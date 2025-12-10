@@ -1,5 +1,7 @@
 const express = require('express');
 const app = express();
+
+// Déclarer PORT une seule fois ici
 const PORT = process.env.PORT || 10000;
 
 app.get('/', (req, res) => {
@@ -12,8 +14,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'SEO backend minimal en ligne' });
 });
 
-const PORT = process.env.PORT || 10000;
+// Écouter sur 0.0.0.0 avec PORT
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
-
