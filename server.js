@@ -12,6 +12,8 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'SEO backend minimal en ligne' });
 });
 
-app.listen(PORT, '127.0.0.1', () => {  // important: 127.0.0.1
-  console.log(`Server running on http://127.0.0.1:${PORT}`);
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
+
