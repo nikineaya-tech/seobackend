@@ -1,25 +1,52 @@
 const express = require('express');
+const cors = require('cors'); // ← AJOUTÉ
 const fetch = (...args) => import('node-fetch').then(({ default: fetch }) => fetch(...args));
 
 const app = express();
 const PORT = process.env.PORT || 10000;
+
+// ✅ CONFIGURATION CORS
+app.use(cors({
+  origin: [
+    'https://seo.mktnstrategix.com',
+    'http://localhost:3000',
+    'http://127.0.0.1:3000'
+  ],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
+}));
+
+// Headers CORS manuels (backup)
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', 'https://seo.mktnstrategix.com');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
 
 app.use(express.json());
 
 // Route racine (optionnelle)
 app.get('/', (req, res) => {
   console.log('GET / reçu');
-  res.send('SEO backend en ligne');
+  res.send('SEO backend en ligne avec CORS activé ✅');
 });
 
 // Healthcheck Render
 app.get('/api/health', (req, res) => {
   console.log('GET /api/health reçu');
-  res.json({ status: 'ok', message: 'SEO backend minimal en ligne' });
+  res.json({ status: 'ok', message: 'SEO backend avec CORS activé' });
 });
 
-// NOUVELLE ROUTE SEO : proxy vers OpenRouter
+// ROUTE SEO : proxy vers OpenRouter
 app.post('/api/seo', async (req, res) => {
+  console.log('POST /api/seo reçu depuis:', req.headers.origin);
+  
   try {
     const body = req.body;
 
@@ -35,9 +62,16 @@ app.post('/api/seo', async (req, res) => {
     });
 
     const data = await orResponse.json();
+    
+    if (!orResponse.ok) {
+      console.error('Erreur OpenRouter:', data);
+      return res.status(orResponse.status).json(data);
+    }
+    
+    console.log('Réponse OpenRouter: OK');
     res.json(data);
   } catch (err) {
-    console.error(err);
+    console.error('Erreur /api/seo:', err);
     res.status(500).json({ error: 'Erreur serveur SEO' });
   }
 });
@@ -50,7 +84,7 @@ app.post('/api/seo', async (req, res) => {
  *  - GSC_REDIRECT_URI
  */
 
-// 1) Générer l’URL OAuth pour connecter GSC
+// 1) Générer l'URL OAuth pour connecter GSC
 app.get('/api/gsc/auth-url', (req, res) => {
   const base = 'https://accounts.google.com/o/oauth2/v2/auth';
 
@@ -90,7 +124,7 @@ app.get('/api/gsc/callback', async (req, res) => {
     });
 
     const tokens = await tokenResponse.json();
-    // TODO : stocker tokens.access_token et tokens.refresh_token en base pour l’utilisateur
+    // TODO : stocker tokens.access_token et tokens.refresh_token en base pour l'utilisateur
     console.log('GSC tokens:', tokens);
 
     res.send('Compte Google Search Console connecté. Vous pouvez fermer cette fenêtre.');
@@ -132,11 +166,11 @@ app.post('/api/gsc/search-analytics', async (req, res) => {
     res.json(data);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Erreur lors de l’appel Search Console' });
+    res.status(500).json({ error: 'Erreur lors de l\'appel Search Console' });
   }
 });
 
-// Écouter sur 0.0.0.0 avec PORT (une seule fois)
+// Écouter sur 0.0.0.0 avec PORT
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Server running on http://0.0.0.0:${PORT}`);
+  console.log(`✅ Server running on http://0.0.0.0:${PORT} - CORS activé pour seo.mktnstrategix.com`);
 });
