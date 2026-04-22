@@ -12,11 +12,15 @@
 
 // Load environment variables FIRST
 require('dotenv').config();
-// 1. CONFIGURATION PUPPETEER (À mettre ici si pas en haut)
-const puppeteer = require('puppeteer-extra');
-const StealthPlugin = require('puppeteer-extra-plugin-stealth');
-puppeteer.use(StealthPlugin());
-const playwrightWrapper = require('./playwright-wrapper.cjs');
+// ── SCRAPING ENGINE — Render Free (Playwright) ──────────────
+const {
+  launchPlaywright,
+  closeBrowser,
+  safeEval,
+  safeEvalAll,
+  extractDominantColors,
+  isAvailable
+} = require('./playwright-wrapper.cjs');
 
 // Core dependencies
 const express = require('express');
