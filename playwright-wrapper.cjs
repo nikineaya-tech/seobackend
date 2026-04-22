@@ -1,15 +1,40 @@
 'use strict';
 
-/**
- * playwright-wrapper.cjs — ÉDITION RENDER FREE
- * Moteur  : Playwright chromium (cache local .cache/playwright)
- * Equiv   : même approche que Puppeteer + .puppeteerrc.cjs
- * Compatible : scrapeStealth / deepScrapeFunnel / safeEval / safeEvalAll
- */
+const path = require('path');
+const { execSync } = require('child_process');
 
-// Force le path cache avant l'import
-process.env.PLAYWRIGHT_BROWSERS_PATH =
-  process.env.PLAYWRIGHT_BROWSERS_PATH || '.cache/playwright';
+// ── PATH FIXE RENDER FREE ─────────────────────────────────
+const BROWSERS_PATH = path.join(__dirname, '.cache', 'playwright');
+process.env.PLAYWRIGHT_BROWSERS_PATH = BROWSERS_PATH;
+
+// ── AUTO-INSTALL si binaire absent ───────────────────────
+function ensureChromium() {
+  const chromiumPath = path.join(
+    BROWSERS_PATH,
+    'chromium_headless_shell-1208',
+    'chrome-headless-shell-linux64',
+    'chrome-headless-shell'
+  );
+
+  const fs = require('fs');
+  if (!fs.existsSync(chromiumPath)) {
+    console.log('⚙️ [PLAYWRIGHT] Chromium absent — installation en cours...');
+    try {
+      execSync(
+        `PLAYWRIGHT_BROWSERS_PATH=${BROWSERS_PATH} npx playwright install chromium`,
+        { stdio: 'inherit', timeout: 120000 }
+      );
+      console.log('✅ [PLAYWRIGHT] Chromium installé avec succès');
+    } catch (err) {
+      console.error('❌ [PLAYWRIGHT] Installation Chromium échouée:', err.message);
+    }
+  } else {
+    console.log('✅ [PLAYWRIGHT] Chromium déjà présent');
+  }
+}
+
+// Exécuter avant tout lancement
+ensureChromium();
 
 const { chromium } = require('playwright');
 
@@ -54,7 +79,6 @@ async function launchPlaywright(url) {
       javaScriptEnabled: true,
     });
 
-    // Bloquer images/fonts/media → économie RAM
     await context.route('**/*', (route) => {
       const type = route.request().resourceType();
       if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
@@ -64,7 +88,6 @@ async function launchPlaywright(url) {
     });
 
     const page = await context.newPage();
-
     page.setDefaultTimeout(PAGE_TIMEOUT);
     page.setDefaultNavigationTimeout(NAVIGATION_TIMEOUT);
 
@@ -96,17 +119,14 @@ async function closeBrowser(browser) {
 
 // ─── HEALTH CHECK ─────────────────────────────────────────
 async function isAvailable() {
-  let browser = null;
-  try {
-    browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox', '--single-process'],
-    });
-    await browser.close();
-    return true;
-  } catch (_) {
-    return false;
-  }
+  const fs = require('fs');
+  const chromiumPath = path.join(
+    BROWSERS_PATH,
+    'chromium_headless_shell-1208',
+    'chrome-headless-shell-linux64',
+    'chrome-headless-shell'
+  );
+  return fs.existsSync(chromiumPath);
 }
 
 // ─── HELPER : safeEval ────────────────────────────────────
