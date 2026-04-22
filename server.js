@@ -4610,6 +4610,7 @@ if (!scrape || typeof scrape !== 'object') {
 const vis        = scrape.visualDNA  || {};
 const pri        = scrape.priceIntel || { bestPrice: 0, currency: 'MAD' };
 const copy       = scrape.copyIntel  || {};
+copyIntel.ctaAnalysis = await analyzeCTAs(copyIntel.realCTAs || [])
 const brand      = scrape.brand      || {};
 
 // ✅ BUG-01 FIX — HTML complet disponible
@@ -4746,8 +4747,8 @@ const techCMS = (() => {
     return 'NONDETECTE';
 })();
 
-const detectedPrice = pri.bestPrice || 0;
-const currency      = pri.currency  || 'MAD';
+const detectedPrice = (pri?.detected && pri.bestPrice > 0) ? pri.bestPrice : null
+const currency = (pri?.currency && pri.currency !== 'UNKNOWN') ? pri.currency : null
 
 const quickLocalScore = {
     hasH1:         !!copy.headlines?.h1?.[0],
@@ -5460,14 +5461,15 @@ Langue : ${targetLang}.`.trim();
             },
 
             financialAudit: {
-                detectedPrice,
-                currency,
-                potentialRevenueIncrease: r3Safe.financialProjection?.potentialGain
-                    || Math.round((detectedPrice || 350) * 0.03 * 5000),
-                revenueOpportunity: isAr ? 'زيادة محتملة في الإيرادات'
-                                  : isEn ? 'Potential Revenue Increase'
-                                  :        'Augmentation potentielle des revenus',
-            },
+    detectedPrice: detectedPrice || null,
+    currency: currency || null,
+    potentialRevenueIncrease: detectedPrice && detectedPrice > 0
+        ? (r3Safe.financialProjection?.potentialGain || null)
+        : null,
+    revenueOpportunity: isAr ? 'زيادة محتملة في الإيرادات'
+                      : isEn ? 'Potential Revenue Increase'
+                      :        'Augmentation potentielle des revenus',
+},
 
             meta: {
                 version:  'V12-GOD-TIER',
@@ -6150,7 +6152,7 @@ const priceIntel = pri;
 const copyIntel  = copy;
 
 // ✅ FIX — HTML complet (pas bodyText) pour detectTechStack
-const rawHtml = deepScrape.html || brand.fullTextSample || '';
+const rawHtml = deepScrape.html || deepScrape.brand?.fullTextSample || '';
 
 // ✅ FIX — scrapedData reconstruit depuis deepScrape (était undefined avant)
 const scrapedData = {
