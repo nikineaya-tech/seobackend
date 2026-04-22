@@ -4,7 +4,7 @@
   "description": "Daka All-in-One : Moteur stratégique fusionnant Gemini 2.0, GPT-4 et Claude 3.5 pour une domination SEO totale.",
   "main": "server.js",
   "scripts": {
-    "postinstall": "npx playwright install chromium --with-deps",
+   "postinstall": "npx playwright install chromium",
     "start": "node server.js",
     "dev": "nodemon server.js",
     "prod": "NODE_ENV=production node server.js",
