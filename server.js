@@ -4072,8 +4072,8 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
         }
 
         // 2. Appel du moteur d'analyse stratégique
-        // ── PATCH 5 : Timeout global 28s (marge Render Free 30s) ─
-        const ROUTE_TIMEOUT  = 28000;
+        // ── PATCH 5 : Timeout global 55s (marge Render Free 60s) ─
+        const ROUTE_TIMEOUT  = 55000;  // ← MODIFIÉ : 28000 → 55000
         const timeoutPromise = new Promise((_, reject) =>
             setTimeout(
                 () => reject(new Error('ROUTE_TIMEOUT')),
