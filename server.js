@@ -3996,9 +3996,10 @@ const warRoomLimiter = rateLimit({
 // ════════════════════════════════════════════════════════════════════
 app.post('/api/competitors', warRoomLimiter, async (req, res) => {
     const startTime = Date.now();
+    const isProd    = process.env.NODE_ENV === 'production';
 
     try {
-        const {
+        let {
             query,
             geo          = 'Morocco',
             lang         = 'fr',
@@ -4006,7 +4007,7 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
             forceRefresh = false
         } = req.body;
 
-        // Validation de l'entrée
+        // ── PATCH 1 : Validation query ────────────────────────
         if (!query || !query.trim()) {
             return res.status(400).json({
                 success: false,
@@ -4014,37 +4015,90 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
                 message: 'Veuillez fournir un mot-clé ou une URL.'
             });
         }
+        if (query.trim().length > 300) {
+            return res.status(400).json({
+                success: false,
+                error:   'Query too long',
+                message: 'Maximum 300 caractères autorisés.'
+            });
+        }
 
-        console.log(`\n⚔️ [/api/competitors] DÉMARRAGE WAR ROOM | query="${query}" | geo=${geo} | lang=${lang}`);
+        // ── PATCH 2 : Whitelist geo + lang ────────────────────
+        const ALLOWED_LANGS = ['fr', 'ar', 'en'];
+        const ALLOWED_GEOS  = [
+            'Morocco', 'France', 'Algeria',
+            'Tunisia', 'Libya', 'Belgium', 'Switzerland'
+        ];
+        if (!ALLOWED_LANGS.includes(lang)) lang = 'fr';
+        if (!ALLOWED_GEOS.includes(geo))   geo  = 'Morocco';
+
+        // ── PATCH 3 : Validation URL anti-SSRF ───────────────
+        const isValidUrl = (u) => {
+            try {
+                const p = new URL(u);
+                return (
+                    ['http:', 'https:'].includes(p.protocol) &&
+                    !['localhost', '127.0.0.1', '0.0.0.0',
+                      '::1', '169.254', '10.', '192.168.']
+                      .some(h => p.hostname.includes(h))
+                );
+            } catch { return false; }
+        };
+
+        // ── PATCH 4 : forceRefresh réservé admin ─────────────
+        const safeForceRefresh = Boolean(forceRefresh) && !!req.user?.isAdmin;
+
+        console.log(
+            `\n⚔️ [/api/competitors] DÉMARRAGE WAR ROOM | ` +
+            `query="${query.trim()}" | geo=${geo} | lang=${lang}`
+        );
 
         // 1. Scraping du site utilisateur (si fourni) pour benchmark
         let userSiteData = null;
-        if (url && url.trim()) {
+        if (url && isValidUrl(url.trim())) {
             console.log(`[/api/competitors] Benchmark utilisateur lancé pour : ${url}`);
             try {
                 const siteScrape = await scrapeSiteData(url.trim(), lang);
                 if (siteScrape?.success) {
                     userSiteData = siteScrape;
-                    console.log(`[/api/competitors] Site utilisateur OK — Mots: ${siteScrape.content?.wordCount || 0}`);
+                    console.log(
+                        `[/api/competitors] Site utilisateur OK — ` +
+                        `Mots: ${siteScrape.content?.wordCount || 0}`
+                    );
                 }
             } catch (scrapeErr) {
                 console.warn(`[/api/competitors] Erreur scraping benchmark:`, scrapeErr.message);
             }
         }
 
-        // 2. Appel du moteur d'analyse stratégique (V11 Chain-of-Thought)
-        const result = await analyzeCompetitors(
-            query.trim(),
-            geo,
-            lang,
-            userSiteData,
-            forceRefresh
+        // 2. Appel du moteur d'analyse stratégique
+        // ── PATCH 5 : Timeout global 28s (marge Render Free 30s) ─
+        const ROUTE_TIMEOUT  = 28000;
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(
+                () => reject(new Error('ROUTE_TIMEOUT')),
+                ROUTE_TIMEOUT
+            )
         );
+
+        const result = await Promise.race([
+            analyzeCompetitors(
+                query.trim(),
+                geo,
+                lang,
+                userSiteData,
+                safeForceRefresh
+            ),
+            timeoutPromise
+        ]);
 
         // 3. Métriques & Logs
         const elapsed = Date.now() - startTime;
         if (result.success) {
-            console.log(`✅ [/api/competitors] TERMINÉE en ${elapsed}ms | source=${result.source}`);
+            console.log(
+                `✅ [/api/competitors] TERMINÉE en ${elapsed}ms | ` +
+                `source=${result.source}`
+            );
         } else {
             console.warn(`❌ [/api/competitors] ÉCHEC :`, result.error);
         }
@@ -4056,14 +4110,37 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
         res.json(result);
 
     } catch (error) {
-        console.error('💥 [/api/competitors] CRASH MAJEUR:', error.stack);
+        const elapsed = Date.now() - startTime;
+
+        // ── PATCH 6 : Timeout → 504 propre ───────────────────
+        if (error.message === 'ROUTE_TIMEOUT') {
+            console.warn(`⏱️ [/api/competitors] TIMEOUT après ${elapsed}ms`);
+            if (typeof updateMetrics === 'function') {
+                updateMetrics(req.method, req.path, 504, elapsed);
+            }
+            return res.status(504).json({
+                success: false,
+                error:   'TIMEOUT',
+                message: 'Analyse trop longue — réessayez dans quelques secondes.'
+            });
+        }
+
+        // ── PATCH 7 : Stack trace masqué en production ────────
+        console.error(
+            '💥 [/api/competitors] CRASH MAJEUR:',
+            isProd ? error.message : error.stack
+        );
+        if (typeof updateMetrics === 'function') {
+            updateMetrics(req.method, req.path, 500, elapsed);
+        }
         res.status(500).json({
             success: false,
             error:   'INTERNAL_SERVER_ERROR',
-            details: error.message
+            details: isProd ? 'Une erreur est survenue.' : error.message
         });
     }
 });
+
 app.post('/api/generate-seo-assets', async (req, res) => {
     const startTime = Date.now();
     try {
