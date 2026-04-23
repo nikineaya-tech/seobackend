@@ -8017,9 +8017,10 @@ async function deepScrapeFunnel(url) {
         }
 
         // ── 4. COPY INTEL — Playwright d'abord, cheerio en fallback
+        // ✅ PATCH COPYINTEL — garantit que copyIntel est TOUJOURS défini
         let copyIntel = scrapeResult.copyIntel || null;
 
-        if (!copyIntel || copyIntel.headlines?.h1?.length === 0) {
+        if (!copyIntel || !copyIntel.headlines || copyIntel.headlines?.h1?.length === 0) {
             copyIntel = {
                 headlines: {
                     h1: $('h1').map((_, el) => $(el).text().trim()).get().filter(t => t.length > 3),
@@ -8040,6 +8041,19 @@ async function deepScrapeFunnel(url) {
                 pageSections:   [],
             };
         }
+
+        // ✅ PATCH SAFETY — garantit que copyIntel ne sera jamais undefined en aval
+        copyIntel = {
+            headlines:      copyIntel.headlines      || { h1: [], h2: [], h3: [] },
+            realCTAs:       copyIntel.realCTAs       || [],
+            heroText:       copyIntel.heroText       || bodyText.substring(0, 300),
+            testimonials:   copyIntel.testimonials   || [],
+            guarantees:     copyIntel.guarantees     || [],
+            faq:            copyIntel.faq            || [],
+            bulletBenefits: copyIntel.bulletBenefits || [],
+            allButtons:     copyIntel.allButtons     || [],
+            pageSections:   copyIntel.pageSections   || [],
+        };
 
         // ── Détection sections (cheerio — complémentaire à Playwright)
         if (!copyIntel.pageSections || copyIntel.pageSections.length === 0) {
@@ -8070,18 +8084,16 @@ async function deepScrapeFunnel(url) {
         }
 
         // ── 5. VISUAL DNA — ✅ Playwright (getComputedStyle) en priorité
-        // Les vraies couleurs viennent de scrapeStealth via page.evaluate()
         let visualDNA = scrapeResult.visualDNA || null;
 
         if (!visualDNA || visualDNA.dominantColors?.length === 0) {
-            // Fallback cheerio — styles inline uniquement (moins fiable)
             console.warn('⚠️ visualDNA vide depuis Playwright — fallback cheerio styles inline');
 
             const styleContent = $('style').text() + ' '
                 + $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
 
             const colorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi;
-            const allColors  = styleContent.match(colorRegex) || []; // ✅ || [] — plus de crash null
+            const allColors  = styleContent.match(colorRegex) || [];
 
             const colorCounts = {};
             allColors.forEach(c => {
@@ -8129,7 +8141,6 @@ async function deepScrapeFunnel(url) {
             success:     scrapeResult.success,
             fetchLayer:  scrapeResult.fetchLayer || 'playwright',
 
-            // ✅ Source unique : scrapeStealth (Playwright)
             visualDNA,
             techStack:        scrapeResult.techStack        || { cms: 'Unknown' },
             copyIntel,
@@ -8154,7 +8165,6 @@ async function deepScrapeFunnel(url) {
                 chain:            [],
             },
 
-            // Alias compatibilité ancien code
             frameworkData: {
                 trustSignals: scrapeResult.trustSignals || {},
                 techStack:    scrapeResult.techStack    || {},
@@ -8164,14 +8174,13 @@ async function deepScrapeFunnel(url) {
     } catch (error) {
         console.error(`❌ [DEEP SCRAPE] CRASH: ${error.message}`);
 
-        // ✅ Jamais de throw — structure vide complète
         return {
             success:          false,
             fetchLayer:       'playwright',
             error:            error.message,
             visualDNA:        { dominantColors: ['#3b82f6', '#1e293b', '#10b981'], googleFonts: [] },
             techStack:        { cms: 'Unknown', hasSSL: false, hasWhatsApp: false },
-            copyIntel:        { headlines: { h1: [], h2: [], h3: [] }, realCTAs: [], heroText: '', pageSections: [] },
+            copyIntel:        { headlines: { h1: [], h2: [], h3: [] }, realCTAs: [], heroText: '', pageSections: [], testimonials: [], guarantees: [], faq: [], bulletBenefits: [], allButtons: [] },
             priceIntel:       { bestPrice: null, currency: 'MAD', all: [], detected: false, struckPrices: [], discountRate: null },
             trustSignals:     { hasSSL: false, hasWhatsApp: false, trustScore: null },
             contacts:         { phones: [], emails: [] },
@@ -8186,6 +8195,7 @@ async function deepScrapeFunnel(url) {
         };
     }
 }
+
 
 // ════════════════════════════════════════════════════════
 // analyzeCTAs — inchangée + renforcée
