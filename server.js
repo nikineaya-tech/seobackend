@@ -2340,6 +2340,147 @@ async function fetchBrandTrendIntel(domain, geoData) {
  * ║          [2] Maintien des frameworks Pro (Hormozi, Océan Bleu, etc.) ║
  * ╚══════════════════════════════════════════════════════════════════════╝
  */
+// ═══════════════════════════════════════════════════════════════
+// 🔑 KEYWORDS EVERYWHERE — Volume, CPC, Competition réels
+// ═══════════════════════════════════════════════════════════════
+async function fetchKeywordData(keywords = []) {
+    const key = process.env.KEYWORDS_EVERYWHERE_KEY;
+    if (!key || !keywords.length) return null;
+
+    try {
+        const res = await axios.post(
+            'https://api.keywordseverywhere.com/v1/get_keyword_data',
+            new URLSearchParams({
+                'kw[]': keywords.slice(0, 10), // Max 10 kw par appel
+                country: 'MA',
+                currency: 'USD',
+                dataSource: 'gkp'
+            }),
+            {
+                headers: {
+                    'Authorization': `Bearer ${key}`,
+                    'Accept': 'application/json'
+                },
+                timeout: 10000
+            }
+        );
+
+        const data = res.data?.data || [];
+        if (!data.length) return null;
+
+        console.log(`🔑 [KE] ${data.length} mots-clés enrichis via Keywords Everywhere`);
+
+        // On retourne un map { keyword -> { vol, cpc, competition } }
+        const kwMap = {};
+        data.forEach(item => {
+            kwMap[item.keyword] = {
+                vol:         item.vol         || 0,
+                cpc:         item.cpc?.value  || 0,
+                competition: item.competition || 0,
+                trend:       item.trend       || []
+            };
+        });
+        return kwMap;
+
+    } catch (e) {
+        console.warn(`⚠️ [KE] Keywords Everywhere error: ${e.message}`);
+        return null;
+    }
+}
+// ═══════════════════════════════════════════════════════════════
+// 📊 GOOGLE SEARCH CONSOLE — Données réelles clicks/impressions
+// ═══════════════════════════════════════════════════════════════
+async function fetchGSCData(siteUrl, accessToken) {
+    if (!siteUrl || !accessToken) return null;
+
+    try {
+        // Dates : 90 derniers jours
+        const endDate   = new Date().toISOString().split('T')[0];
+        const startDate = new Date(Date.now() - 90 * 86400000).toISOString().split('T')[0];
+
+        const res = await axios.post(
+            `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+            {
+                startDate,
+                endDate,
+                dimensions: ['query'],
+                rowLimit:   25,
+                orderBy: [{ fieldName: 'impressions', sortOrder: 'DESCENDING' }]
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type':  'application/json'
+                },
+                timeout: 15000
+            }
+        );
+
+        const rows = res.data?.rows || [];
+        if (!rows.length) return null;
+
+        console.log(`📊 [GSC] ${rows.length} queries récupérées depuis Google Search Console`);
+
+        return rows.map(r => ({
+            query:       r.keys[0],
+            clicks:      r.clicks,
+            impressions: r.impressions,
+            ctr:         (r.ctr * 100).toFixed(1) + '%',
+            position:    r.position.toFixed(1)
+        }));
+
+    } catch (e) {
+        console.warn(`⚠️ [GSC] Google Search Console error: ${e.message}`);
+        return null;
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🔐 GSC — Génère l'URL d'autorisation OAuth2
+// ═══════════════════════════════════════════════════════════════
+function getGSCAuthUrl() {
+    const clientId    = process.env.GSC_CLIENT_ID;
+    const redirectUri = process.env.GSC_REDIRECT_URI;
+    if (!clientId || !redirectUri) return null;
+
+    const params = new URLSearchParams({
+        client_id:     clientId,
+        redirect_uri:  redirectUri,
+        response_type: 'code',
+        scope:         'https://www.googleapis.com/auth/webmasters.readonly',
+        access_type:   'offline',
+        prompt:        'consent'
+    });
+    return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 🔐 GSC — Échange le code OAuth contre un access_token
+// ═══════════════════════════════════════════════════════════════
+async function exchangeGSCCode(code) {
+    const clientId     = process.env.GSC_CLIENT_ID;
+    const clientSecret = process.env.GSC_CLIENT_SECRET;
+    const redirectUri  = process.env.GSC_REDIRECT_URI;
+
+    if (!clientId || !clientSecret || !redirectUri) return null;
+
+    try {
+        const res = await axios.post('https://oauth2.googleapis.com/token',
+            new URLSearchParams({
+                code,
+                client_id:     clientId,
+                client_secret: clientSecret,
+                redirect_uri:  redirectUri,
+                grant_type:    'authorization_code'
+            }),
+            { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 10000 }
+        );
+        return res.data; // { access_token, refresh_token, expires_in }
+    } catch (e) {
+        console.warn(`⚠️ [GSC] Token exchange error: ${e.message}`);
+        return null;
+    }
+}
 async function analyzeCompetitors(
     query,
     geo          = 'Morocco',
