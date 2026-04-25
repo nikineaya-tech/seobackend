@@ -2624,7 +2624,18 @@ async function analyzeCompetitors(
             marketInsights: { difficulty: 'unknown', serpIntent: 'unknown', vocabulary: [] }
         };
     }
+// ── 4d. KE + GSC en parallèle (juste après 4c) ────────────
+const [keResult, gscResult] = await Promise.allSettled([
+    fetchKeywordData([cleanQuery, `meilleur ${cleanQuery}`, `${cleanQuery} avis`, `${cleanQuery} ${geoData.location}`, `alternative ${cleanQuery}`], geoData.gl),
+    fetchGSCData(userSiteData?.url || null, gscAccessToken)
+]);
+const kwData  = keResult.status  === 'fulfilled' ? keResult.value  : null;
+const gscData = gscResult.status === 'fulfilled' ? gscResult.value : null;
 
+// Extras Serper (stockés lors du 4b)
+const peopleAlsoAsk   = serpExtrasStore?.peopleAlsoAsk   || [];
+const relatedSearches = serpExtrasStore?.relatedSearches || [];
+const knowledgeGraph  = serpExtrasStore?.knowledgeGraph  || null;
     // ── 5. ENRICHISSEMENT CONCURRENTS ─────────────────────────
     // (identique à V9.7 — pas de changement)
     const enrichedCompetitors = rawResults.slice(0, 10).map((r, i) => {
@@ -3070,18 +3081,7 @@ JSON uniquement :
   "duelComparison": { ... }
 }`;
         
-// ── 4d. KE + GSC en parallèle (juste après 4c) ────────────
-const [keResult, gscResult] = await Promise.allSettled([
-    fetchKeywordData([cleanQuery, `meilleur ${cleanQuery}`, `${cleanQuery} avis`, `${cleanQuery} ${geoData.location}`, `alternative ${cleanQuery}`], geoData.gl),
-    fetchGSCData(userSiteData?.url || null, gscAccessToken)
-]);
-const kwData  = keResult.status  === 'fulfilled' ? keResult.value  : null;
-const gscData = gscResult.status === 'fulfilled' ? gscResult.value : null;
 
-// Extras Serper (stockés lors du 4b)
-const peopleAlsoAsk   = serpExtrasStore?.peopleAlsoAsk   || [];
-const relatedSearches = serpExtrasStore?.relatedSearches || [];
-const knowledgeGraph  = serpExtrasStore?.knowledgeGraph  || null;
 } 
 
 
