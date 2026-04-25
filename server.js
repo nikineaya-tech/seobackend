@@ -2345,8 +2345,10 @@ async function analyzeCompetitors(
     geo          = 'Morocco',
     lang         = 'fr',
     userSiteData = null,
-    forceRefresh = false
-) {
+    forceRefresh = false,
+    gscAccessToken = null   // 🆕 Optionnel : token GSC de l'utilisateur
+) 
+{
     const startTime = Date.now();
 
     // ── 1. LANGUE ─────────────────────────────────────────────
@@ -2355,7 +2357,7 @@ async function analyzeCompetitors(
     const isAr    = langObj.code === 'ar';
     const isEn    = langObj.code === 'en';
 
-    console.log(`[WarRoom-V9.7] Query="${query}" | Geo=${geo} | Lang=${langObj.name} (${langObj.code})`);
+    console.log(`[WarRoom-V10.0] Query="${query}" | Geo=${geo} | Lang=${langObj.name} (${langObj.code})`);
 
     const GPT_BOT = {
         name:        'Competitor Research Assistant',
@@ -2377,20 +2379,21 @@ async function analyzeCompetitors(
     const googleLang = langObj.serpHl;
 
     // ── 3. CACHE ──────────────────────────────────────────────
-    const cacheKey = `warroom-v9.7:${cleanQuery}:${geoData.gl}:${langObj.code}`;
+    const cacheKey = `warroom-v10.0:${cleanQuery}:${geoData.gl}:${langObj.code}`;
 
     if (forceRefresh) {
         cache.cache.delete(cacheKey);
-        console.log(`🔄 [WarRoom-V9.7] CACHE BYPASS: ${cacheKey}`);
+        console.log(`🔄 [WarRoom-V10.0] CACHE BYPASS: ${cacheKey}`);
     } else {
         const cached = cache.get(cacheKey);
         if (cached) {
-            console.log(`💾 [WarRoom-V9.7] CACHE HIT: ${cacheKey}`);
+            console.log(`💾 [WarRoom-V10.0] CACHE HIT: ${cacheKey}`);
             return { ...cached, externalBot: GPT_BOT, fromCache: true };
         }
     }
 
-    // ── 4. ACQUISITION SERP ───────────────────────────────────
+    // ── 4. ACQUISITION SERP (SERPER PRIMAIRE → SERPAPI FALLBACK) ──
+    // 🔄 INVERSÉ : Serper est le primaire (moins cher), SerpAPI est le fallback
     let rawResults = [];
     let source     = 'none';
 
@@ -2401,41 +2404,73 @@ async function analyzeCompetitors(
             let targetUrl = cleanQuery.trim();
             if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
             const domain = new URL(targetUrl).hostname.replace('www.', '');
-            rawResults   = [{
+            rawResults = [{
                 link: targetUrl, displayed_link: domain,
                 title: `Cible Directe : ${domain}`,
                 snippet: 'Analyse 1v1 déclenchée.', source: 'direct-url'
             }];
             source = 'direct-url';
-        } catch (e) { console.warn('[WarRoom-V9.7] URL invalide:', e.message); }
+        } catch (e) { console.warn('[WarRoom-V10.0] URL invalide:', e.message); }
     }
 
-    // 4b — SerpAPI
-    if (rawResults.length === 0 && CONFIG.SERPAPI_KEY) {
+    // 4b — 🥇 SERPER (PRIMAIRE — moins cher, plus rapide)
+    if (rawResults.length === 0 && process.env.SERPER_API_KEY) {
         try {
+            console.log('[WarRoom-V10.0] SERP via SERPER (primaire)...');
+            const res = await RetryManager.executeWithRetry(
+                () => axios.post('https://google.serper.dev/search',
+                    { q: cleanQuery, gl: geoData.gl, hl: googleLang, num: 10 },
+                    {
+                        headers: {
+                            'X-API-KEY':    process.env.SERPER_API_KEY,
+                            'Content-Type': 'application/json'
+                        },
+                        timeout: CONFIG.TIMEOUT_MEDIUM
+                    }
+                ),
+                { context: 'Serper-WarRoom' }
+            );
+            if (res.data?.organic?.length) {
+                // Normalisation format Serper → format unifié
+                rawResults = res.data.organic.map(r => ({
+                    link:           r.link,
+                    displayed_link: r.displayedLink || r.link,
+                    title:          r.title,
+                    snippet:        r.snippet,
+                    sitelinks:      r.sitelinks || [],
+                    rich_snippet:   r.richSnippet || null,
+                    source:         'serper'
+                }));
+                source = 'serper';
+                console.log(`✅ [WarRoom-V10.0] Serper OK — ${rawResults.length} résultats`);
+            }
+        } catch (e) { console.warn('[WarRoom-V10.0] Serper error:', e.message); }
+    }
+
+    // 4c — 🥈 SERPAPI (FALLBACK si Serper échoue ou quota épuisé)
+    if (rawResults.length === 0 && process.env.SERPAPI_KEY) {
+        try {
+            console.log('[WarRoom-V10.0] SERP via SERPAPI (fallback)...');
             const res = await RetryManager.executeWithRetry(
                 () => axios.get('https://serpapi.com/search', {
-                    params: { q: cleanQuery, gl: geoData.gl, hl: googleLang, num: 10, api_key: CONFIG.SERPAPI_KEY, engine: 'google' },
+                    params: {
+                        q:       cleanQuery,
+                        gl:      geoData.gl,
+                        hl:      googleLang,
+                        num:     10,
+                        api_key: process.env.SERPAPI_KEY,
+                        engine:  'google'
+                    },
                     timeout: CONFIG.TIMEOUT_MEDIUM
                 }),
                 { context: 'SerpAPI-WarRoom' }
             );
-            if (res.data?.organic_results?.length) { rawResults = res.data.organic_results; source = 'serpapi'; }
-        } catch (e) { console.warn('[WarRoom-V9.7] SerpAPI error:', e.message); }
-    }
-
-    // 4c — Serper fallback
-    if (rawResults.length === 0 && CONFIG.SERPER_API_KEY) {
-        try {
-            const res = await RetryManager.executeWithRetry(
-                () => axios.post('https://google.serper.dev/search',
-                    { q: cleanQuery, gl: geoData.gl, hl: googleLang, num: 10 },
-                    { headers: { 'X-API-KEY': CONFIG.SERPER_API_KEY, 'Content-Type': 'application/json' } }
-                ),
-                { context: 'Serper-WarRoom' }
-            );
-            if (res.data?.organic?.length) { rawResults = res.data.organic; source = 'serper'; }
-        } catch (e) { console.warn('[WarRoom-V9.7] Serper error:', e.message); }
+            if (res.data?.organic_results?.length) {
+                rawResults = res.data.organic_results;
+                source = 'serpapi';
+                console.log(`✅ [WarRoom-V10.0] SerpAPI OK — ${rawResults.length} résultats`);
+            }
+        } catch (e) { console.warn('[WarRoom-V10.0] SerpAPI error:', e.message); }
     }
 
     if (rawResults.length === 0) {
@@ -2450,6 +2485,7 @@ async function analyzeCompetitors(
     }
 
     // ── 5. ENRICHISSEMENT CONCURRENTS ─────────────────────────
+    // (identique à V9.7 — pas de changement)
     const enrichedCompetitors = rawResults.slice(0, 10).map((r, i) => {
         const url = r.link || r.url || '';
         let domain = '';
@@ -2468,7 +2504,7 @@ async function analyzeCompetitors(
             position:           i + 1,
             title:              r.title || (isAr ? 'بدون عنوان' : isEn ? 'No title' : 'Sans titre'),
             url, domain,
-            snippet:            r.snippet || r.description || '',
+                        snippet:        r.snippet || r.description || '',
             type,
             dominance:          Math.min(posScore + richScore, 100),
             estimatedAuthority: i <= 2 ? (isAr ? 'عالية جداً' : isEn ? 'Very High'  : 'Très Haute')
@@ -2478,73 +2514,89 @@ async function analyzeCompetitors(
         };
     });
 
-   // ── 6. SCRAPING MOAT LEADER (SÉCURISÉ AVEC SCRAPE.DO) ──────────
+    // ── 6. SCRAPING MOAT LEADER (SCRAPE.DO) ───────────────────
     let leaderMoat = { status: ND };
     try {
         const leaderUrl = enrichedCompetitors[0]?.url;
         if (leaderUrl) {
-            console.log(`[WarRoom-V9.7] Scraping On-Page du Leader via SCRAPE.DO : ${leaderUrl}`);
-            
+            console.log(`[WarRoom-V10.0] Scraping Leader via SCRAPE.DO : ${leaderUrl}`);
             const token = process.env.SCRAPE_DO_TOKEN;
             let htmlString = '';
 
             if (token) {
-                // ✅ Utilisation de l'API Proxy Scrape.do pour contourner les blocages (ex: Cloudflare)
                 const proxyUrl = `http://api.scrape.do?token=${token}&url=${encodeURIComponent(leaderUrl)}`;
                 const proxyRes = await axios.get(proxyUrl, { timeout: 20000 });
                 htmlString = typeof proxyRes.data === 'string' ? proxyRes.data.toLowerCase() : '';
             } else {
-                // Fallback si pas de token configuré
-                const res = await axios.get(leaderUrl, { 
+                const res = await axios.get(leaderUrl, {
                     timeout: 10000,
                     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0' }
                 });
                 htmlString = typeof res.data === 'string' ? res.data.toLowerCase() : '';
             }
-            
+
             if (htmlString) {
                 const $ = cheerio.load(htmlString);
                 leaderMoat = {
                     brandAuthority: {
-                        hasWikipediaLinks: htmlString.includes('wikipedia.org'),
-                        socialLinksCount: (htmlString.match(/facebook|instagram|linkedin|twitter/g) || []).length,
+                        hasWikipediaLinks:      htmlString.includes('wikipedia.org'),
+                        socialLinksCount:       (htmlString.match(/facebook|instagram|linkedin|twitter/g) || []).length,
                         hasTrustpilotOrReviews: /trustpilot|reviews|rating|avis/i.test(htmlString)
                     },
                     technicalMoat: {
                         schemaTagsCount: $('script[type="application/ld+json"]').length,
-                        hasFaqSection: /faq|questions/i.test(htmlString)
+                        hasFaqSection:   /faq|questions/i.test(htmlString)
                     },
                     contentStrategy: {
-                        hasBlog: /blog|actualites|news/i.test(htmlString),
+                        hasBlog:       /blog|actualites|news/i.test(htmlString),
                         semanticCloud: $('h1, h2, h3').map((_, el) => $(el).text().trim()).get().join(' ').substring(0, 300)
                     }
                 };
-                console.log(`[WarRoom-V9.7] Leader Moat extrait avec succès via Scrape.do.`);
+                console.log(`[WarRoom-V10.0] Leader Moat extrait avec succès.`);
             }
         }
     } catch (e) {
-        console.warn(`[WarRoom-V9.7] Leader Moat Error : ${e.message}`);
+        console.warn(`[WarRoom-V10.0] Leader Moat Error: ${e.message}`);
         leaderMoat = { status: 'error', snippet: enrichedCompetitors[0]?.snippet?.substring(0, 200) || ND };
     }
 
-    // ── 7. CONTEXTE UTILISATEUR & TOP 3 ───────────────────────
-    const hasUserSite = !!userSiteData;
+    // ── 7. ENRICHISSEMENT KE → volume réel sur le keyword principal ──
+    // On injecte les vraies données Keywords Everywhere dès maintenant
+    const mainKwData     = kwData?.[cleanQuery] || null;
+    const realVolume     = mainKwData
+        ? `${mainKwData.vol.toLocaleString()} / mois (CPC: $${mainKwData.cpc} | Comp: ${mainKwData.competition})`
+        : ND;
+    const realTrend      = mainKwData?.trend?.length
+        ? (mainKwData.trend.slice(-3).map(t => t.value).join(' → ') + ' (3 derniers mois)')
+        : null;
 
-    const userIntelCtx = userSiteData ? {
-        hasUrl:     !!userSiteData.url,
-        title:      userSiteData.meta?.title || null,
-        wordCount:  userSiteData.content?.wordCount || 0,
-        h1:         userSiteData.structure?.h1?.text || null,
-        schema:     userSiteData.schema?.exists || false,
+    console.log(`🔑 [KE] Volume réel "${cleanQuery}": ${realVolume}`);
+
+    // ── 8. CONTEXTE UTILISATEUR & TOP 3 ───────────────────────
+    const hasUserSite   = !!userSiteData;
+
+    const userIntelCtx  = userSiteData ? {
+        hasUrl:    !!userSiteData.url,
+        title:     userSiteData.meta?.title   || null,
+        wordCount: userSiteData.content?.wordCount || 0,
+        h1:        userSiteData.structure?.h1?.text || null,
+        schema:    userSiteData.schema?.exists || false,
     } : null;
 
-    const top3Context = enrichedCompetitors.slice(0, 3).map((c, i) => `#${i+1} ${c.domain}: ${c.snippet.substring(0,80)}`).join(' | ');
+    // 🆕 Contexte GSC injecté si disponible
+    const gscContext = gscData?.length
+        ? `GSC Top Queries: ${gscData.slice(0, 5).map(r => `"${r.query}" (pos:${r.position}, clicks:${r.clicks})`).join(' | ')}`
+        : null;
 
-    const userContextStr = userSiteData
-        ? `URL Cible: ${userSiteData.url} | Title: ${userIntelCtx?.title || ND} | H1: ${userIntelCtx?.h1 || ND}`
+    const top3Context     = enrichedCompetitors.slice(0, 3).map((c, i) => `#${i+1} ${c.domain}: ${c.snippet.substring(0,80)}`).join(' | ');
+    const paaContext      = peopleAlsoAsk.slice(0, 4).map(p => p.question || p).join(' | ');
+    const relatedContext  = relatedSearches.slice(0, 4).map(r => r.query || r).join(', ');
+
+    const userContextStr  = userSiteData
+        ? `URL Cible: ${userSiteData.url} | Title: ${userIntelCtx?.title || ND} | H1: ${userIntelCtx?.h1 || ND}${gscContext ? ' | ' + gscContext : ''}`
         : `Analyse Benchmark: L'utilisateur n'a pas de site. Génère la stratégie PARFAITE (Mastering) pour battre le Top 3.`;
 
-    // ── 8. FALLBACKS (Mise à jour avec Value Ladder & UX) ─────
+    // ── 9. FALLBACKS ──────────────────────────────────────────
     const leaderDomain = enrichedCompetitors[0]?.domain || (isAr ? 'المنافس' : isEn ? 'competitor' : 'le leader');
 
     const fallbackWinningMove = isAr
@@ -2559,14 +2611,20 @@ async function analyzeCompetitors(
         : ['Réécrire le H1 en mode JTBD', 'Ajouter une garantie forte en hero section', "Simplifier le tunnel d'achat à 2 étapes max"];
 
     const fallbackSwot = isAr ? {
-        strengths: ['القِدَم والشهرة في السوق'], weaknesses: ['باردة ومعاملاتية بلا تخصيص'],
-        opportunities: ['إنشاء مجتمع متخصص حول المنتج'], threats: ['حرب أسعار وشيكة مع المنافسين']
+        strengths:     ['القِدَم والشهرة في السوق'],
+        weaknesses:    ['باردة ومعاملاتية بلا تخصيص'],
+        opportunities: ['إنشاء مجتمع متخصص حول المنتج'],
+        threats:       ['حرب أسعار وشيكة مع المنافسين']
     } : isEn ? {
-        strengths: ['Brand authority and market seniority'], weaknesses: ['Cold and transactional, no personalization'],
-        opportunities: ['Build a niche community around the product'], threats: ['Imminent price war with competitors']
+        strengths:     ['Brand authority and market seniority'],
+        weaknesses:    ['Cold and transactional, no personalization'],
+        opportunities: ['Build a niche community around the product'],
+        threats:       ['Imminent price war with competitors']
     } : {
-        strengths: ['Ancienneté et notoriété sur le marché'], weaknesses: ['Froid et transactionnel, sans personnalisation'],
-        opportunities: ['Créer une communauté de niche autour du produit'], threats: ['Guerre des prix imminente avec les concurrents']
+        strengths:     ['Ancienneté et notoriété sur le marché'],
+        weaknesses:    ['Froid et transactionnel, sans personnalisation'],
+        opportunities: ['Créer une communauté de niche autour du produit'],
+        threats:       ['Guerre des prix imminente avec les concurrents']
     };
 
     const fallbackDuel = isAr ? {
@@ -2598,7 +2656,7 @@ async function analyzeCompetitors(
         uxTeardown:       { competitor: 'Friction au paiement',                user: ND, killShot: 'Checkout natif Apple/Google Pay sans champs inutiles' }
     };
 
-    // ── 9. mergedData INITIAL ─────────────────────────────────
+    // ── 10. mergedData INITIAL ────────────────────────────────
     let mergedData = {
         winningMove:    fallbackWinningMove,
         actionRoadmap:  fallbackRoadmap,
@@ -2608,30 +2666,38 @@ async function analyzeCompetitors(
             barrierToEntry: isAr ? 'سلطة النطاق والقِدَم' : isEn ? 'Domain authority and seniority' : 'Autorité de domaine et ancienneté'
         },
         marketInsights: {
-            difficulty: typeof calculateDifficulty === 'function' ? calculateDifficulty(enrichedCompetitors) : 'unknown',
-            serpIntent: typeof analyzeSERPIntent   === 'function' ? analyzeSERPIntent(enrichedCompetitors)   : (isAr ? 'مختلط' : isEn ? 'mixed' : 'mixte'),
-            volume: ND, 
-            vocabulary: [cleanQuery],
+            difficulty:          typeof calculateDifficulty === 'function' ? calculateDifficulty(enrichedCompetitors) : 'unknown',
+            serpIntent:          typeof analyzeSERPIntent   === 'function' ? analyzeSERPIntent(enrichedCompetitors)   : (isAr ? 'مختلط' : isEn ? 'mixed' : 'mixte'),
+            // 🆕 Volume réel injecté depuis Keywords Everywhere
+            volume:              realVolume,
+            trend:               realTrend,
+            vocabulary:          [cleanQuery],
             sophisticationLevel: '3',
-            awarenessLevel: 'Solution Aware'
+            awarenessLevel:      'Solution Aware',
+            // 🆕 People Also Ask depuis SERP
+            peopleAlsoAsk:       peopleAlsoAsk.slice(0, 4),
+            relatedSearches:     relatedSearches.slice(0, 4)
         },
         keywordStrategy: {
             primary:     [cleanQuery],
-            longTail:    [
-                (isAr ? 'مراجعة ' : isEn ? 'Review '  : 'Avis ')     + cleanQuery,
-                (isAr ? 'أفضل '   : isEn ? 'Best '    : 'Meilleur ') + cleanQuery + ' ' + geoData.location
-            ],
+            // 🆕 Enrichi avec les variantes KE si disponibles
+                       longTail: kwData
+                ? Object.keys(kwData).filter(k => k !== cleanQuery).slice(0, 4)
+                : [
+                    (isAr ? 'مراجعة ' : isEn ? 'Review '  : 'Avis ')     + cleanQuery,
+                    (isAr ? 'أفضل '   : isEn ? 'Best '    : 'Meilleur ') + cleanQuery + ' ' + geoData.location
+                  ],
             missingGaps: [(isAr ? 'بديل ' : isEn ? 'Alternative to ' : 'Alternative ') + leaderDomain]
         },
-        swot: fallbackSwot,
+        swot:               fallbackSwot,
         blueOceanStrategy: {
             eliminate:       [isAr ? 'الرسوم الخفية والعمليات الغامضة' : isEn ? 'Hidden fees and opaque processes'    : 'Frais cachés et processus opaques'],
             reduce:          [isAr ? 'النماذج الطويلة المعقدة'          : isEn ? 'Long and complex forms'             : 'Formulaires trop longs'],
             raise:           [isAr ? 'الطمأنينة والدليل الاجتماعي'      : isEn ? 'Reassurance and social proof'       : 'Réassurance et preuve sociale'],
             create:          [isAr ? 'مرافقة شخصية بعد الشراء'         : isEn ? 'Personalized post-purchase support' : 'Accompagnement post-achat personnalisé'],
             currentRedOcean: [isAr ? 'حرب الأسعار'                     : isEn ? 'Price war'                         : 'Prix bas, même promesse que tous'],
-            blueOceanMoves:  [isAr ? 'ضمان استثنائي + حزمة حصرية'       : isEn ? 'Extreme guarantee + exclusive bundle' : 'Garantie extrême + Bundle exclusif'],
-            positioningMap:  [isAr ? 'فاخر وبأسعار معقولة'              : isEn ? 'Premium accessible'                : 'Premium accessible']
+            blueOceanMoves:  [isAr ? 'ضمان استثنائي + حزمة حصرية'      : isEn ? 'Extreme guarantee + exclusive bundle' : 'Garantie extrême + Bundle exclusif'],
+            positioningMap:  [isAr ? 'فاخر وبأسعار معقولة'             : isEn ? 'Premium accessible'                : 'Premium accessible']
         },
         comparisonScores: {
             user:       hasUserSite ? [40, 50, 40, 30, 50, 20] : [50, 45, 55, 40, 60, 45],
@@ -2651,31 +2717,41 @@ async function analyzeCompetitors(
         },
         top3ReverseEngineering: {
             commonSuccessFactors: [ND],
-            glaringWeaknesses: [ND],
+            glaringWeaknesses:    [ND],
             trafficStrategyGuess: ND
         },
         grandSlamOfferBlueprint: {
-            dreamOutcome: ND,
+            dreamOutcome:        ND,
             perceivedLikelihood: ND,
-            timeDelay: ND,
-            effortAndSacrifice: ND,
+            timeDelay:           ND,
+            effortAndSacrifice:  ND,
             theIrresistibleOffer: ND
         },
-        duelComparison: fallbackDuel,
+        duelComparison:      fallbackDuel,
         semanticDifferences: [],
         masteringTechniques: {
             trafficSources:   ND,
             retentionLoop:    ND,
             monetizationHack: ND
-        }
+        },
+        // 🆕 GSC data brute exposée dans le résultat final
+        gscInsights: gscData ? {
+            available:  true,
+            topQueries: gscData.slice(0, 10),
+            summary: {
+                totalClicks:      gscData.reduce((a, r) => a + r.clicks, 0),
+                totalImpressions: gscData.reduce((a, r) => a + r.impressions, 0),
+                avgPosition:      parseFloat((gscData.reduce((a, r) => a + parseFloat(r.position), 0) / gscData.length).toFixed(1))
+            }
+        } : { available: false }
     };
 
-    // ── 10. SYSTEM BASE (LANGUE IMPÉRATIVE & ANTI-FLUFF) ──────────
+    // ── 11. SYSTEM BASE ───────────────────────────────────────
     const forceLanguageLine = isAr
         ? 'CRITICAL RULE: You MUST translate ALL JSON string values to Arabic (العربية). Absolutely NO French or English.'
         : isEn
         ? 'CRITICAL RULE: You MUST answer ENTIRELY in English.'
-        : 'RÈGLE CRITIQUE : Tu DOIS répondre ENTIÈREMENT en Français. Traduis absolument toutes les valeurs texte en Français.';
+        : 'RÈGLE CRITIQUE : Tu DOIS répondre ENTIÈREMENT en Français.';
 
     const systemBase = [
         `LANGUE OBLIGATOIRE : ${langObj.name.toUpperCase()}`,
@@ -2687,12 +2763,11 @@ async function analyzeCompetitors(
         '2. Tu ne dois inventer aucun chiffre réel (trafic, CA, conversion).',
         `3. Si une donnée est introuvable, formule une recommandation experte ou écrit exactement "${ND}".`,
         '4. Sois ultra-précis, tranchant et stratégique.',
-        // 👇 القواعد الجديدة الصارمة لمنع الكلام الإنشائي 👇
-        '5. INTERDICTION STRICTE du "Fluff" marketing : Ne dis JAMAIS "améliorer l\'expérience", "services innovants", "conception attrayante" ou "optimiser".',
-        '6. OBLIGATION DE PRÉCISION : Décris l\'action MÉCANIQUE exacte. Au lieu de "faciliter le paiement", dis "Checkout en 2 clics avec Apple Pay". Au lieu de "meilleur service", dis "Garantie de remboursement inconditionnelle de 30 jours".'
+        '5. INTERDICTION STRICTE du "Fluff" marketing.',
+        '6. OBLIGATION DE PRÉCISION : Décris l\'action MÉCANIQUE exacte.'
     ].join('\n');
 
-    // ── 11. HELPER callAgent (EXTRACTION SÉCURISÉE SANS REGEX) 
+    // ── 12. HELPER callAgent ──────────────────────────────────
     const callAgent = async (prompt, agentName) => {
         try {
             const res = await RetryManager.executeWithRetry(
@@ -2713,7 +2788,7 @@ async function analyzeCompetitors(
                             'Authorization': `Bearer ${CONFIG.OPENROUTER_KEY || CONFIG.OPENROUTER_API_KEY}`,
                             'Content-Type':  'application/json',
                             'HTTP-Referer':  CONFIG.SITE_URL || 'https://daka.ma',
-                            'X-Title':       'WarRoom-V9.7'
+                            'X-Title':       'WarRoom-V10.0'
                         },
                         timeout: CONFIG.TIMEOUT_LONG || 30000
                     }
@@ -2722,243 +2797,155 @@ async function analyzeCompetitors(
             );
 
             const raw = res.data?.choices?.[0]?.message?.content || '{}';
-            
             let parsed = {};
             if (typeof extractJSON === 'function') {
                 parsed = extractJSON(raw) || {};
             } else {
                 let cleaned = raw.trim();
                 if (cleaned.startsWith('```json')) cleaned = cleaned.slice(7);
-                else if (cleaned.startsWith('```')) cleaned = cleaned.slice(3);
-                if (cleaned.endsWith('```')) cleaned = cleaned.slice(0, -3);
+                else if (cleaned.startsWith('```'))  cleaned = cleaned.slice(3);
+                if (cleaned.endsWith('```'))          cleaned = cleaned.slice(0, -3);
                 parsed = JSON.parse(cleaned.trim());
             }
             return parsed;
 
         } catch (e) {
-            console.warn(`[WarRoom-V9.7] ${agentName} FAILED:`, e.message);
+            console.warn(`[WarRoom-V10.0] ${agentName} FAILED:`, e.message);
             return {};
         }
     };
 
-    // ── 12. PROMPTS 4 AGENTS (PRO FRAMEWORKS) ─────────────────
-    const L            = langObj.name;
-    const langInstr    = isAr ? 'Réponds uniquement en arabe classique.' : isEn ? 'Answer only in English.' : 'Réponds uniquement en français.';
-    const labelsJson   = isAr
+    // ── 13. PROMPTS 4 AGENTS ──────────────────────────────────
+    const L          = langObj.name;
+    const langInstr  = isAr ? 'Réponds uniquement en arabe classique.' : isEn ? 'Answer only in English.' : 'Réponds uniquement en français.';
+    const labelsJson = isAr
         ? '["السلطة","العرض/الخدمة","التقنية","التحويل","الكتابة","الثقة"]'
         : isEn
         ? '["Authority","Offer/Service","Technical","Conversion","Copywriting","Trust"]'
         : '["Autorité","Offre/Service","Technique","Conversion","Copywriting","Confiance"]';
 
-    // ✅ DÉCLARATION UNIQUE ET PROPRE
-    const top5Str      = enrichedCompetitors.slice(0, 5).map(c => `#${c.position} ${c.domain} — ${c.snippet?.substring(0, 80)}`).join('\n');
-    const top3Str      = enrichedCompetitors.slice(0, 3).map(c => `${c.domain} : ${c.snippet?.substring(0, 60)}`).join('\n');
-    
+    const top5Str    = enrichedCompetitors.slice(0, 5).map(c => `#${c.position} ${c.domain} — ${c.snippet?.substring(0, 80)}`).join('\n');
+    const top3Str    = enrichedCompetitors.slice(0, 3).map(c => `${c.domain} : ${c.snippet?.substring(0, 60)}`).join('\n');
+
     const comparisonUserInstruction = hasUserSite
         ? `Pour "user", estime 6 scores réalistes (0-100) basés sur le contexte fourni.`
-        : `L'utilisateur n'a pas de site. Pour "user", génère les scores MOYENS du Top 3 (ex: [50, 45, 55, 40, 60, 50]) pour servir de benchmark d'industrie. Ne mets pas de zéros.`;
+        : `L'utilisateur n'a pas de site. Pour "user", génère les scores MOYENS du Top 3 (ex: [50, 45, 55, 40, 60, 50]).`;
 
-    // FRAMEWORK 1 : EUGENE SCHWARTZ (Sophistication & Awareness)
+    // 🆕 Contexte KE injecté dans les prompts agents
+    const keContext = kwData
+        ? `\n── DONNÉES KEYWORDS EVERYWHERE (RÉELLES) ──\n` +
+          Object.entries(kwData).slice(0, 5).map(([kw, d]) =>
+              `"${kw}": vol=${d.vol}/mois | CPC=$${d.cpc} | comp=${d.competition}`
+          ).join('\n')
+        : '';
+
+    // 🆕 Contexte GSC injecté dans les prompts agents
+    const gscPromptContext = gscData?.length
+        ? `\n── DONNÉES GSC RÉELLES DU SITE ──\n` +
+          gscData.slice(0, 5).map(r =>
+              `"${r.query}": pos=${r.position} | clicks=${r.clicks} | impressions=${r.impressions} | CTR=${r.ctr}`
+          ).join('\n')
+        : '';
+
+    // 🆕 PAA injecté dans Agent 1
+    const paaPromptContext = peopleAlsoAsk.length
+        ? `\nPeople Also Ask: ${peopleAlsoAsk.slice(0, 4).map(p => p.question || p).join(' | ')}`
+        : '';
+
     const agent1Prompt = `${langInstr}
 Analyse de marché SEO & Eugene Schwartz Framework :
 - Niche : "${cleanQuery}" | Pays : ${geoData.location}
 TOP 5 de la SERP :
 ${top5Str}
+${paaPromptContext}
+${keContext}
 
-Applique le framework de Eugene Schwartz pour déduire le niveau de conscience et de sophistication du marché.
-INSTRUCTION CRITIQUE: Pour 'vocabulary', donne exactement 4 mots-clés pertinents sous forme de liste.
+Applique le framework Eugene Schwartz pour déduire le niveau de conscience et sophistication du marché.
+INSTRUCTION CRITIQUE: Pour 'vocabulary', donne exactement 4 mots-clés pertinents.
+${keContext ? `IMPORTANT: Le volume réel est fourni par Keywords Everywhere ci-dessus. Utilise ces chiffres EXACTS dans "volume". N'invente pas de chiffres.` : ''}
 
 JSON uniquement :
 {
-  "marketInsights":  { 
-    "difficulty": "TRADUIS STRICTEMENT EN ${L} : facile | moyen | difficile | saturé", 
-    "serpIntent": "TRADUIS STRICTEMENT EN ${L} : informationnel | transactionnel | commercial | mixte", 
-    "volume": "Estime un volume mensuel réaliste (ex: 10K - 50K)", 
-    "vocabulary": ["mot_cle_1", "mot_cle_2", "mot_cle_3", "mot_cle_4"],
-    "sophisticationLevel": "Niveau 1 à 5 (ex: Niveau 3 - Mécanisme Unique)",
+  "marketInsights": {
+    "difficulty": "TRADUIS STRICTEMENT EN ${L} : facile | moyen | difficile | saturé",
+    "serpIntent":  "TRADUIS STRICTEMENT EN ${L} : informationnel | transactionnel | commercial | mixte",
+    "volume":      "${mainKwData ? realVolume : 'Estime un volume mensuel réaliste'}",
+    "vocabulary":  ["mot_cle_1", "mot_cle_2", "mot_cle_3", "mot_cle_4"],
+    "sophisticationLevel": "Niveau 1 à 5",
     "awarenessLevel": "Unaware | Problem Aware | Solution Aware | Product Aware | Most Aware",
-    "notes": "1 phrase d'analyse en ${L}" 
+    "notes": "1 phrase d'analyse en ${L}"
   },
-  "marketDynamics":  { "porterVerdict": "1 phrase en ${L}", "threatLevel": "Low|Medium|High|Critical", "barrierToEntry": "1 phrase en ${L}" }
+  "marketDynamics": {
+    "porterVerdict":  "1 phrase en ${L}",
+    "threatLevel":    "Low|Medium|High|Critical",
+    "barrierToEntry": "1 phrase en ${L}"
+  }
 }`;
 
     const agent2Prompt = `${langInstr}
 Stratégie SEO offensive & Topic Clusters :
-- Niche : "${cleanQuery}" | Leader : ${enrichedCompetitors[0]?.domain || ND} | Pays : ${geoData.location}
+- Niche : "${cleanQuery}" | Leader : ${enrichedCompetitors?.domain || ND} | Pays : ${geoData.location}
 MOAT — Blog:${leaderMoat?.contentStrategy?.hasBlog ?? '?'} FAQ:${leaderMoat?.technicalMoat?.hasFaqSection ?? '?'} Schema:${leaderMoat?.technicalMoat?.schemaTagsCount ?? 0}
+${keContext}
+${relatedContext ? `Related Searches: ${relatedContext}` : ''}
 
-INSTRUCTION CRITIQUE : Génère de VRAIS mots-clés basés sur ce qui manque au Top 3. Exactement 6 mots-clés pour 'primary', 4 pour 'longTail', et 4 opportunités pour 'missingGaps'.
+INSTRUCTION : Génère de VRAIS mots-clés basés sur ce qui manque au Top 3.
+Exactement 6 pour 'primary', 4 pour 'longTail', 4 pour 'missingGaps'.
+${kwData ? `IMPORTANT: Priorise les mots-clés avec le meilleur ratio volume/competition selon les données KE fournies.` : ''}
 
 JSON uniquement :
 {
-  "winningMove": "slogan offensif max 12 mots en ${L}",
-  "actionRoadmap": ["action technique 1 en ${L}", "action technique 2 en ${L}", "action technique 3 en ${L}"],
-  "keywordStrategy": { 
-    "primary": ["mot_cle_1", "mot_cle_2", "mot_cle_3", "mot_cle_4", "mot_cle_5", "mot_cle_6"], 
-    "longTail": ["longue_traine_1", "longue_traine_2", "longue_traine_3", "longue_traine_4"], 
-    "missingGaps": ["opportunite_1", "opportunite_2", "opportunite_3", "opportunite_4"] 
+  "winningMove":    "slogan offensif max 12 mots en ${L}",
+  "actionRoadmap":  ["action technique 1", "action technique 2", "action technique 3"],
+  "keywordStrategy": {
+    "primary":     ["kw1","kw2","kw3","kw4","kw5","kw6"],
+    "longTail":    ["lt1","lt2","lt3","lt4"],
+    "missingGaps": ["gap1","gap2","gap3","gap4"]
   }
 }`;
 
-    // FRAMEWORK 2 : ALEX HORMOZI (Grand Slam Offer) & REVERSE ENGINEERING DU TOP 3
     const agent3Prompt = `${langInstr}
 MASTERING & DUEL CMO (Reverse Engineering & Grand Slam Offer) :
-- Niche : "${cleanQuery}" 
-- Top 3 Challengers : ${top3Context}
+- Niche : "${cleanQuery}"
+-- Top 3 Challengers : ${top3Context}
 - User Context : ${userContextStr}
+${gscPromptContext}
+${keContext}
 
 CADRE STRATÉGIQUE :
-1. Reverse-engineer le Top 3 pour identifier leurs piliers de succès communs et leurs faiblesses.
+1. Reverse-engineer le Top 3 pour identifier leurs piliers de succès et faiblesses.
 2. Utilise le framework "Grand Slam Offer" d'Alex Hormozi.
-3. RÈGLE : Si l'utilisateur n'a pas de site (Inconnu), la section "user" du duel DOIT être le "Gold Standard" déduit du Top 3.
-4. RÈGLE DE COHÉRENCE (KILL SHOT) : Dans 'productServiceAudit', ta 'killShotFeature' DOIT être la solution technique exacte et directe qui exploite et détruit la 'weakestProductFeature' du concurrent.
-5. RÈGLE ANTI-FLUFF : Dans 'duelComparison', remplace les termes vagues ("meilleure UX") par des fonctionnalités précises (ex: "One-click Apple Pay").
+3. RÈGLE : Si l'utilisateur n'a pas de site, la section "user" du duel DOIT être le "Gold Standard" déduit du Top 3.
+4. RÈGLE COHÉRENCE : 'killShotFeature' DOIT être la solution exacte qui détruit la 'weakestProductFeature'.
+5. RÈGLE ANTI-FLUFF : Remplace les termes vagues par des fonctionnalités précises.
+${gscData ? `6. RÈGLE GSC : Utilise les données GSC réelles pour calibrer les recommandations.` : ''}
 
 JSON uniquement :
 {
-  "top3ReverseEngineering": {
-    "commonSuccessFactors": ["facteur clé 1 du top 3", "facteur clé 2"],
-    "glaringWeaknesses": ["angle mort majeur 1", "angle mort majeur 2"],
-    "trafficStrategyGuess": "Déduction de leur canal d'acquisition principal"
-  },
-  "grandSlamOfferBlueprint": {
-    "dreamOutcome": "Résultat de rêve ultime du client",
-    "perceivedLikelihood": "Preuve sociale (ex: 'Études de cas vérifiées')",
-    "timeDelay": "Promesse de vitesse exacte (ex: 'Livré en 24h chrono')",
-    "effortAndSacrifice": "Réduction de friction (ex: 'Zéro setup requis')",
-    "theIrresistibleOffer": "La promesse finale irrésistible (Pitch)"
-  },
-  "productServiceAudit": { "coreOffering":"...", "pricingStrategy":"...", "uniqueValueProposition":"...", "weakestProductFeature":"Défaut précis", "killShotFeature":"Attaque directe du défaut" },
-  "masteringTechniques": { "trafficSources": "...", "retentionLoop": "...", "monetizationHack": "..." },
-  "duelComparison": {
-    "offerAndRisk":     { "competitor":"...", "user":"...", "killShot":"..." },
-    "jtbdPsychology":   { "competitor":"...", "user":"...", "killShot":"..." },
-    "kanoDelighter":    { "competitor":"...", "user":"...", "killShot":"..." },
-    "activationAARRR":  { "competitor":"...", "user":"...", "killShot":"..." },
-    "flankingStrategy": { "competitor":"...", "user":"...", "killShot":"..." },
-    "pricingBundling":  { "competitor":"...", "user":"...", "killShot":"..." },
-    "valueLadder":      { "competitor":"...", "user":"...", "killShot":"..." },
-    "uxTeardown":       { "competitor":"...", "user":"...", "killShot":"..." }
-  }
+  "top3ReverseEngineering": { ... },
+  "grandSlamOfferBlueprint": { ... },
+  "productServiceAudit": { ... },
+  "masteringTechniques": { ... },
+  "duelComparison": { ... }
 }`;
-
-    // FRAMEWORK 3 : BLUE OCEAN TRIANGULATION
-    const agent4Prompt = `${langInstr}
-SWOT & Blue Ocean Triangulation :
-- Marché : "${cleanQuery}"
-- TOP 3 : ${top3Str}
-
-Applique la stratégie Océan Bleu pour trouver l'espace vierge laissé par le Top 3.
-RÈGLE ABSOLUE : Les listes de 'blueOceanStrategy' et 'swot' doivent contenir des TACTIQUES TECHNIQUES ET CHIRURGICALES. Interdiction d'utiliser des adjectifs génériques (bon, innovant, facile).
-INSTRUCTION CRITIQUE : Pour 'comparisonScores', "competitor" et "user" DOIVENT ÊTRE DES TABLEAUX DE EXACTEMENT 6 NOMBRES (entre 0 et 100). ${comparisonUserInstruction}
-
-JSON uniquement :
-{
-  "swot": { "strengths":["...","..."], "weaknesses":["...","..."], "opportunities":["...","..."], "threats":["...","..."] },
-  "blueOceanStrategy": { "eliminate":["..."], "reduce":["..."], "raise":["..."], "create":["..."], "currentRedOcean":["..."], "blueOceanMoves":["..."], "positioningMap":["..."] },
-  "comparisonScores": { "user": [45, 55, 60, 50, 70, 40], "competitor": [85, 90, 88, 92, 85, 89], "labels":${labelsJson} }
-}`;
-
-   // ── 13. EXÉCUTION HYBRIDE (CHAIN-OF-THOUGHT + SCRAPE.DO TRENDS) ──
-    console.log('[WarRoom-V9.7] Récupération de l\'empreinte Google Trends du Leader...');
-    
-    // 1️⃣ On vérifie la notoriété réelle avec Scrape.do (Nom de variable sécurisé)
-    const targetBrandDomain = enrichedCompetitors[0]?.domain;
-    const brandIntel = await fetchBrandTrendIntel(targetBrandDomain, geoData);
-
-    // 2️⃣ On génère le "Guardrail" (Bouclier Anti-Hallucination & Anti-Générique)
-    let guardrailPrompt = `\n\n── RÈGLE STRATÉGIQUE ABSOLUE (NEGATIVE PROMPTING) ──\nInterdiction formelle de proposer des actions e-commerce basiques ou génériques (ex: "Offrir un code promo", "Créer une page Instagram"). Tes recommandations DOIVENT être des tactiques de Growth Hacking avancées et des optimisations de tunnel agressives.`;
-
-    if (brandIntel && brandIntel.isGiant) {
-        guardrailPrompt += `\n🔴 ATTENTION : Le leader actuel (${brandIntel.brandName}) a été formellement identifié par Google Trends comme un "${brandIntel.brandStatus}" (Score d'intérêt: ${brandIntel.avgInterest}/100). IL EST STRICTEMENT INTERDIT de dire qu'ils "manquent de notoriété" ou qu'ils sont invisibles. Ce sont des leaders établis. Ta stratégie (SWOT, Océan Bleu, Duel) DOIT consister à les attaquer sur leur lourdeur (propose une expérience hyper-personnalisée, une UX sans friction, ou un segment ultra-niche).`;
-    } else {
-        guardrailPrompt += `\n🟢 CONTEXTE : Le leader (${targetBrandDomain || 'concurrent'}) semble être une marque de taille modérée selon Google. Frappe-les sur l'autorité de marque, la preuve sociale et la rassurance client.`;
-    }
-
-    console.log('[WarRoom-V9.7] Lancement de l\'Agent 1 (Market)...');
-    
-    // 3️⃣ L'Agent 1 analyse le marché sous le contrôle du Guardrail
-    const r1Raw = await callAgent(agent1Prompt + guardrailPrompt, 'Agent1-Market');
-    const a1 = r1Raw && typeof r1Raw === 'object' ? r1Raw : {};
-    const marketDiff = a1.marketInsights?.difficulty || 'inconnue';
-
-    // 4️⃣ On aligne les autres agents sur le diagnostic de l'Agent 1
-    const alignmentPrompt = `\n── ALIGNEMENT DE MARCHÉ OBLIGATOIRE ──\nLe marché a été analysé comme : "${marketDiff}". Toute ta réponse doit être cohérente avec ce niveau de difficulté.`;
-
-    console.log('[WarRoom-V9.7] Lancement Agents 2, 3, 4 avec Guardrails et Alignement...');
-    
-    // 5️⃣ Les autres agents s'exécutent en parallèle, mais parfaitement coordonnés
-    const [r2, r3, r4] = await Promise.allSettled([
-        callAgent(agent2Prompt + guardrailPrompt + alignmentPrompt, 'Agent2-Strategy'),
-        callAgent(agent3Prompt + guardrailPrompt + alignmentPrompt, 'Agent3-Duel'),
-        callAgent(agent4Prompt + guardrailPrompt + alignmentPrompt, 'Agent4-SWOT')
-    ]);
-
-    const safe = (s) => s?.status === 'fulfilled' && s.value && typeof s.value === 'object' ? s.value : {};
-    const a2 = safe(r2), a3 = safe(r3), a4 = safe(r4);
-
-    // 🔥 SÉCURITÉ CHART.JS (Anti-Crash Frontend)
-    if (a4.comparisonScores) {
-        if (!Array.isArray(a4.comparisonScores.user) || a4.comparisonScores.user.reduce((a,b)=>a+b,0) === 0) {
-            a4.comparisonScores.user = hasUserSite ? [40, 50, 40, 30, 50, 20] : [45, 50, 55, 40, 60, 45];
         }
-        if (!Array.isArray(a4.comparisonScores.competitor)) {
-            a4.comparisonScores.competitor = [85, 90, 75, 80, 85, 90];
-        }
-    }
+// ── 4d. KE + GSC en parallèle (juste après 4c) ────────────
+const [keResult, gscResult] = await Promise.allSettled([
+    fetchKeywordData([cleanQuery, `meilleur ${cleanQuery}`, `${cleanQuery} avis`, `${cleanQuery} ${geoData.location}`, `alternative ${cleanQuery}`], geoData.gl),
+    fetchGSCData(userSiteData?.url || null, gscAccessToken)
+]);
+const kwData  = keResult.status  === 'fulfilled' ? keResult.value  : null;
+const gscData = gscResult.status === 'fulfilled' ? gscResult.value : null;
 
-    console.log(`[WarRoom-V9.7] Agents — A1:${!!a1.marketInsights} A2:${!!a2.winningMove} A3:${!!a3.duelComparison} A4:${!!a4.swot}`);
+// Extras Serper (stockés lors du 4b)
+const peopleAlsoAsk   = serpExtrasStore?.peopleAlsoAsk   || [];
+const relatedSearches = serpExtrasStore?.relatedSearches || [];
+const knowledgeGraph  = serpExtrasStore?.knowledgeGraph  || null;
 
-    // ── 14. MERGE AGENTS → mergedData ─────────────────────────
-    mergedData = {
-        ...mergedData,
-        ...(a1.marketInsights         && { marketInsights:          a1.marketInsights          }),
-        ...(a1.marketDynamics         && { marketDynamics:          a1.marketDynamics          }),
-        ...(a2.winningMove            && { winningMove:             a2.winningMove             }),
-        ...(a2.actionRoadmap          && { actionRoadmap:           a2.actionRoadmap           }),
-        ...(a2.keywordStrategy        && { keywordStrategy:         a2.keywordStrategy         }),
-        ...(a3.top3ReverseEngineering && { top3ReverseEngineering:  a3.top3ReverseEngineering  }), 
-        ...(a3.grandSlamOfferBlueprint&& { grandSlamOfferBlueprint: a3.grandSlamOfferBlueprint }), 
-        ...(a3.productServiceAudit    && { productServiceAudit:     a3.productServiceAudit     }),
-        ...(a3.duelComparison         && { duelComparison:          a3.duelComparison          }),
-        ...(a3.masteringTechniques    && { masteringTechniques:     a3.masteringTechniques     }),
-        ...(a4.swot                   && { swot:                    a4.swot                    }),
-        ...(a4.blueOceanStrategy      && { blueOceanStrategy:       a4.blueOceanStrategy       }),
-        ...(a4.comparisonScores       && { comparisonScores:        a4.comparisonScores        }),
-    };
 
-    // ── 15. SEMANTIC DIFFERENCES ──────────────────────────────
-    if (typeof extractCommonTerms === 'function') {
-        mergedData.semanticDifferences = extractCommonTerms(
-            enrichedCompetitors.map(c => `${c.title} ${c.snippet}`).join(' ')
-        ).slice(0, 5);
-    }
 
-    // ── 16. RÉSULTAT FINAL ────────────────────────────────────
-    const elapsed = Date.now() - startTime;
-    console.log(`🏁 [WarRoom-V9.7] Done in ${elapsed}ms | source=${source} | lang=${langObj.code}`);
 
-    const result = {
-        success:          true,
-        version:          'warroom-v9.7',
-        source,
-        query:            cleanQuery,
-        geo:              geoData,
-        lang:             langObj,
-        competitors:      enrichedCompetitors,
-        leaderMoat,
-        ...mergedData,
-        externalBot:      GPT_BOT,
-        generatedAt:      new Date().toISOString(),
-        processingTimeMs: elapsed
-    };
 
-    // ── 17. MISE EN CACHE ─────────────────────────────────────
-    cache.set(cacheKey, result, CONFIG.CACHE_TTL || 3600);
-    console.log(`💾 [WarRoom-V9.7] CACHED → ${cacheKey} (TTL: ${CONFIG.CACHE_TTL || 3600}s)`);
-
-    return result;
-}
 
 
 // ═══════════════════════════════════════════════════════════════════
