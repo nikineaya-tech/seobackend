@@ -2928,7 +2928,7 @@ JSON uniquement :
   "masteringTechniques": { ... },
   "duelComparison": { ... }
 }`;
-        }
+        
 // ── 4d. KE + GSC en parallèle (juste après 4c) ────────────
 const [keResult, gscResult] = await Promise.allSettled([
     fetchKeywordData([cleanQuery, `meilleur ${cleanQuery}`, `${cleanQuery} avis`, `${cleanQuery} ${geoData.location}`, `alternative ${cleanQuery}`], geoData.gl),
@@ -2941,7 +2941,7 @@ const gscData = gscResult.status === 'fulfilled' ? gscResult.value : null;
 const peopleAlsoAsk   = serpExtrasStore?.peopleAlsoAsk   || [];
 const relatedSearches = serpExtrasStore?.relatedSearches || [];
 const knowledgeGraph  = serpExtrasStore?.knowledgeGraph  || null;
-
+} 
 
 
 
