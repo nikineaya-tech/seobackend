@@ -2554,7 +2554,10 @@ async function analyzeCompetitors(
         } catch (e) { console.warn('[WarRoom-V10.0] URL invalide:', e.message); }
     }
 
-    // 4b — 🥇 SERPER (PRIMAIRE — moins cher, plus rapide)
+      // ── 4b — 🥇 SERPER (PRIMAIRE — moins cher, plus rapide) ───
+    // 🔒 DÉCLARÉ AVANT les blocs if — accessible partout
+    let serpExtrasStore = { peopleAlsoAsk: [], relatedSearches: [], knowledgeGraph: null };
+
     if (rawResults.length === 0 && process.env.SERPER_API_KEY) {
         try {
             console.log('[WarRoom-V10.0] SERP via SERPER (primaire)...');
@@ -2572,23 +2575,28 @@ async function analyzeCompetitors(
                 { context: 'Serper-WarRoom' }
             );
             if (res.data?.organic?.length) {
-                // Normalisation format Serper → format unifié
                 rawResults = res.data.organic.map(r => ({
                     link:           r.link,
                     displayed_link: r.displayedLink || r.link,
                     title:          r.title,
                     snippet:        r.snippet,
-                    sitelinks:      r.sitelinks || [],
+                    sitelinks:      r.sitelinks   || [],
                     rich_snippet:   r.richSnippet || null,
                     source:         'serper'
                 }));
                 source = 'serper';
-                console.log(`✅ [WarRoom-V10.0] Serper OK — ${rawResults.length} résultats`);
+                // ✅ Stocké HORS du bloc if grâce au let avant
+                serpExtrasStore = {
+                    peopleAlsoAsk:   res.data.peopleAlsoAsk   || [],
+                    relatedSearches: res.data.relatedSearches || [],
+                    knowledgeGraph:  res.data.knowledgeGraph  || null
+                };
+                console.log(`✅ [WarRoom-V10.0] Serper OK — ${rawResults.length} résultats | PAA: ${serpExtrasStore.peopleAlsoAsk.length}`);
             }
         } catch (e) { console.warn('[WarRoom-V10.0] Serper error:', e.message); }
     }
 
-    // 4c — 🥈 SERPAPI (FALLBACK si Serper échoue ou quota épuisé)
+    // ── 4c — 🥈 SERPAPI (FALLBACK si Serper échoue ou quota épuisé) ──
     if (rawResults.length === 0 && process.env.SERPAPI_KEY) {
         try {
             console.log('[WarRoom-V10.0] SERP via SERPAPI (fallback)...');
@@ -2608,8 +2616,14 @@ async function analyzeCompetitors(
             );
             if (res.data?.organic_results?.length) {
                 rawResults = res.data.organic_results;
-                source = 'serpapi';
-                console.log(`✅ [WarRoom-V10.0] SerpAPI OK — ${rawResults.length} résultats`);
+                source     = 'serpapi';
+                // ✅ SerpAPI a ses propres champs
+                serpExtrasStore = {
+                    peopleAlsoAsk:   res.data.related_questions || [],
+                    relatedSearches: res.data.related_searches  || [],
+                    knowledgeGraph:  res.data.knowledge_graph   || null
+                };
+                console.log(`✅ [WarRoom-V10.0] SerpAPI OK — ${rawResults.length} résultats (fallback)`);
             }
         } catch (e) { console.warn('[WarRoom-V10.0] SerpAPI error:', e.message); }
     }
@@ -2624,6 +2638,35 @@ async function analyzeCompetitors(
             marketInsights: { difficulty: 'unknown', serpIntent: 'unknown', vocabulary: [] }
         };
     }
+
+    // ── 4d — Extras SERP + KE + GSC (AVANT section 5) ────────
+    const peopleAlsoAsk   = serpExtrasStore.peopleAlsoAsk;
+    const relatedSearches = serpExtrasStore.relatedSearches;
+    const knowledgeGraph  = serpExtrasStore.knowledgeGraph;
+
+    console.log('[WarRoom-V10.0] Acquisition parallèle KE + GSC...');
+    const [keResult, gscResult] = await Promise.allSettled([
+        fetchKeywordData(
+            [
+                cleanQuery,
+                `meilleur ${cleanQuery}`,
+                `${cleanQuery} avis`,
+                `${cleanQuery} ${geoData.location}`,
+                `alternative ${cleanQuery}`
+            ],
+            geoData.gl
+        ),
+        fetchGSCData(userSiteData?.url || null, gscAccessToken)
+    ]);
+
+    // ✅ 402 ou toute erreur KE/GSC → null silencieux, pas de crash
+    const kwData  = (keResult.status  === 'fulfilled' && keResult.value)  ? keResult.value  : null;
+    const gscData = (gscResult.status === 'fulfilled' && gscResult.value) ? gscResult.value : null;
+
+    if (!kwData)  console.warn('⚠️ [WarRoom-V10.0] KE indisponible (quota/erreur) — fallback estimations IA');
+    if (!gscData) console.log('ℹ️ [WarRoom-V10.0] GSC non connecté — analyse sans données réelles');
+
+    console.log(`🔑 [WarRoom-V10.0] KE=${!!kwData} | GSC=${!!gscData} | PAA=${peopleAlsoAsk.length} | Related=${relatedSearches.length}`);
 // ── 4d. KE + GSC en parallèle (juste après 4c) ────────────
 const [keResult, gscResult] = await Promise.allSettled([
     fetchKeywordData([cleanQuery, `meilleur ${cleanQuery}`, `${cleanQuery} avis`, `${cleanQuery} ${geoData.location}`, `alternative ${cleanQuery}`], geoData.gl),
