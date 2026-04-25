@@ -2554,8 +2554,29 @@ async function analyzeCompetitors(
         } catch (e) { console.warn('[WarRoom-V10.0] URL invalide:', e.message); }
     }
 
-      // ── 4b — 🥇 SERPER (PRIMAIRE — moins cher, plus rapide) ───
-    // 🔒 DÉCLARÉ AVANT les blocs if — accessible partout
+      // ── 4. ACQUISITION SERP (SERPER PRIMAIRE → SERPAPI FALLBACK) ──
+    let rawResults = [];
+    let source     = 'none';
+
+    // ── 4a — URL directe ──────────────────────────────────────
+    const isUrlTarget = /^https?:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/.test(cleanQuery.trim());
+    if (isUrlTarget) {
+        try {
+            let targetUrl = cleanQuery.trim();
+            if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
+            const domain = new URL(targetUrl).hostname.replace('www.', '');
+            rawResults = [{
+                link:           targetUrl,
+                displayed_link: domain,
+                title:          `Cible Directe : ${domain}`,
+                snippet:        'Analyse 1v1 déclenchée.',
+                source:         'direct-url'
+            }];
+            source = 'direct-url';
+        } catch (e) { console.warn('[WarRoom-V10.0] URL invalide:', e.message); }
+    }
+
+    // ── 4b — 🥇 SERPER (PRIMAIRE) ────────────────────────────
     let serpExtrasStore = { peopleAlsoAsk: [], relatedSearches: [], knowledgeGraph: null };
 
     if (rawResults.length === 0 && process.env.SERPER_API_KEY) {
@@ -2584,8 +2605,7 @@ async function analyzeCompetitors(
                     rich_snippet:   r.richSnippet || null,
                     source:         'serper'
                 }));
-                source = 'serper';
-                // ✅ Stocké HORS du bloc if grâce au let avant
+                source          = 'serper';
                 serpExtrasStore = {
                     peopleAlsoAsk:   res.data.peopleAlsoAsk   || [],
                     relatedSearches: res.data.relatedSearches || [],
@@ -2596,7 +2616,7 @@ async function analyzeCompetitors(
         } catch (e) { console.warn('[WarRoom-V10.0] Serper error:', e.message); }
     }
 
-    // ── 4c — 🥈 SERPAPI (FALLBACK si Serper échoue ou quota épuisé) ──
+    // ── 4c — 🥈 SERPAPI (FALLBACK) ───────────────────────────
     if (rawResults.length === 0 && process.env.SERPAPI_KEY) {
         try {
             console.log('[WarRoom-V10.0] SERP via SERPAPI (fallback)...');
@@ -2615,9 +2635,8 @@ async function analyzeCompetitors(
                 { context: 'SerpAPI-WarRoom' }
             );
             if (res.data?.organic_results?.length) {
-                rawResults = res.data.organic_results;
-                source     = 'serpapi';
-                // ✅ SerpAPI a ses propres champs
+                rawResults      = res.data.organic_results;
+                source          = 'serpapi';
                 serpExtrasStore = {
                     peopleAlsoAsk:   res.data.related_questions || [],
                     relatedSearches: res.data.related_searches  || [],
@@ -2639,7 +2658,7 @@ async function analyzeCompetitors(
         };
     }
 
-    // ── 4d — Extras SERP + KE + GSC (AVANT section 5) ────────
+    // ── 4d — Extras SERP + KE + GSC ──────────────────────────
     const peopleAlsoAsk   = serpExtrasStore.peopleAlsoAsk;
     const relatedSearches = serpExtrasStore.relatedSearches;
     const knowledgeGraph  = serpExtrasStore.knowledgeGraph;
@@ -2659,19 +2678,44 @@ async function analyzeCompetitors(
         fetchGSCData(userSiteData?.url || null, gscAccessToken)
     ]);
 
-    // ✅ 402 ou toute erreur KE/GSC → null silencieux, pas de crash
     const kwData  = (keResult.status  === 'fulfilled' && keResult.value)  ? keResult.value  : null;
     const gscData = (gscResult.status === 'fulfilled' && gscResult.value) ? gscResult.value : null;
 
-    if (!kwData)  console.warn('⚠️ [WarRoom-V10.0] KE indisponible (quota/erreur) — fallback estimations IA');
+    if (!kwData)  console.warn('⚠️ [WarRoom-V10.0] KE indisponible — fallback estimations IA');
     if (!gscData) console.log('ℹ️ [WarRoom-V10.0] GSC non connecté — analyse sans données réelles');
 
     console.log(`🔑 [WarRoom-V10.0] KE=${!!kwData} | GSC=${!!gscData} | PAA=${peopleAlsoAsk.length} | Related=${relatedSearches.length}`);
+
+    // ── 5. ENRICHISSEMENT CONCURRENTS ─────────────────────────
+    const enrichedCompetitors = rawResults.slice(0, 10).map((r, i) => {
+        const url = r.link || r.url || '';
+        let domain = '';
+        try { domain = new URL(url).hostname.replace('www.', ''); } catch { domain = r.displayed_link || ''; }
+
+        let type = isAr ? 'عام' : isEn ? 'General' : 'Général';
+        if (/\/product|\/shop|\/boutique/i.test(url))   type = isAr ? '🛒 تجارة إلكترونية' : '🛒 E-commerce';
+        else if (/\/blog|\/guide|\/article/i.test(url)) type = isAr ? '📝 مدونة' : isEn ? '📝 Blog' : '📝 Blog/Média';
+        else if (domain.includes('youtube'))            type = '🎥 YouTube';
+        else if (domain.includes('wikipedia'))          type = '📚 Wikipedia';
+
+        const posScore  = 100 - i * 10;
+        const richScore = (r.sitelinks ? 20 : 0) + (r.rich_snippet ? 20 : 0);
+
+        return {
+            position:           i + 1,
+            title:              r.title || (isAr ? 'بدون عنوان' : isEn ? 'No title' : 'Sans titre'),
+            url, domain,
+            snippet:            r.snippet || r.description || '',
+            type,
+            dominance:          Math.min(posScore + richScore, 100),
+            estimatedAuthority: i <= 2 ? (isAr ? 'عالية جداً' : isEn ? 'Very High'  : 'Très Haute')
+                                       : i <= 5 ? (isAr ? 'عالية'    : isEn ? 'High'       : 'Haute')
+                                                : (isAr ? 'متوسطة'   : isEn ? 'Medium'     : 'Moyenne'),
+            sitelinks: Array.isArray(r.sitelinks) ? r.sitelinks.length : (r.sitelinks || 0),
+        };
+    });
 // ── 4d. KE + GSC en parallèle (juste après 4c) ────────────
-const [keResult, gscResult] = await Promise.allSettled([
-    fetchKeywordData([cleanQuery, `meilleur ${cleanQuery}`, `${cleanQuery} avis`, `${cleanQuery} ${geoData.location}`, `alternative ${cleanQuery}`], geoData.gl),
-    fetchGSCData(userSiteData?.url || null, gscAccessToken)
-]);
+
 const kwData  = keResult.status  === 'fulfilled' ? keResult.value  : null;
 const gscData = gscResult.status === 'fulfilled' ? gscResult.value : null;
 
