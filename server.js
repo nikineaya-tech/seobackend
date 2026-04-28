@@ -2538,27 +2538,7 @@ async function analyzeCompetitors(
     
 
     // 4a — URL directe
-    const isUrlTarget = /^https?:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/.test(cleanQuery.trim());
-    if (isUrlTarget) {
-        try {
-            let targetUrl = cleanQuery.trim();
-            if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
-            const domain = new URL(targetUrl).hostname.replace('www.', '');
-            rawResults = [{
-                link: targetUrl, displayed_link: domain,
-                title: `Cible Directe : ${domain}`,
-                snippet: 'Analyse 1v1 déclenchée.', source: 'direct-url'
-            }];
-            source = 'direct-url';
-        } catch (e) { console.warn('[WarRoom-V10.0] URL invalide:', e.message); }
-    }
-
-      // ── 4. ACQUISITION SERP (SERPER PRIMAIRE → SERPAPI FALLBACK) ──
-    let rawResults = [];
-    let source     = 'none';
-
-    // ── 4a — URL directe ──────────────────────────────────────
-    const isUrlTarget = /^https?:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/.test(cleanQuery.trim());
+  const isUrlTarget = /^https?:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/.test(cleanQuery.trim());
     if (isUrlTarget) {
         try {
             let targetUrl = cleanQuery.trim();
@@ -2574,6 +2554,12 @@ async function analyzeCompetitors(
             source = 'direct-url';
         } catch (e) { console.warn('[WarRoom-V10.0] URL invalide:', e.message); }
     }
+      // ── 4. ACQUISITION SERP (SERPER PRIMAIRE → SERPAPI FALLBACK) ──
+    let rawResults = [];
+    let source     = 'none';
+
+    // ── 4a — URL directe ──────────────────────────────────────
+    
 
     // ── 4b — 🥇 SERPER (PRIMAIRE) ────────────────────────────
     let serpExtrasStore = { peopleAlsoAsk: [], relatedSearches: [], knowledgeGraph: null };
