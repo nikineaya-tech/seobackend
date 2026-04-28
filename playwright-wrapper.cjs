@@ -39,16 +39,17 @@ ensureChromium();
 const { chromium } = require('playwright');
 
 // ─── CONFIG ───────────────────────────────────────────────
-const NAVIGATION_TIMEOUT = 25000;
-const PAGE_TIMEOUT       = 28000;
+const NAVIGATION_TIMEOUT = 30000; // Légèrement augmenté pour les gros sites e-commerce
+const PAGE_TIMEOUT       = 35000;
+// User-Agent très standard et moderne
 const USER_AGENT =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
   'AppleWebKit/537.36 (KHTML, like Gecko) ' +
   'Chrome/124.0.0.0 Safari/537.36';
 
-// ─── LAUNCH ───────────────────────────────────────────────
+// ─── LAUNCH (STEALTH MODE) ────────────────────────────────
 async function launchPlaywright(url) {
-  console.log(`🚀 [PLAYWRIGHT] Scraping : ${url}`);
+  console.log(`🚀 [PLAYWRIGHT] Scraping Stealth : ${url}`);
 
   let browser = null;
 
@@ -61,27 +62,44 @@ async function launchPlaywright(url) {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--no-zygote',
-        '--single-process',
+        // ❌ '--single-process' SUPPRIMÉ (cause des blocages silencieux)
         '--disable-extensions',
         '--disable-background-networking',
         '--disable-default-apps',
         '--mute-audio',
         '--hide-scrollbars',
         '--disable-software-rasterizer',
+        // ✅ AJOUT STEALTH : Désactive l'indicateur d'automatisation Chromium
+        '--disable-blink-features=AutomationControlled',
       ],
     });
 
     const context = await browser.newContext({
       userAgent: USER_AGENT,
       locale: 'fr-FR',
-      viewport: { width: 1280, height: 800 },
+      timezoneId: 'Europe/Paris', // Ajoute au réalisme de l'empreinte
+      viewport: { width: 1920, height: 1080 }, // Résolution d'écran plus crédible
       ignoreHTTPSErrors: true,
       javaScriptEnabled: true,
+      hasTouch: false,
     });
 
+    // ✅ INJECTION STEALTH : Efface les preuves que tu es un bot
+    await context.addInitScript(() => {
+      // 1. Supprime le flag webdriver (Technique n°1 contre Datadome/Cloudflare)
+      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+      // 2. Simule la présence de plugins (les headless n'en ont pas, ce qui est suspect)
+      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
+      // 3. Fake la langue pour coller au contexte
+      Object.defineProperty(navigator, 'languages', { get: () => ['fr-FR', 'fr', 'en-US', 'en'] });
+    });
+
+    // ✅ ROUTAGE INTELLIGENT : On ne bloque PLUS le CSS et les Fonts !
     await context.route('**/*', (route) => {
       const type = route.request().resourceType();
-      if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
+      // Bloquer le CSS hurle "Je suis un robot" aux anti-bots.
+      // On se contente de bloquer les images et vidéos pour économiser de la RAM.
+      if (['image', 'media'].includes(type)) {
         return route.abort();
       }
       return route.continue();
@@ -91,14 +109,27 @@ async function launchPlaywright(url) {
     page.setDefaultTimeout(PAGE_TIMEOUT);
     page.setDefaultNavigationTimeout(NAVIGATION_TIMEOUT);
 
-    await page.goto(url, {
-      waitUntil: 'domcontentloaded',
-      timeout: NAVIGATION_TIMEOUT,
+    // ✅ GOTO ANTI-TIMEOUT : Passage en force
+    try {
+      // 'commit' = On arrête d'attendre l'événement 'domcontentloaded' qui est souvent piégé
+      await page.goto(url, {
+        waitUntil: 'commit',
+        timeout: NAVIGATION_TIMEOUT,
+      });
+
+      // On force une pause manuelle de 6 secondes pour laisser le DOM (les produits) se construire
+      await page.waitForTimeout(6000);
+
+    } catch (gotoErr) {
+      console.warn(`⚠️ [PLAYWRIGHT] Timeout ou blocage ignoré sur le goto : ${gotoErr.message}`);
+    }
+
+    // On vérifie que le body a bien chargé
+    await page.waitForSelector('body', { timeout: 5000 }).catch(() => {
+      console.warn('⚠️ [PLAYWRIGHT] Body introuvable, mais tentative de continuation...');
     });
 
-    await page.waitForSelector('body', { timeout: 8000 }).catch(() => {});
-
-    console.log(`✅ [PLAYWRIGHT] Page chargée : ${url}`);
+    console.log(`✅ [PLAYWRIGHT] Page chargée (Mode Stealth) : ${url}`);
     return { browser, page };
 
   } catch (err) {

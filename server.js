@@ -1690,6 +1690,10 @@ console.log('\n✅ PARTIE 3/5: Validators + Retry + Utilities loaded successfull
  * 🕷️ SCRAPE STEALTH (PLAYWRIGHT PRINCIPAL + SCRAPEDO PROXY AUXILIAIRE)
  * Utilise Playwright pour le rendu JS et route le trafic via Scrapedo pour éviter les blocages.
  */
+// ═══════════════════════════════════════════════════════════════════
+// 🕷️ MODULE 1: SCRAPING ENGINE (FULL EXTRACTION & HTML DUMP)
+// ═══════════════════════════════════════════════════════════════════
+
 async function scrapeStealth(validUrl) {
     const playwrightWrapper = require('./playwright-wrapper.cjs');
     const startTime = Date.now();
@@ -1912,7 +1916,6 @@ async function scrapeStealth(validUrl) {
 
             techStack: extracted.tech,
 
-            // ✅ PATCH B : pageSections ajouté — champ manquant corrigé
             copyIntel: {
                 headlines:      { h1: extracted.copy.h1List, h2: extracted.copy.h2List, h3: extracted.copy.h3List },
                 realCTAs:       extracted.copy.ctaList,
@@ -1922,7 +1925,7 @@ async function scrapeStealth(validUrl) {
                 faq:            [],
                 bulletBenefits: [],
                 allButtons:     extracted.copy.ctaList,
-                pageSections:   [],          // ✅ ajouté
+                pageSections:   [],
             },
 
             priceIntel: {
@@ -1958,7 +1961,7 @@ async function scrapeStealth(validUrl) {
             wordCount:  extracted.wordCount,
             bodyText:   extracted.bodyText,
 
-                       trackingIntel: {
+            trackingIntel: {
                 hasGoogleAnalytics: extracted.tech.hasGA4,
                 hasGTM:             extracted.tech.hasGTM,
                 hasFacebookPixel:   extracted.tech.hasFBPixel,
@@ -2013,6 +2016,12 @@ async function scrapeStealth(validUrl) {
         };
     }
 }
+
+
+// ═══════════════════════════════════════════════════════════════════
+// 🕵️ ROUTE: SCRAPE SITE DATA (AXIOS → SCRAPE.DO FALLBACK)
+// ═══════════════════════════════════════════════════════════════════
+
 async function scrapeSiteData(url, lang = 'fr') {
     const startTime = Date.now();
     try {
@@ -2048,39 +2057,54 @@ async function scrapeSiteData(url, lang = 'fr') {
                 html = scrape.html;
                 console.log(`✅ scrapeSiteData Playwright OK — ${Date.now() - startTime}ms | CMS: ${scrape.techStack?.cms} | Colors: ${scrape.visualDNA?.dominantColors?.[0]}`);
             } else {
-                console.warn(`⚠️ Playwright HTML insuffisant (${scrape.html?.length || 0} chars) — fallback axios`);
+                console.warn(`⚠️ Playwright HTML insuffisant (${scrape.html?.length || 0} chars) — fallback Scrape.do activé`);
                 scrape = null;
             }
         } catch (pwErr) {
-            console.warn(`⚠️ Playwright failed: ${pwErr.message} — fallback axios`);
+            console.warn(`⚠️ Playwright failed: ${pwErr.message} — fallback Scrape.do activé`);
             scrape = null;
         }
 
         // ════════════════════════════════════════════════════
-        // LAYER 2 — Axios fallback si Playwright échoue
+        // LAYER 2 — Scrape.do (Anti-Bot Bypass + JS Render) Fallback
         // ════════════════════════════════════════════════════
         if (!html) {
             try {
+                const scrapeDoToken = process.env.SCRAPE_DO_TOKEN;
+                
                 const { data } = await RetryManager.executeWithRetry(
-                    () => axios.get(validUrl, {
-                        headers: {
-                            'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-                            'Accept-Language': acceptLanguage,
-                        },
-                        timeout: CONFIG.TIMEOUT_SHORT || 15000,
-                    }),
-                    { context: 'Axios-Scraping' }
+                    () => {
+                        if (scrapeDoToken) {
+                            console.log(`🛡️ [Layer 2] Utilisation API Scrape.do (Render=true) pour ${validUrl}...`);
+                            // Utilise l'API avec render JS activé pour ne rien rater
+                            const targetUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(validUrl)}&render=true`;
+                            return axios.get(targetUrl, { timeout: CONFIG.TIMEOUT_MEDIUM || 35000 });
+                        } else {
+                            console.warn(`⚠️ [Layer 2] SCRAPE_DO_TOKEN absent. Fallback Axios basique (risque de blocage Cloudflare)...`);
+                            return axios.get(validUrl, {
+                                headers: {
+                                    'User-Agent':      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+                                    'Accept-Language': acceptLanguage,
+                                },
+                                timeout: CONFIG.TIMEOUT_SHORT || 15000,
+                            });
+                        }
+                    },
+                    { context: 'Layer2-Fallback' }
                 );
-                html = data;
-                console.log(`✅ scrapeSiteData Axios fallback OK — ${Date.now() - startTime}ms`);
+                
+                // Gérer le fait que les API retournent parfois la réponse dans différentes clés selon la config
+                html = typeof data === 'string' ? data : (data.html || data.body || JSON.stringify(data));
+                console.log(`✅ scrapeSiteData Layer 2 (Scrape.do) OK — ${Date.now() - startTime}ms (${html.length} chars)`);
+                
             } catch (axiosErr) {
-                console.error(`❌ Axios fallback failed: ${axiosErr.message}`);
+                console.error(`❌ Layer 2 fallback failed: ${axiosErr.message}`);
                 return { success: false, url: validUrl, error: axiosErr.message };
             }
         }
 
         // ════════════════════════════════════════════════════
-        // LAYER 3 — Cheerio parsing sur HTML final
+        // LAYER 3 — Cheerio parsing sur HTML final (soit Playwright, soit Scrape.do)
         // ════════════════════════════════════════════════════
         const $ = cheerio.load(html);
 
@@ -2121,7 +2145,7 @@ async function scrapeSiteData(url, lang = 'fr') {
         const scrapedData = {
             success:    true,
             url:        validUrl,
-            fetchLayer: scrape?.fetchLayer || 'axios',
+            fetchLayer: scrape ? scrape.fetchLayer : (process.env.SCRAPE_DO_TOKEN ? 'scrape.do' : 'axios'),
             langUsed:   lang,
             html,
 
@@ -2151,7 +2175,7 @@ async function scrapeSiteData(url, lang = 'fr') {
                 types:  schemaTypes,
             },
 
-            // ✅ Données riches Playwright — propagées intégralement
+            // ✅ Si Playwright a échoué (Layer 2 utilisé), on évite le crash des propriétés visuelles
             visualDNA: scrape?.visualDNA || {
                 dominantColors: ['#3b82f6', '#1e293b', '#10b981'],
                 googleFonts:    [],
@@ -2244,7 +2268,7 @@ async function scrapeSiteData(url, lang = 'fr') {
 
         cache.set(cacheKey, scrapedData);
 
-        console.log(`✅ scrapeSiteData DONE — ${Date.now() - startTime}ms | Layer: ${scrapedData.fetchLayer} | Colors: ${scrapedData.visualDNA.dominantColors[0]} | CMS: ${scrapedData.techStack.cms} | Phones: ${scrapedData.contacts.phones.length}`);
+        console.log(`✅ scrapeSiteData DONE — ${Date.now() - startTime}ms | Layer: ${scrapedData.fetchLayer} | Colors: ${scrapedData.visualDNA.dominantColors[0]} | CMS: ${scrapedData.techStack.cms}`);
 
         return scrapedData;
 
@@ -8284,25 +8308,58 @@ console.log('✅ analyzeCompetitors v7 (LangObj + Anti-Hallucination) loaded');
 // SCRAPING ULTRA-DÉTAILLÉ
 // ═══════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════
+// SCRAPING ULTRA-DÉTAILLÉ (AVEC FALLBACK SCRAPE.DO)
+// ═══════════════════════════════════════════════════════════════
+
 async function deepScrapeFunnel(url) {
     const startTime = Date.now();
     console.log(`🔍 [DEEP SCRAPE] Analyse profonde : ${url}`);
 
     try {
-        // ── 1. Playwright via scrapeStealth — source unique de vérité
+        // ── 1. Playwright via scrapeStealth — tentative primaire
         const scrapeResult = await scrapeStealth(url);
 
-        // ✅ JAMAIS de throw — mode dégradé si scrape échoue
+        // ── 2. FALLBACK SCRAPE.DO (ANTI-BOT BYPASS) ────────────────
         if (!scrapeResult.success || !scrapeResult.html || scrapeResult.html.length < 500) {
-            console.warn(`⚠️ [DEEP SCRAPE] HTML insuffisant (${scrapeResult.html?.length || 0} chars) — mode dégradé`);
+            console.warn(`⚠️ [DEEP SCRAPE] Playwright a échoué ou HTML insuffisant. Activation de SCRAPE.DO...`);
+            
+            const scrapeDoToken = process.env.SCRAPE_DO_TOKEN;
+            if (scrapeDoToken) {
+                try {
+                    // &render=true est CRUCIAL pour les sites e-commerce comme Zalando (rendu JS)
+                    const scrapeDoUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(url)}&render=true`;
+                    
+                    const fallbackRes = await RetryManager.executeWithRetry(
+                        () => axios.get(scrapeDoUrl, { timeout: 45000 }),
+                        { context: 'ScrapeDo-DeepFallback' }
+                    );
+
+                    if (fallbackRes.data && typeof fallbackRes.data === 'string' && fallbackRes.data.length > 500) {
+                        console.log(`✅ [DEEP SCRAPE] Sauvetage Scrape.do réussi (${fallbackRes.data.length} chars) !`);
+                        scrapeResult.success = true;
+                        scrapeResult.html = fallbackRes.data;
+                        scrapeResult.fetchLayer = 'scrape.do';
+                        // Réinitialiser les données visuelles/techniques qui ont échoué
+                        scrapeResult.visualDNA = null; 
+                        scrapeResult.techStack = { cms: 'Unknown' };
+                        // S'assurer que le bodyText sera recalculé
+                        scrapeResult.bodyText = null; 
+                    }
+                } catch (e) {
+                    console.error(`❌ [DEEP SCRAPE] Scrape.do a aussi échoué:`, e.message);
+                }
+            } else {
+                console.warn(`⚠️ [DEEP SCRAPE] SCRAPE_DO_TOKEN non trouvé dans les variables d'environnement.`);
+            }
         }
 
         const html     = scrapeResult.html || '';
         const $        = cheerio.load(html);
-        const bodyText = scrapeResult.bodyText
+        const bodyText = scrapeResult.bodyText 
                       || $('body').text().replace(/\s+/g, ' ').trim();
 
-        // ── 2. SCHEMA.ORG — depuis Playwright d'abord, cheerio en double-check
+        // ── 3. SCHEMA.ORG — depuis Playwright d'abord, cheerio en double-check
         const schemaData = scrapeResult.schemaData || { types: [], count: 0 };
         const schemaPrices = [];
 
@@ -8326,7 +8383,7 @@ async function deepScrapeFunnel(url) {
             });
         }
 
-        // ── 3. PRIX — Playwright d'abord (le plus fiable), regex cheerio en fallback
+        // ── 4. PRIX — Playwright d'abord (le plus fiable), regex cheerio en fallback
         let priceIntel = scrapeResult.priceIntel || null;
 
         if (!priceIntel || !priceIntel.detected) {
@@ -8348,7 +8405,7 @@ async function deepScrapeFunnel(url) {
             };
         }
 
-        // ── 4. COPY INTEL — Playwright d'abord, cheerio en fallback
+        // ── 5. COPY INTEL — Playwright d'abord, cheerio en fallback
         // ✅ PATCH COPYINTEL — garantit que copyIntel est TOUJOURS défini
         let copyIntel = scrapeResult.copyIntel || null;
 
@@ -8415,11 +8472,11 @@ async function deepScrapeFunnel(url) {
             });
         }
 
-        // ── 5. VISUAL DNA — ✅ Playwright (getComputedStyle) en priorité
+        // ── 6. VISUAL DNA — ✅ Playwright (getComputedStyle) en priorité
         let visualDNA = scrapeResult.visualDNA || null;
 
         if (!visualDNA || visualDNA.dominantColors?.length === 0) {
-            console.warn('⚠️ visualDNA vide depuis Playwright — fallback cheerio styles inline');
+            console.warn('⚠️ visualDNA vide depuis Playwright/Scrape.do — fallback cheerio styles inline');
 
             const styleContent = $('style').text() + ' '
                 + $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
@@ -8448,7 +8505,7 @@ async function deepScrapeFunnel(url) {
             };
         }
 
-        // ── 6. TRUST SIGNALS — Playwright d'abord
+        // ── 7. TRUST SIGNALS — Playwright d'abord
         const trustSignals = scrapeResult.trustSignals || {
             hasSSL:                url.startsWith('https'),
             hasWhatsApp:           /whatsapp|wa\.me/i.test(html),
