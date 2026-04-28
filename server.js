@@ -4951,15 +4951,39 @@ const analysisLimiter = rateLimit({
 
 
 
+// ============================================================================
+//  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
+// ============================================================================
 app.post('/api/analyze-funnel', analysisLimiter, async (req, res) => {
     const startTime = Date.now();
     const requestId = `SPY12-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
- 
+    
+    // Sauvegarde des données brutes pour le fallback en cas de crash de l'IA
+    let scrapedRawData = null; 
+
     try {
-        const { url, userLang = 'fr', salesAngle = 'aggressive' } = req.body;
- 
-        // ── 1. SETUP LANGUE ───────────────────────────────────
-        let validUrl     = InputValidator.sanitizeURL(url);
+        const { url, userLang = 'fr', salesAngle = 'aggressive', mode = 'deep' } = req.body;
+
+        // ── 0. VALIDATION URL (Intégrée depuis la correction) ─────────
+        if (!url || typeof url !== 'string') {
+            return res.status(400).json({
+                success: false, error: 'URL requise', message: 'Le paramètre url est obligatoire',
+                requestId, performance: { totalTime: Date.now() - startTime }
+            });
+        }
+
+        let targetUrl = url.trim();
+        if (!/^https?:\/\//i.test(targetUrl)) targetUrl = `https://${targetUrl}`;
+        
+        try { new URL(targetUrl); } catch {
+            return res.status(400).json({
+                success: false, error: 'URL invalide', message: `URL non valide : ${url}`,
+                requestId, performance: { totalTime: Date.now() - startTime }
+            });
+        }
+
+        // ── 1. SETUP LANGUE ───────────────────────────────────────────
+        let validUrl     = InputValidator.sanitizeURL(targetUrl);
         const isAr       = userLang === 'ar';
         const isEn       = userLang === 'en';
         const targetLang = isAr ? 'Arabe' : isEn ? 'English' : 'Français';
@@ -4969,233 +4993,221 @@ app.post('/api/analyze-funnel', analysisLimiter, async (req, res) => {
             : isEn
             ? '⚠️ Answer ONLY in English. No French. No Arabic.'
             : '⚠️ Réponds UNIQUEMENT en Français. Aucun mot en anglais ou arabe.';
- 
-        // ── 2. CACHE ──────────────────────────────────────────
-        const cacheKey = `funnelspy_v12_${validUrl}_${userLang}`;
+
+        // ── 2. CACHE ──────────────────────────────────────────────────
+        const cacheKey = `funnelspy_v12_${validUrl}_${userLang}_${mode}`;
         const cached   = cache.get(cacheKey);
-        if (cached) return res.json({ ...cached, fromCache: true });
- 
-        console.log(`[${requestId}] 🚀 FUNNEL SPY V12 GOD TIER — ${validUrl}`);
- 
-      // ══════════════════════════════════════════════════════════════
-// 3. SCRAPING RÉEL PROFOND
-// ══════════════════════════════════════════════════════════════
-console.log(`${requestId} Scraping deep...`);
-
-let scrape = await deepScrapeFunnel(validUrl);
-
-if (!scrape || typeof scrape !== 'object') {
-    console.warn(`${requestId} Scrape null — fallback vide`);
-    scrape = {
-        success:          false,
-        fetchLayer:       'failed',
-        html:             '',          // ✅ BUG-01 FIX
-        visualDNA:        { dominantColors: [] },
-        priceIntel:       { bestPrice: 0, currency: 'MAD', all: [], detected: false, struckPrices: [], discountRate: null },
-        copyIntel:        { headlines: { h1: [], h2: [], h3: [] }, realCTAs: [], pageSections: [], heroText: '', testimonials: [], guarantees: [], faq: [], bulletBenefits: [], allButtons: [] },
-        brand:            { fullTextSample: '', wordCount: 0, hasSSL: false },
-        trustSignals:     { hasSSL: false, hasWhatsApp: false, hasPhoneNumber: false },
-        techStack:        { cms: 'Unknown', hasWhatsApp: false },
-        contacts:         { phones: [], emails: [] },
-        schemaData:       { types: [], count: 0 },
-        performanceIntel: { hasCountdown: false, hasExitIntent: false, hasLiveChat: false },
-        redirectIntel:    { totalRedirects: 0, isFunnelRedirect: false },
-    };
-}
-
-// ══════════════════════════════════════════════════════════════
-// 4. EXTRACTION RÉELLE COMPLÈTE
-// ══════════════════════════════════════════════════════════════
-const vis        = scrape.visualDNA  || {};
-const pri        = scrape.priceIntel || { bestPrice: 0, currency: 'MAD' };
-const copy       = scrape.copyIntel  || {};
-copyIntel.ctaAnalysis = await analyzeCTAs(copyIntel.realCTAs || [])
-const brand      = scrape.brand      || {};
-
-// ✅ BUG-01 FIX — HTML complet disponible
-const rawHtml      = scrape.html || brand.fullTextSample || '';
-const scrapedBlocked = !scrape?.success;
-
-const techStack     = (scrape.techStack && scrape.techStack.cms !== 'Unknown')
-    ? scrape.techStack
-    : (typeof detectTechStack  === 'function' ? detectTechStack(rawHtml)      : { cms: 'Unknown' });
-const psychTriggers = typeof extractPsychTriggers === 'function' ? extractPsychTriggers(rawHtml, rawHtml) : {};
-const perfSignals   = {
-    hasCDN:        scrape.performanceIntel?.hasCDN        ?? (typeof extractPerfSignals === 'function' ? extractPerfSignals(rawHtml).hasCDN        : false),
-    hasExitIntent: scrape.performanceIntel?.hasExitIntent ?? false,
-    hasCountdown:  scrape.performanceIntel?.hasCountdown  ?? false,
-    hasLiveChat:   scrape.performanceIntel?.hasLiveChat   ?? false,
-    hasSSL:        scrape.trustSignals?.hasSSL            ?? validUrl.startsWith('https'),
-    hasWhatsApp:   scrape.techStack?.hasWhatsApp          ?? false,
-    hasMinified:   false,
-    hasPreload:    false,
-};
-
-const h1Main  = copy.headlines?.h1?.[0]      || ND;
-const h2List  = copy.headlines?.h2?.slice(0, 8) || [];
-const h3List  = copy.headlines?.h3?.slice(0, 8) || [];
-const ctaList = copy.realCTAs?.slice(0, 10)     || [];
-
-// ✅ BUG-06 FIX — allSections jamais undefined
-const allSections    = copy.pageSections || [];
-const heroSection    = allSections.find(s => s.type === 'HERO')         || null;
-const featSection    = allSections.find(s => s.type === 'FEATURES')     || null;
-const trustSection   = allSections.find(s => s.type === 'TRUST')        || null;
-const socialProofs   = allSections.filter(s => s.type === 'SOCIAL_PROOF');
-const pricingSection = allSections.find(s => s.type === 'PRICING')      || null;
-const faqSection     = allSections.find(s => s.type === 'FAQ')          || null;
-const ctaSection     = allSections.find(s => s.type === 'CTA')          || null;
-const footerSection  = allSections.find(s => s.type === 'FOOTER')       || null;
-
-// ── FIX 1 — COULEURS
-const BLACKLIST_COLORS = new Set([
-    'ffffff','000000','eeeeee','cccccc','333333',
-    '111111','222222','f0f0f0','fafafa','dddddd',
-    'aaaaaa','555555','999999','e5e5e5','d3d3d3',
-]);
-
-const normalizeColor = (c) => {
-    if (!c) return null;
-    let hex = null;
-    if (typeof c === 'object')      hex = c.color || c.hex || c.value || null;
-    else if (typeof c === 'string') {
-        const rgbMatch = c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/i);
-        if (rgbMatch) {
-            hex = [rgbMatch[1], rgbMatch[2], rgbMatch[3]]
-                .map(n => parseInt(n).toString(16).padStart(2, '0'))
-                .join('');
-        } else {
-            hex = c.trim().replace('#', '');
+        if (cached && !req.body.skipCache) {
+            console.log(`💾 [${requestId}] Cache HIT — ${validUrl}`);
+            return res.json({ ...cached, fromCache: true });
         }
-    }
-    if (!hex) return null;
-    hex = hex.toLowerCase();
-    if (!/^[0-9a-f]{3}$/.test(hex) && !/^[0-9a-f]{6}$/.test(hex)) return null;
-    if (BLACKLIST_COLORS.has(hex)) return null;
-    return '#' + hex;
-};
 
-const safeColors = (rawArr) => {
-    if (!Array.isArray(rawArr) || rawArr.length === 0) return [];
-    return [...new Set(rawArr.map(normalizeColor).filter(Boolean))].slice(0, 6);
-};
+        console.log(`[${requestId}] 🚀 FUNNEL SPY V12 GOD TIER — ${validUrl}`);
 
-// ✅ BUG-02 FIX — dominantColors (pas computedColors)
-const cleanColors  = safeColors(vis.dominantColors || vis.computedColors || []);
-const primaryColor = cleanColors[0] || 'NONDETECTE';
-const secondColor  = cleanColors[1] || 'NONDETECTE';
-const accentColor  = cleanColors[2] || 'NONDETECTE';
+        // ══════════════════════════════════════════════════════════════
+        // 3. SCRAPING RÉEL PROFOND
+        // ══════════════════════════════════════════════════════════════
+        console.log(`${requestId} Scraping deep...`);
 
-// ── FIX 2 — PHONES / EMAILS
-const safePhones = (arr) => {
-    if (!Array.isArray(arr)) return [];
-    return arr
-        .map(p => typeof p === 'string' ? p.trim() : String(p || '').trim())
-        .filter(p => p.length >= 7 && /[-.\d +()]{7,20}/.test(p))
-        .slice(0, 3);
-};
+        let scrape = await deepScrapeFunnel(validUrl);
+        scrapedRawData = scrape; // Conservation pour le fallback en cas d'erreur IA
 
-const safeEmails = (arr) => {
-    if (!Array.isArray(arr)) return [];
-    return arr
-        .filter(e => typeof e === 'string')
-        .filter(e => /\S+@\S+\.\S{2,}/.test(e.trim()))
-        .filter(e => !e.includes('example') && !e.includes('sentry') && !e.includes('wixpress'))
-        .map(e => e.trim())
-        .slice(0, 3);
-};
+        if (!scrape || typeof scrape !== 'object') {
+            console.warn(`${requestId} Scrape null — fallback vide`);
+            scrape = {
+                success:          false,
+                fetchLayer:       'failed',
+                html:             '',
+                visualDNA:        { dominantColors: [] },
+                priceIntel:       { bestPrice: 0, currency: 'MAD', all: [], detected: false, struckPrices: [], discountRate: null },
+                copyIntel:        { headlines: { h1: [], h2: [], h3: [] }, realCTAs: [], pageSections: [], heroText: '', testimonials: [], guarantees: [], faq: [], bulletBenefits: [], allButtons: [] },
+                brand:            { fullTextSample: '', wordCount: 0, hasSSL: false },
+                trustSignals:     { hasSSL: false, hasWhatsApp: false, hasPhoneNumber: false },
+                techStack:        { cms: 'Unknown', hasWhatsApp: false },
+                contacts:         { phones: [], emails: [] },
+                schemaData:       { types: [], count: 0 },
+                performanceIntel: { hasCountdown: false, hasExitIntent: false, hasLiveChat: false },
+                redirectIntel:    { totalRedirects: 0, isFunnelRedirect: false },
+            };
+        }
 
-// ✅ BUG-03 FIX — phones depuis contacts (nouvelle structure Playwright)
-const phones = (() => {
-    const fromScrape = safePhones(scrape.contacts?.phones || scrape.rawPlaywright?.phones);
-    if (fromScrape.length > 0) return fromScrape;
-    const fallbackMatches = [
-        ...(rawHtml.match(/href="tel:[^"]+"/gi) || []).map(m => m.replace(/href="tel:/i, '').replace('"', '').trim()),
-        ...(rawHtml.match(/\+212[0-9 .\-]{8,9}/g) || []).map(p => p.trim()),
-    ];
-    return safePhones([...new Set(fallbackMatches)]);
-})();
+        // ══════════════════════════════════════════════════════════════
+        // 4. EXTRACTION RÉELLE COMPLÈTE
+        // ══════════════════════════════════════════════════════════════
+        const vis        = scrape.visualDNA  || {};
+        const pri        = scrape.priceIntel || { bestPrice: 0, currency: 'MAD' };
+        const copy       = scrape.copyIntel  || {};
+        const brand      = scrape.brand      || {};
 
-// ✅ BUG-04 FIX — emails depuis contacts (nouvelle structure Playwright)
-const emails = (() => {
-    const fromScrape = safeEmails(scrape.contacts?.emails || scrape.rawPlaywright?.emails);
-    if (fromScrape.length > 0) return fromScrape;
-    const fallbackMatches = (rawHtml.match(/href="mailto:[^"]+"/gi) || [])
-        .map(m => m.replace(/href="mailto:/i, '').replace('"', '').trim());
-    return safeEmails([...new Set(fallbackMatches)]);
-})();
+        // ✅ CORRECTION CRITIQUE DU BUG ICI : L'ancien code appelait "copyIntel" qui n'existait pas
+        if (typeof analyzeCTAs === 'function') {
+             copy.ctaAnalysis = await analyzeCTAs(copy.realCTAs || []);
+        }
 
-const wordCount   = brand.wordCount || 0;
+        const rawHtml        = scrape.html || brand.fullTextSample || '';
+        const scrapedBlocked = !scrape?.success;
 
-// ✅ WARN-02 FIX — hasSSL / hasWhatsApp depuis bonne source
-const hasSSL      = scrape.trustSignals?.hasSSL      || brand.hasSSL      || validUrl.startsWith('https');
-const hasWhatsApp = scrape.techStack?.hasWhatsApp    || brand.hasWhatsApp || /whatsapp|wa\.me/i.test(rawHtml);
+        const techStack     = (scrape.techStack && scrape.techStack.cms !== 'Unknown')
+            ? scrape.techStack
+            : (typeof detectTechStack  === 'function' ? detectTechStack(rawHtml)      : { cms: 'Unknown' });
+        const psychTriggers = typeof extractPsychTriggers === 'function' ? extractPsychTriggers(rawHtml, rawHtml) : {};
+        const perfSignals   = {
+            hasCDN:        scrape.performanceIntel?.hasCDN        ?? (typeof extractPerfSignals === 'function' ? extractPerfSignals(rawHtml).hasCDN        : false),
+            hasExitIntent: scrape.performanceIntel?.hasExitIntent ?? false,
+            hasCountdown:  scrape.performanceIntel?.hasCountdown  ?? false,
+            hasLiveChat:   scrape.performanceIntel?.hasLiveChat   ?? false,
+            hasSSL:        scrape.trustSignals?.hasSSL            ?? validUrl.startsWith('https'),
+            hasWhatsApp:   scrape.techStack?.hasWhatsApp          ?? false,
+            hasMinified:   false,
+            hasPreload:    false,
+        };
 
-// ✅ BUG-05 FIX — schemaTypes depuis scrape.schemaData (pas brand)
-const schemaTypes = scrape.schemaData?.types || brand.schemaTypes || [];
+        const h1Main  = copy.headlines?.h1?.[0]      || ND;
+        const h2List  = copy.headlines?.h2?.slice(0, 8) || [];
+        const h3List  = copy.headlines?.h3?.slice(0, 8) || [];
+        const ctaList = copy.realCTAs?.slice(0, 10)     || [];
 
-// ── FIX 3 — techCMS
-const techCMS = (() => {
-    if (!techStack || typeof techStack !== 'object') return 'NONDETECTE';
-    const cms = techStack.cms;
-    if (typeof cms === 'string' && cms && cms !== 'Unknown') return cms;
-    if (Array.isArray(cms)) {
-        const filtered = cms.filter(Boolean);
-        return filtered.length > 0 ? filtered.join(', ') : 'NONDETECTE';
-    }
-    return 'NONDETECTE';
-})();
+        const allSections    = copy.pageSections || [];
+        const heroSection    = allSections.find(s => s.type === 'HERO')         || null;
+        const featSection    = allSections.find(s => s.type === 'FEATURES')     || null;
+        const trustSection   = allSections.find(s => s.type === 'TRUST')        || null;
+        const socialProofs   = allSections.filter(s => s.type === 'SOCIAL_PROOF');
+        const pricingSection = allSections.find(s => s.type === 'PRICING')      || null;
+        const faqSection     = allSections.find(s => s.type === 'FAQ')          || null;
+        const ctaSection     = allSections.find(s => s.type === 'CTA')          || null;
+        const footerSection  = allSections.find(s => s.type === 'FOOTER')       || null;
 
-const detectedPrice = (pri?.detected && pri.bestPrice > 0) ? pri.bestPrice : null
-const currency = (pri?.currency && pri.currency !== 'UNKNOWN') ? pri.currency : null
+        // ── FIX 1 — COULEURS
+        const BLACKLIST_COLORS = new Set([
+            'ffffff','000000','eeeeee','cccccc','333333',
+            '111111','222222','f0f0f0','fafafa','dddddd',
+            'aaaaaa','555555','999999','e5e5e5','d3d3d3',
+        ]);
 
-const quickLocalScore = {
-    hasH1:         !!copy.headlines?.h1?.[0],
-    hasH2:         h2List.length > 0,
-    hasCTA:        ctaList.length > 0,
-    hasSSL,
-    hasSchema:     schemaTypes.length > 0,
-    hasSocialProof:socialProofs.length > 0,
-    hasPricing:    !!pricingSection,
-    hasFAQ:        !!faqSection,
-    hasWhatsApp,
-    hasPhone:      phones.length > 0,
-    wordCountOK:   wordCount > 300,
-};
+        const normalizeColor = (c) => {
+            if (!c) return null;
+            let hex = null;
+            if (typeof c === 'object')      hex = c.color || c.hex || c.value || null;
+            else if (typeof c === 'string') {
+                const rgbMatch = c.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/i);
+                if (rgbMatch) {
+                    hex = [rgbMatch[1], rgbMatch[2], rgbMatch[3]]
+                        .map(n => parseInt(n).toString(16).padStart(2, '0'))
+                        .join('');
+                } else {
+                    hex = c.trim().replace('#', '');
+                }
+            }
+            if (!hex) return null;
+            hex = hex.toLowerCase();
+            if (!/^[0-9a-f]{3}$/.test(hex) && !/^[0-9a-f]{6}$/.test(hex)) return null;
+            if (BLACKLIST_COLORS.has(hex)) return null;
+            return '#' + hex;
+        };
 
-const booleanKeys = [
-    'hasH1','hasH2','hasCTA','hasSSL','hasSchema',
-    'hasSocialProof','hasPricing','hasFAQ',
-    'hasWhatsApp','hasPhone','wordCountOK',
-];
+        const safeColors = (rawArr) => {
+            if (!Array.isArray(rawArr) || rawArr.length === 0) return [];
+            return [...new Set(rawArr.map(normalizeColor).filter(Boolean))].slice(0, 6);
+        };
 
-const localScoreRaw = booleanKeys.filter(k => quickLocalScore[k] === true).length;
-const localScoreMax = booleanKeys.length;
-const localScore    = Math.round((localScoreRaw / localScoreMax) * 100);
+        const cleanColors  = safeColors(vis.dominantColors || vis.computedColors || []);
+        const primaryColor = cleanColors[0] || 'NONDETECTE';
+        const secondColor  = cleanColors[1] || 'NONDETECTE';
+        const accentColor  = cleanColors[2] || 'NONDETECTE';
 
-// ✅ WARN-05 FIX — supprimé: const localScore = localScore (re-déclaration inutile)
+        // ── FIX 2 — PHONES / EMAILS
+        const safePhones = (arr) => {
+            if (!Array.isArray(arr)) return [];
+            return arr
+                .map(p => typeof p === 'string' ? p.trim() : String(p || '').trim())
+                .filter(p => p.length >= 7 && /[-.\d +()]{7,20}/.test(p))
+                .slice(0, 3);
+        };
 
-console.log(`${requestId} Score local    : ${localScore}/100 (${localScoreRaw}/${localScoreMax})`);
-console.log(`${requestId} Colors         : ${cleanColors.join(', ') || 'aucune détectée'}`);
-console.log(`${requestId} CMS            : ${techCMS}`);
-console.log(`${requestId} Sections       : ${allSections.map(s => s.type).join(', ')}`);
-console.log(`${requestId} Prix           : ${detectedPrice} ${currency}`);
-console.log(`${requestId} Phones         : ${phones.join(', ') || 'aucun'}`);
-console.log(`${requestId} Emails         : ${emails.join(', ') || 'aucun'}`);
-console.log(`${requestId} Schema         : ${schemaTypes.join(', ') || 'aucun'}`);
-console.log(`${requestId} SSL            : ${hasSSL} | WhatsApp: ${hasWhatsApp}`);
+        const safeEmails = (arr) => {
+            if (!Array.isArray(arr)) return [];
+            return arr
+                .filter(e => typeof e === 'string')
+                .filter(e => /\S+@\S+\.\S{2,}/.test(e.trim()))
+                .filter(e => !e.includes('example') && !e.includes('sentry') && !e.includes('wixpress'))
+                .map(e => e.trim())
+                .slice(0, 3);
+        };
 
-// ── FIX 4 — safeSerialize
-const safeSerialize = (obj, maxLen = 400) => {
-    if (!obj || typeof obj !== 'object') return ND;
-    const flat = Object.entries(obj).reduce((acc, [k, v]) => {
-        if (Array.isArray(v)) acc[k] = v.slice(0, 3);
-        else if (typeof v !== 'object') acc[k] = v;
-        return acc;
-    }, {});
-    const str = JSON.stringify(flat);
-    return str.length > maxLen ? str.substring(0, maxLen) + '...TRONQUÉ' : str;
-};
+        const phones = (() => {
+            const fromScrape = safePhones(scrape.contacts?.phones || scrape.rawPlaywright?.phones);
+            if (fromScrape.length > 0) return fromScrape;
+            const fallbackMatches = [
+                ...(rawHtml.match(/href="tel:[^"]+"/gi) || []).map(m => m.replace(/href="tel:/i, '').replace('"', '').trim()),
+                ...(rawHtml.match(/\+212[0-9 .\-]{8,9}/g) || []).map(p => p.trim()),
+            ];
+            return safePhones([...new Set(fallbackMatches)]);
+        })();
+
+        const emails = (() => {
+            const fromScrape = safeEmails(scrape.contacts?.emails || scrape.rawPlaywright?.emails);
+            if (fromScrape.length > 0) return fromScrape;
+            const fallbackMatches = (rawHtml.match(/href="mailto:[^"]+"/gi) || [])
+                .map(m => m.replace(/href="mailto:/i, '').replace('"', '').trim());
+            return safeEmails([...new Set(fallbackMatches)]);
+        })();
+
+        const wordCount   = brand.wordCount || 0;
+        const hasSSL      = scrape.trustSignals?.hasSSL      || brand.hasSSL      || validUrl.startsWith('https');
+        const hasWhatsApp = scrape.techStack?.hasWhatsApp    || brand.hasWhatsApp || /whatsapp|wa\.me/i.test(rawHtml);
+        const schemaTypes = scrape.schemaData?.types || brand.schemaTypes || [];
+
+        // ── FIX 3 — techCMS
+        const techCMS = (() => {
+            if (!techStack || typeof techStack !== 'object') return 'NONDETECTE';
+            const cms = techStack.cms;
+            if (typeof cms === 'string' && cms && cms !== 'Unknown') return cms;
+            if (Array.isArray(cms)) {
+                const filtered = cms.filter(Boolean);
+                return filtered.length > 0 ? filtered.join(', ') : 'NONDETECTE';
+            }
+            return 'NONDETECTE';
+        })();
+
+        const detectedPrice = (pri?.detected && pri.bestPrice > 0) ? pri.bestPrice : null;
+        const currency = (pri?.currency && pri.currency !== 'UNKNOWN') ? pri.currency : null;
+
+        const quickLocalScore = {
+            hasH1:         !!copy.headlines?.h1?.[0],
+            hasH2:         h2List.length > 0,
+            hasCTA:        ctaList.length > 0,
+            hasSSL,
+            hasSchema:     schemaTypes.length > 0,
+            hasSocialProof:socialProofs.length > 0,
+            hasPricing:    !!pricingSection,
+            hasFAQ:        !!faqSection,
+            hasWhatsApp,
+            hasPhone:      phones.length > 0,
+            wordCountOK:   wordCount > 300,
+        };
+
+        const booleanKeys = [
+            'hasH1','hasH2','hasCTA','hasSSL','hasSchema',
+            'hasSocialProof','hasPricing','hasFAQ',
+            'hasWhatsApp','hasPhone','wordCountOK',
+        ];
+
+        const localScoreRaw = booleanKeys.filter(k => quickLocalScore[k] === true).length;
+        const localScoreMax = booleanKeys.length;
+        const localScore    = Math.round((localScoreRaw / localScoreMax) * 100);
+
+        console.log(`${requestId} Score local    : ${localScore}/100 (${localScoreRaw}/${localScoreMax})`);
+
+        const safeSerialize = (obj, maxLen = 400) => {
+            if (!obj || typeof obj !== 'object') return ND;
+            const flat = Object.entries(obj).reduce((acc, [k, v]) => {
+                if (Array.isArray(v)) acc[k] = v.slice(0, 3);
+                else if (typeof v !== 'object') acc[k] = v;
+                return acc;
+            }, {});
+            const str = JSON.stringify(flat);
+            return str.length > maxLen ? str.substring(0, maxLen) + '...TRONQUÉ' : str;
+        };
 
         // ── 5. SHARED CONTEXT ─────────────────────────────────
         const sharedContext = `
@@ -5262,7 +5274,7 @@ Score local: ${localScore}/100
 RÈGLE : Utilise UNIQUEMENT ces données. Si absent → "${ND}".`.trim();
 
         // ══════════════════════════════════════════════════════
-        // PROMPTS A1 + A2 (construits avant le lancement parallèle)
+        // PROMPTS A1 + A2
         // ══════════════════════════════════════════════════════
         const prompt_A1 = `
 ${langInstr}
@@ -5372,8 +5384,6 @@ ${sharedContext}
   }
 }`.trim();
 
-        // NOTE : Le prompt A2 dépend des scores A1, mais on peut l'envoyer
-        // avec des valeurs neutres (0) — le modèle re-estimera de toute façon.
         const prompt_A2_parallel = `
 ${langInstr}
 
@@ -5448,7 +5458,6 @@ ${sharedContext}
 
         // ══════════════════════════════════════════════════════
         // ⚡ VAGUE 1 — AGENTS 1 + 2 EN PARALLÈLE
-        // Gain estimé : ~15-25s (au lieu de séquence ~30-50s)
         // ══════════════════════════════════════════════════════
         console.log(`[${requestId}] ⚡ Vague 1/3 — Agents 1+2 en parallèle...`);
         const t1 = Date.now();
@@ -5477,10 +5486,8 @@ ${sharedContext}
 
         const r1Safe = r1 || {};
         const r2Safe = r2 || {};
-
         const cotR1 = r1Safe.chainOfThought || {};
 
-        // ✅ FIX WARN-04 — aidaData fallback structuré (évite NaN dans computedGlobal)
         const aidaData = r1Safe.aidaAnalysis || {
             attention: { score: 0 },
             interest:  { score: 0 },
@@ -5488,11 +5495,8 @@ ${sharedContext}
             action:    { score: 0 },
         };
 
-        console.log(`[${requestId}] ✅ Agent1 — CoT: "${cotR1.reasoning?.substring(0,80)}..."`);
-        console.log(`[${requestId}] ✅ Agent2 — Funnel: "${r2Safe.funnelMapping?.funnelType}"`);
-
         // ══════════════════════════════════════════════════════
-        // PROMPTS A3 + A4 (construits avec résultats A1+A2)
+        // PROMPTS A3 + A4
         // ══════════════════════════════════════════════════════
         const prompt_A3 = `
 ${langInstr}
@@ -5629,12 +5633,11 @@ Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
 
         // ══════════════════════════════════════════════════════
         // ⚡ VAGUE 2 — AGENTS 3 + 4 EN PARALLÈLE
-        // Gain estimé : ~15-25s (au lieu de séquence ~30-50s)
         // ══════════════════════════════════════════════════════
         console.log(`[${requestId}] ⚡ Vague 2/3 — Agents 3+4 en parallèle...`);
         const t2 = Date.now();
 
-                const [aiResult3, aiResult4] = await Promise.all([
+        const [aiResult3, aiResult4] = await Promise.all([
             callOpenRouterAPI(prompt_A3, {
                 temperature:    0.20,
                 maxTokens:      2500,
@@ -5655,17 +5658,13 @@ Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
 
         const r3     = typeof aiResult3.response === 'string' ? extractJSON(aiResult3.response) : aiResult3.response;
         const r3Safe = r3 || {};
-
         const r4     = typeof aiResult4.response === 'string' ? extractJSON(aiResult4.response) : aiResult4.response;
         const r4Safe = r4 || {};
 
-        console.log(`[${requestId}] ✅ Agent3 — KillShot: "${r3Safe.strategicBlueprint?.killShot?.substring(0,60)}"`);
-
         // ══════════════════════════════════════════════════════
-        // ── FIX GLOBALSCORING — Anti-score-zéro + fallback garanti
+        // ── FIX GLOBALSCORING — Anti-score-zéro + fallback
         // ══════════════════════════════════════════════════════
         (() => {
-            // ✅ WARN-01 FIX — parenthèses sur toute la somme
             const aidaAvg = Math.round((
                 (aidaData.attention?.score || 0) +
                 (aidaData.interest?.score  || 0) +
@@ -5685,7 +5684,6 @@ Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
                 localScore * 0.10
             );
 
-            // ✅ BUG RÉSIDUEL 1 FIX — localScore (pas _localScore)
             const finalOverall = (r4Safe.globalScoring?.overall > 0)
                 ? r4Safe.globalScoring.overall
                 : (computedGlobal > 0 ? computedGlobal : localScore || 30);
@@ -5715,10 +5713,7 @@ Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
             r4Safe.globalScoring.verdict        = finalVerdict;
             r4Safe.globalScoring.breakdown      = r4Safe.globalScoring.breakdown     || finalBreakdown;
             r4Safe.globalScoring.potentialScore = r4Safe.globalScoring.potentialScore || Math.min(100, finalOverall + 20);
-            r4Safe.globalScoring.source         = (computedGlobal > 0 && r4Safe.globalScoring.overall !== computedGlobal)
-                ? 'ai' : 'computed';
-
-            console.log(`[${requestId}] 🎯 Agent4 — Score: ${r4Safe.globalScoring.overall}/100 | Grade: ${r4Safe.globalScoring.grade} | Source: ${r4Safe.globalScoring.source}`);
+            r4Safe.globalScoring.source         = (computedGlobal > 0 && r4Safe.globalScoring.overall !== computedGlobal) ? 'ai' : 'computed';
         })();
 
         // ══════════════════════════════════════════════════════
@@ -5800,14 +5795,14 @@ Langue : ${targetLang}.`.trim();
             },
 
             projectIdentity:  r1Safe.projectIdentity  || null,
-            webCharte:        r1Safe.webCharte         || null,
-            pageArchitecture: r1Safe.pageArchitecture  || null,
-            aidaAnalysis:     r1Safe.aidaAnalysis      || null,
+            webCharte:        r1Safe.webCharte        || null,
+            pageArchitecture: r1Safe.pageArchitecture || null,
+            aidaAnalysis:     r1Safe.aidaAnalysis     || null,
 
             funnelMapping:     r2Safe.funnelMapping     || null,
             pricingPsychology: r2Safe.pricingPsychology || null,
             copywritingDeep:   r2Safe.copywritingDeep   || null,
-            aarrMetrics:       r2Safe.aarrMetrics        || null,
+            aarrMetrics:       r2Safe.aarrMetrics       || null,
 
             strategicBlueprint:  r3Safe.strategicBlueprint  || null,
             quickWins:           r3Safe.quickWins           || [],
@@ -5815,23 +5810,8 @@ Langue : ${targetLang}.`.trim();
             technicalAudit:      r3Safe.technicalAudit      || null,
 
             neuromarketing: r4Safe.neuromarketing || null,
-
-            // ✅ BUG RÉSIDUEL 1 FIX — localScore (jamais _localScore)
-            globalScoring: r4Safe.globalScoring || {
-                overall:        localScore,
-                grade:          localScore >= 80 ? 'A' : localScore >= 60 ? 'B' : localScore >= 40 ? 'C' : 'D',
-                verdict:        isAr ? 'تحليل محلي' : isEn ? 'Local analysis' : 'Analyse locale',
-                breakdown: {
-                    aida:          { score: Math.round(((aidaData.attention?.score||0)+(aidaData.interest?.score||0)+(aidaData.desire?.score||0)+(aidaData.action?.score||0))/4), weight: '30%' },
-                    conversion:    { score: r2Safe.funnelMapping?.overallConversionScore || 0, weight: '25%' },
-                    copywriting:   { score: r2Safe.copywritingDeep?.headlineScore        || 0, weight: '20%' },
-                    neuromarketing:{ score: 0,          weight: '15%' },
-                    technical:     { score: localScore, weight: '10%' },
-                },
-                potentialScore: Math.min(100, localScore + 20),
-                source:         'computed',
-            },
-
+            globalScoring:  r4Safe.globalScoring,
+            
             aiRewritePrompt:      magicPrompt,
             magicPromptAvailable: true,
 
@@ -5840,7 +5820,7 @@ Langue : ${targetLang}.`.trim();
                 h2s:   h2List,
                 h3s:   h3List,
                 ctas:  ctaList,
-                colors: cleanColors,        // ✅ cleanColors (pas colors undefined)
+                colors: cleanColors,
                 primaryColor,
                 secondColor,
                 accentColor,
@@ -5860,61 +5840,91 @@ Langue : ${targetLang}.`.trim();
             },
 
             financialAudit: {
-    detectedPrice: detectedPrice || null,
-    currency: currency || null,
-    potentialRevenueIncrease: detectedPrice && detectedPrice > 0
-        ? (r3Safe.financialProjection?.potentialGain || null)
-        : null,
-    revenueOpportunity: isAr ? 'زيادة محتملة في الإيرادات'
-                      : isEn ? 'Potential Revenue Increase'
-                      :        'Augmentation potentielle des revenus',
-},
+                detectedPrice: detectedPrice || null,
+                currency: currency || null,
+                potentialRevenueIncrease: detectedPrice && detectedPrice > 0
+                    ? (r3Safe.financialProjection?.potentialGain || null)
+                    : null,
+                revenueOpportunity: isAr ? 'زيادة محتملة في الإيرادات'
+                                  : isEn ? 'Potential Revenue Increase'
+                                  :        'Augmentation potentielle des revenus',
+            },
 
             meta: {
                 version:  'V12-GOD-TIER',
                 agents:   5,
                 strategy: 'Chain of Thought Parallel (1+2 // 3+4 // 5)',
-                models: {
-                    a1: aiResult1?.model || 'N/A',
-                    a2: aiResult2?.model || 'N/A',
-                    a3: aiResult3?.model || 'N/A',
-                    a4: aiResult4?.model || 'N/A',
-                    a5: aiResult5?.model || 'N/A',
-                },
-                tokens: {
-                    a1:    aiResult1?.usage?.totalTokens || 0,
-                    a2:    aiResult2?.usage?.totalTokens || 0,
-                    a3:    aiResult3?.usage?.totalTokens || 0,
-                                        a4:    aiResult4?.usage?.totalTokens || 0,
-                    a5:    aiResult5?.usage?.totalTokens || 0,
-                    total: (aiResult1?.usage?.totalTokens || 0)
-                         + (aiResult2?.usage?.totalTokens || 0)
-                         + (aiResult3?.usage?.totalTokens || 0)
-                         + (aiResult4?.usage?.totalTokens || 0)
-                         + (aiResult5?.usage?.totalTokens || 0),
-                },
                 duration:  (Date.now() - startTime) + 'ms',
                 timestamp: new Date().toISOString(),
             },
         };
 
         cache.set(cacheKey, finalResponse);
-
-        console.log(`✅ [${requestId}] V12 GOD TIER DONE — ${finalResponse.meta.duration} | Score: ${finalResponse.globalScoring?.overall}/100 | Grade: ${finalResponse.globalScoring?.grade} | Tokens: ${finalResponse.meta.tokens.total}`);
-
+        console.log(`✅ [${requestId}] V12 GOD TIER DONE — ${finalResponse.meta.duration} | Score: ${finalResponse.globalScoring?.overall}/100`);
         res.json(finalResponse);
 
     } catch (error) {
-        console.error(`[${requestId}] 🔥 CRASH V12:`, error.message);
-        res.status(500).json({
-            success:   false,
+        // ═══════════════════════════════════════════════════════════════════════
+        // 🛡️ CORRECTION EXÉCUTÉE : LOGGING STRUCTURÉ + FALLBACK DE DONNÉES
+        // ═══════════════════════════════════════════════════════════════════════
+        const elapsed = Date.now() - startTime;
+        
+        console.error(`[${requestId}] 🔥 CRASH V12: ${error.message}`);
+        console.error(`[${requestId}] Stack trace:`, error.stack);
+
+        // Log structuré pour faciliter le monitoring (pris depuis ton IA)
+        console.error(JSON.stringify({
+            level: 'CRASH',
+            service: 'funnel-spy-v12',
             requestId,
-            error:     'ANALYSIS_FAILED_V12',
-            details:   error.message,
+            route: '/api/analyze-funnel',
+            error: error.message,
             timestamp: new Date().toISOString(),
+            elapsedMs: elapsed,
+            partialData: scrapedRawData ? {
+                url: scrapedRawData.url,
+                fetchLayer: scrapedRawData.fetchLayer,
+                techStack: scrapedRawData.techStack || null,
+            } : null
+        }));
+
+        // ── Fallback intelligent : si le scrape a réussi mais l'IA a planté ──
+        // (Ça évite de cracher une erreur 500 alors qu'on a le HTML et la donnée de base)
+        if (scrapedRawData && scrapedRawData.success) {
+            console.log(`[${requestId}] 🔄 Retour données brutes (scrape OK mais traitement IA failed)`);
+            return res.status(200).json({
+                success: true,
+                requestId,
+                url: req.body?.url,
+                partial: true,
+                errorContext: error.message,
+                data: scrapedRawData, // On retourne le scrape complet
+                summary: {
+                    title: scrapedRawData.meta?.title || '',
+                    cms: scrapedRawData.techStack?.cms || 'Unknown',
+                    primaryColor: scrapedRawData.visualDNA?.dominantColors?.[0] || '#3b82f6',
+                    copyIntel: scrapedRawData.copyIntel || null,
+                },
+                performance: {
+                    totalTime: elapsed,
+                    timestamp: Date.now()
+                }
+            });
+        }
+
+        // Si tout a planté (le scrape compris) on envoie une vraie 500 structurée
+        res.status(500).json({
+            success:  false,
+            requestId,
+            error:    'ANALYSIS_FAILED_V12',
+            message:  error.message,
+            details:  error.stack,
+            performance: {
+                totalTime: elapsed,
+                timestamp: Date.now()
+            }
         });
     }
-
 });
 function safeParseAI(raw, context = '') {
   if (!raw || typeof raw !== 'string') return null;
