@@ -2535,8 +2535,7 @@ async function analyzeCompetitors(
 
     // ── 4. ACQUISITION SERP (SERPER PRIMAIRE → SERPAPI FALLBACK) ──
     // 🔄 INVERSÉ : Serper est le primaire (moins cher), SerpAPI est le fallback
-    let rawResults = [];
-    let source     = 'none';
+    
 
     // 4a — URL directe
     const isUrlTarget = /^https?:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/.test(cleanQuery.trim());
@@ -2664,19 +2663,7 @@ async function analyzeCompetitors(
     const knowledgeGraph  = serpExtrasStore.knowledgeGraph;
 
     console.log('[WarRoom-V10.0] Acquisition parallèle KE + GSC...');
-    const [keResult, gscResult] = await Promise.allSettled([
-        fetchKeywordData(
-            [
-                cleanQuery,
-                `meilleur ${cleanQuery}`,
-                `${cleanQuery} avis`,
-                `${cleanQuery} ${geoData.location}`,
-                `alternative ${cleanQuery}`
-            ],
-            geoData.gl
-        ),
-        fetchGSCData(userSiteData?.url || null, gscAccessToken)
-    ]);
+  
 
     const kwData  = (keResult.status  === 'fulfilled' && keResult.value)  ? keResult.value  : null;
     const gscData = (gscResult.status === 'fulfilled' && gscResult.value) ? gscResult.value : null;
@@ -2714,44 +2701,7 @@ async function analyzeCompetitors(
             sitelinks: Array.isArray(r.sitelinks) ? r.sitelinks.length : (r.sitelinks || 0),
         };
     });
-// ── 4d. KE + GSC en parallèle (juste après 4c) ────────────
 
-const kwData  = keResult.status  === 'fulfilled' ? keResult.value  : null;
-const gscData = gscResult.status === 'fulfilled' ? gscResult.value : null;
-
-// Extras Serper (stockés lors du 4b)
-const peopleAlsoAsk   = serpExtrasStore?.peopleAlsoAsk   || [];
-const relatedSearches = serpExtrasStore?.relatedSearches || [];
-const knowledgeGraph  = serpExtrasStore?.knowledgeGraph  || null;
-    // ── 5. ENRICHISSEMENT CONCURRENTS ─────────────────────────
-    // (identique à V9.7 — pas de changement)
-    const enrichedCompetitors = rawResults.slice(0, 10).map((r, i) => {
-        const url = r.link || r.url || '';
-        let domain = '';
-        try { domain = new URL(url).hostname.replace('www.', ''); } catch { domain = r.displayed_link || ''; }
-
-        let type = isAr ? 'عام' : isEn ? 'General' : 'Général';
-        if (/\/product|\/shop|\/boutique/i.test(url))    type = isAr ? '🛒 تجارة إلكترونية' : '🛒 E-commerce';
-        else if (/\/blog|\/guide|\/article/i.test(url))  type = isAr ? '📝 مدونة'            : isEn ? '📝 Blog' : '📝 Blog/Média';
-        else if (domain.includes('youtube'))             type = '🎥 YouTube';
-        else if (domain.includes('wikipedia'))           type = '📚 Wikipedia';
-
-        const posScore  = 100 - i * 10;
-        const richScore = (r.sitelinks ? 20 : 0) + (r.rich_snippet ? 20 : 0);
-
-        return {
-            position:           i + 1,
-            title:              r.title || (isAr ? 'بدون عنوان' : isEn ? 'No title' : 'Sans titre'),
-            url, domain,
-                        snippet:        r.snippet || r.description || '',
-            type,
-            dominance:          Math.min(posScore + richScore, 100),
-            estimatedAuthority: i <= 2 ? (isAr ? 'عالية جداً' : isEn ? 'Very High'  : 'Très Haute')
-                                       : i <= 5 ? (isAr ? 'عالية'    : isEn ? 'High'       : 'Haute')
-                                                : (isAr ? 'متوسطة'   : isEn ? 'Medium'     : 'Moyenne'),
-            sitelinks: Array.isArray(r.sitelinks) ? r.sitelinks.length : (r.sitelinks || 0),
-        };
-    });
 
     // ── 6. SCRAPING MOAT LEADER (SCRAPE.DO) ───────────────────
     let leaderMoat = { status: ND };
@@ -3143,10 +3093,10 @@ JSON uniquement :
   }
 }`;
 
-    const agent3Prompt = `${langInstr}
+      const agent3Prompt = `${langInstr}
 MASTERING & DUEL CMO (Reverse Engineering & Grand Slam Offer) :
 - Niche : "${cleanQuery}"
--- Top 3 Challengers : ${top3Context}
+- Top 3 Challengers : ${top3Context}
 - User Context : ${userContextStr}
 ${gscPromptContext}
 ${keContext}
@@ -3161,11 +3111,40 @@ ${gscData ? `6. RÈGLE GSC : Utilise les données GSC réelles pour calibrer les
 
 JSON uniquement :
 {
-  "top3ReverseEngineering": { ... },
-  "grandSlamOfferBlueprint": { ... },
-  "productServiceAudit": { ... },
-  "masteringTechniques": { ... },
-  "duelComparison": { ... }
+  "top3ReverseEngineering": {
+    "commonSuccessFactors": ["facteur 1", "facteur 2"],
+    "glaringWeaknesses":    ["angle mort 1", "angle mort 2"],
+    "trafficStrategyGuess": "déduction canal acquisition principal"
+  },
+  "grandSlamOfferBlueprint": {
+    "dreamOutcome":         "résultat de rêve ultime du client",
+    "perceivedLikelihood":  "preuve sociale ex: études de cas vérifiées",
+    "timeDelay":            "promesse de vitesse exacte ex: livré en 24h",
+    "effortAndSacrifice":   "réduction friction ex: zéro setup requis",
+    "theIrresistibleOffer": "la promesse finale irrésistible"
+  },
+  "productServiceAudit": {
+    "coreOffering":           "...",
+    "pricingStrategy":        "...",
+    "uniqueValueProposition": "...",
+    "weakestProductFeature":  "défaut précis",
+    "killShotFeature":        "attaque directe du défaut"
+  },
+  "masteringTechniques": {
+    "trafficSources":   "...",
+    "retentionLoop":    "...",
+    "monetizationHack": "..."
+  },
+  "duelComparison": {
+    "offerAndRisk":     { "competitor": "...", "user": "...", "killShot": "..." },
+    "jtbdPsychology":   { "competitor": "...", "user": "...", "killShot": "..." },
+    "kanoDelighter":    { "competitor": "...", "user": "...", "killShot": "..." },
+    "activationAARRR":  { "competitor": "...", "user": "...", "killShot": "..." },
+    "flankingStrategy": { "competitor": "...", "user": "...", "killShot": "..." },
+    "pricingBundling":  { "competitor": "...", "user": "...", "killShot": "..." },
+    "valueLadder":      { "competitor": "...", "user": "...", "killShot": "..." },
+    "uxTeardown":       { "competitor": "...", "user": "...", "killShot": "..." }
+  }
 }`;
         
 
