@@ -8320,14 +8320,23 @@ async function deepScrapeFunnel(url) {
         // ── 1. Playwright via scrapeStealth — tentative primaire
         const scrapeResult = await scrapeStealth(url);
 
-        // ── 2. FALLBACK SCRAPE.DO (ANTI-BOT BYPASS) ────────────────
-        if (!scrapeResult.success || !scrapeResult.html || scrapeResult.html.length < 500) {
-            console.warn(`⚠️ [DEEP SCRAPE] Playwright a échoué ou HTML insuffisant. Activation de SCRAPE.DO...`);
+        // 🧠 NOUVELLE LOGIQUE ANTI-BOT (DÉTECTION DE FAUSSES PAGES)
+        // Zalando renvoie une page "Captcha" qui ne fait pas crasher Playwright
+        // mais qui ne contient aucun mot (wordCount = 0) et pas de body.
+        const isBotBlocked = !scrapeResult.success 
+            || !scrapeResult.html 
+            || scrapeResult.html.length < 800 
+            || scrapeResult.wordCount < 20 
+            || (!scrapeResult.copyIntel?.headlines?.h1?.length && scrapeResult.visualDNA?.dominantColors?.[0] === '#3b82f6');
+
+        // ── 2. FALLBACK SCRAPE.DO ────────────────
+        if (isBotBlocked) {
+            console.warn(`⚠️ [DEEP SCRAPE] Page vide ou bloquée détectée (Mots: ${scrapeResult.wordCount || 0}). Activation de SCRAPE.DO...`);
             
             const scrapeDoToken = process.env.SCRAPE_DO_TOKEN;
             if (scrapeDoToken) {
                 try {
-                    // &render=true est CRUCIAL pour les sites e-commerce comme Zalando (rendu JS)
+                    // &render=true est CRUCIAL pour les sites e-commerce comme Zalando
                     const scrapeDoUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(url)}&render=true`;
                     
                     const fallbackRes = await RetryManager.executeWithRetry(
@@ -8340,10 +8349,9 @@ async function deepScrapeFunnel(url) {
                         scrapeResult.success = true;
                         scrapeResult.html = fallbackRes.data;
                         scrapeResult.fetchLayer = 'scrape.do';
-                        // Réinitialiser les données visuelles/techniques qui ont échoué
+                        // Réinitialiser les données visuelles/techniques qui ont pris les valeurs par défaut
                         scrapeResult.visualDNA = null; 
                         scrapeResult.techStack = { cms: 'Unknown' };
-                        // S'assurer que le bodyText sera recalculé
                         scrapeResult.bodyText = null; 
                     }
                 } catch (e) {
@@ -8581,6 +8589,329 @@ async function deepScrapeFunnel(url) {
             brand:            { fullTextSample: '', wordCount: 0, hasSSL: false },
             redirectIntel:    { totalRedirects: 0, isFunnelRedirect: false, chain: [] },
             frameworkData:    { trustSignals: {}, techStack: {} },
+        };
+    }
+}
+
+async function scrapeStealth(validUrl) {
+    const playwrightWrapper = require('./playwright-wrapper.cjs');
+    const startTime = Date.now();
+
+    try {
+        console.log(`🎭 Playwright scraping: ${validUrl}`);
+
+        const pw = await playwrightWrapper.launchPlaywright(validUrl);
+
+        if (!pw || !pw.page) {
+            throw new Error('Playwright launch failed — pw ou pw.page null');
+        }
+
+        // ── HTML complet rendu (JS exécuté)
+        // ✅ PATCH A : timeout explicite sur page.content() — évite hang infini
+        const html = await Promise.race([
+            pw.page.content(),
+            new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('page.content() timeout 45s')), 45000)
+            )
+        ]);
+
+        if (!html || typeof html !== 'string' || html.length < 500) {
+            throw new Error(`HTML trop court (${html?.length || 0} chars) — page bloquée ou vide`);
+        }
+
+        // ── EXTRACTION RÉELLE dans le browser context
+        const extracted = await pw.page.evaluate(() => {
+
+            // ── COULEURS RÉELLES via getComputedStyle
+            const colorMap  = new Map();
+            const IGNORE    = new Set([
+                'rgba(0, 0, 0, 0)', 'transparent', 'rgb(0, 0, 0)',
+                'rgb(255, 255, 255)', '', 'rgba(0,0,0,0)'
+            ]);
+            const targets = document.querySelectorAll(
+                'body, header, nav, section, footer, h1, h2, ' +
+                'button, a, [class*="hero"], [class*="btn"], [class*="cta"], ' +
+                '[class*="banner"], [class*="primary"], [class*="brand"]'
+            );
+            targets.forEach(el => {
+                const cs = window.getComputedStyle(el);
+                ['backgroundColor', 'color', 'borderTopColor'].forEach(prop => {
+                    const val = cs[prop];
+                    if (val && !IGNORE.has(val)) {
+                        colorMap.set(val, (colorMap.get(val) || 0) + 1);
+                    }
+                });
+            });
+
+            // CSS Variables :root
+            const rootCS  = window.getComputedStyle(document.documentElement);
+            const cssVars = ['--primary','--primary-color','--color-primary',
+                             '--accent','--brand-color','--theme-color',
+                             '--secondary','--main-color'];
+            const varColors = cssVars
+                .map(v => rootCS.getPropertyValue(v).trim())
+                .filter(v => v && (v.startsWith('#') || v.startsWith('rgb')));
+
+            // rgb → hex
+            const rgbToHex = (rgb) => {
+                const m = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+                if (!m) return rgb;
+                return '#' + [m[1], m[2], m[3]]
+                    .map(x => parseInt(x).toString(16).padStart(2, '0'))
+                    .join('');
+            };
+
+            const BAD = new Set(['#000000','#ffffff','#000','#fff']);
+            const dominantColors = [
+                ...varColors,
+                ...[...colorMap.entries()]
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([c]) => c)
+            ]
+            .map(rgbToHex)
+            .filter(c => c && !BAD.has(c))
+            .filter((c, i, arr) => arr.indexOf(c) === i)
+            .slice(0, 5);
+
+            // ── TECH STACK via window objects
+            const tech = {
+                cms:           'Custom',
+                isWordPress:   !!(window.wp || document.querySelector('[class*="wp-content"],[id*="wp-"]')),
+                isShopify:     !!(window.Shopify || document.querySelector('[data-shopify]')),
+                isNextJS:      !!(window.__NEXT_DATA__ || document.getElementById('__NEXT_DATA__')),
+                isNuxtJS:      !!(window.__NUXT__ || document.getElementById('__nuxt')),
+                isReact:       !!(window.React || window.__REACT_DEVTOOLS_GLOBAL_HOOK__),
+                isVue:         !!(window.Vue || window.__vue_app__),
+                isWooCommerce: !!(window.woocommerce_params || document.querySelector('.woocommerce')),
+                hasJQuery:     !!(window.jQuery || window.$),
+                hasGA4:        !!(window.gtag || !!document.querySelector('[src*="gtag/js"],[src*="googletagmanager"]')),
+                hasGTM:        !!(window.google_tag_manager || !!document.querySelector('[src*="googletagmanager.com/gtm"]')),
+                hasFBPixel:    !!(window.fbq || !!document.querySelector('[src*="connect.facebook.net"]')),
+                hasTikTok:     !!(window.ttq || !!document.querySelector('[src*="analytics.tiktok.com"]')),
+                hasHotjar:     !!(window.hj || !!document.querySelector('[src*="hotjar.com"]')),
+                hasClarity:    !!(window.clarity || !!document.querySelector('[src*="clarity.ms"]')),
+                hasLiveChat:   !!(window.Intercom || window.Crisp || window.$crisp || window.tidioChatApi),
+                hasWhatsApp:   !!document.querySelector('a[href*="wa.me"], a[href*="api.whatsapp.com"]'),
+                hasCountdown:  !!document.querySelector('[id*="countdown"],[class*="countdown"],[data-countdown]'),
+                hasExitIntent: !!(window.exitIntent || !!document.querySelector('[class*="exit-intent"],[id*="exit-intent"]')),
+                hasSSL:        location.protocol === 'https:',
+                isMobile:      !!document.querySelector('meta[name="viewport"]'),
+                hasCDN:        !!(document.querySelector('[src*="cloudflare"],[src*="cdn."]') || window.__CF$cv$params),
+                hasSchema:     document.querySelectorAll('script[type="application/ld+json"]').length > 0,
+            };
+
+            if (tech.isShopify)          tech.cms = 'Shopify';
+            else if (tech.isNextJS)      tech.cms = 'Next.js';
+            else if (tech.isNuxtJS)      tech.cms = 'Nuxt.js';
+            else if (tech.isWooCommerce) tech.cms = 'WooCommerce';
+            else if (tech.isWordPress)   tech.cms = 'WordPress';
+            else if (tech.isReact)       tech.cms = 'React';
+            else if (tech.isVue)         tech.cms = 'Vue.js';
+
+            // ── COPY
+            const h1List  = [...document.querySelectorAll('h1')].map(e => e.innerText.trim()).filter(Boolean);
+            const h2List  = [...document.querySelectorAll('h2')].map(e => e.innerText.trim()).filter(Boolean).slice(0, 10);
+            const h3List  = [...document.querySelectorAll('h3')].map(e => e.innerText.trim()).filter(Boolean).slice(0, 8);
+            const ctaList = [...document.querySelectorAll('a, button')]
+                .map(e => e.innerText.trim())
+                .filter(t => t.length > 1 && t.length < 60)
+                .slice(0, 15);
+
+            // ── PHONES
+            const bodyText   = document.body.innerText || '';
+            const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
+            const phones     = [...new Set((bodyText.match(phoneRegex) || []).map(p => p.trim()))].slice(0, 5);
+
+            // ── EMAILS
+            const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+            const emails     = [...new Set((bodyText.match(emailRegex) || [])
+                .filter(e => !e.includes('example') && !e.includes('test')))].slice(0, 5);
+
+            // ── PRIX
+            const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|€|\$|£)/gi;
+            const allPrices  = (bodyText.match(priceRegex) || []).slice(0, 10);
+            const bestPrice  = allPrices.length > 0
+                ? parseFloat(allPrices[0].replace(/[^\d.]/g, ''))
+                : null;
+            const currency   = allPrices[0]?.match(/MAD|DH|€|\$|£/i)?.[0]?.toUpperCase() || 'MAD';
+
+            // ── SCHEMA
+            const schemas     = [...document.querySelectorAll('script[type="application/ld+json"]')]
+                .map(s => { try { return JSON.parse(s.textContent); } catch { return null; } })
+                .filter(Boolean);
+            const schemaTypes = schemas
+                .map(s => s['@type'] || s['@graph']?.[0]?.['@type'])
+                .filter(Boolean);
+
+            // ── SOCIAL PROOFS
+            const socialProofs = [...document.querySelectorAll(
+                '[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]'
+            )].map(e => e.innerText.trim().substring(0, 120)).filter(Boolean).slice(0, 5);
+
+            // ── SECTIONS
+            const sections = {
+                hasHero:     !!document.querySelector('[class*="hero"],[id*="hero"],[class*="banner"]'),
+                hasFeatures: !!document.querySelector('[class*="feature"],[class*="service"],[id*="service"]'),
+                hasPricing:  !!document.querySelector('[class*="pricing"],[class*="price"],[id*="pricing"]'),
+                hasTestim:   !!document.querySelector('[class*="testimonial"],[class*="review"],[class*="avis"]'),
+                hasFAQ:      !!document.querySelector('[class*="faq"],[id*="faq"],details'),
+                hasCTA:      !!document.querySelector('[class*="cta"],[id*="cta"]'),
+                hasFooter:   !!document.querySelector('footer'),
+            };
+
+            // ── GOOGLE FONTS
+            const googleFonts = [...document.querySelectorAll('link[href*="fonts.googleapis.com"]')]
+                .map(l => { const m = l.href.match(/family=([^&:]+)/); return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null; })
+                .filter(Boolean).slice(0, 3);
+
+            // ── META
+            const meta = {
+                title:       document.title || '',
+                description: document.querySelector('meta[name="description"]')?.content || '',
+                canonical:   document.querySelector('link[rel="canonical"]')?.href || '',
+                ogImage:     document.querySelector('meta[property="og:image"]')?.content || '',
+                hasOG:       !!document.querySelector('meta[property="og:title"]'),
+                lang:        document.documentElement.lang || '',
+            };
+
+            return {
+                dominantColors: dominantColors.length > 0
+                    ? dominantColors
+                    : ['#3b82f6', '#1e293b', '#10b981'],
+                tech,
+                copy:         { h1List, h2List, h3List, ctaList },
+                contacts:     { phones, emails },
+                pricing:      { bestPrice, currency, allPrices },
+                socialProofs,
+                schemaTypes,
+                sections,
+                googleFonts,
+                meta,
+                wordCount:    bodyText.split(/\s+/).filter(Boolean).length,
+                bodyText:     bodyText.substring(0, 10000),
+            };
+        });
+
+        // ── Fermeture propre browser
+        try {
+            await pw.page.close();
+            await pw.browser.close();
+        } catch (closeErr) {
+            console.warn('⚠️ Browser close warning:', closeErr.message);
+        }
+
+        console.log(`✅ scrapeStealth OK — ${Date.now() - startTime}ms | Colors: ${extracted.dominantColors.join(',')} | CMS: ${extracted.tech.cms}`);
+
+        return {
+            success:    true,
+            fetchLayer: 'playwright',
+            html,
+            duration:   Date.now() - startTime,
+
+            visualDNA: {
+                dominantColors: extracted.dominantColors,
+                googleFonts:    extracted.googleFonts,
+            },
+
+            techStack: extracted.tech,
+
+            copyIntel: {
+                headlines:      { h1: extracted.copy.h1List, h2: extracted.copy.h2List, h3: extracted.copy.h3List },
+                realCTAs:       extracted.copy.ctaList,
+                heroText:       extracted.bodyText.substring(0, 300),
+                testimonials:   extracted.socialProofs,
+                guarantees:     [],
+                faq:            [],
+                bulletBenefits: [],
+                allButtons:     extracted.copy.ctaList,
+                pageSections:   [],
+            },
+
+            priceIntel: {
+                bestPrice:    extracted.pricing.bestPrice,
+                currency:     extracted.pricing.currency,
+                all:          extracted.pricing.allPrices,
+                detected:     extracted.pricing.bestPrice !== null,
+                struckPrices: [],
+                discountRate: null,
+            },
+
+            trustSignals: {
+                hasSSL:                extracted.tech.hasSSL,
+                hasWhatsApp:           extracted.tech.hasWhatsApp,
+                hasPhoneNumber:        extracted.contacts.phones.length > 0,
+                hasReviews:            extracted.socialProofs.length > 0,
+                hasMoneyBackGuarantee: false,
+                hasPaymentLogos:       false,
+                hasLegalPages:         false,
+                hasCOD:                false,
+                trustScore:            null,
+            },
+
+            contacts: extracted.contacts,
+
+            schemaData: {
+                types: extracted.schemaTypes,
+                count: extracted.schemaTypes.length,
+            },
+
+            sections:   extracted.sections,
+            meta:       extracted.meta,
+            wordCount:  extracted.wordCount,
+            bodyText:   extracted.bodyText,
+
+            trackingIntel: {
+                hasGoogleAnalytics: extracted.tech.hasGA4,
+                hasGTM:             extracted.tech.hasGTM,
+                hasFacebookPixel:   extracted.tech.hasFBPixel,
+                hasTikTokPixel:     extracted.tech.hasTikTok,
+                hasHotjar:          extracted.tech.hasHotjar,
+                hasClarity:         extracted.tech.hasClarity,
+            },
+
+            performanceIntel: {
+                hasCountdown:      extracted.tech.hasCountdown,
+                hasExitIntent:     extracted.tech.hasExitIntent,
+                hasLiveChat:       extracted.tech.hasLiveChat,
+                hasSSL:            extracted.tech.hasSSL,
+                hasCDN:            extracted.tech.hasCDN,
+                isMobileOptimized: extracted.tech.isMobile,
+            },
+
+            brand: {
+                fullTextSample: extracted.bodyText,
+                wordCount:      extracted.wordCount,
+            },
+
+            redirectIntel: {
+                totalRedirects:   0,
+                isFunnelRedirect: false,
+                chain:            [],
+            },
+        };
+
+    } catch (e) {
+        console.error(`❌ scrapeStealth failed (${Date.now() - startTime}ms):`, e.message);
+        return {
+            success:          false,
+            fetchLayer:       'playwright',
+            html:             '',
+            error:            e.message,
+            visualDNA:        { dominantColors: ['#3b82f6', '#1e293b', '#10b981'], googleFonts: [] },
+            techStack:        { cms: 'Unknown', hasSSL: false, hasWhatsApp: false },
+            copyIntel:        { headlines: { h1: [], h2: [], h3: [] }, realCTAs: [], heroText: '', testimonials: [], guarantees: [], faq: [], bulletBenefits: [], allButtons: [], pageSections: [] },
+            priceIntel:       { bestPrice: null, currency: 'MAD', all: [], detected: false, struckPrices: [], discountRate: null },
+            trustSignals:     { hasSSL: false, hasWhatsApp: false, hasPhoneNumber: false, hasReviews: false, trustScore: null },
+            contacts:         { phones: [], emails: [] },
+            schemaData:       { types: [], count: 0 },
+            sections:         { hasHero: false, hasFeatures: false, hasPricing: false, hasTestim: false, hasFAQ: false, hasCTA: false, hasFooter: false },
+            meta:             { title: '', description: '', canonical: '', ogImage: '', hasOG: false, lang: '' },
+            wordCount:        0,
+            bodyText:         '',
+            trackingIntel:    { hasGoogleAnalytics: false, hasGTM: false, hasFacebookPixel: false, hasTikTokPixel: false, hasHotjar: false, hasClarity: false },
+            performanceIntel: { hasCountdown: false, hasExitIntent: false, hasLiveChat: false, hasSSL: false, hasCDN: false, isMobileOptimized: false },
+            brand:            { fullTextSample: '', wordCount: 0 },
+            redirectIntel:    { totalRedirects: 0, isFunnelRedirect: false, chain: [] },
         };
     }
 }
