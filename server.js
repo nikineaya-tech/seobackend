@@ -2487,9 +2487,8 @@ async function analyzeCompetitors(
     lang         = 'fr',
     userSiteData = null,
     forceRefresh = false,
-    gscAccessToken = null   // 🆕 Optionnel : token GSC de l'utilisateur
-) 
-{
+    gscAccessToken = null   // Optionnel : token GSC de l'utilisateur
+) {
     const startTime = Date.now();
 
     // ── 1. LANGUE ─────────────────────────────────────────────
@@ -2533,12 +2532,13 @@ async function analyzeCompetitors(
         }
     }
 
-    // ── 4. ACQUISITION SERP (SERPER PRIMAIRE → SERPAPI FALLBACK) ──
-    // 🔄 INVERSÉ : Serper est le primaire (moins cher), SerpAPI est le fallback
-    
+    // ── 4. ACQUISITION SERP ────────────────────────────────────
+    // FIX BUG #2 : déclaration AVANT le bloc isUrlTarget
+    let rawResults = [];
+    let source     = 'none';
 
-    // 4a — URL directe
-  const isUrlTarget = /^https?:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/.test(cleanQuery.trim());
+    // ── 4a — URL directe ──────────────────────────────────────
+    const isUrlTarget = /^https?:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/.test(cleanQuery.trim());
     if (isUrlTarget) {
         try {
             let targetUrl = cleanQuery.trim();
@@ -2554,14 +2554,8 @@ async function analyzeCompetitors(
             source = 'direct-url';
         } catch (e) { console.warn('[WarRoom-V10.0] URL invalide:', e.message); }
     }
-      // ── 4. ACQUISITION SERP (SERPER PRIMAIRE → SERPAPI FALLBACK) ──
-    let rawResults = [];
-    let source     = 'none';
 
-    // ── 4a — URL directe ──────────────────────────────────────
-    
-
-    // ── 4b — 🥇 SERPER (PRIMAIRE) ────────────────────────────
+    // ── 4b — SERPER (PRIMAIRE) ────────────────────────────────
     let serpExtrasStore = { peopleAlsoAsk: [], relatedSearches: [], knowledgeGraph: null };
 
     if (rawResults.length === 0 && process.env.SERPER_API_KEY) {
@@ -2601,7 +2595,7 @@ async function analyzeCompetitors(
         } catch (e) { console.warn('[WarRoom-V10.0] Serper error:', e.message); }
     }
 
-    // ── 4c — 🥈 SERPAPI (FALLBACK) ───────────────────────────
+    // ── 4c — SERPAPI (FALLBACK) ───────────────────────────────
     if (rawResults.length === 0 && process.env.SERPAPI_KEY) {
         try {
             console.log('[WarRoom-V10.0] SERP via SERPAPI (fallback)...');
@@ -2643,13 +2637,91 @@ async function analyzeCompetitors(
         };
     }
 
-    // ── 4d — Extras SERP + KE + GSC ──────────────────────────
+    // ── 4d — Extras SERP ─────────────────────────────────────
     const peopleAlsoAsk   = serpExtrasStore.peopleAlsoAsk;
     const relatedSearches = serpExtrasStore.relatedSearches;
     const knowledgeGraph  = serpExtrasStore.knowledgeGraph;
 
+    // ── 4e — ACQUISITION PARALLÈLE KE + GSC ──────────────────
+    // FIX BUG #1 : Promise.allSettled était totalement absent → keResult is not defined
     console.log('[WarRoom-V10.0] Acquisition parallèle KE + GSC...');
-  
+
+    const [keResult, gscResult] = await Promise.allSettled([
+
+        // ── Keywords Everywhere ──────────────────────────────
+        (async () => {
+            if (!process.env.KE_API_KEY) return null;
+            try {
+                const keywords = [
+                    cleanQuery,
+                    ...relatedSearches.slice(0, 4).map(r => r.query || r).filter(Boolean)
+                ];
+                const res = await axios.post(
+                    'https://api.keywordseverywhere.com/v1/get_keyword_data',
+                    { country: geoData.gl, currency: 'USD', dataSource: 'gkp', keywords },
+                    {
+                        headers: {
+                            'Authorization': `Bearer ${process.env.KE_API_KEY}`,
+                            'Content-Type':  'application/json'
+                        },
+                        timeout: CONFIG.TIMEOUT_MEDIUM
+                    }
+                );
+                if (!res.data?.data?.length) return null;
+                const kwMap = {};
+                res.data.data.forEach(item => {
+                    kwMap[item.keyword] = {
+                        vol:         item.vol             || 0,
+                        cpc:         item.cpc?.value      || 0,
+                        competition: item.competition     || 0,
+                        trend:       item.trend           || []
+                    };
+                });
+                console.log(`✅ [WarRoom-V10.0] KE OK — ${Object.keys(kwMap).length} keywords enrichis`);
+                return kwMap;
+            } catch (e) {
+                console.warn('[WarRoom-V10.0] KE error:', e.message);
+                return null;
+            }
+        })(),
+
+        // ── Google Search Console ────────────────────────────
+        (async () => {
+            if (!gscAccessToken) return null;
+            try {
+                const siteUrl = userSiteData?.url;
+                if (!siteUrl) return null;
+                const endDate   = new Date().toISOString().split('T')[0];
+                const startDate = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().split('T')[0];
+                const res = await axios.post(
+                    `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+                    {
+                        startDate,
+                        endDate,
+                        dimensions: ['query'],
+                        rowLimit:   20
+                    },
+                    {
+                        headers: { 'Authorization': `Bearer ${gscAccessToken}` },
+                        timeout: CONFIG.TIMEOUT_MEDIUM
+                    }
+                );
+                if (!res.data?.rows?.length) return null;
+                const rows = res.data.rows.map(r => ({
+                    query:       r.keys[0],
+                    clicks:      r.clicks,
+                    impressions: r.impressions,
+                    ctr:         parseFloat((r.ctr * 100).toFixed(2)),
+                    position:    parseFloat(r.position.toFixed(1))
+                }));
+                console.log(`✅ [WarRoom-V10.0] GSC OK — ${rows.length} queries récupérées`);
+                return rows;
+            } catch (e) {
+                console.warn('[WarRoom-V10.0] GSC error:', e.message);
+                return null;
+            }
+        })()
+    ]);
 
     const kwData  = (keResult.status  === 'fulfilled' && keResult.value)  ? keResult.value  : null;
     const gscData = (gscResult.status === 'fulfilled' && gscResult.value) ? gscResult.value : null;
@@ -2687,7 +2759,6 @@ async function analyzeCompetitors(
             sitelinks: Array.isArray(r.sitelinks) ? r.sitelinks.length : (r.sitelinks || 0),
         };
     });
-
 
     // ── 6. SCRAPING MOAT LEADER (SCRAPE.DO) ───────────────────
     let leaderMoat = { status: ND };
@@ -2735,39 +2806,37 @@ async function analyzeCompetitors(
         leaderMoat = { status: 'error', snippet: enrichedCompetitors[0]?.snippet?.substring(0, 200) || ND };
     }
 
-    // ── 7. ENRICHISSEMENT KE → volume réel sur le keyword principal ──
-    // On injecte les vraies données Keywords Everywhere dès maintenant
-    const mainKwData     = kwData?.[cleanQuery] || null;
-    const realVolume     = mainKwData
+    // ── 7. ENRICHISSEMENT KE → volume réel ───────────────────
+    const mainKwData = kwData?.[cleanQuery] || null;
+    const realVolume = mainKwData
         ? `${mainKwData.vol.toLocaleString()} / mois (CPC: $${mainKwData.cpc} | Comp: ${mainKwData.competition})`
         : ND;
-    const realTrend      = mainKwData?.trend?.length
+    const realTrend  = mainKwData?.trend?.length
         ? (mainKwData.trend.slice(-3).map(t => t.value).join(' → ') + ' (3 derniers mois)')
         : null;
 
     console.log(`🔑 [KE] Volume réel "${cleanQuery}": ${realVolume}`);
 
     // ── 8. CONTEXTE UTILISATEUR & TOP 3 ───────────────────────
-    const hasUserSite   = !!userSiteData;
+    const hasUserSite  = !!userSiteData;
 
-    const userIntelCtx  = userSiteData ? {
+    const userIntelCtx = userSiteData ? {
         hasUrl:    !!userSiteData.url,
-        title:     userSiteData.meta?.title   || null,
+        title:     userSiteData.meta?.title        || null,
         wordCount: userSiteData.content?.wordCount || 0,
         h1:        userSiteData.structure?.h1?.text || null,
-        schema:    userSiteData.schema?.exists || false,
+        schema:    userSiteData.schema?.exists      || false,
     } : null;
 
-    // 🆕 Contexte GSC injecté si disponible
     const gscContext = gscData?.length
         ? `GSC Top Queries: ${gscData.slice(0, 5).map(r => `"${r.query}" (pos:${r.position}, clicks:${r.clicks})`).join(' | ')}`
         : null;
 
-    const top3Context     = enrichedCompetitors.slice(0, 3).map((c, i) => `#${i+1} ${c.domain}: ${c.snippet.substring(0,80)}`).join(' | ');
-    const paaContext      = peopleAlsoAsk.slice(0, 4).map(p => p.question || p).join(' | ');
-    const relatedContext  = relatedSearches.slice(0, 4).map(r => r.query || r).join(', ');
+    const top3Context    = enrichedCompetitors.slice(0, 3).map((c, i) => `#${i+1} ${c.domain}: ${c.snippet.substring(0, 80)}`).join(' | ');
+    const paaContext     = peopleAlsoAsk.slice(0, 4).map(p => p.question || p).join(' | ');
+    const relatedContext = relatedSearches.slice(0, 4).map(r => r.query || r).join(', ');
 
-    const userContextStr  = userSiteData
+    const userContextStr = userSiteData
         ? `URL Cible: ${userSiteData.url} | Title: ${userIntelCtx?.title || ND} | H1: ${userIntelCtx?.h1 || ND}${gscContext ? ' | ' + gscContext : ''}`
         : `Analyse Benchmark: L'utilisateur n'a pas de site. Génère la stratégie PARFAITE (Mastering) pour battre le Top 3.`;
 
@@ -2843,20 +2912,17 @@ async function analyzeCompetitors(
         marketInsights: {
             difficulty:          typeof calculateDifficulty === 'function' ? calculateDifficulty(enrichedCompetitors) : 'unknown',
             serpIntent:          typeof analyzeSERPIntent   === 'function' ? analyzeSERPIntent(enrichedCompetitors)   : (isAr ? 'مختلط' : isEn ? 'mixed' : 'mixte'),
-            // 🆕 Volume réel injecté depuis Keywords Everywhere
             volume:              realVolume,
             trend:               realTrend,
             vocabulary:          [cleanQuery],
             sophisticationLevel: '3',
             awarenessLevel:      'Solution Aware',
-            // 🆕 People Also Ask depuis SERP
             peopleAlsoAsk:       peopleAlsoAsk.slice(0, 4),
             relatedSearches:     relatedSearches.slice(0, 4)
         },
         keywordStrategy: {
             primary:     [cleanQuery],
-            // 🆕 Enrichi avec les variantes KE si disponibles
-                       longTail: kwData
+            longTail: kwData
                 ? Object.keys(kwData).filter(k => k !== cleanQuery).slice(0, 4)
                 : [
                     (isAr ? 'مراجعة ' : isEn ? 'Review '  : 'Avis ')     + cleanQuery,
@@ -2909,7 +2975,6 @@ async function analyzeCompetitors(
             retentionLoop:    ND,
             monetizationHack: ND
         },
-        // 🆕 GSC data brute exposée dans le résultat final
         gscInsights: gscData ? {
             available:  true,
             topQueries: gscData.slice(0, 10),
@@ -2999,14 +3064,13 @@ async function analyzeCompetitors(
         ? '["Authority","Offer/Service","Technical","Conversion","Copywriting","Trust"]'
         : '["Autorité","Offre/Service","Technique","Conversion","Copywriting","Confiance"]';
 
-    const top5Str    = enrichedCompetitors.slice(0, 5).map(c => `#${c.position} ${c.domain} — ${c.snippet?.substring(0, 80)}`).join('\n');
-    const top3Str    = enrichedCompetitors.slice(0, 3).map(c => `${c.domain} : ${c.snippet?.substring(0, 60)}`).join('\n');
+    const top5Str = enrichedCompetitors.slice(0, 5).map(c => `#${c.position} ${c.domain} — ${c.snippet?.substring(0, 80)}`).join('\n');
+    const top3Str = enrichedCompetitors.slice(0, 3).map(c => `${c.domain} : ${c.snippet?.substring(0, 60)}`).join('\n');
 
     const comparisonUserInstruction = hasUserSite
         ? `Pour "user", estime 6 scores réalistes (0-100) basés sur le contexte fourni.`
         : `L'utilisateur n'a pas de site. Pour "user", génère les scores MOYENS du Top 3 (ex: [50, 45, 55, 40, 60, 50]).`;
 
-    // 🆕 Contexte KE injecté dans les prompts agents
     const keContext = kwData
         ? `\n── DONNÉES KEYWORDS EVERYWHERE (RÉELLES) ──\n` +
           Object.entries(kwData).slice(0, 5).map(([kw, d]) =>
@@ -3014,7 +3078,6 @@ async function analyzeCompetitors(
           ).join('\n')
         : '';
 
-    // 🆕 Contexte GSC injecté dans les prompts agents
     const gscPromptContext = gscData?.length
         ? `\n── DONNÉES GSC RÉELLES DU SITE ──\n` +
           gscData.slice(0, 5).map(r =>
@@ -3022,7 +3085,6 @@ async function analyzeCompetitors(
           ).join('\n')
         : '';
 
-    // 🆕 PAA injecté dans Agent 1
     const paaPromptContext = peopleAlsoAsk.length
         ? `\nPeople Also Ask: ${peopleAlsoAsk.slice(0, 4).map(p => p.question || p).join(' | ')}`
         : '';
@@ -3057,9 +3119,10 @@ JSON uniquement :
   }
 }`;
 
+    // FIX BUG #3 : enrichedCompetitors[0]?.domain au lieu de enrichedCompetitors?.domain
     const agent2Prompt = `${langInstr}
 Stratégie SEO offensive & Topic Clusters :
-- Niche : "${cleanQuery}" | Leader : ${enrichedCompetitors?.domain || ND} | Pays : ${geoData.location}
+- Niche : "${cleanQuery}" | Leader : ${enrichedCompetitors[0]?.domain || ND} | Pays : ${geoData.location}
 MOAT — Blog:${leaderMoat?.contentStrategy?.hasBlog ?? '?'} FAQ:${leaderMoat?.technicalMoat?.hasFaqSection ?? '?'} Schema:${leaderMoat?.technicalMoat?.schemaTagsCount ?? 0}
 ${keContext}
 ${relatedContext ? `Related Searches: ${relatedContext}` : ''}
@@ -3079,7 +3142,7 @@ JSON uniquement :
   }
 }`;
 
-      const agent3Prompt = `${langInstr}
+    const agent3Prompt = `${langInstr}
 MASTERING & DUEL CMO (Reverse Engineering & Grand Slam Offer) :
 - Niche : "${cleanQuery}"
 - Top 3 Challengers : ${top3Context}
@@ -3132,9 +3195,95 @@ JSON uniquement :
     "uxTeardown":       { "competitor": "...", "user": "...", "killShot": "..." }
   }
 }`;
-        
 
-} 
+    const agent4Prompt = `${langInstr}
+SWOT Offensif + Blue Ocean + Scores :
+- Niche : "${cleanQuery}"
+- Leader : ${enrichedCompetitors[0]?.domain || ND} (${enrichedCompetitors[0]?.snippet?.substring(0, 60) || ''})
+- Top 3 : ${top3Str}
+- ${comparisonUserInstruction}
+
+JSON uniquement :
+{
+  "swot": {
+    "strengths":     ["point fort du leader 1", "point fort 2"],
+    "weaknesses":    ["faille exploitable 1", "faille exploitable 2"],
+    "opportunities": ["opportunité marché 1", "opportunité marché 2"],
+    "threats":       ["menace concurrentielle 1"]
+  },
+  "blueOceanStrategy": {
+    "eliminate":       ["ce que le marché fait mais qui n'a plus de valeur"],
+    "reduce":          ["ce qui est surévalué dans le marché"],
+    "raise":           ["ce qui est sous-évalué à amplifier"],
+    "create":          ["ce qui n'existe pas encore dans ce marché"],
+    "currentRedOcean": ["description de la guerre actuelle"],
+    "blueOceanMoves":  ["le mouvement stratégique différenciant"],
+    "positioningMap":  ["positionnement idéal sur la carte de valeur"]
+  },
+  "comparisonScores": {
+    "user":       [0,0,0,0,0,0],
+    "competitor": [0,0,0,0,0,0],
+    "labels":     ${labelsJson}
+  },
+  "semanticDifferences": [
+    { "gap": "thème manquant", "opportunity": "action concrète à mener" }
+  ]
+}`;
+
+    // ── 14. EXÉCUTION AGENTS EN PARALLÈLE ────────────────────
+    console.log('[WarRoom-V10.0] Lancement 4 agents IA en parallèle...');
+
+    const [a1, a2, a3, a4] = await Promise.allSettled([
+        callAgent(agent1Prompt, 'Agent1-MarketInsights'),
+        callAgent(agent2Prompt, 'Agent2-KeywordStrategy'),
+        callAgent(agent3Prompt, 'Agent3-MasteringDuel'),
+        callAgent(agent4Prompt, 'Agent4-SwotBlueOcean')
+    ]);
+
+    const r1 = a1.status === 'fulfilled' ? a1.value : {};
+    const r2 = a2.status === 'fulfilled' ? a2.value : {};
+    const r3 = a3.status === 'fulfilled' ? a3.value : {};
+    const r4 = a4.status === 'fulfilled' ? a4.value : {};
+
+    console.log(`[WarRoom-V10.0] Agents: A1=${a1.status} | A2=${a2.status} | A3=${a3.status} | A4=${a4.status}`);
+
+    // ── 15. MERGE RÉSULTATS ───────────────────────────────────
+    if (r1.marketInsights)   mergedData.marketInsights   = { ...mergedData.marketInsights,   ...r1.marketInsights   };
+    if (r1.marketDynamics)   mergedData.marketDynamics   = { ...mergedData.marketDynamics,   ...r1.marketDynamics   };
+    if (r2.winningMove)      mergedData.winningMove      = r2.winningMove;
+    if (r2.actionRoadmap)    mergedData.actionRoadmap    = r2.actionRoadmap;
+    if (r2.keywordStrategy)  mergedData.keywordStrategy  = { ...mergedData.keywordStrategy,  ...r2.keywordStrategy  };
+    if (r3.top3ReverseEngineering)  mergedData.top3ReverseEngineering  = r3.top3ReverseEngineering;
+    if (r3.grandSlamOfferBlueprint) mergedData.grandSlamOfferBlueprint = r3.grandSlamOfferBlueprint;
+    if (r3.productServiceAudit)     mergedData.productServiceAudit     = { ...mergedData.productServiceAudit, ...r3.productServiceAudit };
+    if (r3.masteringTechniques)     mergedData.masteringTechniques     = r3.masteringTechniques;
+    if (r3.duelComparison)          mergedData.duelComparison          = { ...mergedData.duelComparison,      ...r3.duelComparison      };
+    if (r4.swot)                    mergedData.swot                    = r4.swot;
+    if (r4.blueOceanStrategy)       mergedData.blueOceanStrategy       = r4.blueOceanStrategy;
+    if (r4.comparisonScores)        mergedData.comparisonScores        = r4.comparisonScores;
+    if (r4.semanticDifferences)     mergedData.semanticDifferences     = r4.semanticDifferences;
+
+    // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
+    const elapsed = Date.now() - startTime;
+    console.log(`✅ [WarRoom-V10.0] Terminé en ${elapsed}ms`);
+
+    const finalResult = {
+        success:    true,
+        source,
+        elapsed,
+        query:      cleanQuery,
+        geo:        geoData.location,
+        lang:       langObj.code,
+        competitors: enrichedCompetitors,
+        leaderMoat,
+        knowledgeGraph,
+        ...mergedData,
+        externalBot: GPT_BOT
+    };
+
+    cache.set(cacheKey, finalResult);
+    return finalResult;
+}
 
 
 
