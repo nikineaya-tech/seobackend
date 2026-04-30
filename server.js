@@ -1917,16 +1917,31 @@ async function scrapeStealth(validUrl) {
             techStack: extracted.tech,
 
             copyIntel: {
-                headlines:      { h1: extracted.copy.h1List, h2: extracted.copy.h2List, h3: extracted.copy.h3List },
-                realCTAs:       extracted.copy.ctaList,
-                heroText:       extracted.bodyText.substring(0, 300),
-                testimonials:   extracted.socialProofs,
-                guarantees:     [],
-                faq:            [],
-                bulletBenefits: [],
-                allButtons:     extracted.copy.ctaList,
-                pageSections:   [],
-            },
+    headlines:      { h1: extracted.copy.h1List, h2: extracted.copy.h2List, h3: extracted.copy.h3List },
+    realCTAs:       extracted.copy.ctaList,
+    heroText:       extracted.bodyText.substring(0, 300),
+    testimonials:   extracted.socialProofs,
+    guarantees:     [],
+    faq:            [],
+    bulletBenefits: [],
+    allButtons:     extracted.copy.ctaList,
+    pageSections:   (() => {                          // ← REMPLACE pageSections: []
+        const s = extracted.sections || {};
+        const map = {
+            HERO:        s.hasHero,
+            FEATURES:    s.hasFeatures,
+            TRUST:       s.hasTrust,
+            SOCIALPROOF: s.hasTestim,
+            PRICING:     s.hasPricing,
+            FAQ:         s.hasFAQ,
+            CTA:         s.hasCTA,
+            FOOTER:      s.hasFooter,
+        };
+        return Object.entries(map)
+            .filter(([, v]) => v)
+            .map(([type]) => ({ type, present: true, score: 60 }));
+    })(),
+},
 
             priceIntel: {
                 bestPrice:    extracted.pricing.bestPrice,
@@ -4839,9 +4854,45 @@ app.post('/api/analyze-funnel', analysisLimiter, async (req, res) => {
         const h1Main  = copy.headlines?.h1?.[0]      || ND;
         const h2List  = copy.headlines?.h2?.slice(0, 8) || [];
         const h3List  = copy.headlines?.h3?.slice(0, 8) || [];
-        const ctaList = copy.realCTAs?.slice(0, 10)     || [];
+       const ctaList     = copy.realCTAs?.slice(0, 10) || [];
 
-        const allSections    = copy.pageSections || [];
+// ─── CTA Coverage + Images Count ─────────────────────────────────────────────
+const ctaCoverage = allSections.length > 0
+    ? Math.min(100, Math.round((ctaList.length / allSections.length) * 100))
+    : (ctaList.length > 0 ? 100 : 0);
+
+const imagesCount = (() => {
+    if (typeof extractPerfSignals === 'function') {
+        return extractPerfSignals(rawHtml).totalImages || 0;
+    }
+    const $img = cheerio.load(rawHtml);
+    return $img('img').length || 0;
+})();
+// ─────────────────────────────────────────────────────────────────────────────
+
+       const allSections = (() => {
+    const base = Array.isArray(copy.pageSections) ? copy.pageSections : [];
+    if (base.length > 0) return base;
+
+    // Fallback Cheerio — rawHtml déjà disponible dans le scope
+    const $s = cheerio.load(rawHtml);
+    const rebuilt = [];
+    const sectionMap = {
+        HERO:        ['hero', 'banner', 'jumbotron', 'main-banner'],
+        FEATURES:    ['features', 'services', 'avantages', 'benefits'],
+        TRUST:       ['trust', 'garantie', 'guarantee', 'certif', 'reassurance'],
+        SOCIALPROOF: ['testimonials', 'reviews', 'avis', 'clients', 'rating'],
+        PRICING:     ['pricing', 'tarifs', 'offre', 'plans', 'price'],
+        FAQ:         ['faq', 'accordion', 'questions', 'frequentes'],
+        CTA:         ['cta', 'contact', 'devis', 'appel'],
+        FOOTER:      ['footer'],
+    };
+    Object.entries(sectionMap).forEach(([type, kws]) => {
+        const sel = kws.map(k => `[id*="${k}"],[class*="${k}"]`).join(',');
+        if ($s(sel).length > 0) rebuilt.push({ type, present: true, score: 60 });
+    });
+    return rebuilt;
+})();
         const heroSection    = allSections.find(s => s.type === 'HERO')         || null;
         const featSection    = allSections.find(s => s.type === 'FEATURES')     || null;
         const trustSection   = allSections.find(s => s.type === 'TRUST')        || null;
@@ -5259,6 +5310,28 @@ ${sharedContext}
         const r2 = typeof aiResult2.response === 'string' ? extractJSON(aiResult2.response) : aiResult2.response;
 
         const r1Safe = r1 || {};
+
+// ─── Design Score local (fallback si l'IA retourne 0) ────────────────────────
+const computedDesignScore = (() => {
+    let s = 0;
+    if (cleanColors.length >= 2)                              s += 20;
+    if (cleanColors.length >= 3)                              s += 10;
+    if (scrape?.visualDNA?.googleFonts?.length > 0)           s += 15;
+    if (primaryColor && primaryColor !== 'NONDETECTE')         s += 15;
+    if (allSections.length >= 3)                              s += 15;
+    if (/flex|grid/i.test(rawHtml.substring(0, 50000)))       s += 10;
+    if (/transition|animation/gi.test(rawHtml.substring(0, 50000))) s += 10;
+    if (scrape?.success)                                       s += 5;
+    return Math.min(100, s);
+})();
+
+if (r1Safe.webCharte) {
+    const aiDesign = r1Safe.webCharte.designScore;
+    if (!aiDesign || aiDesign === 0 || aiDesign === '0') {
+        r1Safe.webCharte.designScore = computedDesignScore;
+    }
+}
+// ─────────────────────────────────────────────────────────────────────────────
         const r2Safe = r2 || {};
         const cotR1 = r1Safe.chainOfThought || {};
 
@@ -5548,90 +5621,124 @@ Langue : ${targetLang}.`.trim();
             : isEn ? 'Magic Prompt failed'
             :        'Erreur Magic Prompt';
 
-        // ══════════════════════════════════════════════════════
-        // 📦 ASSEMBLAGE RÉPONSE FINALE GOD TIER
-        // ══════════════════════════════════════════════════════
-        const finalResponse = {
-            success:     true,
-            requestId,
-            analyzedUrl: validUrl,
-            lang:        userLang,
-            fromCache:   false,
-            fetchLayer:  scrape.fetchLayer || 'axios',
-            scrapedBlocked,
-            version:     'V12-GOD-TIER',
+      // ─── Calcul Steal Potential V12 ──────────────────────────────────────────────
+const v12Traffic = (() => {
+    const raw = r3Safe?.financialProjection?.monthlyVisitorsEstimate;
+    if (!raw) return null;
+    const n = parseInt(String(raw).replace(/[^0-9]/g, ''), 10);
+    return isNaN(n) ? null : n;
+})();
+const v12CR = (() => {
+    const raw = r2Safe?.funnelMapping?.estimatedConversionRate;
+    if (!raw) return 0.02;
+    const n = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
+    return isNaN(n) ? 0.02 : n / 100;
+})();
+const v12Basket   = detectedPrice > 0 ? detectedPrice : null;
+const v12StealPot = (v12Traffic && v12Basket)
+    ? Math.max(0, Math.round((0.05 - v12CR) * v12Traffic * v12Basket))
+    : null;
+// ─────────────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+// 📦 ASSEMBLAGE RÉPONSE FINALE GOD TIER
+// ══════════════════════════════════════════════════════
+const finalResponse = {
+    success:     true,
+    requestId,
+    analyzedUrl: validUrl,
+    lang:        userLang,
+    fromCache:   false,
+    fetchLayer:  scrape.fetchLayer || 'axios',
+    scrapedBlocked,
+    version:     'V12-GOD-TIER',
 
-            chainOfThought: {
-                agent1: r1Safe.chainOfThought || {},
-                agent2: r2Safe.chainOfThought || {},
-                agent3: r3Safe.chainOfThought || {},
-                agent4: r4Safe.chainOfThought || {},
-            },
+    chainOfThought: {
+        agent1: r1Safe.chainOfThought || {},
+        agent2: r2Safe.chainOfThought || {},
+        agent3: r3Safe.chainOfThought || {},
+        agent4: r4Safe.chainOfThought || {},
+    },
 
-            projectIdentity:  r1Safe.projectIdentity  || null,
-            webCharte:        r1Safe.webCharte        || null,
-            pageArchitecture: r1Safe.pageArchitecture || null,
-            aidaAnalysis:     r1Safe.aidaAnalysis     || null,
+    financialIntel: {                                                  // ← BUG-01 FIX
+        estimatedMonthlyTraffic:  v12Traffic,
+        trafficSource:            v12Traffic ? 'AI Estimation V12' : null,
+        averageBasket:            v12Basket,
+        basketSource:             detectedPrice > 0 ? 'Scrape direct' : 'Non détecté',
+        estimatedConversionRate:  r2Safe?.funnelMapping?.estimatedConversionRate || null,
+        estimatedMRR:             r3Safe?.financialProjection?.projectedMonthlyRevenue || null,
+        monthlyStealPotential:    v12StealPot,                         // ← BUG-02 FIX
+        reasoning:                r3Safe?.financialProjection?.roiVerdict || 'Données insuffisantes',
+        confidence:               detectedPrice > 0 ? 'MEDIUM' : 'LOW',
+    },
 
-            funnelMapping:     r2Safe.funnelMapping     || null,
-            pricingPsychology: r2Safe.pricingPsychology || null,
-            copywritingDeep:   r2Safe.copywritingDeep   || null,
-            aarrMetrics:       r2Safe.aarrMetrics       || null,
+    projectIdentity:  r1Safe.projectIdentity  || null,
+    webCharte:        r1Safe.webCharte        || null,
+    pageArchitecture: r1Safe.pageArchitecture || null,
+    aidaAnalysis:     r1Safe.aidaAnalysis     || null,
 
-            strategicBlueprint:  r3Safe.strategicBlueprint  || null,
-            quickWins:           r3Safe.quickWins           || [],
-            financialProjection: r3Safe.financialProjection || null,
-            technicalAudit:      r3Safe.technicalAudit      || null,
+    funnelMapping:     r2Safe.funnelMapping     || null,
+    pricingPsychology: r2Safe.pricingPsychology || null,
+    copywritingDeep:   r2Safe.copywritingDeep   || null,
+    aarrMetrics:       r2Safe.aarrMetrics       || null,
 
-            neuromarketing: r4Safe.neuromarketing || null,
-            globalScoring:  r4Safe.globalScoring,
-            
-            aiRewritePrompt:      magicPrompt,
-            magicPromptAvailable: true,
+    strategicBlueprint:  r3Safe.strategicBlueprint  || null,
+    quickWins:           r3Safe.quickWins           || [],
+    financialProjection: r3Safe.financialProjection || null,
+    technicalAudit:      r3Safe.technicalAudit      || null,
 
-            rawIntel: {
-                h1:    h1Main,
-                h2s:   h2List,
-                h3s:   h3List,
-                ctas:  ctaList,
-                colors: cleanColors,
-                primaryColor,
-                secondColor,
-                accentColor,
-                phones,
-                emails,
-                techStack,
-                schemaTypes,
-                wordCount,
-                hasSSL,
-                hasWhatsApp,
-                socialProofsCount: socialProofs.length,
-                sectionsDetected:  allSections.map(s => s.type),
-                detectedPrice,
-                currency,
-                localScore,
-                quickLocalScore,
-            },
+    neuromarketing: r4Safe.neuromarketing || null,
+    globalScoring:  r4Safe.globalScoring,
 
-            financialAudit: {
-                detectedPrice: detectedPrice || null,
-                currency: currency || null,
-                potentialRevenueIncrease: detectedPrice && detectedPrice > 0
-                    ? (r3Safe.financialProjection?.potentialGain || null)
-                    : null,
-                revenueOpportunity: isAr ? 'زيادة محتملة في الإيرادات'
-                                  : isEn ? 'Potential Revenue Increase'
-                                  :        'Augmentation potentielle des revenus',
-            },
+    aiRewritePrompt:      magicPrompt,
+    magicPromptAvailable: true,
 
-            meta: {
-                version:  'V12-GOD-TIER',
-                agents:   5,
-                strategy: 'Chain of Thought Parallel (1+2 // 3+4 // 5)',
-                duration:  (Date.now() - startTime) + 'ms',
-                timestamp: new Date().toISOString(),
-            },
-        };
+    rawIntel: {
+        h1:    h1Main,
+        h2s:   h2List,
+        h3s:   h3List,
+        ctas:  ctaList,
+        colors: cleanColors,
+        primaryColor,
+        secondColor,
+        accentColor,
+        phones,
+        emails,
+        techStack,
+        schemaTypes,
+        wordCount,
+        hasSSL,
+        hasWhatsApp,
+        socialProofsCount: socialProofs.length,
+        sectionsDetected:  allSections.map(s => s.type),
+        detectedPrice,
+        currency,
+        localScore,
+        quickLocalScore,
+        imagesCount,
+        ctaCoverage,
+    },
+
+    financialAudit: {
+        detectedPrice: detectedPrice || null,
+        currency:      currency || null,
+        potentialRevenueIncrease: detectedPrice && detectedPrice > 0
+            ? (r3Safe.financialProjection?.potentialGain || null)
+            : null,
+        monthlyStealPotential: v12StealPot,                            // ← BUG-02 FIX
+        annualOpportunity:     v12StealPot ? v12StealPot * 12 : null,  // ← BUG-02 FIX
+        revenueOpportunity: isAr ? 'زيادة محتملة في الإيرادات'
+                          : isEn ? 'Potential Revenue Increase'
+                          :        'Augmentation potentielle des revenus',
+    },
+
+    meta: {
+        version:  'V12-GOD-TIER',
+        agents:   5,
+        strategy: 'Chain of Thought Parallel (1+2 // 3+4 // 5)',
+        duration:  (Date.now() - startTime) + 'ms',
+        timestamp: new Date().toISOString(),
+    },
+};
 
         cache.set(cacheKey, finalResponse);
         console.log(`✅ [${requestId}] V12 GOD TIER DONE — ${finalResponse.meta.duration} | Score: ${finalResponse.globalScoring?.overall}/100`);
