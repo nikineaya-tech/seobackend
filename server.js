@@ -2022,6 +2022,10 @@ async function scrapeStealth(validUrl) {
 // 🕵️ ROUTE: SCRAPE SITE DATA (AXIOS → SCRAPE.DO FALLBACK)
 // ═══════════════════════════════════════════════════════════════════
 
+// ═══════════════════════════════════════════════════════════════════
+// 🕵️ ROUTE: SCRAPE SITE DATA (PLAYWRIGHT → SCRAPE.DO FALLBACK)
+// ═══════════════════════════════════════════════════════════════════
+
 async function scrapeSiteData(url, lang = 'fr') {
     const startTime = Date.now();
     try {
@@ -2038,27 +2042,38 @@ async function scrapeSiteData(url, lang = 'fr') {
         const isAr = lang === 'ar';
         const isEn = lang === 'en';
 
-        // ── Accept-Language selon langue
-        const acceptLanguage = isAr
-            ? 'ar-MA,ar;q=0.9,ar-SA;q=0.8,en;q=0.7'
-            : isEn
-            ? 'en-US,en;q=0.9,fr;q=0.7'
-            : 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7';
+        let acceptLanguage = 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7';
+        if (isAr) acceptLanguage = 'ar-MA,ar;q=0.9,ar-SA;q=0.8,en;q=0.7';
+        else if (isEn) acceptLanguage = 'en-US,en;q=0.9,fr;q=0.7';
 
-        // ════════════════════════════════════════════════════
-        // LAYER 1 — Playwright (données riches : colors, tech, phones)
-        // ════════════════════════════════════════════════════
         let scrape = null;
         let html   = '';
 
         try {
             scrape = await scrapeStealth(validUrl);
-            if (scrape.success && scrape.html && scrape.html.length > 500) {
+            
+            // 🧠 DÉTECTION INTELLIGENTE DU BLOCAGE (CLOUDFLARE / DATADOME)
+            const htmlLower = (scrape.html || '').toLowerCase();
+            const h1Lower   = (scrape.copyIntel?.headlines?.h1?.[0] || '').toLowerCase();
+            const titleLower = (scrape.meta?.title || '').toLowerCase();
+
+            const isBotBlocked = !scrape.success 
+                || !scrape.html 
+                || scrape.html.length < 800 
+                || scrape.wordCount < 20
+                || h1Lower.includes('you have been blocked')
+                || h1Lower.includes('access denied')
+                || titleLower.includes('attention required')
+                || titleLower.includes('security measure')
+                || titleLower.includes('cloudflare')
+                || htmlLower.includes('ray id:');
+
+            if (!isBotBlocked) {
                 html = scrape.html;
-                console.log(`✅ scrapeSiteData Playwright OK — ${Date.now() - startTime}ms | CMS: ${scrape.techStack?.cms} | Colors: ${scrape.visualDNA?.dominantColors?.[0]}`);
+                console.log(`✅ scrapeSiteData Playwright OK — ${Date.now() - startTime}ms | CMS: ${scrape.techStack?.cms}`);
             } else {
-                console.warn(`⚠️ Playwright HTML insuffisant (${scrape.html?.length || 0} chars) — fallback Scrape.do activé`);
-                scrape = null;
+                console.warn(`⚠️ Playwright bloqué par anti-bot (Mots: ${scrape.wordCount || 0}) — fallback Scrape.do activé`);
+                scrape = null; 
             }
         } catch (pwErr) {
             console.warn(`⚠️ Playwright failed: ${pwErr.message} — fallback Scrape.do activé`);
@@ -2066,7 +2081,7 @@ async function scrapeSiteData(url, lang = 'fr') {
         }
 
         // ════════════════════════════════════════════════════
-        // LAYER 2 — Scrape.do (Anti-Bot Bypass + JS Render) Fallback
+        // LAYER 2 — Scrape.do (Anti-Bot Bypass + JS Render)
         // ════════════════════════════════════════════════════
         if (!html) {
             try {
@@ -2076,7 +2091,6 @@ async function scrapeSiteData(url, lang = 'fr') {
                     () => {
                         if (scrapeDoToken) {
                             console.log(`🛡️ [Layer 2] Utilisation API Scrape.do (Render=true) pour ${validUrl}...`);
-                            // Utilise l'API avec render JS activé pour ne rien rater
                             const targetUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(validUrl)}&render=true`;
                             return axios.get(targetUrl, { timeout: CONFIG.TIMEOUT_MEDIUM || 35000 });
                         } else {
@@ -2093,7 +2107,6 @@ async function scrapeSiteData(url, lang = 'fr') {
                     { context: 'Layer2-Fallback' }
                 );
                 
-                // Gérer le fait que les API retournent parfois la réponse dans différentes clés selon la config
                 html = typeof data === 'string' ? data : (data.html || data.body || JSON.stringify(data));
                 console.log(`✅ scrapeSiteData Layer 2 (Scrape.do) OK — ${Date.now() - startTime}ms (${html.length} chars)`);
                 
@@ -2103,45 +2116,24 @@ async function scrapeSiteData(url, lang = 'fr') {
             }
         }
 
-        // ════════════════════════════════════════════════════
-        // LAYER 3 — Cheerio parsing sur HTML final (soit Playwright, soit Scrape.do)
-        // ════════════════════════════════════════════════════
         const $ = cheerio.load(html);
 
-        // ── Meta
-        const metaTitle       = $('title').text().trim()
-                             || scrape?.meta?.title
-                             || (isAr ? 'بدون عنوان' : 'Sans titre');
-        const metaDescription = $('meta[name="description"]').attr('content')
-                             || scrape?.meta?.description
-                             || '';
+        const metaTitle       = $('title').text().trim() || scrape?.meta?.title || (isAr ? 'بدون عنوان' : 'Sans titre');
+        const metaDescription = $('meta[name="description"]').attr('content') || scrape?.meta?.description || '';
         const metaKeywords    = $('meta[name="keywords"]').attr('content') || '';
-        const metaLang        = $('html').attr('lang')
-                             || scrape?.meta?.lang
-                             || 'N/A';
+        const metaLang        = $('html').attr('lang') || scrape?.meta?.lang || 'N/A';
 
-        // ── Structure
-        const h1Text  = $('h1').first().text().trim()
-                     || scrape?.copyIntel?.headlines?.h1?.[0]
-                     || '';
+        const h1Text  = $('h1').first().text().trim() || scrape?.copyIntel?.headlines?.h1?.[0] || '';
         const h1Count = $('h1').length;
         const h2Count = $('h2').length;
         const h3Count = $('h3').length;
 
-        // ── Content
-        const wordCount   = scrape?.wordCount
-                         || $('body').text().trim().split(/\s+/).filter(Boolean).length;
-        const hasWhatsApp = scrape?.techStack?.hasWhatsApp
-                         || /whatsapp|wa\.me/i.test(html);
+        const wordCount   = scrape?.wordCount || $('body').text().trim().split(/\s+/).filter(Boolean).length;
+        const hasWhatsApp = scrape?.techStack?.hasWhatsApp || /whatsapp|wa\.me/i.test(html);
 
-        // ── Schema
-        const schemaExists = (scrape?.schemaData?.count || 0) > 0
-                          || $('script[type="application/ld+json"]').length > 0;
+        const schemaExists = (scrape?.schemaData?.count || 0) > 0 || $('script[type="application/ld+json"]').length > 0;
         const schemaTypes  = scrape?.schemaData?.types || [];
 
-        // ════════════════════════════════════════════════════
-        // ASSEMBLAGE FINAL — données riches Playwright + cheerio
-        // ════════════════════════════════════════════════════
         const scrapedData = {
             success:    true,
             url:        validUrl,
@@ -2175,7 +2167,6 @@ async function scrapeSiteData(url, lang = 'fr') {
                 types:  schemaTypes,
             },
 
-            // ✅ Si Playwright a échoué (Layer 2 utilisé), on évite le crash des propriétés visuelles
             visualDNA: scrape?.visualDNA || {
                 dominantColors: ['#3b82f6', '#1e293b', '#10b981'],
                 googleFonts:    [],
@@ -2268,7 +2259,7 @@ async function scrapeSiteData(url, lang = 'fr') {
 
         cache.set(cacheKey, scrapedData);
 
-        console.log(`✅ scrapeSiteData DONE — ${Date.now() - startTime}ms | Layer: ${scrapedData.fetchLayer} | Colors: ${scrapedData.visualDNA.dominantColors[0]} | CMS: ${scrapedData.techStack.cms}`);
+        console.log(`✅ scrapeSiteData DONE — ${Date.now() - startTime}ms | Layer: ${scrapedData.fetchLayer} | CMS: ${scrapedData.techStack.cms}`);
 
         return scrapedData;
 
@@ -8307,9 +8298,8 @@ console.log('✅ analyzeCompetitors v7 (LangObj + Anti-Hallucination) loaded');
 // ═══════════════════════════════════════════════════════════════
 // SCRAPING ULTRA-DÉTAILLÉ
 // ═══════════════════════════════════════════════════════════════
-
 // ═══════════════════════════════════════════════════════════════
-// SCRAPING ULTRA-DÉTAILLÉ (AVEC FALLBACK SCRAPE.DO)
+// SCRAPING ULTRA-DÉTAILLÉ (AVEC DÉTECTION CLOUDFLARE)
 // ═══════════════════════════════════════════════════════════════
 
 async function deepScrapeFunnel(url) {
@@ -8320,13 +8310,21 @@ async function deepScrapeFunnel(url) {
         // ── 1. Playwright via scrapeStealth — tentative primaire
         const scrapeResult = await scrapeStealth(url);
 
-        // 🧠 NOUVELLE LOGIQUE ANTI-BOT (DÉTECTION DE FAUSSES PAGES)
-        // Zalando renvoie une page "Captcha" qui ne fait pas crasher Playwright
-        // mais qui ne contient aucun mot (wordCount = 0) et pas de body.
+        // 🧠 NOUVELLE LOGIQUE ANTI-BOT (DÉTECTION DE FAUSSES PAGES + CLOUDFLARE)
+        const htmlLower = (scrapeResult.html || '').toLowerCase();
+        const h1Lower   = (scrapeResult.copyIntel?.headlines?.h1?.[0] || '').toLowerCase();
+        const titleLower = (scrapeResult.meta?.title || '').toLowerCase();
+
         const isBotBlocked = !scrapeResult.success 
             || !scrapeResult.html 
             || scrapeResult.html.length < 800 
             || scrapeResult.wordCount < 20 
+            || h1Lower.includes('you have been blocked')
+            || h1Lower.includes('access denied')
+            || titleLower.includes('attention required')
+            || titleLower.includes('security measure')
+            || titleLower.includes('cloudflare')
+            || htmlLower.includes('ray id:')
             || (!scrapeResult.copyIntel?.headlines?.h1?.length && scrapeResult.visualDNA?.dominantColors?.[0] === '#3b82f6');
 
         // ── 2. FALLBACK SCRAPE.DO ────────────────
@@ -8336,7 +8334,6 @@ async function deepScrapeFunnel(url) {
             const scrapeDoToken = process.env.SCRAPE_DO_TOKEN;
             if (scrapeDoToken) {
                 try {
-                    // &render=true est CRUCIAL pour les sites e-commerce comme Zalando
                     const scrapeDoUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(url)}&render=true`;
                     
                     const fallbackRes = await RetryManager.executeWithRetry(
@@ -8349,7 +8346,6 @@ async function deepScrapeFunnel(url) {
                         scrapeResult.success = true;
                         scrapeResult.html = fallbackRes.data;
                         scrapeResult.fetchLayer = 'scrape.do';
-                        // Réinitialiser les données visuelles/techniques qui ont pris les valeurs par défaut
                         scrapeResult.visualDNA = null; 
                         scrapeResult.techStack = { cms: 'Unknown' };
                         scrapeResult.bodyText = null; 
@@ -8358,7 +8354,7 @@ async function deepScrapeFunnel(url) {
                     console.error(`❌ [DEEP SCRAPE] Scrape.do a aussi échoué:`, e.message);
                 }
             } else {
-                console.warn(`⚠️ [DEEP SCRAPE] SCRAPE_DO_TOKEN non trouvé dans les variables d'environnement.`);
+                console.warn(`⚠️ [DEEP SCRAPE] SCRAPE_DO_TOKEN non trouvé.`);
             }
         }
 
@@ -8367,7 +8363,7 @@ async function deepScrapeFunnel(url) {
         const bodyText = scrapeResult.bodyText 
                       || $('body').text().replace(/\s+/g, ' ').trim();
 
-        // ── 3. SCHEMA.ORG — depuis Playwright d'abord, cheerio en double-check
+        // ── 3. SCHEMA.ORG
         const schemaData = scrapeResult.schemaData || { types: [], count: 0 };
         const schemaPrices = [];
 
@@ -8391,7 +8387,7 @@ async function deepScrapeFunnel(url) {
             });
         }
 
-        // ── 4. PRIX — Playwright d'abord (le plus fiable), regex cheerio en fallback
+        // ── 4. PRIX
         let priceIntel = scrapeResult.priceIntel || null;
 
         if (!priceIntel || !priceIntel.detected) {
@@ -8413,8 +8409,7 @@ async function deepScrapeFunnel(url) {
             };
         }
 
-        // ── 5. COPY INTEL — Playwright d'abord, cheerio en fallback
-        // ✅ PATCH COPYINTEL — garantit que copyIntel est TOUJOURS défini
+        // ── 5. COPY INTEL
         let copyIntel = scrapeResult.copyIntel || null;
 
         if (!copyIntel || !copyIntel.headlines || copyIntel.headlines?.h1?.length === 0) {
@@ -8439,7 +8434,6 @@ async function deepScrapeFunnel(url) {
             };
         }
 
-        // ✅ PATCH SAFETY — garantit que copyIntel ne sera jamais undefined en aval
         copyIntel = {
             headlines:      copyIntel.headlines      || { h1: [], h2: [], h3: [] },
             realCTAs:       copyIntel.realCTAs       || [],
@@ -8452,7 +8446,6 @@ async function deepScrapeFunnel(url) {
             pageSections:   copyIntel.pageSections   || [],
         };
 
-        // ── Détection sections (cheerio — complémentaire à Playwright)
         if (!copyIntel.pageSections || copyIntel.pageSections.length === 0) {
             const sectionKeywords = {
                 HERO:         ['hero', 'banner', 'main'],
@@ -8480,12 +8473,10 @@ async function deepScrapeFunnel(url) {
             });
         }
 
-        // ── 6. VISUAL DNA — ✅ Playwright (getComputedStyle) en priorité
+        // ── 6. VISUAL DNA
         let visualDNA = scrapeResult.visualDNA || null;
 
         if (!visualDNA || visualDNA.dominantColors?.length === 0) {
-            console.warn('⚠️ visualDNA vide depuis Playwright/Scrape.do — fallback cheerio styles inline');
-
             const styleContent = $('style').text() + ' '
                 + $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
 
@@ -8513,7 +8504,7 @@ async function deepScrapeFunnel(url) {
             };
         }
 
-        // ── 7. TRUST SIGNALS — Playwright d'abord
+        // ── 7. TRUST SIGNALS
         const trustSignals = scrapeResult.trustSignals || {
             hasSSL:                url.startsWith('https'),
             hasWhatsApp:           /whatsapp|wa\.me/i.test(html),
@@ -8592,6 +8583,8 @@ async function deepScrapeFunnel(url) {
         };
     }
 }
+
+
 
 async function scrapeStealth(validUrl) {
     const playwrightWrapper = require('./playwright-wrapper.cjs');

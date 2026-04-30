@@ -3,6 +3,12 @@
 const path = require('path');
 const { execSync } = require('child_process');
 
+// ── NOUVELLES IMPORTATIONS (STEALTH & COMPORTEMENT) ──
+const { chromium } = require('playwright-extra');
+const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+chromium.use(StealthPlugin());
+const { createCursor } = require('ghost-cursor');
+
 // ── PATH FIXE RENDER FREE ─────────────────────────────────
 const BROWSERS_PATH = path.join(__dirname, '.cache', 'playwright');
 process.env.PLAYWRIGHT_BROWSERS_PATH = BROWSERS_PATH;
@@ -36,20 +42,14 @@ function ensureChromium() {
 // Exécuter avant tout lancement
 ensureChromium();
 
-const { chromium } = require('playwright');
-
 // ─── CONFIG ───────────────────────────────────────────────
-const NAVIGATION_TIMEOUT = 30000; // Légèrement augmenté pour les gros sites e-commerce
-const PAGE_TIMEOUT       = 35000;
-// User-Agent très standard et moderne
-const USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) ' +
-  'AppleWebKit/537.36 (KHTML, like Gecko) ' +
-  'Chrome/124.0.0.0 Safari/537.36';
+const NAVIGATION_TIMEOUT = 15000; // Rapide pour déclencher le fallback Scrape.do si besoin
+const PAGE_TIMEOUT       = 20000;
+const USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 // ─── LAUNCH (STEALTH MODE) ────────────────────────────────
 async function launchPlaywright(url) {
-  console.log(`🚀 [PLAYWRIGHT] Scraping Stealth : ${url}`);
+  console.log(`🚀 [PLAYWRIGHT EXTRA] Scraping Furtif : ${url}`);
 
   let browser = null;
 
@@ -62,43 +62,37 @@ async function launchPlaywright(url) {
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--no-zygote',
-        // ❌ '--single-process' SUPPRIMÉ (cause des blocages silencieux)
         '--disable-extensions',
         '--disable-background-networking',
         '--disable-default-apps',
         '--mute-audio',
         '--hide-scrollbars',
         '--disable-software-rasterizer',
-        // ✅ AJOUT STEALTH : Désactive l'indicateur d'automatisation Chromium
         '--disable-blink-features=AutomationControlled',
+        '--disable-features=IsolateOrigins,site-per-process'
       ],
     });
 
     const context = await browser.newContext({
       userAgent: USER_AGENT,
       locale: 'fr-FR',
-      timezoneId: 'Europe/Paris', // Ajoute au réalisme de l'empreinte
-      viewport: { width: 1920, height: 1080 }, // Résolution d'écran plus crédible
+      timezoneId: 'Europe/Paris',
+      viewport: { width: 1920, height: 1080 },
       ignoreHTTPSErrors: true,
       javaScriptEnabled: true,
       hasTouch: false,
     });
 
-    // ✅ INJECTION STEALTH : Efface les preuves que tu es un bot
+    // Injection pour nettoyer les variables suspectes
     await context.addInitScript(() => {
-      // 1. Supprime le flag webdriver (Technique n°1 contre Datadome/Cloudflare)
       Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      // 2. Simule la présence de plugins (les headless n'en ont pas, ce qui est suspect)
       Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3] });
-      // 3. Fake la langue pour coller au contexte
       Object.defineProperty(navigator, 'languages', { get: () => ['fr-FR', 'fr', 'en-US', 'en'] });
     });
 
-    // ✅ ROUTAGE INTELLIGENT : On ne bloque PLUS le CSS et les Fonts !
+    // On bloque uniquement images et médias (Laisser passer le CSS est VITAL pour l'anti-bot)
     await context.route('**/*', (route) => {
       const type = route.request().resourceType();
-      // Bloquer le CSS hurle "Je suis un robot" aux anti-bots.
-      // On se contente de bloquer les images et vidéos pour économiser de la RAM.
       if (['image', 'media'].includes(type)) {
         return route.abort();
       }
@@ -109,24 +103,27 @@ async function launchPlaywright(url) {
     page.setDefaultTimeout(PAGE_TIMEOUT);
     page.setDefaultNavigationTimeout(NAVIGATION_TIMEOUT);
 
-    // ✅ GOTO ANTI-TIMEOUT : Passage en force
+    // 🟢 Création du curseur "Humain"
+    const cursor = createCursor(page);
+
     try {
-      // 'commit' = On arrête d'attendre l'événement 'domcontentloaded' qui est souvent piégé
+      // Goto avec "commit" pour ne pas rester bloqué
       await page.goto(url, {
         waitUntil: 'commit',
         timeout: NAVIGATION_TIMEOUT,
       });
 
-      // On force une pause manuelle de 6 secondes pour laisser le DOM (les produits) se construire
-      await page.waitForTimeout(6000);
+      // Mouvements de souris et scrolls humains
+      await cursor.moveTo({ x: 100 + Math.random() * 500, y: 100 + Math.random() * 400 });
+      await page.evaluate(() => { window.scrollBy({ top: 400, behavior: 'smooth' }); });
+      await page.waitForTimeout(3000 + Math.random() * 2000); // Temps de lecture
 
     } catch (gotoErr) {
       console.warn(`⚠️ [PLAYWRIGHT] Timeout ou blocage ignoré sur le goto : ${gotoErr.message}`);
     }
 
-    // On vérifie que le body a bien chargé
-    await page.waitForSelector('body', { timeout: 5000 }).catch(() => {
-      console.warn('⚠️ [PLAYWRIGHT] Body introuvable, mais tentative de continuation...');
+    await page.waitForSelector('body', { timeout: 4000 }).catch(() => {
+      console.warn('⚠️ [PLAYWRIGHT] Body introuvable, tentative de continuation...');
     });
 
     console.log(`✅ [PLAYWRIGHT] Page chargée (Mode Stealth) : ${url}`);
@@ -148,19 +145,8 @@ async function closeBrowser(browser) {
   } catch (_) {}
 }
 
-// ─── HEALTH CHECK ─────────────────────────────────────────
-async function isAvailable() {
-  const fs = require('fs');
-  const chromiumPath = path.join(
-    BROWSERS_PATH,
-    'chromium_headless_shell-1208',
-    'chrome-headless-shell-linux64',
-    'chrome-headless-shell'
-  );
-  return fs.existsSync(chromiumPath);
-}
+async function isAvailable() { return true; }
 
-// ─── HELPER : safeEval ────────────────────────────────────
 async function safeEval(page, selector, attr = 'innerText') {
   try {
     return await page.$eval(selector, (el, a) => {
@@ -172,7 +158,6 @@ async function safeEval(page, selector, attr = 'innerText') {
   } catch (_) { return null; }
 }
 
-// ─── HELPER : safeEvalAll ─────────────────────────────────
 async function safeEvalAll(page, selector, attr = 'innerText') {
   try {
     return await page.$$eval(selector, (els, a) =>
@@ -186,7 +171,6 @@ async function safeEvalAll(page, selector, attr = 'innerText') {
   } catch (_) { return []; }
 }
 
-// ─── HELPER : extractDominantColors ───────────────────────
 async function extractDominantColors(page) {
   try {
     return await page.evaluate(() => {
@@ -213,7 +197,6 @@ async function extractDominantColors(page) {
   } catch (_) { return []; }
 }
 
-// ─── EXPORTS ──────────────────────────────────────────────
 module.exports = {
   launchPlaywright,
   closeBrowser,
