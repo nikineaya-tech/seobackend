@@ -4855,22 +4855,7 @@ app.post('/api/analyze-funnel', analysisLimiter, async (req, res) => {
         const h2List  = copy.headlines?.h2?.slice(0, 8) || [];
         const h3List  = copy.headlines?.h3?.slice(0, 8) || [];
        const ctaList     = copy.realCTAs?.slice(0, 10) || [];
-
-// ─── CTA Coverage + Images Count ─────────────────────────────────────────────
-const ctaCoverage = allSections.length > 0
-    ? Math.min(100, Math.round((ctaList.length / allSections.length) * 100))
-    : (ctaList.length > 0 ? 100 : 0);
-
-const imagesCount = (() => {
-    if (typeof extractPerfSignals === 'function') {
-        return extractPerfSignals(rawHtml).totalImages || 0;
-    }
-    const $img = cheerio.load(rawHtml);
-    return $img('img').length || 0;
-})();
-// ─────────────────────────────────────────────────────────────────────────────
-
-       const allSections = (() => {
+ const allSections = (() => {
     const base = Array.isArray(copy.pageSections) ? copy.pageSections : [];
     if (base.length > 0) return base;
 
@@ -4893,6 +4878,21 @@ const imagesCount = (() => {
     });
     return rebuilt;
 })();
+// ─── CTA Coverage + Images Count ─────────────────────────────────────────────
+const ctaCoverage = allSections.length > 0
+    ? Math.min(100, Math.round((ctaList.length / allSections.length) * 100))
+    : (ctaList.length > 0 ? 100 : 0);
+
+const imagesCount = (() => {
+    if (typeof extractPerfSignals === 'function') {
+        return extractPerfSignals(rawHtml).totalImages || 0;
+    }
+    const $img = cheerio.load(rawHtml);
+    return $img('img').length || 0;
+})();
+// ─────────────────────────────────────────────────────────────────────────────
+
+      
         const heroSection    = allSections.find(s => s.type === 'HERO')         || null;
         const featSection    = allSections.find(s => s.type === 'FEATURES')     || null;
         const trustSection   = allSections.find(s => s.type === 'TRUST')        || null;
