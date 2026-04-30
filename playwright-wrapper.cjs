@@ -9,37 +9,27 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 chromium.use(StealthPlugin());
 const { createCursor } = require('ghost-cursor');
 
-// ── PATH FIXE RENDER FREE ─────────────────────────────────
-const BROWSERS_PATH = path.join(__dirname, '.cache', 'playwright');
-process.env.PLAYWRIGHT_BROWSERS_PATH = BROWSERS_PATH;
-
-// ── AUTO-INSTALL si binaire absent ───────────────────────
+// ── AUTO-INSTALL CHROMIUM (Render.com Safe) ───────────────
+// We removed the hardcoded paths. We now let Playwright manage 
+// its own cache natively. This prevents crashes when Playwright updates.
 function ensureChromium() {
-  const chromiumPath = path.join(
-    BROWSERS_PATH,
-    'chromium_headless_shell-1208',
-    'chrome-headless-shell-linux64',
-    'chrome-headless-shell'
-  );
-
-  const fs = require('fs');
-  if (!fs.existsSync(chromiumPath)) {
-    console.log('⚙️ [PLAYWRIGHT] Chromium absent — installation en cours...');
-    try {
-      execSync(
-        `PLAYWRIGHT_BROWSERS_PATH=${BROWSERS_PATH} npx playwright install chromium`,
-        { stdio: 'inherit', timeout: 120000 }
-      );
-      console.log('✅ [PLAYWRIGHT] Chromium installé avec succès');
-    } catch (err) {
-      console.error('❌ [PLAYWRIGHT] Installation Chromium échouée:', err.message);
-    }
-  } else {
-    console.log('✅ [PLAYWRIGHT] Chromium déjà présent');
+  console.log('⚙️ [PLAYWRIGHT] Checking Chromium installation...');
+  
+  try {
+    // This command is idempotent: it downloads Chromium if missing, 
+    // but finishes in milliseconds if it is already installed.
+    execSync('npx playwright install chromium', { 
+      stdio: 'inherit', 
+      timeout: 120000 // 2-minute timeout for the initial download
+    });
+    console.log('✅ [PLAYWRIGHT] Chromium is ready and verified');
+  } catch (err) {
+    console.error('❌ [PLAYWRIGHT] Chromium installation failed:', err.message);
+    console.error('💡 TIP: If this persists on Render, add "npx playwright install chromium" to your Build Command.');
   }
 }
 
-// Exécuter avant tout lancement
+// Execute the check before any scraping occurs
 ensureChromium();
 
 // ─── CONFIG ───────────────────────────────────────────────
@@ -145,8 +135,13 @@ async function closeBrowser(browser) {
   } catch (_) {}
 }
 
-async function isAvailable() { return true; }
+// ─── HEALTH CHECK ─────────────────────────────────────────
+async function isAvailable() { 
+  // Playwright gère maintenant son propre cache via ensureChromium()
+  return true; 
+}
 
+// ─── HELPER : safeEval ────────────────────────────────────
 async function safeEval(page, selector, attr = 'innerText') {
   try {
     return await page.$eval(selector, (el, a) => {
@@ -158,6 +153,7 @@ async function safeEval(page, selector, attr = 'innerText') {
   } catch (_) { return null; }
 }
 
+// ─── HELPER : safeEvalAll ─────────────────────────────────
 async function safeEvalAll(page, selector, attr = 'innerText') {
   try {
     return await page.$$eval(selector, (els, a) =>
@@ -171,6 +167,7 @@ async function safeEvalAll(page, selector, attr = 'innerText') {
   } catch (_) { return []; }
 }
 
+// ─── HELPER : extractDominantColors ───────────────────────
 async function extractDominantColors(page) {
   try {
     return await page.evaluate(() => {
@@ -197,6 +194,7 @@ async function extractDominantColors(page) {
   } catch (_) { return []; }
 }
 
+// ─── EXPORTS ──────────────────────────────────────────────
 module.exports = {
   launchPlaywright,
   closeBrowser,
