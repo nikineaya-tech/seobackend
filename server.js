@@ -1932,7 +1932,7 @@ await playwrightWrapper.closeBrowser(pw.browser);
             HERO:        s.hasHero,
             FEATURES:    s.hasFeatures,
             TRUST:       s.hasTrust,
-            SOCIALPROOF: s.hasTestim,
+    SOCIAL_PROOF: s.hasTestim,
             PRICING:     s.hasPricing,
             FAQ:         s.hasFAQ,
             CTA:         s.hasCTA,
@@ -4739,6 +4739,166 @@ const analysisLimiter = rateLimit({
 
 
 
+function clamp(v, min, max) {
+  return Math.max(min, Math.min(max, v));
+}
+
+function roundPsychologicalPrice(price, currency = 'MAD') {
+  if (!Number.isFinite(price) || price <= 0) return null;
+
+  let rounded;
+  if (price < 100) rounded = Math.round(price / 10) * 10 - 1;
+  else if (price < 500) rounded = Math.round(price / 20) * 20 - 1;
+  else if (price < 2000) rounded = Math.round(price / 50) * 50 - 1;
+  else rounded = Math.round(price / 100) * 100 - 10;
+
+  if (rounded <= 0) rounded = Math.max(1, Math.round(price));
+  return rounded;
+}
+
+function computeSuggestedPricing({
+  detectedPrice,
+  currency = 'MAD',
+  localScore = 50,
+  socialProofsCount = 0,
+  hasSSL = false,
+  hasWhatsApp = false,
+  hasFAQ = false,
+  hasPricing = false,
+  schemaCount = 0,
+  ctaCount = 0,
+  wordCount = 0
+}) {
+  if (!Number.isFinite(detectedPrice) || detectedPrice <= 0) {
+    return {
+      currency,
+      suggestedBasePrice: null,
+      psychologicalPrice: null,
+      starter: null,
+      pro: null,
+      premium: null,
+      confidence: 'LOW',
+      scoreUsed: localScore || 0,
+      multiplier: null,
+      reason: 'Aucun prix détecté'
+    };
+  }
+
+  const trustScore =
+    (hasSSL ? 12 : 0) +
+    (hasWhatsApp ? 8 : 0) +
+    (hasFAQ ? 8 : 0) +
+    Math.min(schemaCount * 4, 12) +
+    Math.min(socialProofsCount * 3, 18);
+
+  const contentScore =
+    Math.min(Math.floor(wordCount / 120), 12) +
+    Math.min(ctaCount * 2, 10) +
+    (hasPricing ? 8 : 0);
+
+  const scoreUsed = clamp(
+    Math.round(localScore * 0.55 + trustScore + contentScore),
+    35,
+    100
+  );
+
+  const multiplier = 0.82 + ((scoreUsed - 35) / 65) * 0.38;
+  const baseRaw = detectedPrice * multiplier;
+  const psychologicalPrice = roundPsychologicalPrice(baseRaw, currency);
+
+  return {
+    currency,
+    suggestedBasePrice: psychologicalPrice,
+    psychologicalPrice,
+    starter: roundPsychologicalPrice(psychologicalPrice * 0.85, currency),
+    pro: roundPsychologicalPrice(psychologicalPrice * 1.15, currency),
+    premium: roundPsychologicalPrice(psychologicalPrice * 1.45, currency),
+    confidence: detectedPrice > 0 ? 'MEDIUM' : 'LOW',
+    scoreUsed,
+    multiplier,
+    reason: null
+  };
+}
+
+function buildPricingPsychology({
+  detectedPrice,
+  currency,
+  localScore,
+  socialProofs,
+  hasSSL,
+  hasWhatsApp,
+  faqSection,
+  pricingSection,
+  schemaTypes,
+  ctaList,
+  wordCount
+}) {
+  const calc = computeSuggestedPricing({
+    detectedPrice,
+    currency: currency || 'MAD',
+    localScore,
+    socialProofsCount: Array.isArray(socialProofs) ? socialProofs.length : 0,
+    hasSSL,
+    hasWhatsApp,
+    hasFAQ: !!faqSection,
+    hasPricing: !!pricingSection,
+    schemaCount: Array.isArray(schemaTypes) ? schemaTypes.length : 0,
+    ctaCount: Array.isArray(ctaList) ? ctaList.length : 0,
+    wordCount: wordCount || 0
+  });
+
+  const hasDetectedPrice = Number.isFinite(detectedPrice) && detectedPrice > 0;
+
+  return {
+    detectedPrice: hasDetectedPrice ? detectedPrice : null,
+    currency: currency || 'MAD',
+    currentPrice: hasDetectedPrice ? `${detectedPrice} ${currency || 'MAD'}` : null,
+    recommendedPrice: calc.psychologicalPrice ? `${calc.psychologicalPrice} ${currency || 'MAD'}` : null,
+    priceAnchoring: hasDetectedPrice
+      ? `Prix détecté à ${detectedPrice} ${currency || 'MAD'} ; ancrage optimisable selon le score funnel ${calc.scoreUsed}/100.`
+      : 'Aucun prix détecté sur la page.',
+    psychologicalPrice: calc.psychologicalPrice,
+    anchors: hasDetectedPrice && calc.psychologicalPrice
+      ? [
+          `${detectedPrice} ${currency || 'MAD'} actuel`,
+          `${calc.psychologicalPrice} ${currency || 'MAD'} psychologique`
+        ]
+      : [],
+    bundleSuggestion: calc.psychologicalPrice
+      ? [
+          {
+            name: 'Offre Starter',
+            price: calc.starter,
+            label: `${calc.starter} ${currency || 'MAD'}`,
+            items: ['Audit initial', 'Optimisations prioritaires']
+          },
+          {
+            name: 'Offre Pro',
+            price: calc.pro,
+            label: `${calc.pro} ${currency || 'MAD'}`,
+            items: ['Audit complet', 'Optimisations', 'Suivi conversion']
+          },
+          {
+            name: 'Offre Premium',
+            price: calc.premium,
+            label: `${calc.premium} ${currency || 'MAD'}`,
+            items: ['Stratégie complète', 'Implémentation', 'Suivi avancé']
+          }
+        ]
+      : [],
+    urgencyMissing: true,
+    guaranteeMissing: true,
+    decoy: calc.pro && calc.premium
+      ? `Utiliser l’offre Pro comme option centrale et Premium comme ancre haute.`
+      : null,
+    strategy: calc.psychologicalPrice
+      ? `Architecture recommandée: Starter < Pro < Premium autour d’un prix psychologique à ${calc.psychologicalPrice} ${currency || 'MAD'}.`
+      : 'Impossible de proposer une architecture tarifaire fiable sans prix détecté.',
+    priceVerdict: calc.psychologicalPrice
+      ? `Prix conseillé calculé à partir du prix détecté et des signaux réels de confiance/conversion.`
+      : `Prix non calculable car aucun prix source fiable n’a été détecté.`
+  };
+}
 
 
 // ============================================================================
@@ -4864,21 +5024,218 @@ app.post('/api/analyze-funnel', analysisLimiter, async (req, res) => {
     const $s = cheerio.load(rawHtml);
     const rebuilt = [];
     const sectionMap = {
-        HERO:        ['hero', 'banner', 'jumbotron', 'main-banner'],
-        FEATURES:    ['features', 'services', 'avantages', 'benefits'],
-        TRUST:       ['trust', 'garantie', 'guarantee', 'certif', 'reassurance'],
-        SOCIALPROOF: ['testimonials', 'reviews', 'avis', 'clients', 'rating'],
-        PRICING:     ['pricing', 'tarifs', 'offre', 'plans', 'price'],
-        FAQ:         ['faq', 'accordion', 'questions', 'frequentes'],
-        CTA:         ['cta', 'contact', 'devis', 'appel'],
-        FOOTER:      ['footer'],
-    };
+  HERO: [
+    'hero', 'banner', 'jumbotron', 'main-banner',
+    'hero-section', 'masthead', 'above-the-fold',
+    'banniere', 'bannière', 'entete', 'en-tete', 'header',
+    'واجهة', 'بانر', 'رئيسية', 'اعلى-الصفحة'
+  ],
+
+  VALUE_PROP: [
+    'value-prop', 'valueprop', 'value-proposition', 'unique-value',
+    'usp', 'positioning', 'promise',
+    'proposition-valeur', 'promesse', 'usp',
+    'عرض-القيمة', 'القيمة', 'الوعد'
+  ],
+
+  PROBLEM: [
+    'problem', 'pain', 'pain-point', 'challenge', 'struggle',
+    'probleme', 'problème', 'douleur', 'defi', 'défi',
+    'مشكلة', 'مشاكل', 'ألم', 'تحدي', 'معاناة'
+  ],
+
+  SOLUTION: [
+    'solution', 'how-it-works', 'how-it-work', 'approach', 'method',
+    'framework', 'fix', 'resolution',
+    'solution', 'comment-ca-marche', 'comment-marche', 'methode', 'méthode',
+    'حل', 'الحل', 'كيف-يعمل', 'كيف-تعمل', 'طريقة', 'منهج'
+  ],
+
+  BENEFITS: [
+    'benefits', 'why-us', 'whychoose', 'value', 'outcomes', 'results',
+    'avantages', 'benefices', 'bénéfices', 'resultats', 'résultats', 'pourquoi-nous',
+    'فوائد', 'مزايا', 'نتائج', 'لماذا-نحن'
+  ],
+
+  FEATURES: [
+    'features', 'feature-list', 'capabilities', 'functionalities', 'services',
+    'caracteristiques', 'caractéristiques', 'fonctionnalites', 'fonctionnalités', 'services',
+    'ميزات', 'خصائص', 'وظائف', 'خدمات'
+  ],
+
+  PROCESS: [
+    'steps', 'process', 'workflow', 'timeline', 'roadmap',
+    'etapes', 'étapes', 'processus', 'parcours',
+    'خطوات', 'عملية', 'مراحل', 'آلية'
+  ],
+
+  DEMO: [
+    'demo', 'product-demo', 'walkthrough', 'tour', 'preview', 'showcase',
+    'demo', 'apercu', 'aperçu', 'demonstration', 'démonstration',
+    'عرض', 'تجربة', 'معاينة', 'شرح'
+  ],
+
+  USE_CASES: [
+    'use-cases', 'usecase', 'for-whom', 'who-its-for', 'personas',
+    'cas-usage', 'cas-dusage', 'pour-qui', 'profils',
+    'حالات-الاستخدام', 'لمن', 'لمن-هذا', 'سيناريوهات'
+  ],
+
+  TRUST: [
+    'trust', 'trust-bar', 'badges', 'certifications', 'security', 'compliance',
+    'garantie', 'reassurance', 'certif', 'certification', 'securite', 'sécurité',
+    'ثقة', 'ضمان', 'شارات', 'اعتماد', 'أمان', 'موثوق'
+  ],
+
+  LOGOS: [
+    'logos', 'logo-bar', 'trusted-by', 'clients-logos', 'brands',
+    'logos-clients', 'ils-nous-font-confiance', 'marques',
+    'شعارات', 'عملاؤنا', 'موثوق-من', 'شركات'
+  ],
+
+  SOCIAL_PROOF: [
+    'testimonials', 'testimonial', 'reviews', 'review', 'rating', 'ratings',
+    'customer-stories', 'success-story', 'social-proof', 'ugc',
+    'avis', 'temoignages', 'témoignages', 'notes', 'clients', 'preuves-sociales',
+    'آراء', 'تقييمات', 'مراجعات', 'شهادات', 'تجارب-العملاء', 'دليل-اجتماعي'
+  ],
+
+  CASE_STUDIES: [
+    'case-study', 'case-studies', 'success-cases', 'customer-story',
+    'etudes-de-cas', 'études-de-cas', 'cas-client',
+    'دراسة-حالة', 'دراسات-حالة', 'قصص-نجاح'
+  ],
+
+  COMPARISON: [
+    'comparison', 'compare', 'vs', 'alternatives', 'why-switch',
+    'comparatif', 'comparaison', 'alternatives',
+    'مقارنة', 'مقارنات', 'بدائل', 'مقارنة-مع'
+  ],
+
+  PRICING: [
+    'pricing', 'plans', 'plan', 'price', 'prices', 'offer', 'offers',
+    'tarifs', 'tarif', 'prix', 'offre', 'offres', 'formules',
+    'الأسعار', 'سعر', 'الخطط', 'الخطة', 'العرض', 'العروض', 'التسعير'
+  ],
+
+  OFFER: [
+    'offer-stack', 'offer-details', 'bonus', 'bonuses', 'what-you-get',
+    'offre-detail', 'ce-que-vous-obtenez', 'bonus',
+    'العرض', 'ماذا-ستحصل', 'مكافآت', 'البونص'
+  ],
+
+  FAQ: [
+    'faq', 'accordion', 'questions', 'frequently-asked', 'common-questions',
+    'faq-section', 'help',
+    'faq', 'questions-frequentes', 'questions-fréquentes', 'aide',
+    'الأسئلة-الشائعة', 'اسئلة-شائعة', 'الاسئلة', 'مساعدة'
+  ],
+
+  OBJECTIONS: [
+    'objections', 'hesitation', 'why-not', 'concerns', 'doubts',
+    'objections', 'freins', 'hesitations', 'hésitations', 'doutes',
+    'اعتراضات', 'تردد', 'مخاوف', 'شكوك'
+  ],
+
+  GUARANTEE: [
+    'guarantee', 'refund', 'money-back', 'risk-free', 'warranty',
+    'garantie', 'remboursement', 'satisfait-ou-rembourse',
+    'ضمان', 'استرجاع', 'استرداد', 'بدون-مخاطرة'
+  ],
+
+  CTA: [
+    'cta', 'call-to-action', 'contact', 'buy', 'order', 'get-started',
+    'book-now', 'apply-now', 'signup', 'start-now',
+    'devis', 'appel', 'acheter', 'commander', 'commencer', 'inscription',
+    'دعوة-للإجراء', 'اتصل', 'اشتر', 'اطلب', 'ابدأ', 'سجل'
+  ],
+
+  FORM: [
+    'form', 'lead-form', 'signup-form', 'contact-form', 'optin',
+    'formulaire', 'form-contact', 'inscription',
+    'نموذج', 'استمارة', 'تسجيل'
+  ],
+
+  CHECKOUT: [
+    'checkout', 'cart', 'basket', 'payment', 'billing',
+    'panier', 'commande', 'paiement', 'facturation',
+    'الدفع', 'السلة', 'الطلب', 'الفاتورة'
+  ],
+
+  CONTACT: [
+    'contact', 'contact-us', 'reach-us', 'book-call',
+    'contact', 'nous-contacter', 'rdv',
+    'اتصل-بنا', 'تواصل', 'احجز-مكالمة'
+  ],
+
+  FOOTER: [
+    'footer', 'site-footer', 'bottom-bar',
+    'footer', 'pied-page',
+    'تذييل', 'ذيل-الصفحة'
+  ]
+};
     Object.entries(sectionMap).forEach(([type, kws]) => {
         const sel = kws.map(k => `[id*="${k}"],[class*="${k}"]`).join(',');
         if ($s(sel).length > 0) rebuilt.push({ type, present: true, score: 60 });
     });
     return rebuilt;
 })();
+
+const sectionLabels = {
+  HERO: 'Hero',
+  VALUE_PROP: 'Value Proposition',
+  PROBLEM: 'Problem',
+  SOLUTION: 'Solution',
+  BENEFITS: 'Benefits',
+  FEATURES: 'Features',
+  PROCESS: 'Process',
+  DEMO: 'Demo',
+  USE_CASES: 'Use Cases',
+  TRUST: 'Trust',
+  LOGOS: 'Logos',
+  SOCIAL_PROOF: 'Social Proof',
+  CASE_STUDIES: 'Case Studies',
+  COMPARISON: 'Comparison',
+  PRICING: 'Pricing',
+  OFFER: 'Offer',
+  FAQ: 'FAQ',
+  OBJECTIONS: 'Objections',
+  GUARANTEE: 'Guarantee',
+  CTA: 'CTA',
+  FORM: 'Form',
+  CHECKOUT: 'Checkout',
+  CONTACT: 'Contact',
+  FOOTER: 'Footer'
+};
+
+const hasSection = (type) => allSections.some(s => s.type === type);
+
+const criticalSectionRules = [
+  { type: 'HERO', required: true },
+  { type: 'VALUE_PROP', required: true },
+  { type: 'PROBLEM', required: true },
+  { type: 'SOLUTION', required: !hasSection('BENEFITS') },
+  { type: 'BENEFITS', required: !hasSection('SOLUTION') },
+  { type: 'SOCIAL_PROOF', required: true },
+  { type: 'TRUST', required: true },
+  { type: 'PRICING', required: true },
+  { type: 'FAQ', required: !hasSection('OBJECTIONS') },
+  { type: 'OBJECTIONS', required: !hasSection('FAQ') },
+  { type: 'CTA', required: true },
+  { type: 'FOOTER', required: true }
+];
+
+const missingCriticalSections = criticalSectionRules
+  .filter(rule => rule.required && !hasSection(rule.type))
+  .map(rule => rule.type);
+
+const sectionsDetailed = allSections.map((s, index) => ({
+  index: index + 1,
+  type: s.type || 'UNKNOWN',
+  label: sectionLabels[s.type] || s.type || 'Unknown',
+  present: s.present !== false,
+  score: s.score ?? null
+}));
 // ─── CTA Coverage + Images Count ─────────────────────────────────────────────
 const ctaCoverage = allSections.length > 0
     ? Math.min(100, Math.round((ctaList.length / allSections.length) * 100))
@@ -4970,6 +5327,8 @@ const imagesCount = (() => {
             return safePhones([...new Set(fallbackMatches)]);
         })();
 
+
+        
         const emails = (() => {
             const fromScrape = safeEmails(scrape.contacts?.emails || scrape.rawPlaywright?.emails);
             if (fromScrape.length > 0) return fromScrape;
@@ -5021,7 +5380,19 @@ const imagesCount = (() => {
         const localScoreRaw = booleanKeys.filter(k => quickLocalScore[k] === true).length;
         const localScoreMax = booleanKeys.length;
         const localScore    = Math.round((localScoreRaw / localScoreMax) * 100);
-
+const computedPricingPsychology = buildPricingPsychology({
+  detectedPrice,
+  currency,
+  localScore,
+  socialProofs,
+  hasSSL,
+  hasWhatsApp,
+  faqSection,
+  pricingSection,
+  schemaTypes,
+  ctaList,
+  wordCount
+});
         console.log(`${requestId} Score local    : ${localScore}/100 (${localScoreRaw}/${localScoreMax})`);
 
         const safeSerialize = (obj, maxLen = 400) => {
@@ -5083,6 +5454,7 @@ RÈGLES ANTI-HALLUCINATION :
 4. Si tu vois "ABSENT" → cette section n'existe pas sur la page.
 5. COULEURS : utilise UNIQUEMENT ${primaryColor} / ${secondColor} / ${accentColor} — zéro invention.
 6. TÉLÉPHONES : si "AUCUN_NUMERO_DETECTE" → ne pas en inventer. Écrire "${ND}".
+7. PRICING : si aucun prix n'est détecté, écrire "${ND}". Ne jamais inventer de prix psychologique, bundle, remise ou ancrage chiffré.
 ═══════════════════════════════════════`.trim();
 
         const sharedContextShort = `
@@ -5204,7 +5576,7 @@ ${sharedContext}
       { "section": "CTA",          "present": ${!!ctaSection},             "score": 0, "verdict": "verdict" },
       { "section": "FOOTER",       "present": ${!!footerSection},          "score": 0, "verdict": "verdict" }
     ],
-    "missingCriticalSections": ["section manquante critique"],
+    "missingCriticalSections": ${JSON.stringify(missingCriticalSections)},
     "structureScore": ${localScore},
     "flowVerdict": "la page guide-t-elle naturellement vers la conversion ?"
   }
@@ -5216,7 +5588,7 @@ ${langInstr}
 ÉTAPE 1 — RÉFLEXION (Chain of Thought) :
 → Quel est le chemin exact du visiteur depuis l'arrivée jusqu'à l'achat ?
 → À quelle étape le visiteur abandonne-t-il le plus probablement ?
-→ Le prix ${detectedPrice} ${currency} est-il bien ancré psychologiquement ?
+→ ${detectedPrice > 0 ? `Le prix ${detectedPrice} ${currency} est-il bien ancré psychologiquement ?` : `Aucun prix détecté : analyse uniquement la présentation tarifaire sans inventer de prix.`}
 → Les CTAs "${ctaList.slice(0,2).join('" et "')}" déclenchent-ils l'action ?
 → Y a-t-il un système de nurturing ou tout est one-shot ?
 
@@ -5242,19 +5614,15 @@ ${sharedContext}
     "estimatedConversionRate": "X%",
     "dropOffStage": "étape la plus risquée"
   },
-  "pricingPsychology": {
-    "detectedPrice": ${detectedPrice},
-    "currency": "${currency}",
-    "priceAnchoring": "présent|absent — impact",
-        "psychologicalPrice": "${detectedPrice > 0 ? detectedPrice - 1 : ND}",
-    "bundleSuggestion": [
-      { "name": "Offre Starter",  "price": 0, "items": ["item 1"] },
-      { "name": "Offre Pro",      "price": 0, "items": ["item 1", "item 2"] },
-      { "name": "Offre Premium",  "price": 0, "items": ["item 1", "item 2", "item 3"] }
-    ],
+    "pricingPsychology": {
+    "detectedPrice": ${detectedPrice ?? 'null'},
+    "currency": ${currency ? `"${currency}"` : 'null'},
+    "priceAnchoring": "présent/absent + impact",
+    "psychologicalPrice": "ND si aucun prix détecté ; ne jamais inventer",
+    "bundleSuggestion": [],
     "urgencyMissing": true,
     "guaranteeMissing": true,
-    "priceVerdict": "verdict sur la stratégie tarifaire"
+    "priceVerdict": "verdict sur la stratégie tarifaire sans inventer de prix"
   },
   "copywritingDeep": {
     "currentAngle": "angle détecté",
@@ -5334,6 +5702,14 @@ if (r1Safe.webCharte) {
 }
 // ─────────────────────────────────────────────────────────────────────────────
         const r2Safe = r2 || {};
+        if (!r2Safe.pricingPsychology || typeof r2Safe.pricingPsychology !== 'object') {
+  r2Safe.pricingPsychology = {};
+}
+
+r2Safe.pricingPsychology = {
+  ...r2Safe.pricingPsychology,
+  ...computedPricingPsychology
+};
         const cotR1 = r1Safe.chainOfThought || {};
 
         const aidaData = r1Safe.aidaAnalysis || {
@@ -5694,30 +6070,35 @@ const finalResponse = {
     magicPromptAvailable: true,
 
     rawIntel: {
-        h1:    h1Main,
-        h2s:   h2List,
-        h3s:   h3List,
-        ctas:  ctaList,
-        colors: cleanColors,
-        primaryColor,
-        secondColor,
-        accentColor,
-        phones,
-        emails,
-        techStack,
-        schemaTypes,
-        wordCount,
-        hasSSL,
-        hasWhatsApp,
-        socialProofsCount: socialProofs.length,
-        sectionsDetected:  allSections.map(s => s.type),
-        detectedPrice,
-        currency,
-        localScore,
-        quickLocalScore,
-        imagesCount,
-        ctaCoverage,
-    },
+    h1: h1Main,
+    h2s: h2List,
+    h3s: h3List,
+    ctas: ctaList,
+    colors: cleanColors,
+    primaryColor,
+    secondColor,
+    accentColor,
+    phones,
+    emails,
+    techStack,
+    schemaTypes,
+    wordCount,
+    hasSSL,
+    hasWhatsApp,
+    socialProofsCount: socialProofs.length,
+
+    sectionsDetected: sectionsDetailed.map(s => s.type),
+    sectionsDetailed,
+    missingCriticalSections,
+    sectionsCount: sectionsDetailed.length,
+
+    detectedPrice,
+    currency,
+    localScore,
+    quickLocalScore,
+    imagesCount,
+    ctaCoverage,
+},
 
     financialAudit: {
         detectedPrice: detectedPrice || null,
@@ -8552,7 +8933,7 @@ async function deepScrapeFunnel(url) {
             HERO: ['hero', 'banner', 'main'],
             FEATURES: ['feature', 'avantage', 'service', 'produit'],
             TRUST: ['trust', 'reassurance', 'garantie', 'guarantee'],
-            SOCIAL_PROOF: ['review', 'testimonial', 'avis', 'client'],
+            SOCIAL_PROOF: ['testimonials', 'reviews', 'avis', 'clients', 'rating'],
             PRICING: ['price', 'pricing', 'tarif', 'offre'],
             FAQ: ['faq', 'question'],
             CTA: ['action', 'contact', 'footer-cta'],
