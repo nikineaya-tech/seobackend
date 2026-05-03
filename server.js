@@ -4933,17 +4933,21 @@ app.post('/api/analyze-funnel', analysisLimiter, async (req, res) => {
         }
 
         // ── 1. SETUP LANGUE ───────────────────────────────────────────
-        let validUrl     = InputValidator.sanitizeURL(targetUrl);
-        const isAr       = userLang === 'ar';
-        const isEn       = userLang === 'en';
-        const targetLang = isAr ? 'Arabe' : isEn ? 'English' : 'Français';
-        const ND         = isAr ? 'غير متوفر' : isEn ? 'N/A' : 'Non détecté';
-        const langInstr  = isAr
-            ? '⚠️ أجب فقط باللغة العربية الفصحى. ممنوع الفرنسية والإنجليزية.'
-            : isEn
-            ? '⚠️ Answer ONLY in English. No French. No Arabic.'
-            : '⚠️ Réponds UNIQUEMENT en Français. Aucun mot en anglais ou arabe.';
+        // 1. SETUP LANGUE
+let validUrl = InputValidator.sanitizeURL(targetUrl);
 
+const validLang = InputValidator.validateLanguage(userLang || req.body?.lang || 'fr');
+const T = getFeatureI18n(validLang);
+const isAr = validLang === 'ar';
+const isEn = validLang === 'en';
+
+const targetLang = isAr ? 'Arabe' : isEn ? 'English' : 'Français';
+const ND = isAr ? 'غير مكتشف' : isEn ? 'NA' : 'Non détecté';
+const langInstr = isAr
+  ? 'أجب فقط بالعربية. ممنوع الفرنسية أو الإنجليزية.'
+  : isEn
+  ? 'Answer ONLY in English. No French. No Arabic.'
+  : 'Réponds UNIQUEMENT en Français. Aucun mot en anglais ou arabe.';
         // ── 2. CACHE ──────────────────────────────────────────────────
         const cacheKey = `funnelspy_v12_${validUrl}_${userLang}_${mode}`;
         const cached   = cache.get(cacheKey);
@@ -6019,6 +6023,46 @@ const v12StealPot = (v12Traffic && v12Basket)
 // ══════════════════════════════════════════════════════
 // 📦 ASSEMBLAGE RÉPONSE FINALE GOD TIER
 // ══════════════════════════════════════════════════════
+
+function getFeatureI18n(lang = 'fr') {
+  const dict = {
+    ar: {
+      insufficientData: 'المعطيات غير كافية',
+      notDetected: 'غير مكتشف',
+      directScrape: 'استخراج مباشر',
+      noReliablePrice: 'تعذر اقتراح هيكلة سعرية موثوقة لعدم العثور على سعر.',
+      noPriceDetected: 'لم يتم العثور على أي سعر في الصفحة.',
+      priceNotCalculable: 'السعر غير قابل للحساب لأنه لم يتم العثور على سعر مرجعي موثوق.',
+      potentialRevenueIncrease: 'زيادة محتملة في الإيرادات',
+      noData: 'لا توجد بيانات',
+      partialAnalysis: 'تحليل جزئي'
+    },
+    en: {
+      insufficientData: 'Insufficient data',
+      notDetected: 'Not detected',
+      directScrape: 'Direct scrape',
+      noReliablePrice: 'Unable to suggest a reliable pricing architecture because no source price was detected.',
+      noPriceDetected: 'No price detected on the page.',
+      priceNotCalculable: 'Price cannot be calculated because no reliable source price was detected.',
+      potentialRevenueIncrease: 'Potential Revenue Increase',
+      noData: 'No data',
+      partialAnalysis: 'Partial analysis'
+    },
+    fr: {
+      insufficientData: 'Données insuffisantes',
+      notDetected: 'Non détecté',
+      directScrape: 'Scrape direct',
+      noReliablePrice: 'Impossible de proposer une architecture tarifaire fiable sans prix détecté.',
+      noPriceDetected: 'Aucun prix détecté sur la page.',
+      priceNotCalculable: 'Prix non calculable car aucun prix source fiable n’a été détecté.',
+      potentialRevenueIncrease: 'Augmentation potentielle des revenus',
+      noData: 'Aucune donnée',
+      partialAnalysis: 'Analyse partielle'
+    }
+  };
+
+  return dict[lang] || dict.fr;
+}
 const finalResponse = {
     success:     true,
     requestId,
@@ -6036,18 +6080,19 @@ const finalResponse = {
         agent4: r4Safe.chainOfThought || {},
     },
 
-    financialIntel: {                                                  // ← BUG-01 FIX
-        estimatedMonthlyTraffic:  v12Traffic,
-        trafficSource:            v12Traffic ? 'AI Estimation V12' : null,
-        averageBasket:            v12Basket,
-        basketSource:             detectedPrice > 0 ? 'Scrape direct' : 'Non détecté',
-        estimatedConversionRate:  r2Safe?.funnelMapping?.estimatedConversionRate || null,
-        estimatedMRR:             r3Safe?.financialProjection?.projectedMonthlyRevenue || null,
-        monthlyStealPotential:    v12StealPot,                         // ← BUG-02 FIX
-        reasoning:                r3Safe?.financialProjection?.roiVerdict || 'Données insuffisantes',
-        confidence:               detectedPrice > 0 ? 'MEDIUM' : 'LOW',
-    },
-
+   financialIntel: {                                                  // ← BUG-01 FIX
+    estimatedMonthlyTraffic:  v12Traffic,
+    trafficSource:            v12Traffic
+        ? (isAr ? 'تقدير ذكاء اصطناعي V12' : isEn ? 'AI Estimation V12' : 'Estimation IA V12')
+        : null,
+    averageBasket:            v12Basket,
+    basketSource:             detectedPrice > 0 ? T.directScrape : T.notDetected,
+    estimatedConversionRate:  r2Safe?.funnelMapping?.estimatedConversionRate || null,
+    estimatedMRR:             r3Safe?.financialProjection?.projectedMonthlyRevenue || null,
+    monthlyStealPotential:    v12StealPot,
+    reasoning:                r3Safe?.financialProjection?.roiVerdict || T.insufficientData,
+    confidence:               detectedPrice > 0 ? 'MEDIUM' : 'LOW',
+},
     projectIdentity:  r1Safe.projectIdentity  || null,
     webCharte:        r1Safe.webCharte        || null,
     pageArchitecture: r1Safe.pageArchitecture || null,
@@ -6100,18 +6145,16 @@ const finalResponse = {
     ctaCoverage,
 },
 
-    financialAudit: {
-        detectedPrice: detectedPrice || null,
-        currency:      currency || null,
-        potentialRevenueIncrease: detectedPrice && detectedPrice > 0
-            ? (r3Safe.financialProjection?.potentialGain || null)
-            : null,
-        monthlyStealPotential: v12StealPot,                            // ← BUG-02 FIX
-        annualOpportunity:     v12StealPot ? v12StealPot * 12 : null,  // ← BUG-02 FIX
-        revenueOpportunity: isAr ? 'زيادة محتملة في الإيرادات'
-                          : isEn ? 'Potential Revenue Increase'
-                          :        'Augmentation potentielle des revenus',
-    },
+   financialAudit: {
+    detectedPrice: detectedPrice || null,
+    currency:      currency || null,
+    potentialRevenueIncrease: detectedPrice && detectedPrice > 0
+        ? (r3Safe.financialProjection?.potentialGain || null)
+        : null,
+    monthlyStealPotential: v12StealPot,
+    annualOpportunity:     v12StealPot ? v12StealPot * 12 : null,
+    revenueOpportunity:    T.potentialRevenueIncrease,
+},
 
     meta: {
         version:  'V12-GOD-TIER',
