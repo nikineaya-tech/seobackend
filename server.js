@@ -1851,14 +1851,51 @@ async function scrapeStealth(validUrl) {
 
             // ── SECTIONS
             const sections = {
-                hasHero:     !!document.querySelector('[class*="hero"],[id*="hero"],[class*="banner"]'),
-                hasFeatures: !!document.querySelector('[class*="feature"],[class*="service"],[id*="service"]'),
-                hasPricing:  !!document.querySelector('[class*="pricing"],[class*="price"],[id*="pricing"]'),
-                hasTestim:   !!document.querySelector('[class*="testimonial"],[class*="review"],[class*="avis"]'),
-                hasFAQ:      !!document.querySelector('[class*="faq"],[id*="faq"],details'),
-                hasCTA:      !!document.querySelector('[class*="cta"],[id*="cta"]'),
-                hasFooter:   !!document.querySelector('footer'),
-            };
+  hasHero: !!document.querySelector([
+    '.hero', '#hero', '.banner', '.masthead', '.hero-section',
+    '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
+  ].join(',')),
+
+  hasFeatures: !!document.querySelector([
+    '.feature', '.features', '#features', '.service', '.services',
+    '#service', '.benefits', '.benefit', '.solutions',
+    '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
+  ].join(',')),
+
+  hasTrust: !!document.querySelector([
+    '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
+    '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
+    '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
+    '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
+    '[class*="reassurance"]', '[class*="trusted"]'
+  ].join(',')),
+
+  hasPricing: !!document.querySelector([
+    '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
+    '.tarifs', '.tarif', '.offres', '.offer',
+    '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
+  ].join(',')),
+
+  hasTestim: !!document.querySelector([
+    '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
+    '.ratings', '.social-proof',
+    '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
+  ].join(',')),
+
+  hasFAQ: !!document.querySelector([
+    '.faq', '#faq', 'details', '.accordion', '.questions',
+    '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
+  ].join(',')),
+
+  hasCTA: !!document.querySelector([
+    '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
+    '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
+  ].join(',')),
+
+  hasFooter: !!document.querySelector([
+    'footer', '.footer', '#footer', '[class*="footer"]'
+  ].join(','))
+};
 
             // ── GOOGLE FONTS
             const googleFonts = [...document.querySelectorAll('link[href*="fonts.googleapis.com"]')]
@@ -5375,13 +5412,37 @@ const ctaCoverage = allSections.length > 0
     ? Math.min(100, Math.round((ctaList.length / allSections.length) * 100))
     : (ctaList.length > 0 ? 100 : 0);
 
-const imagesCount = (() => {
+const imageIntel = (() => {
     if (typeof extractPerfSignals === 'function') {
-        return extractPerfSignals(rawHtml).totalImages || 0;
+        const perf = extractPerfSignals(rawHtml) || {};
+        return {
+            totalImages: perf.totalImages || 0,
+            missingAlt: perf.missingAlt || 0,
+            webpImages: perf.webpImages || 0,
+            lazyLoadImages: perf.lazyLoadImages || 0
+        };
     }
+
     const $img = cheerio.load(rawHtml);
-    return $img('img').length || 0;
+    const imgTags = $img('img').length;
+    const imgDataSrc = $img('img[data-src], img[data-lazy-src], img[data-original]').length;
+    const bgImages = (rawHtml.match(/url\(?['"]?https?:\/\/[^'")\s]+\.(png|jpg|jpeg|webp|gif|svg)/gi) || []).length;
+
+    return {
+        totalImages: imgTags + imgDataSrc + bgImages,
+        missingAlt: $img('img:not([alt]), img[alt=""]').length || 0,
+        webpImages:
+            $img('img[src*=".webp"], source[srcset*=".webp"], source[type="image/webp"]').length +
+            ((rawHtml.match(/\.webp/gi) || []).length),
+        lazyLoadImages:
+            $img('img[loading="lazy"], img[data-src], img[data-lazy-src], img[data-original]').length || 0
+    };
 })();
+
+const imagesCount = imageIntel.totalImages;
+const missingAlt = imageIntel.missingAlt;
+const webpImages = imageIntel.webpImages;
+const lazyLoadImages = imageIntel.lazyLoadImages;
 // ─────────────────────────────────────────────────────────────────────────────
 
       
@@ -6412,7 +6473,28 @@ function buildFallbackPrompt(
   const structure = ds?.structure || {};
 
   // ─── SECTIONS ─────────────────────────────────────────────────────────
-  const sections = (report?.pageArchitecture?.arborescence || report?.sections || []).slice(0, 8);
+ const rawSections =
+  report?.pageArchitecture?.arborescence ||
+  report?.sections ||
+  deepScrapeData?.copyIntel?.pageSections ||
+  [];
+
+const sections = rawSections
+  .filter(Boolean)
+  .map((s, i) => ({
+    index: s.index ?? i + 1,
+    type: s.type || s.sectionType || 'UNKNOWN',
+    label: s.label || s.title || s.sectionType || s.type || 'Unknown',
+    present: s.present !== false,
+    score: Number.isFinite(s.score) ? s.score : 60,
+    weakness: s.weakness || null,
+    missingElement: s.missingElement || null,
+    conversionImpact: s.conversionImpact || 'MEDIUM',
+    conversionRole: s.conversionRole || null,
+    upgradeCopy: s.upgradeCopy || null,
+    title: s.title || null,
+  }))
+  .slice(0, 8);
 
   // ─── COPY INTEL ───────────────────────────────────────────────────────
   const realH1          = cop?.headlines?.h1?.[0] || funnel?.attention?.headline || null;
@@ -9493,15 +9575,52 @@ async function scrapeStealth(validUrl) {
             .filter(Boolean)
             .slice(0, 5);
 
-        const sections = {
-            hasHero: !!$('[class*="hero"],[id*="hero"],[class*="banner"]').length,
-            hasFeatures: !!$('[class*="feature"],[class*="service"],[id*="service"]').length,
-            hasPricing: !!$('[class*="pricing"],[class*="price"],[id*="pricing"]').length,
-            hasTestim: !!$('[class*="testimonial"],[class*="review"],[class*="avis"]').length,
-            hasFAQ: !!$('[class*="faq"],[id*="faq"],details').length,
-            hasCTA: !!$('[class*="cta"],[id*="cta"]').length,
-            hasFooter: !!$('footer').length,
-        };
+       const sections = {
+  hasHero: !!$([
+    '.hero', '#hero', '.banner', '.masthead', '.hero-section',
+    '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
+  ].join(',')).length,
+
+  hasFeatures: !!$([
+    '.feature', '.features', '#features', '.service', '.services',
+    '#service', '.benefits', '.benefit', '.solutions',
+    '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
+  ].join(',')).length,
+
+  hasTrust: !!$([
+    '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
+    '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
+    '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
+    '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
+    '[class*="reassurance"]', '[class*="trusted"]'
+  ].join(',')).length,
+
+  hasPricing: !!$([
+    '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
+    '.tarifs', '.tarif', '.offres', '.offer',
+    '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
+  ].join(',')).length,
+
+  hasTestim: !!$([
+    '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
+    '.ratings', '.social-proof',
+    '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
+  ].join(',')).length,
+
+  hasFAQ: !!$([
+    '.faq', '#faq', 'details', '.accordion', '.questions',
+    '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
+  ].join(',')).length,
+
+  hasCTA: !!$([
+    '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
+    '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
+  ].join(',')).length,
+
+  hasFooter: !!$([
+    'footer', '.footer', '#footer', '[class*="footer"]'
+  ].join(',')).length,
+};
 
         const styleContent = $('style').text() + ' ' + $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
         const colorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi;
@@ -9759,10 +9878,33 @@ async function scrapeStealth(validUrl) {
             const h1List = [...document.querySelectorAll('h1')].map(e => e.innerText.trim()).filter(Boolean);
             const h2List = [...document.querySelectorAll('h2')].map(e => e.innerText.trim()).filter(Boolean).slice(0, 12);
             const h3List = [...document.querySelectorAll('h3')].map(e => e.innerText.trim()).filter(Boolean).slice(0, 12);
-            const ctaList = [...document.querySelectorAll('a, button')]
-                .map(e => e.innerText.trim())
-                .filter(t => t.length > 1 && t.length < 60)
-                .slice(0, 20);
+            const ctaRegex = /(get started|start|book|buy|order|try|sign up|signup|subscribe|join|contact|demo|call|apply|shop|acheter|commander|essayer|devis|contactez|réserver|reserver|ابدأ|اشتر|اطلب|احجز|تواصل)/i;
+
+const ctaList = [
+  ...document.querySelectorAll('a, button, input[type="submit"], input[type="button"]')
+]
+  .map(el => {
+    const text = (el.innerText || el.value || el.getAttribute('aria-label') || '').trim();
+    const href = (el.getAttribute('href') || '').trim();
+    const cls = (el.className || '').toString();
+    return { text, href, cls };
+  })
+  .filter(({ text, href, cls }) => {
+    if (text.length < 2 || text.length > 80) return false;
+
+    const looksLikeCTA =
+      ctaRegex.test(text) ||
+      /cta|btn|button|primary|submit|contact|pricing|demo|trial|whatsapp/i.test(cls) ||
+      /contact|pricing|demo|signup|trial|book|buy|order|whatsapp|wa\.me/i.test(href);
+
+    const looksLikeNav =
+      /^(home|about|services|solutions|platform|pricing|blog|faq|contact)$/i.test(text);
+
+    return looksLikeCTA && !looksLikeNav;
+  })
+  .map(x => x.text)
+  .filter((v, i, arr) => arr.indexOf(v) === i)
+  .slice(0, 20);
 
             const bodyText = document.body.innerText || '';
 
@@ -9797,15 +9939,60 @@ async function scrapeStealth(validUrl) {
                 '[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]'
             )].map(e => e.innerText.trim().substring(0, 120)).filter(Boolean).slice(0, 5);
 
-            const sections = {
-                hasHero: !!document.querySelector('[class*="hero"],[id*="hero"],[class*="banner"]'),
-                hasFeatures: !!document.querySelector('[class*="feature"],[class*="service"],[id*="service"]'),
-                hasPricing: !!document.querySelector('[class*="pricing"],[class*="price"],[id*="pricing"]'),
-                hasTestim: !!document.querySelector('[class*="testimonial"],[class*="review"],[class*="avis"]'),
-                hasFAQ: !!document.querySelector('[class*="faq"],[id*="faq"],details'),
-                hasCTA: !!document.querySelector('[class*="cta"],[id*="cta"]'),
-                hasFooter: !!document.querySelector('footer'),
-            };
+           const hasAny = (selectors) => {
+  try {
+    return selectors.some(sel => document.querySelector(sel));
+  } catch {
+    return false;
+  }
+};
+
+const sections = {
+  hasHero: hasAny([
+    '.hero', '#hero', '.banner', '.masthead', '.hero-section',
+    '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
+  ]),
+
+  hasFeatures: hasAny([
+    '.feature', '.features', '#features', '.service', '.services',
+    '#service', '.benefits', '.benefit', '.solutions',
+    '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
+  ]),
+
+  hasTrust: hasAny([
+    '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
+    '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
+    '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
+    '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
+    '[class*="reassurance"]', '[class*="trusted"]'
+  ]),
+
+  hasPricing: hasAny([
+    '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
+    '.tarifs', '.tarif', '.offres', '.offer',
+    '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
+  ]),
+
+  hasTestim: hasAny([
+    '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
+    '.ratings', '.social-proof',
+    '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
+  ]),
+
+  hasFAQ: hasAny([
+    '.faq', '#faq', 'details', '.accordion', '.questions',
+    '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
+  ]),
+
+  hasCTA: hasAny([
+    '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
+    '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
+  ]),
+
+  hasFooter: hasAny([
+    'footer', '.footer', '#footer', '[class*="footer"]'
+  ])
+};
 
             const googleFonts = [...document.querySelectorAll('link[href*="fonts.googleapis.com"]')]
                 .map(l => {
