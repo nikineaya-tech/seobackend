@@ -3339,8 +3339,8 @@ async function callOpenRouterAPI(prompt, options = {}) {
         // 🚀 TIER 1 : PAYANTS — Ultra-Rapides (Fail-Fast: 8s - 10s)
         // Correction des IDs suite aux erreurs "is not a valid model ID"
         { id: 'google/gemini-2.5-flash-lite-preview-09-2025', free: false, timeout: 8000,  maxContext: 1050000 }, // 1.05M tokens ! Idéal pour analyser des sites entiers
-        { id: 'bytedance/seed-2.0-mini',                      free: false, timeout: 8000,  maxContext: 262000 },
-        { id: 'qwen/qwen-3.5-flash',                          free: false, timeout: 9000,  maxContext: 1000000 }, // 1M tokens
+        { id: 'bytedance-seed/seed-2.0-mini',                      free: false, timeout: 8000,  maxContext: 262000 },
+        { id: 'qwen/qwen3.5-flash-02-23',                          free: false, timeout: 9000,  maxContext: 1000000 }, // 1M tokens
         { id: 'stepfun/step-3.5-flash',                       free: false, timeout: 9000,  maxContext: 262000 },
         { id: 'z-ai/glm-4.7-flash',                           free: false, timeout: 10000, maxContext: 203000 },
         { id: 'xiaomi/mimo-v2-flash',                         free: false, timeout: 10000, maxContext: 262000 },
@@ -4819,7 +4819,6 @@ function computeSuggestedPricing({
     reason: null
   };
 }
-
 function buildPricingPsychology({
   detectedPrice,
   currency,
@@ -4831,8 +4830,11 @@ function buildPricingPsychology({
   pricingSection,
   schemaTypes,
   ctaList,
-  wordCount
+  wordCount,
+  lang = 'fr'
 }) {
+  const T = getFeatureI18n(lang);
+
   const calc = computeSuggestedPricing({
     detectedPrice,
     currency: currency || 'MAD',
@@ -4847,59 +4849,67 @@ function buildPricingPsychology({
     wordCount: wordCount || 0
   });
 
+  const cur = currency || 'MAD';
   const hasDetectedPrice = Number.isFinite(detectedPrice) && detectedPrice > 0;
 
   return {
     detectedPrice: hasDetectedPrice ? detectedPrice : null,
-    currency: currency || 'MAD',
-    currentPrice: hasDetectedPrice ? `${detectedPrice} ${currency || 'MAD'}` : null,
-    recommendedPrice: calc.psychologicalPrice ? `${calc.psychologicalPrice} ${currency || 'MAD'}` : null,
+    currency: cur,
+    currentPrice: hasDetectedPrice ? `${detectedPrice} ${cur}` : null,
+    recommendedPrice: calc.psychologicalPrice ? `${calc.psychologicalPrice} ${cur}` : null,
+
     priceAnchoring: hasDetectedPrice
-      ? `Prix détecté à ${detectedPrice} ${currency || 'MAD'} ; ancrage optimisable selon le score funnel ${calc.scoreUsed}/100.`
-      : 'Aucun prix détecté sur la page.',
+      ? `${T.detectedPriceAt} ${detectedPrice} ${cur} ; ${T.anchorOptimizable} ${calc.scoreUsed}/100.`
+      : T.noPriceDetectedOnPage,
+
     psychologicalPrice: calc.psychologicalPrice,
+
     anchors: hasDetectedPrice && calc.psychologicalPrice
       ? [
-          `${detectedPrice} ${currency || 'MAD'} actuel`,
-          `${calc.psychologicalPrice} ${currency || 'MAD'} psychologique`
+          `${detectedPrice} ${cur} ${T.currentLabel}`,
+          `${calc.psychologicalPrice} ${cur} ${T.psychologicalLabel}`
         ]
       : [],
+
     bundleSuggestion: calc.psychologicalPrice
       ? [
           {
-            name: 'Offre Starter',
+            name: T.offerStarter,
             price: calc.starter,
-            label: `${calc.starter} ${currency || 'MAD'}`,
-            items: ['Audit initial', 'Optimisations prioritaires']
+            label: `${calc.starter} ${cur}`,
+            items: [T.initialAudit, T.priorityOptimizations]
           },
           {
-            name: 'Offre Pro',
+            name: T.offerPro,
             price: calc.pro,
-            label: `${calc.pro} ${currency || 'MAD'}`,
-            items: ['Audit complet', 'Optimisations', 'Suivi conversion']
+            label: `${calc.pro} ${cur}`,
+            items: [T.fullAudit, T.optimizations, T.conversionTracking]
           },
           {
-            name: 'Offre Premium',
+            name: T.offerPremium,
             price: calc.premium,
-            label: `${calc.premium} ${currency || 'MAD'}`,
-            items: ['Stratégie complète', 'Implémentation', 'Suivi avancé']
+            label: `${calc.premium} ${cur}`,
+            items: [T.fullStrategy, T.implementation, T.advancedTracking]
           }
         ]
       : [],
+
     urgencyMissing: true,
     guaranteeMissing: true,
+
     decoy: calc.pro && calc.premium
-      ? `Utiliser l’offre Pro comme option centrale et Premium comme ancre haute.`
+      ? T.decoyEffectText
       : null,
+
     strategy: calc.psychologicalPrice
-      ? `Architecture recommandée: Starter < Pro < Premium autour d’un prix psychologique à ${calc.psychologicalPrice} ${currency || 'MAD'}.`
-      : 'Impossible de proposer une architecture tarifaire fiable sans prix détecté.',
+      ? `${T.recommendedArchitecture} ${T.offerStarter} < ${T.offerPro} < ${T.offerPremium} ${T.aroundPsychologicalPrice} ${calc.psychologicalPrice} ${cur}.`
+      : T.noReliablePricingArchitecture,
+
     priceVerdict: calc.psychologicalPrice
-      ? `Prix conseillé calculé à partir du prix détecté et des signaux réels de confiance/conversion.`
-      : `Prix non calculable car aucun prix source fiable n’a été détecté.`
+      ? T.priceVerdictDetected
+      : T.priceVerdictUndetectable
   };
 }
-
 
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
@@ -5381,6 +5391,7 @@ const imagesCount = (() => {
             'hasWhatsApp','hasPhone','wordCountOK',
         ];
 
+
         const localScoreRaw = booleanKeys.filter(k => quickLocalScore[k] === true).length;
         const localScoreMax = booleanKeys.length;
         const localScore    = Math.round((localScoreRaw / localScoreMax) * 100);
@@ -5395,7 +5406,8 @@ const computedPricingPsychology = buildPricingPsychology({
   pricingSection,
   schemaTypes,
   ctaList,
-  wordCount
+  wordCount,
+  lang: validLang
 });
         console.log(`${requestId} Score local    : ${localScore}/100 (${localScoreRaw}/${localScoreMax})`);
 
@@ -6026,38 +6038,103 @@ const v12StealPot = (v12Traffic && v12Basket)
 
 function getFeatureI18n(lang = 'fr') {
   const dict = {
-    ar: {
-      insufficientData: 'المعطيات غير كافية',
-      notDetected: 'غير مكتشف',
-      directScrape: 'استخراج مباشر',
-      noReliablePrice: 'تعذر اقتراح هيكلة سعرية موثوقة لعدم العثور على سعر.',
-      noPriceDetected: 'لم يتم العثور على أي سعر في الصفحة.',
-      priceNotCalculable: 'السعر غير قابل للحساب لأنه لم يتم العثور على سعر مرجعي موثوق.',
-      potentialRevenueIncrease: 'زيادة محتملة في الإيرادات',
-      noData: 'لا توجد بيانات',
-      partialAnalysis: 'تحليل جزئي'
-    },
-    en: {
-      insufficientData: 'Insufficient data',
-      notDetected: 'Not detected',
-      directScrape: 'Direct scrape',
-      noReliablePrice: 'Unable to suggest a reliable pricing architecture because no source price was detected.',
-      noPriceDetected: 'No price detected on the page.',
-      priceNotCalculable: 'Price cannot be calculated because no reliable source price was detected.',
-      potentialRevenueIncrease: 'Potential Revenue Increase',
-      noData: 'No data',
-      partialAnalysis: 'Partial analysis'
-    },
     fr: {
-      insufficientData: 'Données insuffisantes',
-      notDetected: 'Non détecté',
       directScrape: 'Scrape direct',
-      noReliablePrice: 'Impossible de proposer une architecture tarifaire fiable sans prix détecté.',
-      noPriceDetected: 'Aucun prix détecté sur la page.',
-      priceNotCalculable: 'Prix non calculable car aucun prix source fiable n’a été détecté.',
+      notDetected: 'Non détecté',
+      insufficientData: 'Données insuffisantes',
       potentialRevenueIncrease: 'Augmentation potentielle des revenus',
-      noData: 'Aucune donnée',
-      partialAnalysis: 'Analyse partielle'
+
+      detectedPriceAt: 'Prix détecté à',
+      anchorOptimizable: 'ancrage optimisable selon le score funnel',
+      noPriceDetectedOnPage: 'Aucun prix détecté sur la page.',
+      currentLabel: 'actuel',
+      psychologicalLabel: 'psychologique',
+
+      offerStarter: 'Offre Starter',
+      offerPro: 'Offre Pro',
+      offerPremium: 'Offre Premium',
+
+      initialAudit: 'Audit initial',
+      priorityOptimizations: 'Optimisations prioritaires',
+      fullAudit: 'Audit complet',
+      optimizations: 'Optimisations',
+      conversionTracking: 'Suivi conversion',
+      fullStrategy: 'Stratégie complète',
+      implementation: 'Implémentation',
+      advancedTracking: 'Suivi avancé',
+
+      decoyEffectText: 'Utiliser l’offre Pro comme option centrale et Premium comme ancre haute.',
+      recommendedArchitecture: 'Architecture recommandée:',
+      aroundPsychologicalPrice: 'autour d’un prix psychologique à',
+      noReliablePricingArchitecture: 'Impossible de proposer une architecture tarifaire fiable sans prix détecté.',
+      priceVerdictDetected: 'Prix conseillé calculé à partir du prix détecté et des signaux réels de confiance/conversion.',
+      priceVerdictUndetectable: 'Prix non calculable car aucun prix source fiable n’a été détecté.'
+    },
+
+    en: {
+      directScrape: 'Direct scrape',
+      notDetected: 'Not detected',
+      insufficientData: 'Insufficient data',
+      potentialRevenueIncrease: 'Potential Revenue Increase',
+
+      detectedPriceAt: 'Detected price at',
+      anchorOptimizable: 'anchoring can be optimized based on funnel score',
+      noPriceDetectedOnPage: 'No price detected on the page.',
+      currentLabel: 'current',
+      psychologicalLabel: 'psychological',
+
+      offerStarter: 'Starter Offer',
+      offerPro: 'Pro Offer',
+      offerPremium: 'Premium Offer',
+
+      initialAudit: 'Initial audit',
+      priorityOptimizations: 'Priority optimizations',
+      fullAudit: 'Full audit',
+      optimizations: 'Optimizations',
+      conversionTracking: 'Conversion tracking',
+      fullStrategy: 'Full strategy',
+      implementation: 'Implementation',
+      advancedTracking: 'Advanced tracking',
+
+      decoyEffectText: 'Use the Pro offer as the core option and Premium as the high anchor.',
+      recommendedArchitecture: 'Recommended architecture:',
+      aroundPsychologicalPrice: 'around a psychological price of',
+      noReliablePricingArchitecture: 'Unable to suggest a reliable pricing structure without a detected price.',
+      priceVerdictDetected: 'Recommended price calculated from the detected price and real trust/conversion signals.',
+      priceVerdictUndetectable: 'Price cannot be calculated because no reliable source price was detected.'
+    },
+
+    ar: {
+      directScrape: 'استخراج مباشر',
+      notDetected: 'غير مكتشف',
+      insufficientData: 'المعطيات غير كافية',
+      potentialRevenueIncrease: 'زيادة محتملة في الإيرادات',
+
+      detectedPriceAt: 'تم رصد السعر عند',
+      anchorOptimizable: 'ويمكن تحسين التثبيت السعري حسب نتيجة الفَنَل',
+      noPriceDetectedOnPage: 'لم يتم رصد أي سعر على الصفحة.',
+      currentLabel: 'الحالي',
+      psychologicalLabel: 'النفسي',
+
+      offerStarter: 'عرض البداية',
+      offerPro: 'عرض برو',
+      offerPremium: 'عرض بريميوم',
+
+      initialAudit: 'تدقيق أولي',
+      priorityOptimizations: 'تحسينات ذات أولوية',
+      fullAudit: 'تدقيق كامل',
+      optimizations: 'تحسينات',
+      conversionTracking: 'متابعة التحويل',
+      fullStrategy: 'استراتيجية كاملة',
+      implementation: 'تنفيذ',
+      advancedTracking: 'متابعة متقدمة',
+
+      decoyEffectText: 'استخدم عرض برو كخيار أساسي، وPremium كمرساة سعرية مرتفعة.',
+      recommendedArchitecture: 'البنية المقترحة:',
+      aroundPsychologicalPrice: 'حول سعر نفسي قدره',
+      noReliablePricingArchitecture: 'لا يمكن اقتراح هيكلة تسعير موثوقة بدون سعر مكتشف.',
+      priceVerdictDetected: 'تم احتساب السعر المقترح انطلاقاً من السعر المكتشف وإشارات الثقة والتحويل الفعلية.',
+      priceVerdictUndetectable: 'لا يمكن احتساب السعر لأنه لم يتم العثور على سعر مرجعي موثوق.'
     }
   };
 
