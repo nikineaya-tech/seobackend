@@ -4819,6 +4819,126 @@ function computeSuggestedPricing({
     reason: null
   };
 }
+
+function getFeatureI18n(lang = 'fr') {
+  const dict = {
+    fr: {
+      directScrape: 'Scrape direct',
+      notDetected: 'Non détecté',
+      insufficientData: 'Données insuffisantes',
+      potentialRevenueIncrease: 'Augmentation potentielle des revenus',
+
+
+      detectedPriceAt: 'Prix détecté à',
+      anchorOptimizable: 'ancrage optimisable selon le score funnel',
+      noPriceDetectedOnPage: 'Aucun prix détecté sur la page.',
+      currentLabel: 'actuel',
+      psychologicalLabel: 'psychologique',
+
+
+      offerStarter: 'Offre Starter',
+      offerPro: 'Offre Pro',
+      offerPremium: 'Offre Premium',
+
+
+      initialAudit: 'Audit initial',
+      priorityOptimizations: 'Optimisations prioritaires',
+      fullAudit: 'Audit complet',
+      optimizations: 'Optimisations',
+      conversionTracking: 'Suivi conversion',
+      fullStrategy: 'Stratégie complète',
+      implementation: 'Implémentation',
+      advancedTracking: 'Suivi avancé',
+
+
+      decoyEffectText: 'Utiliser l’offre Pro comme option centrale et Premium comme ancre haute.',
+      recommendedArchitecture: 'Architecture recommandée:',
+      aroundPsychologicalPrice: 'autour d’un prix psychologique à',
+      noReliablePricingArchitecture: 'Impossible de proposer une architecture tarifaire fiable sans prix détecté.',
+      priceVerdictDetected: 'Prix conseillé calculé à partir du prix détecté et des signaux réels de confiance/conversion.',
+      priceVerdictUndetectable: 'Prix non calculable car aucun prix source fiable n’a été détecté.'
+    },
+
+
+    en: {
+      directScrape: 'Direct scrape',
+      notDetected: 'Not detected',
+      insufficientData: 'Insufficient data',
+      potentialRevenueIncrease: 'Potential Revenue Increase',
+
+
+      detectedPriceAt: 'Detected price at',
+      anchorOptimizable: 'anchoring can be optimized based on funnel score',
+      noPriceDetectedOnPage: 'No price detected on the page.',
+      currentLabel: 'current',
+      psychologicalLabel: 'psychological',
+
+
+      offerStarter: 'Starter Offer',
+      offerPro: 'Pro Offer',
+      offerPremium: 'Premium Offer',
+
+
+      initialAudit: 'Initial audit',
+      priorityOptimizations: 'Priority optimizations',
+      fullAudit: 'Full audit',
+      optimizations: 'Optimizations',
+      conversionTracking: 'Conversion tracking',
+      fullStrategy: 'Full strategy',
+      implementation: 'Implementation',
+      advancedTracking: 'Advanced tracking',
+
+
+      decoyEffectText: 'Use the Pro offer as the core option and Premium as the high anchor.',
+      recommendedArchitecture: 'Recommended architecture:',
+      aroundPsychologicalPrice: 'around a psychological price of',
+      noReliablePricingArchitecture: 'Unable to suggest a reliable pricing structure without a detected price.',
+      priceVerdictDetected: 'Recommended price calculated from the detected price and real trust/conversion signals.',
+      priceVerdictUndetectable: 'Price cannot be calculated because no reliable source price was detected.'
+    },
+
+
+    ar: {
+      directScrape: 'استخراج مباشر',
+      notDetected: 'غير مكتشف',
+      insufficientData: 'المعطيات غير كافية',
+      potentialRevenueIncrease: 'زيادة محتملة في الإيرادات',
+
+
+      detectedPriceAt: 'تم رصد السعر عند',
+      anchorOptimizable: 'ويمكن تحسين التثبيت السعري حسب نتيجة الفَنَل',
+      noPriceDetectedOnPage: 'لم يتم رصد أي سعر على الصفحة.',
+      currentLabel: 'الحالي',
+      psychologicalLabel: 'النفسي',
+
+
+      offerStarter: 'عرض البداية',
+      offerPro: 'عرض برو',
+      offerPremium: 'عرض بريميوم',
+
+
+      initialAudit: 'تدقيق أولي',
+      priorityOptimizations: 'تحسينات ذات أولوية',
+      fullAudit: 'تدقيق كامل',
+      optimizations: 'تحسينات',
+      conversionTracking: 'متابعة التحويل',
+      fullStrategy: 'استراتيجية كاملة',
+      implementation: 'تنفيذ',
+      advancedTracking: 'متابعة متقدمة',
+
+
+      decoyEffectText: 'استخدم عرض برو كخيار أساسي، وPremium كمرساة سعرية مرتفعة.',
+      recommendedArchitecture: 'البنية المقترحة:',
+      aroundPsychologicalPrice: 'حول سعر نفسي قدره',
+      noReliablePricingArchitecture: 'لا يمكن اقتراح هيكلة تسعير موثوقة بدون سعر مكتشف.',
+      priceVerdictDetected: 'تم احتساب السعر المقترح انطلاقاً من السعر المكتشف وإشارات الثقة والتحويل الفعلية.',
+      priceVerdictUndetectable: 'لا يمكن احتساب السعر لأنه لم يتم العثور على سعر مرجعي موثوق.'
+    }
+  };
+
+
+  return dict[lang] || dict.fr;
+}
 function buildPricingPsychology({
   detectedPrice,
   currency,
@@ -6036,110 +6156,7 @@ const v12StealPot = (v12Traffic && v12Basket)
 // 📦 ASSEMBLAGE RÉPONSE FINALE GOD TIER
 // ══════════════════════════════════════════════════════
 
-function getFeatureI18n(lang = 'fr') {
-  const dict = {
-    fr: {
-      directScrape: 'Scrape direct',
-      notDetected: 'Non détecté',
-      insufficientData: 'Données insuffisantes',
-      potentialRevenueIncrease: 'Augmentation potentielle des revenus',
 
-      detectedPriceAt: 'Prix détecté à',
-      anchorOptimizable: 'ancrage optimisable selon le score funnel',
-      noPriceDetectedOnPage: 'Aucun prix détecté sur la page.',
-      currentLabel: 'actuel',
-      psychologicalLabel: 'psychologique',
-
-      offerStarter: 'Offre Starter',
-      offerPro: 'Offre Pro',
-      offerPremium: 'Offre Premium',
-
-      initialAudit: 'Audit initial',
-      priorityOptimizations: 'Optimisations prioritaires',
-      fullAudit: 'Audit complet',
-      optimizations: 'Optimisations',
-      conversionTracking: 'Suivi conversion',
-      fullStrategy: 'Stratégie complète',
-      implementation: 'Implémentation',
-      advancedTracking: 'Suivi avancé',
-
-      decoyEffectText: 'Utiliser l’offre Pro comme option centrale et Premium comme ancre haute.',
-      recommendedArchitecture: 'Architecture recommandée:',
-      aroundPsychologicalPrice: 'autour d’un prix psychologique à',
-      noReliablePricingArchitecture: 'Impossible de proposer une architecture tarifaire fiable sans prix détecté.',
-      priceVerdictDetected: 'Prix conseillé calculé à partir du prix détecté et des signaux réels de confiance/conversion.',
-      priceVerdictUndetectable: 'Prix non calculable car aucun prix source fiable n’a été détecté.'
-    },
-
-    en: {
-      directScrape: 'Direct scrape',
-      notDetected: 'Not detected',
-      insufficientData: 'Insufficient data',
-      potentialRevenueIncrease: 'Potential Revenue Increase',
-
-      detectedPriceAt: 'Detected price at',
-      anchorOptimizable: 'anchoring can be optimized based on funnel score',
-      noPriceDetectedOnPage: 'No price detected on the page.',
-      currentLabel: 'current',
-      psychologicalLabel: 'psychological',
-
-      offerStarter: 'Starter Offer',
-      offerPro: 'Pro Offer',
-      offerPremium: 'Premium Offer',
-
-      initialAudit: 'Initial audit',
-      priorityOptimizations: 'Priority optimizations',
-      fullAudit: 'Full audit',
-      optimizations: 'Optimizations',
-      conversionTracking: 'Conversion tracking',
-      fullStrategy: 'Full strategy',
-      implementation: 'Implementation',
-      advancedTracking: 'Advanced tracking',
-
-      decoyEffectText: 'Use the Pro offer as the core option and Premium as the high anchor.',
-      recommendedArchitecture: 'Recommended architecture:',
-      aroundPsychologicalPrice: 'around a psychological price of',
-      noReliablePricingArchitecture: 'Unable to suggest a reliable pricing structure without a detected price.',
-      priceVerdictDetected: 'Recommended price calculated from the detected price and real trust/conversion signals.',
-      priceVerdictUndetectable: 'Price cannot be calculated because no reliable source price was detected.'
-    },
-
-    ar: {
-      directScrape: 'استخراج مباشر',
-      notDetected: 'غير مكتشف',
-      insufficientData: 'المعطيات غير كافية',
-      potentialRevenueIncrease: 'زيادة محتملة في الإيرادات',
-
-      detectedPriceAt: 'تم رصد السعر عند',
-      anchorOptimizable: 'ويمكن تحسين التثبيت السعري حسب نتيجة الفَنَل',
-      noPriceDetectedOnPage: 'لم يتم رصد أي سعر على الصفحة.',
-      currentLabel: 'الحالي',
-      psychologicalLabel: 'النفسي',
-
-      offerStarter: 'عرض البداية',
-      offerPro: 'عرض برو',
-      offerPremium: 'عرض بريميوم',
-
-      initialAudit: 'تدقيق أولي',
-      priorityOptimizations: 'تحسينات ذات أولوية',
-      fullAudit: 'تدقيق كامل',
-      optimizations: 'تحسينات',
-      conversionTracking: 'متابعة التحويل',
-      fullStrategy: 'استراتيجية كاملة',
-      implementation: 'تنفيذ',
-      advancedTracking: 'متابعة متقدمة',
-
-      decoyEffectText: 'استخدم عرض برو كخيار أساسي، وPremium كمرساة سعرية مرتفعة.',
-      recommendedArchitecture: 'البنية المقترحة:',
-      aroundPsychologicalPrice: 'حول سعر نفسي قدره',
-      noReliablePricingArchitecture: 'لا يمكن اقتراح هيكلة تسعير موثوقة بدون سعر مكتشف.',
-      priceVerdictDetected: 'تم احتساب السعر المقترح انطلاقاً من السعر المكتشف وإشارات الثقة والتحويل الفعلية.',
-      priceVerdictUndetectable: 'لا يمكن احتساب السعر لأنه لم يتم العثور على سعر مرجعي موثوق.'
-    }
-  };
-
-  return dict[lang] || dict.fr;
-}
 const finalResponse = {
     success:     true,
     requestId,
