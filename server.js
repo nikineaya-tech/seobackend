@@ -1697,18 +1697,24 @@ console.log('\n✅ PARTIE 3/5: Validators + Retry + Utilities loaded successfull
 async function scrapeStealth(validUrl) {
     const playwrightWrapper = require('./playwright-wrapper.cjs');
     const startTime = Date.now();
+    let pw = null;
+
+    const finalizeEmpty = (error, layer = 'playwright') => ({
+        ...EMPTY_SCRAPE_RESULT(error, layer),
+        duration: Date.now() - startTime
+    });
+
+    const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
 
     try {
         console.log(`🎭 Playwright scraping: ${validUrl}`);
 
-        const pw = await playwrightWrapper.launchPlaywright(validUrl);
+        pw = await playwrightWrapper.launchPlaywright(validUrl);
 
         if (!pw || !pw.page) {
             throw new Error('Playwright launch failed — pw ou pw.page null');
         }
 
-        // ── HTML complet rendu (JS exécuté)
-        // ✅ PATCH A : timeout explicite sur page.content() — évite hang infini
         const html = await Promise.race([
             pw.page.content(),
             new Promise((_, reject) =>
@@ -1720,20 +1726,25 @@ async function scrapeStealth(validUrl) {
             throw new Error(`HTML trop court (${html?.length || 0} chars) — page bloquée ou vide`);
         }
 
-        // ── EXTRACTION RÉELLE dans le browser context
         const extracted = await pw.page.evaluate(() => {
+            const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
+            const normText = (v) => (v || '').replace(/\s+/g, ' ').trim();
 
-            // ── COULEURS RÉELLES via getComputedStyle
-            const colorMap  = new Map();
-            const IGNORE    = new Set([
+            const bodyText = normText(document.body?.innerText || '');
+            const viewport = !!document.querySelector('meta[name="viewport"]');
+
+            const colorMap = new Map();
+            const IGNORE = new Set([
                 'rgba(0, 0, 0, 0)', 'transparent', 'rgb(0, 0, 0)',
                 'rgb(255, 255, 255)', '', 'rgba(0,0,0,0)'
             ]);
+
             const targets = document.querySelectorAll(
-                'body, header, nav, section, footer, h1, h2, ' +
-                'button, a, [class*="hero"], [class*="btn"], [class*="cta"], ' +
+                'body, header, nav, section, footer, h1, h2, button, a, ' +
+                '[class*="hero"], [class*="btn"], [class*="cta"], ' +
                 '[class*="banner"], [class*="primary"], [class*="brand"]'
             );
+
             targets.forEach(el => {
                 const cs = window.getComputedStyle(el);
                 ['backgroundColor', 'color', 'borderTopColor'].forEach(prop => {
@@ -1744,342 +1755,656 @@ async function scrapeStealth(validUrl) {
                 });
             });
 
-            // CSS Variables :root
-            const rootCS  = window.getComputedStyle(document.documentElement);
-            const cssVars = ['--primary','--primary-color','--color-primary',
-                             '--accent','--brand-color','--theme-color',
-                             '--secondary','--main-color'];
+            const rootCS = window.getComputedStyle(document.documentElement);
+            const cssVars = [
+                '--primary', '--primary-color', '--color-primary',
+                '--accent', '--brand-color', '--theme-color',
+                '--secondary', '--main-color'
+            ];
+
             const varColors = cssVars
                 .map(v => rootCS.getPropertyValue(v).trim())
                 .filter(v => v && (v.startsWith('#') || v.startsWith('rgb')));
 
-            // rgb → hex
             const rgbToHex = (rgb) => {
                 const m = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-                if (!m) return rgb;
+                if (!m) return rgb.toLowerCase();
                 return '#' + [m[1], m[2], m[3]]
-                    .map(x => parseInt(x).toString(16).padStart(2, '0'))
+                    .map(x => parseInt(x, 10).toString(16).padStart(2, '0'))
                     .join('');
             };
 
-            const BAD = new Set(['#000000','#ffffff','#000','#fff']);
-            const dominantColors = [
+            const BAD = new Set(['#000000', '#ffffff', '#000', '#fff']);
+
+            const dominantColors = unique([
                 ...varColors,
                 ...[...colorMap.entries()]
                     .sort((a, b) => b[1] - a[1])
                     .map(([c]) => c)
-            ]
-            .map(rgbToHex)
-            .filter(c => c && !BAD.has(c))
-            .filter((c, i, arr) => arr.indexOf(c) === i)
-            .slice(0, 5);
+            ])
+                .map(rgbToHex)
+                .filter(c => c && !BAD.has(c))
+                .slice(0, 5);
 
-            // ── TECH STACK via window objects
             const tech = {
-                cms:           'Custom',
-                isWordPress:   !!(window.wp || document.querySelector('[class*="wp-content"],[id*="wp-"]')),
-                isShopify:     !!(window.Shopify || document.querySelector('[data-shopify]')),
-                isNextJS:      !!(window.__NEXT_DATA__ || document.getElementById('__NEXT_DATA__')),
-                isNuxtJS:      !!(window.__NUXT__ || document.getElementById('__nuxt')),
-                isReact:       !!(window.React || window.__REACT_DEVTOOLS_GLOBAL_HOOK__),
-                isVue:         !!(window.Vue || window.__vue_app__),
+                cms: 'Custom',
+                isWordPress: !!(window.wp || document.querySelector('[class*="wp-content"],[id*="wp-"]')),
+                isShopify: !!(window.Shopify || document.querySelector('[data-shopify]')),
+                isNextJS: !!(window.__NEXT_DATA__ || document.getElementById('__NEXT_DATA__')),
+                isNuxtJS: !!(window.__NUXT__ || document.getElementById('__nuxt')),
+                isReact: !!(window.React || window.__REACT_DEVTOOLS_GLOBAL_HOOK__),
+                isVue: !!(window.Vue || window.__vue_app__),
                 isWooCommerce: !!(window.woocommerce_params || document.querySelector('.woocommerce')),
-                hasJQuery:     !!(window.jQuery || window.$),
-                hasGA4:        !!(window.gtag || !!document.querySelector('[src*="gtag/js"],[src*="googletagmanager"]')),
-                hasGTM:        !!(window.google_tag_manager || !!document.querySelector('[src*="googletagmanager.com/gtm"]')),
-                hasFBPixel:    !!(window.fbq || !!document.querySelector('[src*="connect.facebook.net"]')),
-                hasTikTok:     !!(window.ttq || !!document.querySelector('[src*="analytics.tiktok.com"]')),
-                hasHotjar:     !!(window.hj || !!document.querySelector('[src*="hotjar.com"]')),
-                hasClarity:    !!(window.clarity || !!document.querySelector('[src*="clarity.ms"]')),
-                hasLiveChat:   !!(window.Intercom || window.Crisp || window.$crisp || window.tidioChatApi),
-                hasWhatsApp:   !!document.querySelector('a[href*="wa.me"], a[href*="api.whatsapp.com"]'),
-                hasCountdown:  !!document.querySelector('[id*="countdown"],[class*="countdown"],[data-countdown]'),
-                hasExitIntent: !!(window.exitIntent || !!document.querySelector('[class*="exit-intent"],[id*="exit-intent"]')),
-                hasSSL:        location.protocol === 'https:',
-                isMobile:      !!document.querySelector('meta[name="viewport"]'),
-                hasCDN:        !!(document.querySelector('[src*="cloudflare"],[src*="cdn."]') || window.__CF$cv$params),
-                hasSchema:     document.querySelectorAll('script[type="application/ld+json"]').length > 0,
+                hasJQuery: !!(window.jQuery || window.$),
+                hasGA4: !!(window.gtag || document.querySelector('[src*="gtag/js"],[src*="googletagmanager"]')),
+                hasGTM: !!(window.google_tag_manager || document.querySelector('[src*="googletagmanager.com/gtm"]')),
+                hasFBPixel: !!(window.fbq || document.querySelector('[src*="connect.facebook.net"]')),
+                hasTikTok: !!(window.ttq || document.querySelector('[src*="analytics.tiktok.com"]')),
+                hasHotjar: !!(window.hj || document.querySelector('[src*="hotjar.com"]')),
+                hasClarity: !!(window.clarity || document.querySelector('[src*="clarity.ms"]')),
+                hasLiveChat: !!(window.Intercom || window.Crisp || window.$crisp || window.tidioChatApi),
+                hasWhatsApp: !!document.querySelector('a[href*="wa.me"], a[href*="api.whatsapp.com"], a[href*="whatsapp"]'),
+                hasCountdown: !!document.querySelector('[id*="countdown"],[class*="countdown"],[data-countdown]'),
+                hasExitIntent: !!(window.exitIntent || document.querySelector('[class*="exit-intent"],[id*="exit-intent"]')),
+                hasSSL: location.protocol === 'https:',
+                isMobile: viewport,
+                hasCDN: !!(document.querySelector('[src*="cloudflare"],[src*="cdn."],[href*="cdn."]') || window.__CF$cv$params),
+                hasSchema: document.querySelectorAll('script[type="application/ld+json"]').length > 0
             };
 
-            if (tech.isShopify)          tech.cms = 'Shopify';
-            else if (tech.isNextJS)      tech.cms = 'Next.js';
-            else if (tech.isNuxtJS)      tech.cms = 'Nuxt.js';
+            if (tech.isShopify) tech.cms = 'Shopify';
+            else if (tech.isNextJS) tech.cms = 'Next.js';
+            else if (tech.isNuxtJS) tech.cms = 'Nuxt.js';
             else if (tech.isWooCommerce) tech.cms = 'WooCommerce';
-            else if (tech.isWordPress)   tech.cms = 'WordPress';
-            else if (tech.isReact)       tech.cms = 'React';
-            else if (tech.isVue)         tech.cms = 'Vue.js';
+            else if (tech.isWordPress) tech.cms = 'WordPress';
+            else if (tech.isReact) tech.cms = 'React';
+            else if (tech.isVue) tech.cms = 'Vue.js';
 
-            // ── COPY
-            const h1List  = [...document.querySelectorAll('h1')].map(e => e.innerText.trim()).filter(Boolean);
-            const h2List  = [...document.querySelectorAll('h2')].map(e => e.innerText.trim()).filter(Boolean).slice(0, 10);
-            const h3List  = [...document.querySelectorAll('h3')].map(e => e.innerText.trim()).filter(Boolean).slice(0, 8);
-            const ctaList = [...document.querySelectorAll('a, button')]
-                .map(e => e.innerText.trim())
-                .filter(t => t.length > 1 && t.length < 60)
-                .slice(0, 15);
+            const h1List = unique([...document.querySelectorAll('h1')].map(e => normText(e.innerText))).slice(0, 8);
+            const h2List = unique([...document.querySelectorAll('h2')].map(e => normText(e.innerText))).slice(0, 12);
+            const h3List = unique([...document.querySelectorAll('h3')].map(e => normText(e.innerText))).slice(0, 12);
 
-            // ── PHONES
-            const bodyText   = document.body.innerText || '';
+            const ctaRegex = /get started|start|book|buy|order|try|sign up|signup|subscribe|join|contact|demo|call|apply|shop|acheter|commander|essayer|devis|contactez|réserver|reserver/i;
+            const ctaList = unique(
+                [...document.querySelectorAll('a, button, input[type="submit"], input[type="button"]')]
+                    .map(el => {
+                        const text = normText(el.innerText || el.value || el.getAttribute('aria-label') || '');
+                        const href = normText(el.getAttribute('href') || '');
+                        const cls = (el.className || '').toString();
+                        return { text, href, cls };
+                    })
+                    .filter(({ text, href, cls }) => {
+                        if (!text || text.length < 2 || text.length > 80) return false;
+                        const looksLikeCTA =
+                            ctaRegex.test(text) ||
+                            /cta|btn|button|primary|submit|contact|pricing|demo|trial|whatsapp/i.test(cls) ||
+                            /contact|pricing|demo|signup|trial|book|buy|order|whatsapp|wa\.me/i.test(href);
+                        const looksLikeNav = /home|about|services|solutions|platform|blog/i.test(text);
+                        return looksLikeCTA && !looksLikeNav;
+                    })
+                    .map(x => x.text)
+            ).slice(0, 20);
+
             const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
-            const phones     = [...new Set((bodyText.match(phoneRegex) || []).map(p => p.trim()))].slice(0, 5);
+            const phones = unique((bodyText.match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
 
-            // ── EMAILS
             const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-            const emails     = [...new Set((bodyText.match(emailRegex) || [])
-                .filter(e => !e.includes('example') && !e.includes('test')))].slice(0, 5);
+            const emails = unique(
+                (bodyText.match(emailRegex) || [])
+                    .filter(e => !/example|test/i.test(e))
+            ).slice(0, 5);
 
-            // ── PRIX
             const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|€|\$|£)/gi;
-            const allPrices  = (bodyText.match(priceRegex) || []).slice(0, 10);
-            const bestPrice  = allPrices.length > 0
-                ? parseFloat(allPrices[0].replace(/[^\d.]/g, ''))
-                : null;
-            const currency   = allPrices[0]?.match(/MAD|DH|€|\$|£/i)?.[0]?.toUpperCase() || 'MAD';
+            const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 15);
 
-            // ── SCHEMA
-            const schemas     = [...document.querySelectorAll('script[type="application/ld+json"]')]
-                .map(s => { try { return JSON.parse(s.textContent); } catch { return null; } })
+            const normalizedPrices = rawPrices
+                .map(m => ({
+                    raw: m[0],
+                    value: parseFloat(
+                        (m[1] || '')
+                            .replace(/\s/g, '')
+                            .replace(/,/g, '.')
+                            .replace(/'/g, '')
+                    ),
+                    currency: (m[2] || 'MAD').toUpperCase()
+                }))
+                .filter(p => !isNaN(p.value) && p.value > 0);
+
+            const bestPrice = normalizedPrices.length ? normalizedPrices[0].value : null;
+            const currency = normalizedPrices.length ? normalizedPrices[0].currency : 'MAD';
+
+            const schemaNodes = [...document.querySelectorAll('script[type="application/ld+json"]')]
+                .map(s => {
+                    try { return JSON.parse(s.textContent); } catch { return null; }
+                })
                 .filter(Boolean);
-            const schemaTypes = schemas
-                .map(s => s['@type'] || s['@graph']?.[0]?.['@type'])
-                .filter(Boolean);
 
-            // ── SOCIAL PROOFS
-            const socialProofs = [...document.querySelectorAll(
-                '[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]'
-            )].map(e => e.innerText.trim().substring(0, 120)).filter(Boolean).slice(0, 5);
+            const schemaTypes = unique(
+                schemaNodes.flatMap(node => {
+                    const out = [];
+                    const arr = Array.isArray(node) ? node : [node];
+                    arr.forEach(item => {
+                        if (item?.['@type']) {
+                            if (Array.isArray(item['@type'])) out.push(...item['@type']);
+                            else out.push(item['@type']);
+                        }
+                        if (Array.isArray(item?.['@graph'])) {
+                            item['@graph'].forEach(g => {
+                                if (g?.['@type']) {
+                                    if (Array.isArray(g['@type'])) out.push(...g['@type']);
+                                    else out.push(g['@type']);
+                                }
+                            });
+                        }
+                    });
+                    return out;
+                })
+            );
 
-            // ── SECTIONS
+            const socialProofs = unique(
+                [...document.querySelectorAll(
+                    '[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]'
+                )]
+                    .map(e => normText(e.innerText).substring(0, 160))
+                    .filter(Boolean)
+            ).slice(0, 5);
+
             const sections = {
-  hasHero: !!document.querySelector([
-    '.hero', '#hero', '.banner', '.masthead', '.hero-section',
-    '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
-  ].join(',')),
-
-  hasFeatures: !!document.querySelector([
-    '.feature', '.features', '#features', '.service', '.services',
-    '#service', '.benefits', '.benefit', '.solutions',
-    '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
-  ].join(',')),
-
-  hasTrust: !!document.querySelector([
-    '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
-    '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
-    '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
-    '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
-    '[class*="reassurance"]', '[class*="trusted"]'
-  ].join(',')),
-
-  hasPricing: !!document.querySelector([
-    '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
-    '.tarifs', '.tarif', '.offres', '.offer',
-    '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
-  ].join(',')),
-
-  hasTestim: !!document.querySelector([
-    '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
-    '.ratings', '.social-proof',
-    '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
-  ].join(',')),
-
-  hasFAQ: !!document.querySelector([
-    '.faq', '#faq', 'details', '.accordion', '.questions',
-    '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
-  ].join(',')),
-
-  hasCTA: !!document.querySelector([
-    '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
-    '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
-  ].join(',')),
-
-  hasFooter: !!document.querySelector([
-    'footer', '.footer', '#footer', '[class*="footer"]'
-  ].join(','))
-};
-
-            // ── GOOGLE FONTS
-            const googleFonts = [...document.querySelectorAll('link[href*="fonts.googleapis.com"]')]
-                .map(l => { const m = l.href.match(/family=([^&:]+)/); return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null; })
-                .filter(Boolean).slice(0, 3);
-
-            // ── META
-            const meta = {
-                title:       document.title || '',
-                description: document.querySelector('meta[name="description"]')?.content || '',
-                canonical:   document.querySelector('link[rel="canonical"]')?.href || '',
-                ogImage:     document.querySelector('meta[property="og:image"]')?.content || '',
-                hasOG:       !!document.querySelector('meta[property="og:title"]'),
-                lang:        document.documentElement.lang || '',
+                hasHero: !!document.querySelector([
+                    '.hero', '#hero', '.banner', '.masthead', '.hero-section',
+                    '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
+                ].join(',')),
+                hasFeatures: !!document.querySelector([
+                    '.feature', '.features', '#features', '.service', '.services',
+                    '#service', '.benefits', '.benefit', '.solutions',
+                    '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
+                ].join(',')),
+                hasTrust: !!document.querySelector([
+                    '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
+                    '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
+                    '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
+                    '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
+                    '[class*="reassurance"]', '[class*="trusted"]'
+                ].join(',')),
+                hasPricing: !!document.querySelector([
+                    '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
+                    '.tarifs', '.tarif', '.offres', '.offer',
+                    '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
+                ].join(',')),
+                hasTestim: !!document.querySelector([
+                    '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
+                    '.ratings', '.social-proof',
+                    '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
+                ].join(',')),
+                hasFAQ: !!document.querySelector([
+                    '.faq', '#faq', 'details', '.accordion', '.questions',
+                    '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
+                ].join(',')),
+                hasCTA: !!document.querySelector([
+                    '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
+                    '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
+                ].join(',')),
+                hasFooter: !!document.querySelector([
+                    'footer', '.footer', '#footer', '[class*="footer"]'
+                ].join(','))
             };
+
+            const googleFonts = unique(
+                [...document.querySelectorAll('link[href*="fonts.googleapis.com"]')]
+                    .map(l => {
+                        const m = l.href.match(/family=([^&:]+)/);
+                        return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
+                    })
+                    .filter(Boolean)
+            ).slice(0, 5);
+
+            const internalLinkObjects = [];
+            const externalOutboundLinkObjects = [];
+            const anchors = [...document.querySelectorAll('a[href]')];
+            const currentHost = location.hostname.replace(/^www\./, '');
+
+            anchors.forEach(a => {
+                const href = a.getAttribute('href') || '';
+                const text = normText(a.innerText || a.getAttribute('aria-label') || '').substring(0, 120);
+                if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+                    return;
+                }
+
+                try {
+                    const url = new URL(href, location.href);
+                    const normalized = url.href;
+                    const host = url.hostname.replace(/^www\./, '');
+                    const item = { href: url.href, normalized, text, host };
+
+                    if (host === currentHost) internalLinkObjects.push(item);
+                    else externalOutboundLinkObjects.push(item);
+                } catch (_) {}
+            });
+
+            const meta = {
+                title: document.title || '',
+                description: document.querySelector('meta[name="description"]')?.content || '',
+                keywords: document.querySelector('meta[name="keywords"]')?.content || '',
+                canonical: document.querySelector('link[rel="canonical"]')?.href || '',
+                ogImage: document.querySelector('meta[property="og:image"]')?.content || '',
+                ogTitle: document.querySelector('meta[property="og:title"]')?.content || '',
+                ogDescription: document.querySelector('meta[property="og:description"]')?.content || '',
+                robots: document.querySelector('meta[name="robots"]')?.content || '',
+                hasOG: !!document.querySelector('meta[property="og:title"]'),
+                lang: document.documentElement.lang || ''
+            };
+
+            const scripts = [...document.querySelectorAll('script')];
+            const scriptSrc = scripts.filter(s => s.src);
+            const inlineScripts = scripts.filter(s => !s.src);
+            const stylesheets = [...document.querySelectorAll('link[rel="stylesheet"]')];
+            const totalImages = document.querySelectorAll('img').length;
+            const lazyLoadImages = document.querySelectorAll('img[loading="lazy"]').length;
+            const webpImages = document.querySelectorAll('img[src*=".webp"], source[type="image/webp"]').length;
+            const missingAlt = document.querySelectorAll('img:not([alt]), img[alt=""]').length;
+            const hasVideo = !!document.querySelector('video, iframe[src*="youtube"], iframe[src*="vimeo"], iframe[src*="loom"]');
+
+            const hasMinified = /(\.min\.js|\.min\.css)/i.test(document.documentElement.innerHTML);
+            const hasPreload = document.querySelectorAll('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"]').length > 0;
+            const hasServiceWorker = /serviceWorker/i.test(document.documentElement.innerHTML);
+            const charset = document.querySelector('meta[charset]')?.getAttribute('charset') || null;
+
+            const listCount = document.querySelectorAll('ul, ol').length;
+            const buttonCount = document.querySelectorAll('button, a, input[type="submit"], input[type="button"]').length;
+            const paragraphCount = document.querySelectorAll('p').length;
+            const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
+
+            const contentStatus =
+                wordCount < 200 ? 'INSUFFISANT (< 200 mots)' :
+                wordCount < 600 ? 'MOYEN (200-600 mots)' :
+                'RICHE (> 600 mots)';
+
+            const internalLinks = unique(internalLinkObjects.map(x => x.href));
+            const externalOutboundLinks = unique(externalOutboundLinkObjects.map(x => x.href));
 
             return {
-                dominantColors: dominantColors.length > 0
-                    ? dominantColors
-                    : ['#3b82f6', '#1e293b', '#10b981'],
+                dominantColors: dominantColors.length ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
                 tech,
-                copy:         { h1List, h2List, h3List, ctaList },
-                contacts:     { phones, emails },
-                pricing:      { bestPrice, currency, allPrices },
+                copy: { h1List, h2List, h3List, ctaList },
+                contacts: { phones, emails },
+                pricing: {
+                    bestPrice,
+                    currency,
+                    allPrices: normalizedPrices.map(p => p.value)
+                },
                 socialProofs,
                 schemaTypes,
                 sections,
                 googleFonts,
                 meta,
-                wordCount:    bodyText.split(/\s+/).filter(Boolean).length,
-                bodyText:     bodyText.substring(0, 10000),
+                wordCount,
+                bodyText: bodyText.substring(0, 15000),
+
+                paragraphCount,
+                listCount,
+                buttonCount,
+                totalImages,
+                lazyLoadImages,
+                webpImages,
+                missingAlt,
+                hasVideo,
+
+                internalLinks,
+                externalOutboundLinks,
+                internalLinkObjects,
+                externalOutboundLinkObjects,
+                linkSummary: {
+                    totalAnchors: anchors.length,
+                    internalCount: internalLinks.length,
+                    externalOutboundCount: externalOutboundLinks.length,
+                    ignoredCount: Math.max(0, anchors.length - internalLinks.length - externalOutboundLinks.length)
+                },
+
+                performance: {
+                    scriptCount: scripts.length,
+                    inlineScriptCount: inlineScripts.length,
+                    externalScripts: scriptSrc.length,
+                    cssCount: stylesheets.length,
+                    cssFiles: stylesheets.length,
+                    hasMinified,
+                    hasPreload,
+                    hasServiceWorker,
+                    hasCDN: tech.hasCDN,
+                    hasSSL: tech.hasSSL,
+                    charset
+                }
             };
         });
 
-        // ── Fermeture propre browser
-        try {
-            const playwrightWrapper = require('./playwright-wrapper.cjs');
-await pw.page.close().catch(() => {});
-await playwrightWrapper.closeBrowser(pw.browser);
-        } catch (closeErr) {
-            console.warn('⚠️ Browser close warning:', closeErr.message);
-        }
+        const pageSections = (() => {
+            const s = extracted.sections || {};
+            const map = {
+                HERO: s.hasHero,
+                FEATURES: s.hasFeatures,
+                TRUST: s.hasTrust,
+                SOCIAL_PROOF: s.hasTestim,
+                PRICING: s.hasPricing,
+                FAQ: s.hasFAQ,
+                CTA: s.hasCTA,
+                FOOTER: s.hasFooter
+            };
+            return Object.entries(map)
+                .filter(([, v]) => v)
+                .map(([type]) => ({ type, present: true, score: 60 }));
+        })();
 
-        console.log(`✅ scrapeStealth OK — ${Date.now() - startTime}ms | Colors: ${extracted.dominantColors.join(',')} | CMS: ${extracted.tech.cms}`);
-
-        return {
-            success:    true,
-            fetchLayer: 'playwright',
+        const result = {
+            ...EMPTY_SCRAPE_RESULT(null, pw.provider || 'playwright'),
+            success: true,
+            fetchLayer: pw.provider || 'playwright',
             html,
-            duration:   Date.now() - startTime,
+            error: null,
+            duration: Date.now() - startTime,
 
             visualDNA: {
                 dominantColors: extracted.dominantColors,
-                googleFonts:    extracted.googleFonts,
+                googleFonts: extracted.googleFonts
             },
 
-            techStack: extracted.tech,
+            techStack: {
+                ...EMPTY_SCRAPE_RESULT().techStack,
+                ...extracted.tech
+            },
 
             copyIntel: {
-    headlines:      { h1: extracted.copy.h1List, h2: extracted.copy.h2List, h3: extracted.copy.h3List },
-    realCTAs:       extracted.copy.ctaList,
-    heroText:       extracted.bodyText.substring(0, 300),
-    testimonials:   extracted.socialProofs,
-    guarantees:     [],
-    faq:            [],
-    bulletBenefits: [],
-    allButtons:     extracted.copy.ctaList,
-    pageSections:   (() => {                          // ← REMPLACE pageSections: []
-        const s = extracted.sections || {};
-        const map = {
-            HERO:        s.hasHero,
-            FEATURES:    s.hasFeatures,
-            TRUST:       s.hasTrust,
-    SOCIAL_PROOF: s.hasTestim,
-            PRICING:     s.hasPricing,
-            FAQ:         s.hasFAQ,
-            CTA:         s.hasCTA,
-            FOOTER:      s.hasFooter,
-        };
-        return Object.entries(map)
-            .filter(([, v]) => v)
-            .map(([type]) => ({ type, present: true, score: 60 }));
-    })(),
-},
+                ...EMPTY_SCRAPE_RESULT().copyIntel,
+                headlines: {
+                    h1: extracted.copy.h1List,
+                    h2: extracted.copy.h2List,
+                    h3: extracted.copy.h3List
+                },
+                realCTAs: extracted.copy.ctaList,
+                heroText: extracted.bodyText.substring(0, 300),
+                testimonials: extracted.socialProofs,
+                guarantees: [],
+                faq: [],
+                bulletBenefits: [],
+                allButtons: extracted.copy.ctaList,
+                pageSections
+            },
+
+            chapterIntel: {
+                chapters: []
+            },
 
             priceIntel: {
-                bestPrice:    extracted.pricing.bestPrice,
-                currency:     extracted.pricing.currency,
-                all:          extracted.pricing.allPrices,
-                detected:     extracted.pricing.bestPrice !== null,
+                bestPrice: extracted.pricing.bestPrice,
+                currency: extracted.pricing.currency,
+                all: extracted.pricing.allPrices,
+                detected: extracted.pricing.bestPrice !== null,
                 struckPrices: [],
-                discountRate: null,
+                discountRate: null
             },
 
             trustSignals: {
-                hasSSL:                extracted.tech.hasSSL,
-                hasWhatsApp:           extracted.tech.hasWhatsApp,
-                hasPhoneNumber:        extracted.contacts.phones.length > 0,
-                hasReviews:            extracted.socialProofs.length > 0,
+                hasSSL: extracted.tech.hasSSL,
+                hasWhatsApp: extracted.tech.hasWhatsApp,
+                hasPhoneNumber: extracted.contacts.phones.length > 0,
+                hasReviews: extracted.socialProofs.length > 0,
                 hasMoneyBackGuarantee: false,
-                hasPaymentLogos:       false,
-                hasLegalPages:         false,
-                hasCOD:                false,
-                trustScore:            null,
+                hasPaymentLogos: /visa|mastercard|paypal|cmi/i.test(html),
+                hasLegalPages: /mentions légales|privacy|conditions|terms/i.test(extracted.bodyText),
+                hasCOD: /cash on delivery|paiement à la livraison/i.test(extracted.bodyText),
+                trustScore: null
             },
 
             contacts: extracted.contacts,
 
             schemaData: {
                 types: extracted.schemaTypes,
-                count: extracted.schemaTypes.length,
+                count: extracted.schemaTypes.length
             },
 
-            sections:   extracted.sections,
-            meta:       extracted.meta,
-            wordCount:  extracted.wordCount,
-            bodyText:   extracted.bodyText,
+            sections: extracted.sections,
+            meta: extracted.meta,
+
+            seoIntel: {
+                ...EMPTY_SCRAPE_RESULT().seoIntel,
+                title: extracted.meta.title,
+                titleLength: extracted.meta.title.length,
+                metaDescription: extracted.meta.description,
+                description: extracted.meta.description,
+                descriptionLength: extracted.meta.description.length,
+                keywordsMeta: extracted.meta.keywords
+                    ? extracted.meta.keywords.split(',').map(x => x.trim()).filter(Boolean)
+                    : [],
+                headingCounts: {
+                    h1: extracted.copy.h1List.length,
+                    h2: extracted.copy.h2List.length,
+                    h3: extracted.copy.h3List.length
+                },
+                h1: extracted.copy.h1List[0] || '',
+                h2s: extracted.copy.h2List,
+                h3s: extracted.copy.h3List,
+                canonical: extracted.meta.canonical,
+                hasCanonical: !!extracted.meta.canonical,
+                robots: extracted.meta.robots,
+                hasRobotsMeta: !!extracted.meta.robots,
+                ogTitle: extracted.meta.ogTitle,
+                ogDescription: extracted.meta.ogDescription,
+                ogImage: extracted.meta.ogImage,
+                lang: extracted.meta.lang || null,
+                schemaTypes: extracted.schemaTypes,
+                schemaCount: extracted.schemaTypes.length,
+                hasSchema: extracted.schemaTypes.length > 0,
+                paragraphs: extracted.paragraphCount,
+                listCount: extracted.listCount,
+                buttonCount: extracted.buttonCount,
+                wordCount: extracted.wordCount,
+                contentStatus:
+                    extracted.wordCount < 200 ? 'INSUFFISANT (< 200 mots)' :
+                    extracted.wordCount < 600 ? 'MOYEN (200-600 mots)' :
+                    'RICHE (> 600 mots)',
+                totalImages: extracted.totalImages,
+                missingAlt: extracted.missingAlt,
+                webpImages: extracted.webpImages,
+                lazyLoadImages: extracted.lazyLoadImages,
+                hasVideo: extracted.hasVideo,
+                scriptCount: extracted.performance.scriptCount,
+                inlineScriptCount: extracted.performance.inlineScriptCount,
+                externalScripts: extracted.performance.externalScripts,
+                cssCount: extracted.performance.cssCount,
+                cssFiles: extracted.performance.cssFiles,
+                hasMinified: extracted.performance.hasMinified,
+                hasServiceWorker: extracted.performance.hasServiceWorker,
+                hasCDN: extracted.tech.hasCDN,
+                hasPreload: extracted.performance.hasPreload,
+                hasSSL: extracted.tech.hasSSL,
+                charset: extracted.performance.charset,
+                hasFAQ: extracted.sections.hasFAQ,
+                hasExitIntent: extracted.tech.hasExitIntent,
+                hasPopup: /popup|modal/i.test(html),
+                hasCountdown: extracted.tech.hasCountdown,
+                hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html),
+                hasLiveChat: extracted.tech.hasLiveChat,
+                hasWhatsApp: extracted.tech.hasWhatsApp,
+                hasCOD: /cash on delivery|paiement à la livraison/i.test(extracted.bodyText),
+                internalLinks: extracted.internalLinks,
+                externalLinks: extracted.externalOutboundLinks,
+                externalOutboundLinks: extracted.externalOutboundLinks,
+                internalLinkObjects: extracted.internalLinkObjects,
+                externalOutboundLinkObjects: extracted.externalOutboundLinkObjects,
+                linkSummary: extracted.linkSummary,
+                technicalSummary: {
+                    meta: {
+                        titleLength: extracted.meta.title.length,
+                        descriptionLength: extracted.meta.description.length,
+                        hasCanonical: !!extracted.meta.canonical,
+                        hasRobots: !!extracted.meta.robots,
+                        hasViewport: !!/name=["']viewport["']/i.test(html),
+                        hasOG: extracted.meta.hasOG,
+                        hasTwitterCard: /twitter:card/i.test(html),
+                        lang: extracted.meta.lang || null
+                    },
+                    headings: {
+                        h1Count: extracted.copy.h1List.length,
+                        h2Count: extracted.copy.h2List.length,
+                        h3Count: extracted.copy.h3List.length
+                    },
+                    content: {
+                        wordCount: extracted.wordCount,
+                        paragraphs: extracted.paragraphCount,
+                        listCount: extracted.listCount,
+                        buttonCount: extracted.buttonCount,
+                        contentStatus:
+                            extracted.wordCount < 200 ? 'INSUFFISANT (< 200 mots)' :
+                            extracted.wordCount < 600 ? 'MOYEN (200-600 mots)' :
+                            'RICHE (> 600 mots)'
+                    },
+                    media: {
+                        totalImages: extracted.totalImages,
+                        missingAlt: extracted.missingAlt,
+                        webpImages: extracted.webpImages,
+                        lazyLoadImages: extracted.lazyLoadImages,
+                        hasVideo: extracted.hasVideo
+                    },
+                    links: extracted.linkSummary,
+                    structuredData: {
+                        hasSchema: extracted.schemaTypes.length > 0,
+                        schemaCount: extracted.schemaTypes.length,
+                        schemaTypes: extracted.schemaTypes
+                    },
+                    performance: {
+                        scriptCount: extracted.performance.scriptCount,
+                        inlineScriptCount: extracted.performance.inlineScriptCount,
+                        externalScripts: extracted.performance.externalScripts,
+                        cssCount: extracted.performance.cssCount,
+                        cssFiles: extracted.performance.cssFiles,
+                        hasMinified: extracted.performance.hasMinified,
+                        hasServiceWorker: extracted.performance.hasServiceWorker,
+                        hasCDN: extracted.tech.hasCDN,
+                        hasPreload: extracted.performance.hasPreload,
+                        hasSSL: extracted.tech.hasSSL,
+                        charset: extracted.performance.charset
+                    },
+                    conversion: {
+                        hasFAQ: extracted.sections.hasFAQ,
+                        hasExitIntent: extracted.tech.hasExitIntent,
+                        hasPopup: /popup|modal/i.test(html),
+                        hasCountdown: extracted.tech.hasCountdown,
+                        hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html),
+                        hasLiveChat: extracted.tech.hasLiveChat,
+                        hasWhatsApp: extracted.tech.hasWhatsApp,
+                        hasCOD: /cash on delivery|paiement à la livraison/i.test(extracted.bodyText)
+                    }
+                }
+            },
+
+            contentIntel: {
+                ...EMPTY_SCRAPE_RESULT().contentIntel,
+                paragraphCount: extracted.paragraphCount,
+                listCount: extracted.listCount,
+                imageCount: extracted.totalImages,
+                buttonCount: extracted.buttonCount,
+                internalLinks: extracted.internalLinks,
+                externalLinks: extracted.externalOutboundLinks,
+                externalOutboundLinks: extracted.externalOutboundLinks,
+                internalLinkObjects: extracted.internalLinkObjects,
+                externalOutboundLinkObjects: extracted.externalOutboundLinkObjects,
+                wordCount: extracted.wordCount,
+                bodyText: extracted.bodyText,
+                contentStatus:
+                    extracted.wordCount < 200 ? 'INSUFFISANT (< 200 mots)' :
+                    extracted.wordCount < 600 ? 'MOYEN (200-600 mots)' :
+                    'RICHE (> 600 mots)',
+                totalImages: extracted.totalImages,
+                missingAlt: extracted.missingAlt,
+                webpImages: extracted.webpImages,
+                lazyLoadImages: extracted.lazyLoadImages,
+                hasVideo: extracted.hasVideo,
+                linkSummary: extracted.linkSummary
+            },
 
             trackingIntel: {
                 hasGoogleAnalytics: extracted.tech.hasGA4,
-                hasGTM:             extracted.tech.hasGTM,
-                hasFacebookPixel:   extracted.tech.hasFBPixel,
-                hasTikTokPixel:     extracted.tech.hasTikTok,
-                hasHotjar:          extracted.tech.hasHotjar,
-                hasClarity:         extracted.tech.hasClarity,
+                hasGTM: extracted.tech.hasGTM,
+                hasFacebookPixel: extracted.tech.hasFBPixel,
+                hasTikTokPixel: extracted.tech.hasTikTok,
+                hasHotjar: extracted.tech.hasHotjar,
+                hasClarity: extracted.tech.hasClarity
             },
 
             performanceIntel: {
-                hasCountdown:      extracted.tech.hasCountdown,
-                hasExitIntent:     extracted.tech.hasExitIntent,
-                hasLiveChat:       extracted.tech.hasLiveChat,
-                hasSSL:            extracted.tech.hasSSL,
-                hasCDN:            extracted.tech.hasCDN,
+                ...EMPTY_SCRAPE_RESULT().performanceIntel,
+                hasCountdown: extracted.tech.hasCountdown,
+                hasExitIntent: extracted.tech.hasExitIntent,
+                hasLiveChat: extracted.tech.hasLiveChat,
+                hasSSL: extracted.tech.hasSSL,
+                hasCDN: extracted.tech.hasCDN,
                 isMobileOptimized: extracted.tech.isMobile,
+                hasMinified: extracted.performance.hasMinified,
+                hasPreload: extracted.performance.hasPreload,
+                hasPopup: /popup|modal/i.test(html),
+                hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html),
+                hasVideo: extracted.hasVideo,
+                hasServiceWorker: extracted.performance.hasServiceWorker
             },
 
             brand: {
-                fullTextSample: extracted.bodyText,
-                wordCount:      extracted.wordCount,
+                fullTextSample: extracted.bodyText.substring(0, 15000),
+                wordCount: extracted.wordCount,
+                hasSSL: extracted.tech.hasSSL
             },
 
             redirectIntel: {
-                totalRedirects:   0,
+                totalRedirects: 0,
                 isFunnelRedirect: false,
-                chain:            [],
+                chain: []
             },
+
+            frameworkData: {
+                trustSignals: {
+                    hasSSL: extracted.tech.hasSSL,
+                    hasWhatsApp: extracted.tech.hasWhatsApp,
+                    hasPhoneNumber: extracted.contacts.phones.length > 0,
+                    hasReviews: extracted.socialProofs.length > 0
+                },
+                techStack: {
+                    cms: extracted.tech.cms,
+                    isWordPress: extracted.tech.isWordPress,
+                    isShopify: extracted.tech.isShopify,
+                    isNextJS: extracted.tech.isNextJS,
+                    isNuxtJS: extracted.tech.isNuxtJS,
+                    isReact: extracted.tech.isReact,
+                    isVue: extracted.tech.isVue,
+                    isWooCommerce: extracted.tech.isWooCommerce
+                },
+                technicalSummary: {
+                    content: {
+                        wordCount: extracted.wordCount,
+                        paragraphs: extracted.paragraphCount
+                    },
+                    links: extracted.linkSummary,
+                    schema: {
+                        count: extracted.schemaTypes.length,
+                        types: extracted.schemaTypes
+                    }
+                }
+            }
         };
 
+        console.log(
+            `✅ scrapeStealth OK — ${result.duration}ms | Layer: ${result.fetchLayer} | Colors: ${extracted.dominantColors.join(',')} | CMS: ${extracted.tech.cms}`
+        );
+
+        return result;
     } catch (e) {
         console.error(`❌ scrapeStealth failed (${Date.now() - startTime}ms):`, e.message);
-        return {
-            success:          false,
-            fetchLayer:       'playwright',
-            html:             '',
-            error:            e.message,
-            visualDNA:        { dominantColors: ['#3b82f6', '#1e293b', '#10b981'], googleFonts: [] },
-            techStack:        { cms: 'Unknown', hasSSL: false, hasWhatsApp: false },
-            copyIntel:        { headlines: { h1: [], h2: [], h3: [] }, realCTAs: [], heroText: '', testimonials: [], guarantees: [], faq: [], bulletBenefits: [], allButtons: [], pageSections: [] },
-            priceIntel:       { bestPrice: null, currency: 'MAD', all: [], detected: false, struckPrices: [], discountRate: null },
-            trustSignals:     { hasSSL: false, hasWhatsApp: false, hasPhoneNumber: false, hasReviews: false, trustScore: null },
-            contacts:         { phones: [], emails: [] },
-            schemaData:       { types: [], count: 0 },
-            sections:         { hasHero: false, hasFeatures: false, hasPricing: false, hasTestim: false, hasFAQ: false, hasCTA: false, hasFooter: false },
-            meta:             { title: '', description: '', canonical: '', ogImage: '', hasOG: false, lang: '' },
-            wordCount:        0,
-            bodyText:         '',
-            trackingIntel:    { hasGoogleAnalytics: false, hasGTM: false, hasFacebookPixel: false, hasTikTokPixel: false, hasHotjar: false, hasClarity: false },
-            performanceIntel: { hasCountdown: false, hasExitIntent: false, hasLiveChat: false, hasSSL: false, hasCDN: false, isMobileOptimized: false },
-            brand:            { fullTextSample: '', wordCount: 0 },
-            redirectIntel:    { totalRedirects: 0, isFunnelRedirect: false, chain: [] },
-        };
+        return finalizeEmpty(e.message, pw?.provider || 'playwright');
+    } finally {
+        try {
+            if (pw?.page) await pw.page.close().catch(() => {});
+            if (pw?.browser) await playwrightWrapper.closeBrowser(pw.browser);
+        } catch (closeErr) {
+            console.warn('⚠️ Browser close warning:', closeErr.message);
+        }
     }
 }
-
-
-// ═══════════════════════════════════════════════════════════════════
-// 🕵️ ROUTE: SCRAPE SITE DATA (AXIOS → SCRAPE.DO FALLBACK)
-// ═══════════════════════════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════════════════════════
-// 🕵️ ROUTE: SCRAPE SITE DATA (PLAYWRIGHT → SCRAPE.DO FALLBACK)
-// ═══════════════════════════════════════════════════════════════════
-
-
 // ═══════════════════════════════════════════════════════════════════
 // 📈 OFF-PAGE BRAND INTEL (GOOGLE TRENDS VIA SCRAPE.DO FREE)
 // ═══════════════════════════════════════════════════════════════════
@@ -4289,7 +4614,226 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
         });
     }
 });
+app.post('/api/competitors/decision-layer', async (req, res) => {
+  try {
+    const {
+      lang = 'fr',
+      keyword = '',
+      marketInsights = {},
+      marketDynamics = {},
+      leaderMoat = {},
+      productServiceAudit = {},
+      top3ReverseEngineering = {},
+      swot = {},
+      strategicBlueprint = {},
+      winningMove = '',
+      actionRoadmap = []
+    } = req.body || {};
 
+    const safeArray = (v) => Array.isArray(v) ? v.filter(Boolean) : [];
+    const firstNonEmpty = (...vals) => {
+      for (const v of vals) {
+        if (typeof v === 'string' && v.trim()) return v.trim();
+        if (Array.isArray(v) && v.filter(Boolean).length) return v.filter(Boolean)[0];
+      }
+      return '';
+    };
+    const compact = (v, fallback = '') => {
+      if (typeof v === 'string' && v.trim()) return v.trim();
+      if (Array.isArray(v) && v.filter(Boolean).length) return v.filter(Boolean).join(' • ');
+      return fallback;
+    };
+
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+
+    const mi = marketInsights || {};
+    const md = marketDynamics || {};
+    const lm = leaderMoat || {};
+    const prod = productServiceAudit || {};
+    const rev = top3ReverseEngineering || {};
+    const roadmap = Array.isArray(actionRoadmap) ? actionRoadmap.filter(Boolean).slice(0, 3) : [];
+
+    const difficulty = mi.difficulty || (isAr ? 'متوسط' : isEn ? 'moderate' : 'modéré');
+    const primaryIntent = mi.serpIntent || (isAr ? 'نية بحث واضحة' : isEn ? 'clear search intent' : 'une intention de recherche claire');
+
+    const dominantSuccessFactor = firstNonEmpty(
+      safeArray(rev.commonSuccessFactors),
+      lm.mainMoat,
+      lm.summary,
+      isAr ? 'تموقع قوي في السوق' : isEn ? 'strong market positioning' : 'un positionnement fort'
+    );
+
+    const coreMoat = firstNonEmpty(
+      lm.mainMoat,
+      lm.summary,
+      safeArray(rev.commonSuccessFactors),
+      isAr ? 'السلطة والثقة والتنفيذ' : isEn ? 'authority, trust, and execution' : 'l’autorité, la confiance et l’exécution'
+    );
+
+    const proofItems = [
+      firstNonEmpty(
+        lm.brandAuthority?.summary,
+        lm.brandAuthority?.reasoning,
+        lm.brandAuthority?.socialLinksCount !== undefined
+          ? (isAr
+              ? `حضور العلامة موزع على ${lm.brandAuthority.socialLinksCount} قنوات.`
+              : isEn
+                ? `Brand presence is spread across ${lm.brandAuthority.socialLinksCount} channels.`
+                : `La présence de la marque est répartie sur ${lm.brandAuthority.socialLinksCount} canaux.`)
+          : ''
+      ),
+      firstNonEmpty(
+        lm.contentStrategy?.summary,
+        lm.technicalMoat?.summary,
+        safeArray(rev.commonSuccessFactors)[1],
+        rev.trafficStrategyGuess
+      ),
+      firstNonEmpty(
+        lm.unfairAdvantage,
+        lm.competitiveEdge,
+        safeArray(rev.commonSuccessFactors)[2],
+        isAr
+          ? 'لديه أفضلية تتراكم مع الوقت.'
+          : isEn
+            ? 'It has an advantage that compounds over time.'
+            : 'Il possède un avantage qui se renforce avec le temps.'
+      )
+    ].filter(Boolean).slice(0, 3);
+
+    const weakness = firstNonEmpty(
+      prod.weakestProductFeature,
+      safeArray(rev.glaringWeaknesses),
+      safeArray(swot.weaknesses),
+      isAr ? 'ثغرة واضحة يمكن استغلالها' : isEn ? 'a clear exploitable gap' : 'une faiblesse exploitable'
+    );
+
+    const underservedSegment = firstNonEmpty(
+      safeArray(swot.opportunities),
+      md.blueOceanOpportunity,
+      strategicBlueprint?.yourPositioning,
+      isAr ? 'طلب غير مخدوم جيداً' : isEn ? 'underserved demand' : 'une demande encore mal servie'
+    );
+
+    const strategicAngle = firstNonEmpty(
+      winningMove,
+      strategicBlueprint?.salesAngleRecommended,
+      strategicBlueprint?.uniqueAngle,
+      isAr ? 'زاوية تموقع مختلفة' : isEn ? 'a differentiated angle' : 'un angle différenciant'
+    );
+
+    const actionItems = roadmap.length ? roadmap : (
+      isAr ? [
+        'وضح عرضك حول الفجوة التي لا يسيطر عليها المنافس.',
+        'أنشئ صفحة هبوط مركزة على الطلب غير المخدوم جيداً.',
+        'اختبر قناة اكتساب واحدة بسرعة قبل التوسع.'
+      ] : isEn ? [
+        'Clarify your offer around the gap the competitor does not own.',
+        'Launch a focused landing page for underserved demand.',
+        'Validate one acquisition channel before scaling.'
+      ] : [
+        "Clarifie ton offre autour de la faille que le concurrent ne contrôle pas.",
+        "Lance une landing page ciblée sur la demande mal servie.",
+        "Valide un canal d'acquisition avant de scaler."
+      ]
+    );
+
+    const decisionLayer = isAr ? {
+      topLabel: 'الذكاء التنافسي',
+      title: 'موقعك الاستراتيجي في هذا السوق',
+      subtitle: `افهم من يهيمن في "${keyword || 'هذا السوق'}"، ولماذا يربح، وأين يمكنك الدخول بقوة.`,
+      snapshot: 'ملخص استراتيجي',
+      verdictLabel: 'حكم السوق',
+      verdictMain: `هذا السوق ${difficulty} ويعتمد على ${primaryIntent}.`,
+      verdictSub: `النجاح هنا يحتاج إلى ${compact(dominantSuccessFactor, 'تموضع ذكي')} وليس فقط منتج أفضل.`,
+      verdictMicro: 'هذا التقدير مبني على شدة المنافسة ونية البحث ومستوى تموضع اللاعبين.',
+      leaderLabel: 'لماذا يتفوق القائد',
+      leaderMain: `المتصدر الحالي يتفوق بفضل ${compact(coreMoat, 'السلطة والثقة والتنفيذ')}.`,
+      leaderMicro: 'هذه هي المنظومة التي تحافظ على تفوقه، وليس مجرد تفاصيل سطحية.',
+      gapLabel: 'أهم ثغرة قابلة للاستغلال',
+      gapMain: `أضعف نقطة لديه هي ${compact(weakness, 'ثغرة تنفيذية واضحة')}.`,
+      gapSub: `هذه الثغرة تفتح لك فرصة لالتقاط ${compact(underservedSegment, 'طلب غير مخدوم جيداً')}.`,
+      gapMicro: 'ركز هنا أولاً، لأن المواجهة في نقاط قوته ستكون أغلى وأصعب.',
+      moveLabel: 'أفضل هجوم مقترح',
+      moveMain: `تحرك عبر ${compact(strategicAngle, 'زاوية تموقع مختلفة')} بدل المواجهة المباشرة.`,
+      moveSub: 'هذه المقاربة تتفادى قوته وتستهدف حاجة لم تُلبَّ جيداً.',
+      moveMicro: 'الهدف هو تحقيق أثر أسرع مع مقاومة أقل.',
+      actionsLabel: 'ماذا تفعل الآن',
+      actionsTitle: 'ابدأ بهذه الخطوات الثلاث',
+      actionsMicro: 'هذه الخطوات مرتبة حسب السرعة والتأثير وسهولة التنفيذ.',
+      closingDivider: '— انتهى الملخص الاستراتيجي —',
+      closingText: 'الآن لديك مسار أوضح للمنافسة بدون تخمين.',
+      proofItems,
+      actionItems
+    } : isEn ? {
+      topLabel: 'COMPETITIVE INTELLIGENCE',
+      title: 'Your Strategic Position in This Market',
+      subtitle: `Understand who dominates in "${keyword || 'this market'}", why they win, and where you can break through.`,
+      snapshot: 'STRATEGIC SNAPSHOT',
+      verdictLabel: 'Market Verdict',
+      verdictMain: `This market is ${difficulty} and driven by ${primaryIntent}.`,
+      verdictSub: `Winning here requires ${compact(dominantSuccessFactor, 'smart positioning')}, not just a better product.`,
+      verdictMicro: 'This view is based on competition intensity, search intent, and positioning maturity.',
+      leaderLabel: 'Why the Leader Wins',
+      leaderMain: `The leader wins through ${compact(coreMoat, 'authority, trust, and execution')}.`,
+      leaderMicro: 'This is the system protecting their position, not just surface strengths.',
+      gapLabel: 'Most Exploitable Gap',
+      gapMain: `Their weakest point is ${compact(weakness, 'a clear execution gap')}.`,
+      gapSub: `That creates an opening to capture ${compact(underservedSegment, 'underserved demand')}.`,
+      gapMicro: 'Start here. Fighting on their strongest ground is slower and more expensive.',
+      moveLabel: 'Best Attack Angle',
+      moveMain: `Move with ${compact(strategicAngle, 'a differentiated angle')} instead of direct confrontation.`,
+      moveSub: 'This avoids their strengths and targets unmet demand.',
+      moveMicro: 'The goal is faster traction with less resistance.',
+      actionsLabel: 'What To Do Next',
+      actionsTitle: 'Start with these 3 moves',
+      actionsMicro: 'These actions are prioritized for speed, leverage, and execution ease.',
+      closingDivider: '— Strategic Snapshot Complete —',
+      closingText: 'You now have a clearer path to compete without guessing.',
+      proofItems,
+      actionItems
+    } : {
+      topLabel: 'INTELLIGENCE CONCURRENTIELLE',
+      title: 'Ta position stratégique sur ce marché',
+      subtitle: `Comprends qui domine sur "${keyword || 'ce marché'}", pourquoi il gagne, et où tu peux percer.`,
+      snapshot: 'PHOTO STRATÉGIQUE',
+      verdictLabel: 'Verdict du marché',
+      verdictMain: `Ce marché est ${difficulty} et porté par ${primaryIntent}.`,
+      verdictSub: `Pour gagner, il faut ${compact(dominantSuccessFactor, 'un positionnement intelligent')}, pas seulement un meilleur produit.`,
+      verdictMicro: 'Cette lecture repose sur l’intensité concurrentielle, l’intention de recherche et la maturité du marché.',
+      leaderLabel: 'Pourquoi le leader gagne',
+      leaderMain: `Le leader domine grâce à ${compact(coreMoat, 'l’autorité, la confiance et l’exécution')}.`,
+      leaderMicro: 'C’est le système qui protège sa place, pas seulement des qualités visibles.',
+      gapLabel: 'Faille la plus exploitable',
+      gapMain: `Son point faible principal est ${compact(weakness, 'une faiblesse claire dans l’exécution')}.`,
+      gapSub: `Cela te donne une ouverture pour capter ${compact(underservedSegment, 'une demande encore mal servie')}.`,
+      gapMicro: 'Commence ici. L’attaquer sur ses forces coûtera plus cher.',
+      moveLabel: 'Meilleur angle d’attaque',
+      moveMain: `Positionne-toi autour de ${compact(strategicAngle, 'un angle différenciant')} plutôt qu’en confrontation directe.`,
+      moveSub: 'Cette approche évite ses forces et vise une demande mal couverte.',
+      moveMicro: 'Le but est d’obtenir plus d’impact avec moins de friction.',
+      actionsLabel: 'Quoi faire maintenant',
+      actionsTitle: 'Commence par ces 3 actions',
+      actionsMicro: 'Ces actions sont priorisées pour la vitesse, l’impact et la simplicité d’exécution.',
+      closingDivider: '— Instantané stratégique terminé —',
+      closingText: 'Tu as maintenant une voie plus claire pour concurrencer sans deviner.',
+      proofItems,
+      actionItems
+    };
+
+    return res.json({
+      success: true,
+      lang,
+      decisionLayer
+    });
+  } catch (error) {
+    console.error('Decision layer error:', error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || 'Decision layer generation failed'
+    });
+  }
+});
 app.post('/api/generate-seo-assets', async (req, res) => {
     const startTime = Date.now();
     try {
@@ -4453,179 +4997,509 @@ console.log('\n✅ PARTIE 4/5: Business Logic Modules loaded successfully\n');
 
 // ✅ FIX BUG 2 & 3 — Ajouter url en paramètre
 function extractSEOIntel(html, pageUrl = '') {
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(html || '');
 
-    // ── ORIGIN ROBUSTE ────────────────────────────────────────
-    const origin = (() => {
-        // Priorité 1 : URL passée en paramètre (la plus fiable)
-        try { if (pageUrl) return new URL(pageUrl).origin; } catch {}
-        // Priorité 2 : canonical
+    const safeText = (value) => (typeof value === 'string' ? value.trim() : '');
+    const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
+
+    const normalizeUrl = (href, baseOrigin = '', currentPageUrl = '') => {
+        if (!href || typeof href !== 'string') return null;
+        const raw = href.trim();
+        if (!raw) return null;
+
+        const lower = raw.toLowerCase();
+        if (
+            lower.startsWith('#') ||
+            lower.startsWith('javascript:') ||
+            lower.startsWith('mailto:') ||
+            lower.startsWith('tel:') ||
+            lower.startsWith('sms:') ||
+            lower.startsWith('whatsapp:') ||
+            lower.startsWith('data:')
+        ) {
+            return null;
+        }
+
         try {
-            const canonical = $('link[rel="canonical"]').attr('href') || '';
-            if (canonical.startsWith('http')) return new URL(canonical).origin;
+            if (raw.startsWith('//')) return new URL(`https:${raw}`).href;
+            if (/^https?:\/\//i.test(raw)) return new URL(raw).href;
+            if (currentPageUrl) return new URL(raw, currentPageUrl).href;
+            if (baseOrigin) return new URL(raw, baseOrigin).href;
+        } catch {}
+
+        return null;
+    };
+
+    const getHostname = (url) => {
+        try {
+            return new URL(url).hostname.replace(/^www\./i, '').toLowerCase();
+        } catch {
+            return '';
+        }
+    };
+
+    const isSameSite = (urlA, urlB) => {
+        const a = getHostname(urlA);
+        const b = getHostname(urlB);
+        return !!a && !!b && a === b;
+    };
+
+    const uniqueBy = (arr = [], key) => {
+        const seen = new Set();
+        return arr.filter(item => {
+            const val = item?.[key];
+            if (!val || seen.has(val)) return false;
+            seen.add(val);
+            return true;
+        });
+    };
+
+    const countRegex = (re, str) => {
+        try {
+            return (str.match(re) || []).length;
+        } catch {
+            return 0;
+        }
+    };
+
+    const wordStatus = (count = 0) =>
+        count < 200 ? 'INSUFFISANT (< 200 mots)' :
+        count < 500 ? 'FAIBLE (200-500 mots)' :
+        count < 1000 ? 'MOYEN (500-1000 mots)' :
+        'BON (> 1000 mots)';
+
+    const canonicalHref = safeText($('link[rel="canonical"]').attr('href'));
+    const origin = (() => {
+        try {
+            if (pageUrl) return new URL(pageUrl).origin;
+        } catch {}
+        try {
+            if (canonicalHref && /^https?:\/\//i.test(canonicalHref)) {
+                return new URL(canonicalHref).origin;
+            }
         } catch {}
         return '';
     })();
 
-    // ── MOTS-CLÉS ─────────────────────────────────────────────
     const stopWords = new Set([
-        'dans','avec','pour','votre','notre','leurs','cette',
-        'tous','fait','faire','plus','être','avoir','aussi','comme',
-        'nous','vous','elles','ils','ceci','cela','tres','très',
-        'the','of','and','in','to','for','a','an','is','are',
-        'was','this','that','le','la','les','de','des','un','une',
-        'et','en','au','du','ce','est','sur','nos','par','que',
-        'qui','je','il',
-        'من','في','على','هذا','هذه','مع','هو','هي','أن','إلى','عن','كان'
+        'dans', 'avec', 'pour', 'votre', 'notre', 'leurs', 'cette',
+        'tous', 'fait', 'faire', 'plus', 'être', 'avoir', 'aussi', 'comme',
+        'nous', 'vous', 'elles', 'ils', 'ceci', 'cela', 'tres', 'très',
+        'the', 'of', 'and', 'in', 'to', 'for', 'a', 'an', 'is', 'are',
+        'was', 'this', 'that', 'le', 'la', 'les', 'de', 'des', 'un', 'une',
+        'et', 'en', 'au', 'du', 'ce', 'est', 'sur', 'nos', 'par', 'que',
+        'qui', 'je', 'il',
+        'من', 'في', 'على', 'هذا', 'هذه', 'مع', 'هو', 'هي', 'أن', 'إلى', 'عن', 'كان'
     ]);
 
-    const bodyText = $('body').text().replace(/\s+/g, ' ').toLowerCase();
-    const words = bodyText.split(/\s+/).filter(w =>
-        w.length > 3 &&
-        !stopWords.has(w) &&
-        /[a-z\u00C0-\u024F\u0600-\u06FF]/.test(w)
-    );
+    const bodyTextRaw = $('body').text().replace(/\s+/g, ' ').trim();
+    const bodyText = bodyTextRaw.toLowerCase();
+
+    const words = bodyText
+        .split(/\s+/)
+        .map(w => w.replace(/[^\p{L}\p{N}-]/gu, ''))
+        .filter(w =>
+            w.length > 3 &&
+            !stopWords.has(w) &&
+            /[a-z\u00C0-\u024F\u0600-\u06FF]/i.test(w)
+        );
 
     const totalWords = words.length || 1;
     const wordFreq = {};
-    words.forEach(w => { wordFreq[w] = (wordFreq[w] || 0) + 1; });
+    words.forEach(w => {
+        wordFreq[w] = (wordFreq[w] || 0) + 1;
+    });
 
     const topKeywords = Object.entries(wordFreq)
         .sort((a, b) => b[1] - a[1])
         .slice(0, 25)
         .map(([word, count]) => ({
             word,
+            keyword: word,
             count,
-            // ✅ FIX BUG 1 : density reste un number propre
             density: parseFloat(((count / totalWords) * 100).toFixed(2))
         }));
 
-    // ── ISSUES ────────────────────────────────────────────────
-    const issues = [];
-    const title       = $('title').text().trim();
-    const description = $('meta[name="description" i]').attr('content') || '';
-    const h1Count     = $('h1').length;
-    const imgNoAlt    = $('img:not([alt]), img[alt=""]').length;
-    const canonical   = $('link[rel="canonical"]').attr('href');
-    const viewport    = $('meta[name="viewport"]').attr('content');
-    const ogTitle     = $('meta[property="og:title"]').attr('content');
+    const title = safeText($('title').text());
+    const description = safeText($('meta[name="description" i]').attr('content'));
+    const h1Text = safeText($('h1').first().text());
+    const h1Count = $('h1').length;
+    const h2s = unique($('h2').map((i, el) => safeText($(el).text())).get()).slice(0, 12);
+    const h3s = unique($('h3').map((i, el) => safeText($(el).text())).get()).slice(0, 12);
 
-    if (!title || title.length === 0)
-        issues.push({ severity: 'HIGH', field: 'title', issue: 'Title manquant — suicide SEO' });
-    else if (title.length < 30)
-        issues.push({ severity: 'HIGH', field: 'title', issue: `Title trop court (${title.length} chars < 30)` });
-    else if (title.length > 65)
-        issues.push({ severity: 'MEDIUM', field: 'title', issue: `Title trop long (${title.length} chars > 65)` });
+    const titleLength = title.length;
+    const descriptionLength = description.length;
 
-    if (!description || description.length === 0)
-        issues.push({ severity: 'HIGH', field: 'description', issue: 'Meta description absente' });
-    else if (description.length < 70)
-        issues.push({ severity: 'MEDIUM', field: 'description', issue: `Description trop courte (${description.length} chars)` });
-    else if (description.length > 165)
-        issues.push({ severity: 'LOW', field: 'description', issue: `Description trop longue (${description.length} chars > 165)` });
+    const canonical = canonicalHref || null;
+    const viewport = safeText($('meta[name="viewport"]').attr('content'));
+    const robots = safeText($('meta[name="robots" i]').attr('content')) || null;
+    const lang = safeText($('html').attr('lang')) || null;
 
-    if (h1Count === 0)
-        issues.push({ severity: 'HIGH', field: 'h1', issue: 'H1 absent' });
-    else if (h1Count > 1)
-        issues.push({ severity: 'MEDIUM', field: 'h1', issue: `${h1Count} H1 détectés — doit être unique` });
+    const ogTitle = safeText($('meta[property="og:title"]').attr('content')) || null;
+    const ogDescription = safeText($('meta[property="og:description"]').attr('content')) || null;
+    const ogImage = safeText($('meta[property="og:image"]').attr('content')) || null;
+    const keywords = safeText($('meta[name="keywords" i]').attr('content')) || null;
+    const twitterCard = safeText($('meta[name="twitter:card" i]').attr('content')) || null;
 
-    if (imgNoAlt > 0)
-        issues.push({ severity: 'MEDIUM', field: 'images', issue: `${imgNoAlt} image(s) sans ALT` });
+    const schemaBlocks = $('script[type="application/ld+json"]');
+    const schemaTypes = [];
 
-    if (!canonical)
-        issues.push({ severity: 'MEDIUM', field: 'canonical', issue: 'Canonical absent' });
+    schemaBlocks.each((i, el) => {
+        try {
+            const raw = $(el).html();
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
 
-    if (!viewport)
-        issues.push({ severity: 'HIGH', field: 'mobile', issue: 'Viewport absent — pénalité Google' });
+            const collectType = (node) => {
+                if (!node) return;
+                if (Array.isArray(node)) {
+                    node.forEach(collectType);
+                    return;
+                }
+                if (typeof node !== 'object') return;
 
-    if (!ogTitle)
-        issues.push({ severity: 'LOW', field: 'opengraph', issue: 'og:title absent' });
+                if (node['@type']) {
+                    if (Array.isArray(node['@type'])) {
+                        node['@type'].forEach(t => schemaTypes.push(String(t)));
+                    } else {
+                        schemaTypes.push(String(node['@type']));
+                    }
+                }
 
-    if ($('script[type="application/ld+json"]').length === 0)
-        issues.push({ severity: 'MEDIUM', field: 'schema', issue: 'Schema.org absent' });
+                if (Array.isArray(node['@graph'])) {
+                    node['@graph'].forEach(collectType);
+                }
+            };
 
-    // ── SEO SCORE ─────────────────────────────────────────────
-    const highIssues   = issues.filter(i => i.severity === 'HIGH').length;
-    const mediumIssues = issues.filter(i => i.severity === 'MEDIUM').length;
-    let seoScore = Math.max(0, Math.min(100, Math.round(100 - (highIssues * 20) - (mediumIssues * 8))));
-    const seoGrade = seoScore >= 90 ? 'A+' : seoScore >= 80 ? 'A' : seoScore >= 70 ? 'B'
-                   : seoScore >= 60 ? 'C'  : seoScore >= 45 ? 'D' : 'F';
-
-    // ── HREFLANG ──────────────────────────────────────────────
-    const hreflang = [];
-    $('link[rel="alternate"][hreflang]').each((i, el) => {
-        hreflang.push($(el).attr('hreflang'));
+            collectType(parsed);
+        } catch {}
     });
 
-    // ── AEO SIGNALS ───────────────────────────────────────────
-    const hasFAQ         = $('[itemtype*="FAQPage"], .faq, #faq, [class*="faq"], details').length > 0
-                        || /faq|frequently\s+asked|questions?\s+fr[ée]quentes?/i.test(html);
-    const hasHowTo       = $('[itemtype*="HowTo"]').length > 0 || /how.to|étapes/i.test(html);
+    const cleanSchemaTypes = unique(schemaTypes);
+
+    const issues = [];
+
+    if (!title) {
+        issues.push({ severity: 'HIGH', field: 'title', issue: 'Title manquant — suicide SEO' });
+    } else if (titleLength < 30) {
+        issues.push({ severity: 'HIGH', field: 'title', issue: `Title trop court (${titleLength} chars < 30)` });
+    } else if (titleLength > 65) {
+        issues.push({ severity: 'MEDIUM', field: 'title', issue: `Title trop long (${titleLength} chars > 65)` });
+    }
+
+    if (!description) {
+        issues.push({ severity: 'HIGH', field: 'description', issue: 'Meta description absente' });
+    } else if (descriptionLength < 70) {
+        issues.push({ severity: 'MEDIUM', field: 'description', issue: `Description trop courte (${descriptionLength} chars)` });
+    } else if (descriptionLength > 165) {
+        issues.push({ severity: 'LOW', field: 'description', issue: `Description trop longue (${descriptionLength} chars > 165)` });
+    }
+
+    if (h1Count === 0) {
+        issues.push({ severity: 'HIGH', field: 'h1', issue: 'H1 absent' });
+    } else if (h1Count > 1) {
+        issues.push({ severity: 'MEDIUM', field: 'h1', issue: `${h1Count} H1 détectés — doit être unique` });
+    }
+
+    const missingAlt = $('img:not([alt]), img[alt=""]').length;
+    if (missingAlt > 0) {
+        issues.push({ severity: 'MEDIUM', field: 'images', issue: `${missingAlt} image(s) sans ALT` });
+    }
+
+    if (!canonical) {
+        issues.push({ severity: 'MEDIUM', field: 'canonical', issue: 'Canonical absent' });
+    }
+
+    if (!viewport) {
+        issues.push({ severity: 'HIGH', field: 'mobile', issue: 'Viewport absent — pénalité Google' });
+    }
+
+    if (!ogTitle) {
+        issues.push({ severity: 'LOW', field: 'opengraph', issue: 'og:title absent' });
+    }
+
+    if (schemaBlocks.length === 0) {
+        issues.push({ severity: 'MEDIUM', field: 'schema', issue: 'Schema.org absent' });
+    }
+
+    const highIssues = issues.filter(i => i.severity === 'HIGH').length;
+    const mediumIssues = issues.filter(i => i.severity === 'MEDIUM').length;
+    const lowIssues = issues.filter(i => i.severity === 'LOW').length;
+
+    const seoScore = Math.max(
+        0,
+        Math.min(100, Math.round(100 - (highIssues * 20) - (mediumIssues * 8) - (lowIssues * 3)))
+    );
+
+    const seoGrade =
+        seoScore >= 90 ? 'A+' :
+        seoScore >= 80 ? 'A' :
+        seoScore >= 70 ? 'B' :
+        seoScore >= 60 ? 'C' :
+        seoScore >= 45 ? 'D' : 'F';
+
+    const hreflang = unique(
+        $('link[rel="alternate"][hreflang]')
+            .map((i, el) => safeText($(el).attr('hreflang')))
+            .get()
+    );
+
+    const hasSchema = schemaBlocks.length > 0;
+    const hasFAQ =
+        $('[itemtype*="FAQPage"], .faq, #faq, [class*="faq"], details, summary').length > 0 ||
+        /faq|frequently\s+asked|questions?\s+fr[ée]quentes?/i.test(html || '');
+
+    const hasHowTo =
+        $('[itemtype*="HowTo"]').length > 0 ||
+        /how.to|étapes/i.test(html || '');
+
     const hasDefinitions = $('dt, dfn').length > 0;
-    const hasSchema      = $('script[type="application/ld+json"]').length > 0;
-    const aeoSignals     = {
-        hasFAQ, hasHowTo, hasDefinitions, hasSchema,
+
+    const aeoSignals = {
+        hasFAQ,
+        hasHowTo,
+        hasDefinitions,
+        hasSchema,
         score: [hasFAQ, hasHowTo, hasDefinitions, hasSchema].filter(Boolean).length,
         aiCompatibility: {
-            chatgpt    : hasSchema && hasFAQ        ? 'GOOD' : 'WEAK',
-            gemini     : hasSchema                  ? 'GOOD' : 'WEAK',
-            perplexity : hasFAQ && words.length > 300 ? 'GOOD' : 'WEAK'
+            chatgpt: hasSchema && hasFAQ ? 'GOOD' : 'WEAK',
+            gemini: hasSchema ? 'GOOD' : 'WEAK',
+            perplexity: hasFAQ && words.length > 300 ? 'GOOD' : 'WEAK'
         }
     };
 
-    // ── PERF SIGNALS ──────────────────────────────────────────
     const scriptCount = $('script[src]').length;
-    const cssCount    = $('link[rel="stylesheet"]').length;
-    const hasMinified = /\.min\.js|\.min\.css/.test(html);
-    const charset     = $('meta[charset]').attr('charset')
-                     || $('meta[http-equiv="Content-Type"]').attr('content')
-                        ?.match(/charset=([^\s;]+)/i)?.[1]
-                     || null;
+    const inlineScriptCount = $('script:not([src])').length;
+    const externalScripts = $('script[src]').length;
+    const cssCount = $('link[rel="stylesheet"]').length;
+    const cssFiles = cssCount;
+    const hasMinified = /\.min\.js|\.min\.css/i.test(html || '');
+    const hasServiceWorker = /serviceworker/i.test(html || '');
+    const hasCDN = /cloudflare|cloudfront|fastly|akamai|jsdelivr|unpkg|cdn\./i.test(html || '');
+    const hasPreload = $('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"]').length > 0;
+    const hasSSL = pageUrl ? /^https:\/\//i.test(pageUrl) : /^https:\/\//i.test(canonicalHref || '');
+    const charset =
+        safeText($('meta[charset]').attr('charset')) ||
+        (($('meta[http-equiv="Content-Type"]').attr('content') || '').match(/charset=([^\s;]+)/i)?.[1] || null);
 
-    // ── LIENS ─────────────────────────────────────────────────
-    const allLinks      = $('a[href]');
-    const internalLinks = allLinks.filter((i, el) => {
-        const href = $(el).attr('href') || '';
-        return href.startsWith('/') || (origin && href.startsWith(origin));
-    }).map((i, el) => $(el).attr('href')).get().slice(0, 10);
+    const hasVideo =
+        $('video').length > 0 ||
+        $('iframe[src*="youtube"], iframe[src*="youtu.be"], iframe[src*="vimeo"], iframe[src*="dailymotion"]').length > 0 ||
+        /\.(mp4|webm|ogg)/i.test(html || '');
 
-    const externalLinks = allLinks.filter((i, el) => {
-        const href = $(el).attr('href') || '';
-        return href.startsWith('http') && !(origin && href.startsWith(origin));
-    }).map((i, el) => $(el).attr('href')).get().slice(0, 10);
+    const imgTags = $('img').length;
+    const imgDataSrc = $('img[data-src], img[data-lazy-src], img[data-original]').length;
+    const bgImages = countRegex(/url\((['"]?)(https?:)?[^)]+\.(png|jpg|jpeg|webp|gif|svg)\1\)/gi, html || '');
+    const totalImages = imgTags + imgDataSrc + bgImages;
+    const webpImages =
+        $('img[src$=".webp"], source[srcset*=".webp"], source[type="image/webp"]').length +
+        countRegex(/\.webp/gi, html || '');
+    const lazyLoadImages =
+        $('img[loading="lazy"], img[data-src], img[data-lazy-src], img[data-original]').length;
 
-    // ── CONTENU ───────────────────────────────────────────────
-    const paragraphs    = $('p').length;
-    const wordCount     = totalWords;
-    const contentStatus = wordCount < 200  ? 'INSUFFISANT (< 200 mots)'
-                        : wordCount < 500  ? 'FAIBLE (200-500 mots)'
-                        : wordCount < 1000 ? 'MOYEN (500-1000 mots)'
-                        : 'BON (> 1000 mots)';
+    const hasExitIntent = /exit[-\s_]?intent|mouseleave|beforeunload/i.test(html || '');
+    const hasPopup = /modal|popup|lightbox|overlay/i.test(html || '');
+    const hasCountdown = /countdown|timer|count-?down|compte-?.?rebours/i.test(html || '');
+    const hasStickyCTA = /sticky|fixed-bottom|fixed-top/i.test(html || '');
+    const hasLiveChat = /tawk|intercom|crisp|tidio|zendesk|freshchat/i.test(html || '');
+    const hasWhatsApp = /wa\.me|whatsapp/i.test(html || '');
+    const hasCOD = /cash[-\s]?on[-\s]?delivery|contre[-\s]?remboursement|paiement[-\s]?livraison/i.test(html || '');
+
+    const allAnchors = $('a[href]').map((i, el) => {
+        const href = safeText($(el).attr('href'));
+        const text = safeText($(el).text()).replace(/\s+/g, ' ');
+        const normalized = normalizeUrl(href, origin, pageUrl);
+
+        const isInternal =
+            !!normalized &&
+            (
+                href.startsWith('/') ||
+                (origin ? isSameSite(normalized, origin) : false)
+            );
+
+        const isExternal = !!normalized && !isInternal;
+
+        return {
+            href,
+            text: text || null,
+            normalized,
+            isInternal,
+            isExternal
+        };
+    }).get();
+
+    const internalLinkObjects = uniqueBy(
+        allAnchors.filter(x => x.normalized && x.isInternal),
+        'normalized'
+    ).slice(0, 10);
+
+    const externalOutboundLinkObjects = uniqueBy(
+        allAnchors.filter(x => x.normalized && x.isExternal),
+        'normalized'
+    ).slice(0, 10);
+
+    const internalLinks = internalLinkObjects.map(x => x.normalized);
+    const externalOutboundLinks = externalOutboundLinkObjects.map(x => x.normalized);
+    const externalLinks = externalOutboundLinks;
+
+    const linkSummary = {
+        totalAnchors: allAnchors.length,
+        internalCount: uniqueBy(allAnchors.filter(x => x.normalized && x.isInternal), 'normalized').length,
+        externalOutboundCount: uniqueBy(allAnchors.filter(x => x.normalized && x.isExternal), 'normalized').length,
+        ignoredCount: allAnchors.filter(x => !x.normalized).length
+    };
+
+    const paragraphs = $('p').length;
+    const listCount = $('ul, ol').length;
+    const buttonCount = $('button, a.btn, a.button, .cta').length;
+    const wordCount = totalWords;
+    const contentStatus = wordStatus(wordCount);
+
+    const technicalSummary = {
+        meta: {
+            titleLength,
+            descriptionLength,
+            hasCanonical: !!canonical,
+            hasRobots: !!robots,
+            hasViewport: !!viewport,
+            hasOG: !!ogTitle,
+            hasTwitterCard: !!twitterCard,
+            lang
+        },
+        headings: {
+            h1Count,
+            h2Count: $('h2').length,
+            h3Count: $('h3').length
+        },
+        content: {
+            wordCount,
+            paragraphs,
+            listCount,
+            buttonCount,
+            contentStatus
+        },
+        media: {
+            totalImages,
+            missingAlt,
+            webpImages,
+            lazyLoadImages,
+            hasVideo
+        },
+        links: linkSummary,
+        structuredData: {
+            hasSchema,
+            schemaCount: schemaBlocks.length,
+            schemaTypes: cleanSchemaTypes
+        },
+        performance: {
+            scriptCount,
+            inlineScriptCount,
+            externalScripts,
+            cssCount,
+            cssFiles,
+            hasMinified,
+            hasServiceWorker,
+            hasCDN,
+            hasPreload,
+            hasSSL,
+            charset
+        },
+        conversion: {
+            hasFAQ,
+            hasExitIntent,
+            hasPopup,
+            hasCountdown,
+            hasStickyCTA,
+            hasLiveChat,
+            hasWhatsApp,
+            hasCOD
+        }
+    };
 
     return {
         title,
-        metaDescription : description,
-        h1              : $('h1').first().text().trim(),
-        h2s             : $('h2').map((i, el) => $(el).text().trim()).get().slice(0, 8),
+        titleLength,
+        metaDescription: description,
+        description: description,
+        descriptionLength,
+        h1: h1Text,
+        h1Count,
+        h2s,
+        h3s,
+        headingCounts: {
+            h1: h1Count,
+            h2: $('h2').length,
+            h3: $('h3').length
+        },
         ogTitle,
-        ogImage         : $('meta[property="og:image"]').attr('content') || null,
-        keywords        : $('meta[name="keywords"]').attr('content') || null,
+        ogDescription,
+        ogImage,
+        twitterCard,
+        robots,
+        lang,
+        canonical,
+        hasCanonical: !!canonical,
+        keywords,
+        keywordsMeta: keywords ? keywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 20) : [],
+
         topKeywords,
+
         seoScore,
         seoGrade,
         issues,
+
         hreflang,
-        hasHreflang     : hreflang.length > 0,
+        hasHreflang: hreflang.length > 0,
+
         aeoSignals,
+
+        schemaTypes: cleanSchemaTypes,
+        schemaCount: schemaBlocks.length,
+        hasSchema,
+
         paragraphs,
+        listCount,
+        buttonCount,
         wordCount,
         contentStatus,
+
+        totalImages,
+        missingAlt,
+        webpImages,
+        lazyLoadImages,
+        hasVideo,
+
         scriptCount,
+        inlineScriptCount,
+        externalScripts,
         cssCount,
+        cssFiles,
         hasMinified,
+        hasServiceWorker,
+        hasCDN,
+        hasPreload,
+        hasSSL,
         charset,
+
+        hasFAQ,
+        hasHowTo,
+        hasDefinitions,
+        hasExitIntent,
+        hasPopup,
+        hasCountdown,
+        hasStickyCTA,
+        hasLiveChat,
+        hasWhatsApp,
+        hasCOD,
+
         internalLinks,
         externalLinks,
+        externalOutboundLinks,
+        internalLinkObjects,
+        externalOutboundLinkObjects,
+        linkSummary,
+
+        technicalSummary
     };
 }
 
@@ -8705,17 +9579,40 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
 
         visualDNA: {
             dominantColors: ['#3b82f6', '#1e293b', '#10b981'],
-            googleFonts: [],
+            googleFonts: []
         },
 
         techStack: {
             cms: 'Unknown',
             hasSSL: false,
             hasWhatsApp: false,
+            hasSchema: false,
+            hasGA4: false,
+            hasGTM: false,
+            hasFBPixel: false,
+            hasTikTok: false,
+            hasHotjar: false,
+            hasClarity: false,
+            hasLiveChat: false,
+            hasCountdown: false,
+            hasExitIntent: false,
+            hasCDN: false,
+            isMobile: false,
+            isWordPress: false,
+            isShopify: false,
+            isWooCommerce: false,
+            isNextJS: false,
+            isNuxtJS: false,
+            isReact: false,
+            isVue: false
         },
 
         copyIntel: {
-            headlines: { h1: [], h2: [], h3: [] },
+            headlines: {
+                h1: [],
+                h2: [],
+                h3: []
+            },
             realCTAs: [],
             heroText: '',
             testimonials: [],
@@ -8723,11 +9620,11 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             faq: [],
             bulletBenefits: [],
             allButtons: [],
-            pageSections: [],
+            pageSections: []
         },
 
         chapterIntel: {
-            chapters: [],
+            chapters: []
         },
 
         priceIntel: {
@@ -8736,7 +9633,7 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             all: [],
             detected: false,
             struckPrices: [],
-            discountRate: null,
+            discountRate: null
         },
 
         trustSignals: {
@@ -8748,17 +9645,17 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             hasPaymentLogos: false,
             hasLegalPages: false,
             hasCOD: false,
-            trustScore: null,
+            trustScore: null
         },
 
         contacts: {
             phones: [],
-            emails: [],
+            emails: []
         },
 
         schemaData: {
             types: [],
-            count: 0,
+            count: 0
         },
 
         sections: {
@@ -8768,7 +9665,7 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             hasTestim: false,
             hasFAQ: false,
             hasCTA: false,
-            hasFooter: false,
+            hasFooter: false
         },
 
         meta: {
@@ -8781,20 +9678,180 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             ogDescription: '',
             robots: '',
             hasOG: false,
-            lang: '',
+            lang: ''
         },
 
         seoIntel: {
+            title: '',
             titleLength: 0,
+
+            metaDescription: '',
+            description: '',
             descriptionLength: 0,
+
             keywordsMeta: [],
-            headingCounts: { h1: 0, h2: 0, h3: 0 },
+            keywords: null,
+
+            headingCounts: {
+                h1: 0,
+                h2: 0,
+                h3: 0
+            },
+
+            h1: '',
+            h2s: [],
+            h3s: [],
+
             topKeywords: [],
+
             canonical: '',
+            hasCanonical: false,
+
             robots: '',
+            hasRobotsMeta: false,
+
             ogTitle: '',
             ogDescription: '',
             ogImage: '',
+            twitterCard: null,
+
+            lang: null,
+
+            seoScore: 0,
+            seoGrade: 'F',
+            issues: [],
+
+            hreflang: [],
+            hasHreflang: false,
+
+            aeoSignals: {
+                hasFAQ: false,
+                hasHowTo: false,
+                hasDefinitions: false,
+                hasSchema: false,
+                score: 0,
+                aiCompatibility: {
+                    chatgpt: 'WEAK',
+                    gemini: 'WEAK',
+                    perplexity: 'WEAK'
+                }
+            },
+
+            schemaTypes: [],
+            schemaCount: 0,
+            hasSchema: false,
+
+            paragraphs: 0,
+            listCount: 0,
+            buttonCount: 0,
+            wordCount: 0,
+            contentStatus: 'INSUFFISANT (< 200 mots)',
+
+            totalImages: 0,
+            missingAlt: 0,
+            webpImages: 0,
+            lazyLoadImages: 0,
+            hasVideo: false,
+
+            scriptCount: 0,
+            inlineScriptCount: 0,
+            externalScripts: 0,
+            cssCount: 0,
+            cssFiles: 0,
+            hasMinified: false,
+            hasServiceWorker: false,
+            hasCDN: false,
+            hasPreload: false,
+            hasSSL: false,
+            charset: null,
+
+            hasFAQ: false,
+            hasExitIntent: false,
+            hasPopup: false,
+            hasCountdown: false,
+            hasStickyCTA: false,
+            hasLiveChat: false,
+            hasWhatsApp: false,
+            hasCOD: false,
+
+            internalLinks: [],
+            externalLinks: [],
+            externalOutboundLinks: [],
+            internalLinkObjects: [],
+            externalOutboundLinkObjects: [],
+
+            linkSummary: {
+                totalAnchors: 0,
+                internalCount: 0,
+                externalOutboundCount: 0,
+                ignoredCount: 0
+            },
+
+            technicalSummary: {
+                meta: {
+                    titleLength: 0,
+                    descriptionLength: 0,
+                    hasCanonical: false,
+                    hasRobots: false,
+                    hasViewport: false,
+                    hasOG: false,
+                    hasTwitterCard: false,
+                    lang: null
+                },
+                headings: {
+                    h1Count: 0,
+                    h2Count: 0,
+                    h3Count: 0
+                },
+                content: {
+                    wordCount: 0,
+                    paragraphs: 0,
+                    listCount: 0,
+                    buttonCount: 0,
+                    contentStatus: 'INSUFFISANT (< 200 mots)'
+                },
+                media: {
+                    totalImages: 0,
+                    missingAlt: 0,
+                    webpImages: 0,
+                    lazyLoadImages: 0,
+                    hasVideo: false
+                },
+                links: {
+                    totalAnchors: 0,
+                    internalCount: 0,
+                    externalOutboundCount: 0,
+                    ignoredCount: 0
+                },
+                structuredData: {
+                    hasSchema: false,
+                    schemaCount: 0,
+                    schemaTypes: []
+                },
+                performance: {
+                    scriptCount: 0,
+                    inlineScriptCount: 0,
+                    externalScripts: 0,
+                    cssCount: 0,
+                    cssFiles: 0,
+                    hasMinified: false,
+                    hasServiceWorker: false,
+                    hasCDN: false,
+                    hasPreload: false,
+                    hasSSL: false,
+                    charset: null
+                },
+                conversion: {
+                    hasFAQ: false,
+                    hasExitIntent: false,
+                    hasPopup: false,
+                    hasCountdown: false,
+                    hasStickyCTA: false,
+                    hasLiveChat: false,
+                    hasWhatsApp: false,
+                    hasCOD: false
+                }
+            }
         },
 
         contentIntel: {
@@ -8802,12 +9859,31 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             listCount: 0,
             imageCount: 0,
             buttonCount: 0,
+
             internalLinks: [],
             externalLinks: [],
-        },
+            externalOutboundLinks: [],
 
-        wordCount: 0,
-        bodyText: '',
+            internalLinkObjects: [],
+            externalOutboundLinkObjects: [],
+
+            wordCount: 0,
+            bodyText: '',
+            contentStatus: 'INSUFFISANT (< 200 mots)',
+
+            totalImages: 0,
+            missingAlt: 0,
+            webpImages: 0,
+            lazyLoadImages: 0,
+            hasVideo: false,
+
+            linkSummary: {
+                totalAnchors: 0,
+                internalCount: 0,
+                externalOutboundCount: 0,
+                ignoredCount: 0
+            }
+        },
 
         trackingIntel: {
             hasGoogleAnalytics: false,
@@ -8815,7 +9891,7 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             hasFacebookPixel: false,
             hasTikTokPixel: false,
             hasHotjar: false,
-            hasClarity: false,
+            hasClarity: false
         },
 
         performanceIntel: {
@@ -8825,155 +9901,517 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             hasSSL: false,
             hasCDN: false,
             isMobileOptimized: false,
+            hasMinified: false,
+            hasPreload: false,
+            hasPopup: false,
+            hasStickyCTA: false,
+            hasVideo: false,
+            hasServiceWorker: false
         },
 
         brand: {
             fullTextSample: '',
             wordCount: 0,
-            hasSSL: false,
+            hasSSL: false
         },
 
         redirectIntel: {
             totalRedirects: 0,
             isFunnelRedirect: false,
-            chain: [],
+            chain: []
         },
 
         frameworkData: {
             trustSignals: {},
             techStack: {},
-        },
+            technicalSummary: {}
+        }
     };
 }
 function mergeSeoIntel(base = {}, extra = {}) {
+    const pickArray = (a, b) => (Array.isArray(a) && a.length ? a : (Array.isArray(b) ? b : []));
+    const pickObject = (a, b, fallback = {}) => {
+        if (a && typeof a === 'object' && !Array.isArray(a) && Object.keys(a).length) return a;
+        if (b && typeof b === 'object' && !Array.isArray(b)) return b;
+        return fallback;
+    };
+    const unique = (arr) => [...new Set((arr || []).filter(Boolean))];
+
     return {
+        title: extra.title ?? base.title ?? '',
         titleLength: extra.titleLength ?? base.titleLength ?? 0,
+
+        metaDescription: extra.metaDescription ?? extra.description ?? base.metaDescription ?? base.description ?? '',
+        description: extra.description ?? extra.metaDescription ?? base.description ?? base.metaDescription ?? '',
         descriptionLength: extra.descriptionLength ?? base.descriptionLength ?? 0,
-        keywordsMeta: extra.keywordsMeta?.length ? extra.keywordsMeta : (base.keywordsMeta || []),
+
+        keywordsMeta: pickArray(extra.keywordsMeta, base.keywordsMeta),
+        keywords: extra.keywords ?? base.keywords ?? null,
+
         headingCounts: {
             h1: extra.headingCounts?.h1 ?? base.headingCounts?.h1 ?? 0,
             h2: extra.headingCounts?.h2 ?? base.headingCounts?.h2 ?? 0,
             h3: extra.headingCounts?.h3 ?? base.headingCounts?.h3 ?? 0,
         },
-        topKeywords: extra.topKeywords?.length ? extra.topKeywords : (base.topKeywords || []),
+
+        h1: extra.h1 ?? base.h1 ?? '',
+        h2s: pickArray(extra.h2s, base.h2s),
+        h3s: pickArray(extra.h3s, base.h3s),
+
+        topKeywords: pickArray(extra.topKeywords, base.topKeywords),
+
         canonical: extra.canonical ?? base.canonical ?? '',
+        hasCanonical: extra.hasCanonical ?? base.hasCanonical ?? false,
+
         robots: extra.robots ?? base.robots ?? '',
+        hasRobotsMeta: extra.hasRobotsMeta ?? base.hasRobotsMeta ?? false,
+
         ogTitle: extra.ogTitle ?? base.ogTitle ?? '',
         ogDescription: extra.ogDescription ?? base.ogDescription ?? '',
         ogImage: extra.ogImage ?? base.ogImage ?? '',
+        twitterCard: extra.twitterCard ?? base.twitterCard ?? null,
+
+        lang: extra.lang ?? base.lang ?? null,
+
+        seoScore: extra.seoScore ?? base.seoScore ?? 0,
+        seoGrade: extra.seoGrade ?? base.seoGrade ?? 'F',
+
+        issues: pickArray(extra.issues, base.issues),
+
+        hreflang: unique([...(base.hreflang || []), ...(extra.hreflang || [])]),
+        hasHreflang: extra.hasHreflang ?? base.hasHreflang ?? false,
+
+        aeoSignals: {
+            hasFAQ: extra.aeoSignals?.hasFAQ ?? base.aeoSignals?.hasFAQ ?? false,
+            hasHowTo: extra.aeoSignals?.hasHowTo ?? base.aeoSignals?.hasHowTo ?? false,
+            hasDefinitions: extra.aeoSignals?.hasDefinitions ?? base.aeoSignals?.hasDefinitions ?? false,
+            hasSchema: extra.aeoSignals?.hasSchema ?? base.aeoSignals?.hasSchema ?? false,
+            score: extra.aeoSignals?.score ?? base.aeoSignals?.score ?? 0,
+            aiCompatibility: {
+                chatgpt: extra.aeoSignals?.aiCompatibility?.chatgpt ?? base.aeoSignals?.aiCompatibility?.chatgpt ?? 'WEAK',
+                gemini: extra.aeoSignals?.aiCompatibility?.gemini ?? base.aeoSignals?.aiCompatibility?.gemini ?? 'WEAK',
+                perplexity: extra.aeoSignals?.aiCompatibility?.perplexity ?? base.aeoSignals?.aiCompatibility?.perplexity ?? 'WEAK',
+            }
+        },
+
+        schemaTypes: unique([...(base.schemaTypes || []), ...(extra.schemaTypes || [])]),
+        schemaCount: extra.schemaCount ?? base.schemaCount ?? 0,
+        hasSchema: extra.hasSchema ?? base.hasSchema ?? false,
+
+        paragraphs: extra.paragraphs ?? base.paragraphs ?? 0,
+        listCount: extra.listCount ?? base.listCount ?? 0,
+        buttonCount: extra.buttonCount ?? base.buttonCount ?? 0,
+        wordCount: extra.wordCount ?? base.wordCount ?? 0,
+        contentStatus: extra.contentStatus ?? base.contentStatus ?? 'INSUFFISANT (< 200 mots)',
+
+        totalImages: extra.totalImages ?? base.totalImages ?? 0,
+        missingAlt: extra.missingAlt ?? base.missingAlt ?? 0,
+        webpImages: extra.webpImages ?? base.webpImages ?? 0,
+        lazyLoadImages: extra.lazyLoadImages ?? base.lazyLoadImages ?? 0,
+        hasVideo: extra.hasVideo ?? base.hasVideo ?? false,
+
+        scriptCount: extra.scriptCount ?? base.scriptCount ?? 0,
+        inlineScriptCount: extra.inlineScriptCount ?? base.inlineScriptCount ?? 0,
+        externalScripts: extra.externalScripts ?? base.externalScripts ?? 0,
+        cssCount: extra.cssCount ?? base.cssCount ?? 0,
+        cssFiles: extra.cssFiles ?? base.cssFiles ?? 0,
+        hasMinified: extra.hasMinified ?? base.hasMinified ?? false,
+        hasServiceWorker: extra.hasServiceWorker ?? base.hasServiceWorker ?? false,
+        hasCDN: extra.hasCDN ?? base.hasCDN ?? false,
+        hasPreload: extra.hasPreload ?? base.hasPreload ?? false,
+        hasSSL: extra.hasSSL ?? base.hasSSL ?? false,
+        charset: extra.charset ?? base.charset ?? null,
+
+        hasFAQ: extra.hasFAQ ?? base.hasFAQ ?? false,
+        hasExitIntent: extra.hasExitIntent ?? base.hasExitIntent ?? false,
+        hasPopup: extra.hasPopup ?? base.hasPopup ?? false,
+        hasCountdown: extra.hasCountdown ?? base.hasCountdown ?? false,
+        hasStickyCTA: extra.hasStickyCTA ?? base.hasStickyCTA ?? false,
+        hasLiveChat: extra.hasLiveChat ?? base.hasLiveChat ?? false,
+        hasWhatsApp: extra.hasWhatsApp ?? base.hasWhatsApp ?? false,
+        hasCOD: extra.hasCOD ?? base.hasCOD ?? false,
+
+        internalLinks: pickArray(extra.internalLinks, base.internalLinks),
+        externalLinks: pickArray(extra.externalLinks, base.externalLinks),
+        externalOutboundLinks: pickArray(extra.externalOutboundLinks, base.externalOutboundLinks),
+        internalLinkObjects: pickArray(extra.internalLinkObjects, base.internalLinkObjects),
+        externalOutboundLinkObjects: pickArray(extra.externalOutboundLinkObjects, base.externalOutboundLinkObjects),
+
+        linkSummary: {
+            totalAnchors: extra.linkSummary?.totalAnchors ?? base.linkSummary?.totalAnchors ?? 0,
+            internalCount: extra.linkSummary?.internalCount ?? base.linkSummary?.internalCount ?? 0,
+            externalOutboundCount: extra.linkSummary?.externalOutboundCount ?? base.linkSummary?.externalOutboundCount ?? 0,
+            ignoredCount: extra.linkSummary?.ignoredCount ?? base.linkSummary?.ignoredCount ?? 0,
+        },
+
+        technicalSummary: {
+            ...pickObject(base.technicalSummary, {}, {}),
+            ...pickObject(extra.technicalSummary, {}, {}),
+            meta: {
+                ...(base.technicalSummary?.meta || {}),
+                ...(extra.technicalSummary?.meta || {}),
+            },
+            headings: {
+                ...(base.technicalSummary?.headings || {}),
+                ...(extra.technicalSummary?.headings || {}),
+            },
+            content: {
+                ...(base.technicalSummary?.content || {}),
+                ...(extra.technicalSummary?.content || {}),
+            },
+            media: {
+                ...(base.technicalSummary?.media || {}),
+                ...(extra.technicalSummary?.media || {}),
+            },
+            links: {
+                ...(base.technicalSummary?.links || {}),
+                ...(extra.technicalSummary?.links || {}),
+            },
+            structuredData: {
+                ...(base.technicalSummary?.structuredData || {}),
+                ...(extra.technicalSummary?.structuredData || {}),
+            },
+            performance: {
+                ...(base.technicalSummary?.performance || {}),
+                ...(extra.technicalSummary?.performance || {}),
+            },
+            conversion: {
+                ...(base.technicalSummary?.conversion || {}),
+                ...(extra.technicalSummary?.conversion || {}),
+            }
+        }
     };
 }
 
 function mergeScrapeData(base = {}, extra = {}) {
     const empty = EMPTY_SCRAPE_RESULT();
 
+    const pickArray = (a, b, c = []) =>
+        Array.isArray(a) && a.length ? a :
+        Array.isArray(b) && b.length ? b :
+        Array.isArray(c) ? c : [];
+
+    const unique = (arr) => [...new Set((arr || []).filter(Boolean))];
+
+    const mergeObjects = (...objs) => Object.assign({}, ...objs.filter(Boolean));
+
+    const mergeLinkObjects = (baseArr = [], extraArr = [], emptyArr = []) => {
+        const map = new Map();
+        [...(emptyArr || []), ...(baseArr || []), ...(extraArr || [])].forEach(item => {
+            if (!item || typeof item !== 'object') return;
+            const key = item.normalized || item.href || JSON.stringify(item);
+            if (!key) return;
+            map.set(key, item);
+        });
+        return [...map.values()];
+    };
+
+    const mergedSeoIntel = mergeSeoIntel(
+        base.seoIntel || empty.seoIntel,
+        extra.seoIntel || {}
+    );
+
+    const mergedVisualDNA = {
+        ...empty.visualDNA,
+        ...(base.visualDNA || {}),
+        ...(extra.visualDNA || {}),
+        dominantColors: pickArray(
+            extra.visualDNA?.dominantColors,
+            base.visualDNA?.dominantColors,
+            empty.visualDNA?.dominantColors
+        ),
+        googleFonts: unique([
+            ...(empty.visualDNA?.googleFonts || []),
+            ...(base.visualDNA?.googleFonts || []),
+            ...(extra.visualDNA?.googleFonts || [])
+        ])
+    };
+
+    const mergedTechStack = {
+        ...empty.techStack,
+        ...(base.techStack || {}),
+        ...(extra.techStack || {})
+    };
+
+    const mergedCopyIntel = {
+        ...empty.copyIntel,
+        ...(base.copyIntel || {}),
+        ...(extra.copyIntel || {}),
+        headlines: {
+            ...empty.copyIntel.headlines,
+            ...(base.copyIntel?.headlines || {}),
+            ...(extra.copyIntel?.headlines || {}),
+            h1: pickArray(
+                extra.copyIntel?.headlines?.h1,
+                base.copyIntel?.headlines?.h1,
+                empty.copyIntel.headlines.h1
+            ),
+            h2: pickArray(
+                extra.copyIntel?.headlines?.h2,
+                base.copyIntel?.headlines?.h2,
+                empty.copyIntel.headlines.h2
+            ),
+            h3: pickArray(
+                extra.copyIntel?.headlines?.h3,
+                base.copyIntel?.headlines?.h3,
+                empty.copyIntel.headlines.h3
+            )
+        },
+        realCTAs: pickArray(extra.copyIntel?.realCTAs, base.copyIntel?.realCTAs, empty.copyIntel.realCTAs),
+        testimonials: pickArray(extra.copyIntel?.testimonials, base.copyIntel?.testimonials, empty.copyIntel.testimonials),
+        guarantees: pickArray(extra.copyIntel?.guarantees, base.copyIntel?.guarantees, empty.copyIntel.guarantees),
+        faq: pickArray(extra.copyIntel?.faq, base.copyIntel?.faq, empty.copyIntel.faq),
+        bulletBenefits: pickArray(extra.copyIntel?.bulletBenefits, base.copyIntel?.bulletBenefits, empty.copyIntel.bulletBenefits),
+        allButtons: pickArray(extra.copyIntel?.allButtons, base.copyIntel?.allButtons, empty.copyIntel.allButtons),
+        pageSections: pickArray(extra.copyIntel?.pageSections, base.copyIntel?.pageSections, empty.copyIntel.pageSections)
+    };
+
+    const mergedChapterIntel = {
+        ...empty.chapterIntel,
+        ...(base.chapterIntel || {}),
+        ...(extra.chapterIntel || {}),
+        chapters: pickArray(
+            extra.chapterIntel?.chapters,
+            base.chapterIntel?.chapters,
+            empty.chapterIntel?.chapters || []
+        )
+    };
+
+    const mergedPriceIntel = {
+        ...empty.priceIntel,
+        ...(base.priceIntel || {}),
+        ...(extra.priceIntel || {}),
+        all: unique([
+            ...(empty.priceIntel?.all || []),
+            ...(base.priceIntel?.all || []),
+            ...(extra.priceIntel?.all || [])
+        ]).sort((a, b) => a - b),
+        struckPrices: unique([
+            ...(empty.priceIntel?.struckPrices || []),
+            ...(base.priceIntel?.struckPrices || []),
+            ...(extra.priceIntel?.struckPrices || [])
+        ]).sort((a, b) => a - b)
+    };
+    mergedPriceIntel.detected = mergedPriceIntel.detected || mergedPriceIntel.all.length > 0;
+    mergedPriceIntel.bestPrice = mergedPriceIntel.bestPrice ?? (mergedPriceIntel.all.length ? mergedPriceIntel.all[0] : null);
+
+    const mergedContacts = {
+        ...empty.contacts,
+        ...(base.contacts || {}),
+        ...(extra.contacts || {}),
+        phones: unique([
+            ...(empty.contacts?.phones || []),
+            ...(base.contacts?.phones || []),
+            ...(extra.contacts?.phones || [])
+        ]),
+        emails: unique([
+            ...(empty.contacts?.emails || []),
+            ...(base.contacts?.emails || []),
+            ...(extra.contacts?.emails || [])
+        ])
+    };
+
+    const mergedTrustSignals = {
+        ...empty.trustSignals,
+        ...(base.trustSignals || {}),
+        ...(extra.trustSignals || {})
+    };
+    mergedTrustSignals.hasPhoneNumber =
+        mergedTrustSignals.hasPhoneNumber ?? (mergedContacts.phones.length > 0);
+    mergedTrustSignals.hasWhatsApp =
+        mergedTrustSignals.hasWhatsApp ?? mergedSeoIntel.hasWhatsApp ?? false;
+    mergedTrustSignals.hasCOD =
+        mergedTrustSignals.hasCOD ?? mergedSeoIntel.hasCOD ?? false;
+    mergedTrustSignals.hasSSL =
+        mergedTrustSignals.hasSSL ?? mergedSeoIntel.hasSSL ?? false;
+
+    const mergedSchemaData = {
+        ...empty.schemaData,
+        ...(base.schemaData || {}),
+        ...(extra.schemaData || {}),
+        types: unique([
+            ...(empty.schemaData?.types || []),
+            ...(base.schemaData?.types || []),
+            ...(extra.schemaData?.types || []),
+            ...(mergedSeoIntel.schemaTypes || [])
+        ])
+    };
+    mergedSchemaData.count = mergedSchemaData.count || mergedSchemaData.types.length;
+
+    const mergedSections = {
+        ...empty.sections,
+        ...(base.sections || {}),
+        ...(extra.sections || {})
+    };
+
+    const mergedMeta = {
+        ...empty.meta,
+        ...(base.meta || {}),
+        ...(extra.meta || {}),
+        title: extra.meta?.title ?? base.meta?.title ?? empty.meta.title,
+        description: extra.meta?.description ?? base.meta?.description ?? empty.meta.description,
+        keywords: extra.meta?.keywords ?? base.meta?.keywords ?? empty.meta.keywords,
+        canonical: extra.meta?.canonical ?? base.meta?.canonical ?? mergedSeoIntel.canonical ?? empty.meta.canonical,
+        ogImage: extra.meta?.ogImage ?? base.meta?.ogImage ?? mergedSeoIntel.ogImage ?? empty.meta.ogImage,
+        ogTitle: extra.meta?.ogTitle ?? base.meta?.ogTitle ?? mergedSeoIntel.ogTitle ?? empty.meta.ogTitle,
+        ogDescription: extra.meta?.ogDescription ?? base.meta?.ogDescription ?? mergedSeoIntel.ogDescription ?? empty.meta.ogDescription,
+        robots: extra.meta?.robots ?? base.meta?.robots ?? mergedSeoIntel.robots ?? empty.meta.robots,
+        lang: extra.meta?.lang ?? base.meta?.lang ?? mergedSeoIntel.lang ?? empty.meta.lang,
+        hasOG: extra.meta?.hasOG ?? base.meta?.hasOG ?? !!(mergedSeoIntel.ogTitle || mergedSeoIntel.ogImage)
+    };
+
+    const mergedContentIntel = {
+        ...empty.contentIntel,
+        ...(base.contentIntel || {}),
+        ...(extra.contentIntel || {}),
+        paragraphCount: extra.contentIntel?.paragraphCount ?? base.contentIntel?.paragraphCount ?? mergedSeoIntel.paragraphs ?? empty.contentIntel.paragraphCount,
+        listCount: extra.contentIntel?.listCount ?? base.contentIntel?.listCount ?? mergedSeoIntel.listCount ?? empty.contentIntel.listCount,
+        imageCount: extra.contentIntel?.imageCount ?? base.contentIntel?.imageCount ?? mergedSeoIntel.totalImages ?? empty.contentIntel.imageCount,
+        buttonCount: extra.contentIntel?.buttonCount ?? base.contentIntel?.buttonCount ?? mergedSeoIntel.buttonCount ?? empty.contentIntel.buttonCount,
+        internalLinks: pickArray(extra.contentIntel?.internalLinks, base.contentIntel?.internalLinks, mergedSeoIntel.internalLinks),
+        externalLinks: pickArray(extra.contentIntel?.externalLinks, base.contentIntel?.externalLinks, mergedSeoIntel.externalLinks),
+        externalOutboundLinks: pickArray(
+            extra.contentIntel?.externalOutboundLinks,
+            base.contentIntel?.externalOutboundLinks,
+            mergedSeoIntel.externalOutboundLinks
+        ),
+        internalLinkObjects: mergeLinkObjects(
+            base.contentIntel?.internalLinkObjects || mergedSeoIntel.internalLinkObjects || [],
+            extra.contentIntel?.internalLinkObjects || [],
+            empty.contentIntel?.internalLinkObjects || []
+        ),
+        externalOutboundLinkObjects: mergeLinkObjects(
+            base.contentIntel?.externalOutboundLinkObjects || mergedSeoIntel.externalOutboundLinkObjects || [],
+            extra.contentIntel?.externalOutboundLinkObjects || [],
+            empty.contentIntel?.externalOutboundLinkObjects || []
+        ),
+        wordCount: extra.contentIntel?.wordCount ?? base.contentIntel?.wordCount ?? mergedSeoIntel.wordCount ?? empty.contentIntel.wordCount ?? 0,
+        contentStatus: extra.contentIntel?.contentStatus ?? base.contentIntel?.contentStatus ?? mergedSeoIntel.contentStatus ?? 'INSUFFISANT (< 200 mots)',
+        totalImages: extra.contentIntel?.totalImages ?? base.contentIntel?.totalImages ?? mergedSeoIntel.totalImages ?? 0,
+        missingAlt: extra.contentIntel?.missingAlt ?? base.contentIntel?.missingAlt ?? mergedSeoIntel.missingAlt ?? 0,
+        webpImages: extra.contentIntel?.webpImages ?? base.contentIntel?.webpImages ?? mergedSeoIntel.webpImages ?? 0,
+        lazyLoadImages: extra.contentIntel?.lazyLoadImages ?? base.contentIntel?.lazyLoadImages ?? mergedSeoIntel.lazyLoadImages ?? 0,
+        hasVideo: extra.contentIntel?.hasVideo ?? base.contentIntel?.hasVideo ?? mergedSeoIntel.hasVideo ?? false,
+        linkSummary: {
+            totalAnchors:
+                extra.contentIntel?.linkSummary?.totalAnchors ??
+                base.contentIntel?.linkSummary?.totalAnchors ??
+                mergedSeoIntel.linkSummary?.totalAnchors ?? 0,
+            internalCount:
+                extra.contentIntel?.linkSummary?.internalCount ??
+                base.contentIntel?.linkSummary?.internalCount ??
+                mergedSeoIntel.linkSummary?.internalCount ?? 0,
+            externalOutboundCount:
+                extra.contentIntel?.linkSummary?.externalOutboundCount ??
+                base.contentIntel?.linkSummary?.externalOutboundCount ??
+                mergedSeoIntel.linkSummary?.externalOutboundCount ?? 0,
+            ignoredCount:
+                extra.contentIntel?.linkSummary?.ignoredCount ??
+                base.contentIntel?.linkSummary?.ignoredCount ??
+                mergedSeoIntel.linkSummary?.ignoredCount ?? 0
+        }
+    };
+
+    const mergedTrackingIntel = {
+        ...empty.trackingIntel,
+        ...(base.trackingIntel || {}),
+        ...(extra.trackingIntel || {})
+    };
+
+    const mergedPerformanceIntel = {
+        ...empty.performanceIntel,
+        ...(base.performanceIntel || {}),
+        ...(extra.performanceIntel || {}),
+        hasCountdown: extra.performanceIntel?.hasCountdown ?? base.performanceIntel?.hasCountdown ?? mergedSeoIntel.hasCountdown ?? false,
+        hasExitIntent: extra.performanceIntel?.hasExitIntent ?? base.performanceIntel?.hasExitIntent ?? mergedSeoIntel.hasExitIntent ?? false,
+        hasLiveChat: extra.performanceIntel?.hasLiveChat ?? base.performanceIntel?.hasLiveChat ?? mergedSeoIntel.hasLiveChat ?? false,
+        hasSSL: extra.performanceIntel?.hasSSL ?? base.performanceIntel?.hasSSL ?? mergedSeoIntel.hasSSL ?? false,
+        hasCDN: extra.performanceIntel?.hasCDN ?? base.performanceIntel?.hasCDN ?? mergedSeoIntel.hasCDN ?? false,
+        isMobileOptimized: extra.performanceIntel?.isMobileOptimized ?? base.performanceIntel?.isMobileOptimized ?? false,
+        hasMinified: extra.performanceIntel?.hasMinified ?? base.performanceIntel?.hasMinified ?? mergedSeoIntel.hasMinified ?? false,
+        hasPreload: extra.performanceIntel?.hasPreload ?? base.performanceIntel?.hasPreload ?? mergedSeoIntel.hasPreload ?? false,
+        hasPopup: extra.performanceIntel?.hasPopup ?? base.performanceIntel?.hasPopup ?? mergedSeoIntel.hasPopup ?? false,
+        hasStickyCTA: extra.performanceIntel?.hasStickyCTA ?? base.performanceIntel?.hasStickyCTA ?? mergedSeoIntel.hasStickyCTA ?? false,
+        hasVideo: extra.performanceIntel?.hasVideo ?? base.performanceIntel?.hasVideo ?? mergedSeoIntel.hasVideo ?? false,
+        hasServiceWorker: extra.performanceIntel?.hasServiceWorker ?? base.performanceIntel?.hasServiceWorker ?? mergedSeoIntel.hasServiceWorker ?? false
+    };
+
+    const mergedBrand = {
+        ...empty.brand,
+        ...(base.brand || {}),
+        ...(extra.brand || {}),
+        wordCount: extra.brand?.wordCount ?? base.brand?.wordCount ?? mergedContentIntel.wordCount ?? mergedSeoIntel.wordCount ?? 0,
+        hasSSL: extra.brand?.hasSSL ?? base.brand?.hasSSL ?? mergedPerformanceIntel.hasSSL ?? false
+    };
+
+    const mergedRedirectIntel = {
+        ...empty.redirectIntel,
+        ...(base.redirectIntel || {}),
+        ...(extra.redirectIntel || {}),
+        chain: pickArray(
+            extra.redirectIntel?.chain,
+            base.redirectIntel?.chain,
+            empty.redirectIntel.chain
+        )
+    };
+
+    const mergedFrameworkData = {
+        ...empty.frameworkData,
+        ...(base.frameworkData || {}),
+        ...(extra.frameworkData || {}),
+        trustSignals: mergeObjects(
+            empty.frameworkData?.trustSignals || {},
+            base.frameworkData?.trustSignals || {},
+            mergedTrustSignals,
+            extra.frameworkData?.trustSignals || {}
+        ),
+        techStack: mergeObjects(
+            empty.frameworkData?.techStack || {},
+            base.frameworkData?.techStack || {},
+            mergedTechStack,
+            extra.frameworkData?.techStack || {}
+        ),
+        technicalSummary: {
+            ...(empty.frameworkData?.technicalSummary || {}),
+            ...(base.frameworkData?.technicalSummary || {}),
+            ...(mergedSeoIntel.technicalSummary || {}),
+            ...(extra.frameworkData?.technicalSummary || {})
+        }
+    };
+
     return {
         ...empty,
         ...base,
         ...extra,
 
-        visualDNA: {
-            ...empty.visualDNA,
-            ...(base.visualDNA || {}),
-            ...(extra.visualDNA || {}),
-        },
+        success: extra.success ?? base.success ?? empty.success,
+        fetchLayer: extra.fetchLayer ?? base.fetchLayer ?? empty.fetchLayer,
+        html: extra.html ?? base.html ?? empty.html,
+        error: extra.error ?? base.error ?? empty.error,
+        duration: extra.duration ?? base.duration ?? empty.duration,
 
-        techStack: {
-            ...empty.techStack,
-            ...(base.techStack || {}),
-            ...(extra.techStack || {}),
-        },
+        visualDNA: mergedVisualDNA,
+        techStack: mergedTechStack,
+        copyIntel: mergedCopyIntel,
+        chapterIntel: mergedChapterIntel,
+        priceIntel: mergedPriceIntel,
+        trustSignals: mergedTrustSignals,
+        contacts: mergedContacts,
+        schemaData: mergedSchemaData,
+        sections: mergedSections,
+        meta: mergedMeta,
+        seoIntel: mergedSeoIntel,
+        contentIntel: mergedContentIntel,
+        trackingIntel: mergedTrackingIntel,
+        performanceIntel: mergedPerformanceIntel,
+        brand: mergedBrand,
+        redirectIntel: mergedRedirectIntel,
+        frameworkData: mergedFrameworkData,
 
-        copyIntel: {
-            ...empty.copyIntel,
-            ...(base.copyIntel || {}),
-            ...(extra.copyIntel || {}),
-            headlines: {
-                ...empty.copyIntel.headlines,
-                ...(base.copyIntel?.headlines || {}),
-                ...(extra.copyIntel?.headlines || {}),
-            },
-        },
-
-        chapterIntel: {
-            ...empty.chapterIntel,
-            ...(base.chapterIntel || {}),
-            ...(extra.chapterIntel || {}),
-        },
-
-        priceIntel: {
-            ...empty.priceIntel,
-            ...(base.priceIntel || {}),
-            ...(extra.priceIntel || {}),
-        },
-
-        trustSignals: {
-            ...empty.trustSignals,
-            ...(base.trustSignals || {}),
-            ...(extra.trustSignals || {}),
-        },
-
-        contacts: {
-            ...empty.contacts,
-            ...(base.contacts || {}),
-            ...(extra.contacts || {}),
-        },
-
-        schemaData: {
-            ...empty.schemaData,
-            ...(base.schemaData || {}),
-            ...(extra.schemaData || {}),
-        },
-
-        sections: {
-            ...empty.sections,
-            ...(base.sections || {}),
-            ...(extra.sections || {}),
-        },
-
-        meta: {
-            ...empty.meta,
-            ...(base.meta || {}),
-            ...(extra.meta || {}),
-        },
-
-        seoIntel: mergeSeoIntel(base.seoIntel || empty.seoIntel, extra.seoIntel || {}),
-
-        contentIntel: {
-            ...empty.contentIntel,
-            ...(base.contentIntel || {}),
-            ...(extra.contentIntel || {}),
-        },
-
-        trackingIntel: {
-            ...empty.trackingIntel,
-            ...(base.trackingIntel || {}),
-            ...(extra.trackingIntel || {}),
-        },
-
-        performanceIntel: {
-            ...empty.performanceIntel,
-            ...(base.performanceIntel || {}),
-            ...(extra.performanceIntel || {}),
-        },
-
-        brand: {
-            ...empty.brand,
-            ...(base.brand || {}),
-            ...(extra.brand || {}),
-        },
-
-        redirectIntel: {
-            ...empty.redirectIntel,
-            ...(base.redirectIntel || {}),
-            ...(extra.redirectIntel || {}),
-        },
-
-        frameworkData: {
-            ...empty.frameworkData,
-            ...(base.frameworkData || {}),
-            ...(extra.frameworkData || {}),
-        },
+        sectionsFound: (mergedCopyIntel.pageSections || []).length,
+        h1: mergedCopyIntel.headlines?.h1?.[0] || null,
+        price: mergedPriceIntel.bestPrice ?? null,
+        phones: mergedContacts.phones?.length || 0
     };
 }
 // ═══════════════════════════════════════════════════════════════
@@ -8986,219 +10424,380 @@ async function deepScrapeFunnel(url) {
     const startTime = Date.now();
     console.log(`🔍 [DEEP SCRAPE] Analyse profonde : ${url}`);
 
+    const finalizeError = (message, layer = 'browser') => {
+        const base = EMPTY_SCRAPE_RESULT(message, layer);
+        return {
+            ...base,
+            duration: Date.now() - startTime,
+            sectionsFound: 0,
+            h1: null,
+            price: null,
+            phones: 0
+        };
+    };
+
+    const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
+    const normText = (v) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '');
+    const wordStatus = (count = 0) =>
+        count < 200 ? 'INSUFFISANT (< 200 mots)' :
+        count < 500 ? 'FAIBLE (200-500 mots)' :
+        count < 1000 ? 'MOYEN (500-1000 mots)' :
+        'BON (> 1000 mots)';
+
+    const normalizePhones = (text = '') => {
+        const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
+        return unique((text.match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
+    };
+
+    const normalizeEmails = (text = '') => {
+        const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+        return unique((text.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
+    };
+
+    const inferSections = ($) => ({
+        hasHero: !!$([
+            '.hero', '#hero', '.banner', '.masthead', '.hero-section',
+            '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
+        ].join(',')).length,
+        hasFeatures: !!$([
+            '.feature', '.features', '#features', '.service', '.services',
+            '#service', '.benefits', '.benefit', '.solutions',
+            '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
+        ].join(',')).length,
+        hasTrust: !!$([
+            '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
+            '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
+            '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
+            '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
+            '[class*="reassurance"]', '[class*="trusted"]'
+        ].join(',')).length,
+        hasPricing: !!$([
+            '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
+            '.tarifs', '.tarif', '.offres', '.offer',
+            '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
+        ].join(',')).length,
+        hasTestim: !!$([
+            '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
+            '.ratings', '.social-proof',
+            '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
+        ].join(',')).length,
+        hasFAQ: !!$([
+            '.faq', '#faq', 'details', '.accordion', '.questions',
+            '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
+        ].join(',')).length,
+        hasCTA: !!$([
+            '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
+            '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
+        ].join(',')).length,
+        hasFooter: !!$('footer, .footer, #footer, [class*="footer"]').length
+    });
+
+    const inferPageSections = (sections = {}) => {
+        const map = {
+            HERO: sections.hasHero,
+            FEATURES: sections.hasFeatures,
+            TRUST: sections.hasTrust,
+            SOCIAL_PROOF: sections.hasTestim,
+            PRICING: sections.hasPricing,
+            FAQ: sections.hasFAQ,
+            CTA: sections.hasCTA,
+            FOOTER: sections.hasFooter
+        };
+        return Object.entries(map)
+            .filter(([, v]) => v)
+            .map(([type]) => ({ type, present: true, score: 60 }));
+    };
+
+    const detectBotBlocked = (scrapeResult) => {
+        const htmlLower = (scrapeResult?.html || '').toLowerCase();
+        const h1Lower = (scrapeResult?.copyIntel?.headlines?.h1?.[0] || '').toLowerCase();
+        const titleLower = (scrapeResult?.meta?.title || '').toLowerCase();
+        const wc =
+            scrapeResult?.contentIntel?.wordCount ??
+            scrapeResult?.seoIntel?.wordCount ??
+            scrapeResult?.brand?.wordCount ??
+            scrapeResult?.wordCount ??
+            0;
+
+        return (
+            !scrapeResult?.success ||
+            !scrapeResult?.html ||
+            scrapeResult.html.length < 800 ||
+            wc < 20 ||
+            h1Lower.includes('you have been blocked') ||
+            h1Lower.includes('access denied') ||
+            titleLower.includes('attention required') ||
+            titleLower.includes('security measure') ||
+            titleLower.includes('cloudflare') ||
+            htmlLower.includes('ray id:') ||
+            htmlLower.includes('captcha') ||
+            (
+                !scrapeResult?.copyIntel?.headlines?.h1?.length &&
+                scrapeResult?.visualDNA?.dominantColors?.[0] === '#3b82f6'
+            )
+        );
+    };
+
     try {
-        // ── 1. Smart scrape via scrapeStealth — tentative primaire
-        const scrapeResult = await scrapeStealth(url);
+        let scrapeResult = await scrapeStealth(url);
 
-        const htmlLower   = (scrapeResult.html || '').toLowerCase();
-        const h1Lower     = (scrapeResult.copyIntel?.headlines?.h1?.[0] || '').toLowerCase();
-        const titleLower  = (scrapeResult.meta?.title || '').toLowerCase();
-
-        const isBotBlocked = !scrapeResult.success
-            || !scrapeResult.html
-            || scrapeResult.html.length < 800
-            || scrapeResult.wordCount < 20
-            || h1Lower.includes('you have been blocked')
-            || h1Lower.includes('access denied')
-            || titleLower.includes('attention required')
-            || titleLower.includes('security measure')
-            || titleLower.includes('cloudflare')
-            || htmlLower.includes('ray id:')
-            || (!scrapeResult.copyIntel?.headlines?.h1?.length && scrapeResult.visualDNA?.dominantColors?.[0] === '#3b82f6');
-
-        // ── 2. FALLBACK SCRAPE.DO ─────────────────────────────
-        if (isBotBlocked && scrapeResult.fetchLayer !== 'scrape.do') {
+        if (detectBotBlocked(scrapeResult) && scrapeResult?.fetchLayer !== 'scrape.do') {
             console.warn(`⚠️ [DEEP SCRAPE] Page vide ou bloquée détectée. Activation de SCRAPE.DO...`);
 
-            const scrapeDoToken = process.env.SCRAPE_DO_TOKEN;
-            if (scrapeDoToken) {
-                try {
-                    const scrapeDoUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(url)}&render=true`;
-
-                    const fallbackRes = await RetryManager.executeWithRetry(
-                        () => axios.get(scrapeDoUrl, { timeout: 45000 }),
-                        { context: 'ScrapeDo-DeepFallback' }
-                    );
-
-                    if (fallbackRes.data && typeof fallbackRes.data === 'string' && fallbackRes.data.length > 500) {
-                        console.log(`✅ [DEEP SCRAPE] Sauvetage Scrape.do réussi (${fallbackRes.data.length} chars) !`);
-                        scrapeResult.success = true;
-                        scrapeResult.html = fallbackRes.data;
-                        scrapeResult.fetchLayer = 'scrape.do';
-                        scrapeResult.visualDNA = null;
-                        scrapeResult.techStack = { cms: 'Unknown' };
-                        scrapeResult.bodyText = null;
-                    } else {
-                        throw new Error('Réponse de Scrape.do invalide ou trop courte.');
-                    }
-                } catch (e) {
-                    console.error(`❌ [DEEP SCRAPE] Scrape.do a aussi échoué:`, e.message);
-                    throw new Error('Anti-bot infranchissable (browser + Scrape.do bloqués).');
-                }
-            } else {
-                console.warn(`⚠️ [DEEP SCRAPE] SCRAPE_DO_TOKEN non trouvé.`);
+            const scrapeDoToken = process.env.SCRAPEDOTOKEN || process.env.SCRAPE_DO_TOKEN;
+            if (!scrapeDoToken) {
                 throw new Error('Bloqué par anti-bot, et aucun token Scrape.do disponible.');
+            }
+
+            try {
+                const scrapeDoUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(url)}&render=true`;
+
+                const fallbackRes = await RetryManager.executeWithRetry(
+                    () => axios.get(scrapeDoUrl, { timeout: 45000 }),
+                    { context: 'ScrapeDo-DeepFallback' }
+                );
+
+                const fallbackHtml = typeof fallbackRes?.data === 'string'
+                    ? fallbackRes.data
+                    : (fallbackRes?.data?.html || fallbackRes?.data?.body || '');
+
+                if (!fallbackHtml || fallbackHtml.length < 500) {
+                    throw new Error('Réponse de Scrape.do invalide ou trop courte.');
+                }
+
+                console.log(`✅ [DEEP SCRAPE] Sauvetage Scrape.do réussi (${fallbackHtml.length} chars) !`);
+
+                scrapeResult = mergeScrapeData(scrapeResult, {
+                    success: true,
+                    fetchLayer: 'scrape.do',
+                    html: fallbackHtml,
+                    bodyText: '',
+                    duration: Date.now() - startTime
+                });
+            } catch (e) {
+                console.error(`❌ [DEEP SCRAPE] Scrape.do a aussi échoué: ${e.message}`);
+                throw new Error('Anti-bot infranchissable (browser + Scrape.do bloqués).');
             }
         }
 
-        // ── 3. PRÉPARATION HTML ──────────────────────────────
-        const html = scrapeResult.html || '';
-        const $ = cheerio.load(html);
-        const bodyText = scrapeResult.bodyText || $('body').text().replace(/\s+/g, ' ').trim();
-
-        // ── 4. META / SEO ────────────────────────────────────
-        const metaTitle       = scrapeResult.meta?.title || $('title').text().trim() || '';
-        const metaDescription = scrapeResult.meta?.description || $('meta[name="description"]').attr('content') || '';
-        const metaKeywords    = $('meta[name="keywords"]').attr('content') || '';
-        const canonical       = scrapeResult.meta?.canonical || $('link[rel="canonical"]').attr('href') || '';
-        const ogTitle         = $('meta[property="og:title"]').attr('content') || '';
-        const ogDescription   = $('meta[property="og:description"]').attr('content') || '';
-        const ogImage         = scrapeResult.meta?.ogImage || $('meta[property="og:image"]').attr('content') || '';
-        const robots          = $('meta[name="robots"]').attr('content') || '';
-        const lang            = scrapeResult.meta?.lang || $('html').attr('lang') || '';
-
-        // ── 5. SCHEMA.ORG ────────────────────────────────────
-        const schemaData = scrapeResult.schemaData || { types: [], count: 0 };
-        const schemaPrices = [];
-
-        if (schemaData.count === 0) {
-            $('script[type="application/ld+json"]').each((_, el) => {
-                try {
-                    const content = $(el).html()?.substring(0, 50000);
-                    if (!content) return;
-
-                    const parsed = JSON.parse(content);
-                    const schemas = Array.isArray(parsed) ? parsed : [parsed];
-
-                    schemas.forEach(s => {
-                        const type = s['@type'];
-                        if (type) {
-                            schemaData.types.push(Array.isArray(type) ? type[0] : type);
-                            schemaData.count++;
-                        }
-                        const price = s.offers?.price || (Array.isArray(s.offers) ? s.offers[0]?.price : null);
-                        if (price) schemaPrices.push(parseFloat(price));
-                    });
-                } catch {}
-            });
+        const html = scrapeResult?.html || '';
+        if (!html || html.length < 200) {
+            throw new Error('HTML vide ou insuffisant après scraping.');
         }
 
-        schemaData.types = [...new Set(schemaData.types.filter(Boolean))];
+        const $ = cheerio.load(html);
+        const bodyText = normText(
+            scrapeResult?.bodyText ||
+            scrapeResult?.contentIntel?.bodyText ||
+            $('body').text()
+        );
 
-        // ── 6. PRIX ──────────────────────────────────────────
-        let priceIntel = scrapeResult.priceIntel || null;
+        const seoIntelDeep = extractSEOIntel(html, url);
 
-        if (!priceIntel || !priceIntel.detected) {
-            const priceRegex = /(\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})?)\s*(?:MAD|DH|Mad|dh|€|\$)/gi;
-            const priceMatches = [...bodyText.substring(0, 20000).matchAll(priceRegex)];
-            const detectedPrices = priceMatches
-                .map(m => parseFloat(m[1].replace(/\s/g, '').replace(',', '.')))
+        const metaTitle = scrapeResult?.meta?.title || seoIntelDeep.title || normText($('title').text()) || '';
+        const metaDescription =
+            scrapeResult?.meta?.description ||
+            scrapeResult?.meta?.metaDescription ||
+            seoIntelDeep.metaDescription ||
+            $('meta[name="description"]').attr('content') ||
+            '';
+
+        const metaKeywords =
+            scrapeResult?.meta?.keywords ||
+            $('meta[name="keywords"]').attr('content') ||
+            '';
+
+        const canonical =
+            scrapeResult?.meta?.canonical ||
+            seoIntelDeep.canonical ||
+            $('link[rel="canonical"]').attr('href') ||
+            '';
+
+        const ogTitle =
+            scrapeResult?.meta?.ogTitle ||
+            seoIntelDeep.ogTitle ||
+            $('meta[property="og:title"]').attr('content') ||
+            '';
+
+        const ogDescription =
+            scrapeResult?.meta?.ogDescription ||
+            seoIntelDeep.ogDescription ||
+            $('meta[property="og:description"]').attr('content') ||
+            '';
+
+        const ogImage =
+            scrapeResult?.meta?.ogImage ||
+            seoIntelDeep.ogImage ||
+            $('meta[property="og:image"]').attr('content') ||
+            '';
+
+        const robots =
+            scrapeResult?.meta?.robots ||
+            seoIntelDeep.robots ||
+            $('meta[name="robots"]').attr('content') ||
+            '';
+
+        const lang =
+            scrapeResult?.meta?.lang ||
+            seoIntelDeep.lang ||
+            $('html').attr('lang') ||
+            '';
+
+        const schemaTypes = unique([
+            ...(Array.isArray(scrapeResult?.schemaData?.types) ? scrapeResult.schemaData.types : []),
+            ...(Array.isArray(seoIntelDeep.schemaTypes) ? seoIntelDeep.schemaTypes : [])
+        ]);
+
+        const schemaData = {
+            types: schemaTypes,
+            count: schemaTypes.length
+        };
+
+        const schemaPrices = [];
+        $('script[type="application/ld+json"]').each((_, el) => {
+            try {
+                const content = $(el).html()?.substring(0, 50000);
+                if (!content) return;
+
+                const parsed = JSON.parse(content);
+
+                const walk = (node) => {
+                    if (!node) return;
+                    if (Array.isArray(node)) return node.forEach(walk);
+                    if (typeof node !== 'object') return;
+
+                    const rawOffers = node.offers;
+                    if (Array.isArray(rawOffers)) {
+                        rawOffers.forEach(o => {
+                            const p = parseFloat(o?.price);
+                            if (!isNaN(p) && p > 0) schemaPrices.push(p);
+                        });
+                    } else if (rawOffers?.price) {
+                        const p = parseFloat(rawOffers.price);
+                        if (!isNaN(p) && p > 0) schemaPrices.push(p);
+                    }
+
+                    if (Array.isArray(node['@graph'])) node['@graph'].forEach(walk);
+                };
+
+                walk(parsed);
+            } catch {}
+        });
+
+        const rawPriceIntel = scrapeResult?.priceIntel || {};
+        let allPrices = Array.isArray(rawPriceIntel.all) ? rawPriceIntel.all.filter(n => Number.isFinite(n)) : [];
+
+        if (!allPrices.length) {
+            const priceRegex = /(\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})?)\s*(?:MAD|DH|Mad|dh|€|\$|USD|EUR)/gi;
+            const detectedPrices = [...bodyText.substring(0, 20000).matchAll(priceRegex)]
+                .map(m => parseFloat((m[1] || '').replace(/\s/g, '').replace(',', '.')))
                 .filter(p => !isNaN(p) && p > 0);
 
-            const allPrices = [...new Set([...schemaPrices, ...detectedPrices])].sort((a, b) => a - b);
-
-            priceIntel = {
-                detected: allPrices.length > 0,
-                bestPrice: allPrices.length > 0 ? allPrices[0] : null,
-                all: allPrices,
-                currency: /MAD|DH/i.test(html) ? 'MAD' : /€/.test(html) ? 'EUR' : /\$/.test(html) ? 'USD' : 'MAD',
-                struckPrices: [],
-                discountRate: null,
-            };
+            allPrices = unique([...schemaPrices, ...detectedPrices]).sort((a, b) => a - b);
         }
 
-        // ── 7. COPY / HEADINGS / CHAPITRES ───────────────────
-        let copyIntel = scrapeResult.copyIntel || null;
-
-        if (!copyIntel || !copyIntel.headlines || copyIntel.headlines?.h1?.length === 0) {
-            copyIntel = {
-                headlines: {
-                    h1: $('h1').map((_, el) => $(el).text().trim()).get().filter(t => t.length > 3),
-                    h2: $('h2').map((_, el) => $(el).text().trim()).get().filter(t => t.length > 3).slice(0, 12),
-                    h3: $('h3').map((_, el) => $(el).text().trim()).get().filter(t => t.length > 3).slice(0, 12),
-                },
-                realCTAs: $('a.button, a.btn, button, .cta, [class*="button"], [class*="btn"]')
-                    .map((_, el) => $(el).text().trim())
-                    .get()
-                    .filter(t => t.length > 2 && t.length < 60)
-                    .slice(0, 20),
-                heroText: bodyText.substring(0, 400),
-                testimonials: [],
-                guarantees: [],
-                faq: [],
-                bulletBenefits: [],
-                allButtons: $('button, a').map((_, el) => $(el).text().trim()).get().filter(Boolean).slice(0, 25),
-                pageSections: [],
-            };
-        }
-
-        copyIntel = {
-            headlines: copyIntel.headlines || { h1: [], h2: [], h3: [] },
-            realCTAs: copyIntel.realCTAs || [],
-            heroText: copyIntel.heroText || bodyText.substring(0, 400),
-            testimonials: copyIntel.testimonials || [],
-            guarantees: copyIntel.guarantees || [],
-            faq: copyIntel.faq || [],
-            bulletBenefits: copyIntel.bulletBenefits || [],
-            allButtons: copyIntel.allButtons || [],
-            pageSections: copyIntel.pageSections || [],
+        const priceIntel = {
+            bestPrice: allPrices.length ? allPrices[0] : null,
+            currency: rawPriceIntel.currency || (/MAD|DH/i.test(html) ? 'MAD' : /€|EUR/i.test(html) ? 'EUR' : /\$|USD/i.test(html) ? 'USD' : 'MAD'),
+            all: allPrices,
+            detected: allPrices.length > 0,
+            struckPrices: Array.isArray(rawPriceIntel.struckPrices) ? rawPriceIntel.struckPrices : [],
+            discountRate: rawPriceIntel.discountRate ?? null
         };
 
-        const chapterIntel = {
-            chapters: [],
+        const h1List = unique(
+            $('h1').map((_, el) => normText($(el).text())).get().filter(t => t.length > 2)
+        ).slice(0, 8);
+
+        const h2List = unique(
+            $('h2').map((_, el) => normText($(el).text())).get().filter(t => t.length > 2)
+        ).slice(0, 12);
+
+        const h3List = unique(
+            $('h3').map((_, el) => normText($(el).text())).get().filter(t => t.length > 2)
+        ).slice(0, 12);
+
+        const allButtons = unique(
+            $('button, a, input[type="submit"], input[type="button"]')
+                .map((_, el) => normText($(el).text() || $(el).val() || $(el).attr('aria-label') || ''))
+                .get()
+                .filter(t => t.length > 1 && t.length < 80)
+        ).slice(0, 30);
+
+        const realCTAs = unique(
+            $('a.button, a.btn, button, .cta, [class*="button"], [class*="btn"], [class*="cta"]')
+                .map((_, el) => normText($(el).text() || $(el).val() || $(el).attr('aria-label') || ''))
+                .get()
+                .filter(t => t.length > 2 && t.length < 60)
+        ).slice(0, 20);
+
+        const testimonials = unique(
+            $('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')
+                .map((_, el) => normText($(el).text()).substring(0, 120))
+                .get()
+                .filter(Boolean)
+        ).slice(0, 5);
+
+        const sections = {
+            ...inferSections($),
+            ...(scrapeResult?.sections || {})
         };
 
+        const pageSections =
+            Array.isArray(scrapeResult?.copyIntel?.pageSections) && scrapeResult.copyIntel.pageSections.length
+                ? scrapeResult.copyIntel.pageSections
+                : inferPageSections(sections);
+
+        const chapterIntel = { chapters: [] };
         const sectionKeywords = {
             HERO: ['hero', 'banner', 'main'],
             FEATURES: ['feature', 'avantage', 'service', 'produit'],
             TRUST: ['trust', 'reassurance', 'garantie', 'guarantee'],
-            SOCIAL_PROOF: ['testimonials', 'reviews', 'avis', 'clients', 'rating'],
+            SOCIAL_PROOF: ['testimonial', 'testimonials', 'review', 'reviews', 'avis', 'clients', 'rating'],
             PRICING: ['price', 'pricing', 'tarif', 'offre'],
             FAQ: ['faq', 'question'],
             CTA: ['action', 'contact', 'footer-cta'],
-            FOOTER: ['footer'],
+            FOOTER: ['footer']
         };
 
-        if (!copyIntel.pageSections || copyIntel.pageSections.length === 0) {
-            copyIntel.pageSections = [];
-
+        if (!pageSections.length) {
             Object.entries(sectionKeywords).forEach(([type, keywords]) => {
                 const selector = keywords
                     .map(k => `[id*="${k}"], [class*="${k}"], section[class*="${k}"]`)
                     .join(', ');
+
                 const found = $(selector).first();
+                if (!found.length) return;
 
-                if (found.length) {
-                    const title = found.find('h1, h2, h3').first().text().trim() || null;
-                    const textSample = found.text().trim().replace(/\s+/g, ' ').substring(0, 220);
+                const title = normText(found.find('h1, h2, h3').first().text()) || type;
+                const textSample = normText(found.text()).substring(0, 220);
 
-                    copyIntel.pageSections.push({
-                        type,
-                        title,
-                        textSample,
-                    });
-
-                    chapterIntel.chapters.push({
-                        type,
-                        title: title || type,
-                        textSample,
-                        wordCount: found.text().trim().split(/\s+/).filter(Boolean).length,
-                    });
-                }
+                chapterIntel.chapters.push({
+                    type,
+                    title,
+                    textSample,
+                    wordCount: found.text().trim().split(/\s+/).filter(Boolean).length
+                });
             });
+        } else {
+            chapterIntel.chapters = pageSections.map((s, i) => ({
+                type: s.type || `SECTION_${i + 1}`,
+                title: s.title || s.type || `Section ${i + 1}`,
+                textSample: s.textSample || '',
+                wordCount: (s.textSample || '').split(/\s+/).filter(Boolean).length
+            }));
         }
 
-        // ── 8. VISUAL DNA ────────────────────────────────────
-        let visualDNA = scrapeResult.visualDNA || null;
-
-        if (!visualDNA || visualDNA.dominantColors?.length === 0) {
-            const styleContent = $('style').text() + ' ' +
+        let visualDNA = scrapeResult?.visualDNA || null;
+        if (!visualDNA || !Array.isArray(visualDNA.dominantColors) || !visualDNA.dominantColors.length) {
+            const styleContent =
+                ($('style').text() || '') + ' ' +
                 $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
 
             const colorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi;
             const allColors = styleContent.match(colorRegex) || [];
-
             const colorCounts = {};
+
             allColors.forEach(c => {
                 const norm = c.toLowerCase().replace(/\s+/g, '');
                 if (!['#ffffff', '#000000', '#fff', '#000', 'transparent', 'rgba(0,0,0,0)'].includes(norm)) {
@@ -9209,84 +10808,140 @@ async function deepScrapeFunnel(url) {
             const dominantColors = Object.entries(colorCounts)
                 .sort((a, b) => b[1] - a[1])
                 .slice(0, 5)
-                .map(e => e[0]);
+                .map(([color]) => color);
 
             visualDNA = {
-                dominantColors: dominantColors.length > 0 ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
-                googleFonts: scrapeResult.visualDNA?.googleFonts || [],
+                dominantColors: dominantColors.length ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
+                googleFonts: Array.isArray(scrapeResult?.visualDNA?.googleFonts) ? scrapeResult.visualDNA.googleFonts : []
+            };
+        } else {
+            visualDNA = {
+                dominantColors: visualDNA.dominantColors,
+                googleFonts: Array.isArray(visualDNA.googleFonts) ? visualDNA.googleFonts : []
             };
         }
 
-        // ── 9. TRUST / LINKS / CONTENT ───────────────────────
-        const trustSignals = scrapeResult.trustSignals || {
-            hasSSL: url.startsWith('https'),
-            hasWhatsApp: /whatsapp|wa\.me/i.test(html),
-            hasPhoneNumber: scrapeResult.contacts?.phones?.length > 0,
-            hasReviews: false,
-            hasMoneyBackGuarantee: false,
-            hasPaymentLogos: false,
-            hasLegalPages: false,
-            hasCOD: false,
-            trustScore: null,
+        const contacts = {
+            phones:
+                Array.isArray(scrapeResult?.contacts?.phones) && scrapeResult.contacts.phones.length
+                    ? scrapeResult.contacts.phones
+                    : normalizePhones(bodyText),
+            emails:
+                Array.isArray(scrapeResult?.contacts?.emails) && scrapeResult.contacts.emails.length
+                    ? scrapeResult.contacts.emails
+                    : normalizeEmails(bodyText)
         };
 
-        const internalLinks = [];
-        const externalLinks = [];
-
-        $('a[href]').each((_, el) => {
-            const href = ($(el).attr('href') || '').trim();
-            if (!href) return;
-
-            if (href.startsWith('/') || href.includes(new URL(url).hostname)) internalLinks.push(href);
-            else if (/^https?:\/\//i.test(href)) externalLinks.push(href);
-        });
+        const trustSignals = {
+            hasSSL: scrapeResult?.trustSignals?.hasSSL ?? seoIntelDeep.hasSSL ?? url.startsWith('https'),
+            hasWhatsApp: scrapeResult?.trustSignals?.hasWhatsApp ?? seoIntelDeep.hasWhatsApp ?? /whatsapp|wa\.me/i.test(html),
+            hasPhoneNumber: scrapeResult?.trustSignals?.hasPhoneNumber ?? (contacts.phones.length > 0),
+            hasReviews: scrapeResult?.trustSignals?.hasReviews ?? (testimonials.length > 0),
+            hasMoneyBackGuarantee: scrapeResult?.trustSignals?.hasMoneyBackGuarantee ?? /garantie|money back|refund/i.test(bodyText),
+            hasPaymentLogos: scrapeResult?.trustSignals?.hasPaymentLogos ?? /visa|mastercard|paypal|cmi/i.test(html),
+            hasLegalPages: scrapeResult?.trustSignals?.hasLegalPages ?? /mentions légales|privacy|conditions|terms/i.test(bodyText),
+            hasCOD: scrapeResult?.trustSignals?.hasCOD ?? seoIntelDeep.hasCOD ?? /cash on delivery|contre-remboursement|paiement à la livraison/i.test(bodyText),
+            trustScore: scrapeResult?.trustSignals?.trustScore ?? null
+        };
 
         const contentIntel = {
-            paragraphCount: $('p').length,
-            listCount: $('ul, ol').length,
-            imageCount: $('img').length,
-            buttonCount: $('button').length,
-            internalLinks: [...new Set(internalLinks)].slice(0, 50),
-            externalLinks: [...new Set(externalLinks)].slice(0, 30),
+            paragraphCount: seoIntelDeep.paragraphs ?? $('p').length,
+            listCount: seoIntelDeep.listCount ?? $('ul, ol').length,
+            imageCount: seoIntelDeep.totalImages ?? $('img').length,
+            buttonCount: seoIntelDeep.buttonCount ?? $('button').length,
+            internalLinks: Array.isArray(seoIntelDeep.internalLinks) ? seoIntelDeep.internalLinks.slice(0, 50) : [],
+            externalLinks: Array.isArray(seoIntelDeep.externalLinks) ? seoIntelDeep.externalLinks.slice(0, 30) : [],
+            externalOutboundLinks: Array.isArray(seoIntelDeep.externalOutboundLinks) ? seoIntelDeep.externalOutboundLinks.slice(0, 30) : [],
+            internalLinkObjects: Array.isArray(seoIntelDeep.internalLinkObjects) ? seoIntelDeep.internalLinkObjects.slice(0, 20) : [],
+            externalOutboundLinkObjects: Array.isArray(seoIntelDeep.externalOutboundLinkObjects) ? seoIntelDeep.externalOutboundLinkObjects.slice(0, 20) : [],
+            wordCount: seoIntelDeep.wordCount ?? bodyText.split(/\s+/).filter(Boolean).length,
+            bodyText: bodyText.substring(0, 15000),
+            contentStatus: seoIntelDeep.contentStatus || wordStatus(seoIntelDeep.wordCount ?? bodyText.split(/\s+/).filter(Boolean).length),
+            totalImages: seoIntelDeep.totalImages ?? 0,
+            missingAlt: seoIntelDeep.missingAlt ?? 0,
+            webpImages: seoIntelDeep.webpImages ?? 0,
+            lazyLoadImages: seoIntelDeep.lazyLoadImages ?? 0,
+            hasVideo: !!seoIntelDeep.hasVideo,
+            linkSummary: seoIntelDeep.linkSummary || {
+                totalAnchors: 0,
+                internalCount: 0,
+                externalOutboundCount: 0,
+                ignoredCount: 0
+            }
         };
 
-        // ── 10. SEO INTEL ────────────────────────────────────
-        const stopWords = new Set([
-            'le','la','les','de','des','du','un','une','et','ou','en','à','a','the','and','for','with','sur','dans','par','pour',
-            'est','are','is','your','vous','nous','notre','vos','ses','ces','this','that','from','plus','moins'
-        ]);
+        const copyIntel = {
+            headlines: {
+                h1: Array.isArray(scrapeResult?.copyIntel?.headlines?.h1) && scrapeResult.copyIntel.headlines.h1.length
+                    ? scrapeResult.copyIntel.headlines.h1
+                    : h1List,
+                h2: Array.isArray(scrapeResult?.copyIntel?.headlines?.h2) && scrapeResult.copyIntel.headlines.h2.length
+                    ? scrapeResult.copyIntel.headlines.h2
+                    : h2List,
+                h3: Array.isArray(scrapeResult?.copyIntel?.headlines?.h3) && scrapeResult.copyIntel.headlines.h3.length
+                    ? scrapeResult.copyIntel.headlines.h3
+                    : h3List
+            },
+            realCTAs: Array.isArray(scrapeResult?.copyIntel?.realCTAs) && scrapeResult.copyIntel.realCTAs.length
+                ? scrapeResult.copyIntel.realCTAs
+                : realCTAs,
+            heroText: scrapeResult?.copyIntel?.heroText || bodyText.substring(0, 400),
+            testimonials: Array.isArray(scrapeResult?.copyIntel?.testimonials) && scrapeResult.copyIntel.testimonials.length
+                ? scrapeResult.copyIntel.testimonials
+                : testimonials,
+            guarantees: Array.isArray(scrapeResult?.copyIntel?.guarantees) ? scrapeResult.copyIntel.guarantees : [],
+            faq: Array.isArray(scrapeResult?.copyIntel?.faq) ? scrapeResult.copyIntel.faq : [],
+            bulletBenefits: Array.isArray(scrapeResult?.copyIntel?.bulletBenefits) ? scrapeResult.copyIntel.bulletBenefits : [],
+            allButtons: Array.isArray(scrapeResult?.copyIntel?.allButtons) && scrapeResult.copyIntel.allButtons.length
+                ? scrapeResult.copyIntel.allButtons
+                : allButtons,
+            pageSections
+        };
 
-        const topKeywords = bodyText
-            .toLowerCase()
-            .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
-            .split(/\s+/)
-            .filter(w => w && w.length >= 4 && !stopWords.has(w))
-            .reduce((acc, word) => {
-                acc[word] = (acc[word] || 0) + 1;
-                return acc;
-            }, {});
+        const perfFallback = typeof extractPerfSignals === 'function' ? extractPerfSignals(html) : null;
+        const performanceIntel = {
+            hasCountdown: scrapeResult?.performanceIntel?.hasCountdown ?? seoIntelDeep.hasCountdown ?? perfFallback?.hasCountdown ?? false,
+            hasExitIntent: scrapeResult?.performanceIntel?.hasExitIntent ?? seoIntelDeep.hasExitIntent ?? perfFallback?.hasExitIntent ?? false,
+            hasLiveChat: scrapeResult?.performanceIntel?.hasLiveChat ?? seoIntelDeep.hasLiveChat ?? perfFallback?.hasLiveChat ?? false,
+            hasSSL: scrapeResult?.performanceIntel?.hasSSL ?? seoIntelDeep.hasSSL ?? perfFallback?.hasSSL ?? url.startsWith('https'),
+            hasCDN: scrapeResult?.performanceIntel?.hasCDN ?? seoIntelDeep.hasCDN ?? perfFallback?.hasCDN ?? false,
+            isMobileOptimized: scrapeResult?.performanceIntel?.isMobileOptimized ?? !!$('meta[name="viewport"]').length,
+            hasMinified: seoIntelDeep.hasMinified ?? perfFallback?.hasMinified ?? false,
+            hasPreload: seoIntelDeep.hasPreload ?? perfFallback?.hasPreload ?? false,
+            hasPopup: seoIntelDeep.hasPopup ?? perfFallback?.hasPopup ?? false,
+            hasStickyCTA: seoIntelDeep.hasStickyCTA ?? perfFallback?.hasStickyCTA ?? false,
+            hasVideo: seoIntelDeep.hasVideo ?? perfFallback?.hasVideo ?? false,
+            hasServiceWorker: seoIntelDeep.hasServiceWorker ?? perfFallback?.hasServiceWorker ?? false
+        };
 
-        const sortedKeywords = Object.entries(topKeywords)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 20)
-            .map(([keyword, count]) => ({ keyword, count }));
+        const brand = {
+            fullTextSample: bodyText.substring(0, 15000),
+            wordCount: contentIntel.wordCount,
+            hasSSL: url.startsWith('https')
+        };
+
+        const frameworkData = {
+            trustSignals,
+            techStack: scrapeResult?.techStack || { cms: 'Unknown' },
+            technicalSummary: seoIntelDeep.technicalSummary || {}
+        };
 
         const seoIntel = {
             title: metaTitle,
-            titleLength: metaTitle.length,
+            titleLength: seoIntelDeep.titleLength ?? metaTitle.length,
+            metaDescription: metaDescription,
             description: metaDescription,
-            descriptionLength: metaDescription.length,
-            keywordsMeta: metaKeywords
-                .split(',')
-                .map(k => k.trim())
-                .filter(Boolean)
-                .slice(0, 20),
-            topKeywords: sortedKeywords,
+            descriptionLength: seoIntelDeep.descriptionLength ?? metaDescription.length,
+            keywordsMeta: (metaKeywords || '').split(',').map(k => k.trim()).filter(Boolean).slice(0, 20),
+            topKeywords: Array.isArray(seoIntelDeep.topKeywords) ? seoIntelDeep.topKeywords : [],
             headingCounts: {
-                h1: $('h1').length,
-                h2: $('h2').length,
-                h3: $('h3').length,
+                h1: copyIntel.headlines.h1.length,
+                h2: copyIntel.headlines.h2.length,
+                h3: copyIntel.headlines.h3.length
             },
+            h1: copyIntel.headlines.h1[0] || '',
+            h2s: copyIntel.headlines.h2,
+            h3s: copyIntel.headlines.h3,
             hasCanonical: !!canonical,
             hasRobotsMeta: !!robots,
             canonical,
@@ -9294,30 +10949,69 @@ async function deepScrapeFunnel(url) {
             ogTitle,
             ogDescription,
             ogImage,
+            issues: Array.isArray(seoIntelDeep.issues) ? seoIntelDeep.issues : [],
+            seoScore: seoIntelDeep.seoScore ?? 0,
+            seoGrade: seoIntelDeep.seoGrade ?? 'F',
+            hreflang: Array.isArray(seoIntelDeep.hreflang) ? seoIntelDeep.hreflang : [],
+            hasHreflang: !!seoIntelDeep.hasHreflang,
+            aeoSignals: seoIntelDeep.aeoSignals || EMPTY_SCRAPE_RESULT().seoIntel.aeoSignals,
+            schemaTypes: Array.isArray(seoIntelDeep.schemaTypes) ? seoIntelDeep.schemaTypes : schemaData.types,
+            schemaCount: seoIntelDeep.schemaCount ?? schemaData.count ?? 0,
+            hasSchema: !!seoIntelDeep.hasSchema || schemaData.count > 0,
+            paragraphs: seoIntelDeep.paragraphs ?? 0,
+            listCount: seoIntelDeep.listCount ?? 0,
+            buttonCount: seoIntelDeep.buttonCount ?? 0,
+            wordCount: contentIntel.wordCount,
+            contentStatus: contentIntel.contentStatus,
+            totalImages: seoIntelDeep.totalImages ?? 0,
+            missingAlt: seoIntelDeep.missingAlt ?? 0,
+            webpImages: seoIntelDeep.webpImages ?? 0,
+            lazyLoadImages: seoIntelDeep.lazyLoadImages ?? 0,
+            hasVideo: !!seoIntelDeep.hasVideo,
+            scriptCount: seoIntelDeep.scriptCount ?? 0,
+            inlineScriptCount: seoIntelDeep.inlineScriptCount ?? 0,
+            externalScripts: seoIntelDeep.externalScripts ?? 0,
+            cssCount: seoIntelDeep.cssCount ?? 0,
+            cssFiles: seoIntelDeep.cssFiles ?? seoIntelDeep.cssCount ?? 0,
+            hasMinified: !!seoIntelDeep.hasMinified,
+            hasServiceWorker: !!seoIntelDeep.hasServiceWorker,
+            hasCDN: !!seoIntelDeep.hasCDN,
+            hasPreload: !!seoIntelDeep.hasPreload,
+            hasSSL: !!seoIntelDeep.hasSSL,
+            charset: seoIntelDeep.charset ?? null,
+            hasFAQ: !!seoIntelDeep.hasFAQ,
+            hasHowTo: !!seoIntelDeep.hasHowTo,
+            hasDefinitions: !!seoIntelDeep.hasDefinitions,
+            hasExitIntent: !!seoIntelDeep.hasExitIntent,
+            hasPopup: !!seoIntelDeep.hasPopup,
+            hasCountdown: !!seoIntelDeep.hasCountdown,
+            hasStickyCTA: !!seoIntelDeep.hasStickyCTA,
+            hasLiveChat: !!seoIntelDeep.hasLiveChat,
+            hasWhatsApp: !!seoIntelDeep.hasWhatsApp,
+            hasCOD: !!seoIntelDeep.hasCOD,
+            internalLinks: contentIntel.internalLinks,
+            externalLinks: contentIntel.externalLinks,
+            externalOutboundLinks: contentIntel.externalOutboundLinks,
+            internalLinkObjects: contentIntel.internalLinkObjects,
+            externalOutboundLinkObjects: contentIntel.externalOutboundLinkObjects,
+            linkSummary: contentIntel.linkSummary,
+            technicalSummary: seoIntelDeep.technicalSummary || {}
         };
 
-        console.log(
-            `✅ [DEEP SCRAPE] OK — ${Date.now() - startTime}ms` +
-            ` | Layer: ${scrapeResult.fetchLayer || 'unknown'}` +
-            ` | Colors: ${visualDNA.dominantColors.slice(0, 3).join(',')}` +
-            ` | CMS: ${scrapeResult.techStack?.cms || 'Unknown'}` +
-            ` | Prix: ${priceIntel.bestPrice || 'N/A'} ${priceIntel.currency}` +
-            ` | H1: ${copyIntel.headlines?.h1?.[0]?.substring(0, 40) || 'N/A'}`
-        );
-
-        // ── 11. RETOUR FINAL ─────────────────────────────────
-        return {
-            success: scrapeResult.success,
-            fetchLayer: scrapeResult.fetchLayer || 'browser',
+        const finalResult = mergeScrapeData(scrapeResult, {
+            success: !!scrapeResult?.success,
+            fetchLayer: scrapeResult?.fetchLayer || 'browser',
+            html,
+            duration: Date.now() - startTime,
             visualDNA,
-            techStack: scrapeResult.techStack || { cms: 'Unknown' },
+            techStack: scrapeResult?.techStack || { cms: 'Unknown' },
             copyIntel,
             chapterIntel,
             priceIntel,
             trustSignals,
-            contacts: scrapeResult.contacts || { phones: [], emails: [] },
+            contacts,
             schemaData,
-            sections: scrapeResult.sections || {},
+            sections,
             meta: {
                 title: metaTitle,
                 description: metaDescription,
@@ -9328,94 +11022,40 @@ async function deepScrapeFunnel(url) {
                 ogDescription,
                 robots,
                 lang,
+                hasOG: !!ogTitle
             },
             seoIntel,
             contentIntel,
-            trackingIntel: scrapeResult.trackingIntel || {},
-            performanceIntel: scrapeResult.performanceIntel || {},
-            brand: {
-                fullTextSample: bodyText.substring(0, 15000),
-                wordCount: bodyText.split(/\s+/).filter(Boolean).length,
-                hasSSL: url.startsWith('https'),
-            },
-            redirectIntel: scrapeResult.redirectIntel || {
+            trackingIntel: scrapeResult?.trackingIntel || EMPTY_SCRAPE_RESULT().trackingIntel,
+            performanceIntel,
+            brand,
+            redirectIntel: scrapeResult?.redirectIntel || {
                 totalRedirects: 0,
                 isFunnelRedirect: false,
-                chain: [],
+                chain: []
             },
-            frameworkData: {
-                trustSignals: scrapeResult.trustSignals || {},
-                techStack: scrapeResult.techStack || {},
-            },
-        };
+            frameworkData
+        });
 
+        const allSections = finalResult.copyIntel?.pageSections || [];
+        finalResult.sectionsFound = allSections.length;
+        finalResult.h1 = finalResult.copyIntel?.headlines?.h1?.[0] || null;
+        finalResult.price = finalResult.priceIntel?.bestPrice ?? null;
+        finalResult.phones = finalResult.contacts?.phones?.length || 0;
+
+        console.log(
+            `✅ [DEEP SCRAPE] OK — ${Date.now() - startTime}ms` +
+            ` | Layer: ${finalResult.fetchLayer}` +
+            ` | Colors: ${(finalResult.visualDNA?.dominantColors || []).slice(0, 3).join(',')}` +
+            ` | CMS: ${finalResult.techStack?.cms || 'Unknown'}` +
+            ` | Prix: ${finalResult.priceIntel?.bestPrice || 'N/A'} ${finalResult.priceIntel?.currency || 'MAD'}` +
+            ` | H1: ${finalResult.copyIntel?.headlines?.h1?.[0]?.substring(0, 40) || 'N/A'}`
+        );
+
+        return finalResult;
     } catch (error) {
         console.error(`❌ [DEEP SCRAPE] CRASH: ${error.message}`);
-
-        return {
-            success: false,
-            fetchLayer: 'browser',
-            error: error.message,
-            visualDNA: { dominantColors: ['#3b82f6', '#1e293b', '#10b981'], googleFonts: [] },
-            techStack: { cms: 'Unknown', hasSSL: false, hasWhatsApp: false },
-            copyIntel: {
-                headlines: { h1: [], h2: [], h3: [] },
-                realCTAs: [],
-                heroText: '',
-                pageSections: [],
-                testimonials: [],
-                guarantees: [],
-                faq: [],
-                bulletBenefits: [],
-                allButtons: []
-            },
-            chapterIntel: { chapters: [] },
-            priceIntel: { bestPrice: null, currency: 'MAD', all: [], detected: false, struckPrices: [], discountRate: null },
-            trustSignals: { hasSSL: false, hasWhatsApp: false, hasPhoneNumber: false, hasReviews: false, trustScore: null },
-            contacts: { phones: [], emails: [] },
-            schemaData: { types: [], count: 0 },
-            sections: {},
-            meta: {
-                title: '',
-                description: '',
-                keywords: '',
-                canonical: '',
-                ogImage: '',
-                ogTitle: '',
-                ogDescription: '',
-                robots: '',
-                lang: ''
-            },
-            seoIntel: {
-                title: '',
-                titleLength: 0,
-                description: '',
-                descriptionLength: 0,
-                keywordsMeta: [],
-                topKeywords: [],
-                headingCounts: { h1: 0, h2: 0, h3: 0 },
-                hasCanonical: false,
-                hasRobotsMeta: false,
-                canonical: '',
-                robots: '',
-                ogTitle: '',
-                ogDescription: '',
-                ogImage: ''
-            },
-            contentIntel: {
-                paragraphCount: 0,
-                listCount: 0,
-                imageCount: 0,
-                buttonCount: 0,
-                internalLinks: [],
-                externalLinks: []
-            },
-            trackingIntel: {},
-            performanceIntel: {},
-            brand: { fullTextSample: '', wordCount: 0, hasSSL: false },
-            redirectIntel: { totalRedirects: 0, isFunnelRedirect: false, chain: [] },
-            frameworkData: { trustSignals: {}, techStack: {} },
-        };
+        return finalizeError(error.message, 'browser');
     }
 }
 
@@ -10135,7 +11775,6 @@ async function scrapeSiteData(url, lang = 'fr') {
     try {
         const validUrl = InputValidator.sanitizeURL(url);
 
-        // ── Cache Check ─────────────────────────────────────
         const cacheKey = `scrape_v2_${validUrl}_${lang}`;
         const cached = cache.get(cacheKey);
         if (cached) {
@@ -10150,118 +11789,99 @@ async function scrapeSiteData(url, lang = 'fr') {
         if (isAr) acceptLanguage = 'ar-MA,ar;q=0.9,ar-SA;q=0.8,en;q=0.7';
         else if (isEn) acceptLanguage = 'en-US,en;q=0.9,fr;q=0.7';
 
-        let scrape = null;
-        let html = '';
+        const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
+        const wordStatus = (count = 0) =>
+            count < 200 ? 'INSUFFISANT (< 200 mots)' :
+            count < 600 ? 'MOYEN (200-600 mots)' :
+            'RICHE (> 600 mots)';
 
-        // ════════════════════════════════════════════════════
-        // LAYER 1 — Smart scrape (Browserless / Local / Scrape.do)
-        // ════════════════════════════════════════════════════
-        try {
-            scrape = await scrapeStealth(validUrl);
+        const normalizePhones = (text = '') => {
+            const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
+            return unique((text.match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
+        };
 
-            const htmlLower = (scrape.html || '').toLowerCase();
-            const h1Lower = (scrape.copyIntel?.headlines?.h1?.[0] || '').toLowerCase();
-            const titleLower = (scrape.meta?.title || '').toLowerCase();
+        const normalizeEmails = (text = '') => {
+            const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+            return unique((text.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
+        };
 
-            const isBotBlocked = !scrape.success
-                || !scrape.html
+        const detectBotBlock = (scrape) => {
+            const htmlLower = (scrape?.html || '').toLowerCase();
+            const h1Lower = (scrape?.copyIntel?.headlines?.h1?.[0] || '').toLowerCase();
+            const titleLower = (scrape?.meta?.title || '').toLowerCase();
+            const wc = scrape?.contentIntel?.wordCount ?? scrape?.seoIntel?.wordCount ?? scrape?.brand?.wordCount ?? 0;
+
+            return !scrape?.success
+                || !scrape?.html
                 || scrape.html.length < 800
-                || scrape.wordCount < 20
+                || wc < 20
                 || h1Lower.includes('you have been blocked')
                 || h1Lower.includes('access denied')
                 || titleLower.includes('attention required')
                 || titleLower.includes('security measure')
                 || titleLower.includes('cloudflare')
-                || htmlLower.includes('ray id:');
+                || htmlLower.includes('ray id:')
+                || htmlLower.includes('access denied')
+                || htmlLower.includes('captcha');
+        };
 
-            if (!isBotBlocked) {
-                html = scrape.html;
-                console.log(`✅ scrapeSiteData Smart Layer OK — ${Date.now() - startTime}ms | Layer: ${scrape.fetchLayer} | CMS: ${scrape.techStack?.cms}`);
-            } else {
-                console.warn(`⚠️ Smart layer blocked or empty (Words: ${scrape.wordCount || 0}) — fallback HTTP activated`);
-                scrape = null;
-            }
-        } catch (primaryErr) {
-            console.warn(`⚠️ Smart layer failed entirely: ${primaryErr.message} — fallback HTTP activated`);
-            scrape = null;
-        }
+        const inferPageSections = (sections = {}) => {
+            const map = {
+                HERO: sections.hasHero,
+                FEATURES: sections.hasFeatures,
+                TRUST: sections.hasTrust,
+                SOCIAL_PROOF: sections.hasTestim,
+                PRICING: sections.hasPricing,
+                FAQ: sections.hasFAQ,
+                CTA: sections.hasCTA,
+                FOOTER: sections.hasFooter
+            };
+            return Object.entries(map)
+                .filter(([, v]) => v)
+                .map(([type]) => ({ type, present: true, score: 60 }));
+        };
 
-        // ════════════════════════════════════════════════════
-        // LAYER 2 — HTTP fallback (Scrape.do or Axios)
-        // ════════════════════════════════════════════════════
-        if (!html) {
-            try {
-                const scrapeDoToken = process.env.SCRAPE_DO_TOKEN;
+        const extractFromHtml = (html, source = 'axios') => {
+            const $ = cheerio.load(html);
+            const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-                const { data } = await RetryManager.executeWithRetry(
-                    () => {
-                        if (scrapeDoToken) {
-                            console.log(`🛡️ [Layer 2] Using Scrape.do API (render=true) for ${validUrl}...`);
-                            const targetUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(validUrl)}&render=true`;
-                            return axios.get(targetUrl, { timeout: CONFIG.TIMEOUT_MEDIUM || 35000 });
-                        }
+            const h1List = unique($('h1').map((_, el) => $(el).text().trim()).get()).slice(0, 8);
+            const h2List = unique($('h2').map((_, el) => $(el).text().trim()).get()).slice(0, 12);
+            const h3List = unique($('h3').map((_, el) => $(el).text().trim()).get()).slice(0, 12);
 
-                        console.warn(`⚠️ [Layer 2] SCRAPE_DO_TOKEN missing. Basic Axios fallback...`);
-                        return axios.get(validUrl, {
-                            headers: {
-                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                                'Accept-Language': acceptLanguage,
-                            },
-                            timeout: CONFIG.TIMEOUT_SHORT || 15000,
-                        });
-                    },
-                    { context: 'Layer2-Fallback' }
-                );
+            const allButtons = unique(
+                $('a, button, input[type="submit"], input[type="button"]')
+                    .map((_, el) => ($(el).text() || $(el).val() || $(el).attr('aria-label') || '').trim())
+                    .get()
+                    .filter(t => t.length > 1 && t.length < 80)
+            ).slice(0, 30);
 
-                html = typeof data === 'string'
-                    ? data
-                    : (data.html || data.body || JSON.stringify(data));
+            const ctaList = unique(
+                $('a.button, a.btn, button, .cta, [class*="button"], [class*="btn"], [class*="cta"]')
+                    .map((_, el) => ($(el).text() || $(el).val() || $(el).attr('aria-label') || '').trim())
+                    .get()
+                    .filter(t => t.length > 1 && t.length < 80)
+            ).slice(0, 20);
 
-                console.log(`✅ scrapeSiteData Layer 2 OK — ${Date.now() - startTime}ms (${html.length} chars)`);
+            const phones = normalizePhones(bodyText);
+            const emails = normalizeEmails(bodyText);
 
-                if (!html || html.length < 300) {
-                    throw new Error('Fallback HTML too short');
-                }
-            } catch (axiosErr) {
-                console.error(`❌ Layer 2 fallback failed: ${axiosErr.message}`);
-                return { success: false, url: validUrl, error: axiosErr.message };
-            }
-        }
+            const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|€|\$|£)/gi;
+            const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 15);
+            const normalizedPrices = rawPrices
+                .map(m => ({
+                    raw: m[0],
+                    value: parseFloat(
+                        (m[1] || '')
+                            .replace(/\s/g, '')
+                            .replace(/,/g, '.')
+                            .replace(/[^\d.]/g, '')
+                    ),
+                    currency: (m[2] || 'MAD').toUpperCase()
+                }))
+                .filter(p => !isNaN(p.value) && p.value > 0);
 
-        // ════════════════════════════════════════════════════
-        // LAYER 3 — Cheerio Extraction
-        // ════════════════════════════════════════════════════
-        const $ = cheerio.load(html);
-        const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
-
-        // ── Meta ────────────────────────────────────────────
-        const metaTitle = $('title').text().trim() || scrape?.meta?.title || (isAr ? 'بدون عنوان' : 'Sans titre');
-        const metaDescription = $('meta[name="description"]').attr('content') || scrape?.meta?.description || '';
-        const metaKeywords = $('meta[name="keywords"]').attr('content') || scrape?.meta?.keywords || '';
-        const metaLang = $('html').attr('lang') || scrape?.meta?.lang || 'N/A';
-        const canonical = $('link[rel="canonical"]').attr('href') || scrape?.meta?.canonical || '';
-        const ogImage = $('meta[property="og:image"]').attr('content') || scrape?.meta?.ogImage || '';
-        const ogTitle = $('meta[property="og:title"]').attr('content') || '';
-        const ogDescription = $('meta[property="og:description"]').attr('content') || '';
-        const robots = $('meta[name="robots"]').attr('content') || '';
-
-        // ── Structure ───────────────────────────────────────
-        const h1List = $('h1').map((_, el) => $(el).text().trim()).get().filter(Boolean);
-        const h2List = $('h2').map((_, el) => $(el).text().trim()).get().filter(Boolean);
-        const h3List = $('h3').map((_, el) => $(el).text().trim()).get().filter(Boolean);
-
-        const h1Text = h1List[0] || scrape?.copyIntel?.headlines?.h1?.[0] || '';
-        const h1Count = h1List.length;
-        const h2Count = h2List.length;
-        const h3Count = h3List.length;
-
-        // ── Content basics ──────────────────────────────────
-        const wordCount = scrape?.wordCount || bodyText.split(/\s+/).filter(Boolean).length;
-        const hasWhatsApp = scrape?.techStack?.hasWhatsApp || /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html);
-
-        // ── Schema ──────────────────────────────────────────
-        let schemaTypes = scrape?.schemaData?.types || [];
-        if (!schemaTypes.length) {
+            const schemaTypes = [];
             $('script[type="application/ld+json"]').each((_, el) => {
                 try {
                     const raw = $(el).html();
@@ -10270,24 +11890,65 @@ async function scrapeSiteData(url, lang = 'fr') {
                     const entries = Array.isArray(parsed) ? parsed : [parsed];
                     entries.forEach(item => {
                         const type = item?.['@type'] || item?.['@graph']?.[0]?.['@type'];
-                        if (type) schemaTypes.push(Array.isArray(type) ? type[0] : type);
+                        if (type) {
+                            if (Array.isArray(type)) schemaTypes.push(...type);
+                            else schemaTypes.push(type);
+                        }
                     });
                 } catch (_) {}
             });
-        }
-        schemaTypes = [...new Set(schemaTypes.filter(Boolean))];
 
-        const schemaExists = schemaTypes.length > 0;
+            const socialProofs = unique(
+                $('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')
+                    .map((_, el) => $(el).text().trim().substring(0, 120))
+                    .get()
+                    .filter(Boolean)
+            ).slice(0, 5);
 
-        // ── Visual DNA ──────────────────────────────────────
-        const visualDNA = scrape?.visualDNA || (() => {
+            const sections = {
+                hasHero: !!$([
+                    '.hero', '#hero', '.banner', '.masthead', '.hero-section',
+                    '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
+                ].join(',')).length,
+                hasFeatures: !!$([
+                    '.feature', '.features', '#features', '.service', '.services',
+                    '#service', '.benefits', '.benefit', '.solutions',
+                    '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
+                ].join(',')).length,
+                hasTrust: !!$([
+                    '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
+                    '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
+                    '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
+                    '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
+                    '[class*="reassurance"]', '[class*="trusted"]'
+                ].join(',')).length,
+                hasPricing: !!$([
+                    '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
+                    '.tarifs', '.tarif', '.offres', '.offer',
+                    '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
+                ].join(',')).length,
+                hasTestim: !!$([
+                    '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
+                    '.ratings', '.social-proof',
+                    '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
+                ].join(',')).length,
+                hasFAQ: !!$([
+                    '.faq', '#faq', 'details', '.accordion', '.questions',
+                    '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
+                ].join(',')).length,
+                hasCTA: !!$([
+                    '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
+                    '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
+                ].join(',')).length,
+                hasFooter: !!$('footer, .footer, #footer, [class*="footer"]').length
+            };
+
             const styleContent = $('style').text() + ' ' +
                 $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
 
             const colorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi;
             const allColors = styleContent.match(colorRegex) || [];
             const colorCounts = {};
-
             allColors.forEach(c => {
                 const norm = c.toLowerCase().replace(/\s+/g, '');
                 if (!['#ffffff', '#000000', '#fff', '#000', 'transparent', 'rgba(0,0,0,0)'].includes(norm)) {
@@ -10300,187 +11961,457 @@ async function scrapeSiteData(url, lang = 'fr') {
                 .slice(0, 5)
                 .map(([color]) => color);
 
-            return {
-                dominantColors: dominantColors.length ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
-                googleFonts: [],
+            const googleFonts = unique(
+                $('link[href*="fonts.googleapis.com"]')
+                    .map((_, el) => {
+                        const href = $(el).attr('href') || '';
+                        const m = href.match(/family=([^&:]+)/);
+                        return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
+                    })
+                    .get()
+                    .filter(Boolean)
+            ).slice(0, 5);
+
+            const meta = {
+                title: $('title').text().trim(),
+                description: $('meta[name="description"]').attr('content') || '',
+                keywords: $('meta[name="keywords"]').attr('content') || '',
+                canonical: $('link[rel="canonical"]').attr('href') || '',
+                ogImage: $('meta[property="og:image"]').attr('content') || '',
+                ogTitle: $('meta[property="og:title"]').attr('content') || '',
+                ogDescription: $('meta[property="og:description"]').attr('content') || '',
+                robots: $('meta[name="robots"]').attr('content') || '',
+                hasOG: !!$('meta[property="og:title"]').attr('content'),
+                lang: $('html').attr('lang') || ''
             };
-        })();
 
-        // ── Tech stack ──────────────────────────────────────
-        const techStack = scrape?.techStack || {
-            cms: /shopify|myshopify/i.test(html) ? 'Shopify'
-                : /wp-content|wp-includes/i.test(html) ? 'WordPress'
-                : /woocommerce/i.test(html) ? 'WooCommerce'
-                : /__NEXT_DATA__/i.test(html) ? 'Next.js'
-                : /__NUXT__/i.test(html) ? 'Nuxt.js'
-                : 'Unknown',
-            hasSSL: validUrl.startsWith('https'),
-            hasWhatsApp,
-            isWordPress: /wp-content|wp-includes/i.test(html),
-            isShopify: /shopify|myshopify/i.test(html),
-        };
+            const currentHostname = (() => {
+                try { return new URL(validUrl).hostname.replace(/^www\./, ''); } catch { return ''; }
+            })();
 
-        // ── Copy intel ──────────────────────────────────────
-        const copyIntel = scrape?.copyIntel || {
-            headlines: {
-                h1: h1List.slice(0, 8),
-                h2: h2List.slice(0, 12),
-                h3: h3List.slice(0, 12),
-            },
-            realCTAs: $('a.button, a.btn, button, .cta, [class*="button"], [class*="btn"]')
-                .map((_, el) => $(el).text().trim())
-                .get()
-                .filter(t => t.length > 1 && t.length < 80)
-                .slice(0, 20),
-            heroText: bodyText.substring(0, 400),
-            testimonials: $('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')
-                .map((_, el) => $(el).text().trim().substring(0, 120))
-                .get()
-                .filter(Boolean)
-                .slice(0, 5),
-            guarantees: [],
-            faq: [],
-            bulletBenefits: [],
-            allButtons: $('a, button')
-                .map((_, el) => $(el).text().trim())
-                .get()
-                .filter(t => t.length > 1 && t.length < 80)
-                .slice(0, 30),
-            pageSections: [],
-        };
+            const internalLinkObjects = [];
+            const externalOutboundLinkObjects = [];
+            $('a[href]').each((_, el) => {
+                const href = ($(el).attr('href') || '').trim();
+                const text = $(el).text().trim().replace(/\s+/g, ' ').substring(0, 120);
+                if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) return;
 
-        // ── Price intel ─────────────────────────────────────
-        const priceIntel = scrape?.priceIntel || (() => {
-            const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|€|\$|£)/gi;
-            const prices = [...bodyText.matchAll(priceRegex)]
-                .map(m => ({
-                    raw: m[0],
-                    value: parseFloat((m[1] || '').replace(/\s/g, '').replace(',', '.').replace(/[^\d.]/g, '')),
-                    currency: (m[2] || 'MAD').toUpperCase()
-                }))
-                .filter(p => !isNaN(p.value) && p.value > 0)
-                .slice(0, 15);
+                try {
+                    const urlObj = new URL(href, validUrl);
+                    const host = urlObj.hostname.replace(/^www\./, '');
+                    const item = { href: urlObj.href, normalized: urlObj.href, text, host };
+                    if (host === currentHostname) internalLinkObjects.push(item);
+                    else externalOutboundLinkObjects.push(item);
+                } catch (_) {}
+            });
+
+            const internalLinks = unique(internalLinkObjects.map(x => x.href)).slice(0, 50);
+            const externalOutboundLinks = unique(externalOutboundLinkObjects.map(x => x.href)).slice(0, 30);
+
+            const paragraphCount = $('p').length;
+            const listCount = $('ul, ol').length;
+            const imageCount = $('img').length;
+            const buttonCount = $('button, input[type="submit"], input[type="button"]').length;
+            const lazyLoadImages = $('img[loading="lazy"]').length;
+            const webpImages = $('img[src*=".webp"], source[type="image/webp"]').length;
+            const missingAlt = $('img:not([alt]), img[alt=""]').length;
+            const hasVideo = $('video, iframe[src*="youtube"], iframe[src*="vimeo"], iframe[src*="loom"]').length > 0;
+
+            const scriptCount = $('script').length;
+            const inlineScriptCount = $('script:not([src])').length;
+            const externalScripts = $('script[src]').length;
+            const cssCount = $('link[rel="stylesheet"]').length;
+            const cssFiles = cssCount;
+            const hasMinified = /\.min\.js|\.min\.css/i.test(html);
+            const hasPreload = $('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"]').length > 0;
+            const hasServiceWorker = /serviceWorker/i.test(html);
+            const charset = $('meta[charset]').attr('charset') || null;
+
+            const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
 
             return {
-                bestPrice: prices.length ? prices[0].value : null,
-                currency: prices.length ? prices[0].currency : 'MAD',
-                all: prices.map(p => p.value),
-                detected: prices.length > 0,
-                struckPrices: [],
-                discountRate: null,
+                ...EMPTY_SCRAPE_RESULT(null, source),
+                success: true,
+                fetchLayer: source,
+                html,
+                error: null,
+
+                visualDNA: {
+                    dominantColors: dominantColors.length ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
+                    googleFonts
+                },
+
+                techStack: {
+                    ...EMPTY_SCRAPE_RESULT().techStack,
+                    cms: /shopify|myshopify/i.test(html) ? 'Shopify'
+                        : /wp-content|wp-includes/i.test(html) ? 'WordPress'
+                        : /woocommerce/i.test(html) ? 'WooCommerce'
+                        : /__NEXT_DATA__/i.test(html) ? 'Next.js'
+                        : /__NUXT__/i.test(html) ? 'Nuxt.js'
+                        : 'Unknown',
+                    hasSSL: validUrl.startsWith('https'),
+                    hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
+                    hasSchema: schemaTypes.length > 0,
+                    hasGA4: /gtag|google-analytics|G-[A-Z0-9]+/i.test(html),
+                    hasGTM: /googletagmanager/i.test(html),
+                    hasFBPixel: /connect\.facebook\.net|fbq/i.test(html),
+                    hasTikTok: /analytics\.tiktok\.com|ttq/i.test(html),
+                    hasHotjar: /hotjar/i.test(html),
+                    hasClarity: /clarity\.ms|clarity/i.test(html),
+                    hasLiveChat: /tawk|tidio|crisp|intercom/i.test(html),
+                    hasCountdown: /countdown/i.test(html),
+                    hasExitIntent: /exit.?intent/i.test(html),
+                    hasCDN: /cloudflare|cdn\./i.test(html),
+                    isMobile: !!$('meta[name="viewport"]').length,
+                    isWordPress: /wp-content|wp-includes/i.test(html),
+                    isShopify: /shopify|myshopify/i.test(html),
+                    isWooCommerce: /woocommerce/i.test(html),
+                    isNextJS: /__NEXT_DATA__/i.test(html),
+                    isNuxtJS: /__NUXT__/i.test(html)
+                },
+
+                copyIntel: {
+                    ...EMPTY_SCRAPE_RESULT().copyIntel,
+                    headlines: { h1: h1List, h2: h2List, h3: h3List },
+                    realCTAs: ctaList,
+                    heroText: bodyText.substring(0, 400),
+                    testimonials: socialProofs,
+                    guarantees: [],
+                    faq: [],
+                    bulletBenefits: [],
+                    allButtons,
+                    pageSections: inferPageSections(sections)
+                },
+
+                chapterIntel: {
+                    chapters: []
+                },
+
+                priceIntel: {
+                    bestPrice: normalizedPrices.length ? normalizedPrices[0].value : null,
+                    currency: normalizedPrices.length ? normalizedPrices[0].currency : 'MAD',
+                    all: normalizedPrices.map(p => p.value),
+                    detected: normalizedPrices.length > 0,
+                    struckPrices: [],
+                    discountRate: null
+                },
+
+                trustSignals: {
+                    hasSSL: validUrl.startsWith('https'),
+                    hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
+                    hasPhoneNumber: phones.length > 0,
+                    hasReviews: socialProofs.length > 0,
+                    hasMoneyBackGuarantee: /garantie|money back|refund/i.test(bodyText),
+                    hasPaymentLogos: /visa|mastercard|paypal|cmi/i.test(html),
+                    hasLegalPages: /mentions légales|privacy|conditions|terms/i.test(bodyText),
+                    hasCOD: /cash on delivery|paiement à la livraison/i.test(bodyText),
+                    trustScore: null
+                },
+
+                contacts: { phones, emails },
+
+                schemaData: {
+                    types: unique(schemaTypes),
+                    count: unique(schemaTypes).length
+                },
+
+                sections,
+
+                meta,
+
+                seoIntel: {
+                    ...EMPTY_SCRAPE_RESULT().seoIntel,
+                    title: meta.title,
+                    titleLength: meta.title.length,
+                    metaDescription: meta.description,
+                    description: meta.description,
+                    descriptionLength: meta.description.length,
+                    keywordsMeta: meta.keywords ? meta.keywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 20) : [],
+                    headingCounts: { h1: h1List.length, h2: h2List.length, h3: h3List.length },
+                    h1: h1List[0] || '',
+                    h2s: h2List,
+                    h3s: h3List,
+                    canonical: meta.canonical,
+                    hasCanonical: !!meta.canonical,
+                    robots: meta.robots,
+                    hasRobotsMeta: !!meta.robots,
+                    ogTitle: meta.ogTitle,
+                    ogDescription: meta.ogDescription,
+                    ogImage: meta.ogImage,
+                    lang: meta.lang || null,
+                    schemaTypes: unique(schemaTypes),
+                    schemaCount: unique(schemaTypes).length,
+                    hasSchema: unique(schemaTypes).length > 0,
+                    paragraphs: paragraphCount,
+                    listCount,
+                    buttonCount,
+                    wordCount,
+                    contentStatus: wordStatus(wordCount),
+                    totalImages: imageCount,
+                    missingAlt,
+                    webpImages,
+                    lazyLoadImages,
+                    hasVideo,
+                    scriptCount,
+                    inlineScriptCount,
+                    externalScripts,
+                    cssCount,
+                    cssFiles,
+                    hasMinified,
+                    hasServiceWorker,
+                    hasCDN: /cloudflare|cdn\./i.test(html),
+                    hasPreload,
+                    hasSSL: validUrl.startsWith('https'),
+                    charset,
+                    hasFAQ: sections.hasFAQ,
+                    hasExitIntent: /exit.?intent/i.test(html),
+                    hasPopup: /popup|modal/i.test(html),
+                    hasCountdown: /countdown/i.test(html),
+                    hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html),
+                    hasLiveChat: /tawk|tidio|crisp|intercom/i.test(html),
+                    hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
+                    hasCOD: /cash on delivery|paiement à la livraison/i.test(bodyText),
+                    internalLinks,
+                    externalLinks: externalOutboundLinks,
+                    externalOutboundLinks,
+                    internalLinkObjects: internalLinkObjects.slice(0, 50),
+                    externalOutboundLinkObjects: externalOutboundLinkObjects.slice(0, 30),
+                    linkSummary: {
+                        totalAnchors: $('a[href]').length,
+                        internalCount: internalLinks.length,
+                        externalOutboundCount: externalOutboundLinks.length,
+                        ignoredCount: Math.max(0, $('a[href]').length - internalLinks.length - externalOutboundLinks.length)
+                    },
+                    technicalSummary: {
+                        meta: {
+                            titleLength: meta.title.length,
+                            descriptionLength: meta.description.length,
+                            hasCanonical: !!meta.canonical,
+                            hasRobots: !!meta.robots,
+                            hasViewport: !!$('meta[name="viewport"]').length,
+                            hasOG: meta.hasOG,
+                            hasTwitterCard: /twitter:card/i.test(html),
+                            lang: meta.lang || null
+                        },
+                        headings: {
+                            h1Count: h1List.length,
+                            h2Count: h2List.length,
+                            h3Count: h3List.length
+                        },
+                        content: {
+                            wordCount,
+                            paragraphs: paragraphCount,
+                            listCount,
+                            buttonCount,
+                            contentStatus: wordStatus(wordCount)
+                        },
+                        media: {
+                            totalImages: imageCount,
+                            missingAlt,
+                            webpImages,
+                            lazyLoadImages,
+                            hasVideo
+                        },
+                        links: {
+                            totalAnchors: $('a[href]').length,
+                            internalCount: internalLinks.length,
+                            externalOutboundCount: externalOutboundLinks.length,
+                            ignoredCount: Math.max(0, $('a[href]').length - internalLinks.length - externalOutboundLinks.length)
+                        },
+                        structuredData: {
+                            hasSchema: unique(schemaTypes).length > 0,
+                            schemaCount: unique(schemaTypes).length,
+                            schemaTypes: unique(schemaTypes)
+                        },
+                        performance: {
+                            scriptCount,
+                            inlineScriptCount,
+                            externalScripts,
+                            cssCount,
+                            cssFiles,
+                            hasMinified,
+                            hasServiceWorker,
+                            hasCDN: /cloudflare|cdn\./i.test(html),
+                            hasPreload,
+                            hasSSL: validUrl.startsWith('https'),
+                            charset
+                        },
+                        conversion: {
+                            hasFAQ: sections.hasFAQ,
+                            hasExitIntent: /exit.?intent/i.test(html),
+                            hasPopup: /popup|modal/i.test(html),
+                            hasCountdown: /countdown/i.test(html),
+                            hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html),
+                            hasLiveChat: /tawk|tidio|crisp|intercom/i.test(html),
+                            hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
+                            hasCOD: /cash on delivery|paiement à la livraison/i.test(bodyText)
+                        }
+                    }
+                },
+
+                contentIntel: {
+                    ...EMPTY_SCRAPE_RESULT().contentIntel,
+                    paragraphCount,
+                    listCount,
+                    imageCount,
+                    buttonCount,
+                    internalLinks,
+                    externalLinks: externalOutboundLinks,
+                    externalOutboundLinks,
+                    internalLinkObjects: internalLinkObjects.slice(0, 50),
+                    externalOutboundLinkObjects: externalOutboundLinkObjects.slice(0, 30),
+                    wordCount,
+                    bodyText: bodyText.substring(0, 15000),
+                    contentStatus: wordStatus(wordCount),
+                    totalImages: imageCount,
+                    missingAlt,
+                    webpImages,
+                    lazyLoadImages,
+                    hasVideo,
+                    linkSummary: {
+                        totalAnchors: $('a[href]').length,
+                        internalCount: internalLinks.length,
+                        externalOutboundCount: externalOutboundLinks.length,
+                        ignoredCount: Math.max(0, $('a[href]').length - internalLinks.length - externalOutboundLinks.length)
+                    }
+                },
+
+                trackingIntel: {
+                    hasGoogleAnalytics: /gtag|google-analytics|G-[A-Z0-9]+/i.test(html),
+                    hasGTM: /googletagmanager/i.test(html),
+                    hasFacebookPixel: /connect\.facebook\.net|fbq/i.test(html),
+                    hasTikTokPixel: /analytics\.tiktok\.com|ttq/i.test(html),
+                    hasHotjar: /hotjar/i.test(html),
+                    hasClarity: /clarity\.ms|clarity/i.test(html)
+                },
+
+                performanceIntel: {
+                    ...EMPTY_SCRAPE_RESULT().performanceIntel,
+                    hasCountdown: /countdown/i.test(html),
+                    hasExitIntent: /exit.?intent/i.test(html),
+                    hasLiveChat: /tawk|tidio|crisp|intercom/i.test(html),
+                    hasSSL: validUrl.startsWith('https'),
+                    hasCDN: /cloudflare|cdn\./i.test(html),
+                    isMobileOptimized: !!$('meta[name="viewport"]').length,
+                    hasMinified,
+                    hasPreload,
+                    hasPopup: /popup|modal/i.test(html),
+                    hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html),
+                    hasVideo,
+                    hasServiceWorker
+                },
+
+                brand: {
+                    fullTextSample: bodyText.substring(0, 15000),
+                    wordCount,
+                    hasSSL: validUrl.startsWith('https')
+                },
+
+                redirectIntel: {
+                    totalRedirects: 0,
+                    isFunnelRedirect: false,
+                    chain: []
+                },
+
+                frameworkData: {
+                    trustSignals: {
+                        hasSSL: validUrl.startsWith('https'),
+                        hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
+                        hasPhoneNumber: phones.length > 0,
+                        hasReviews: socialProofs.length > 0
+                    },
+                    techStack: {
+                        cms: /shopify|myshopify/i.test(html) ? 'Shopify'
+                            : /wp-content|wp-includes/i.test(html) ? 'WordPress'
+                            : /woocommerce/i.test(html) ? 'WooCommerce'
+                            : /__NEXT_DATA__/i.test(html) ? 'Next.js'
+                            : /__NUXT__/i.test(html) ? 'Nuxt.js'
+                            : 'Unknown'
+                    },
+                    technicalSummary: {
+                        wordCount,
+                        schemaTypes: unique(schemaTypes),
+                        internalLinks: internalLinks.length,
+                        externalOutboundLinks: externalOutboundLinks.length
+                    }
+                }
             };
-        })();
-
-        // ── Trust signals ───────────────────────────────────
-        const trustSignals = scrape?.trustSignals || {
-            hasSSL: validUrl.startsWith('https'),
-            hasWhatsApp,
-            hasPhoneNumber: /\+212|00212|0[5-7]/.test(bodyText),
-            hasReviews: /review|testimonial|avis|rating/i.test(bodyText),
-            hasMoneyBackGuarantee: /garantie|money back|refund/i.test(bodyText),
-            hasPaymentLogos: /visa|mastercard|paypal|cmi/i.test(html),
-            hasLegalPages: /mentions légales|privacy|conditions|terms/i.test(bodyText),
-            hasCOD: /cash on delivery|paiement à la livraison/i.test(bodyText),
-            trustScore: null,
         };
 
-        // ── Contacts ────────────────────────────────────────
-        const contacts = scrape?.contacts || (() => {
-            const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
-            const phones = [...new Set((bodyText.match(phoneRegex) || []).map(p => p.trim()))].slice(0, 5);
+        let scrape = null;
+        let html = '';
 
-            const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-            const emails = [...new Set((bodyText.match(emailRegex) || []).filter(e => !e.includes('example') && !e.includes('test')))].slice(0, 5);
+        try {
+            scrape = await scrapeStealth(validUrl);
 
-            return { phones, emails };
-        })();
+            const isBotBlocked = detectBotBlock(scrape);
 
-        // ── Sections ────────────────────────────────────────
-        const sections = scrape?.sections || {
-            hasHero: !!$('[class*="hero"],[id*="hero"],[class*="banner"]').length,
-            hasFeatures: !!$('[class*="feature"],[class*="service"],[id*="service"]').length,
-            hasPricing: !!$('[class*="pricing"],[class*="price"],[id*="pricing"]').length,
-            hasTestim: !!$('[class*="testimonial"],[class*="review"],[class*="avis"]').length,
-            hasFAQ: !!$('[class*="faq"],[id*="faq"],details').length,
-            hasCTA: !!$('[class*="cta"],[id*="cta"]').length,
-            hasFooter: !!$('footer').length,
-        };
-
-        // ── Tracking ────────────────────────────────────────
-        const trackingIntel = scrape?.trackingIntel || {
-            hasGoogleAnalytics: /gtag|google-analytics/i.test(html),
-            hasGTM: /googletagmanager/i.test(html),
-            hasFacebookPixel: /connect\.facebook\.net|fbq/i.test(html),
-            hasTikTokPixel: /analytics\.tiktok\.com|ttq/i.test(html),
-            hasHotjar: /hotjar/i.test(html),
-            hasClarity: /clarity\.ms|clarity/i.test(html),
-        };
-
-        // ── Performance ─────────────────────────────────────
-        const performanceIntel = scrape?.performanceIntel || {
-            hasCountdown: /countdown/i.test(html),
-            hasExitIntent: /exit.?intent/i.test(html),
-            hasLiveChat: /tawk|tidio|crisp|intercom/i.test(html),
-            hasSSL: validUrl.startsWith('https'),
-            hasCDN: /cloudflare|cdn\./i.test(html),
-            isMobileOptimized: !!$('meta[name="viewport"]').length,
-        };
-
-        // ── Chapter intel ───────────────────────────────────
-        const chapterIntel = { chapters: [] };
-        const sectionKeywords = {
-            HERO: ['hero', 'banner', 'main'],
-            FEATURES: ['feature', 'avantage', 'service', 'produit'],
-            TRUST: ['trust', 'reassurance', 'garantie', 'guarantee'],
-            SOCIAL_PROOF: ['review', 'testimonial', 'avis', 'client'],
-            PRICING: ['price', 'pricing', 'tarif', 'offre'],
-            FAQ: ['faq', 'question'],
-            CTA: ['action', 'contact', 'footer-cta'],
-            FOOTER: ['footer'],
-        };
-
-        Object.entries(sectionKeywords).forEach(([type, keywords]) => {
-            const selector = keywords
-                .map(k => `[id*="${k}"], [class*="${k}"], section[class*="${k}"]`)
-                .join(', ');
-            const found = $(selector).first();
-
-            if (found.length) {
-                chapterIntel.chapters.push({
-                    type,
-                    title: found.find('h1, h2, h3').first().text().trim() || type,
-                    textSample: found.text().trim().replace(/\s+/g, ' ').substring(0, 220),
-                    wordCount: found.text().trim().split(/\s+/).filter(Boolean).length,
-                });
+            if (!isBotBlocked) {
+                html = scrape.html;
+                console.log(
+                    `✅ scrapeSiteData Smart Layer OK — ${Date.now() - startTime}ms | Layer: ${scrape.fetchLayer} | CMS: ${scrape.techStack?.cms}`
+                );
+            } else {
+                const fallbackWords = scrape?.contentIntel?.wordCount ?? scrape?.seoIntel?.wordCount ?? 0;
+                console.warn(`⚠️ Smart layer blocked or empty (Words: ${fallbackWords}) — fallback HTTP activated`);
+                scrape = null;
             }
-        });
+        } catch (primaryErr) {
+            console.warn(`⚠️ Smart layer failed entirely: ${primaryErr.message} — fallback HTTP activated`);
+            scrape = null;
+        }
 
-        // ── Content intel ───────────────────────────────────
-        const currentHostname = (() => {
-            try { return new URL(validUrl).hostname; } catch { return ''; }
-        })();
+        if (!html) {
+            try {
+                const scrapeDoToken = process.env.SCRAPEDOTOKEN || process.env.SCRAPE_DO_TOKEN;
 
-        const internalLinks = [];
-        const externalLinks = [];
+                const { data } = await RetryManager.executeWithRetry(
+                    () => {
+                        if (scrapeDoToken) {
+                            console.log(`🛡️ [Layer 2] Using Scrape.do API (render=true) for ${validUrl}...`);
+                            const targetUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(validUrl)}&render=true`;
+                            return axios.get(targetUrl, { timeout: CONFIG.TIMEOUTMEDIUM || 35000 });
+                        }
 
-        $('a[href]').each((_, el) => {
-            const href = ($(el).attr('href') || '').trim();
-            if (!href) return;
+                        console.warn(`⚠️ [Layer 2] SCRAPEDOTOKEN missing. Basic Axios fallback...`);
+                        return axios.get(validUrl, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                                'Accept-Language': acceptLanguage
+                            },
+                            timeout: CONFIG.TIMEOUTSHORT || 15000
+                        });
+                    },
+                    { context: 'Layer2-Fallback' }
+                );
 
-            if (href.startsWith('/') || href.includes(currentHostname)) internalLinks.push(href);
-            else if (/^https?:\/\//i.test(href)) externalLinks.push(href);
-        });
+                html = typeof data === 'string'
+                    ? data
+                    : (data?.html || data?.body || JSON.stringify(data));
 
-        const contentIntel = {
-            paragraphCount: $('p').length,
-            listCount: $('ul, ol').length,
-            imageCount: $('img').length,
-            buttonCount: $('button').length,
-            internalLinks: [...new Set(internalLinks)].slice(0, 50),
-            externalLinks: [...new Set(externalLinks)].slice(0, 30),
-        };
+                console.log(`✅ scrapeSiteData Layer 2 OK — ${Date.now() - startTime}ms (${html.length} chars)`);
 
-        // ── SEO intel ───────────────────────────────────────
+                if (!html || html.length < 300) {
+                    throw new Error('Fallback HTML too short');
+                }
+
+                scrape = extractFromHtml(html, scrapeDoToken ? 'scrape.do' : 'axios');
+            } catch (axiosErr) {
+                console.error(`❌ Layer 2 fallback failed: ${axiosErr.message}`);
+                return {
+                    ...EMPTY_SCRAPE_RESULT(axiosErr.message, 'fallback'),
+                    success: false,
+                    url: validUrl,
+                    duration: Date.now() - startTime
+                };
+            }
+        }
+
+        const base = scrape || extractFromHtml(html, process.env.SCRAPEDOTOKEN || process.env.SCRAPE_DO_TOKEN ? 'scrape.do' : 'axios');
+
+        const $ = cheerio.load(html);
+        const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
+
         const stopWords = new Set([
             'le','la','les','de','des','du','un','une','et','ou','en','à','a','the','and','for','with','sur','dans','par','pour',
             'est','are','is','your','vous','nous','notre','vos','ses','ces','this','that','from','plus','moins'
@@ -10501,96 +12432,87 @@ async function scrapeSiteData(url, lang = 'fr') {
             .slice(0, 20)
             .map(([keyword, count]) => ({ keyword, count }));
 
-        const seoIntel = scrape?.seoIntel || {
-            titleLength: metaTitle.length,
-            descriptionLength: metaDescription.length,
-            keywordsMeta: metaKeywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 20),
-            headingCounts: { h1: h1Count, h2: h2Count, h3: h3Count },
-            topKeywords,
-            canonical,
-            robots,
-            ogTitle,
-            ogDescription,
-            ogImage,
-        };
-
-        // ── Brand ───────────────────────────────────────────
-        const brand = scrape?.brand || {
-            fullTextSample: bodyText.substring(0, 8000),
-            wordCount,
-        };
-
-        const scrapedData = {
+        const enriched = mergeScrapeData(base, {
             success: true,
             url: validUrl,
-            fetchLayer: scrape ? scrape.fetchLayer : (process.env.SCRAPE_DO_TOKEN ? 'scrape.do' : 'axios'),
             langUsed: lang,
             html,
+            duration: Date.now() - startTime,
+
+            seoIntel: {
+                ...(base.seoIntel || {}),
+                topKeywords: (base.seoIntel?.topKeywords && base.seoIntel.topKeywords.length)
+                    ? base.seoIntel.topKeywords
+                    : topKeywords
+            },
+
+            frameworkData: {
+                ...(base.frameworkData || {}),
+                technicalSummary: {
+                    ...(base.frameworkData?.technicalSummary || {}),
+                    topKeywordCount: topKeywords.length
+                }
+            }
+        });
+
+        const h1Main = enriched.copyIntel?.headlines?.h1?.[0] || '';
+        const bestPrice = enriched.priceIntel?.bestPrice ?? null;
+        const phonesCount = enriched.contacts?.phones?.length || 0;
+        const sectionsFound = Object.values(enriched.sections || {}).filter(Boolean).length;
+
+        const scrapedData = {
+            ...enriched,
 
             meta: {
-                title: metaTitle,
-                description: metaDescription,
-                keywords: metaKeywords,
-                language: metaLang,
-                canonical,
-                ogImage,
-                ogTitle,
-                ogDescription,
-                robots,
-                hasOG: scrape?.meta?.hasOG || !!$('meta[property="og:title"]').attr('content'),
+                ...enriched.meta,
+                language: enriched.meta?.lang || enriched.meta?.language || 'N/A'
             },
 
             structure: {
-                h1: { count: h1Count, text: h1Text },
-                h2Count,
-                h3Count,
+                h1: {
+                    count: enriched.seoIntel?.headingCounts?.h1 || 0,
+                    text: h1Main
+                },
+                h2Count: enriched.seoIntel?.headingCounts?.h2 || 0,
+                h3Count: enriched.seoIntel?.headingCounts?.h3 || 0,
                 headings: {
-                    h1: h1List.slice(0, 8),
-                    h2: h2List.slice(0, 12),
-                    h3: h3List.slice(0, 12),
+                    h1: enriched.copyIntel?.headlines?.h1 || [],
+                    h2: enriched.copyIntel?.headlines?.h2 || [],
+                    h3: enriched.copyIntel?.headlines?.h3 || []
                 }
             },
 
             content: {
-                wordCount,
-                hasWhatsApp,
+                wordCount: enriched.contentIntel?.wordCount || enriched.seoIntel?.wordCount || 0,
+                hasWhatsApp: enriched.techStack?.hasWhatsApp || false
             },
 
             schema: {
-                exists: schemaExists,
-                types: schemaTypes,
+                exists: (enriched.schemaData?.count || 0) > 0,
+                types: enriched.schemaData?.types || []
             },
 
-            visualDNA,
-            techStack,
-            copyIntel,
-            chapterIntel,
-            priceIntel,
-            trustSignals,
-            contacts,
-            sections,
-            seoIntel,
-            contentIntel,
-            trackingIntel,
-            performanceIntel,
-            brand,
-
-            redirectIntel: scrape?.redirectIntel || {
-                totalRedirects: 0,
-                isFunnelRedirect: false,
-                chain: [],
-            },
+            sectionsFound,
+            h1: h1Main || null,
+            price: bestPrice,
+            phones: phonesCount
         };
 
         cache.set(cacheKey, scrapedData);
 
-        console.log(`✅ scrapeSiteData DONE — ${Date.now() - startTime}ms | Layer: ${scrapedData.fetchLayer} | CMS: ${scrapedData.techStack.cms}`);
+        console.log(
+            `✅ scrapeSiteData DONE — ${Date.now() - startTime}ms | Layer: ${scrapedData.fetchLayer} | CMS: ${scrapedData.techStack?.cms}`
+        );
 
         return scrapedData;
-
     } catch (error) {
         console.error(`❌ scrapeSiteData CRASH: ${error.message}`);
-        return { success: false, url, error: error.message };
+        return {
+            ...EMPTY_SCRAPE_RESULT(error.message, 'crash'),
+            success: false,
+            url,
+            duration: Date.now() - startTime
+        };
     }
 }
 
