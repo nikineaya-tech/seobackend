@@ -4614,7 +4614,7 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
         });
     }
 });
-app.post('/api/competitors/decision-layer', async (req, res) => {
+app.post('/api/decision-layer', async (req, res) => {
   try {
     const {
       lang = 'fr',
