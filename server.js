@@ -7086,6 +7086,232 @@ const v12Basket   = detectedPrice > 0 ? detectedPrice : null;
 const v12StealPot = (v12Traffic && v12Basket)
     ? Math.max(0, Math.round((0.05 - v12CR) * v12Traffic * v12Basket))
     : null;
+    // ─────────────────────────────────────────────────────────────
+// PATCH V2-A — helpers audit frontend-ready
+// À placer juste avant: const finalResponse = {
+// ─────────────────────────────────────────────────────────────
+
+const normalizeConfidence = (value, fallback = 'MEDIUM') => {
+    const v = String(value || fallback).toUpperCase();
+    if (['HIGH', 'MEDIUM', 'LOW'].includes(v)) return v;
+    return fallback;
+};
+
+const inferSectionStatus = (type) => {
+    const found = sectionsDetailed.find(s => s.type === type);
+    if (!found) return 'missing';
+    const score = Number(found.score ?? 0);
+    if (score >= 70) return 'present';
+    return 'weak';
+};
+
+const buildSectionMap = () => {
+    const map = [
+        ['HERO', 'Hero'],
+        ['VALUE_PROP', 'Value Proposition'],
+        ['PROBLEM', 'Problem'],
+        ['SOLUTION', 'Solution'],
+        ['BENEFITS', 'Benefits'],
+        ['SOCIAL_PROOF', 'Social Proof'],
+        ['TRUST', 'Trust'],
+        ['PRICING', 'Pricing'],
+        ['FAQ', 'FAQ'],
+        ['OBJECTIONS', 'Objections'],
+        ['CTA', 'CTA'],
+        ['FORM', 'Form'],
+        ['CHECKOUT', 'Checkout'],
+        ['FOOTER', 'Footer']
+    ];
+
+    return map.map(([type, label]) => {
+        const found = sectionsDetailed.find(s => s.type === type);
+        return {
+            type,
+            label,
+            status: inferSectionStatus(type),
+            present: !!found,
+            score: found?.score ?? null
+        };
+    });
+};
+
+const buildEvidence = () => ({
+    h1: h1Main || null,
+    h2s: h2List || [],
+    h3s: h3List || [],
+    ctas: ctaList || [],
+    phones: phones || [],
+    emails: emails || [],
+    detectedPrice: detectedPrice || null,
+    currency: currency || null,
+    colors: cleanColors || [],
+    schemaTypes: schemaTypes || [],
+    wordCount: wordCount || 0,
+    hasSSL: !!hasSSL,
+    hasWhatsApp: !!hasWhatsApp,
+    socialProofsCount: socialProofs.length || 0,
+    sectionsDetected: sectionsDetailed.map(s => s.type),
+    missingCriticalSections: missingCriticalSections || [],
+    localScore: localScore || 0,
+    ctaCoverage: ctaCoverage || 0,
+    imagesCount: imagesCount || 0
+});
+
+const buildAuditIssues = () => {
+    const issues = [];
+
+    if (!heroSection) {
+        issues.push({
+            key: 'missing_hero',
+            title: isEn ? 'Hero section missing or not detected' : isAr ? 'قسم Hero مفقود أو غير مكتشف' : 'Section Hero absente ou non détectée',
+            severity: 'HIGH',
+            category: 'structure',
+            observed: false,
+            evidence: 'HERO not found in sectionsDetailed',
+            impact: isEn ? 'Weak first impression and poor attention capture.' : isAr ? 'انطباع أول ضعيف والتقاط انتباه منخفض.' : 'Première impression faible et captation d’attention réduite.',
+            recommendedFix: isEn ? 'Add a clear above-the-fold hero with value proposition and CTA.' : isAr ? 'أضف Hero واضح فوق خط الطي مع عرض قيمة وCTA.' : 'Ajouter un hero clair au-dessus de la ligne de flottaison avec proposition de valeur et CTA.',
+            confidence: 'HIGH'
+        });
+    }
+
+    if (socialProofs.length === 0) {
+        issues.push({
+            key: 'missing_social_proof',
+            title: isEn ? 'No social proof detected' : isAr ? 'لا توجد أدلة اجتماعية مكتشفة' : 'Aucune preuve sociale détectée',
+            severity: 'HIGH',
+            category: 'trust',
+            observed: false,
+            evidence: 'SOCIAL_PROOF missing from detected sections',
+            impact: isEn ? 'Trust and purchase confidence remain low.' : isAr ? 'الثقة والاطمئنان للشراء يظلان منخفضين.' : 'La confiance et le passage à l’achat restent faibles.',
+            recommendedFix: isEn ? 'Add testimonials, ratings, client logos, or proof elements.' : isAr ? 'أضف شهادات وتقييمات وشعارات عملاء أو عناصر إثبات.' : 'Ajouter témoignages, avis, logos clients ou éléments de preuve.',
+            confidence: 'HIGH'
+        });
+    }
+
+    if (!pricingSection && !detectedPrice) {
+        issues.push({
+            key: 'missing_pricing',
+            title: isEn ? 'Pricing is unclear or absent' : isAr ? 'التسعير غير واضح أو غائب' : 'Tarification absente ou peu claire',
+            severity: 'HIGH',
+            category: 'offer',
+            observed: false,
+            evidence: 'No PRICING section and no detected price',
+            impact: isEn ? 'Visitors cannot evaluate the offer quickly.' : isAr ? 'الزائر لا يستطيع تقييم العرض بسرعة.' : 'Le visiteur ne peut pas évaluer l’offre rapidement.',
+            recommendedFix: isEn ? 'Show pricing, offer framing, or a clearer pricing path.' : isAr ? 'اعرض التسعير أو هيكلة العرض أو مسارًا أوضح للسعر.' : 'Afficher le prix, le cadrage de l’offre ou un chemin tarifaire plus clair.',
+            confidence: 'HIGH'
+        });
+    }
+
+    if (ctaList.length === 0) {
+        issues.push({
+            key: 'missing_cta',
+            title: isEn ? 'No clear CTA detected' : isAr ? 'لم يتم اكتشاف CTA واضح' : 'Aucun CTA clair détecté',
+            severity: 'HIGH',
+            category: 'conversion',
+            observed: false,
+            evidence: 'ctaList is empty',
+            impact: isEn ? 'Users lack a clear next step.' : isAr ? 'لا يملك المستخدم خطوة تالية واضحة.' : 'L’utilisateur n’a pas d’étape suivante claire.',
+            recommendedFix: isEn ? 'Add a primary CTA and repeat it across key sections.' : isAr ? 'أضف CTA رئيسيًا وكرره داخل الأقسام الأساسية.' : 'Ajouter un CTA principal et le répéter dans les sections clés.',
+            confidence: 'HIGH'
+        });
+    }
+
+    if (!faqSection && !hasSection('OBJECTIONS')) {
+        issues.push({
+            key: 'missing_objection_handling',
+            title: isEn ? 'Objections are not handled' : isAr ? 'لا توجد معالجة للاعتراضات' : 'Les objections ne sont pas traitées',
+            severity: 'MEDIUM',
+            category: 'copy',
+            observed: false,
+            evidence: 'FAQ and OBJECTIONS sections missing',
+            impact: isEn ? 'Hesitant visitors remain unconvinced.' : isAr ? 'الزوار المترددون يبقون غير مقتنعين.' : 'Les visiteurs hésitants restent non convaincus.',
+            recommendedFix: isEn ? 'Add FAQ or objection-handling copy near the CTA.' : isAr ? 'أضف FAQ أو نصًا لمعالجة الاعتراضات قرب CTA.' : 'Ajouter une FAQ ou du copy de traitement des objections près du CTA.',
+            confidence: 'HIGH'
+        });
+    }
+
+    if (!hasSSL) {
+        issues.push({
+            key: 'ssl_missing',
+            title: isEn ? 'SSL not detected' : isAr ? 'لم يتم اكتشاف SSL' : 'SSL non détecté',
+            severity: 'HIGH',
+            category: 'technical',
+            observed: false,
+            evidence: 'hasSSL=false',
+            impact: isEn ? 'Trust and browser confidence drop.' : isAr ? 'تنخفض الثقة وثقة المتصفح.' : 'La confiance et la crédibilité navigateur chutent.',
+            recommendedFix: isEn ? 'Enable HTTPS and secure all key pages.' : isAr ? 'فعّل HTTPS وأمّن كل الصفحات الأساسية.' : 'Activer HTTPS et sécuriser toutes les pages clés.',
+            confidence: 'HIGH'
+        });
+    }
+
+    if (issues.length === 0) {
+        issues.push({
+            key: 'general_optimization',
+            title: isEn ? 'Optimization opportunities detected' : isAr ? 'تم اكتشاف فرص تحسين' : 'Opportunités d’optimisation détectées',
+            severity: 'MEDIUM',
+            category: 'general',
+            observed: true,
+            evidence: `localScore=${localScore}, sections=${sectionsDetailed.length}, ctas=${ctaList.length}`,
+            impact: isEn ? 'The page can still improve clarity, trust, and conversion flow.' : isAr ? 'لا تزال الصفحة قابلة للتحسين في الوضوح والثقة ومسار التحويل.' : 'La page peut encore améliorer clarté, confiance et parcours de conversion.',
+            recommendedFix: isEn ? 'Review quick wins and prioritize highest-impact fixes.' : isAr ? 'راجع التحسينات السريعة وأعط الأولوية للأعلى أثرًا.' : 'Revoir les quick wins et prioriser les correctifs à plus fort impact.',
+            confidence: 'MEDIUM'
+        });
+    }
+
+    return issues.slice(0, 8).map((issue, i) => ({
+        id: `issue_${i + 1}`,
+        ...issue,
+        confidence: normalizeConfidence(issue.confidence)
+    }));
+};
+
+const buildQuickWinsAudit = () => {
+    const source = Array.isArray(r3Safe.quickWins) ? r3Safe.quickWins : [];
+    return source.slice(0, 5).map((item, index) => ({
+        id: `qw_${index + 1}`,
+        priority: item.priority || index + 1,
+        title: item.action || item.title || item.label || `Quick Win ${index + 1}`,
+        impact: item.impact || 'MEDIUM',
+        effort: item.effort || 'MEDIUM',
+        expectedGain: item.expectedGain || null,
+        howTo: item.howTo || item.fix || null,
+        confidence: 'MEDIUM'
+    }));
+};
+
+const auditSummary = {
+    title: isEn ? 'Website & Funnel Audit' : isAr ? 'تدقيق الموقع والفَنَل' : 'Website & Funnel Audit',
+    verdict: r4Safe.globalScoring?.verdict || null,
+    overallScore: r4Safe.globalScoring?.overall || localScore || 0,
+    grade: r4Safe.globalScoring?.grade || null,
+    confidence: detectedPrice || sectionsDetailed.length > 0 ? 'MEDIUM' : 'LOW',
+    topStrengths: [
+        hasSSL ? (isEn ? 'SSL detected' : isAr ? 'تم اكتشاف SSL' : 'SSL détecté') : null,
+        ctaList.length > 0 ? (isEn ? 'CTA detected' : isAr ? 'تم اكتشاف CTA' : 'CTA détecté') : null,
+        socialProofs.length > 0 ? (isEn ? 'Social proof detected' : isAr ? 'تم اكتشاف دليل اجتماعي' : 'Preuve sociale détectée') : null,
+        pricingSection || detectedPrice ? (isEn ? 'Pricing signal detected' : isAr ? 'تم اكتشاف إشارة تسعير' : 'Signal tarifaire détecté') : null
+    ].filter(Boolean).slice(0, 3),
+    topWeaknesses: [
+        !heroSection ? (isEn ? 'Weak or missing hero' : isAr ? 'Hero ضعيف أو مفقود' : 'Hero faible ou absent') : null,
+        socialProofs.length === 0 ? (isEn ? 'No social proof' : isAr ? 'لا يوجد دليل اجتماعي' : 'Absence de preuve sociale') : null,
+        !pricingSection && !detectedPrice ? (isEn ? 'Pricing unclear' : isAr ? 'التسعير غير واضح' : 'Tarification peu claire') : null,
+        ctaList.length === 0 ? (isEn ? 'CTA unclear' : isAr ? 'CTA غير واضح' : 'CTA peu clair') : null
+    ].filter(Boolean).slice(0, 3)
+};
+
+const auditScorecard = {
+    structure: r1Safe.pageArchitecture?.structureScore || localScore || 0,
+    clarity: Math.round(((aidaData.attention?.score || 0) + (aidaData.interest?.score || 0)) / 2),
+    trust: Math.round(((socialProofs.length > 0 ? 75 : 35) + (hasSSL ? 80 : 20) + (!!trustSection ? 70 : 30)) / 3),
+    offer: pricingSection || detectedPrice ? 70 : 35,
+    cta: ctaList.length > 0 ? Math.min(100, 40 + ctaList.length * 10) : 20,
+    friction: Math.max(0, 100 - localScore)
+};
+
+const auditSectionMap = buildSectionMap();
+const auditEvidence = buildEvidence();
+const auditIssues = buildAuditIssues();
+const auditQuickWins = buildQuickWinsAudit();
 // ─────────────────────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════
 // 📦 ASSEMBLAGE RÉPONSE FINALE GOD TIER
@@ -7109,7 +7335,8 @@ const finalResponse = {
         agent4: r4Safe.chainOfThought || {},
     },
 
-   financialIntel: {                                                  // ← BUG-01 FIX
+      financialIntel: {
+    observed: false,
     estimatedMonthlyTraffic:  v12Traffic,
     trafficSource:            v12Traffic
         ? (isAr ? 'تقدير ذكاء اصطناعي V12' : isEn ? 'AI Estimation V12' : 'Estimation IA V12')
@@ -7120,7 +7347,7 @@ const finalResponse = {
     estimatedMRR:             r3Safe?.financialProjection?.projectedMonthlyRevenue || null,
     monthlyStealPotential:    v12StealPot,
     reasoning:                r3Safe?.financialProjection?.roiVerdict || T.insufficientData,
-    confidence:               detectedPrice > 0 ? 'MEDIUM' : 'LOW',
+    confidence:               normalizeConfidence(detectedPrice > 0 ? 'MEDIUM' : 'LOW'),
 },
     projectIdentity:  r1Safe.projectIdentity  || null,
     webCharte:        r1Safe.webCharte        || null,
@@ -7139,11 +7366,17 @@ const finalResponse = {
 
     neuromarketing: r4Safe.neuromarketing || null,
     globalScoring:  r4Safe.globalScoring,
+        auditSummary,
+    auditScorecard,
+    auditSectionMap,
+    auditIssues,
+    auditQuickWins,
+    auditEvidence,
 
     aiRewritePrompt:      magicPrompt,
     magicPromptAvailable: true,
 
-    rawIntel: {
+ rawIntel: {
     h1: h1Main,
     h2s: h2List,
     h3s: h3List,
@@ -7172,6 +7405,23 @@ const finalResponse = {
     quickLocalScore,
     imagesCount,
     ctaCoverage,
+
+    evidence: {
+        h1: h1Main,
+        ctas: ctaList,
+        detectedPrice,
+        currency,
+        phones,
+        emails,
+        schemaTypes,
+        hasSSL,
+        hasWhatsApp,
+        socialProofsCount: socialProofs.length,
+        sectionsDetected: sectionsDetailed.map(s => s.type),
+        sectionsDetailed,
+        missingCriticalSections,
+        localScore
+    },
 },
 
    financialAudit: {
@@ -7184,7 +7434,21 @@ const finalResponse = {
     annualOpportunity:     v12StealPot ? v12StealPot * 12 : null,
     revenueOpportunity:    T.potentialRevenueIncrease,
 },
-
+    speculative: {
+        financialModeling: {
+            estimatedMonthlyTraffic: v12Traffic,
+            estimatedConversionRate: r2Safe?.funnelMapping?.estimatedConversionRate || null,
+            estimatedMRR: r3Safe?.financialProjection?.projectedMonthlyRevenue || null,
+            monthlyStealPotential: v12StealPot,
+            annualOpportunity: v12StealPot ? v12StealPot * 12 : null,
+            confidence: detectedPrice > 0 ? 'MEDIUM' : 'LOW',
+            note: isEn
+                ? 'These figures are model-based estimates and should not be treated as observed data.'
+                : isAr
+                ? 'هذه الأرقام تقديرات نموذجية ولا يجب اعتبارها بيانات مرصودة.'
+                : 'Ces chiffres sont des estimations de modèle et ne doivent pas être considérés comme des données observées.'
+        }
+    },
     meta: {
         version:  'V12-GOD-TIER',
         agents:   5,
