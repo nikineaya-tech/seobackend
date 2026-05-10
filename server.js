@@ -6119,7 +6119,7 @@ const langInstr = isAr
                 fetchLayer:       'failed',
                 html:             '',
                 visualDNA:        { dominantColors: [] },
-                priceIntel:       { bestPrice: 0, currency: 'MAD', all: [], detected: false, struckPrices: [], discountRate: null },
+               priceIntel: { detected: false, currency: 'MAD', primaryPrice: null, bestPrice: null, minPrice: null, maxPrice: null, priceRange: null, pricingModel: 'unknown', confidence: 'LOW', primarySource: null, primaryKind: null, primaryScore: null, all: [], prices: [], schemaPrices: [], textPrices: [], domPrices: [], planPrices: [], struckPrices: [], discountRate: null, priceSourcesSummary: { schema: 0, text: 0, dom: 0 } },
                 copyIntel:        { headlines: { h1: [], h2: [], h3: [] }, realCTAs: [], pageSections: [], heroText: '', testimonials: [], guarantees: [], faq: [], bulletBenefits: [], allButtons: [] },
                 brand:            { fullTextSample: '', wordCount: 0, hasSSL: false },
                 trustSignals:     { hasSSL: false, hasWhatsApp: false, hasPhoneNumber: false },
@@ -6135,7 +6135,7 @@ const langInstr = isAr
         // 4. EXTRACTION RÉELLE COMPLÈTE
         // ══════════════════════════════════════════════════════════════
         const vis        = scrape.visualDNA  || {};
-        const pri        = scrape.priceIntel || { bestPrice: 0, currency: 'MAD' };
+        const pri = scrape.priceIntel || EMPTYSCRAPERESULT.priceIntel;
         const copy       = scrape.copyIntel  || {};
         const brand      = scrape.brand      || {};
 
@@ -6528,7 +6528,7 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
             return 'NONDETECTE';
         })();
 
-        const detectedPrice = (pri?.detected && pri.bestPrice > 0) ? pri.bestPrice : null;
+      const detectedPrice = pri?.detected ? ((pri.primaryPrice ?? pri.bestPrice ?? 0) > 0 ? (pri.primaryPrice ?? pri.bestPrice) : null) : null;
         const currency = (pri?.currency && pri.currency !== 'UNKNOWN') ? pri.currency : null;
 
         const quickLocalScore = {
@@ -12569,7 +12569,7 @@ async function scrapeStealth(validUrl) {
                 bestPrice,
                 currency,
                 all: normalizedPrices.map(p => p.value),
-                detected: bestPrice !== null,
+              detected: (primaryPrice ?? bestPrice ?? 0) > 0,
                 struckPrices: [],
                 discountRate: null,
             },
@@ -12914,7 +12914,7 @@ const sections = {
                 bestPrice: extracted.pricing.bestPrice,
                 currency: extracted.pricing.currency,
                 all: extracted.pricing.allPrices,
-                detected: extracted.pricing.bestPrice !== null,
+                detected: (extracted.pricing.primaryPrice ?? extracted.pricing.bestPrice ?? 0) > 0,
                 struckPrices: [],
                 discountRate: null,
             },
