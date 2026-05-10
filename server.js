@@ -1730,6 +1730,65 @@ async function scrapeStealth(validUrl) {
             const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
             const normText = (v) => (v || '').replace(/\s+/g, ' ').trim();
 
+            const normalizePriceValue = (raw) => {
+                if (raw == null) return null;
+                let s = String(raw)
+                    .replace(/\u00A0/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+
+                if (!s) return null;
+
+                s = s.replace(/[^\d.,']/g, '');
+                if (!s || !/\d/.test(s)) return null;
+
+                const commaCount = (s.match(/,/g) || []).length;
+                const dotCount = (s.match(/\./g) || []).length;
+
+                s = s.replace(/'/g, '');
+
+                if (commaCount > 0 && dotCount > 0) {
+                    const lastComma = s.lastIndexOf(',');
+                    const lastDot = s.lastIndexOf('.');
+                    if (lastComma > lastDot) {
+                        s = s.replace(/\./g, '');
+                        s = s.replace(',', '.');
+                    } else {
+                        s = s.replace(/,/g, '');
+                    }
+                } else if (commaCount > 0) {
+                    const parts = s.split(',');
+                    const last = parts[parts.length - 1];
+                    if (parts.length === 2 && last.length <= 2) {
+                        s = parts[0].replace(/[^\d]/g, '') + '.' + last;
+                    } else {
+                        s = s.replace(/,/g, '');
+                    }
+                } else if (dotCount > 0) {
+                    const parts = s.split('.');
+                    const last = parts[parts.length - 1];
+                    if (parts.length === 2 && last.length <= 2) {
+                        s = parts[0].replace(/[^\d]/g, '') + '.' + last;
+                    } else {
+                        s = s.replace(/\./g, '');
+                    }
+                }
+
+                const n = parseFloat(s);
+                if (!Number.isFinite(n) || n <= 0) return null;
+                if (n > 999999999) return null;
+                return n;
+            };
+
+            const detectCurrency = (raw = '') => {
+                const str = String(raw || '').toUpperCase();
+                if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
+                if (/\bEUR\b|€/.test(str)) return 'EUR';
+                if (/\bUSD\b|\$/.test(str)) return 'USD';
+                if (/\bGBP\b|£/.test(str)) return 'GBP';
+                return 'MAD';
+            };
+
             const bodyText = normText(document.body?.innerText || '');
             const viewport = !!document.querySelector('meta[name="viewport"]');
 
@@ -1854,24 +1913,32 @@ async function scrapeStealth(validUrl) {
                     .filter(e => !/example|test/i.test(e))
             ).slice(0, 5);
 
-            const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|€|\$|£)/gi;
-            const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 15);
+            const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|DHS|€|\$|£|EUR|USD|GBP)/gi;
+            const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 25);
 
             const normalizedPrices = rawPrices
-                .map(m => ({
-                    raw: m[0],
-                    value: parseFloat(
-                        (m[1] || '')
-                            .replace(/\s/g, '')
-                            .replace(/,/g, '.')
-                            .replace(/'/g, '')
-                    ),
-                    currency: (m[2] || 'MAD').toUpperCase()
-                }))
-                .filter(p => !isNaN(p.value) && p.value > 0);
+                .map(m => {
+                    const raw = m[0];
+                    const value = normalizePriceValue(m[1] || raw);
+                    const currency = detectCurrency(m[2] || raw);
+                    return value ? {
+                        raw,
+                        value,
+                        currency,
+                        source: 'text',
+                        kind: 'current',
+                        confidence: 0.66
+                    } : null;
+                })
+                .filter(Boolean);
 
-            const bestPrice = normalizedPrices.length ? normalizedPrices[0].value : null;
+            const allValues = normalizedPrices.map(p => p.value).sort((a, b) => a - b);
+            const primaryPrice = allValues.length ? allValues[0] : null;
+            const bestPrice = primaryPrice;
+            const minPrice = allValues.length ? allValues[0] : null;
+            const maxPrice = allValues.length ? allValues[allValues.length - 1] : null;
             const currency = normalizedPrices.length ? normalizedPrices[0].currency : 'MAD';
+            const priceRange = minPrice !== null && maxPrice !== null && minPrice !== maxPrice ? [minPrice, maxPrice] : null;
 
             const schemaNodes = [...document.querySelectorAll('script[type="application/ld+json"]')]
                 .map(s => {
@@ -2028,9 +2095,31 @@ async function scrapeStealth(validUrl) {
                 copy: { h1List, h2List, h3List, ctaList },
                 contacts: { phones, emails },
                 pricing: {
-                    bestPrice,
+                    detected: primaryPrice !== null,
                     currency,
-                    allPrices: normalizedPrices.map(p => p.value)
+                    primaryPrice,
+                    bestPrice,
+                    minPrice,
+                    maxPrice,
+                    priceRange,
+                    pricingModel: priceRange ? 'range' : (primaryPrice !== null ? 'one-time' : 'unknown'),
+                    confidence: primaryPrice !== null ? 'MEDIUM' : 'LOW',
+                    primarySource: primaryPrice !== null ? 'text' : null,
+                    primaryKind: primaryPrice !== null ? 'current' : null,
+                    primaryScore: primaryPrice !== null ? 66 : null,
+                    allPrices: allValues,
+                    prices: normalizedPrices,
+                    schemaPrices: [],
+                    textPrices: allValues,
+                    domPrices: [],
+                    planPrices: [],
+                    struckPrices: [],
+                    discountRate: null,
+                    priceSourcesSummary: {
+                        schema: 0,
+                        text: normalizedPrices.length,
+                        dom: 0
+                    }
                 },
                 socialProofs,
                 schemaTypes,
@@ -2133,12 +2222,28 @@ async function scrapeStealth(validUrl) {
             },
 
             priceIntel: {
-                bestPrice: extracted.pricing.bestPrice,
+                ...EMPTY_SCRAPE_RESULT().priceIntel,
+                detected: extracted.pricing.detected,
                 currency: extracted.pricing.currency,
+                primaryPrice: extracted.pricing.primaryPrice,
+                bestPrice: extracted.pricing.bestPrice,
+                minPrice: extracted.pricing.minPrice,
+                maxPrice: extracted.pricing.maxPrice,
+                priceRange: extracted.pricing.priceRange,
+                pricingModel: extracted.pricing.pricingModel,
+                confidence: extracted.pricing.confidence,
+                primarySource: extracted.pricing.primarySource,
+                primaryKind: extracted.pricing.primaryKind,
+                primaryScore: extracted.pricing.primaryScore,
                 all: extracted.pricing.allPrices,
-                detected: extracted.pricing.bestPrice !== null,
-                struckPrices: [],
-                discountRate: null
+                prices: extracted.pricing.prices,
+                schemaPrices: extracted.pricing.schemaPrices,
+                textPrices: extracted.pricing.textPrices,
+                domPrices: extracted.pricing.domPrices,
+                planPrices: extracted.pricing.planPrices,
+                struckPrices: extracted.pricing.struckPrices,
+                discountRate: extracted.pricing.discountRate,
+                priceSourcesSummary: extracted.pricing.priceSourcesSummary
             },
 
             trustSignals: {
@@ -2389,7 +2494,7 @@ async function scrapeStealth(validUrl) {
         };
 
         console.log(
-            `✅ scrapeStealth OK — ${result.duration}ms | Layer: ${result.fetchLayer} | Colors: ${extracted.dominantColors.join(',')} | CMS: ${extracted.tech.cms}`
+            `✅ scrapeStealth OK — ${result.duration}ms | Layer: ${result.fetchLayer} | Colors: ${extracted.dominantColors.join(',')} | CMS: ${extracted.tech.cms} | Prix: ${result.priceIntel.primaryPrice || 'N/A'} ${result.priceIntel.currency || ''}`
         );
 
         return result;
@@ -9892,12 +9997,35 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
         },
 
         priceIntel: {
-            bestPrice: null,
-            currency: 'MAD',
-            all: [],
             detected: false,
+            currency: 'MAD',
+            primaryPrice: null,
+            bestPrice: null,
+            minPrice: null,
+            maxPrice: null,
+            priceRange: null,
+            pricingModel: 'unknown',
+            confidence: 'LOW',
+
+            primarySource: null,
+            primaryKind: null,
+            primaryScore: null,
+
+            all: [],
+            prices: [],
+            schemaPrices: [],
+            textPrices: [],
+            domPrices: [],
+            planPrices: [],
+
             struckPrices: [],
-            discountRate: null
+            discountRate: null,
+
+            priceSourcesSummary: {
+                schema: 0,
+                text: 0,
+                dom: 0
+            }
         },
 
         trustSignals: {
@@ -10189,6 +10317,445 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             trustSignals: {},
             techStack: {},
             technicalSummary: {}
+        }
+    };
+}
+
+function normalizePriceValue(raw) {
+    if (raw == null) return null;
+    let s = String(raw)
+        .replace(/\u00A0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    if (!s) return null;
+
+    s = s.replace(/[^\d.,\s]/g, '').trim();
+    if (!s) return null;
+
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+
+    if (hasComma && hasDot) {
+        if (s.lastIndexOf(',') > s.lastIndexOf('.')) {
+            s = s.replace(/\./g, '').replace(',', '.');
+        } else {
+            s = s.replace(/,/g, '');
+        }
+    } else if (hasComma) {
+        const parts = s.split(',');
+        s = parts.length > 2 ? s.replace(/,/g, '') : s.replace(',', '.');
+    } else if (hasDot) {
+        const parts = s.split('.');
+        if (parts.length > 2) s = s.replace(/\./g, '');
+    }
+
+    s = s.replace(/\s/g, '');
+    const n = parseFloat(s);
+    return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function detectCurrency(raw = '', html = '') {
+    const str = `${raw} ${html}`.toUpperCase();
+    if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|د\.?\s?م|درهم/.test(str)) return 'MAD';
+    if (/\bEUR\b|€/.test(str)) return 'EUR';
+    if (/\bUSD\b|\$/.test(str)) return 'USD';
+    if (/\bGBP\b|£/.test(str)) return 'GBP';
+    return null;
+}
+
+function pushPrice(bucket, item) {
+    if (!Array.isArray(bucket) || !item) return;
+    const value = normalizePriceValue(item.value ?? item.raw);
+    if (!value) return;
+    bucket.push({
+        value,
+        currency: item.currency || null,
+        raw: item.raw ? String(item.raw).trim() : String(value),
+        source: item.source || 'unknown',
+        kind: item.kind || 'current',
+        context: item.context || '',
+        confidence: Number(item.confidence ?? 0.5)
+    });
+}
+
+function extractSchemaPricesFromNode(node, out = []) {
+    if (!node || typeof node !== 'object') return out;
+
+    if (Array.isArray(node)) {
+        node.forEach(n => extractSchemaPricesFromNode(n, out));
+        return out;
+    }
+
+    const type = Array.isArray(node['@type']) ? node['@type'][0] : node['@type'] || node.type || '';
+    const priceCurrency = node.priceCurrency || node.currency || null;
+
+    pushPrice(out, {
+        value: node.price,
+        currency: priceCurrency,
+        raw: node.price,
+        source: 'schema',
+        kind: 'current',
+        context: type || node.name || '',
+        confidence: 0.95
+    });
+
+    pushPrice(out, {
+        value: node.lowPrice,
+        currency: priceCurrency,
+        raw: node.lowPrice,
+        source: 'schema',
+        kind: 'range-min',
+        context: type || 'AggregateOffer',
+        confidence: 0.9
+    });
+
+    pushPrice(out, {
+        value: node.highPrice,
+        currency: priceCurrency,
+        raw: node.highPrice,
+        source: 'schema',
+        kind: 'range-max',
+        context: type || 'AggregateOffer',
+        confidence: 0.9
+    });
+
+    if (node.priceSpecification) extractSchemaPricesFromNode(node.priceSpecification, out);
+    if (node.offers) extractSchemaPricesFromNode(node.offers, out);
+    if (node.offers?.priceSpecification) extractSchemaPricesFromNode(node.offers.priceSpecification, out);
+
+    Object.values(node).forEach(v => {
+        if (v && typeof v === 'object') extractSchemaPricesFromNode(v, out);
+    });
+
+    return out;
+}
+
+function extractTextPrices(bodyText = '', html = '') {
+    const prices = [];
+    const text = String(bodyText || '').replace(/\u00A0/g, ' ');
+
+    const patterns = [
+        { regex: /(?:à partir de|from|starting at|dès)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi, kind: 'from', confidence: 0.82 },
+        { regex: /(?:au lieu de|instead of|was|avant)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi, kind: 'old', confidence: 0.78 },
+        { regex: /([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi, kind: 'current', confidence: 0.65 },
+        { regex: /(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*([0-9][0-9\s.,]*)/gi, kind: 'current', confidence: 0.65 }
+    ];
+
+    for (const { regex, kind, confidence } of patterns) {
+        let m;
+        while ((m = regex.exec(text)) !== null) {
+            const raw = m[0];
+            const numeric = normalizePriceValue(m[1]) || normalizePriceValue(m[2]);
+            const currency = detectCurrency(raw, html);
+            if (!numeric) continue;
+            pushPrice(prices, {
+                value: numeric,
+                currency,
+                raw,
+                source: 'text',
+                kind,
+                context: raw.toLowerCase(),
+                confidence
+            });
+        }
+    }
+
+    const rangeRegex = /([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*(?:-|à|to)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)?/gi;
+    let rangeMatch;
+    while ((rangeMatch = rangeRegex.exec(text)) !== null) {
+        const raw = rangeMatch[0];
+        const min = normalizePriceValue(rangeMatch[1]);
+        const max = normalizePriceValue(rangeMatch[3]);
+        const currency = detectCurrency(raw, html);
+        if (min) {
+            pushPrice(prices, {
+                value: min,
+                currency,
+                raw,
+                source: 'text',
+                kind: 'range-min',
+                context: 'range',
+                confidence: 0.8
+            });
+        }
+        if (max) {
+            pushPrice(prices, {
+                value: max,
+                currency,
+                raw,
+                source: 'text',
+                kind: 'range-max',
+                context: 'range',
+                confidence: 0.8
+            });
+        }
+    }
+
+    return prices;
+}
+
+function extractDomPrices($, html = '') {
+    const prices = [];
+    if (!$ || typeof $.root !== 'function') return prices;
+
+    const selectors = [
+        '[class*="price"]',
+        '[id*="price"]',
+        '[class*="pricing"]',
+        '[id*="pricing"]',
+        '[class*="plan"]',
+        '[class*="tarif"]',
+        '[class*="offer"]',
+        '[data-price]',
+        '[itemprop="price"]',
+        '.woocommerce-Price-amount',
+        '.price',
+        '.product-price',
+        '.sale-price',
+        '.regular-price',
+        '.compare-at-price'
+    ];
+
+    const seenRaw = new Set();
+    $(selectors.join(',')).each((_, el) => {
+        const node = $(el);
+        const text = node.text().replace(/\s+/g, ' ').trim();
+        const attrs = `${node.attr('data-price') || ''} ${node.attr('content') || ''} ${node.attr('aria-label') || ''}`.trim();
+        const raw = `${text} ${attrs}`.trim();
+        if (!raw || raw.length > 300 || seenRaw.has(raw)) return;
+        seenRaw.add(raw);
+
+        const matches = raw.match(/([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)|(?:MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*([0-9][0-9\s.,]*)/gi) || [];
+        if (!matches.length) return;
+
+        const lowered = raw.toLowerCase();
+        let kind = 'current';
+        if (/old|regular|compare|barr|avant|instead of|au lieu/.test(lowered)) kind = 'old';
+        else if (/from|à partir|starting at|dès/.test(lowered)) kind = 'from';
+        else if (/plan|monthly|annuel|mensuel|subscription|abonnement/.test(lowered)) kind = 'plan';
+
+        matches.forEach(match => {
+            const numeric = normalizePriceValue(match);
+            const currency = detectCurrency(match, html);
+            pushPrice(prices, {
+                value: numeric,
+                currency,
+                raw: match,
+                source: 'dom',
+                kind,
+                context: raw.substring(0, 180),
+                confidence: 0.72
+            });
+        });
+    });
+
+    return prices;
+}
+
+function finalizePriceIntel(allPrices = [], html = '') {
+    const uniq = [];
+    const seen = new Set();
+
+    for (const p of allPrices) {
+        if (!p || !p.value || p.value <= 0) continue;
+        const key = `${p.value}|${p.currency || ''}|${p.kind || ''}|${p.source || ''}|${(p.raw || '').slice(0, 80)}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        uniq.push({
+            value: p.value,
+            currency: p.currency || null,
+            raw: p.raw || null,
+            source: p.source || 'unknown',
+            kind: p.kind || 'current',
+            context: p.context || '',
+            confidence: Number(p.confidence ?? 0.5)
+        });
+    }
+
+    const currentKinds = new Set(['current', 'from', 'plan', 'range-min']);
+    const currentCandidates = uniq.filter(p => currentKinds.has(p.kind));
+    const oldCandidates = uniq.filter(p => p.kind === 'old');
+    const rangeMaxCandidates = uniq.filter(p => p.kind === 'range-max');
+
+    const sortedCurrents = [...currentCandidates].sort((a, b) => a.value - b.value);
+    const primary = [...currentCandidates].sort((a, b) => {
+        if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+        return a.value - b.value;
+    })[0] || null;
+
+    const primaryCurrency =
+        primary?.currency ||
+        uniq.find(p => p.currency)?.currency ||
+        detectCurrency('', html) ||
+        'MAD';
+
+    const minPrice = sortedCurrents[0]?.value ?? null;
+    const maxCurrent = sortedCurrents[sortedCurrents.length - 1]?.value ?? null;
+    const maxRange = rangeMaxCandidates.sort((a, b) => b.value - a.value)[0]?.value ?? null;
+    const maxPrice = maxRange || maxCurrent || null;
+
+    const struckPrices = oldCandidates.map(p => p.value).sort((a, b) => a - b);
+    const bestOld = struckPrices.length ? struckPrices[struckPrices.length - 1] : null;
+    const discountRate =
+        primary?.value && bestOld && bestOld > primary.value
+            ? Math.round(((bestOld - primary.value) / bestOld) * 100)
+            : null;
+
+    let pricingModel = 'unknown';
+    if (uniq.some(p => p.kind === 'plan')) pricingModel = 'subscription';
+    else if (minPrice && maxPrice && minPrice !== maxPrice) pricingModel = 'range';
+    else if (primary?.value) pricingModel = 'one-time';
+
+    let confidence = 'LOW';
+    if (primary && primary.confidence >= 0.9) confidence = 'HIGH';
+    else if (primary && primary.confidence >= 0.65) confidence = 'MEDIUM';
+
+    return {
+        detected: uniq.length > 0,
+        currency: primaryCurrency,
+        primaryPrice: primary?.value || null,
+        bestPrice: primary?.value || null,
+        minPrice,
+        maxPrice,
+        priceRange: minPrice && maxPrice && minPrice !== maxPrice ? [minPrice, maxPrice] : null,
+        pricingModel,
+        confidence,
+        all: [...new Set(uniq.map(p => p.value))].sort((a, b) => a - b),
+        prices: uniq.sort((a, b) => a.value - b.value),
+        schemaPrices: uniq.filter(p => p.source === 'schema').map(p => p.value),
+        textPrices: uniq.filter(p => p.source === 'text').map(p => p.value),
+        domPrices: uniq.filter(p => p.source === 'dom').map(p => p.value),
+        planPrices: uniq.filter(p => p.kind === 'plan').map(p => p.value),
+        struckPrices,
+        discountRate
+    };
+}
+
+function mergePriceIntel(base = {}, extra = {}) {
+    const empty = EMPTY_SCRAPE_RESULT().priceIntel;
+    const merged = {
+        ...empty,
+        ...(base || {}),
+        ...(extra || {})
+    };
+
+    const existingPrices = Array.isArray(base?.prices) ? base.prices : [];
+    const incomingPrices = Array.isArray(extra?.prices) ? extra.prices : [];
+
+    const rebuilt =
+        incomingPrices.length > 0
+            ? finalizePriceIntel([...existingPrices, ...incomingPrices], '')
+            : null;
+
+    return rebuilt
+        ? { ...merged, ...rebuilt }
+        : merged;
+}
+
+function mergeScrapeData(base, extra) {
+    const empty = EMPTY_SCRAPE_RESULT();
+    return {
+        ...empty,
+        ...base,
+        ...extra,
+
+        visualDNA: {
+            ...empty.visualDNA,
+            ...base?.visualDNA,
+            ...extra?.visualDNA
+        },
+
+        techStack: {
+            ...empty.techStack,
+            ...base?.techStack,
+            ...extra?.techStack
+        },
+
+        copyIntel: {
+            ...empty.copyIntel,
+            ...base?.copyIntel,
+            ...extra?.copyIntel,
+            headlines: {
+                ...empty.copyIntel.headlines,
+                ...base?.copyIntel?.headlines,
+                ...extra?.copyIntel?.headlines
+            }
+        },
+
+        chapterIntel: {
+            ...empty.chapterIntel,
+            ...base?.chapterIntel,
+            ...extra?.chapterIntel
+        },
+
+        priceIntel: mergePriceIntel(base?.priceIntel, extra?.priceIntel),
+
+        trustSignals: {
+            ...empty.trustSignals,
+            ...base?.trustSignals,
+            ...extra?.trustSignals
+        },
+
+        contacts: {
+            ...empty.contacts,
+            ...base?.contacts,
+            ...extra?.contacts
+        },
+
+        schemaData: {
+            ...empty.schemaData,
+            ...base?.schemaData,
+            ...extra?.schemaData
+        },
+
+        sections: {
+            ...empty.sections,
+            ...base?.sections,
+            ...extra?.sections
+        },
+
+        meta: {
+            ...empty.meta,
+            ...base?.meta,
+            ...extra?.meta
+        },
+
+        seoIntel: mergeSeoIntel(base?.seoIntel || empty.seoIntel, extra?.seoIntel || {}),
+
+        contentIntel: {
+            ...empty.contentIntel,
+            ...base?.contentIntel,
+            ...extra?.contentIntel
+        },
+
+        trackingIntel: {
+            ...empty.trackingIntel,
+            ...base?.trackingIntel,
+            ...extra?.trackingIntel
+        },
+
+        performanceIntel: {
+            ...empty.performanceIntel,
+            ...base?.performanceIntel,
+            ...extra?.performanceIntel
+        },
+
+        brand: {
+            ...empty.brand,
+            ...base?.brand,
+            ...extra?.brand
+        },
+
+        redirectIntel: {
+            ...empty.redirectIntel,
+            ...base?.redirectIntel,
+            ...extra?.redirectIntel
+        },
+
+        frameworkData: {
+            ...empty.frameworkData,
+            ...base?.frameworkData,
+            ...extra?.frameworkData
         }
     };
 }
@@ -10718,6 +11285,422 @@ async function deepScrapeFunnel(url) {
         return unique((text.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
     };
 
+    const normalizePriceValue = (raw) => {
+        if (raw == null) return null;
+        let s = String(raw)
+            .replace(/\u00A0/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!s) return null;
+
+        s = s.replace(/[^\d.,]/g, '');
+        if (!s || !/\d/.test(s)) return null;
+
+        const commaCount = (s.match(/,/g) || []).length;
+        const dotCount = (s.match(/\./g) || []).length;
+
+        if (commaCount > 0 && dotCount > 0) {
+            const lastComma = s.lastIndexOf(',');
+            const lastDot = s.lastIndexOf('.');
+            if (lastComma > lastDot) {
+                s = s.replace(/\./g, '');
+                s = s.replace(',', '.');
+            } else {
+                s = s.replace(/,/g, '');
+            }
+        } else if (commaCount > 0) {
+            const parts = s.split(',');
+            const last = parts[parts.length - 1];
+            if (parts.length === 2 && last.length <= 2) {
+                s = parts[0].replace(/[^\d]/g, '') + '.' + last;
+            } else {
+                s = s.replace(/,/g, '');
+            }
+        } else if (dotCount > 0) {
+            const parts = s.split('.');
+            const last = parts[parts.length - 1];
+            if (parts.length === 2 && last.length <= 2) {
+                s = parts[0].replace(/[^\d]/g, '') + '.' + last;
+            } else {
+                s = s.replace(/\./g, '');
+            }
+        }
+
+        const n = parseFloat(s);
+        if (!Number.isFinite(n) || n <= 0) return null;
+        if (n > 999999999) return null;
+        return n;
+    };
+
+    const detectCurrency = (raw = '', html = '') => {
+        const str = `${raw} ${html}`.toUpperCase();
+        if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
+        if (/\bEUR\b|€/.test(str)) return 'EUR';
+        if (/\bUSD\b|\$/.test(str)) return 'USD';
+        if (/\bGBP\b|£/.test(str)) return 'GBP';
+        return null;
+    };
+
+    const isNoisePriceContext = (context = '') => {
+        const s = String(context || '').toLowerCase();
+        return /sku|ref(?:erence)?|réf|reference|qty|quantit|stock|year|année|mois|jours?|hours?|mins?|minutes?|seconds?|tel|phone|whatsapp|code postal|zip|fax|pourcent|%|rating|note|avis|review count|stars?/i.test(s);
+    };
+
+    const pushPrice = (bucket, item) => {
+        if (!Array.isArray(bucket) || !item) return;
+
+        const value = normalizePriceValue(item.value ?? item.raw);
+        if (!value) return;
+        if (value < 0.5) return;
+
+        const raw = item.raw ? String(item.raw).trim() : String(value);
+        const context = item.context || raw;
+        if (isNoisePriceContext(context)) return;
+
+        bucket.push({
+            value,
+            currency: item.currency || null,
+            raw,
+            source: item.source || 'unknown',
+            kind: item.kind || 'current',
+            context,
+            selector: item.selector || null,
+            visibilityScore: Number(item.visibilityScore ?? 0),
+            confidence: Number(item.confidence ?? 0.5)
+        });
+    };
+
+    const extractSchemaPricesFromNode = (node, out = []) => {
+        if (!node || typeof node !== 'object') return out;
+
+        if (Array.isArray(node)) {
+            node.forEach(n => extractSchemaPricesFromNode(n, out));
+            return out;
+        }
+
+        const type = Array.isArray(node['@type']) ? node['@type'][0] : node['@type'] || node.type || '';
+        const priceCurrency = node.priceCurrency || node.currency || null;
+
+        pushPrice(out, {
+            value: node.price,
+            currency: priceCurrency,
+            raw: node.price,
+            source: 'schema',
+            kind: 'current',
+            context: type || node.name || '',
+            confidence: 0.96
+        });
+
+        pushPrice(out, {
+            value: node.lowPrice,
+            currency: priceCurrency,
+            raw: node.lowPrice,
+            source: 'schema',
+            kind: 'range-min',
+            context: type || 'AggregateOffer',
+            confidence: 0.92
+        });
+
+        pushPrice(out, {
+            value: node.highPrice,
+            currency: priceCurrency,
+            raw: node.highPrice,
+            source: 'schema',
+            kind: 'range-max',
+            context: type || 'AggregateOffer',
+            confidence: 0.92
+        });
+
+        if (node.priceSpecification) extractSchemaPricesFromNode(node.priceSpecification, out);
+        if (node.offers) extractSchemaPricesFromNode(node.offers, out);
+
+        Object.values(node).forEach(v => {
+            if (v && typeof v === 'object') extractSchemaPricesFromNode(v, out);
+        });
+
+        return out;
+    };
+
+    const extractTextPrices = (bodyText = '', html = '') => {
+        const prices = [];
+        const text = String(bodyText || '').replace(/\u00A0/g, ' ').substring(0, 40000);
+
+        const rules = [
+            {
+                regex: /(?:à partir de|from|starting at|dès)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi,
+                kind: 'from',
+                confidence: 0.83
+            },
+            {
+                regex: /(?:au lieu de|instead of|was|avant|prix normal|regular price)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi,
+                kind: 'old',
+                confidence: 0.8
+            },
+            {
+                regex: /([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi,
+                kind: 'current',
+                confidence: 0.66
+            },
+            {
+                regex: /(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*([0-9][0-9\s.,]*)/gi,
+                kind: 'current',
+                confidence: 0.66
+            }
+        ];
+
+        for (const { regex, kind, confidence } of rules) {
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                const raw = match[0];
+                const value = normalizePriceValue(match[1]) || normalizePriceValue(match[2]);
+                const currency = detectCurrency(raw, html);
+                if (!value) continue;
+                if (raw.length > 80) continue;
+
+                pushPrice(prices, {
+                    value,
+                    currency,
+                    raw,
+                    source: 'text',
+                    kind,
+                    context: raw.toLowerCase(),
+                    confidence
+                });
+            }
+        }
+
+        const rangeRegex = /([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*(?:-|à|to)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)?/gi;
+        let rangeMatch;
+        while ((rangeMatch = rangeRegex.exec(text)) !== null) {
+            const raw = rangeMatch[0];
+            const min = normalizePriceValue(rangeMatch[1]);
+            const max = normalizePriceValue(rangeMatch[3]);
+            const currency = detectCurrency(raw, html);
+
+            if (min) {
+                pushPrice(prices, {
+                    value: min,
+                    currency,
+                    raw,
+                    source: 'text',
+                    kind: 'range-min',
+                    context: raw,
+                    confidence: 0.82
+                });
+            }
+
+            if (max) {
+                pushPrice(prices, {
+                    value: max,
+                    currency,
+                    raw,
+                    source: 'text',
+                    kind: 'range-max',
+                    context: raw,
+                    confidence: 0.82
+                });
+            }
+        }
+
+        return prices;
+    };
+
+    const extractDomPrices = ($, html = '') => {
+        const prices = [];
+        if (!$ || typeof $.root !== 'function') return prices;
+
+        const selectors = [
+            '[class*="price"]',
+            '[id*="price"]',
+            '[class*="pricing"]',
+            '[id*="pricing"]',
+            '[class*="plan"]',
+            '[class*="tarif"]',
+            '[class*="offer"]',
+            '[data-price]',
+            '[itemprop="price"]',
+            '.woocommerce-Price-amount',
+            '.price',
+            '.product-price',
+            '.sale-price',
+            '.regular-price',
+            '.compare-at-price'
+        ];
+
+        const seen = new Set();
+
+        $(selectors.join(',')).each((_, el) => {
+            const node = $(el);
+            const text = normText(node.text());
+            const attrs = normText([
+                node.attr('data-price'),
+                node.attr('content'),
+                node.attr('aria-label')
+            ].filter(Boolean).join(' '));
+            const rawBlock = normText(`${text} ${attrs}`);
+            if (!rawBlock || rawBlock.length > 300) return;
+
+            const key = `${node.get(0)?.tagName || 'x'}|${rawBlock}`;
+            if (seen.has(key)) return;
+            seen.add(key);
+
+            const lowered = rawBlock.toLowerCase();
+            if (isNoisePriceContext(lowered)) return;
+
+            let kind = 'current';
+            if (/old|regular|compare|barr|avant|instead of|au lieu/.test(lowered)) kind = 'old';
+            else if (/from|à partir|starting at|dès/.test(lowered)) kind = 'from';
+            else if (/mois|month|monthly|year|annuel|annual|abonnement|subscription/.test(lowered)) kind = 'plan';
+
+            let visibilityScore = 0;
+            if (/\b(price|pricing|plan|tarif|offre)\b/i.test(rawBlock)) visibilityScore += 2;
+            if (node.closest('[class*="pricing"],[id*="pricing"],[class*="plan"],[class*="offer"]').length) visibilityScore += 3;
+            if (node.closest('button,a,[class*="cta"],[class*="buy"],[class*="cart"]').length) visibilityScore += 2;
+            if (/acheter|buy|order|commander|shop|subscribe|signup|trial|demo/.test(lowered)) visibilityScore += 2;
+
+            const matches = rawBlock.match(/([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)|(?:MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*([0-9][0-9\s.,]*)/gi) || [];
+            matches.forEach(match => {
+                const value = normalizePriceValue(match);
+                const currency = detectCurrency(match, html);
+                pushPrice(prices, {
+                    value,
+                    currency,
+                    raw: match,
+                    source: 'dom',
+                    kind,
+                    context: rawBlock.substring(0, 200),
+                    selector: node.attr('class') || node.attr('id') || node.get(0)?.tagName || null,
+                    visibilityScore,
+                    confidence: 0.74 + Math.min(0.16, visibilityScore * 0.03)
+                });
+            });
+        });
+
+        return prices;
+    };
+
+    const finalizePriceIntel = (allPrices = [], html = '') => {
+        const normalized = [];
+        const seen = new Set();
+
+        for (const p of allPrices) {
+            if (!p || !p.value || p.value <= 0) continue;
+            const key = [
+                p.value,
+                p.currency || '',
+                p.kind || '',
+                p.source || '',
+                (p.raw || '').slice(0, 80)
+            ].join('|');
+
+            if (seen.has(key)) continue;
+            seen.add(key);
+
+            normalized.push({
+                value: p.value,
+                currency: p.currency || null,
+                raw: p.raw || null,
+                source: p.source || 'unknown',
+                kind: p.kind || 'current',
+                context: p.context || '',
+                selector: p.selector || null,
+                visibilityScore: Number(p.visibilityScore ?? 0),
+                confidence: Number(p.confidence ?? 0.5)
+            });
+        }
+
+        const candidates = normalized.map(p => {
+            let score = 0;
+            score += p.confidence * 100;
+            if (p.source === 'schema') score += 30;
+            if (p.source === 'dom') score += 20;
+            if (p.kind === 'current') score += 20;
+            if (p.kind === 'plan') score += 10;
+            if (p.kind === 'from') score += 5;
+            if (p.kind === 'old') score -= 35;
+            if (p.kind === 'range-max') score -= 10;
+            score += (p.visibilityScore || 0) * 6;
+            if (p.value < 1) score -= 100;
+            return { ...p, score };
+        });
+
+        const currentCandidates = candidates.filter(p =>
+            ['current', 'from', 'plan', 'range-min'].includes(p.kind)
+        );
+
+        const oldCandidates = candidates.filter(p => p.kind === 'old');
+        const rangeMaxCandidates = candidates.filter(p => p.kind === 'range-max');
+
+        const primary = [...currentCandidates].sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score;
+            if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+            return a.value - b.value;
+        })[0] || null;
+
+        const primaryCurrency =
+            primary?.currency ||
+            normalized.find(p => p.currency)?.currency ||
+            detectCurrency('', html) ||
+            'MAD';
+
+        const currentValues = currentCandidates.map(p => p.value).sort((a, b) => a - b);
+        const minPrice = currentValues[0] ?? null;
+        const currentMax = currentValues[currentValues.length - 1] ?? null;
+        const rangeMax = rangeMaxCandidates.map(p => p.value).sort((a, b) => b - a)[0] ?? null;
+        const maxPrice = rangeMax || currentMax || null;
+
+        const struckPrices = [...new Set(oldCandidates.map(p => p.value))].sort((a, b) => a - b);
+        const bestOld = struckPrices[struckPrices.length - 1] ?? null;
+
+        const discountRate =
+            primary?.value && bestOld && bestOld > primary.value
+                ? Math.round(((bestOld - primary.value) / bestOld) * 100)
+                : null;
+
+        const hasPlanSignals = candidates.some(p => p.kind === 'plan');
+        const hasRange = minPrice && maxPrice && minPrice !== maxPrice;
+        const distinctCurrentCount = [...new Set(currentValues)].length;
+
+        let pricingModel = 'unknown';
+        if (hasPlanSignals && distinctCurrentCount >= 2) pricingModel = 'plans';
+        else if (hasPlanSignals) pricingModel = 'subscription';
+        else if (hasRange) pricingModel = 'range';
+        else if (primary?.value) pricingModel = 'one-time';
+
+        let confidence = 'LOW';
+        if (primary && primary.score >= 120) confidence = 'HIGH';
+        else if (primary && primary.score >= 85) confidence = 'MEDIUM';
+
+        return {
+            detected: normalized.length > 0,
+            currency: primaryCurrency,
+            primaryPrice: primary?.value || null,
+            bestPrice: primary?.value || null,
+            minPrice,
+            maxPrice,
+            priceRange: hasRange ? [minPrice, maxPrice] : null,
+            pricingModel,
+            confidence,
+            primarySource: primary?.source || null,
+            primaryKind: primary?.kind || null,
+            primaryScore: primary?.score || null,
+            all: [...new Set(normalized.map(p => p.value))].sort((a, b) => a - b),
+            prices: normalized.sort((a, b) => a.value - b.value),
+            schemaPrices: normalized.filter(p => p.source === 'schema').map(p => p.value),
+            textPrices: normalized.filter(p => p.source === 'text').map(p => p.value),
+            domPrices: normalized.filter(p => p.source === 'dom').map(p => p.value),
+            planPrices: normalized.filter(p => p.kind === 'plan').map(p => p.value),
+            struckPrices,
+            discountRate,
+            priceSourcesSummary: {
+                schema: normalized.filter(p => p.source === 'schema').length,
+                text: normalized.filter(p => p.source === 'text').length,
+                dom: normalized.filter(p => p.source === 'dom').length
+            }
+        };
+    };
+
     const inferSections = ($) => ({
         hasHero: !!$([
             '.hero', '#hero', '.banner', '.masthead', '.hero-section',
@@ -10922,52 +11905,26 @@ async function deepScrapeFunnel(url) {
             try {
                 const content = $(el).html()?.substring(0, 50000);
                 if (!content) return;
-
                 const parsed = JSON.parse(content);
-
-                const walk = (node) => {
-                    if (!node) return;
-                    if (Array.isArray(node)) return node.forEach(walk);
-                    if (typeof node !== 'object') return;
-
-                    const rawOffers = node.offers;
-                    if (Array.isArray(rawOffers)) {
-                        rawOffers.forEach(o => {
-                            const p = parseFloat(o?.price);
-                            if (!isNaN(p) && p > 0) schemaPrices.push(p);
-                        });
-                    } else if (rawOffers?.price) {
-                        const p = parseFloat(rawOffers.price);
-                        if (!isNaN(p) && p > 0) schemaPrices.push(p);
-                    }
-
-                    if (Array.isArray(node['@graph'])) node['@graph'].forEach(walk);
-                };
-
-                walk(parsed);
+                const entries = Array.isArray(parsed) ? parsed : [parsed];
+                entries.forEach(entry => extractSchemaPricesFromNode(entry, schemaPrices));
             } catch {}
         });
 
-        const rawPriceIntel = scrapeResult?.priceIntel || {};
-        let allPrices = Array.isArray(rawPriceIntel.all) ? rawPriceIntel.all.filter(n => Number.isFinite(n)) : [];
+        const rawPriceIntel = scrapeResult?.priceIntel || EMPTY_SCRAPE_RESULT().priceIntel;
+        const textPrices = extractTextPrices(bodyText, html);
+        const domPrices = extractDomPrices($, html);
+        const existingPrices = Array.isArray(rawPriceIntel.prices) ? rawPriceIntel.prices : [];
 
-        if (!allPrices.length) {
-            const priceRegex = /(\d{1,3}(?:[.,\s]\d{3})*(?:[.,]\d{2})?)\s*(?:MAD|DH|Mad|dh|€|\$|USD|EUR)/gi;
-            const detectedPrices = [...bodyText.substring(0, 20000).matchAll(priceRegex)]
-                .map(m => parseFloat((m[1] || '').replace(/\s/g, '').replace(',', '.')))
-                .filter(p => !isNaN(p) && p > 0);
-
-            allPrices = unique([...schemaPrices, ...detectedPrices]).sort((a, b) => a - b);
-        }
-
-        const priceIntel = {
-            bestPrice: allPrices.length ? allPrices[0] : null,
-            currency: rawPriceIntel.currency || (/MAD|DH/i.test(html) ? 'MAD' : /€|EUR/i.test(html) ? 'EUR' : /\$|USD/i.test(html) ? 'USD' : 'MAD'),
-            all: allPrices,
-            detected: allPrices.length > 0,
-            struckPrices: Array.isArray(rawPriceIntel.struckPrices) ? rawPriceIntel.struckPrices : [],
-            discountRate: rawPriceIntel.discountRate ?? null
-        };
+        const priceIntel = finalizePriceIntel(
+            [
+                ...existingPrices,
+                ...schemaPrices,
+                ...textPrices,
+                ...domPrices
+            ],
+            html
+        );
 
         const h1List = unique(
             $('h1').map((_, el) => normText($(el).text())).get().filter(t => t.length > 2)
@@ -11304,7 +12261,7 @@ async function deepScrapeFunnel(url) {
         const allSections = finalResult.copyIntel?.pageSections || [];
         finalResult.sectionsFound = allSections.length;
         finalResult.h1 = finalResult.copyIntel?.headlines?.h1?.[0] || null;
-        finalResult.price = finalResult.priceIntel?.bestPrice ?? null;
+        finalResult.price = finalResult.priceIntel?.primaryPrice ?? finalResult.priceIntel?.bestPrice ?? null;
         finalResult.phones = finalResult.contacts?.phones?.length || 0;
 
         console.log(
@@ -11312,7 +12269,10 @@ async function deepScrapeFunnel(url) {
             ` | Layer: ${finalResult.fetchLayer}` +
             ` | Colors: ${(finalResult.visualDNA?.dominantColors || []).slice(0, 3).join(',')}` +
             ` | CMS: ${finalResult.techStack?.cms || 'Unknown'}` +
-            ` | Prix: ${finalResult.priceIntel?.bestPrice || 'N/A'} ${finalResult.priceIntel?.currency || 'MAD'}` +
+            ` | Prix: ${finalResult.priceIntel?.primaryPrice || finalResult.priceIntel?.bestPrice || 'N/A'} ${finalResult.priceIntel?.currency || 'MAD'}` +
+            ` | Range: ${Array.isArray(finalResult.priceIntel?.priceRange) ? finalResult.priceIntel.priceRange.join('-') : 'N/A'}` +
+            ` | Model: ${finalResult.priceIntel?.pricingModel || 'unknown'}` +
+            ` | Score: ${finalResult.priceIntel?.primaryScore || 'N/A'}` +
             ` | H1: ${finalResult.copyIntel?.headlines?.h1?.[0]?.substring(0, 40) || 'N/A'}`
         );
 
@@ -11322,8 +12282,6 @@ async function deepScrapeFunnel(url) {
         return finalizeError(error.message, 'browser');
     }
 }
-
-
 
 // ═══════════════════════════════════════════════════════════════════
 // 🕷️ MODULE 1: SCRAPING ENGINE (FULL EXTRACTION & HTML DUMP)
@@ -12069,6 +13027,65 @@ async function scrapeSiteData(url, lang = 'fr') {
             return unique((text.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
         };
 
+        const normalizePriceValue = (raw) => {
+            if (raw == null) return null;
+            let s = String(raw)
+                .replace(/\u00A0/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+
+            if (!s) return null;
+
+            s = s.replace(/[^\d.,']/g, '');
+            if (!s || !/\d/.test(s)) return null;
+
+            const commaCount = (s.match(/,/g) || []).length;
+            const dotCount = (s.match(/\./g) || []).length;
+
+            s = s.replace(/'/g, '');
+
+            if (commaCount > 0 && dotCount > 0) {
+                const lastComma = s.lastIndexOf(',');
+                const lastDot = s.lastIndexOf('.');
+                if (lastComma > lastDot) {
+                    s = s.replace(/\./g, '');
+                    s = s.replace(',', '.');
+                } else {
+                    s = s.replace(/,/g, '');
+                }
+            } else if (commaCount > 0) {
+                const parts = s.split(',');
+                const last = parts[parts.length - 1];
+                if (parts.length === 2 && last.length <= 2) {
+                    s = parts[0].replace(/[^\d]/g, '') + '.' + last;
+                } else {
+                    s = s.replace(/,/g, '');
+                }
+            } else if (dotCount > 0) {
+                const parts = s.split('.');
+                const last = parts[parts.length - 1];
+                if (parts.length === 2 && last.length <= 2) {
+                    s = parts[0].replace(/[^\d]/g, '') + '.' + last;
+                } else {
+                    s = s.replace(/\./g, '');
+                }
+            }
+
+            const n = parseFloat(s);
+            if (!Number.isFinite(n) || n <= 0) return null;
+            if (n > 999999999) return null;
+            return n;
+        };
+
+        const detectCurrency = (raw = '') => {
+            const str = String(raw || '').toUpperCase();
+            if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
+            if (/\bEUR\b|€/.test(str)) return 'EUR';
+            if (/\bUSD\b|\$/.test(str)) return 'USD';
+            if (/\bGBP\b|£/.test(str)) return 'GBP';
+            return 'MAD';
+        };
+
         const detectBotBlock = (scrape) => {
             const htmlLower = (scrape?.html || '').toLowerCase();
             const h1Lower = (scrape?.copyIntel?.headlines?.h1?.[0] || '').toLowerCase();
@@ -12130,20 +13147,34 @@ async function scrapeSiteData(url, lang = 'fr') {
             const phones = normalizePhones(bodyText);
             const emails = normalizeEmails(bodyText);
 
-            const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|€|\$|£)/gi;
-            const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 15);
+            const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|DHS|€|\$|£|EUR|USD|GBP)/gi;
+            const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 25);
+
             const normalizedPrices = rawPrices
-                .map(m => ({
-                    raw: m[0],
-                    value: parseFloat(
-                        (m[1] || '')
-                            .replace(/\s/g, '')
-                            .replace(/,/g, '.')
-                            .replace(/[^\d.]/g, '')
-                    ),
-                    currency: (m[2] || 'MAD').toUpperCase()
-                }))
-                .filter(p => !isNaN(p.value) && p.value > 0);
+                .map(m => {
+                    const raw = m[0];
+                    const value = normalizePriceValue(m[1] || raw);
+                    const currency = detectCurrency(m[2] || raw);
+                    return value ? {
+                        raw,
+                        value,
+                        currency,
+                        source: 'text',
+                        kind: 'current',
+                        confidence: 0.66
+                    } : null;
+                })
+                .filter(Boolean);
+
+            const allPriceValues = normalizedPrices.map(p => p.value).sort((a, b) => a - b);
+            const primaryPrice = allPriceValues.length ? allPriceValues[0] : null;
+            const bestPrice = primaryPrice;
+            const minPrice = allPriceValues.length ? allPriceValues[0] : null;
+            const maxPrice = allPriceValues.length ? allPriceValues[allPriceValues.length - 1] : null;
+            const currency = normalizedPrices.length ? normalizedPrices[0].currency : 'MAD';
+            const priceRange = minPrice !== null && maxPrice !== null && minPrice !== maxPrice
+                ? [minPrice, maxPrice]
+                : null;
 
             const schemaTypes = [];
             $('script[type="application/ld+json"]').each((_, el) => {
@@ -12352,12 +13383,32 @@ async function scrapeSiteData(url, lang = 'fr') {
                 },
 
                 priceIntel: {
-                    bestPrice: normalizedPrices.length ? normalizedPrices[0].value : null,
-                    currency: normalizedPrices.length ? normalizedPrices[0].currency : 'MAD',
-                    all: normalizedPrices.map(p => p.value),
-                    detected: normalizedPrices.length > 0,
+                    ...EMPTY_SCRAPE_RESULT().priceIntel,
+                    detected: primaryPrice !== null,
+                    currency,
+                    primaryPrice,
+                    bestPrice,
+                    minPrice,
+                    maxPrice,
+                    priceRange,
+                    pricingModel: priceRange ? 'range' : (primaryPrice !== null ? 'one-time' : 'unknown'),
+                    confidence: primaryPrice !== null ? 'MEDIUM' : 'LOW',
+                    primarySource: primaryPrice !== null ? 'text' : null,
+                    primaryKind: primaryPrice !== null ? 'current' : null,
+                    primaryScore: primaryPrice !== null ? 66 : null,
+                    all: allPriceValues,
+                    prices: normalizedPrices,
+                    schemaPrices: [],
+                    textPrices: allPriceValues,
+                    domPrices: [],
+                    planPrices: [],
                     struckPrices: [],
-                    discountRate: null
+                    discountRate: null,
+                    priceSourcesSummary: {
+                        schema: 0,
+                        text: normalizedPrices.length,
+                        dom: 0
+                    }
                 },
 
                 trustSignals: {
@@ -12380,7 +13431,6 @@ async function scrapeSiteData(url, lang = 'fr') {
                 },
 
                 sections,
-
                 meta,
 
                 seoIntel: {
@@ -12720,8 +13770,8 @@ async function scrapeSiteData(url, lang = 'fr') {
         });
 
         const h1Main = enriched.copyIntel?.headlines?.h1?.[0] || '';
-        const bestPrice = enriched.priceIntel?.bestPrice ?? null;
-        const phonesCount = enriched.contacts?.phones?.length || 0;
+const detectedPrice = enriched.priceIntel?.primaryPrice ?? enriched.priceIntel?.bestPrice ?? null;
+const phonesCount = enriched.contacts?.phones?.length || 0;
         const sectionsFound = Object.values(enriched.sections || {}).filter(Boolean).length;
 
         const scrapedData = {
@@ -12758,14 +13808,14 @@ async function scrapeSiteData(url, lang = 'fr') {
 
             sectionsFound,
             h1: h1Main || null,
-            price: bestPrice,
+            price: detectedPrice,
             phones: phonesCount
         };
 
         cache.set(cacheKey, scrapedData);
 
         console.log(
-            `✅ scrapeSiteData DONE — ${Date.now() - startTime}ms | Layer: ${scrapedData.fetchLayer} | CMS: ${scrapedData.techStack?.cms}`
+            `✅ scrapeSiteData DONE — ${Date.now() - startTime}ms | Layer: ${scrapedData.fetchLayer} | CMS: ${scrapedData.techStack?.cms} | Prix: ${scrapedData.price ?? 'N/A'} ${scrapedData.priceIntel?.currency || ''}`
         );
 
         return scrapedData;
@@ -12779,7 +13829,6 @@ async function scrapeSiteData(url, lang = 'fr') {
         };
     }
 }
-
 
 // ════════════════════════════════════════════════════════
 // analyzeCTAs — inchangée + renforcée
