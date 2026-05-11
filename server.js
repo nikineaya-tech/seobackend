@@ -10356,11 +10356,111 @@ function normalizePriceValue(raw) {
 
 function detectCurrency(raw = '', html = '') {
     const str = `${raw} ${html}`.toUpperCase();
+
+    if (/\bLYD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
     if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|د\.?\s?م|درهم/.test(str)) return 'MAD';
     if (/\bEUR\b|€/.test(str)) return 'EUR';
-    if (/\bUSD\b|\$/.test(str)) return 'USD';
+    if (/\bUSD\b|\$|US\$/.test(str)) return 'USD';
     if (/\bGBP\b|£/.test(str)) return 'GBP';
+
     return null;
+}
+
+function extractTextPrices(bodyText = '', html = '') {
+    const prices = [];
+    const text = String(bodyText || '').replace(/\u00A0/g, ' ');
+
+    const CUR = '(?:LYD|ل\\.?\\s?د|د\\.?\\s?ل|دينار\\s*ليبي|دينار\\s*ليبى|MAD|DH|DHS|EUR|USD|GBP|€|\\$|£)';
+
+    const patterns = [
+        {
+            regex: new RegExp(`(?:à partir de|from|starting at|dès)\\s*([0-9][0-9\\s.,]*)\\s*(${CUR})`, 'gi'),
+            kind: 'from',
+            confidence: 0.82
+        },
+        {
+            regex: new RegExp(`(?:au lieu de|instead of|was|avant|ancien prix|old price|prix barr[ée]|regular price|compare at)\\s*([0-9][0-9\\s.,]*)\\s*(${CUR})`, 'gi'),
+            kind: 'old',
+            confidence: 0.86
+        },
+        {
+            regex: new RegExp(`([0-9][0-9\\s.,]*)\\s*(${CUR})`, 'gi'),
+            kind: 'current',
+            confidence: 0.65
+        },
+        {
+            regex: new RegExp(`(${CUR})\\s*([0-9][0-9\\s.,]*)`, 'gi'),
+            kind: 'current',
+            confidence: 0.65
+        }
+    ];
+
+    const looksOld = (raw) =>
+        /au lieu de|instead of|was|avant|ancien prix|old price|prix barr[ée]|regular price|compare at|line-through|strikethrough/.test(String(raw).toLowerCase());
+
+    for (const { regex, kind, confidence } of patterns) {
+        let m;
+        while ((m = regex.exec(text)) !== null) {
+            const raw = m[0];
+            const numeric = normalizePriceValue(m[1]) || normalizePriceValue(m[2]);
+            const currency = detectCurrency(raw, html);
+            if (!numeric) continue;
+
+            let finalKind = kind;
+            let finalConfidence = confidence;
+
+            if (kind === 'current' && looksOld(raw)) {
+                finalKind = 'old';
+                finalConfidence = 0.84;
+            }
+
+            pushPrice(prices, {
+                value: numeric,
+                currency,
+                raw,
+                source: 'text',
+                kind: finalKind,
+                context: raw.toLowerCase(),
+                confidence: finalConfidence
+            });
+        }
+    }
+
+    const rangeRegex = new RegExp(`([0-9][0-9\\s.,]*)\\s*(${CUR})\\s*(?:-|à|to)\\s*([0-9][0-9\\s.,]*)\\s*(${CUR})?`, 'gi');
+
+    let rangeMatch;
+    while ((rangeMatch = rangeRegex.exec(text)) !== null) {
+        const raw = rangeMatch[0];
+        const min = normalizePriceValue(rangeMatch[1]);
+        const max = normalizePriceValue(rangeMatch[3]);
+        const currency = detectCurrency(raw, html);
+
+        if (min) {
+            pushPrice(prices, {
+                value: min,
+                currency,
+                raw,
+                source: 'text',
+                kind: 'range-min',
+                context: 'range',
+                confidence: 0.8
+            });
+        }
+
+        if (max) {
+            pushPrice(prices, {
+                value: max,
+                currency,
+                raw,
+                source: 'text',
+                kind: 'range-max',
+                context: 'range',
+                confidence: 0.8
+            });
+        }
+    }
+
+    return prices;
 }
 
 function pushPrice(bucket, item) {
@@ -10430,69 +10530,7 @@ function extractSchemaPricesFromNode(node, out = []) {
     return out;
 }
 
-function extractTextPrices(bodyText = '', html = '') {
-    const prices = [];
-    const text = String(bodyText || '').replace(/\u00A0/g, ' ');
 
-    const patterns = [
-        { regex: /(?:à partir de|from|starting at|dès)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi, kind: 'from', confidence: 0.82 },
-        { regex: /(?:au lieu de|instead of|was|avant)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi, kind: 'old', confidence: 0.78 },
-        { regex: /([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi, kind: 'current', confidence: 0.65 },
-        { regex: /(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*([0-9][0-9\s.,]*)/gi, kind: 'current', confidence: 0.65 }
-    ];
-
-    for (const { regex, kind, confidence } of patterns) {
-        let m;
-        while ((m = regex.exec(text)) !== null) {
-            const raw = m[0];
-            const numeric = normalizePriceValue(m[1]) || normalizePriceValue(m[2]);
-            const currency = detectCurrency(raw, html);
-            if (!numeric) continue;
-            pushPrice(prices, {
-                value: numeric,
-                currency,
-                raw,
-                source: 'text',
-                kind,
-                context: raw.toLowerCase(),
-                confidence
-            });
-        }
-    }
-
-    const rangeRegex = /([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*(?:-|à|to)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)?/gi;
-    let rangeMatch;
-    while ((rangeMatch = rangeRegex.exec(text)) !== null) {
-        const raw = rangeMatch[0];
-        const min = normalizePriceValue(rangeMatch[1]);
-        const max = normalizePriceValue(rangeMatch[3]);
-        const currency = detectCurrency(raw, html);
-        if (min) {
-            pushPrice(prices, {
-                value: min,
-                currency,
-                raw,
-                source: 'text',
-                kind: 'range-min',
-                context: 'range',
-                confidence: 0.8
-            });
-        }
-        if (max) {
-            pushPrice(prices, {
-                value: max,
-                currency,
-                raw,
-                source: 'text',
-                kind: 'range-max',
-                context: 'range',
-                confidence: 0.8
-            });
-        }
-    }
-
-    return prices;
-}
 
 function extractDomPrices($, html = '') {
     const prices = [];
@@ -10513,30 +10551,87 @@ function extractDomPrices($, html = '') {
         '.product-price',
         '.sale-price',
         '.regular-price',
-        '.compare-at-price'
+        '.compare-at-price',
+        '.old-price',
+        '.new-price',
+        '.hero-old-price',
+        '.hero-new-price'
     ];
 
-    const seenRaw = new Set();
+    const CUR = '(?:LYD|ل\\.?\\s?د|د\\.?\\s?ل|دينار\\s*ليبي|دينار\\s*ليبى|MAD|DH|DHS|EUR|USD|GBP|€|\\$|£)';
+    const seen = new Set();
+
     $(selectors.join(',')).each((_, el) => {
         const node = $(el);
+
         const text = node.text().replace(/\s+/g, ' ').trim();
-        const attrs = `${node.attr('data-price') || ''} ${node.attr('content') || ''} ${node.attr('aria-label') || ''}`.trim();
+        const attrs = [
+            node.attr('data-price') || '',
+            node.attr('content') || '',
+            node.attr('aria-label') || '',
+            node.attr('class') || '',
+            node.attr('id') || ''
+        ].join(' ').trim();
+
         const raw = `${text} ${attrs}`.trim();
-        if (!raw || raw.length > 300 || seenRaw.has(raw)) return;
-        seenRaw.add(raw);
+        if (!raw || raw.length > 300) return;
 
-        const matches = raw.match(/([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)|(?:MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*([0-9][0-9\s.,]*)/gi) || [];
-        if (!matches.length) return;
-
+        const className = String(node.attr('class') || '').toLowerCase();
+        const idName = String(node.attr('id') || '').toLowerCase();
+        const style = String(node.attr('style') || '').toLowerCase();
+        const tagName = String(el.tagName || '').toLowerCase();
         const lowered = raw.toLowerCase();
-        let kind = 'current';
-        if (/old|regular|compare|barr|avant|instead of|au lieu/.test(lowered)) kind = 'old';
-        else if (/from|à partir|starting at|dès/.test(lowered)) kind = 'from';
-        else if (/plan|monthly|annuel|mensuel|subscription|abonnement/.test(lowered)) kind = 'plan';
 
-        matches.forEach(match => {
-            const numeric = normalizePriceValue(match);
+        const oldSignals =
+            /old|regular|compare|compare-at|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/.test(lowered) ||
+            /old|regular|compare|compare-at|hero-old-price|old-price/.test(className) ||
+            /old|regular|compare|compare-at|hero-old-price|old-price/.test(idName) ||
+            tagName === 'del' ||
+            tagName === 's' ||
+            /line-through/.test(style);
+
+        const newSignals =
+            /new|sale|promo|current|hero-new-price|new-price/.test(lowered) ||
+            /new|sale|promo|current|hero-new-price|new-price/.test(className) ||
+            /new|sale|promo|current|hero-new-price|new-price/.test(idName);
+
+        const fromSignals = /from|à partir|starting at|dès/.test(lowered);
+        const planSignals = /plan|monthly|annuel|mensuel|subscription|abonnement/.test(lowered);
+
+        const regex = new RegExp(`([0-9][0-9\\s.,]*)\\s*(${CUR})|(${CUR})\\s*([0-9][0-9\\s.,]*)`, 'gi');
+        let m;
+
+        while ((m = regex.exec(raw)) !== null) {
+            const match = m[0];
+            const numeric =
+                normalizePriceValue(m[1]) ||
+                normalizePriceValue(m[4]) ||
+                normalizePriceValue(match);
+
             const currency = detectCurrency(match, html);
+            if (!numeric) continue;
+
+            let kind = 'current';
+            let confidence = 0.72;
+
+            if (oldSignals) {
+                kind = 'old';
+                confidence = 0.9;
+            } else if (fromSignals) {
+                kind = 'from';
+                confidence = 0.82;
+            } else if (planSignals) {
+                kind = 'plan';
+                confidence = 0.78;
+            } else if (newSignals) {
+                kind = 'current';
+                confidence = 0.88;
+            }
+
+            const key = `${numeric}|${currency}|${kind}|${match}|${className}|${idName}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+
             pushPrice(prices, {
                 value: numeric,
                 currency,
@@ -10544,9 +10639,9 @@ function extractDomPrices($, html = '') {
                 source: 'dom',
                 kind,
                 context: raw.substring(0, 180),
-                confidence: 0.72
+                confidence
             });
-        });
+        }
     });
 
     return prices;
@@ -10558,9 +10653,11 @@ function finalizePriceIntel(allPrices = [], html = '') {
 
     for (const p of allPrices) {
         if (!p || !p.value || p.value <= 0) continue;
+
         const key = `${p.value}|${p.currency || ''}|${p.kind || ''}|${p.source || ''}|${(p.raw || '').slice(0, 80)}`;
         if (seen.has(key)) continue;
         seen.add(key);
+
         uniq.push({
             value: p.value,
             currency: p.currency || null,
@@ -10572,30 +10669,67 @@ function finalizePriceIntel(allPrices = [], html = '') {
         });
     }
 
-    const currentKinds = new Set(['current', 'from', 'plan', 'range-min']);
-    const currentCandidates = uniq.filter(p => currentKinds.has(p.kind));
-    const oldCandidates = uniq.filter(p => p.kind === 'old');
+    const looksOldContext = (p) => {
+        const s = `${p.raw || ''} ${p.context || ''}`.toLowerCase();
+        return /old|regular|compare|compare-at|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]|line-through|strikethrough|hero-old-price|old-price/.test(s);
+    };
+
+    const currencyCounts = {};
+    for (const p of uniq) {
+        if (!p.currency) continue;
+        currencyCounts[p.currency] = (currencyCounts[p.currency] || 0) + 1;
+    }
+
+    const dominantCurrency =
+        Object.entries(currencyCounts)
+            .sort((a, b) => b[1] - a[1])[0]?.[0] || null;
+
+    const oldCandidates = uniq.filter(p => p.kind === 'old' || looksOldContext(p));
+    const strictCurrentCandidates = uniq.filter(
+        p => p.kind === 'current' && !looksOldContext(p)
+    );
+    const secondaryCurrentCandidates = uniq.filter(
+        p => ['from', 'plan', 'range-min'].includes(p.kind) && !looksOldContext(p)
+    );
     const rangeMaxCandidates = uniq.filter(p => p.kind === 'range-max');
 
-    const sortedCurrents = [...currentCandidates].sort((a, b) => a.value - b.value);
-    const primary = [...currentCandidates].sort((a, b) => {
-        if (b.confidence !== a.confidence) return b.confidence - a.confidence;
-        return a.value - b.value;
-    })[0] || null;
+    const currencyFilteredStrict =
+        dominantCurrency
+            ? strictCurrentCandidates.filter(p => !p.currency || p.currency === dominantCurrency)
+            : strictCurrentCandidates;
+
+    const currencyFilteredSecondary =
+        dominantCurrency
+            ? secondaryCurrentCandidates.filter(p => !p.currency || p.currency === dominantCurrency)
+            : secondaryCurrentCandidates;
+
+    const pickBest = (arr) =>
+        [...arr].sort((a, b) => {
+            if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+            if ((b.source === 'dom') !== (a.source === 'dom')) return b.source === 'dom' ? 1 : -1;
+            return a.value - b.value;
+        })[0] || null;
+
+    const primary =
+        pickBest(currencyFilteredStrict) ||
+        pickBest(currencyFilteredSecondary) ||
+        null;
 
     const primaryCurrency =
         primary?.currency ||
+        dominantCurrency ||
         uniq.find(p => p.currency)?.currency ||
-        detectCurrency('', html) ||
-        'MAD';
+        null;
 
-    const minPrice = sortedCurrents[0]?.value ?? null;
-    const maxCurrent = sortedCurrents[sortedCurrents.length - 1]?.value ?? null;
-    const maxRange = rangeMaxCandidates.sort((a, b) => b.value - a.value)[0]?.value ?? null;
-    const maxPrice = maxRange || maxCurrent || null;
+    const currentForRange = [...strictCurrentCandidates].sort((a, b) => a.value - b.value);
+    const minPrice = currentForRange[0]?.value ?? null;
+    const maxCurrent = currentForRange[currentForRange.length - 1]?.value ?? null;
+    const maxRange = [...rangeMaxCandidates].sort((a, b) => b.value - a.value)[0]?.value ?? null;
+    const maxPrice = maxCurrent || maxRange || null;
 
-    const struckPrices = oldCandidates.map(p => p.value).sort((a, b) => a - b);
+    const struckPrices = [...new Set(oldCandidates.map(p => p.value))].sort((a, b) => a - b);
     const bestOld = struckPrices.length ? struckPrices[struckPrices.length - 1] : null;
+
     const discountRate =
         primary?.value && bestOld && bestOld > primary.value
             ? Math.round(((bestOld - primary.value) / bestOld) * 100)
@@ -10607,7 +10741,7 @@ function finalizePriceIntel(allPrices = [], html = '') {
     else if (primary?.value) pricingModel = 'one-time';
 
     let confidence = 'LOW';
-    if (primary && primary.confidence >= 0.9) confidence = 'HIGH';
+    if (primary && primary.confidence >= 0.88) confidence = 'HIGH';
     else if (primary && primary.confidence >= 0.65) confidence = 'MEDIUM';
 
     return {
@@ -10630,7 +10764,6 @@ function finalizePriceIntel(allPrices = [], html = '') {
         discountRate
     };
 }
-
 function mergePriceIntel(base = {}, extra = {}) {
     const empty = EMPTY_SCRAPE_RESULT().priceIntel;
     const merged = {
@@ -12978,7 +13111,14 @@ const sections = {
         }
     }
 }
+function getCanonicalPrice(pricing) {
+  const value = pricing?.primaryPrice ?? pricing?.bestPrice ?? null;
+  return typeof value === 'number' && value > 0 ? value : null;
+}
 
+function hasCanonicalPrice(pricing) {
+  return getCanonicalPrice(pricing) !== null;
+}
 // ═══════════════════════════════════════════════════════════════════
 // 🕵️ ROUTE: SCRAPE SITE DATA (PLAYWRIGHT → SCRAPE.DO FALLBACK)
 // ═══════════════════════════════════════════════════════════════════
