@@ -12479,6 +12479,7 @@ async function deepScrapeFunnel(url) {
  * Launches Playwright. Fails FAST (15s) if blocked, returning an empty 
  * result object so the fallback logic can take over immediately.
  */
+
 async function scrapeStealth(validUrl) {
     const playwrightWrapper = require('./playwright-wrapper.cjs');
     const startTime = Date.now();
@@ -12504,11 +12505,22 @@ async function scrapeStealth(validUrl) {
         },
         priceIntel: {
             bestPrice: null,
-            currency: 'MAD',
+            primaryPrice: null,
+            minPrice: null,
+            maxPrice: null,
+            priceRange: null,
+            currency: null,
             all: [],
+            prices: [],
             detected: false,
             struckPrices: [],
             discountRate: null,
+            pricingModel: 'unknown',
+            confidence: 'LOW',
+            primarySource: null,
+            primaryKind: null,
+            primaryScore: null,
+            priceSourcesSummary: { schema: 0, text: 0, dom: 0 },
         },
         trustSignals: {
             hasSSL: false,
@@ -12522,6 +12534,7 @@ async function scrapeStealth(validUrl) {
         sections: {
             hasHero: false,
             hasFeatures: false,
+            hasTrust: false,
             hasPricing: false,
             hasTestim: false,
             hasFAQ: false,
@@ -12565,86 +12578,194 @@ async function scrapeStealth(validUrl) {
         redirectIntel: { totalRedirects: 0, isFunnelRedirect: false, chain: [] },
     });
 
-    const extractFromHtml = (html, source = 'scrape.do') => {
-        const $ = cheerio.load(html);
-        const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
+    const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
+    const normText = (v) => String(v || '').replace(/\s+/g, ' ').trim();
 
-        const h1List = $('h1').map((_, el) => $(el).text().trim()).get().filter(Boolean).slice(0, 8);
-        const h2List = $('h2').map((_, el) => $(el).text().trim()).get().filter(Boolean).slice(0, 12);
-        const h3List = $('h3').map((_, el) => $(el).text().trim()).get().filter(Boolean).slice(0, 12);
+    const normalizePriceValueLocal = (raw) => {
+        if (raw == null) return null;
+        let s = String(raw)
+            .replace(/ /g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!s) return null;
+        s = s.replace(/[^\d.,']/g, '');
+        if (!s || !/\d/.test(s)) return null;
+        const commaCount = (s.match(/,/g) || []).length;
+        const dotCount = (s.match(/\./g) || []).length;
+        s = s.replace(/'/g, '');
+        if (commaCount > 0 && dotCount > 0) {
+            const lastComma = s.lastIndexOf(',');
+            const lastDot = s.lastIndexOf('.');
+            if (lastComma > lastDot) {
+                s = s.replace(/\./g, '');
+                s = s.replace(',', '.');
+            } else {
+                s = s.replace(/,/g, '');
+            }
+        } else if (commaCount > 0) {
+            const parts = s.split(',');
+            const last = parts[parts.length - 1];
+            if (parts.length === 2 && last.length <= 2) {
+                s = parts[0].replace(/[^\d]/g, '') + '.' + last;
+            } else {
+                s = s.replace(/,/g, '');
+            }
+        } else if (dotCount > 0) {
+            const parts = s.split('.');
+            const last = parts[parts.length - 1];
+            if (parts.length === 2 && last.length <= 2) {
+                s = parts[0].replace(/[^\d]/g, '') + '.' + last;
+            } else {
+                s = s.replace(/\./g, '');
+            }
+        }
+        const n = parseFloat(s);
+        if (!Number.isFinite(n) || n <= 0 || n > 999999999) return null;
+        return n;
+    };
 
-        const allButtons = $('a, button')
-            .map((_, el) => $(el).text().trim())
-            .get()
-            .filter(t => t.length > 1 && t.length < 80)
-            .slice(0, 25);
+    const detectCurrencyLocal = (raw = '', extra = '') => {
+        const str = `${raw} ${extra}`.toUpperCase();
+        if (/LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
+        if (/MAD|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
+        if (/EUR|€/.test(str)) return 'EUR';
+        if (/USD|US\$|\$/.test(str)) return 'USD';
+        if (/GBP|£/.test(str)) return 'GBP';
+        return null;
+    };
 
-        const ctaList = $('a.button, a.btn, button, .cta, [class*="button"], [class*="btn"]')
-            .map((_, el) => $(el).text().trim())
-            .get()
-            .filter(t => t.length > 1 && t.length < 80)
-            .slice(0, 20);
+    const buildPriceIntelLocal = (bodyText = '', html = '', domPriceTexts = [], schemaRaw = []) => {
+        const prices = [];
+        const pushPrice = (entry) => {
+            if (!entry || !Number.isFinite(entry.value) || entry.value <= 0) return;
+            prices.push({
+                raw: entry.raw || '',
+                value: entry.value,
+                currency: entry.currency || detectCurrencyLocal(entry.raw || '', bodyText || html) || null,
+                source: entry.source || 'text',
+                kind: entry.kind || 'current',
+                confidence: entry.confidence ?? 0.66,
+            });
+        };
 
-        const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
-        const phones = [...new Set((bodyText.match(phoneRegex) || []).map(p => p.trim()))].slice(0, 5);
+        const priceRegex = /(\d[\d\s,.']*)\s*(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
+        const rawPrices = [...String(bodyText || '').matchAll(priceRegex)].slice(0, 80);
+        rawPrices.forEach(m => {
+            const raw = m[0] || '';
+            const value = normalizePriceValueLocal(m[1] || m[4] || raw);
+            const currency = detectCurrencyLocal(raw, bodyText);
+            if (!Number.isFinite(value) || value <= 0) return;
+            const lowered = raw.toLowerCase();
+            let kind = 'current';
+            let confidence = 0.66;
+            if (/old|regular|compare|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/i.test(lowered)) {
+                kind = 'old';
+                confidence = 0.84;
+            } else if (/from|à partir|starting at|dès/i.test(lowered)) {
+                kind = 'from';
+                confidence = 0.8;
+            }
+            pushPrice({ raw, value, currency, source: 'text', kind, confidence });
+        });
 
-        const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-        const emails = [...new Set((bodyText.match(emailRegex) || []).filter(e => !e.includes('example') && !e.includes('test')))].slice(0, 5);
-const priceRegex = /(\d[\d\s,.']*)\s*(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
-       const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 50);
+        (domPriceTexts || []).forEach(raw => {
+            const text = normText(raw);
+            const value = normalizePriceValueLocal(text);
+            const currency = detectCurrencyLocal(text, bodyText || html);
+            if (!Number.isFinite(value) || value <= 0) return;
+            pushPrice({ raw: text, value, currency, source: 'dom', kind: 'current', confidence: 0.72 });
+        });
 
-const normalizedPrices = rawPrices
-    .map(m => {
-        const raw = m[0] || '';
-        const value = normalizePriceValue(m[1] || m[4] || raw);
-        const currency = detectCurrency(raw, bodyText);
+        (schemaRaw || []).forEach(raw => {
+            try {
+                const parsed = JSON.parse(raw);
+                const walk = (node) => {
+                    if (!node) return;
+                    if (Array.isArray(node)) return node.forEach(walk);
+                    if (typeof node !== 'object') return;
+                    const candidates = [node.price, node.lowPrice, node.highPrice];
+                    candidates.forEach(v => {
+                        const value = normalizePriceValueLocal(v);
+                        if (!Number.isFinite(value) || value <= 0) return;
+                        pushPrice({
+                            raw: String(v),
+                            value,
+                            currency: node.priceCurrency || detectCurrencyLocal(String(v), html),
+                            source: 'schema',
+                            kind: 'current',
+                            confidence: 0.9,
+                        });
+                    });
+                    Object.values(node).forEach(walk);
+                };
+                walk(parsed);
+            } catch (_) {}
+        });
 
-        if (!Number.isFinite(value) || value <= 0) return null;
-
-        const lowered = raw.toLowerCase();
-        let kind = 'current';
-        let confidence = 0.66;
-
-        if (/old|regular|compare|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/i.test(lowered)) {
-            kind = 'old';
-            confidence = 0.84;
-        } else if (/from|à partir|starting at|dès/i.test(lowered)) {
-            kind = 'from';
-            confidence = 0.8;
+        const deduped = [];
+        const seen = new Set();
+        for (const p of prices) {
+            const key = `${p.currency || 'NA'}|${p.value}|${p.kind}|${p.source}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            deduped.push(p);
         }
 
+        deduped.sort((a, b) => a.value - b.value);
+        const currentPrices = deduped.filter(p => p.kind !== 'old');
+        const oldPrices = deduped.filter(p => p.kind === 'old');
+        const allValues = currentPrices.map(p => p.value).sort((a, b) => a - b);
+        const primary = currentPrices[0] || deduped[0] || null;
+        const minPrice = allValues.length ? allValues[0] : (primary ? primary.value : null);
+        const maxPrice = allValues.length ? allValues[allValues.length - 1] : (primary ? primary.value : null);
+        const priceRange = minPrice !== null && maxPrice !== null && minPrice !== maxPrice ? [minPrice, maxPrice] : null;
+        const oldCandidate = oldPrices.length ? oldPrices.sort((a, b) => b.value - a.value)[0] : null;
+        const discountRate = primary && oldCandidate && oldCandidate.value > primary.value
+            ? Math.round(((oldCandidate.value - primary.value) / oldCandidate.value) * 100)
+            : null;
+        const currency = primary?.currency || detectCurrencyLocal(bodyText, html) || null;
+
         return {
-            raw,
-            value,
+            detected: !!primary,
             currency,
-            source: 'text',
-            kind,
-            confidence
+            primaryPrice: primary ? primary.value : null,
+            bestPrice: primary ? primary.value : null,
+            minPrice,
+            maxPrice,
+            priceRange,
+            pricingModel: priceRange ? 'range' : (primary ? 'one-time' : 'unknown'),
+            confidence: primary ? (primary.source === 'schema' ? 'HIGH' : 'MEDIUM') : 'LOW',
+            primarySource: primary?.source || null,
+            primaryKind: primary?.kind || null,
+            primaryScore: primary ? Math.round((primary.confidence || 0.66) * 100) : null,
+            all: deduped.map(p => p.value),
+            prices: deduped,
+            struckPrices: oldPrices.map(p => p.value),
+            discountRate,
+            priceSourcesSummary: {
+                schema: deduped.filter(p => p.source === 'schema').length,
+                text: deduped.filter(p => p.source === 'text').length,
+                dom: deduped.filter(p => p.source === 'dom').length,
+            },
         };
-    })
-    .filter(Boolean);
-  const detectCurrency = (raw = '', extra = '') => {
-    const str = `${raw} ${extra}`.toUpperCase();
+    };
 
-    if (/\bLYD\b|\bLD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
-    if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
-    if (/\bEUR\b|€/.test(str)) return 'EUR';
-    if (/\bUSD\b|US\$|\$/.test(str)) return 'USD';
-    if (/\bGBP\b|£/.test(str)) return 'GBP';
-
-    return null;
-};
-        const bestPrice = normalizedPrices.length ? normalizedPrices[0].value : null;
-        const currency =
-    normalizedPrices.find(p => p.currency)?.currency ||
-    detectCurrency(bodyText) ||
-    null;
-
+    const extractFromHtml = (html, source = 'scrape.do') => {
+        const $ = cheerio.load(html);
+        const bodyText = normText($('body').text());
+        const h1List = unique($('h1').map((_, el) => normText($(el).text())).get()).slice(0, 8);
+        const h2List = unique($('h2').map((_, el) => normText($(el).text())).get()).slice(0, 12);
+        const h3List = unique($('h3').map((_, el) => normText($(el).text())).get()).slice(0, 12);
+        const allButtons = unique($('a, button').map((_, el) => normText($(el).text())).get().filter(t => t.length > 1 && t.length < 80)).slice(0, 25);
+        const ctaList = unique($('a.button, a.btn, button, .cta, [class*="button"], [class*="btn"]').map((_, el) => normText($(el).text())).get().filter(t => t.length > 1 && t.length < 80)).slice(0, 20);
+        const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
+        const phones = unique((bodyText.match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
+        const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+        const emails = unique((bodyText.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
+        const schemaRaw = $('script[type="application/ld+json"]').map((_, el) => $(el).html() || '').get().filter(Boolean);
         const schemaTypes = [];
-        $('script[type="application/ld+json"]').each((_, el) => {
+        schemaRaw.forEach(raw => {
             try {
-                const raw = $(el).html();
-                if (!raw) return;
                 const parsed = JSON.parse(raw);
                 const entries = Array.isArray(parsed) ? parsed : [parsed];
                 entries.forEach(item => {
@@ -12653,87 +12774,35 @@ const normalizedPrices = rawPrices
                 });
             } catch (_) {}
         });
-
-        const socialProofs = $('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')
-            .map((_, el) => $(el).text().trim().substring(0, 120))
-            .get()
-            .filter(Boolean)
-            .slice(0, 5);
-
-       const sections = {
-  hasHero: !!$([
-    '.hero', '#hero', '.banner', '.masthead', '.hero-section',
-    '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
-  ].join(',')).length,
-
-  hasFeatures: !!$([
-    '.feature', '.features', '#features', '.service', '.services',
-    '#service', '.benefits', '.benefit', '.solutions',
-    '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
-  ].join(',')).length,
-
-  hasTrust: !!$([
-    '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
-    '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
-    '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
-    '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
-    '[class*="reassurance"]', '[class*="trusted"]'
-  ].join(',')).length,
-
-  hasPricing: !!$([
-    '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
-    '.tarifs', '.tarif', '.offres', '.offer',
-    '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
-  ].join(',')).length,
-
-  hasTestim: !!$([
-    '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
-    '.ratings', '.social-proof',
-    '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
-  ].join(',')).length,
-
-  hasFAQ: !!$([
-    '.faq', '#faq', 'details', '.accordion', '.questions',
-    '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
-  ].join(',')).length,
-
-  hasCTA: !!$([
-    '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
-    '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
-  ].join(',')).length,
-
-  hasFooter: !!$([
-    'footer', '.footer', '#footer', '[class*="footer"]'
-  ].join(',')).length,
-};
-
+        const domPriceTexts = unique($('[class*="price"], [id*="price"], .pricing, .plan, .offer').map((_, el) => normText($(el).text())).get().filter(Boolean)).slice(0, 40);
+        const pricing = buildPriceIntelLocal(bodyText, html, domPriceTexts, schemaRaw);
+        const socialProofs = unique($('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]').map((_, el) => normText($(el).text()).substring(0, 120)).get()).slice(0, 5);
+        const sections = {
+            hasHero: !!$('.hero, #hero, .banner, .masthead, .hero-section, [class*="hero"], [id*="hero"], [class*="banner"]').length,
+            hasFeatures: !!$('.feature, .features, #features, .service, .services, #service, .benefits, .benefit, .solutions, [class*="feature"], [id*="feature"], [class*="benefit"], [id*="service"]').length,
+            hasTrust: !!$('.trust, .trust-bar, .badge, .badges, .guarantee, .guarantees, .security, .certifications, .reassurance, .trusted-by, .logo-bar, [class*="trust"], [id*="trust"], [class*="badge"], [class*="guarantee"], [class*="security"], [class*="certif"], [class*="reassurance"], [class*="trusted"]').length,
+            hasPricing: !!$('.pricing, #pricing, .price, .prices, .plans, .plan, .tarifs, .tarif, .offres, .offer, [class*="pricing"], [class*="price"], [id*="pricing"], [class*="plan"]').length,
+            hasTestim: !!$('.testimonial, .testimonials, .review, .reviews, .avis, .ratings, .social-proof, [class*="testimonial"], [class*="review"], [class*="avis"]').length,
+            hasFAQ: !!$('.faq, #faq, details, .accordion, .questions, .questions-frequentes, [class*="faq"], [id*="faq"]').length,
+            hasCTA: !!$('.cta, #cta, .call-to-action, .sticky-cta, .contact-section, [class*="cta"], [id*="cta"], [href*="contact"], [href*="whatsapp"], [href*="wa.me"]').length,
+            hasFooter: !!$('footer, .footer, #footer, [class*="footer"]').length,
+        };
         const styleContent = $('style').text() + ' ' + $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
-        const colorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi;
+        const colorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi;
         const allColors = styleContent.match(colorRegex) || [];
         const colorCounts = {};
-
         allColors.forEach(c => {
             const norm = c.toLowerCase().replace(/\s+/g, '');
             if (!['#ffffff', '#000000', '#fff', '#000', 'transparent', 'rgba(0,0,0,0)'].includes(norm)) {
                 colorCounts[norm] = (colorCounts[norm] || 0) + 1;
             }
         });
-
-        const dominantColors = Object.entries(colorCounts)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
-            .map(([color]) => color);
-
-        const googleFonts = $('link[href*="fonts.googleapis.com"]')
-            .map((_, el) => {
-                const href = $(el).attr('href') || '';
-                const m = href.match(/family=([^&:]+)/);
-                return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
-            })
-            .get()
-            .filter(Boolean)
-            .slice(0, 5);
-
+        const dominantColors = Object.entries(colorCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([color]) => color);
+        const googleFonts = unique($('link[href*="fonts.googleapis.com"]').map((_, el) => {
+            const href = $(el).attr('href') || '';
+            const m = href.match(/family=([^&:]+)/);
+            return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
+        }).get()).slice(0, 5);
         const meta = {
             title: $('title').text().trim() || '',
             description: $('meta[name="description"]').attr('content') || '',
@@ -12743,9 +12812,7 @@ const normalizedPrices = rawPrices
             lang: $('html').attr('lang') || '',
             keywords: $('meta[name="keywords"]').attr('content') || '',
         };
-
         const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
-
         return {
             success: true,
             fetchLayer: source,
@@ -12756,12 +12823,7 @@ const normalizedPrices = rawPrices
                 googleFonts,
             },
             techStack: {
-                cms: /shopify|myshopify/i.test(html) ? 'Shopify'
-                    : /wp-content|wp-includes/i.test(html) ? 'WordPress'
-                    : /woocommerce/i.test(html) ? 'WooCommerce'
-                    : /__NEXT_DATA__/i.test(html) ? 'Next.js'
-                    : /__NUXT__/i.test(html) ? 'Nuxt.js'
-                    : 'Unknown',
+                cms: /shopify|myshopify/i.test(html) ? 'Shopify' : /wp-content|wp-includes/i.test(html) ? 'WordPress' : /woocommerce/i.test(html) ? 'WooCommerce' : /__NEXT_DATA__/i.test(html) ? 'Next.js' : /__NUXT__/i.test(html) ? 'Nuxt.js' : 'Unknown',
                 hasSSL: validUrl.startsWith('https'),
                 hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
                 hasSchema: schemaTypes.length > 0,
@@ -12788,14 +12850,7 @@ const normalizedPrices = rawPrices
                 allButtons,
                 pageSections: [],
             },
-            priceIntel: {
-                bestPrice,
-                currency,
-                all: normalizedPrices.map(p => p.value),
-              detected: (primaryPrice ?? bestPrice ?? 0) > 0,
-                struckPrices: [],
-                discountRate: null,
-            },
+            priceIntel: pricing,
             trustSignals: {
                 hasSSL: validUrl.startsWith('https'),
                 hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
@@ -12808,7 +12863,7 @@ const normalizedPrices = rawPrices
                 trustScore: null,
             },
             contacts: { phones, emails },
-            schemaData: { types: [...new Set(schemaTypes)], count: [...new Set(schemaTypes)].length },
+            schemaData: { types: unique(schemaTypes), count: unique(schemaTypes).length },
             sections,
             meta,
             wordCount,
@@ -12841,38 +12896,27 @@ const normalizedPrices = rawPrices
     };
 
     let pw = null;
-
     try {
         console.log(`🧠 Smart scraping: ${validUrl}`);
-
         pw = await playwrightWrapper.launchPlaywright(validUrl);
+        if (!pw) throw new Error('launchPlaywright returned null');
 
-        if (!pw) {
-            throw new Error('launchPlaywright returned null');
-        }
-
-        // ── MODE 1: FALLBACK HTML (Scrape.do) ─────────────────
         if (!pw.page && pw.html) {
             if (typeof pw.html !== 'string' || pw.html.length < 500) {
                 throw new Error(`Fallback HTML too short (${pw.html?.length || 0} chars)`);
             }
-
             const result = extractFromHtml(pw.html, pw.provider || 'scrape.do');
-
-            console.log(`✅ scrapeStealth HTML fallback OK — ${Date.now() - startTime}ms | Layer: ${result.fetchLayer}`);
+            console.log(`✅ scrapeStealth HTML fallback OK — ${Date.now() - startTime}ms | Layer: ${result.fetchLayer} | Prix: ${result.priceIntel.primaryPrice || result.priceIntel.bestPrice || 'N/A'} ${result.priceIntel.currency || ''}`);
             return result;
         }
 
-        // ── MODE 2: BROWSER MODE ──────────────────────────────
         if (!pw.page) {
             throw new Error(`Browser launch failed — provider=${pw.provider || 'unknown'} and page is null`);
         }
 
         const html = await Promise.race([
             pw.page.content(),
-            new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('page.content() timeout 15s')), 15000)
-            )
+            new Promise((_, reject) => setTimeout(() => reject(new Error('page.content() timeout 15s')), 15000))
         ]);
 
         if (!html || typeof html !== 'string' || html.length < 500) {
@@ -12880,52 +12924,28 @@ const normalizedPrices = rawPrices
         }
 
         const extracted = await pw.page.evaluate(() => {
+            const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
+            const normText = (v) => String(v || '').replace(/\s+/g, ' ').trim();
             const colorMap = new Map();
-            const IGNORE = new Set([
-                'rgba(0, 0, 0, 0)', 'transparent', 'rgb(0, 0, 0)',
-                'rgb(255, 255, 255)', '', 'rgba(0,0,0,0)'
-            ]);
-
-            const targets = document.querySelectorAll(
-                'body, header, nav, section, footer, h1, h2, ' +
-                'button, a, [class*="hero"], [class*="btn"], [class*="cta"], ' +
-                '[class*="banner"], [class*="primary"], [class*="brand"]'
-            );
-
+            const IGNORE = new Set(['rgba(0, 0, 0, 0)', 'transparent', 'rgb(0, 0, 0)', 'rgb(255, 255, 255)', '', 'rgba(0,0,0,0)']);
+            const targets = document.querySelectorAll('body, header, nav, section, footer, h1, h2, button, a, [class*="hero"], [class*="btn"], [class*="cta"], [class*="banner"], [class*="primary"], [class*="brand"]');
             targets.forEach(el => {
                 const cs = window.getComputedStyle(el);
                 ['backgroundColor', 'color', 'borderTopColor'].forEach(prop => {
                     const val = cs[prop];
-                    if (val && !IGNORE.has(val)) {
-                        colorMap.set(val, (colorMap.get(val) || 0) + 1);
-                    }
+                    if (val && !IGNORE.has(val)) colorMap.set(val, (colorMap.get(val) || 0) + 1);
                 });
             });
-
             const rootCS = window.getComputedStyle(document.documentElement);
             const cssVars = ['--primary','--primary-color','--color-primary','--accent','--brand-color','--theme-color','--secondary','--main-color'];
-            const varColors = cssVars
-                .map(v => rootCS.getPropertyValue(v).trim())
-                .filter(v => v && (v.startsWith('#') || v.startsWith('rgb')));
-
+            const varColors = cssVars.map(v => rootCS.getPropertyValue(v).trim()).filter(v => v && (v.startsWith('#') || v.startsWith('rgb')));
             const rgbToHex = (rgb) => {
                 const m = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
                 if (!m) return rgb;
-                return '#' + [m[1], m[2], m[3]]
-                    .map(x => parseInt(x).toString(16).padStart(2, '0'))
-                    .join('');
+                return '#' + [m[1], m[2], m[3]].map(x => parseInt(x, 10).toString(16).padStart(2, '0')).join('');
             };
-
             const BAD = new Set(['#000000','#ffffff','#000','#fff']);
-            const dominantColors = [
-                ...varColors,
-                ...[...colorMap.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c)
-            ]
-                .map(rgbToHex)
-                .filter(c => c && !BAD.has(c))
-                .filter((c, i, arr) => arr.indexOf(c) === i)
-                .slice(0, 5);
-
+            const dominantColors = unique([...varColors, ...[...colorMap.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c)]).map(rgbToHex).filter(c => c && !BAD.has(c)).slice(0, 5);
             const tech = {
                 cms: 'Custom',
                 isWordPress: !!(window.wp || document.querySelector('[class*="wp-content"],[id*="wp-"]')),
@@ -12936,22 +12956,21 @@ const normalizedPrices = rawPrices
                 isVue: !!(window.Vue || window.__vue_app__),
                 isWooCommerce: !!(window.woocommerce_params || document.querySelector('.woocommerce')),
                 hasJQuery: !!(window.jQuery || window.$),
-                hasGA4: !!(window.gtag || !!document.querySelector('[src*="gtag/js"],[src*="googletagmanager"]')),
-                hasGTM: !!(window.google_tag_manager || !!document.querySelector('[src*="googletagmanager.com/gtm"]')),
-                hasFBPixel: !!(window.fbq || !!document.querySelector('[src*="connect.facebook.net"]')),
-                hasTikTok: !!(window.ttq || !!document.querySelector('[src*="analytics.tiktok.com"]')),
-                hasHotjar: !!(window.hj || !!document.querySelector('[src*="hotjar.com"]')),
-                hasClarity: !!(window.clarity || !!document.querySelector('[src*="clarity.ms"]')),
+                hasGA4: !!(window.gtag || document.querySelector('[src*="gtag/js"],[src*="googletagmanager"]')),
+                hasGTM: !!(window.google_tag_manager || document.querySelector('[src*="googletagmanager.com/gtm"]')),
+                hasFBPixel: !!(window.fbq || document.querySelector('[src*="connect.facebook.net"]')),
+                hasTikTok: !!(window.ttq || document.querySelector('[src*="analytics.tiktok.com"]')),
+                hasHotjar: !!(window.hj || document.querySelector('[src*="hotjar.com"]')),
+                hasClarity: !!(window.clarity || document.querySelector('[src*="clarity.ms"]')),
                 hasLiveChat: !!(window.Intercom || window.Crisp || window.$crisp || window.tidioChatApi),
-                hasWhatsApp: !!document.querySelector('a[href*="wa.me"], a[href*="api.whatsapp.com"]'),
+                hasWhatsApp: !!document.querySelector('a[href*="wa.me"], a[href*="api.whatsapp.com"], a[href*="whatsapp"]'),
                 hasCountdown: !!document.querySelector('[id*="countdown"],[class*="countdown"],[data-countdown]'),
-                hasExitIntent: !!(window.exitIntent || !!document.querySelector('[class*="exit-intent"],[id*="exit-intent"]')),
+                hasExitIntent: !!(window.exitIntent || document.querySelector('[class*="exit-intent"],[id*="exit-intent"]')),
                 hasSSL: location.protocol === 'https:',
                 isMobile: !!document.querySelector('meta[name="viewport"]'),
                 hasCDN: !!(document.querySelector('[src*="cloudflare"],[src*="cdn."]') || window.__CF$cv$params),
                 hasSchema: document.querySelectorAll('script[type="application/ld+json"]').length > 0,
             };
-
             if (tech.isShopify) tech.cms = 'Shopify';
             else if (tech.isNextJS) tech.cms = 'Next.js';
             else if (tech.isNuxtJS) tech.cms = 'Nuxt.js';
@@ -12959,160 +12978,49 @@ const normalizedPrices = rawPrices
             else if (tech.isWordPress) tech.cms = 'WordPress';
             else if (tech.isReact) tech.cms = 'React';
             else if (tech.isVue) tech.cms = 'Vue.js';
-
-            const h1List = [...document.querySelectorAll('h1')].map(e => e.innerText.trim()).filter(Boolean);
-            const h2List = [...document.querySelectorAll('h2')].map(e => e.innerText.trim()).filter(Boolean).slice(0, 12);
-            const h3List = [...document.querySelectorAll('h3')].map(e => e.innerText.trim()).filter(Boolean).slice(0, 12);
+            const h1List = unique([...document.querySelectorAll('h1')].map(e => normText(e.innerText))).slice(0, 8);
+            const h2List = unique([...document.querySelectorAll('h2')].map(e => normText(e.innerText))).slice(0, 12);
+            const h3List = unique([...document.querySelectorAll('h3')].map(e => normText(e.innerText))).slice(0, 12);
             const ctaRegex = /(get started|start|book|buy|order|try|sign up|signup|subscribe|join|contact|demo|call|apply|shop|acheter|commander|essayer|devis|contactez|réserver|reserver|ابدأ|اشتر|اطلب|احجز|تواصل)/i;
-
-const ctaList = [
-  ...document.querySelectorAll('a, button, input[type="submit"], input[type="button"]')
-]
-  .map(el => {
-    const text = (el.innerText || el.value || el.getAttribute('aria-label') || '').trim();
-    const href = (el.getAttribute('href') || '').trim();
-    const cls = (el.className || '').toString();
-    return { text, href, cls };
-  })
-  .filter(({ text, href, cls }) => {
-    if (text.length < 2 || text.length > 80) return false;
-
-    const looksLikeCTA =
-      ctaRegex.test(text) ||
-      /cta|btn|button|primary|submit|contact|pricing|demo|trial|whatsapp/i.test(cls) ||
-      /contact|pricing|demo|signup|trial|book|buy|order|whatsapp|wa\.me/i.test(href);
-
-    const looksLikeNav =
-      /^(home|about|services|solutions|platform|pricing|blog|faq|contact)$/i.test(text);
-
-    return looksLikeCTA && !looksLikeNav;
-  })
-  .map(x => x.text)
-  .filter((v, i, arr) => arr.indexOf(v) === i)
-  .slice(0, 20);
-
-            const bodyText = document.body.innerText || '';
-
+            const ctaList = unique([...document.querySelectorAll('a, button, input[type="submit"], input[type="button"]')].map(el => {
+                const text = normText(el.innerText || el.value || el.getAttribute('aria-label') || '');
+                const href = normText(el.getAttribute('href') || '');
+                const cls = (el.className || '').toString();
+                return { text, href, cls };
+            }).filter(({ text, href, cls }) => {
+                if (text.length < 2 || text.length > 80) return false;
+                const looksLikeCTA = ctaRegex.test(text) || /cta|btn|button|primary|submit|contact|pricing|demo|trial|whatsapp/i.test(cls) || /contact|pricing|demo|signup|trial|book|buy|order|whatsapp|wa\.me/i.test(href);
+                const looksLikeNav = /^(home|about|services|solutions|platform|pricing|blog|faq|contact)$/i.test(text);
+                return looksLikeCTA && !looksLikeNav;
+            }).map(x => x.text)).slice(0, 20);
+            const bodyText = normText(document.body?.innerText || '');
             const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
-            const phones = [...new Set((bodyText.match(phoneRegex) || []).map(p => p.trim()))].slice(0, 5);
-
+            const phones = unique((bodyText.match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
             const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-            const emails = [...new Set((bodyText.match(emailRegex) || []).filter(e => !e.includes('example') && !e.includes('test')))].slice(0, 5);
-const priceRegex = /(\d[\d\s,.']*)\s*(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
-            const allPrices = [...bodyText.matchAll(priceRegex)].slice(0, 15);
-           const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 50);
-
-const normalizedPrices = rawPrices
-    .map(m => {
-        const raw = m[0] || '';
-        const value = normalizePriceValue(m[1] || m[4] || raw);
-        const currency = detectCurrency(raw, bodyText);
-
-        if (!Number.isFinite(value) || value <= 0) return null;
-
-        const lowered = raw.toLowerCase();
-        let kind = 'current';
-        let confidence = 0.66;
-
-        if (/old|regular|compare|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/i.test(lowered)) {
-            kind = 'old';
-            confidence = 0.84;
-        } else if (/from|à partir|starting at|dès/i.test(lowered)) {
-            kind = 'from';
-            confidence = 0.8;
-        }
-
-        return {
-            raw,
-            value,
-            currency,
-            source: 'text',
-            kind,
-            confidence
-        };
-    })
-    .filter(Boolean);
-            const bestPrice = normalizedPrices.length ? normalizedPrices[0].value : null;
-            const currency =
-    normalizedPrices.find(p => p.currency)?.currency ||
-    detectCurrency(bodyText) ||
-    null;
-
-            const schemas = [...document.querySelectorAll('script[type="application/ld+json"]')]
-                .map(s => { try { return JSON.parse(s.textContent); } catch { return null; } })
-                .filter(Boolean);
-
-            const schemaTypes = schemas
-                .map(s => s['@type'] || s['@graph']?.[0]?.['@type'])
-                .filter(Boolean);
-
-            const socialProofs = [...document.querySelectorAll(
-                '[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]'
-            )].map(e => e.innerText.trim().substring(0, 120)).filter(Boolean).slice(0, 5);
-
-           const hasAny = (selectors) => {
-  try {
-    return selectors.some(sel => document.querySelector(sel));
-  } catch {
-    return false;
-  }
-};
-
-const sections = {
-  hasHero: hasAny([
-    '.hero', '#hero', '.banner', '.masthead', '.hero-section',
-    '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
-  ]),
-
-  hasFeatures: hasAny([
-    '.feature', '.features', '#features', '.service', '.services',
-    '#service', '.benefits', '.benefit', '.solutions',
-    '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
-  ]),
-
-  hasTrust: hasAny([
-    '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
-    '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
-    '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
-    '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
-    '[class*="reassurance"]', '[class*="trusted"]'
-  ]),
-
-  hasPricing: hasAny([
-    '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
-    '.tarifs', '.tarif', '.offres', '.offer',
-    '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
-  ]),
-
-  hasTestim: hasAny([
-    '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
-    '.ratings', '.social-proof',
-    '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
-  ]),
-
-  hasFAQ: hasAny([
-    '.faq', '#faq', 'details', '.accordion', '.questions',
-    '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
-  ]),
-
-  hasCTA: hasAny([
-    '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
-    '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
-  ]),
-
-  hasFooter: hasAny([
-    'footer', '.footer', '#footer', '[class*="footer"]'
-  ])
-};
-
-            const googleFonts = [...document.querySelectorAll('link[href*="fonts.googleapis.com"]')]
-                .map(l => {
-                    const m = l.href.match(/family=([^&:]+)/);
-                    return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
-                })
-                .filter(Boolean)
-                .slice(0, 5);
-
+            const emails = unique((bodyText.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
+            const schemaJsonRaw = [...document.querySelectorAll('script[type="application/ld+json"]')].map(s => s.textContent || '').filter(Boolean);
+            const schemaTypes = schemaJsonRaw.map(raw => {
+                try {
+                    const parsed = JSON.parse(raw);
+                    return parsed?.['@type'] || parsed?.['@graph']?.[0]?.['@type'] || null;
+                } catch { return null; }
+            }).flat().filter(Boolean);
+            const socialProofs = unique([...document.querySelectorAll('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')].map(e => normText(e.innerText).substring(0, 120))).slice(0, 5);
+            const hasAny = (selectors) => { try { return selectors.some(sel => document.querySelector(sel)); } catch { return false; } };
+            const sections = {
+                hasHero: hasAny(['.hero', '#hero', '.banner', '.masthead', '.hero-section', '[class*="hero"]', '[id*="hero"]', '[class*="banner"]']),
+                hasFeatures: hasAny(['.feature', '.features', '#features', '.service', '.services', '#service', '.benefits', '.benefit', '.solutions', '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]']),
+                hasTrust: hasAny(['.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees', '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar', '[class*="trust"]', '[id*="trust"]', '[class*="badge"]', '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]', '[class*="reassurance"]', '[class*="trusted"]']),
+                hasPricing: hasAny(['.pricing', '#pricing', '.price', '.prices', '.plans', '.plan', '.tarifs', '.tarif', '.offres', '.offer', '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]']),
+                hasTestim: hasAny(['.testimonial', '.testimonials', '.review', '.reviews', '.avis', '.ratings', '.social-proof', '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]']),
+                hasFAQ: hasAny(['.faq', '#faq', 'details', '.accordion', '.questions', '.questions-frequentes', '[class*="faq"]', '[id*="faq"]']),
+                hasCTA: hasAny(['.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section', '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]']),
+                hasFooter: hasAny(['footer', '.footer', '#footer', '[class*="footer"]'])
+            };
+            const googleFonts = unique([...document.querySelectorAll('link[href*="fonts.googleapis.com"]')].map(l => {
+                const m = l.href.match(/family=([^&:]+)/);
+                return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
+            })).slice(0, 5);
             const meta = {
                 title: document.title || '',
                 description: document.querySelector('meta[name="description"]')?.content || '',
@@ -13122,15 +13030,19 @@ const sections = {
                 lang: document.documentElement.lang || '',
                 keywords: document.querySelector('meta[name="keywords"]')?.content || '',
             };
-
+            const domPriceTexts = unique([
+                ...[...document.querySelectorAll('[class*="price"], [id*="price"], .pricing, .plan, .offer')].map(el => normText(el.innerText || '')),
+                ...[...document.querySelectorAll('meta[itemprop="price"]')].map(el => normText(el.getAttribute('content') || '')),
+            ].filter(Boolean)).slice(0, 40);
             return {
                 dominantColors: dominantColors.length > 0 ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
                 tech,
                 copy: { h1List, h2List, h3List, ctaList },
                 contacts: { phones, emails },
-                pricing: { bestPrice, currency, allPrices: normalizedPrices.map(p => p.value) },
                 socialProofs,
                 schemaTypes,
+                schemaJsonRaw,
+                domPriceTexts,
                 sections,
                 googleFonts,
                 meta,
@@ -13139,7 +13051,8 @@ const sections = {
             };
         });
 
-        console.log(`✅ scrapeStealth OK — ${Date.now() - startTime}ms | Layer: ${pw.provider || 'browser'} | Colors: ${extracted.dominantColors.join(',')} | CMS: ${extracted.tech.cms}`);
+        const pricing = buildPriceIntelLocal(extracted.bodyText || '', html, extracted.domPriceTexts || [], extracted.schemaJsonRaw || []);
+        console.log(`✅ scrapeStealth OK — ${Date.now() - startTime}ms | Layer: ${pw.provider || 'browser'} | Colors: ${extracted.dominantColors.join(',')} | CMS: ${extracted.tech.cms} | Prix: ${pricing.primaryPrice || pricing.bestPrice || 'N/A'} ${pricing.currency || ''} | Range: ${pricing.priceRange ? pricing.priceRange.join(' - ') : 'N/A'}`);
 
         return {
             success: true,
@@ -13159,14 +13072,7 @@ const sections = {
                 allButtons: extracted.copy.ctaList,
                 pageSections: [],
             },
-            priceIntel: {
-                bestPrice: extracted.pricing.bestPrice,
-                currency: extracted.pricing.currency,
-                all: extracted.pricing.allPrices,
-                detected: (extracted.pricing.primaryPrice ?? extracted.pricing.bestPrice ?? 0) > 0,
-                struckPrices: [],
-                discountRate: null,
-            },
+            priceIntel: pricing,
             trustSignals: {
                 hasSSL: extracted.tech.hasSSL,
                 hasWhatsApp: extracted.tech.hasWhatsApp,
@@ -13213,20 +13119,18 @@ const sections = {
             brand: { fullTextSample: extracted.bodyText, wordCount: extracted.wordCount },
             redirectIntel: { totalRedirects: 0, isFunnelRedirect: false, chain: [] },
         };
-
     } catch (e) {
         console.warn(`⚠️ scrapeStealth timeout/failed (${Date.now() - startTime}ms). Returning empty struct to trigger fallback. Cause: ${e.message}`);
         return EMPTY_RESULT(e.message, pw?.provider || 'browser');
     } finally {
         try {
-            if (pw) {
-                await playwrightWrapper.closeBrowser(pw);
-            }
+            if (pw) await playwrightWrapper.closeBrowser(pw);
         } catch (closeErr) {
             console.warn('⚠️ Browser close warning:', closeErr.message);
         }
     }
 }
+
 function getCanonicalPrice(pricing) {
   const value = pricing?.primaryPrice ?? pricing?.bestPrice ?? null;
   return typeof value === 'number' && value > 0 ? value : null;
