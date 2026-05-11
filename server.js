@@ -1780,14 +1780,17 @@ async function scrapeStealth(validUrl) {
                 return n;
             };
 
-            const detectCurrency = (raw = '') => {
-                const str = String(raw || '').toUpperCase();
-                if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
-                if (/\bEUR\b|€/.test(str)) return 'EUR';
-                if (/\bUSD\b|\$/.test(str)) return 'USD';
-                if (/\bGBP\b|£/.test(str)) return 'GBP';
-                return 'MAD';
-            };
+       const detectCurrency = (raw = '', html = '') => {
+    const str = `${raw} ${html}`.toUpperCase();
+
+    if (/\bLYD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
+    if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
+    if (/\bEUR\b|€/.test(str)) return 'EUR';
+    if (/\bUSD\b|US\$|\$/.test(str)) return 'USD';
+    if (/\bGBP\b|£/.test(str)) return 'GBP';
+
+    return null;
+};
 
             const bodyText = normText(document.body?.innerText || '');
             const viewport = !!document.querySelector('meta[name="viewport"]');
@@ -1913,32 +1916,81 @@ async function scrapeStealth(validUrl) {
                     .filter(e => !/example|test/i.test(e))
             ).slice(0, 5);
 
-            const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|DHS|€|\$|£|EUR|USD|GBP)/gi;
+            const priceRegex = /(\d[\d\s,.']*)\s*(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
             const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 25);
 
-            const normalizedPrices = rawPrices
-                .map(m => {
-                    const raw = m[0];
-                    const value = normalizePriceValue(m[1] || raw);
-                    const currency = detectCurrency(m[2] || raw);
-                    return value ? {
-                        raw,
-                        value,
-                        currency,
-                        source: 'text',
-                        kind: 'current',
-                        confidence: 0.66
-                    } : null;
-                })
-                .filter(Boolean);
+           const normalizedPrices = [...bodyText.matchAll(priceRegex)]
+    .slice(0, 50)
+    .map(m => {
+        const raw = m[0];
+        const value = normalizePriceValue(m[1] || m[4] || raw);
+        const currency = detectCurrency(raw, html);
 
-            const allValues = normalizedPrices.map(p => p.value).sort((a, b) => a - b);
-            const primaryPrice = allValues.length ? allValues[0] : null;
-            const bestPrice = primaryPrice;
-            const minPrice = allValues.length ? allValues[0] : null;
-            const maxPrice = allValues.length ? allValues[allValues.length - 1] : null;
-            const currency = normalizedPrices.length ? normalizedPrices[0].currency : 'MAD';
-            const priceRange = minPrice !== null && maxPrice !== null && minPrice !== maxPrice ? [minPrice, maxPrice] : null;
+        if (!value) return null;
+
+        const lowered = raw.toLowerCase();
+        let kind = 'current';
+        let confidence = 0.66;
+
+        if (/old|regular|compare|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/i.test(lowered)) {
+            kind = 'old';
+            confidence = 0.84;
+        } else if (/from|à partir|starting at|dès/i.test(lowered)) {
+            kind = 'from';
+            confidence = 0.8;
+        }
+
+        return {
+            raw,
+            value,
+            currency,
+            source: 'text',
+            kind,
+            confidence
+        };
+    })
+    .filter(Boolean);
+
+            const oldCandidates = normalizedPrices.filter(p => p.kind === 'old');
+const currentCandidates = normalizedPrices.filter(p => p.kind === 'current' || p.kind === 'from');
+
+const sortedCurrents = [...currentCandidates].sort((a, b) => {
+    if (b.confidence !== a.confidence) return b.confidence - a.confidence;
+    return a.value - b.value;
+});
+
+const primary = sortedCurrents[0] || null;
+const allValues = [...new Set(normalizedPrices.map(p => p.value))].sort((a, b) => a - b);
+
+const minPrice = currentCandidates.length
+    ? [...currentCandidates].sort((a, b) => a.value - b.value)[0].value
+    : null;
+
+const maxPrice = currentCandidates.length
+    ? [...currentCandidates].sort((a, b) => b.value - a.value)[0].value
+    : null;
+
+const bestPrice = primary?.value || null;
+const primaryPrice = primary?.value || null;
+
+const currency =
+    primary?.currency ||
+    normalizedPrices.find(p => p.currency)?.currency ||
+    detectCurrency(bodyText, html) ||
+    null;
+
+const struckPrices = [...new Set(oldCandidates.map(p => p.value))].sort((a, b) => a - b);
+
+const bestOld = struckPrices.length ? struckPrices[struckPrices.length - 1] : null;
+const discountRate =
+    primaryPrice && bestOld && bestOld > primaryPrice
+        ? Math.round(((bestOld - primaryPrice) / bestOld) * 100)
+        : null;
+
+const priceRange =
+    minPrice !== null && maxPrice !== null && minPrice !== maxPrice
+        ? [minPrice, maxPrice]
+        : null;
 
             const schemaNodes = [...document.querySelectorAll('script[type="application/ld+json"]')]
                 .map(s => {
@@ -2095,32 +2147,32 @@ async function scrapeStealth(validUrl) {
                 copy: { h1List, h2List, h3List, ctaList },
                 contacts: { phones, emails },
                 pricing: {
-                    detected: primaryPrice !== null,
-                    currency,
-                    primaryPrice,
-                    bestPrice,
-                    minPrice,
-                    maxPrice,
-                    priceRange,
-                    pricingModel: priceRange ? 'range' : (primaryPrice !== null ? 'one-time' : 'unknown'),
-                    confidence: primaryPrice !== null ? 'MEDIUM' : 'LOW',
-                    primarySource: primaryPrice !== null ? 'text' : null,
-                    primaryKind: primaryPrice !== null ? 'current' : null,
-                    primaryScore: primaryPrice !== null ? 66 : null,
-                    allPrices: allValues,
-                    prices: normalizedPrices,
-                    schemaPrices: [],
-                    textPrices: allValues,
-                    domPrices: [],
-                    planPrices: [],
-                    struckPrices: [],
-                    discountRate: null,
-                    priceSourcesSummary: {
-                        schema: 0,
-                        text: normalizedPrices.length,
-                        dom: 0
-                    }
-                },
+    detected: primaryPrice !== null,
+    currency,
+    primaryPrice,
+    bestPrice,
+    minPrice,
+    maxPrice,
+    priceRange,
+    pricingModel: priceRange ? 'range' : (primaryPrice !== null ? 'one-time' : 'unknown'),
+    confidence: primaryPrice !== null ? (primary?.confidence >= 0.84 ? 'HIGH' : 'MEDIUM') : 'LOW',
+    primarySource: primary?.source || null,
+    primaryKind: primary?.kind || null,
+    primaryScore: primary ? Math.round((primary.confidence || 0.66) * 100) : null,
+    allPrices: allValues,
+    prices: normalizedPrices.sort((a, b) => a.value - b.value),
+    schemaPrices: [],
+    textPrices: normalizedPrices.filter(p => p.source === 'text').map(p => p.value),
+    domPrices: [],
+    planPrices: [],
+    struckPrices,
+    discountRate,
+    priceSourcesSummary: {
+        schema: 0,
+        text: normalizedPrices.length,
+        dom: 0
+    }
+},
                 socialProofs,
                 schemaTypes,
                 sections,
@@ -11466,14 +11518,17 @@ async function deepScrapeFunnel(url) {
         return n;
     };
 
-    const detectCurrency = (raw = '', html = '') => {
-        const str = `${raw} ${html}`.toUpperCase();
-        if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
-        if (/\bEUR\b|€/.test(str)) return 'EUR';
-        if (/\bUSD\b|\$/.test(str)) return 'USD';
-        if (/\bGBP\b|£/.test(str)) return 'GBP';
-        return null;
-    };
+ const detectCurrency = (raw = '', html = '') => {
+    const str = `${raw} ${html}`.toUpperCase();
+
+    if (/\bLYD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
+    if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
+    if (/\bEUR\b|€/.test(str)) return 'EUR';
+    if (/\bUSD\b|US\$|\$/.test(str)) return 'USD';
+    if (/\bGBP\b|£/.test(str)) return 'GBP';
+
+    return null;
+};
 
     const isNoisePriceContext = (context = '') => {
         const s = String(context || '').toLowerCase();
@@ -12537,15 +12592,70 @@ async function scrapeStealth(validUrl) {
         const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
         const emails = [...new Set((bodyText.match(emailRegex) || []).filter(e => !e.includes('example') && !e.includes('test')))].slice(0, 5);
 
-        const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|€|\$|£)/gi;
+      const priceRegex = /(\d[\d\s,.']*)\s*(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
         const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 15);
-        const normalizedPrices = rawPrices
-            .map(m => ({
-                raw: m[0],
-                value: parseFloat((m[1] || '').replace(/\s/g, '').replace(',', '.').replace(/[^\d.]/g, '')),
-                currency: (m[2] || 'MAD').toUpperCase()
-            }))
-            .filter(p => !isNaN(p.value) && p.value > 0);
+       const normalizedPrices = allPrices
+    .map(m => {
+        const raw = m[0] || '';
+        const value = parseFloat(
+            String(m[1] || m[4] || '')
+                .replace(/\s/g, '')
+                .replace(',', '.')
+                .replace(/[^\d.]/g, '')
+        );
+
+        const currency = detectCurrency(raw, html);
+
+        if (!Number.isFinite(value) || value <= 0) return null;
+
+        const lowered = raw.toLowerCase();
+        let kind = 'current';
+        let confidence = 0.66;
+
+        if (/old|regular|compare|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/i.test(lowered)) {
+            kind = 'old';
+            confidence = 0.84;
+        } else if (/from|à partir|starting at|dès/i.test(lowered)) {
+            kind = 'from';
+            confidence = 0.8;
+        }
+
+        return {
+            raw,
+            value,
+            currency,
+            source: 'text',
+            kind,
+            confidence
+        };
+    })
+    .filter(Boolean);
+        const currency = detectCurrency(raw, html);
+
+        if (!Number.isFinite(value) || value <= 0) return null;
+
+        const lowered = raw.toLowerCase();
+        let kind = 'current';
+        let confidence = 0.66;
+
+        if (/old|regular|compare|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/i.test(lowered)) {
+            kind = 'old';
+            confidence = 0.84;
+        } else if (/from|à partir|starting at|dès/i.test(lowered)) {
+            kind = 'from';
+            confidence = 0.8;
+        }
+
+        return {
+            raw,
+            value,
+            currency,
+            source: 'text',
+            kind,
+            confidence
+        };
+    })
+    .filter(Boolean);
 
         const bestPrice = normalizedPrices.length ? normalizedPrices[0].value : null;
         const currency = normalizedPrices.length ? normalizedPrices[0].currency : 'MAD';
@@ -12909,7 +13019,7 @@ const ctaList = [
             const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
             const emails = [...new Set((bodyText.match(emailRegex) || []).filter(e => !e.includes('example') && !e.includes('test')))].slice(0, 5);
 
-            const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|€|\$|£)/gi;
+            const priceRegex = /(\d[\d\s,.']*)\s*(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
             const allPrices = [...bodyText.matchAll(priceRegex)].slice(0, 15);
             const normalizedPrices = allPrices
                 .map(m => ({
@@ -13217,14 +13327,17 @@ async function scrapeSiteData(url, lang = 'fr') {
             return n;
         };
 
-        const detectCurrency = (raw = '') => {
-            const str = String(raw || '').toUpperCase();
-            if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
-            if (/\bEUR\b|€/.test(str)) return 'EUR';
-            if (/\bUSD\b|\$/.test(str)) return 'USD';
-            if (/\bGBP\b|£/.test(str)) return 'GBP';
-            return 'MAD';
-        };
+const detectCurrency = (raw = '', html = '') => {
+    const str = `${raw} ${html}`.toUpperCase();
+
+    if (/\bLYD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
+    if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
+    if (/\bEUR\b|€/.test(str)) return 'EUR';
+    if (/\bUSD\b|US\$|\$/.test(str)) return 'USD';
+    if (/\bGBP\b|£/.test(str)) return 'GBP';
+
+    return null;
+};
 
         const detectBotBlock = (scrape) => {
             const htmlLower = (scrape?.html || '').toLowerCase();
@@ -13287,24 +13400,40 @@ async function scrapeSiteData(url, lang = 'fr') {
             const phones = normalizePhones(bodyText);
             const emails = normalizeEmails(bodyText);
 
-            const priceRegex = /(\d[\d\s,.']*)\s*(MAD|DH|DHS|€|\$|£|EUR|USD|GBP)/gi;
+          const priceRegex = /(\d[\d\s,.']*)\s*(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
             const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 25);
 
-            const normalizedPrices = rawPrices
-                .map(m => {
-                    const raw = m[0];
-                    const value = normalizePriceValue(m[1] || raw);
-                    const currency = detectCurrency(m[2] || raw);
-                    return value ? {
-                        raw,
-                        value,
-                        currency,
-                        source: 'text',
-                        kind: 'current',
-                        confidence: 0.66
-                    } : null;
-                })
-                .filter(Boolean);
+            const normalizedPrices = [...bodyText.matchAll(priceRegex)]
+    .slice(0, 50)
+    .map(m => {
+        const raw = m[0];
+        const value = normalizePriceValue(m[1] || m[4] || raw);
+        const currency = detectCurrency(raw, html);
+
+        if (!value) return null;
+
+        const lowered = raw.toLowerCase();
+        let kind = 'current';
+        let confidence = 0.66;
+
+        if (/old|regular|compare|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/i.test(lowered)) {
+            kind = 'old';
+            confidence = 0.84;
+        } else if (/from|à partir|starting at|dès/i.test(lowered)) {
+            kind = 'from';
+            confidence = 0.8;
+        }
+
+        return {
+            raw,
+            value,
+            currency,
+            source: 'text',
+            kind,
+            confidence
+        };
+    })
+    .filter(Boolean);
 
             const allPriceValues = normalizedPrices.map(p => p.value).sort((a, b) => a - b);
             const primaryPrice = allPriceValues.length ? allPriceValues[0] : null;
