@@ -1919,14 +1919,13 @@ async function scrapeStealth(validUrl) {
             const priceRegex = /(\d[\d\s,.']*)\s*(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
             const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 25);
 
-           const normalizedPrices = [...bodyText.matchAll(priceRegex)]
-    .slice(0, 50)
+          const normalizedPrices = rawPrices
     .map(m => {
-        const raw = m[0];
+        const raw = m[0] || '';
         const value = normalizePriceValue(m[1] || m[4] || raw);
         const currency = detectCurrency(raw, html);
 
-        if (!value) return null;
+        if (!Number.isFinite(value) || value <= 0) return null;
 
         const lowered = raw.toLowerCase();
         let kind = 'current';
@@ -12594,17 +12593,11 @@ async function scrapeStealth(validUrl) {
 
       const priceRegex = /(\d[\d\s,.']*)\s*(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
         const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 15);
-       const normalizedPrices = allPrices
+      const normalizedPrices = rawPrices
     .map(m => {
         const raw = m[0] || '';
-        const value = parseFloat(
-            String(m[1] || m[4] || '')
-                .replace(/\s/g, '')
-                .replace(',', '.')
-                .replace(/[^\d.]/g, '')
-        );
-
-        const currency = detectCurrency(raw, html);
+        const value = normalizePriceValue(m[1] || m[4] || raw);
+        const currency = detectCurrency(raw);
 
         if (!Number.isFinite(value) || value <= 0) return null;
 
@@ -12630,32 +12623,17 @@ async function scrapeStealth(validUrl) {
         };
     })
     .filter(Boolean);
-        const currency = detectCurrency(raw, html);
+        const detectCurrency = (raw = '', extra = '') => {
+    const str = `${raw} ${extra}`.toUpperCase();
 
-        if (!Number.isFinite(value) || value <= 0) return null;
+    if (/\bLYD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
+    if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
+    if (/\bEUR\b|€/.test(str)) return 'EUR';
+    if (/\bUSD\b|US\$|\$/.test(str)) return 'USD';
+    if (/\bGBP\b|£/.test(str)) return 'GBP';
 
-        const lowered = raw.toLowerCase();
-        let kind = 'current';
-        let confidence = 0.66;
-
-        if (/old|regular|compare|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/i.test(lowered)) {
-            kind = 'old';
-            confidence = 0.84;
-        } else if (/from|à partir|starting at|dès/i.test(lowered)) {
-            kind = 'from';
-            confidence = 0.8;
-        }
-
-        return {
-            raw,
-            value,
-            currency,
-            source: 'text',
-            kind,
-            confidence
-        };
-    })
-    .filter(Boolean);
+    return null;
+};
 
         const bestPrice = normalizedPrices.length ? normalizedPrices[0].value : null;
         const currency = normalizedPrices.length ? normalizedPrices[0].currency : 'MAD';
@@ -13021,13 +12999,36 @@ const ctaList = [
 
             const priceRegex = /(\d[\d\s,.']*)\s*(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
             const allPrices = [...bodyText.matchAll(priceRegex)].slice(0, 15);
-            const normalizedPrices = allPrices
-                .map(m => ({
-                    raw: m[0],
-                    value: parseFloat((m[1] || '').replace(/\s/g, '').replace(',', '.').replace(/[^\d.]/g, '')),
-                    currency: (m[2] || 'MAD').toUpperCase()
-                }))
-                .filter(p => !isNaN(p.value) && p.value > 0);
+            const normalizedPrices = rawPrices
+    .map(m => {
+        const raw = m[0] || '';
+        const value = normalizePriceValue(m[1] || m[4] || raw);
+        const currency = detectCurrency(raw, html);
+
+        if (!Number.isFinite(value) || value <= 0) return null;
+
+        const lowered = raw.toLowerCase();
+        let kind = 'current';
+        let confidence = 0.66;
+
+        if (/old|regular|compare|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/i.test(lowered)) {
+            kind = 'old';
+            confidence = 0.84;
+        } else if (/from|à partir|starting at|dès/i.test(lowered)) {
+            kind = 'from';
+            confidence = 0.8;
+        }
+
+        return {
+            raw,
+            value,
+            currency,
+            source: 'text',
+            kind,
+            confidence
+        };
+    })
+    .filter(Boolean);
 
             const bestPrice = normalizedPrices.length ? normalizedPrices[0].value : null;
             const currency = normalizedPrices.length ? normalizedPrices[0].currency : 'MAD';
@@ -13403,14 +13404,13 @@ const detectCurrency = (raw = '', html = '') => {
           const priceRegex = /(\d[\d\s,.']*)\s*(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
             const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 25);
 
-            const normalizedPrices = [...bodyText.matchAll(priceRegex)]
-    .slice(0, 50)
+           const normalizedPrices = rawPrices
     .map(m => {
-        const raw = m[0];
+        const raw = m[0] || '';
         const value = normalizePriceValue(m[1] || m[4] || raw);
         const currency = detectCurrency(raw, html);
 
-        if (!value) return null;
+        if (!Number.isFinite(value) || value <= 0) return null;
 
         const lowered = raw.toLowerCase();
         let kind = 'current';
