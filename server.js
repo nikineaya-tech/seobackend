@@ -10406,7 +10406,7 @@ function pushPrice(bucket, item) {
 
 
 
-function extractDomPrices($, html = '') {
+function extractDomPrices($, html) {
     const prices = [];
     if (!$ || typeof $.root !== 'function') return prices;
 
@@ -10432,87 +10432,96 @@ function extractDomPrices($, html = '') {
         '.hero-new-price'
     ];
 
-    const CUR = '(?:LYD|ل\\.?\\s?د|د\\.?\\s?ل|دينار\\s*ليبي|دينار\\s*ليبى|MAD|DH|DHS|EUR|USD|GBP|€|\\$|£)';
     const seen = new Set();
+    const pricePattern = /(?:\b\d[\d.,]{0,12}\b\s*(?:LYD|LD|MAD|DH|DHS|EUR|USD|GBP)|(?:LYD|LD|MAD|DH|DHS|EUR|USD|GBP)\s*\d[\d.,]{0,12}\b)/gi;
+    const splitPattern = /(\d[\d.,]{0,12})\s*(LYD|LD|MAD|DH|DHS|EUR|USD|GBP)|(LYD|LD|MAD|DH|DHS|EUR|USD|GBP)\s*(\d[\d.,]{0,12})/i;
+
+    const getNodeTextOnly = (node) => {
+        const ownText = node.contents().filter((_, el) => el.type === 'text').map((_, el) => $(el).text()).get().join(' ');
+        return normText(ownText);
+    };
+
+    const hasChildPriceNodes = (node) => {
+        return node.find('.old-price, .new-price, .hero-old-price, .hero-new-price, .sale-price, .regular-price, .compare-at-price, [class*="price"]').length > 0;
+    };
+
+    const inferKind = (raw, className, idName, style, tagName) => {
+        const lowered = String(raw || '').toLowerCase();
+        if (
+            /old|regular|compare|compare-at|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[eé]/i.test(lowered) ||
+            /old|regular|compare|compare-at|hero-old-price|old-price/i.test(className) ||
+            /old|regular|compare|compare-at|hero-old-price|old-price/i.test(idName) ||
+            tagName === 'del' ||
+            /line-through/.test(style)
+        ) return 'old';
+
+        if (
+            /new|sale|promo|current|hero-new-price|new-price/i.test(lowered) ||
+            /new|sale|promo|current|hero-new-price|new-price/i.test(className) ||
+            /new|sale|promo|current|hero-new-price|new-price/i.test(idName)
+        ) return 'current';
+
+        if (/from|à partir|starting at|dès/i.test(lowered)) return 'from';
+        if (/plan|monthly|annuel|mensuel|subscription|abonnement/i.test(lowered)) return 'plan';
+        return 'current';
+    };
 
     $(selectors.join(',')).each((_, el) => {
         const node = $(el);
-
-        const text = node.text().replace(/\s+/g, ' ').trim();
-        const attrs = [
-            node.attr('data-price') || '',
-            node.attr('content') || '',
-            node.attr('aria-label') || '',
-            node.attr('class') || '',
-            node.attr('id') || ''
-        ].join(' ').trim();
-
-        const raw = `${text} ${attrs}`.trim();
-        if (!raw || raw.length > 300) return;
-
         const className = String(node.attr('class') || '').toLowerCase();
         const idName = String(node.attr('id') || '').toLowerCase();
         const style = String(node.attr('style') || '').toLowerCase();
         const tagName = String(el.tagName || '').toLowerCase();
-        const lowered = raw.toLowerCase();
 
-        const oldSignals =
-            /old|regular|compare|compare-at|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/.test(lowered) ||
-            /old|regular|compare|compare-at|hero-old-price|old-price/.test(className) ||
-            /old|regular|compare|compare-at|hero-old-price|old-price/.test(idName) ||
-            tagName === 'del' ||
-            tagName === 's' ||
-            /line-through/.test(style);
+        const ownText = getNodeTextOnly(node);
+        const fullText = normText(node.text());
+        const attrs = normText([
+            node.attr('data-price'),
+            node.attr('content'),
+            node.attr('aria-label')
+        ].filter(Boolean).join(' '));
 
-        const newSignals =
-            /new|sale|promo|current|hero-new-price|new-price/.test(lowered) ||
-            /new|sale|promo|current|hero-new-price|new-price/.test(className) ||
-            /new|sale|promo|current|hero-new-price|new-price/.test(idName);
+        const rawBlock = normText([ownText, attrs].filter(Boolean).join(' ')) || fullText;
+        if (!rawBlock || rawBlock.length > 220) return;
 
-        const fromSignals = /from|à partir|starting at|dès/.test(lowered);
-        const planSignals = /plan|monthly|annuel|mensuel|subscription|abonnement/.test(lowered);
+        const childPriceNodes = hasChildPriceNodes(node);
 
-        const regex = new RegExp(`([0-9][0-9\\s.,]*)\\s*(${CUR})|(${CUR})\\s*([0-9][0-9\\s.,]*)`, 'gi');
-        let m;
+        if (childPriceNodes && ownText !== fullText && fullText.match(pricePattern)?.length > 1) {
+            return;
+        }
 
-        while ((m = regex.exec(raw)) !== null) {
-            const match = m[0];
-            const numeric =
-                normalizePriceValue(m[1]) ||
-                normalizePriceValue(m[4]) ||
-                normalizePriceValue(match);
+        const matches = [...rawBlock.matchAll(pricePattern)].map(m => m[0]).slice(0, 3);
+        if (!matches.length) return;
 
-            const currency = detectCurrency(match, html);
-            if (!numeric) continue;
+        for (const match of matches) {
+            const parsed = match.match(splitPattern);
+            const rawValue = parsed?.[1] || parsed?.[4] || match;
+            const currency = parsed?.[2] || parsed?.[3] || detectCurrency(match, html);
+            const value = normalizePriceValue(rawValue);
+            if (!value) continue;
 
-            let kind = 'current';
-            let confidence = 0.72;
+            if (value > 999999) continue;
 
-            if (oldSignals) {
-                kind = 'old';
-                confidence = 0.9;
-            } else if (fromSignals) {
-                kind = 'from';
-                confidence = 0.82;
-            } else if (planSignals) {
-                kind = 'plan';
-                confidence = 0.78;
-            } else if (newSignals) {
-                kind = 'current';
-                confidence = 0.88;
-            }
+            const kind = inferKind(rawBlock, className, idName, style, tagName);
+            const confidence =
+                kind === 'old' ? 0.93 :
+                kind === 'current' ? 0.90 :
+                kind === 'from' ? 0.82 :
+                0.78;
 
-            const key = `${numeric}|${currency}|${kind}|${match}|${className}|${idName}`;
+            const key = [value, currency, kind, className, idName, tagName].join('|');
             if (seen.has(key)) continue;
             seen.add(key);
 
             pushPrice(prices, {
-                value: numeric,
+                value,
                 currency,
                 raw: match,
                 source: 'dom',
                 kind,
-                context: raw.substring(0, 180),
+                context: rawBlock.substring(0, 180),
+                selector: className || idName || tagName || null,
+                visibilityScore: 3,
                 confidence
             });
         }
@@ -10520,6 +10529,7 @@ function extractDomPrices($, html = '') {
 
     return prices;
 }
+
 
 function normalizePriceValue(raw) {
   if (raw == null) return null;
@@ -10876,14 +10886,21 @@ function finalizePriceIntel(allPrices = []) {
   const normalized = [];
   const seen = new Set();
 
+  const looksOldContext = (p) => {
+    const s = `${p?.raw || ''} ${p?.context || ''}`.toLowerCase();
+    return /old|regular|compare|compare-at|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[eé]|line-through|strikethrough|hero-old-price|old-price/.test(s);
+  };
+
   for (const p of allPrices) {
     if (!p || !p.value || p.value <= 0) continue;
-    const key = [p.value, p.currency || '', p.kind || '', p.source || '', String(p.raw || '').slice(0, 80)].join('|');
+    const currency = normalizeCurrency(p.currency) || null;
+    const key = [p.value, currency || '', p.kind || '', p.source || '', String(p.raw || '').slice(0, 80)].join('|');
     if (seen.has(key)) continue;
     seen.add(key);
+
     normalized.push({
       value: p.value,
-      currency: normalizeCurrency(p.currency) || null,
+      currency,
       raw: p.raw || null,
       source: p.source || 'unknown',
       kind: p.kind || 'current',
@@ -10893,6 +10910,15 @@ function finalizePriceIntel(allPrices = []) {
       confidence: Number(p.confidence ?? 0.5)
     });
   }
+
+  const currencyCounts = {};
+  for (const p of normalized) {
+    if (!p.currency) continue;
+    currencyCounts[p.currency] = (currencyCounts[p.currency] || 0) + 1;
+  }
+
+  const dominantCurrency =
+    Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
 
   const candidates = normalized.map(p => {
     let score = 0;
@@ -10908,21 +10934,28 @@ function finalizePriceIntel(allPrices = []) {
     if (p.kind === 'range-max') score -= 10;
     if (!p.currency) score -= 18;
     score += p.visibilityScore * 6;
+    if (looksOldContext(p)) score -= 50;
     return { ...p, score };
   });
 
-  const oldCandidates = candidates.filter(p => p.kind === 'old');
-  const currentCandidates = candidates.filter(p => ['current', 'from', 'plan', 'range-min'].includes(p.kind));
+  const oldCandidates = candidates.filter(p => p.kind === 'old' || looksOldContext(p));
+  const currentCandidates = candidates.filter(
+    p => ['current', 'from', 'plan', 'range-min'].includes(p.kind) && !looksOldContext(p)
+  );
 
-  const primary = [...currentCandidates].sort((a, b) => {
+  const currencyFilteredCurrents = dominantCurrency
+    ? currentCandidates.filter(p => !p.currency || p.currency === dominantCurrency)
+    : currentCandidates;
+
+  const primary = [...currencyFilteredCurrents].sort((a, b) => {
     if (b.score !== a.score) return b.score - a.score;
     if (b.confidence !== a.confidence) return b.confidence - a.confidence;
     return a.value - b.value;
   })[0] || null;
 
-  const currentValues = currentCandidates.map(p => p.value).sort((a, b) => a - b);
+  const currentValues = currencyFilteredCurrents.map(p => p.value).sort((a, b) => a - b);
   const rangeMax = candidates
-    .filter(p => p.kind === 'range-max')
+    .filter(p => p.kind === 'range-max' && !looksOldContext(p))
     .map(p => p.value)
     .sort((a, b) => b - a)[0] ?? null;
 
@@ -10932,11 +10965,12 @@ function finalizePriceIntel(allPrices = []) {
 
   const struckPrices = [...new Set(oldCandidates.map(p => p.value))].sort((a, b) => a - b);
   const bestOld = struckPrices[struckPrices.length - 1] ?? null;
+
   const discountRate = primary?.value && bestOld && bestOld > primary.value
     ? Math.round(((bestOld - primary.value) / bestOld) * 100)
     : null;
 
-  const hasPlanSignals = candidates.some(p => p.kind === 'plan');
+  const hasPlanSignals = currentCandidates.some(p => p.kind === 'plan');
   const hasRange = minPrice != null && maxPrice != null && minPrice !== maxPrice;
   const distinctCurrentCount = new Set(currentValues).size;
 
@@ -10947,12 +10981,12 @@ function finalizePriceIntel(allPrices = []) {
   else if (primary?.value) pricingModel = 'one-time';
 
   let confidence = 'LOW';
-  if (primary && primary.score >= 120 && primary.currency) confidence = 'HIGH';
+  if (primary && primary.score >= 120 && (primary.currency || dominantCurrency)) confidence = 'HIGH';
   else if (primary && primary.score >= 85) confidence = 'MEDIUM';
 
   return {
-    detected: normalized.length > 0,
-    currency: primary?.currency || null,
+    detected: !!primary || struckPrices.length > 0,
+    currency: primary?.currency || dominantCurrency || null,
     primaryPrice: primary?.value ?? null,
     bestPrice: primary?.value ?? null,
     minPrice,
@@ -10964,7 +10998,7 @@ function finalizePriceIntel(allPrices = []) {
     primaryKind: primary?.kind || null,
     primaryScore: primary?.score || null,
     all: [...new Set(normalized.map(p => p.value))].sort((a, b) => a - b),
-    prices: normalized.sort((a, b) => a.value - b.value),
+    prices: [...normalized].sort((a, b) => a.value - b.value),
     schemaPrices: normalized.filter(p => p.source === 'schema').map(p => p.value),
     textPrices: normalized.filter(p => p.source === 'text').map(p => p.value),
     domPrices: normalized.filter(p => p.source === 'dom').map(p => p.value),
