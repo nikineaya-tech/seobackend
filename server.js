@@ -10365,24 +10365,7 @@ function extractPriceCurrencyPairsFromTextBlock(text, source = 'text', baseConfi
   return out;
 }
 
-async function extractTextPrices(bodyText) {
-  const prices = [];
-  const text = String(bodyText || '').replace(/\u00A0/g, ' ').substring(0, 40000);
 
-  const blocks = text
-    .split(/\n+/)
-    .map(x => x.trim())
-    .filter(Boolean)
-    .filter(x => /(?:\$|€|£|\bUSD\b|\bEUR\b|\bGBP\b|\bMAD\b|\bDH\b|\bDHS\b|\bLYD\b|\bLD\b|dollars?|euros?|dirhams?|pounds?)/i.test(x))
-    .slice(0, 400);
-
-  blocks.forEach(block => {
-    const found = extractPriceCurrencyPairsFromTextBlock(block, 'text', 0.66);
-    found.forEach(p => prices.push(p));
-  });
-
-  return prices;
-}
 
 function extractDomPrices($, html) {
   const prices = [];
