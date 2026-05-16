@@ -10882,136 +10882,7 @@ function extractDomPrices($, html) {
   return prices;
 }
 
-function finalizePriceIntel(allPrices = []) {
-  const normalized = [];
-  const seen = new Set();
 
-  const looksOldContext = (p) => {
-    const s = `${p?.raw || ''} ${p?.context || ''}`.toLowerCase();
-    return /old|regular|compare|compare-at|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[eé]|line-through|strikethrough|hero-old-price|old-price/.test(s);
-  };
-
-  for (const p of allPrices) {
-    if (!p || !p.value || p.value <= 0) continue;
-    const currency = normalizeCurrency(p.currency) || null;
-    const key = [p.value, currency || '', p.kind || '', p.source || '', String(p.raw || '').slice(0, 80)].join('|');
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    normalized.push({
-      value: p.value,
-      currency,
-      raw: p.raw || null,
-      source: p.source || 'unknown',
-      kind: p.kind || 'current',
-      context: p.context || '',
-      selector: p.selector || null,
-      visibilityScore: Number(p.visibilityScore ?? 0),
-      confidence: Number(p.confidence ?? 0.5)
-    });
-  }
-
-  const currencyCounts = {};
-  for (const p of normalized) {
-    if (!p.currency) continue;
-    currencyCounts[p.currency] = (currencyCounts[p.currency] || 0) + 1;
-  }
-
-  const dominantCurrency =
-    Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
-
-  const candidates = normalized.map(p => {
-    let score = 0;
-    score += p.confidence * 100;
-    if (p.source === 'schema') score += 35;
-    if (p.source === 'dom') score += 20;
-    if (p.source === 'text') score += 8;
-    if (p.kind === 'current') score += 22;
-    if (p.kind === 'plan') score += 12;
-    if (p.kind === 'from') score += 7;
-    if (p.kind === 'range-min') score += 4;
-    if (p.kind === 'old') score -= 40;
-    if (p.kind === 'range-max') score -= 10;
-    if (!p.currency) score -= 18;
-    score += p.visibilityScore * 6;
-    if (looksOldContext(p)) score -= 50;
-    return { ...p, score };
-  });
-
-  const oldCandidates = candidates.filter(p => p.kind === 'old' || looksOldContext(p));
-  const currentCandidates = candidates.filter(
-    p => ['current', 'from', 'plan', 'range-min'].includes(p.kind) && !looksOldContext(p)
-  );
-
-  const currencyFilteredCurrents = dominantCurrency
-    ? currentCandidates.filter(p => !p.currency || p.currency === dominantCurrency)
-    : currentCandidates;
-
-  const primary = [...currencyFilteredCurrents].sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    if (b.confidence !== a.confidence) return b.confidence - a.confidence;
-    return a.value - b.value;
-  })[0] || null;
-
-  const currentValues = currencyFilteredCurrents.map(p => p.value).sort((a, b) => a - b);
-  const rangeMax = candidates
-    .filter(p => p.kind === 'range-max' && !looksOldContext(p))
-    .map(p => p.value)
-    .sort((a, b) => b - a)[0] ?? null;
-
-  const minPrice = currentValues[0] ?? null;
-  const currentMax = currentValues[currentValues.length - 1] ?? null;
-  const maxPrice = rangeMax ?? currentMax ?? null;
-
-  const struckPrices = [...new Set(oldCandidates.map(p => p.value))].sort((a, b) => a - b);
-  const bestOld = struckPrices[struckPrices.length - 1] ?? null;
-
-  const discountRate = primary?.value && bestOld && bestOld > primary.value
-    ? Math.round(((bestOld - primary.value) / bestOld) * 100)
-    : null;
-
-  const hasPlanSignals = currentCandidates.some(p => p.kind === 'plan');
-  const hasRange = minPrice != null && maxPrice != null && minPrice !== maxPrice;
-  const distinctCurrentCount = new Set(currentValues).size;
-
-  let pricingModel = 'unknown';
-  if (hasPlanSignals && distinctCurrentCount >= 2) pricingModel = 'plans';
-  else if (hasPlanSignals) pricingModel = 'subscription';
-  else if (hasRange) pricingModel = 'range';
-  else if (primary?.value) pricingModel = 'one-time';
-
-  let confidence = 'LOW';
-  if (primary && primary.score >= 120 && (primary.currency || dominantCurrency)) confidence = 'HIGH';
-  else if (primary && primary.score >= 85) confidence = 'MEDIUM';
-
-  return {
-    detected: !!primary || struckPrices.length > 0,
-    currency: primary?.currency || dominantCurrency || null,
-    primaryPrice: primary?.value ?? null,
-    bestPrice: primary?.value ?? null,
-    minPrice,
-    maxPrice,
-    priceRange: hasRange ? [minPrice, maxPrice] : null,
-    pricingModel,
-    confidence,
-    primarySource: primary?.source || null,
-    primaryKind: primary?.kind || null,
-    primaryScore: primary?.score || null,
-    all: [...new Set(normalized.map(p => p.value))].sort((a, b) => a - b),
-    prices: [...normalized].sort((a, b) => a.value - b.value),
-    schemaPrices: normalized.filter(p => p.source === 'schema').map(p => p.value),
-    textPrices: normalized.filter(p => p.source === 'text').map(p => p.value),
-    domPrices: normalized.filter(p => p.source === 'dom').map(p => p.value),
-    planPrices: normalized.filter(p => p.kind === 'plan').map(p => p.value),
-    struckPrices,
-    discountRate,
-    priceSourcesSummary: {
-      schema: normalized.filter(p => p.source === 'schema').length,
-      text: normalized.filter(p => p.source === 'text').length,
-      dom: normalized.filter(p => p.source === 'dom').length
-    }
-  };
-}
 function mergePriceIntel(base = {}, extra = {}) {
     const empty = EMPTY_SCRAPE_RESULT().priceIntel;
     const merged = {
@@ -12921,7 +12792,7 @@ module.exports = {
 };
 
 const {
-    finalizePriceIntel,
+    
     buildPriceIntelLocal,
     extractSchemaPricesFromNode,
     extractTextPrices,
