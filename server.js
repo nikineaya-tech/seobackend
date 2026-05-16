@@ -42,7 +42,7 @@ const {
   getCanonicalPrice,
   detectCurrency,
   normalizePriceValue,
-  EMPTYPRICEINTELOBSERVED,
+  EMPTY_PRICE_INTEL_OBSERVED,
   EXTRACTIONSTATUS,
 } = require('./pricing-pipeline-refactored-1');
 function extractJSON(raw) {
