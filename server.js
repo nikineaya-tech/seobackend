@@ -11639,22 +11639,22 @@ function mergeScrapeData(base = {}, extra = {}) {
 //           pushPrice local, extractSchemaPricesFromNode local,
 //           getCanonicalPrice local, hasCanonicalPrice local
 // ─────────────────────────────────────────────────────────────────
+const pricingPipeline = require('./pricing-pipeline-refactored-1');
 const {
-    finalizePriceIntel,
-    buildPriceIntelLocal,
-    extractSchemaPricesFromNode,
-    extractTextPrices,
-    extractDomPrices,
-    pushValidatedPrice,
-    getCanonicalPrice,
-    hasCanonicalPrice,
-    detectCurrency,
-    normalizePriceValue,
-    isNoisePriceContext,
-    EMPTY_PRICE_INTEL_OBSERVED,
-    EXTRACTION_STATUS,
-} = require('./pricing-pipeline-refactored');
-
+  finalizePriceIntel,
+  buildPriceIntelLocal,
+  extractSchemaPricesFromNode,
+  extractTextPrices,
+  extractDomPrices,
+  pushValidatedPrice,
+  getCanonicalPrice,
+  hasCanonicalPrice,
+  detectCurrency,
+  normalizePriceValue,
+  isNoisePriceContext,
+  EMPTYPRICEINTELOBSERVED,
+  EXTRACTIONSTATUS,
+} = pricingPipeline;
 
 // ═══════════════════════════════════════════════════════════════════
 // 🔍 DEEP SCRAPE FUNNEL
@@ -12825,7 +12825,15 @@ async function scrapeStealth(validUrl) {
 }
 
 
+// ═══════════════════════════════════════════════════════════════════
+// 🕵️ ROUTE: SCRAPE SITE DATA (PLAYWRIGHT → SCRAPE.DO FALLBACK)
+// ═══════════════════════════════════════════════════════════════════
 
+/**
+ * Acts as the "Brain" for gathering site data.
+ * Tries Playwright first. If blocked (Cloudflare detected or 0 words),
+ * it triggers the Scrape.do API with JS rendering enabled.
+ */
 async function scrapeSiteData(url, lang = 'fr') {
     const startTime = Date.now();
 
@@ -13397,6 +13405,7 @@ async function scrapeSiteData(url, lang = 'fr') {
         return { ...EMPTY_SCRAPE_RESULT(error.message, 'crash'), success: false, url, duration: Date.now() - startTime };
     }
 }
+
 
 
 // ════════════════════════════════════════════════════════
