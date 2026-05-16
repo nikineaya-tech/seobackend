@@ -32,6 +32,19 @@ const crypto = require('crypto');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
+const {
+  finalizePriceIntel,
+  buildPriceIntelLocal,
+  extractSchemaPricesFromNode,
+  extractTextPrices,
+  extractDomPrices,
+  pushValidatedPrice,
+  getCanonicalPrice,
+  detectCurrency,
+  normalizePriceValue,
+  EMPTYPRICEINTELOBSERVED,
+  EXTRACTIONSTATUS,
+} = require('./pricing-pipeline-refactored-1');
 function extractJSON(raw) {
   if (!raw || typeof raw !== 'string') return null;
 
@@ -1969,7 +1982,7 @@ const maxPrice = currentCandidates.length
     ? [...currentCandidates].sort((a, b) => b.value - a.value)[0].value
     : null;
 
-const bestPrice = primary?.value || null;
+const primaryPrice = primary?.value || null;
 const primaryPrice = primary?.value || null;
 
 const currency =
@@ -2149,7 +2162,7 @@ const priceRange =
     detected: primaryPrice !== null,
     currency,
     primaryPrice,
-    bestPrice,
+    primaryPrice,
     minPrice,
     maxPrice,
     priceRange,
@@ -2277,7 +2290,7 @@ const priceRange =
                 detected: extracted.pricing.detected,
                 currency: extracted.pricing.currency,
                 primaryPrice: extracted.pricing.primaryPrice,
-                bestPrice: extracted.pricing.bestPrice,
+                primaryPrice: extracted.pricing.primaryPrice,
                 minPrice: extracted.pricing.minPrice,
                 maxPrice: extracted.pricing.maxPrice,
                 priceRange: extracted.pricing.priceRange,
@@ -5823,69 +5836,7 @@ function roundPsychologicalPrice(price, currency = 'MAD') {
   return rounded;
 }
 
-function computeSuggestedPricing({
-  detectedPrice,
-  currency = 'MAD',
-  localScore = 50,
-  socialProofsCount = 0,
-  hasSSL = false,
-  hasWhatsApp = false,
-  hasFAQ = false,
-  hasPricing = false,
-  schemaCount = 0,
-  ctaCount = 0,
-  wordCount = 0
-}) {
-  if (!Number.isFinite(detectedPrice) || detectedPrice <= 0) {
-    return {
-      currency,
-      suggestedBasePrice: null,
-      psychologicalPrice: null,
-      starter: null,
-      pro: null,
-      premium: null,
-      confidence: 'LOW',
-      scoreUsed: localScore || 0,
-      multiplier: null,
-      reason: 'Aucun prix détecté'
-    };
-  }
 
-  const trustScore =
-    (hasSSL ? 12 : 0) +
-    (hasWhatsApp ? 8 : 0) +
-    (hasFAQ ? 8 : 0) +
-    Math.min(schemaCount * 4, 12) +
-    Math.min(socialProofsCount * 3, 18);
-
-  const contentScore =
-    Math.min(Math.floor(wordCount / 120), 12) +
-    Math.min(ctaCount * 2, 10) +
-    (hasPricing ? 8 : 0);
-
-  const scoreUsed = clamp(
-    Math.round(localScore * 0.55 + trustScore + contentScore),
-    35,
-    100
-  );
-
-  const multiplier = 0.82 + ((scoreUsed - 35) / 65) * 0.38;
-  const baseRaw = detectedPrice * multiplier;
-  const psychologicalPrice = roundPsychologicalPrice(baseRaw, currency);
-
-  return {
-    currency,
-    suggestedBasePrice: psychologicalPrice,
-    psychologicalPrice,
-    starter: roundPsychologicalPrice(psychologicalPrice * 0.85, currency),
-    pro: roundPsychologicalPrice(psychologicalPrice * 1.15, currency),
-    premium: roundPsychologicalPrice(psychologicalPrice * 1.45, currency),
-    confidence: detectedPrice > 0 ? 'MEDIUM' : 'LOW',
-    scoreUsed,
-    multiplier,
-    reason: null
-  };
-}
 
 function getFeatureI18n(lang = 'fr') {
   const dict = {
@@ -6006,97 +5957,7 @@ function getFeatureI18n(lang = 'fr') {
 
   return dict[lang] || dict.fr;
 }
-function buildPricingPsychology({
-  detectedPrice,
-  currency,
-  localScore,
-  socialProofs,
-  hasSSL,
-  hasWhatsApp,
-  faqSection,
-  pricingSection,
-  schemaTypes,
-  ctaList,
-  wordCount,
-  lang = 'fr'
-}) {
-  const T = getFeatureI18n(lang);
 
-  const calc = computeSuggestedPricing({
-    detectedPrice,
-    currency: currency || 'MAD',
-    localScore,
-    socialProofsCount: Array.isArray(socialProofs) ? socialProofs.length : 0,
-    hasSSL,
-    hasWhatsApp,
-    hasFAQ: !!faqSection,
-    hasPricing: !!pricingSection,
-    schemaCount: Array.isArray(schemaTypes) ? schemaTypes.length : 0,
-    ctaCount: Array.isArray(ctaList) ? ctaList.length : 0,
-    wordCount: wordCount || 0
-  });
-
-  const cur = currency || 'MAD';
-  const hasDetectedPrice = Number.isFinite(detectedPrice) && detectedPrice > 0;
-
-  return {
-    detectedPrice: hasDetectedPrice ? detectedPrice : null,
-    currency: cur,
-    currentPrice: hasDetectedPrice ? `${detectedPrice} ${cur}` : null,
-    recommendedPrice: calc.psychologicalPrice ? `${calc.psychologicalPrice} ${cur}` : null,
-
-    priceAnchoring: hasDetectedPrice
-      ? `${T.detectedPriceAt} ${detectedPrice} ${cur} ; ${T.anchorOptimizable} ${calc.scoreUsed}/100.`
-      : T.noPriceDetectedOnPage,
-
-    psychologicalPrice: calc.psychologicalPrice,
-
-    anchors: hasDetectedPrice && calc.psychologicalPrice
-      ? [
-          `${detectedPrice} ${cur} ${T.currentLabel}`,
-          `${calc.psychologicalPrice} ${cur} ${T.psychologicalLabel}`
-        ]
-      : [],
-
-    bundleSuggestion: calc.psychologicalPrice
-      ? [
-          {
-            name: T.offerStarter,
-            price: calc.starter,
-            label: `${calc.starter} ${cur}`,
-            items: [T.initialAudit, T.priorityOptimizations]
-          },
-          {
-            name: T.offerPro,
-            price: calc.pro,
-            label: `${calc.pro} ${cur}`,
-            items: [T.fullAudit, T.optimizations, T.conversionTracking]
-          },
-          {
-            name: T.offerPremium,
-            price: calc.premium,
-            label: `${calc.premium} ${cur}`,
-            items: [T.fullStrategy, T.implementation, T.advancedTracking]
-          }
-        ]
-      : [],
-
-    urgencyMissing: true,
-    guaranteeMissing: true,
-
-    decoy: calc.pro && calc.premium
-      ? T.decoyEffectText
-      : null,
-
-    strategy: calc.psychologicalPrice
-      ? `${T.recommendedArchitecture} ${T.offerStarter} < ${T.offerPro} < ${T.offerPremium} ${T.aroundPsychologicalPrice} ${calc.psychologicalPrice} ${cur}.`
-      : T.noReliablePricingArchitecture,
-
-    priceVerdict: calc.psychologicalPrice
-      ? T.priceVerdictDetected
-      : T.priceVerdictUndetectable
-  };
-}
 
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
@@ -6170,7 +6031,7 @@ const langInstr = isAr
                 fetchLayer:       'failed',
                 html:             '',
                 visualDNA:        { dominantColors: [] },
-               priceIntel: { detected: false, currency: 'MAD', primaryPrice: null, bestPrice: null, minPrice: null, maxPrice: null, priceRange: null, pricingModel: 'unknown', confidence: 'LOW', primarySource: null, primaryKind: null, primaryScore: null, all: [], prices: [], schemaPrices: [], textPrices: [], domPrices: [], planPrices: [], struckPrices: [], discountRate: null, priceSourcesSummary: { schema: 0, text: 0, dom: 0 } },
+               priceIntel: { detected: false, currency: 'MAD', primaryPrice: null, primaryPrice: null, minPrice: null, maxPrice: null, priceRange: null, pricingModel: 'unknown', confidence: 'LOW', primarySource: null, primaryKind: null, primaryScore: null, all: [], prices: [], schemaPrices: [], textPrices: [], domPrices: [], planPrices: [], struckPrices: [], discountRate: null, priceSourcesSummary: { schema: 0, text: 0, dom: 0 } },
                 copyIntel:        { headlines: { h1: [], h2: [], h3: [] }, realCTAs: [], pageSections: [], heroText: '', testimonials: [], guarantees: [], faq: [], bulletBenefits: [], allButtons: [] },
                 brand:            { fullTextSample: '', wordCount: 0, hasSSL: false },
                 trustSignals:     { hasSSL: false, hasWhatsApp: false, hasPhoneNumber: false },
@@ -6579,7 +6440,7 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
             return 'NONDETECTE';
         })();
 
-      const detectedPrice = pri?.detected ? ((pri.primaryPrice ?? pri.bestPrice ?? 0) > 0 ? (pri.primaryPrice ?? pri.bestPrice) : null) : null;
+      const detectedPrice = pri?.detected ? ((pri.primaryPrice ?? pri.primaryPrice ?? 0) > 0 ? (pri.primaryPrice ?? pri.detectedPrice) : null) : null;
         const currency = (pri?.currency && pri.currency !== 'UNKNOWN') ? pri.currency : null;
 
         const quickLocalScore = {
@@ -6606,20 +6467,7 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
         const localScoreRaw = booleanKeys.filter(k => quickLocalScore[k] === true).length;
         const localScoreMax = booleanKeys.length;
         const localScore    = Math.round((localScoreRaw / localScoreMax) * 100);
-const computedPricingPsychology = buildPricingPsychology({
-  detectedPrice,
-  currency,
-  localScore,
-  socialProofs,
-  hasSSL,
-  hasWhatsApp,
-  faqSection,
-  pricingSection,
-  schemaTypes,
-  ctaList,
-  wordCount,
-  lang: validLang
-});
+
         console.log(`${requestId} Score local    : ${localScore}/100 (${localScoreRaw}/${localScoreMax})`);
 
         const safeSerialize = (obj, maxLen = 400) => {
@@ -6643,7 +6491,7 @@ STACK           : ${techCMS}
 SSL             : ${hasSSL}
 SCHEMA JSON-LD  : ${schemaTypes.join(', ') || 'Absent'}
 MOT COUNT       : ${wordCount} mots
-PRIX DÉTECTÉ    : ${detectedPrice > 0 ? `${detectedPrice} ${currency}` : 'AUCUN_PRIX_DETECTE'}
+PRIX DÉTECTÉ    : ${getCanonicalPrice(priceIntel) > 0 ? `${getCanonicalPrice(priceIntel)} ${currency}` : 'AUCUN_PRIX_DETECTE'}
 TÉLÉPHONES      : ${phones.length > 0 ? phones.join(', ') : 'AUCUN_NUMERO_DETECTE_SUR_LA_PAGE'}
 EMAILS          : ${emails.length > 0 ? emails.join(', ') : 'AUCUN_EMAIL_DETECTE_SUR_LA_PAGE'}
 WHATSAPP        : ${hasWhatsApp ? 'OUI' : 'NON'}
@@ -6686,7 +6534,7 @@ RÈGLES ANTI-HALLUCINATION :
 
         const sharedContextShort = `
 URL: ${validUrl} | Stack: ${techCMS} | SSL: ${hasSSL}
-Prix: ${detectedPrice > 0 ? `${detectedPrice} ${currency}` : 'AUCUN_PRIX_DETECTE'}
+Prix: ${getCanonicalPrice(priceIntel) > 0 ? `${getCanonicalPrice(priceIntel)} ${currency}` : 'AUCUN_PRIX_DETECTE'}
 Words: ${wordCount} | H1: ${h1Main}
 CTAs: ${ctaList.slice(0,3).join(' | ')}
 Colors: ${primaryColor} / ${secondColor} | WA: ${hasWhatsApp}
@@ -6758,7 +6606,7 @@ ${sharedContext}
       "socialProofCount": ${socialProofs.length},
       "socialProofQuality": "${socialProofs.length > 0 ? 'analyser' : 'ABSENT — critique'}",
       "urgencyFOMO": "présent|absent|faible",
-      "priceAnchoring": "${detectedPrice > 0 ? detectedPrice + ' ' + currency + ' — analyser' : 'ABSENT'}",
+      "priceAnchoring": "${getCanonicalPrice(priceIntel) > 0 ? getCanonicalPrice(priceIntel) + ' ' + currency + ' — analyser' : 'ABSENT'}",
       "trustBadges": "${trustSection ? 'présent' : 'ABSENT'}",
       "weaknesses": ["faiblesse réelle"],
       "fix": "action corrective"
@@ -6815,7 +6663,7 @@ ${langInstr}
 ÉTAPE 1 — RÉFLEXION (Chain of Thought) :
 → Quel est le chemin exact du visiteur depuis l'arrivée jusqu'à l'achat ?
 → À quelle étape le visiteur abandonne-t-il le plus probablement ?
-→ ${detectedPrice > 0 ? `Le prix ${detectedPrice} ${currency} est-il bien ancré psychologiquement ?` : `Aucun prix détecté : analyse uniquement la présentation tarifaire sans inventer de prix.`}
+→ ${getCanonicalPrice(priceIntel) > 0 ? `Le prix ${getCanonicalPrice(priceIntel)} ${currency} est-il bien ancré psychologiquement ?` : `Aucun prix détecté : analyse uniquement la présentation tarifaire sans inventer de prix.`}
 → Les CTAs "${ctaList.slice(0,2).join('" et "')}" déclenchent-ils l'action ?
 → Y a-t-il un système de nurturing ou tout est one-shot ?
 
@@ -6833,7 +6681,7 @@ ${sharedContext}
     "stages": [
       { "stage": "ACQUISITION", "score": 0, "source": "trafic probable SEO|Pub|Social|Direct", "verdict": "verdict basé sur données", "fix": "action corrective" },
       { "stage": "ACTIVATION",  "score": 0, "hook": "accroche détectée : ${h1Main}", "verdict": "verdict", "fix": "action corrective" },
-      { "stage": "DESIRE",      "score": 0, "socialProof": "${socialProofs.length} preuves sociales", "pricePresentation": "${detectedPrice > 0 ? detectedPrice + ' ' + currency : 'ABSENT'}", "verdict": "verdict", "fix": "action corrective" },
+      { "stage": "DESIRE",      "score": 0, "socialProof": "${socialProofs.length} preuves sociales", "pricePresentation": "${getCanonicalPrice(priceIntel) > 0 ? getCanonicalPrice(priceIntel) + ' ' + currency : 'ABSENT'}", "verdict": "verdict", "fix": "action corrective" },
       { "stage": "ACTION",      "score": 0, "ctaMain": "${ctaList[0] || ND}", "frictions": ["friction réelle basée sur données"], "verdict": "verdict", "fix": "action corrective" },
       { "stage": "RETENTION",   "score": 0, "hasEmail": ${emails.length > 0}, "hasWhatsApp": ${hasWhatsApp}, "nurturingSystem": "présent|absent|faible", "verdict": "verdict", "fix": "action corrective" }
     ],
@@ -6842,7 +6690,7 @@ ${sharedContext}
     "dropOffStage": "étape la plus risquée"
   },
     "pricingPsychology": {
-    "detectedPrice": ${detectedPrice ?? 'null'},
+    "getCanonicalPrice(priceIntel)": ${getCanonicalPrice(priceIntel) ?? 'null'},
     "currency": ${currency ? `"${currency}"` : 'null'},
     "priceAnchoring": "présent/absent + impact",
     "psychologicalPrice": "ND si aucun prix détecté ; ne jamais inventer",
@@ -6965,7 +6813,7 @@ Funnel Type    : ${r2Safe.funnelMapping?.funnelType || ND}
 Conversion Est.: ${r2Safe.funnelMapping?.estimatedConversionRate || ND}
 Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
 Top Weakness   : ${r2Safe.copywritingDeep?.topWeakness || ND}
-Prix détecté   : ${detectedPrice} ${currency}
+Prix détecté   : ${getCanonicalPrice(priceIntel)} ${currency}
 
 ÉTAPE 2 — RÉPONSE JSON en ${targetLang} :
 {
@@ -6991,12 +6839,12 @@ Prix détecté   : ${detectedPrice} ${currency}
   "financialProjection": {
     "currentConversionRate": "${r2Safe.funnelMapping?.estimatedConversionRate || '1-2%'}",
     "targetConversionRate": "taux cible après fixes",
-    "detectedPrice": ${detectedPrice},
+    "getCanonicalPrice(priceIntel)": ${getCanonicalPrice(priceIntel)},
     "currency": "${currency}",
     "monthlyVisitorsEstimate": "estimation trafic mensuel basée sur données réelles",
     "currentMonthlyRevenue": "estimation revenus actuels",
     "projectedMonthlyRevenue": "projection après optimisation",
-    "potentialGain": "[CALCULE basé sur taux conversion estimé × trafic × ${detectedPrice || 'prix détecté'}]",
+    "potentialGain": "[CALCULE basé sur taux conversion estimé × trafic × ${getCanonicalPrice(priceIntel) || 'prix détecté'}]",
     "roiVerdict": "verdict ROI si corrections appliquées"
   },
   "technicalAudit": {
@@ -7238,7 +7086,7 @@ const v12CR = (() => {
     const n = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
     return isNaN(n) ? 0.02 : n / 100;
 })();
-const v12Basket   = detectedPrice > 0 ? detectedPrice : null;
+const v12Basket   = getCanonicalPrice(priceIntel) > 0 ? detectedPrice : null;
 const v12StealPot = (v12Traffic && v12Basket)
     ? Math.max(0, Math.round((0.05 - v12CR) * v12Traffic * v12Basket))
     : null;
@@ -7802,8 +7650,8 @@ const sections = rawSections
   const allButtons      = (cop?.allButtons || []).slice(0, 5).map(b => b.text).join(', ');
 
   // ─── PRIX & DEVISE ────────────────────────────────────────────────────
-  const realPrice    = pri?.bestPrice || report?.financialIntel?.averageBasket || null;
-  const basketSource = pri?.bestPrice ? 'Scrape direct' : (report?.financialIntel?.basketSource || 'Non détecté');
+  const realPrice    = pri?.primaryPrice || report?.financialIntel?.averageBasket || null;
+  const basketSource = pri?.primaryPrice ? 'Scrape direct' : (report?.financialIntel?.basketSource || 'Non détecté');
   const currency     = pri?.currency && pri.currency !== 'UNKNOWN' && pri.currency !== 'EUR' ? pri.currency : 'MAD';
   const struckPrices = (pri?.struckPrices || []).join(', ') || 'Aucun';
   const discountRate = pri?.discountRate || 'Aucune';
@@ -8437,7 +8285,7 @@ if (CONFIG.SERPAPI_KEY && !pri.detected) {
     }
 }
 
-const finalAvgBasket = pri.bestPrice || serpPriceData.avgBasket || null;
+const finalAvgBasket = pri.primaryPrice || serpPriceData.avgBasket || null;
 const basketSource   = pri.detected
     ? 'Playwright scrape'
     : (serpPriceData.source || 'Non détecté');
@@ -10051,7 +9899,7 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             detected: false,
             currency: 'MAD',
             primaryPrice: null,
-            bestPrice: null,
+            primaryPrice: null,
             minPrice: null,
             maxPrice: null,
             priceRange: null,
@@ -10374,17 +10222,7 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
 
 
 
-function detectCurrency(raw = '', html = '') {
-    const str = `${raw} ${html}`.toUpperCase();
 
-    if (/\bLYD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
-    if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|د\.?\s?م|درهم/.test(str)) return 'MAD';
-    if (/\bEUR\b|€/.test(str)) return 'EUR';
-    if (/\bUSD\b|\$|US\$/.test(str)) return 'USD';
-    if (/\bGBP\b|£/.test(str)) return 'GBP';
-
-    return null;
-}
 
 
 
@@ -10531,49 +10369,7 @@ function extractDomPrices($, html) {
 }
 
 
-function normalizePriceValue(raw) {
-  if (raw == null) return null;
 
-  let s = String(raw)
-    .replace(/\u00A0/g, ' ')
-    .replace(/[^\d,.\-]/g, '')
-    .trim();
-
-  if (!s || !/\d/.test(s)) return null;
-
-  const commaCount = (s.match(/,/g) || []).length;
-  const dotCount = (s.match(/\./g) || []).length;
-
-  if (commaCount > 0 && dotCount > 0) {
-    const lastComma = s.lastIndexOf(',');
-    const lastDot = s.lastIndexOf('.');
-    if (lastComma > lastDot) {
-      s = s.replace(/\./g, '').replace(',', '.');
-    } else {
-      s = s.replace(/,/g, '');
-    }
-  } else if (commaCount > 0) {
-    const parts = s.split(',');
-    const last = parts[parts.length - 1];
-    if (parts.length === 2 && last.length <= 2) {
-      s = parts[0].replace(/\./g, '') + '.' + last;
-    } else {
-      s = s.replace(/,/g, '');
-    }
-  } else if (dotCount > 0) {
-    const parts = s.split('.');
-    const last = parts[parts.length - 1];
-    if (parts.length === 2 && last.length <= 2) {
-      s = parts[0].replace(/,/g, '') + '.' + last;
-    } else {
-      s = s.replace(/\./g, '');
-    }
-  }
-
-  const n = parseFloat(s);
-  if (!Number.isFinite(n) || n <= 0 || n > 999999999) return null;
-  return n;
-}
 
 function normalizeCurrency(cur) {
   if (!cur) return null;
@@ -10600,84 +10396,11 @@ function detectCurrencyLocal(raw, context = '') {
   return null;
 }
 
-function isNoisePriceContext(context = '') {
-  const s = String(context).toLowerCase();
-  return /(sku|ref|reference|réf|qty|quantit|stock|year|année|month|mois|day|jour|hour|min|minute|tel|phone|whatsapp|zip|postal|fax|rating|review count|stars?)/i.test(s);
-}
 
-function pushPrice(bucket, item) {
-  if (!Array.isArray(bucket) || !item) return;
 
-  const value = normalizePriceValue(item.value ?? item.raw);
-  if (!value || value < 0.5) return;
 
-  const raw = item.raw ? String(item.raw).trim() : String(value);
-  const context = String(item.context || raw).trim();
-  if (isNoisePriceContext(context)) return;
 
-  bucket.push({
-    value,
-    currency: normalizeCurrency(item.currency) || null,
-    raw,
-    source: item.source || 'unknown',
-    kind: item.kind || 'current',
-    context,
-    selector: item.selector || null,
-    visibilityScore: Number(item.visibilityScore ?? 0),
-    confidence: Number(item.confidence ?? 0.5)
-  });
-}
 
-function extractSchemaPricesFromNode(node, out, inheritedCurrency = null) {
-  if (!node || typeof node !== 'object') return out;
-  if (Array.isArray(node)) {
-    node.forEach(n => extractSchemaPricesFromNode(n, out, inheritedCurrency));
-    return out;
-  }
-
-  const type = Array.isArray(node['@type']) ? node['@type'][0] : (node['@type'] || node.type || null);
-  const localCurrency = normalizeCurrency(node.priceCurrency || node.currency || inheritedCurrency);
-
-  pushPrice(out, {
-    value: node.price,
-    currency: localCurrency,
-    raw: node.price,
-    source: 'schema',
-    kind: 'current',
-    context: `${type || ''} ${node.name || ''}`,
-    confidence: 0.98
-  });
-
-  pushPrice(out, {
-    value: node.lowPrice,
-    currency: localCurrency,
-    raw: node.lowPrice,
-    source: 'schema',
-    kind: 'range-min',
-    context: `${type || ''} AggregateOffer`,
-    confidence: 0.94
-  });
-
-  pushPrice(out, {
-    value: node.highPrice,
-    currency: localCurrency,
-    raw: node.highPrice,
-    source: 'schema',
-    kind: 'range-max',
-    context: `${type || ''} AggregateOffer`,
-    confidence: 0.94
-  });
-
-  if (node.priceSpecification) extractSchemaPricesFromNode(node.priceSpecification, out, localCurrency);
-  if (node.offers) extractSchemaPricesFromNode(node.offers, out, localCurrency);
-  if (node.offers?.priceSpecification) extractSchemaPricesFromNode(node.offers.priceSpecification, out, localCurrency);
-
-  Object.values(node).forEach(v => {
-    if (v && typeof v === 'object') extractSchemaPricesFromNode(v, out, localCurrency);
-  });
-
-  return out;
-}
 
 function extractPriceCurrencyPairsFromTextBlock(text, source = 'text', baseConfidence = 0.68, meta = {}) {
   const out = [];
@@ -10882,136 +10605,7 @@ function extractDomPrices($, html) {
   return prices;
 }
 
-function finalizePriceIntel(allPrices = []) {
-  const normalized = [];
-  const seen = new Set();
 
-  const looksOldContext = (p) => {
-    const s = `${p?.raw || ''} ${p?.context || ''}`.toLowerCase();
-    return /old|regular|compare|compare-at|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[eé]|line-through|strikethrough|hero-old-price|old-price/.test(s);
-  };
-
-  for (const p of allPrices) {
-    if (!p || !p.value || p.value <= 0) continue;
-    const currency = normalizeCurrency(p.currency) || null;
-    const key = [p.value, currency || '', p.kind || '', p.source || '', String(p.raw || '').slice(0, 80)].join('|');
-    if (seen.has(key)) continue;
-    seen.add(key);
-
-    normalized.push({
-      value: p.value,
-      currency,
-      raw: p.raw || null,
-      source: p.source || 'unknown',
-      kind: p.kind || 'current',
-      context: p.context || '',
-      selector: p.selector || null,
-      visibilityScore: Number(p.visibilityScore ?? 0),
-      confidence: Number(p.confidence ?? 0.5)
-    });
-  }
-
-  const currencyCounts = {};
-  for (const p of normalized) {
-    if (!p.currency) continue;
-    currencyCounts[p.currency] = (currencyCounts[p.currency] || 0) + 1;
-  }
-
-  const dominantCurrency =
-    Object.entries(currencyCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null;
-
-  const candidates = normalized.map(p => {
-    let score = 0;
-    score += p.confidence * 100;
-    if (p.source === 'schema') score += 35;
-    if (p.source === 'dom') score += 20;
-    if (p.source === 'text') score += 8;
-    if (p.kind === 'current') score += 22;
-    if (p.kind === 'plan') score += 12;
-    if (p.kind === 'from') score += 7;
-    if (p.kind === 'range-min') score += 4;
-    if (p.kind === 'old') score -= 40;
-    if (p.kind === 'range-max') score -= 10;
-    if (!p.currency) score -= 18;
-    score += p.visibilityScore * 6;
-    if (looksOldContext(p)) score -= 50;
-    return { ...p, score };
-  });
-
-  const oldCandidates = candidates.filter(p => p.kind === 'old' || looksOldContext(p));
-  const currentCandidates = candidates.filter(
-    p => ['current', 'from', 'plan', 'range-min'].includes(p.kind) && !looksOldContext(p)
-  );
-
-  const currencyFilteredCurrents = dominantCurrency
-    ? currentCandidates.filter(p => !p.currency || p.currency === dominantCurrency)
-    : currentCandidates;
-
-  const primary = [...currencyFilteredCurrents].sort((a, b) => {
-    if (b.score !== a.score) return b.score - a.score;
-    if (b.confidence !== a.confidence) return b.confidence - a.confidence;
-    return a.value - b.value;
-  })[0] || null;
-
-  const currentValues = currencyFilteredCurrents.map(p => p.value).sort((a, b) => a - b);
-  const rangeMax = candidates
-    .filter(p => p.kind === 'range-max' && !looksOldContext(p))
-    .map(p => p.value)
-    .sort((a, b) => b - a)[0] ?? null;
-
-  const minPrice = currentValues[0] ?? null;
-  const currentMax = currentValues[currentValues.length - 1] ?? null;
-  const maxPrice = rangeMax ?? currentMax ?? null;
-
-  const struckPrices = [...new Set(oldCandidates.map(p => p.value))].sort((a, b) => a - b);
-  const bestOld = struckPrices[struckPrices.length - 1] ?? null;
-
-  const discountRate = primary?.value && bestOld && bestOld > primary.value
-    ? Math.round(((bestOld - primary.value) / bestOld) * 100)
-    : null;
-
-  const hasPlanSignals = currentCandidates.some(p => p.kind === 'plan');
-  const hasRange = minPrice != null && maxPrice != null && minPrice !== maxPrice;
-  const distinctCurrentCount = new Set(currentValues).size;
-
-  let pricingModel = 'unknown';
-  if (hasPlanSignals && distinctCurrentCount >= 2) pricingModel = 'plans';
-  else if (hasPlanSignals) pricingModel = 'subscription';
-  else if (hasRange) pricingModel = 'range';
-  else if (primary?.value) pricingModel = 'one-time';
-
-  let confidence = 'LOW';
-  if (primary && primary.score >= 120 && (primary.currency || dominantCurrency)) confidence = 'HIGH';
-  else if (primary && primary.score >= 85) confidence = 'MEDIUM';
-
-  return {
-    detected: !!primary || struckPrices.length > 0,
-    currency: primary?.currency || dominantCurrency || null,
-    primaryPrice: primary?.value ?? null,
-    bestPrice: primary?.value ?? null,
-    minPrice,
-    maxPrice,
-    priceRange: hasRange ? [minPrice, maxPrice] : null,
-    pricingModel,
-    confidence,
-    primarySource: primary?.source || null,
-    primaryKind: primary?.kind || null,
-    primaryScore: primary?.score || null,
-    all: [...new Set(normalized.map(p => p.value))].sort((a, b) => a - b),
-    prices: [...normalized].sort((a, b) => a.value - b.value),
-    schemaPrices: normalized.filter(p => p.source === 'schema').map(p => p.value),
-    textPrices: normalized.filter(p => p.source === 'text').map(p => p.value),
-    domPrices: normalized.filter(p => p.source === 'dom').map(p => p.value),
-    planPrices: normalized.filter(p => p.kind === 'plan').map(p => p.value),
-    struckPrices,
-    discountRate,
-    priceSourcesSummary: {
-      schema: normalized.filter(p => p.source === 'schema').length,
-      text: normalized.filter(p => p.source === 'text').length,
-      dom: normalized.filter(p => p.source === 'dom').length
-    }
-  };
-}
 function mergePriceIntel(base = {}, extra = {}) {
     const empty = EMPTY_SCRAPE_RESULT().priceIntel;
     const merged = {
@@ -11405,7 +10999,7 @@ function mergeScrapeData(base = {}, extra = {}) {
         ]).sort((a, b) => a - b)
     };
     mergedPriceIntel.detected = mergedPriceIntel.detected || mergedPriceIntel.all.length > 0;
-    mergedPriceIntel.bestPrice = mergedPriceIntel.bestPrice ?? (mergedPriceIntel.all.length ? mergedPriceIntel.all[0] : null);
+    mergedPriceIntel.primaryPrice = mergedPriceIntel.primaryPrice ?? (mergedPriceIntel.all.length ? mergedPriceIntel.all[0] : null);
 
     const mergedContacts = {
         ...empty.contacts,
@@ -11622,7 +11216,7 @@ function mergeScrapeData(base = {}, extra = {}) {
 
         sectionsFound: (mergedCopyIntel.pageSections || []).length,
         h1: mergedCopyIntel.headlines?.h1?.[0] || null,
-        price: mergedPriceIntel.bestPrice ?? null,
+        price: mergedPriceIntel.primaryPrice ?? null,
         phones: mergedContacts.phones?.length || 0
     };
 }
@@ -11639,22 +11233,7 @@ function mergeScrapeData(base = {}, extra = {}) {
 //           pushPrice local, extractSchemaPricesFromNode local,
 //           getCanonicalPrice local, hasCanonicalPrice local
 // ─────────────────────────────────────────────────────────────────
-const pricingPipeline = require('./pricing-pipeline-refactored-1');
-const {
-  finalizePriceIntel,
-  buildPriceIntelLocal,
-  extractSchemaPricesFromNode,
-  extractTextPrices,
-  extractDomPrices,
-  pushValidatedPrice,
-  getCanonicalPrice,
-  hasCanonicalPrice,
-  detectCurrency,
-  normalizePriceValue,
-  isNoisePriceContext,
-  EMPTYPRICEINTELOBSERVED,
-  EXTRACTIONSTATUS,
-} = pricingPipeline;
+
 
 // ═══════════════════════════════════════════════════════════════════
 // 🔍 DEEP SCRAPE FUNNEL
@@ -12243,7 +11822,8 @@ async function deepScrapeFunnel(url) {
         finalResult.sectionsFound = allSections.length;
         finalResult.h1    = finalResult.copyIntel?.headlines?.h1?.[0] || null;
         // ★ getCanonicalPrice respects isBlocked — null if price not confirmed
-        finalResult.price = getCanonicalPrice(finalResult.priceIntel);
+        // ✅ CORRECT
+finalResult.price = getCanonicalPrice(finalResult.priceIntel);
         finalResult.phones = finalResult.contacts?.phones?.length || 0;
 
         console.log(
@@ -12268,7 +11848,7 @@ async function deepScrapeFunnel(url) {
             textPrices:      textPrices.length,
             domPrices:       domPrices.length,
             primaryPrice:    priceIntel?.primaryPrice,
-            bestPrice:       priceIntel?.bestPrice,
+            primaryPrice:       priceIntel?.primaryPrice,
             currency:        priceIntel?.currency,
             model:           priceIntel?.pricingModel,
             // ★ New fields
@@ -12325,7 +11905,7 @@ async function scrapeStealth(validUrl) {
         // ★ Aligned with PriceIntelObserved (new fields + all legacy aliases)
         priceIntel: {
             // Legacy aliases (read-only)
-            bestPrice:       null,
+            primaryPrice:       null,
             primaryPrice:    null,
             minPrice:        null,
             maxPrice:        null,
@@ -13349,7 +12929,7 @@ async function scrapeSiteData(url, lang = 'fr') {
         const sectionsFound = Object.values(enriched.sections || {}).filter(Boolean).length;
 
         // ★ getCanonicalPrice — null if priceIntel.isBlocked
-        const detectedPrice = getCanonicalPrice(enriched.priceIntel);
+        const detectedPrice = getCanonicalPrice(priceIntel);
 
         const scrapedData = {
             ...enriched,
