@@ -1983,7 +1983,7 @@ const maxPrice = currentCandidates.length
     : null;
 
 const primaryPrice = primary?.value || null;
-const primaryPrice = primary?.value || null;
+
 
 const currency =
     primary?.currency ||
