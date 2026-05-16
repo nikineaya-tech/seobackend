@@ -10365,7 +10365,7 @@ function extractPriceCurrencyPairsFromTextBlock(text, source = 'text', baseConfi
   return out;
 }
 
-function extractTextPrices(bodyText) {
+async function extractTextPrices(bodyText) {
   const prices = [];
   const text = String(bodyText || '').replace(/\u00A0/g, ' ').substring(0, 40000);
 
