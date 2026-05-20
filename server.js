@@ -1744,54 +1744,69 @@ async function scrapeStealth(validUrl) {
             const normText = (v) => (v || '').replace(/\s+/g, ' ').trim();
 
             const normalizePriceValue = (raw) => {
-                if (raw == null) return null;
-                let s = String(raw)
-                    .replace(/\u00A0/g, ' ')
-                    .replace(/\s+/g, ' ')
-                    .trim();
+    if (raw == null) return null;
+    let s = String(raw)
+        .replace(/\u00A0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
 
-                if (!s) return null;
+    if (!s) return null;
 
-                s = s.replace(/[^\d.,']/g, '');
-                if (!s || !/\d/.test(s)) return null;
+    s = s.replace(/[^\d.,']/g, '');
+    if (!s || !/\d/.test(s)) return null;
 
-                const commaCount = (s.match(/,/g) || []).length;
-                const dotCount = (s.match(/\./g) || []).length;
+    const commaCount = (s.match(/,/g) || []).length;
+    const dotCount = (s.match(/\./g) || []).length;
 
-                s = s.replace(/'/g, '');
+    s = s.replace(/'/g, '');
 
-                if (commaCount > 0 && dotCount > 0) {
-                    const lastComma = s.lastIndexOf(',');
-                    const lastDot = s.lastIndexOf('.');
-                    if (lastComma > lastDot) {
-                        s = s.replace(/\./g, '');
-                        s = s.replace(',', '.');
-                    } else {
-                        s = s.replace(/,/g, '');
-                    }
-                } else if (commaCount > 0) {
-                    const parts = s.split(',');
-                    const last = parts[parts.length - 1];
-                    if (parts.length === 2 && last.length <= 2) {
-                        s = parts[0].replace(/[^\d]/g, '') + '.' + last;
-                    } else {
-                        s = s.replace(/,/g, '');
-                    }
-                } else if (dotCount > 0) {
-                    const parts = s.split('.');
-                    const last = parts[parts.length - 1];
-                    if (parts.length === 2 && last.length <= 2) {
-                        s = parts[0].replace(/[^\d]/g, '') + '.' + last;
-                    } else {
-                        s = s.replace(/\./g, '');
-                    }
-                }
+    if (commaCount > 0 && dotCount > 0) {
+        const lastComma = s.lastIndexOf(',');
+        const lastDot = s.lastIndexOf('.');
+        if (lastComma > lastDot) {
+            s = s.replace(/\./g, '');
+            s = s.replace(',', '.');
+        } else {
+            s = s.replace(/,/g, '');
+        }
+    } else if (commaCount > 0) {
+        const parts = s.split(',');
+        const last = parts[parts.length - 1];
+        if (parts.length === 2 && last.length <= 2) {
+            s = parts[0].replace(/[^\d]/g, '') + '.' + last;
+        } else {
+            s = s.replace(/,/g, '');
+        }
+    } else if (dotCount > 0) {
+        const parts = s.split('.');
+        const last = parts[parts.length - 1];
+        if (parts.length === 2 && last.length <= 2) {
+            s = parts[0].replace(/[^\d]/g, '') + '.' + last;
+        } else {
+            s = s.replace(/\./g, '');
+        }
+    }
 
-                const n = parseFloat(s);
-                if (!Number.isFinite(n) || n <= 0) return null;
-                if (n > 999999999) return null;
-                return n;
-            };
+    const n = parseFloat(s);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    if (n > 999999999) return null;
+
+    // ✅ FIX ANTI-CONCATENATION — détecte ex: 175290 = 175 + 290 collés
+    // Seuil 99999 pour supporter les abonnements annuels en LYD (ex: 12000 LYD OK)
+    // Seuls les nombres > 99999 sont vérifiés pour concaténation
+    if (n > 99999) {
+        const digits = String(Math.round(n));
+        for (let split = 2; split <= digits.length - 2; split++) {
+            const left  = parseFloat(digits.slice(0, split));
+            const right = parseFloat(digits.slice(split));
+            if (left >= 10 && left <= 99999 && right >= 10 && right <= 99999) {
+                return null; // Concaténation détectée → rejeté
+            }
+        }
+    }
+
+    return n;
+};
 
    const detectCurrency = (raw = '', extra = '') => {
     const str = `${raw} ${extra}`.toUpperCase();
@@ -1927,10 +1942,17 @@ async function scrapeStealth(validUrl) {
             const emails = unique(
                 (bodyText.match(emailRegex) || [])
                     .filter(e => !/example|test/i.test(e))
-            ).slice(0, 5);
+            ).s// ✅ FIX SÉPARATEUR — injecter un espace entre chiffres et devises collés
+// Évite "175290 LYD" → sépare en "175 LYD 290 LYD"
+const cleanBodyText = bodyText
+    .replace(/(\d+)\s*(LYD|LD|MAD|DH|€|\$|£)/gi, ' $1 $2 ')  // chiffre+devise collés
+    .replace(/(LYD|LD|MAD|DH|€|\$|£)\s*(\d+)/gi, ' $1 $2 ')  // devise+chiffre collés
+    .replace(/(\d{2,6})\s*(\d{2,6})\s*(LYD|LD|MAD)/gi, '$1 $3 $2 $3'); // 175 290 LYDlice(0, 5);
+
+
 const priceRegex = /(\d[\d\s,.']*)\s*(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
            
-            const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 50);
+           const rawPrices = [...cleanBodyText.matchAll(priceRegex)].slice(0, 50);
 
 const normalizedPrices = rawPrices
     .map(m => {
