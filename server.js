@@ -6048,6 +6048,7 @@ const langInstr = isAr
         // ══════════════════════════════════════════════════════════════
         const vis        = scrape.visualDNA  || {};
         const pri = scrape.priceIntel || EMPTYSCRAPERESULT.priceIntel;
+        const priceIntel = pri;  // alias pour compatibilité sharedContext + prompts IA
         const copy       = scrape.copyIntel  || {};
         const brand      = scrape.brand      || {};
 
