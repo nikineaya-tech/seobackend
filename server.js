@@ -1944,15 +1944,28 @@ async function scrapeStealth(validUrl) {
                     .filter(e => !/example|test/i.test(e))
             ).s// ✅ FIX SÉPARATEUR — injecter un espace entre chiffres et devises collés
 // Évite "175290 LYD" → sépare en "175 LYD 290 LYD"
+// ══ LIGNE 1931 — REMPLACER CES 3 LIGNES : ══
+// const priceRegex = ...
+// (ligne vide)
+// const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 50);
+
+// ✅ PAR CE BLOC COMPLET :
+const priceRegex = /(\d[\d\s,.']*)\s*(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,'.']*)/gi;
+
+// ✅ FIX ANTI-CONCATENATION — Nettoyer bodyText avant extraction prix
+// Problème : HTML arabe colle "175" et "290 LYD" → "175290 LYD"
+// Solution : injecter des espaces autour des devises pour séparer les prix collés
 const cleanBodyText = bodyText
-    .replace(/(\d+)\s*(LYD|LD|MAD|DH|€|\$|£)/gi, ' $1 $2 ')  // chiffre+devise collés
-    .replace(/(LYD|LD|MAD|DH|€|\$|£)\s*(\d+)/gi, ' $1 $2 ')  // devise+chiffre collés
-    .replace(/(\d{2,6})\s*(\d{2,6})\s*(LYD|LD|MAD)/gi, '$1 $3 $2 $3'); // 175 290 LYDlice(0, 5);
+    // Sépare chiffres+devise collés : "175LYD" → "175 LYD"
+    .replace(/(\d+)(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)/gi, '$1 $2 ')
+    // Sépare devise+chiffres collés : "LYD290" → "LYD 290"
+    .replace(/(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)(\d+)/gi, '$1 $2 ')
+    // Cas clé : deux nombres collés avant une devise "175290 LYD"
+    // Détecte pattern NNN_NNN où les deux parties sont des prix plausibles (2-5 chiffres)
+    .replace(/\b(\d{2,5})(\d{2,5})\s*(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\b/gi,
+        (match, p1, p2, cur) => `${p1} ${cur} ${p2} ${cur} `);
 
-
-const priceRegex = /(\d[\d\s,.']*)\s*(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
-           
-           const rawPrices = [...cleanBodyText.matchAll(priceRegex)].slice(0, 50);
+const rawPrices = [...cleanBodyText.matchAll(priceRegex)].slice(0, 50);
 
 const normalizedPrices = rawPrices
     .map(m => {
