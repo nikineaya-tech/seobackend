@@ -6782,6 +6782,24 @@ if (r1Safe.webCharte) {
   r2Safe.pricingPsychology = {};
 }
 
+// ✅ APRÈS — calcul local basé sur pri (déjà disponible dans le scope)
+const computedPricingPsychology = (() => {
+    const price = getCanonicalPrice(pri);
+    if (!price || price <= 0) return {};
+    return {
+        priceDetected:    true,
+        canonicalPrice:   price,
+        currency:         pri?.currency || 'N/A',
+        pricingModel:     pri?.pricingModel || 'unknown',
+        confidenceBand:   pri?.confidenceBand || 'LOW',
+        isBlocked:        pri?.isBlocked || false,
+        blockingReasons:  pri?.blockingReasons || [],
+        hasDiscount:      (pri?.struckPrices?.length > 0) || false,
+        discountRate:     pri?.discountRate || null,
+        priceAnchorScore: price > 0 ? Math.min(100, Math.round((pri?.confidenceScore || 0.5) * 100)) : 0,
+    };
+})();
+
 r2Safe.pricingPsychology = {
   ...r2Safe.pricingPsychology,
   ...computedPricingPsychology
