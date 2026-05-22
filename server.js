@@ -1712,169 +1712,720 @@ async function scrapeStealth(validUrl) {
     const startTime = Date.now();
     let pw = null;
 
-    const finalizeEmpty = (error, layer = 'playwright') => ({
-        ...EMPTY_SCRAPE_RESULT(error, layer),
-        duration: Date.now() - startTime
-    });
+  const EXTRACTION_STATUS_SAFE =
+  typeof EXTRACTIONSTATUS !== 'undefined' ? EXTRACTIONSTATUS :
+  typeof EXTRACTION_STATUS !== 'undefined' ? EXTRACTION_STATUS :
+  {
+    NOT_FOUND: 'NOT_FOUND',
+    WEAK: 'WEAK',
+    CONFLICT: 'CONFLICT',
+    CONFIRMED: 'CONFIRMED'
+  };
+
 
     const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
+    const normText = (v) => String(v || '').replace(/\s+/g, ' ').trim();
+
+    const emptyPriceIntel = () => ({
+        primaryPrice: null,
+        minPrice: null,
+        maxPrice: null,
+        priceRange: null,
+        currency: null,
+        all: [],
+        prices: [],
+        currentPrices: [],
+        oldPrices: [],
+        struckPrices: [],
+        schemaPrices: [],
+        domPrices: [],
+        textPrices: [],
+        planPrices: [],
+        fromPrices: [],
+        installmentPrices: [],
+        discountRate: null,
+        pricingModel: 'unknown',
+        detected: false,
+        confidence: 'LOW',
+        confidenceBand: 'LOW',
+        confidenceScore: 0,
+        primarySource: null,
+        primaryKind: null,
+        primaryScore: null,
+        extractionStatus: EXTRACTION_NOT_FOUND,
+        isBlocked: true,
+        blockingReasons: ['empty_result'],
+        priceSourcesSummary: { schema: 0, text: 0, dom: 0, checkout: 0 },
+        sourceEvidence: [],
+        auditTrail: {
+            observedValues: [],
+            rejectedValues: [],
+            selectedValue: null,
+            selectionReason: 'empty_result',
+            conflicts: [],
+            timestamp: new Date().toISOString(),
+            evidenceCount: 0
+        }
+    });
+
+    const EMPTY_RESULT = (error = 'Unknown scrape error', fetchLayer = 'browser') => ({
+        success: false,
+        fetchLayer,
+        html: '',
+        error,
+        duration: Date.now() - startTime,
+        visualDNA: { dominantColors: ['#3b82f6', '#1e293b', '#10b981'], googleFonts: [] },
+        techStack: { cms: 'Unknown', hasSSL: false, hasWhatsApp: false },
+        copyIntel: {
+            headlines: { h1: [], h2: [], h3: [] },
+            realCTAs: [],
+            heroText: '',
+            testimonials: [],
+            guarantees: [],
+            faq: [],
+            bulletBenefits: [],
+            allButtons: [],
+            pageSections: []
+        },
+        priceIntel: emptyPriceIntel(),
+        trustSignals: {
+            hasSSL: false,
+            hasWhatsApp: false,
+            hasPhoneNumber: false,
+            hasReviews: false,
+            trustScore: null
+        },
+        contacts: { phones: [], emails: [] },
+        schemaData: { types: [], count: 0 },
+        sections: {
+            hasHero: false,
+            hasFeatures: false,
+            hasTrust: false,
+            hasPricing: false,
+            hasTestim: false,
+            hasFAQ: false,
+            hasCTA: false,
+            hasFooter: false
+        },
+        meta: { title: '', description: '', canonical: '', ogImage: '', hasOG: false, lang: '', keywords: '' },
+        wordCount: 0,
+        bodyText: '',
+        trackingIntel: {
+            hasGoogleAnalytics: false,
+            hasGTM: false,
+            hasFacebookPixel: false,
+            hasTikTokPixel: false,
+            hasHotjar: false,
+            hasClarity: false
+        },
+        performanceIntel: {
+            hasCountdown: false,
+            hasExitIntent: false,
+            hasLiveChat: false,
+            hasSSL: false,
+            hasCDN: false,
+            isMobileOptimized: false
+        },
+        seoIntel: {
+            titleLength: 0,
+            descriptionLength: 0,
+            keywordsMeta: [],
+            headingCounts: { h1: 0, h2: 0, h3: 0 }
+        },
+        brand: { fullTextSample: '', wordCount: 0 },
+        redirectIntel: { totalRedirects: 0, isFunnelRedirect: false, chain: [] }
+    });
+
+    const normalizePriceValueLocal = (raw) => {
+        if (raw == null) return null;
+
+        let s = String(raw)
+            .replace(/\u00A0/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        if (!s) return null;
+
+        s = s.replace(/[^\d.,']/g, '');
+        if (!s || !/\d/.test(s)) return null;
+
+        const commaCount = (s.match(/,/g) || []).length;
+        const dotCount = (s.match(/\./g) || []).length;
+
+        s = s.replace(/'/g, '');
+
+        if (commaCount > 0 && dotCount > 0) {
+            const lastComma = s.lastIndexOf(',');
+            const lastDot = s.lastIndexOf('.');
+            if (lastComma > lastDot) {
+                s = s.replace(/\./g, '').replace(',', '.');
+            } else {
+                s = s.replace(/,/g, '');
+            }
+        } else if (commaCount > 0) {
+            const parts = s.split(',');
+            const last = parts[parts.length - 1];
+            s = parts.length === 2 && last.length <= 2
+                ? parts[0].replace(/[^\d]/g, '') + '.' + last
+                : s.replace(/,/g, '');
+        } else if (dotCount > 0) {
+            const parts = s.split('.');
+            const last = parts[parts.length - 1];
+            s = parts.length === 2 && last.length <= 2
+                ? parts[0].replace(/[^\d]/g, '') + '.' + last
+                : s.replace(/\./g, '');
+        }
+
+        const n = parseFloat(s);
+        if (!Number.isFinite(n) || n <= 0 || n > 999999999) return null;
+
+        if (n > 99999) {
+            const digits = String(Math.round(n));
+            for (let split = 2; split <= digits.length - 2; split++) {
+                const left = parseFloat(digits.slice(0, split));
+                const right = parseFloat(digits.slice(split));
+                if (left >= 10 && left <= 99999 && right >= 10 && right <= 99999) return null;
+            }
+        }
+
+        return n;
+    };
+
+    const detectCurrencyLocalSafe = (raw = '', extra = '') => {
+        const str = `${raw} ${extra}`.toUpperCase();
+
+        if (/\bLYD\b|\bLD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
+        if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
+        if (/\bEUR\b|€/.test(str)) return 'EUR';
+        if (/\bUSD\b|US\$|\$/.test(str)) return 'USD';
+        if (/\bGBP\b|£/.test(str)) return 'GBP';
+
+        return null;
+    };
+
+    const classifyPriceKind = (raw = '', context = '', meta = {}) => {
+        const s = `${raw} ${context} ${meta.className || ''} ${meta.id || ''} ${meta.ariaLabel || ''}`.toLowerCase();
+
+        if (
+            meta.isStruck ||
+            /old|regular|compare|compare-at|was|before|ancien|barr|barre|barré|prix-barr|au lieu|instead of|السعر\s*القديم|سعر\s*قديم|سعر\s*سابق|السعر\s*الأصلي|بدلاً|كان\s*سعره/i.test(s)
+        ) {
+            return { kind: 'old', confidenceBoost: 0.25 };
+        }
+
+        if (/sale|current|final|now|new|discount|promo|offer|price__sale|woocommerce-price-amount|amount|prix|سعر|العرض/i.test(s)) {
+            return { kind: 'current', confidenceBoost: 0.16 };
+        }
+
+        if (/from|starting at|à partir|dès|ابتداء|ابتداءً|starting/i.test(s)) {
+            return { kind: 'from', confidenceBoost: 0.12 };
+        }
+
+        if (/monthly|month|mois|mensuel|annuel|annual|yearly|subscription|abonnement|اشتراك|شهري|سنوي|\/mois|\/month|\/an|\/year/i.test(s)) {
+            return { kind: 'plan', confidenceBoost: 0.12 };
+        }
+
+        if (/installment|payment|split|x\s*\d+|fois|تقسيط|دفعة/i.test(s)) {
+            return { kind: 'installment', confidenceBoost: 0.08 };
+        }
+
+        return { kind: 'current', confidenceBoost: 0 };
+    };
+
+    const extractRichDomPricesCheerio = ($, bodyText) => {
+        const out = [];
+        const selectors = [
+            '[itemprop="price"]',
+            'meta[itemprop="price"]',
+            '[property="product:price:amount"]',
+            '[class*="price"]',
+            '[id*="price"]',
+            '[class*="amount"]',
+            '[class*="sale"]',
+            '[class*="regular"]',
+            '[class*="compare"]',
+            '[class*="pricing"]',
+            '[class*="plan"]',
+            '[class*="offer"]',
+            '.woocommerce-Price-amount',
+            'del',
+            's',
+            'strike'
+        ].join(',');
+
+        $(selectors).each((_, el) => {
+            const $el = $(el);
+            const tagName = String(el.tagName || '').toUpperCase();
+            const className = $el.attr('class') || '';
+            const id = $el.attr('id') || '';
+            const ariaLabel = $el.attr('aria-label') || '';
+            const content = $el.attr('content') || $el.attr('value') || $el.text() || '';
+            const parentText = normText($el.parent().text()).slice(0, 280);
+            const nearbyText = normText(`${parentText} ${ariaLabel}`);
+            const style = $el.attr('style') || '';
+
+            const isStruck =
+                ['S', 'STRIKE', 'DEL'].includes(tagName) ||
+                /line-through/i.test(style) ||
+                /old|regular|compare|was|before|ancien|barr|barre|prix-barr/i.test(`${className} ${id} ${nearbyText}`);
+
+            const priceRegex = /(\d[\d\s,.']*)\s*(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
+            const cleanText = normText(content)
+                .replace(/(\d+)(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)/gi, '$1 $2 ')
+                .replace(/(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)(\d+)/gi, '$1 $2 ')
+                .replace(/\b(\d{2,5})(\d{2,5})\s*(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\b/gi, (_, p1, p2, cur) => `${p1} ${cur} ${p2} ${cur}`);
+
+            for (const m of cleanText.matchAll(priceRegex)) {
+                const raw = m[0] || '';
+                const value = normalizePriceValueLocal(m[1] || m[4] || raw);
+                if (!Number.isFinite(value) || value <= 0) continue;
+
+                const currency = detectCurrencyLocalSafe(raw, `${nearbyText} ${bodyText}`);
+                const classified = classifyPriceKind(raw, nearbyText, { className, id, ariaLabel, isStruck });
+
+                out.push({
+                    raw,
+                    value,
+                    currency,
+                    source: 'dom',
+                    kind: classified.kind,
+                    confidence: Math.min(0.96, 0.72 + classified.confidenceBoost),
+                    selector: tagName.toLowerCase(),
+                    tagName,
+                    className,
+                    id,
+                    ariaLabel,
+                    textDecoration: isStruck ? 'line-through' : '',
+                    isStruck,
+                    context: nearbyText.slice(0, 240)
+                });
+            }
+        });
+
+        return out;
+    };
+
+    const buildEnhancedPriceIntel = (bodyText, html, schemaRaw = [], domPriceTexts = [], richDomPrices = []) => {
+        let moduleIntel = null;
+        try {
+            if (typeof buildPriceIntelLocal === 'function') {
+                moduleIntel = buildPriceIntelLocal(bodyText, html, domPriceTexts, schemaRaw);
+            }
+        } catch (err) {
+            console.warn('⚠️ buildPriceIntelLocal failed:', err.message);
+        }
+
+        const modulePrices = Array.isArray(moduleIntel?.prices) ? moduleIntel.prices : [];
+        const allCandidates = [...modulePrices, ...richDomPrices]
+            .filter(p => p && Number.isFinite(Number(p.value)) && Number(p.value) > 0)
+            .map(p => ({
+                ...p,
+                value: Number(p.value),
+                currency: p.currency || detectCurrencyLocalSafe(p.raw, p.context || bodyText),
+                confidence: Number(p.confidence ?? 0.6)
+            }));
+
+        let finalized = null;
+        try {
+            if (typeof finalizePriceIntel === 'function' && allCandidates.length) {
+                finalized = finalizePriceIntel(allCandidates, html);
+            }
+        } catch (err) {
+            console.warn('⚠️ finalizePriceIntel failed:', err.message);
+        }
+
+        const base = finalized || moduleIntel || emptyPriceIntel();
+
+        const oldPrices = allCandidates.filter(p => p.kind === 'old' || p.isStruck);
+        const currentPrices = allCandidates.filter(p => ['current', 'from'].includes(p.kind) && !p.isStruck);
+        const planPrices = allCandidates.filter(p => p.kind === 'plan');
+        const fromPrices = allCandidates.filter(p => p.kind === 'from');
+        const installmentPrices = allCandidates.filter(p => p.kind === 'installment');
+        const domPrices = allCandidates.filter(p => p.source === 'dom');
+
+        const selectedCurrent = [...currentPrices, ...planPrices]
+            .sort((a, b) => (b.confidence - a.confidence) || (a.value - b.value))[0] || null;
+
+        const primaryPrice = base.primaryPrice || selectedCurrent?.value || null;
+        const currency =
+            base.currency ||
+            selectedCurrent?.currency ||
+            allCandidates.find(p => p.currency)?.currency ||
+            detectCurrencyLocalSafe(bodyText, html);
+
+        const struckPrices = unique([
+            ...(base.struckPrices || []),
+            ...oldPrices.map(p => p.value)
+        ]).sort((a, b) => a - b);
+
+        const bestOld = struckPrices.length ? struckPrices[struckPrices.length - 1] : null;
+        const discountRate =
+            primaryPrice && bestOld && bestOld > primaryPrice
+                ? Math.round(((bestOld - primaryPrice) / bestOld) * 100)
+                : (base.discountRate || null);
+
+        const currentValues = unique(currentPrices.map(p => p.value)).sort((a, b) => a - b);
+        const minPrice = base.minPrice || currentValues[0] || null;
+        const maxPrice = base.maxPrice || currentValues[currentValues.length - 1] || null;
+        const priceRange = base.priceRange || (minPrice && maxPrice && minPrice !== maxPrice ? [minPrice, maxPrice] : null);
+
+        const pricingModel =
+            base.pricingModel && base.pricingModel !== 'unknown'
+                ? base.pricingModel
+                : planPrices.length
+                    ? 'subscription'
+                    : priceRange
+                        ? 'range'
+                        : primaryPrice
+                            ? 'one-time'
+                            : 'unknown';
+
+        return {
+            ...emptyPriceIntel(),
+            ...base,
+            detected: !!primaryPrice,
+            primaryPrice,
+            minPrice,
+            maxPrice,
+            priceRange,
+            currency,
+            all: unique([
+                ...(base.all || []),
+                ...allCandidates.map(p => p.value)
+            ]).sort((a, b) => a - b),
+            prices: allCandidates.sort((a, b) => a.value - b.value),
+            currentPrices,
+            oldPrices,
+            struckPrices,
+            schemaPrices: base.schemaPrices || [],
+            domPrices,
+            textPrices: base.textPrices || [],
+            planPrices,
+            fromPrices,
+            installmentPrices,
+            discountRate,
+            pricingModel,
+            confidence: primaryPrice ? (selectedCurrent?.confidence >= 0.82 ? 'HIGH' : 'MEDIUM') : 'LOW',
+            confidenceBand: primaryPrice ? (selectedCurrent?.confidence >= 0.82 ? 'HIGH' : 'MEDIUM') : 'LOW',
+            confidenceScore: primaryPrice ? Math.round((selectedCurrent?.confidence || base.confidenceScore || 0.66) * 100) / 100 : 0,
+            primarySource: selectedCurrent?.source || base.primarySource || null,
+            primaryKind: selectedCurrent?.kind || base.primaryKind || null,
+            primaryScore: selectedCurrent ? Math.round((selectedCurrent.confidence || 0.66) * 100) : base.primaryScore || null,
+            extractionStatus: primaryPrice ? 'FOUND' : EXTRACTION_NOT_FOUND,
+            isBlocked: false,
+            blockingReasons: primaryPrice ? [] : ['no_confirmed_price'],
+            priceSourcesSummary: {
+                schema: (base.schemaPrices || []).length,
+                text: (base.textPrices || []).length,
+                dom: domPrices.length,
+                checkout: base.priceSourcesSummary?.checkout || 0
+            },
+            sourceEvidence: [
+                ...(base.sourceEvidence || []),
+                ...allCandidates.slice(0, 20).map(p => ({
+                    raw: p.raw,
+                    value: p.value,
+                    currency: p.currency,
+                    source: p.source,
+                    kind: p.kind,
+                    confidence: p.confidence,
+                    selector: p.selector,
+                    context: p.context
+                }))
+            ],
+            auditTrail: {
+                observedValues: allCandidates.map(p => p.value),
+                rejectedValues: base.auditTrail?.rejectedValues || [],
+                selectedValue: primaryPrice,
+                selectionReason: selectedCurrent
+                    ? `selected_${selectedCurrent.source}_${selectedCurrent.kind}`
+                    : base.auditTrail?.selectionReason || 'no_price_selected',
+                conflicts: base.auditTrail?.conflicts || [],
+                timestamp: new Date().toISOString(),
+                evidenceCount: allCandidates.length
+            }
+        };
+    };
+
+    const extractFromHtml = (html, source = 'scrape.do') => {
+        const $ = cheerio.load(html);
+        const bodyText = normText($('body').text());
+
+        const h1List = unique($('h1').map((_, el) => normText($(el).text())).get()).slice(0, 8);
+        const h2List = unique($('h2').map((_, el) => normText($(el).text())).get()).slice(0, 12);
+        const h3List = unique($('h3').map((_, el) => normText($(el).text())).get()).slice(0, 12);
+        const allButtons = unique($('a, button').map((_, el) => normText($(el).text())).get().filter(t => t.length > 1 && t.length < 80)).slice(0, 25);
+        const ctaList = unique($('a.button, a.btn, button, .cta, [class*="button"], [class*="btn"]').map((_, el) => normText($(el).text())).get().filter(t => t.length > 1 && t.length < 80)).slice(0, 20);
+
+        const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
+        const phones = unique((bodyText.match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
+
+        const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+        const emails = unique((bodyText.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
+
+        const schemaRaw = $('script[type="application/ld+json"]').map((_, el) => $(el).html() || '').get().filter(Boolean);
+        const schemaTypes = [];
+        schemaRaw.forEach(raw => {
+            try {
+                const parsed = JSON.parse(raw);
+                const entries = Array.isArray(parsed) ? parsed : [parsed];
+                entries.forEach(item => {
+                    const type = item?.['@type'] || item?.['@graph']?.[0]?.['@type'];
+                    if (type) schemaTypes.push(Array.isArray(type) ? type[0] : type);
+                });
+            } catch (_) {}
+        });
+
+        const domPriceTexts = unique(
+            $('[class*="price"], [id*="price"], .pricing, .plan, .offer, del, s, strike')
+                .map((_, el) => normText($(el).text())).get().filter(Boolean)
+        ).slice(0, 80);
+
+        const richDomPrices = extractRichDomPricesCheerio($, bodyText);
+        const pricing = buildEnhancedPriceIntel(bodyText, html, schemaRaw, domPriceTexts, richDomPrices);
+
+        const socialProofs = unique(
+            $('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')
+                .map((_, el) => normText($(el).text()).substring(0, 120)).get()
+        ).slice(0, 5);
+
+        const sections = {
+            hasHero: !!$('.hero, #hero, .banner, .masthead, .hero-section, [class*="hero"], [id*="hero"], [class*="banner"]').length,
+            hasFeatures: !!$('.feature, .features, #features, .service, .services, #service, .benefits, .benefit, .solutions, [class*="feature"], [id*="feature"], [class*="benefit"], [id*="service"]').length,
+            hasTrust: !!$('.trust, .trust-bar, .badge, .badges, .guarantee, .guarantees, .security, .certifications, .reassurance, .trusted-by, .logo-bar, [class*="trust"], [id*="trust"], [class*="badge"], [class*="guarantee"], [class*="security"], [class*="certif"], [class*="reassurance"], [class*="trusted"]').length,
+            hasPricing: !!$('.pricing, #pricing, .price, .prices, .plans, .plan, .tarifs, .tarif, .offres, .offer, [class*="pricing"], [class*="price"], [id*="pricing"], [class*="plan"]').length,
+            hasTestim: !!$('.testimonial, .testimonials, .review, .reviews, .avis, .ratings, .social-proof, [class*="testimonial"], [class*="review"], [class*="avis"]').length,
+            hasFAQ: !!$('.faq, #faq, details, .accordion, .questions, .questions-frequentes, [class*="faq"], [id*="faq"]').length,
+            hasCTA: !!$('.cta, #cta, .call-to-action, .sticky-cta, .contact-section, [class*="cta"], [id*="cta"], [href*="contact"], [href*="whatsapp"], [href*="wa.me"]').length,
+            hasFooter: !!$('footer, .footer, #footer, [class*="footer"]').length
+        };
+
+        const pageSections = Object.entries({
+            HERO: sections.hasHero,
+            FEATURES: sections.hasFeatures,
+            TRUST: sections.hasTrust,
+            SOCIAL_PROOF: sections.hasTestim,
+            PRICING: sections.hasPricing,
+            FAQ: sections.hasFAQ,
+            CTA: sections.hasCTA,
+            FOOTER: sections.hasFooter
+        }).filter(([, v]) => v).map(([type]) => ({ type, present: true, score: 60 }));
+
+        const styleContent = $('style').text() + ' ' + $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
+        const colorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi;
+        const allColors = styleContent.match(colorRegex) || [];
+        const colorCounts = {};
+        allColors.forEach(c => {
+            const n = c.toLowerCase().replace(/\s+/g, '');
+            if (!['#ffffff', '#000000', '#fff', '#000', 'transparent', 'rgba(0,0,0,0)'].includes(n)) {
+                colorCounts[n] = (colorCounts[n] || 0) + 1;
+            }
+        });
+        const dominantColors = Object.entries(colorCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([color]) => color);
+
+        const googleFonts = unique($('link[href*="fonts.googleapis.com"]').map((_, el) => {
+            const href = $(el).attr('href') || '';
+            const m = href.match(/family=([^&:]+)/);
+            return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
+        }).get()).slice(0, 5);
+
+        const meta = {
+            title: $('title').text().trim() || '',
+            description: $('meta[name="description"]').attr('content') || '',
+            canonical: $('link[rel="canonical"]').attr('href') || '',
+            ogImage: $('meta[property="og:image"]').attr('content') || '',
+            ogTitle: $('meta[property="og:title"]').attr('content') || '',
+            ogDescription: $('meta[property="og:description"]').attr('content') || '',
+            robots: $('meta[name="robots"]').attr('content') || '',
+            hasOG: !!$('meta[property="og:title"]').attr('content'),
+            lang: $('html').attr('lang') || '',
+            keywords: $('meta[name="keywords"]').attr('content') || ''
+        };
+
+        const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
+
+        return {
+            success: true,
+            fetchLayer: source,
+            html,
+            error: null,
+            duration: Date.now() - startTime,
+            visualDNA: {
+                dominantColors: dominantColors.length ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
+                googleFonts
+            },
+            techStack: {
+                cms: /shopify|myshopify/i.test(html) ? 'Shopify'
+                    : /wp-content|wp-includes/i.test(html) ? 'WordPress'
+                    : /woocommerce/i.test(html) ? 'WooCommerce'
+                    : /__NEXT_DATA__/i.test(html) ? 'Next.js'
+                    : /__NUXT__/i.test(html) ? 'Nuxt.js'
+                    : 'Unknown',
+                hasSSL: validUrl.startsWith('https'),
+                hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
+                hasSchema: schemaTypes.length > 0,
+                hasGA4: /gtag|googletagmanager/i.test(html),
+                hasGTM: /googletagmanager\.com\/gtm/i.test(html),
+                hasFBPixel: /connect\.facebook\.net|fbq/i.test(html),
+                hasTikTok: /analytics\.tiktok\.com|ttq/i.test(html),
+                hasHotjar: /hotjar/i.test(html),
+                hasClarity: /clarity\.ms|clarity/i.test(html),
+                hasLiveChat: /intercom|crisp|tidio/i.test(html),
+                hasCountdown: /countdown/i.test(html),
+                hasExitIntent: /exit-intent/i.test(html),
+                hasCDN: /cloudflare|cdn\./i.test(html),
+                isMobile: /<meta[^>]+name=["']viewport["']/i.test(html)
+            },
+            copyIntel: {
+                headlines: { h1: h1List, h2: h2List, h3: h3List },
+                realCTAs: ctaList,
+                heroText: bodyText.substring(0, 300),
+                testimonials: socialProofs,
+                guarantees: [],
+                faq: [],
+                bulletBenefits: [],
+                allButtons,
+                pageSections
+            },
+            priceIntel: pricing,
+            pricingDebug: {
+                observedCount: pricing.prices?.length || 0,
+                oldDetected: pricing.oldPrices?.length || 0,
+                currentDetected: pricing.currentPrices?.length || 0,
+                struckDetected: pricing.struckPrices?.length || 0,
+                blockedReasons: pricing.blockingReasons || [],
+                selectedReason: pricing.auditTrail?.selectionReason || null,
+                evidence: (pricing.sourceEvidence || []).slice(0, 10)
+            },
+            trustSignals: {
+                hasSSL: validUrl.startsWith('https'),
+                hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
+                hasPhoneNumber: phones.length > 0,
+                hasReviews: socialProofs.length > 0,
+                hasMoneyBackGuarantee: /garantie|money back|refund/i.test(bodyText),
+                hasPaymentLogos: /visa|mastercard|paypal|cmi/i.test(html),
+                hasLegalPages: /mentions légales|privacy|conditions|terms/i.test(bodyText),
+                hasCOD: /cash on delivery|paiement à la livraison/i.test(bodyText),
+                trustScore: null
+            },
+            contacts: { phones, emails },
+            schemaData: { types: unique(schemaTypes), count: unique(schemaTypes).length },
+            sections,
+            meta,
+            wordCount,
+            bodyText: bodyText.substring(0, 15000),
+            trackingIntel: {
+                hasGoogleAnalytics: /gtag|google-analytics|googletagmanager/i.test(html),
+                hasGTM: /googletagmanager\.com\/gtm/i.test(html),
+                hasFacebookPixel: /connect\.facebook\.net|fbq/i.test(html),
+                hasTikTokPixel: /analytics\.tiktok\.com|ttq/i.test(html),
+                hasHotjar: /hotjar/i.test(html),
+                hasClarity: /clarity\.ms|clarity/i.test(html)
+            },
+            performanceIntel: {
+                hasCountdown: /countdown/i.test(html),
+                hasExitIntent: /exit-intent/i.test(html),
+                hasLiveChat: /intercom|crisp|tidio/i.test(html),
+                hasSSL: validUrl.startsWith('https'),
+                hasCDN: /cloudflare|cdn\./i.test(html),
+                isMobileOptimized: /<meta[^>]+name=["']viewport["']/i.test(html)
+            },
+            seoIntel: {
+                title: meta.title,
+                titleLength: meta.title.length,
+                metaDescription: meta.description,
+                description: meta.description,
+                descriptionLength: meta.description.length,
+                keywordsMeta: meta.keywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 20),
+                headingCounts: { h1: h1List.length, h2: h2List.length, h3: h3List.length },
+                h1: h1List[0] || '',
+                h2s: h2List,
+                h3s: h3List,
+                canonical: meta.canonical,
+                hasCanonical: !!meta.canonical,
+                robots: meta.robots,
+                hasRobotsMeta: !!meta.robots,
+                ogTitle: meta.ogTitle,
+                ogDescription: meta.ogDescription,
+                ogImage: meta.ogImage,
+                lang: meta.lang || null,
+                schemaTypes: unique(schemaTypes),
+                schemaCount: unique(schemaTypes).length,
+                hasSchema: schemaTypes.length > 0,
+                wordCount
+            },
+            brand: { fullTextSample: bodyText.substring(0, 15000), wordCount, hasSSL: validUrl.startsWith('https') },
+            redirectIntel: { totalRedirects: 0, isFunnelRedirect: false, chain: [] }
+        };
+    };
 
     try {
-        console.log(`🎭 Playwright scraping: ${validUrl}`);
+        console.log(`🧠 Smart scraping enhanced: ${validUrl}`);
 
         pw = await playwrightWrapper.launchPlaywright(validUrl);
+        if (!pw) throw new Error('launchPlaywright returned null');
 
-        if (!pw || !pw.page) {
-            throw new Error('Playwright launch failed — pw ou pw.page null');
+        if (!pw.page && pw.html) {
+            if (typeof pw.html !== 'string' || pw.html.length < 500) {
+                throw new Error(`Fallback HTML too short (${pw.html?.length || 0} chars)`);
+            }
+
+            const result = extractFromHtml(pw.html, pw.provider || 'scrape.do');
+            console.log(
+                `✅ scrapeStealth HTML fallback OK — ${result.duration}ms` +
+                ` | Layer: ${result.fetchLayer}` +
+                ` | Prix: ${result.priceIntel.primaryPrice ?? 'N/A'} ${result.priceIntel.currency ?? ''}` +
+                ` | Old: ${(result.priceIntel.struckPrices || []).join(',') || 'N/A'}` +
+                ` | Discount: ${result.priceIntel.discountRate ?? 'N/A'}` +
+                ` | Status: ${result.priceIntel.extractionStatus}`
+            );
+            return result;
+        }
+
+        if (!pw.page) {
+            throw new Error(`Browser launch failed — provider=${pw.provider || 'unknown'} and page is null`);
         }
 
         const html = await Promise.race([
             pw.page.content(),
-            new Promise((_, reject) =>
-                setTimeout(() => reject(new Error('page.content() timeout 45s')), 45000)
-            )
+            new Promise((_, reject) => setTimeout(() => reject(new Error('page.content() timeout 45s')), 45000))
         ]);
 
         if (!html || typeof html !== 'string' || html.length < 500) {
-            throw new Error(`HTML trop court (${html?.length || 0} chars) — page bloquée ou vide`);
+            throw new Error(`HTML too short (${html?.length || 0} chars) — page blocked or empty`);
         }
 
-        const extracted = await pw.page.evaluate(() => {
+        const browserExtracted = await pw.page.evaluate(() => {
             const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
-            const normText = (v) => (v || '').replace(/\s+/g, ' ').trim();
-
-            const normalizePriceValue = (raw) => {
-    if (raw == null) return null;
-    let s = String(raw)
-        .replace(/\u00A0/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-
-    if (!s) return null;
-
-    s = s.replace(/[^\d.,']/g, '');
-    if (!s || !/\d/.test(s)) return null;
-
-    const commaCount = (s.match(/,/g) || []).length;
-    const dotCount = (s.match(/\./g) || []).length;
-
-    s = s.replace(/'/g, '');
-
-    if (commaCount > 0 && dotCount > 0) {
-        const lastComma = s.lastIndexOf(',');
-        const lastDot = s.lastIndexOf('.');
-        if (lastComma > lastDot) {
-            s = s.replace(/\./g, '');
-            s = s.replace(',', '.');
-        } else {
-            s = s.replace(/,/g, '');
-        }
-    } else if (commaCount > 0) {
-        const parts = s.split(',');
-        const last = parts[parts.length - 1];
-        if (parts.length === 2 && last.length <= 2) {
-            s = parts[0].replace(/[^\d]/g, '') + '.' + last;
-        } else {
-            s = s.replace(/,/g, '');
-        }
-    } else if (dotCount > 0) {
-        const parts = s.split('.');
-        const last = parts[parts.length - 1];
-        if (parts.length === 2 && last.length <= 2) {
-            s = parts[0].replace(/[^\d]/g, '') + '.' + last;
-        } else {
-            s = s.replace(/\./g, '');
-        }
-    }
-
-    const n = parseFloat(s);
-    if (!Number.isFinite(n) || n <= 0) return null;
-    if (n > 999999999) return null;
-
-    // ✅ FIX ANTI-CONCATENATION — détecte ex: 175290 = 175 + 290 collés
-    // Seuil 99999 pour supporter les abonnements annuels en LYD (ex: 12000 LYD OK)
-    // Seuls les nombres > 99999 sont vérifiés pour concaténation
-    if (n > 99999) {
-        const digits = String(Math.round(n));
-        for (let split = 2; split <= digits.length - 2; split++) {
-            const left  = parseFloat(digits.slice(0, split));
-            const right = parseFloat(digits.slice(split));
-            if (left >= 10 && left <= 99999 && right >= 10 && right <= 99999) {
-                return null; // Concaténation détectée → rejeté
-            }
-        }
-    }
-
-    return n;
-};
-
-   const detectCurrency = (raw = '', extra = '') => {
-    const str = `${raw} ${extra}`.toUpperCase();
-
-    if (/\bLYD\b|\bLD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
-    if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
-    if (/\bEUR\b|€/.test(str)) return 'EUR';
-    if (/\bUSD\b|US\$|\$/.test(str)) return 'USD';
-    if (/\bGBP\b|£/.test(str)) return 'GBP';
-
-    return null;
-};
+            const normText = (v) => String(v || '').replace(/\s+/g, ' ').trim();
 
             const bodyText = normText(document.body?.innerText || '');
-            const viewport = !!document.querySelector('meta[name="viewport"]');
 
             const colorMap = new Map();
-            const IGNORE = new Set([
-                'rgba(0, 0, 0, 0)', 'transparent', 'rgb(0, 0, 0)',
-                'rgb(255, 255, 255)', '', 'rgba(0,0,0,0)'
-            ]);
-
-            const targets = document.querySelectorAll(
-                'body, header, nav, section, footer, h1, h2, button, a, ' +
-                '[class*="hero"], [class*="btn"], [class*="cta"], ' +
-                '[class*="banner"], [class*="primary"], [class*="brand"]'
-            );
-
-            targets.forEach(el => {
+            const IGNORE = new Set(['rgba(0, 0, 0, 0)', 'transparent', 'rgb(0, 0, 0)', 'rgb(255, 255, 255)', '', 'rgba(0,0,0,0)']);
+            document.querySelectorAll('body, header, nav, section, footer, h1, h2, button, a, [class*="hero"], [class*="btn"], [class*="cta"], [class*="banner"], [class*="primary"], [class*="brand"]').forEach(el => {
                 const cs = window.getComputedStyle(el);
                 ['backgroundColor', 'color', 'borderTopColor'].forEach(prop => {
                     const val = cs[prop];
-                    if (val && !IGNORE.has(val)) {
-                        colorMap.set(val, (colorMap.get(val) || 0) + 1);
-                    }
+                    if (val && !IGNORE.has(val)) colorMap.set(val, (colorMap.get(val) || 0) + 1);
                 });
             });
 
             const rootCS = window.getComputedStyle(document.documentElement);
-            const cssVars = [
-                '--primary', '--primary-color', '--color-primary',
-                '--accent', '--brand-color', '--theme-color',
-                '--secondary', '--main-color'
-            ];
-
-            const varColors = cssVars
+            const varColors = ['--primary', '--primary-color', '--color-primary', '--accent', '--brand-color', '--theme-color', '--secondary', '--main-color']
                 .map(v => rootCS.getPropertyValue(v).trim())
                 .filter(v => v && (v.startsWith('#') || v.startsWith('rgb')));
 
             const rgbToHex = (rgb) => {
                 const m = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
                 if (!m) return rgb.toLowerCase();
-                return '#' + [m[1], m[2], m[3]]
-                    .map(x => parseInt(x, 10).toString(16).padStart(2, '0'))
-                    .join('');
+                return '#' + [m[1], m[2], m[3]].map(x => parseInt(x, 10).toString(16).padStart(2, '0')).join('');
             };
-
-            const BAD = new Set(['#000000', '#ffffff', '#000', '#fff']);
 
             const dominantColors = unique([
                 ...varColors,
-                ...[...colorMap.entries()]
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([c]) => c)
-            ])
-                .map(rgbToHex)
-                .filter(c => c && !BAD.has(c))
-                .slice(0, 5);
+                ...[...colorMap.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c)
+            ]).map(rgbToHex).filter(c => c && !['#000000', '#ffffff', '#000', '#fff'].includes(c)).slice(0, 5);
 
             const tech = {
                 cms: 'Custom',
@@ -1885,7 +2436,6 @@ async function scrapeStealth(validUrl) {
                 isReact: !!(window.React || window.__REACT_DEVTOOLS_GLOBAL_HOOK__),
                 isVue: !!(window.Vue || window.__vue_app__),
                 isWooCommerce: !!(window.woocommerce_params || document.querySelector('.woocommerce')),
-                hasJQuery: !!(window.jQuery || window.$),
                 hasGA4: !!(window.gtag || document.querySelector('[src*="gtag/js"],[src*="googletagmanager"]')),
                 hasGTM: !!(window.google_tag_manager || document.querySelector('[src*="googletagmanager.com/gtm"]')),
                 hasFBPixel: !!(window.fbq || document.querySelector('[src*="connect.facebook.net"]')),
@@ -1897,7 +2447,7 @@ async function scrapeStealth(validUrl) {
                 hasCountdown: !!document.querySelector('[id*="countdown"],[class*="countdown"],[data-countdown]'),
                 hasExitIntent: !!(window.exitIntent || document.querySelector('[class*="exit-intent"],[id*="exit-intent"]')),
                 hasSSL: location.protocol === 'https:',
-                isMobile: viewport,
+                isMobile: !!document.querySelector('meta[name="viewport"]'),
                 hasCDN: !!(document.querySelector('[src*="cloudflare"],[src*="cdn."],[href*="cdn."]') || window.__CF$cv$params),
                 hasSchema: document.querySelectorAll('script[type="application/ld+json"]').length > 0
             };
@@ -1914,696 +2464,141 @@ async function scrapeStealth(validUrl) {
             const h2List = unique([...document.querySelectorAll('h2')].map(e => normText(e.innerText))).slice(0, 12);
             const h3List = unique([...document.querySelectorAll('h3')].map(e => normText(e.innerText))).slice(0, 12);
 
-            const ctaRegex = /get started|start|book|buy|order|try|sign up|signup|subscribe|join|contact|demo|call|apply|shop|acheter|commander|essayer|devis|contactez|réserver|reserver/i;
-            const ctaList = unique(
-                [...document.querySelectorAll('a, button, input[type="submit"], input[type="button"]')]
-                    .map(el => {
-                        const text = normText(el.innerText || el.value || el.getAttribute('aria-label') || '');
-                        const href = normText(el.getAttribute('href') || '');
-                        const cls = (el.className || '').toString();
-                        return { text, href, cls };
-                    })
-                    .filter(({ text, href, cls }) => {
-                        if (!text || text.length < 2 || text.length > 80) return false;
-                        const looksLikeCTA =
-                            ctaRegex.test(text) ||
-                            /cta|btn|button|primary|submit|contact|pricing|demo|trial|whatsapp/i.test(cls) ||
-                            /contact|pricing|demo|signup|trial|book|buy|order|whatsapp|wa\.me/i.test(href);
-                        const looksLikeNav = /home|about|services|solutions|platform|blog/i.test(text);
-                        return looksLikeCTA && !looksLikeNav;
-                    })
-                    .map(x => x.text)
-            ).slice(0, 20);
+            const ctaRegex = /(get started|start|book|buy|order|try|sign up|signup|subscribe|join|contact|demo|call|apply|shop|acheter|commander|essayer|devis|contactez|réserver|reserver|ابدأ|اشتر|اطلب|احجز|تواصل)/i;
+            const ctaList = unique([...document.querySelectorAll('a, button, input[type="submit"], input[type="button"]')].map(el => {
+                const text = normText(el.innerText || el.value || el.getAttribute('aria-label') || '');
+                const href = normText(el.getAttribute('href') || '');
+                const cls = (el.className || '').toString();
+                return { text, href, cls };
+            }).filter(({ text, href, cls }) => {
+                if (text.length < 2 || text.length > 80) return false;
+                const looksLikeCTA = ctaRegex.test(text) || /cta|btn|button|primary|submit|contact|pricing|demo|trial|whatsapp/i.test(cls) || /contact|pricing|demo|signup|trial|book|buy|order|whatsapp|wa\.me/i.test(href);
+                const looksLikeNav = /^(home|about|services|solutions|platform|pricing|blog|faq|contact)$/i.test(text);
+                return looksLikeCTA && !looksLikeNav;
+            }).map(x => x.text)).slice(0, 20);
 
             const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
             const phones = unique((bodyText.match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
 
             const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-            const emails = unique(
-                (bodyText.match(emailRegex) || [])
-                    .filter(e => !/example|test/i.test(e))
-            ).s// ✅ FIX SÉPARATEUR — injecter un espace entre chiffres et devises collés
-// Évite "175290 LYD" → sépare en "175 LYD 290 LYD"
-// ══ LIGNE 1931 — REMPLACER CES 3 LIGNES : ══
-// const priceRegex = ...
-// (ligne vide)
-// const rawPrices = [...bodyText.matchAll(priceRegex)].slice(0, 50);
+            const emails = unique((bodyText.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
 
-// ✅ PAR CE BLOC COMPLET :
-const priceRegex = /(\d[\d\s,.']*)\s*(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,'.']*)/gi;
+            const schemaJsonRaw = [...document.querySelectorAll('script[type="application/ld+json"]')].map(s => s.textContent || '').filter(Boolean);
+            const schemaTypes = schemaJsonRaw.map(raw => {
+                try {
+                    const parsed = JSON.parse(raw);
+                    return parsed?.['@type'] || parsed?.['@graph']?.[0]?.['@type'] || null;
+                } catch {
+                    return null;
+                }
+            }).flat().filter(Boolean);
 
-// ✅ FIX ANTI-CONCATENATION — Nettoyer bodyText avant extraction prix
-// Problème : HTML arabe colle "175" et "290 LYD" → "175290 LYD"
-// Solution : injecter des espaces autour des devises pour séparer les prix collés
-const cleanBodyText = bodyText
-    // Sépare chiffres+devise collés : "175LYD" → "175 LYD"
-    .replace(/(\d+)(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)/gi, '$1 $2 ')
-    // Sépare devise+chiffres collés : "LYD290" → "LYD 290"
-    .replace(/(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)(\d+)/gi, '$1 $2 ')
-    // Cas clé : deux nombres collés avant une devise "175290 LYD"
-    // Détecte pattern NNN_NNN où les deux parties sont des prix plausibles (2-5 chiffres)
-    .replace(/\b(\d{2,5})(\d{2,5})\s*(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\b/gi,
-        (match, p1, p2, cur) => `${p1} ${cur} ${p2} ${cur} `);
+            const socialProofs = unique([...document.querySelectorAll('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')].map(e => normText(e.innerText).substring(0, 120))).slice(0, 5);
 
-const rawPrices = [...cleanBodyText.matchAll(priceRegex)].slice(0, 50);
-
-const normalizedPrices = rawPrices
-    .map(m => {
-        const raw = m[0] || '';
-        const value = normalizePriceValue(m[1] || m[4] || raw);
-        const currency = detectCurrency(raw, bodyText);
-
-        if (!Number.isFinite(value) || value <= 0) return null;
-
-        const lowered = raw.toLowerCase();
-        let kind = 'current';
-        let confidence = 0.66;
-
-        if (/old|regular|compare|barr|barre|avant|instead of|au lieu|ancien prix|old price|prix barr[ée]/i.test(lowered)) {
-            kind = 'old';
-            confidence = 0.84;
-        } else if (/from|à partir|starting at|dès/i.test(lowered)) {
-            kind = 'from';
-            confidence = 0.8;
-        }
-
-        return {
-            raw,
-            value,
-            currency,
-            source: 'text',
-            kind,
-            confidence
-        };
-    })
-    .filter(Boolean);
-
-            const oldCandidates = normalizedPrices.filter(p => p.kind === 'old');
-const currentCandidates = normalizedPrices.filter(p => p.kind === 'current' || p.kind === 'from');
-
-const sortedCurrents = [...currentCandidates].sort((a, b) => {
-    if (b.confidence !== a.confidence) return b.confidence - a.confidence;
-    return a.value - b.value;
-});
-
-const primary = sortedCurrents[0] || null;
-const allValues = [...new Set(normalizedPrices.map(p => p.value))].sort((a, b) => a - b);
-
-const minPrice = currentCandidates.length
-    ? [...currentCandidates].sort((a, b) => a.value - b.value)[0].value
-    : null;
-
-const maxPrice = currentCandidates.length
-    ? [...currentCandidates].sort((a, b) => b.value - a.value)[0].value
-    : null;
-
-const primaryPrice = primary?.value || null;
-
-
-const currency =
-    primary?.currency ||
-    normalizedPrices.find(p => p.currency)?.currency ||
-    detectCurrency(bodyText, html) ||
-    null;
-
-const struckPrices = [...new Set(oldCandidates.map(p => p.value))].sort((a, b) => a - b);
-
-const bestOld = struckPrices.length ? struckPrices[struckPrices.length - 1] : null;
-const discountRate =
-    primaryPrice && bestOld && bestOld > primaryPrice
-        ? Math.round(((bestOld - primaryPrice) / bestOld) * 100)
-        : null;
-
-const priceRange =
-    minPrice !== null && maxPrice !== null && minPrice !== maxPrice
-        ? [minPrice, maxPrice]
-        : null;
-
-            const schemaNodes = [...document.querySelectorAll('script[type="application/ld+json"]')]
-                .map(s => {
-                    try { return JSON.parse(s.textContent); } catch { return null; }
-                })
-                .filter(Boolean);
-
-            const schemaTypes = unique(
-                schemaNodes.flatMap(node => {
-                    const out = [];
-                    const arr = Array.isArray(node) ? node : [node];
-                    arr.forEach(item => {
-                        if (item?.['@type']) {
-                            if (Array.isArray(item['@type'])) out.push(...item['@type']);
-                            else out.push(item['@type']);
-                        }
-                        if (Array.isArray(item?.['@graph'])) {
-                            item['@graph'].forEach(g => {
-                                if (g?.['@type']) {
-                                    if (Array.isArray(g['@type'])) out.push(...g['@type']);
-                                    else out.push(g['@type']);
-                                }
-                            });
-                        }
-                    });
-                    return out;
-                })
-            );
-
-            const socialProofs = unique(
-                [...document.querySelectorAll(
-                    '[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]'
-                )]
-                    .map(e => normText(e.innerText).substring(0, 160))
-                    .filter(Boolean)
-            ).slice(0, 5);
-
-            const sections = {
-                hasHero: !!document.querySelector([
-                    '.hero', '#hero', '.banner', '.masthead', '.hero-section',
-                    '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
-                ].join(',')),
-                hasFeatures: !!document.querySelector([
-                    '.feature', '.features', '#features', '.service', '.services',
-                    '#service', '.benefits', '.benefit', '.solutions',
-                    '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
-                ].join(',')),
-                hasTrust: !!document.querySelector([
-                    '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
-                    '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
-                    '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
-                    '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
-                    '[class*="reassurance"]', '[class*="trusted"]'
-                ].join(',')),
-                hasPricing: !!document.querySelector([
-                    '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
-                    '.tarifs', '.tarif', '.offres', '.offer',
-                    '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
-                ].join(',')),
-                hasTestim: !!document.querySelector([
-                    '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
-                    '.ratings', '.social-proof',
-                    '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
-                ].join(',')),
-                hasFAQ: !!document.querySelector([
-                    '.faq', '#faq', 'details', '.accordion', '.questions',
-                    '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
-                ].join(',')),
-                hasCTA: !!document.querySelector([
-                    '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
-                    '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
-                ].join(',')),
-                hasFooter: !!document.querySelector([
-                    'footer', '.footer', '#footer', '[class*="footer"]'
-                ].join(','))
+            const hasAny = (selectors) => {
+                try { return selectors.some(sel => document.querySelector(sel)); } catch { return false; }
             };
 
-            const googleFonts = unique(
-                [...document.querySelectorAll('link[href*="fonts.googleapis.com"]')]
-                    .map(l => {
-                        const m = l.href.match(/family=([^&:]+)/);
-                        return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
-                    })
-                    .filter(Boolean)
-            ).slice(0, 5);
+            const sections = {
+                hasHero: hasAny(['.hero', '#hero', '.banner', '.masthead', '.hero-section', '[class*="hero"]', '[id*="hero"]', '[class*="banner"]']),
+                hasFeatures: hasAny(['.feature', '.features', '#features', '.service', '.services', '#service', '.benefits', '.benefit', '.solutions', '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]']),
+                hasTrust: hasAny(['.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees', '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar', '[class*="trust"]', '[id*="trust"]', '[class*="badge"]', '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]', '[class*="reassurance"]', '[class*="trusted"]']),
+                hasPricing: hasAny(['.pricing', '#pricing', '.price', '.prices', '.plans', '.plan', '.tarifs', '.tarif', '.offres', '.offer', '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]']),
+                hasTestim: hasAny(['.testimonial', '.testimonials', '.review', '.reviews', '.avis', '.ratings', '.social-proof', '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]']),
+                hasFAQ: hasAny(['.faq', '#faq', 'details', '.accordion', '.questions', '.questions-frequentes', '[class*="faq"]', '[id*="faq"]']),
+                hasCTA: hasAny(['.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section', '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]']),
+                hasFooter: hasAny(['footer', '.footer', '#footer', '[class*="footer"]'])
+            };
 
-            const internalLinkObjects = [];
-            const externalOutboundLinkObjects = [];
-            const anchors = [...document.querySelectorAll('a[href]')];
-            const currentHost = location.hostname.replace(/^www\./, '');
-
-            anchors.forEach(a => {
-                const href = a.getAttribute('href') || '';
-                const text = normText(a.innerText || a.getAttribute('aria-label') || '').substring(0, 120);
-                if (!href || href.startsWith('#') || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
-                    return;
-                }
-
-                try {
-                    const url = new URL(href, location.href);
-                    const normalized = url.href;
-                    const host = url.hostname.replace(/^www\./, '');
-                    const item = { href: url.href, normalized, text, host };
-
-                    if (host === currentHost) internalLinkObjects.push(item);
-                    else externalOutboundLinkObjects.push(item);
-                } catch (_) {}
-            });
+            const googleFonts = unique([...document.querySelectorAll('link[href*="fonts.googleapis.com"]')].map(l => {
+                const m = l.href.match(/family=([^&:]+)/);
+                return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
+            })).slice(0, 5);
 
             const meta = {
                 title: document.title || '',
                 description: document.querySelector('meta[name="description"]')?.content || '',
-                keywords: document.querySelector('meta[name="keywords"]')?.content || '',
                 canonical: document.querySelector('link[rel="canonical"]')?.href || '',
                 ogImage: document.querySelector('meta[property="og:image"]')?.content || '',
                 ogTitle: document.querySelector('meta[property="og:title"]')?.content || '',
                 ogDescription: document.querySelector('meta[property="og:description"]')?.content || '',
                 robots: document.querySelector('meta[name="robots"]')?.content || '',
                 hasOG: !!document.querySelector('meta[property="og:title"]'),
-                lang: document.documentElement.lang || ''
+                lang: document.documentElement.lang || '',
+                keywords: document.querySelector('meta[name="keywords"]')?.content || ''
             };
 
-            const scripts = [...document.querySelectorAll('script')];
-            const scriptSrc = scripts.filter(s => s.src);
-            const inlineScripts = scripts.filter(s => !s.src);
-            const stylesheets = [...document.querySelectorAll('link[rel="stylesheet"]')];
-            const totalImages = document.querySelectorAll('img').length;
-            const lazyLoadImages = document.querySelectorAll('img[loading="lazy"]').length;
-            const webpImages = document.querySelectorAll('img[src*=".webp"], source[type="image/webp"]').length;
-            const missingAlt = document.querySelectorAll('img:not([alt]), img[alt=""]').length;
-            const hasVideo = !!document.querySelector('video, iframe[src*="youtube"], iframe[src*="vimeo"], iframe[src*="loom"]');
-
-            const hasMinified = /(\.min\.js|\.min\.css)/i.test(document.documentElement.innerHTML);
-            const hasPreload = document.querySelectorAll('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"]').length > 0;
-            const hasServiceWorker = /serviceWorker/i.test(document.documentElement.innerHTML);
-            const charset = document.querySelector('meta[charset]')?.getAttribute('charset') || null;
-
-            const listCount = document.querySelectorAll('ul, ol').length;
-            const buttonCount = document.querySelectorAll('button, a, input[type="submit"], input[type="button"]').length;
-            const paragraphCount = document.querySelectorAll('p').length;
-            const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
-
-            const contentStatus =
-                wordCount < 200 ? 'INSUFFISANT (< 200 mots)' :
-                wordCount < 600 ? 'MOYEN (200-600 mots)' :
-                'RICHE (> 600 mots)';
-
-            const internalLinks = unique(internalLinkObjects.map(x => x.href));
-            const externalOutboundLinks = unique(externalOutboundLinkObjects.map(x => x.href));
-
             return {
-                dominantColors: dominantColors.length ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
+                dominantColors: dominantColors.length > 0 ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
                 tech,
                 copy: { h1List, h2List, h3List, ctaList },
                 contacts: { phones, emails },
-                pricing: {
-    detected: primaryPrice !== null,
-    currency,
-    primaryPrice,
-    primaryPrice,
-    minPrice,
-    maxPrice,
-    priceRange,
-    pricingModel: priceRange ? 'range' : (primaryPrice !== null ? 'one-time' : 'unknown'),
-    confidence: primaryPrice !== null ? (primary?.confidence >= 0.84 ? 'HIGH' : 'MEDIUM') : 'LOW',
-    primarySource: primary?.source || null,
-    primaryKind: primary?.kind || null,
-    primaryScore: primary ? Math.round((primary.confidence || 0.66) * 100) : null,
-    allPrices: allValues,
-    prices: normalizedPrices.sort((a, b) => a.value - b.value),
-    schemaPrices: [],
-    textPrices: normalizedPrices.filter(p => p.source === 'text').map(p => p.value),
-    domPrices: [],
-    planPrices: [],
-    struckPrices,
-    discountRate,
-    priceSourcesSummary: {
-        schema: 0,
-        text: normalizedPrices.length,
-        dom: 0
-    }
-},
                 socialProofs,
                 schemaTypes,
+                schemaJsonRaw,
                 sections,
                 googleFonts,
                 meta,
-                wordCount,
-                bodyText: bodyText.substring(0, 15000),
-
-                paragraphCount,
-                listCount,
-                buttonCount,
-                totalImages,
-                lazyLoadImages,
-                webpImages,
-                missingAlt,
-                hasVideo,
-
-                internalLinks,
-                externalOutboundLinks,
-                internalLinkObjects,
-                externalOutboundLinkObjects,
-                linkSummary: {
-                    totalAnchors: anchors.length,
-                    internalCount: internalLinks.length,
-                    externalOutboundCount: externalOutboundLinks.length,
-                    ignoredCount: Math.max(0, anchors.length - internalLinks.length - externalOutboundLinks.length)
-                },
-
-                performance: {
-                    scriptCount: scripts.length,
-                    inlineScriptCount: inlineScripts.length,
-                    externalScripts: scriptSrc.length,
-                    cssCount: stylesheets.length,
-                    cssFiles: stylesheets.length,
-                    hasMinified,
-                    hasPreload,
-                    hasServiceWorker,
-                    hasCDN: tech.hasCDN,
-                    hasSSL: tech.hasSSL,
-                    charset
-                }
+                wordCount: bodyText.split(/\s+/).filter(Boolean).length,
+                bodyText: bodyText.substring(0, 15000)
             };
         });
 
-        const pageSections = (() => {
-            const s = extracted.sections || {};
-            const map = {
-                HERO: s.hasHero,
-                FEATURES: s.hasFeatures,
-                TRUST: s.hasTrust,
-                SOCIAL_PROOF: s.hasTestim,
-                PRICING: s.hasPricing,
-                FAQ: s.hasFAQ,
-                CTA: s.hasCTA,
-                FOOTER: s.hasFooter
-            };
-            return Object.entries(map)
-                .filter(([, v]) => v)
-                .map(([type]) => ({ type, present: true, score: 60 }));
-        })();
+        const baseResult = extractFromHtml(html, pw.provider || 'playwright');
 
         const result = {
-            ...EMPTY_SCRAPE_RESULT(null, pw.provider || 'playwright'),
-            success: true,
+            ...baseResult,
             fetchLayer: pw.provider || 'playwright',
-            html,
-            error: null,
-            duration: Date.now() - startTime,
-
             visualDNA: {
-                dominantColors: extracted.dominantColors,
-                googleFonts: extracted.googleFonts
+                dominantColors: browserExtracted.dominantColors || baseResult.visualDNA.dominantColors,
+                googleFonts: browserExtracted.googleFonts || baseResult.visualDNA.googleFonts
             },
-
-            techStack: {
-                ...EMPTY_SCRAPE_RESULT().techStack,
-                ...extracted.tech
-            },
-
+            techStack: { ...baseResult.techStack, ...browserExtracted.tech },
             copyIntel: {
-                ...EMPTY_SCRAPE_RESULT().copyIntel,
+                ...baseResult.copyIntel,
                 headlines: {
-                    h1: extracted.copy.h1List,
-                    h2: extracted.copy.h2List,
-                    h3: extracted.copy.h3List
+                    h1: browserExtracted.copy.h1List,
+                    h2: browserExtracted.copy.h2List,
+                    h3: browserExtracted.copy.h3List
                 },
-                realCTAs: extracted.copy.ctaList,
-                heroText: extracted.bodyText.substring(0, 300),
-                testimonials: extracted.socialProofs,
-                guarantees: [],
-                faq: [],
-                bulletBenefits: [],
-                allButtons: extracted.copy.ctaList,
-                pageSections
+                realCTAs: browserExtracted.copy.ctaList,
+                heroText: browserExtracted.bodyText.substring(0, 300),
+                testimonials: browserExtracted.socialProofs,
+                allButtons: browserExtracted.copy.ctaList
             },
-
-            chapterIntel: {
-                chapters: []
-            },
-
-            priceIntel: {
-                ...EMPTY_SCRAPE_RESULT().priceIntel,
-                detected: extracted.pricing.detected,
-                currency: extracted.pricing.currency,
-                primaryPrice: extracted.pricing.primaryPrice,
-                primaryPrice: extracted.pricing.primaryPrice,
-                minPrice: extracted.pricing.minPrice,
-                maxPrice: extracted.pricing.maxPrice,
-                priceRange: extracted.pricing.priceRange,
-                pricingModel: extracted.pricing.pricingModel,
-                confidence: extracted.pricing.confidence,
-                primarySource: extracted.pricing.primarySource,
-                primaryKind: extracted.pricing.primaryKind,
-                primaryScore: extracted.pricing.primaryScore,
-                all: extracted.pricing.allPrices,
-                prices: extracted.pricing.prices,
-                schemaPrices: extracted.pricing.schemaPrices,
-                textPrices: extracted.pricing.textPrices,
-                domPrices: extracted.pricing.domPrices,
-                planPrices: extracted.pricing.planPrices,
-                struckPrices: extracted.pricing.struckPrices,
-                discountRate: extracted.pricing.discountRate,
-                priceSourcesSummary: extracted.pricing.priceSourcesSummary
-            },
-
-            trustSignals: {
-                hasSSL: extracted.tech.hasSSL,
-                hasWhatsApp: extracted.tech.hasWhatsApp,
-                hasPhoneNumber: extracted.contacts.phones.length > 0,
-                hasReviews: extracted.socialProofs.length > 0,
-                hasMoneyBackGuarantee: false,
-                hasPaymentLogos: /visa|mastercard|paypal|cmi/i.test(html),
-                hasLegalPages: /mentions légales|privacy|conditions|terms/i.test(extracted.bodyText),
-                hasCOD: /cash on delivery|paiement à la livraison/i.test(extracted.bodyText),
-                trustScore: null
-            },
-
-            contacts: extracted.contacts,
-
-            schemaData: {
-                types: extracted.schemaTypes,
-                count: extracted.schemaTypes.length
-            },
-
-            sections: extracted.sections,
-            meta: extracted.meta,
-
-            seoIntel: {
-                ...EMPTY_SCRAPE_RESULT().seoIntel,
-                title: extracted.meta.title,
-                titleLength: extracted.meta.title.length,
-                metaDescription: extracted.meta.description,
-                description: extracted.meta.description,
-                descriptionLength: extracted.meta.description.length,
-                keywordsMeta: extracted.meta.keywords
-                    ? extracted.meta.keywords.split(',').map(x => x.trim()).filter(Boolean)
-                    : [],
-                headingCounts: {
-                    h1: extracted.copy.h1List.length,
-                    h2: extracted.copy.h2List.length,
-                    h3: extracted.copy.h3List.length
-                },
-                h1: extracted.copy.h1List[0] || '',
-                h2s: extracted.copy.h2List,
-                h3s: extracted.copy.h3List,
-                canonical: extracted.meta.canonical,
-                hasCanonical: !!extracted.meta.canonical,
-                robots: extracted.meta.robots,
-                hasRobotsMeta: !!extracted.meta.robots,
-                ogTitle: extracted.meta.ogTitle,
-                ogDescription: extracted.meta.ogDescription,
-                ogImage: extracted.meta.ogImage,
-                lang: extracted.meta.lang || null,
-                schemaTypes: extracted.schemaTypes,
-                schemaCount: extracted.schemaTypes.length,
-                hasSchema: extracted.schemaTypes.length > 0,
-                paragraphs: extracted.paragraphCount,
-                listCount: extracted.listCount,
-                buttonCount: extracted.buttonCount,
-                wordCount: extracted.wordCount,
-                contentStatus:
-                    extracted.wordCount < 200 ? 'INSUFFISANT (< 200 mots)' :
-                    extracted.wordCount < 600 ? 'MOYEN (200-600 mots)' :
-                    'RICHE (> 600 mots)',
-                totalImages: extracted.totalImages,
-                missingAlt: extracted.missingAlt,
-                webpImages: extracted.webpImages,
-                lazyLoadImages: extracted.lazyLoadImages,
-                hasVideo: extracted.hasVideo,
-                scriptCount: extracted.performance.scriptCount,
-                inlineScriptCount: extracted.performance.inlineScriptCount,
-                externalScripts: extracted.performance.externalScripts,
-                cssCount: extracted.performance.cssCount,
-                cssFiles: extracted.performance.cssFiles,
-                hasMinified: extracted.performance.hasMinified,
-                hasServiceWorker: extracted.performance.hasServiceWorker,
-                hasCDN: extracted.tech.hasCDN,
-                hasPreload: extracted.performance.hasPreload,
-                hasSSL: extracted.tech.hasSSL,
-                charset: extracted.performance.charset,
-                hasFAQ: extracted.sections.hasFAQ,
-                hasExitIntent: extracted.tech.hasExitIntent,
-                hasPopup: /popup|modal/i.test(html),
-                hasCountdown: extracted.tech.hasCountdown,
-                hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html),
-                hasLiveChat: extracted.tech.hasLiveChat,
-                hasWhatsApp: extracted.tech.hasWhatsApp,
-                hasCOD: /cash on delivery|paiement à la livraison/i.test(extracted.bodyText),
-                internalLinks: extracted.internalLinks,
-                externalLinks: extracted.externalOutboundLinks,
-                externalOutboundLinks: extracted.externalOutboundLinks,
-                internalLinkObjects: extracted.internalLinkObjects,
-                externalOutboundLinkObjects: extracted.externalOutboundLinkObjects,
-                linkSummary: extracted.linkSummary,
-                technicalSummary: {
-                    meta: {
-                        titleLength: extracted.meta.title.length,
-                        descriptionLength: extracted.meta.description.length,
-                        hasCanonical: !!extracted.meta.canonical,
-                        hasRobots: !!extracted.meta.robots,
-                        hasViewport: !!/name=["']viewport["']/i.test(html),
-                        hasOG: extracted.meta.hasOG,
-                        hasTwitterCard: /twitter:card/i.test(html),
-                        lang: extracted.meta.lang || null
-                    },
-                    headings: {
-                        h1Count: extracted.copy.h1List.length,
-                        h2Count: extracted.copy.h2List.length,
-                        h3Count: extracted.copy.h3List.length
-                    },
-                    content: {
-                        wordCount: extracted.wordCount,
-                        paragraphs: extracted.paragraphCount,
-                        listCount: extracted.listCount,
-                        buttonCount: extracted.buttonCount,
-                        contentStatus:
-                            extracted.wordCount < 200 ? 'INSUFFISANT (< 200 mots)' :
-                            extracted.wordCount < 600 ? 'MOYEN (200-600 mots)' :
-                            'RICHE (> 600 mots)'
-                    },
-                    media: {
-                        totalImages: extracted.totalImages,
-                        missingAlt: extracted.missingAlt,
-                        webpImages: extracted.webpImages,
-                        lazyLoadImages: extracted.lazyLoadImages,
-                        hasVideo: extracted.hasVideo
-                    },
-                    links: extracted.linkSummary,
-                    structuredData: {
-                        hasSchema: extracted.schemaTypes.length > 0,
-                        schemaCount: extracted.schemaTypes.length,
-                        schemaTypes: extracted.schemaTypes
-                    },
-                    performance: {
-                        scriptCount: extracted.performance.scriptCount,
-                        inlineScriptCount: extracted.performance.inlineScriptCount,
-                        externalScripts: extracted.performance.externalScripts,
-                        cssCount: extracted.performance.cssCount,
-                        cssFiles: extracted.performance.cssFiles,
-                        hasMinified: extracted.performance.hasMinified,
-                        hasServiceWorker: extracted.performance.hasServiceWorker,
-                        hasCDN: extracted.tech.hasCDN,
-                        hasPreload: extracted.performance.hasPreload,
-                        hasSSL: extracted.tech.hasSSL,
-                        charset: extracted.performance.charset
-                    },
-                    conversion: {
-                        hasFAQ: extracted.sections.hasFAQ,
-                        hasExitIntent: extracted.tech.hasExitIntent,
-                        hasPopup: /popup|modal/i.test(html),
-                        hasCountdown: extracted.tech.hasCountdown,
-                        hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html),
-                        hasLiveChat: extracted.tech.hasLiveChat,
-                        hasWhatsApp: extracted.tech.hasWhatsApp,
-                        hasCOD: /cash on delivery|paiement à la livraison/i.test(extracted.bodyText)
-                    }
-                }
-            },
-
-            contentIntel: {
-                ...EMPTY_SCRAPE_RESULT().contentIntel,
-                paragraphCount: extracted.paragraphCount,
-                listCount: extracted.listCount,
-                imageCount: extracted.totalImages,
-                buttonCount: extracted.buttonCount,
-                internalLinks: extracted.internalLinks,
-                externalLinks: extracted.externalOutboundLinks,
-                externalOutboundLinks: extracted.externalOutboundLinks,
-                internalLinkObjects: extracted.internalLinkObjects,
-                externalOutboundLinkObjects: extracted.externalOutboundLinkObjects,
-                wordCount: extracted.wordCount,
-                bodyText: extracted.bodyText,
-                contentStatus:
-                    extracted.wordCount < 200 ? 'INSUFFISANT (< 200 mots)' :
-                    extracted.wordCount < 600 ? 'MOYEN (200-600 mots)' :
-                    'RICHE (> 600 mots)',
-                totalImages: extracted.totalImages,
-                missingAlt: extracted.missingAlt,
-                webpImages: extracted.webpImages,
-                lazyLoadImages: extracted.lazyLoadImages,
-                hasVideo: extracted.hasVideo,
-                linkSummary: extracted.linkSummary
-            },
-
-            trackingIntel: {
-                hasGoogleAnalytics: extracted.tech.hasGA4,
-                hasGTM: extracted.tech.hasGTM,
-                hasFacebookPixel: extracted.tech.hasFBPixel,
-                hasTikTokPixel: extracted.tech.hasTikTok,
-                hasHotjar: extracted.tech.hasHotjar,
-                hasClarity: extracted.tech.hasClarity
-            },
-
-            performanceIntel: {
-                ...EMPTY_SCRAPE_RESULT().performanceIntel,
-                hasCountdown: extracted.tech.hasCountdown,
-                hasExitIntent: extracted.tech.hasExitIntent,
-                hasLiveChat: extracted.tech.hasLiveChat,
-                hasSSL: extracted.tech.hasSSL,
-                hasCDN: extracted.tech.hasCDN,
-                isMobileOptimized: extracted.tech.isMobile,
-                hasMinified: extracted.performance.hasMinified,
-                hasPreload: extracted.performance.hasPreload,
-                hasPopup: /popup|modal/i.test(html),
-                hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html),
-                hasVideo: extracted.hasVideo,
-                hasServiceWorker: extracted.performance.hasServiceWorker
-            },
-
+            contacts: browserExtracted.contacts,
+            schemaData: { types: browserExtracted.schemaTypes, count: browserExtracted.schemaTypes.length },
+            sections: browserExtracted.sections,
+            meta: browserExtracted.meta,
+            wordCount: browserExtracted.wordCount,
+            bodyText: browserExtracted.bodyText,
             brand: {
-                fullTextSample: extracted.bodyText.substring(0, 15000),
-                wordCount: extracted.wordCount,
-                hasSSL: extracted.tech.hasSSL
-            },
-
-            redirectIntel: {
-                totalRedirects: 0,
-                isFunnelRedirect: false,
-                chain: []
-            },
-
-            frameworkData: {
-                trustSignals: {
-                    hasSSL: extracted.tech.hasSSL,
-                    hasWhatsApp: extracted.tech.hasWhatsApp,
-                    hasPhoneNumber: extracted.contacts.phones.length > 0,
-                    hasReviews: extracted.socialProofs.length > 0
-                },
-                techStack: {
-                    cms: extracted.tech.cms,
-                    isWordPress: extracted.tech.isWordPress,
-                    isShopify: extracted.tech.isShopify,
-                    isNextJS: extracted.tech.isNextJS,
-                    isNuxtJS: extracted.tech.isNuxtJS,
-                    isReact: extracted.tech.isReact,
-                    isVue: extracted.tech.isVue,
-                    isWooCommerce: extracted.tech.isWooCommerce
-                },
-                technicalSummary: {
-                    content: {
-                        wordCount: extracted.wordCount,
-                        paragraphs: extracted.paragraphCount
-                    },
-                    links: extracted.linkSummary,
-                    schema: {
-                        count: extracted.schemaTypes.length,
-                        types: extracted.schemaTypes
-                    }
-                }
+                fullTextSample: browserExtracted.bodyText,
+                wordCount: browserExtracted.wordCount,
+                hasSSL: browserExtracted.tech.hasSSL
             }
         };
 
         console.log(
-            `✅ scrapeStealth OK — ${result.duration}ms | Layer: ${result.fetchLayer} | Colors: ${extracted.dominantColors.join(',')} | CMS: ${extracted.tech.cms} | Prix: ${result.priceIntel.primaryPrice || 'N/A'} ${result.priceIntel.currency || ''}`
+            `✅ scrapeStealth OK — ${result.duration}ms` +
+            ` | Layer: ${result.fetchLayer}` +
+            ` | Colors: ${result.visualDNA.dominantColors.join(',')}` +
+            ` | CMS: ${result.techStack.cms}` +
+            ` | Prix: ${result.priceIntel.primaryPrice ?? 'N/A'} ${result.priceIntel.currency ?? ''}` +
+            ` | Old: ${(result.priceIntel.struckPrices || []).join(',') || 'N/A'}` +
+            ` | Discount: ${result.priceIntel.discountRate ?? 'N/A'}` +
+            ` | Status: ${result.priceIntel.extractionStatus}`
         );
 
         return result;
     } catch (e) {
-        console.error(`❌ scrapeStealth failed (${Date.now() - startTime}ms):`, e.message);
-        return finalizeEmpty(e.message, pw?.provider || 'playwright');
+        console.warn(`⚠️ scrapeStealth failed (${Date.now() - startTime}ms): ${e.message}`);
+        return EMPTY_RESULT(e.message, pw?.provider || 'browser');
     } finally {
         try {
             if (pw?.page) await pw.page.close().catch(() => {});
             if (pw?.browser) await playwrightWrapper.closeBrowser(pw.browser);
+            else if (pw) await playwrightWrapper.closeBrowser(pw);
         } catch (closeErr) {
             console.warn('⚠️ Browser close warning:', closeErr.message);
         }
@@ -11695,531 +11690,7 @@ finalResult.price = getCanonicalPrice(finalResult.priceIntel);
  * Launches Playwright. Fails FAST (15s) if blocked, returning an empty
  * result object so the fallback logic can take over immediately.
  */
-async function scrapeStealth(validUrl) {
-    const playwrightWrapper = require('./playwright-wrapper.cjs');
-    const startTime = Date.now();
 
-    // ★ EMPTY_RESULT.priceIntel now aligned with PriceIntelObserved shape
-    const EMPTY_RESULT = (error = 'Unknown scrape error', fetchLayer = 'browser') => ({
-        success: false,
-        fetchLayer,
-        html: '',
-        error,
-        duration: Date.now() - startTime,
-        visualDNA: { dominantColors: ['#3b82f6', '#1e293b', '#10b981'], googleFonts: [] },
-        techStack: { cms: 'Unknown', hasSSL: false, hasWhatsApp: false },
-        copyIntel: {
-            headlines:     { h1: [], h2: [], h3: [] },
-            realCTAs:      [],
-            heroText:      '',
-            testimonials:  [],
-            guarantees:    [],
-            faq:           [],
-            bulletBenefits: [],
-            allButtons:    [],
-            pageSections:  [],
-        },
-        // ★ Aligned with PriceIntelObserved (new fields + all legacy aliases)
-        priceIntel: {
-            // Legacy aliases (read-only)
-            primaryPrice:       null,
-            primaryPrice:    null,
-            minPrice:        null,
-            maxPrice:        null,
-            priceRange:      null,
-            currency:        null,
-            all:             [],
-            prices:          [],
-            detected:        false,
-            struckPrices:    [],
-            discountRate:    null,
-            pricingModel:    'unknown',
-            confidence:      'LOW',
-            primarySource:   null,
-            primaryKind:     null,
-            primaryScore:    null,
-            priceSourcesSummary: { schema: 0, text: 0, dom: 0, checkout: 0 },
-            // ★ New Observed-First fields
-            extractionStatus:          EXTRACTION_STATUS.NOT_FOUND,
-            confidenceBand:            'LOW',
-            confidenceScore:           0,
-            isBlocked:                 true,
-            blockingReasons:           ['empty_result'],
-            auditTrail:                { observedValues: [], rejectedValues: [], selectedValue: null, selectionReason: 'empty_result', conflicts: [], timestamp: new Date().toISOString(), evidenceCount: 0 },
-            sourceEvidence:            [],
-            classificationConfidence:  0,
-            allPrices:                 [],
-            schemaPrices:              [],
-            domPrices:                 [],
-            textPrices:                [],
-            planPrices:                [],
-        },
-        trustSignals: {
-            hasSSL: false, hasWhatsApp: false, hasPhoneNumber: false, hasReviews: false, trustScore: null,
-        },
-        contacts: { phones: [], emails: [] },
-        schemaData: { types: [], count: 0 },
-        sections: {
-            hasHero: false, hasFeatures: false, hasTrust: false, hasPricing: false,
-            hasTestim: false, hasFAQ: false, hasCTA: false, hasFooter: false,
-        },
-        meta: { title: '', description: '', canonical: '', ogImage: '', hasOG: false, lang: '', keywords: '' },
-        wordCount: 0,
-        bodyText: '',
-        trackingIntel: {
-            hasGoogleAnalytics: false, hasGTM: false, hasFacebookPixel: false,
-            hasTikTokPixel: false, hasHotjar: false, hasClarity: false,
-        },
-        performanceIntel: {
-            hasCountdown: false, hasExitIntent: false, hasLiveChat: false,
-            hasSSL: false, hasCDN: false, isMobileOptimized: false,
-        },
-        seoIntel: {
-            titleLength: 0, descriptionLength: 0,
-            keywordsMeta: [], headingCounts: { h1: 0, h2: 0, h3: 0 },
-        },
-        brand: { fullTextSample: '', wordCount: 0 },
-        redirectIntel: { totalRedirects: 0, isFunnelRedirect: false, chain: [] },
-    });
-
-    const unique   = (arr = []) => [...new Set((arr || []).filter(Boolean))];
-    const normText = (v) => String(v || '').replace(/\s+/g, ' ').trim();
-
-    // ★ extractFromHtml: replaces local buildPriceIntelLocal with module version
-    const extractFromHtml = (html, source = 'scrape.do') => {
-        const $ = cheerio.load(html);
-        const bodyText = normText($('body').text());
-
-        const h1List     = unique($('h1').map((_, el) => normText($(el).text())).get()).slice(0, 8);
-        const h2List     = unique($('h2').map((_, el) => normText($(el).text())).get()).slice(0, 12);
-        const h3List     = unique($('h3').map((_, el) => normText($(el).text())).get()).slice(0, 12);
-        const allButtons = unique($('a, button').map((_, el) => normText($(el).text())).get().filter(t => t.length > 1 && t.length < 80)).slice(0, 25);
-        const ctaList    = unique($('a.button, a.btn, button, .cta, [class*="button"], [class*="btn"]').map((_, el) => normText($(el).text())).get().filter(t => t.length > 1 && t.length < 80)).slice(0, 20);
-
-        const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
-        const phones     = unique((bodyText.match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
-        const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-        const emails     = unique((bodyText.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
-
-        // Schema types (unchanged logic)
-        const schemaRaw  = $('script[type="application/ld+json"]').map((_, el) => $(el).html() || '').get().filter(Boolean);
-        const schemaTypes = [];
-        schemaRaw.forEach(raw => {
-            try {
-                const parsed  = JSON.parse(raw);
-                const entries = Array.isArray(parsed) ? parsed : [parsed];
-                entries.forEach(item => {
-                    const type = item?.['@type'] || item?.['@graph']?.[0]?.['@type'];
-                    if (type) schemaTypes.push(Array.isArray(type) ? type[0] : type);
-                });
-            } catch (_) {}
-        });
-
-        const domPriceTexts = unique(
-            $('[class*="price"], [id*="price"], .pricing, .plan, .offer')
-                .map((_, el) => normText($(el).text())).get().filter(Boolean)
-        ).slice(0, 40);
-
-        // ★ Module buildPriceIntelLocal — Observed-First, returns PriceIntelObserved
-        const pricing = buildPriceIntelLocal(bodyText, html, domPriceTexts, schemaRaw);
-
-        const socialProofs = unique(
-            $('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')
-                .map((_, el) => normText($(el).text()).substring(0, 120)).get()
-        ).slice(0, 5);
-
-        const sections = {
-            hasHero:     !!$('.hero, #hero, .banner, .masthead, .hero-section, [class*="hero"], [id*="hero"], [class*="banner"]').length,
-            hasFeatures: !!$('.feature, .features, #features, .service, .services, #service, .benefits, .benefit, .solutions, [class*="feature"], [id*="feature"], [class*="benefit"], [id*="service"]').length,
-            hasTrust:    !!$('.trust, .trust-bar, .badge, .badges, .guarantee, .guarantees, .security, .certifications, .reassurance, .trusted-by, .logo-bar, [class*="trust"], [id*="trust"], [class*="badge"], [class*="guarantee"], [class*="security"], [class*="certif"], [class*="reassurance"], [class*="trusted"]').length,
-            hasPricing:  !!$('.pricing, #pricing, .price, .prices, .plans, .plan, .tarifs, .tarif, .offres, .offer, [class*="pricing"], [class*="price"], [id*="pricing"], [class*="plan"]').length,
-            hasTestim:   !!$('.testimonial, .testimonials, .review, .reviews, .avis, .ratings, .social-proof, [class*="testimonial"], [class*="review"], [class*="avis"]').length,
-            hasFAQ:      !!$('.faq, #faq, details, .accordion, .questions, .questions-frequentes, [class*="faq"], [id*="faq"]').length,
-            hasCTA:      !!$('.cta, #cta, .call-to-action, .sticky-cta, .contact-section, [class*="cta"], [id*="cta"], [href*="contact"], [href*="whatsapp"], [href*="wa.me"]').length,
-            hasFooter:   !!$('footer, .footer, #footer, [class*="footer"]').length,
-        };
-
-        const styleContent = $('style').text() + ' ' + $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
-        const colorRegex   = /#(?:[0-9a-fA-F]{3,4}){1,2}|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi;
-        const allColors    = styleContent.match(colorRegex) || [];
-        const colorCounts  = {};
-        allColors.forEach(c => {
-            const norm = c.toLowerCase().replace(/\s+/g, '');
-            if (!['#ffffff', '#000000', '#fff', '#000', 'transparent', 'rgba(0,0,0,0)'].includes(norm)) {
-                colorCounts[norm] = (colorCounts[norm] || 0) + 1;
-            }
-        });
-        const dominantColors = Object.entries(colorCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([color]) => color);
-
-        const googleFonts = unique($('link[href*="fonts.googleapis.com"]').map((_, el) => {
-            const href = $(el).attr('href') || '';
-            const m = href.match(/family=([^&:]+)/);
-            return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
-        }).get()).slice(0, 5);
-
-        const meta = {
-            title:       $('title').text().trim() || '',
-            description: $('meta[name="description"]').attr('content') || '',
-            canonical:   $('link[rel="canonical"]').attr('href') || '',
-            ogImage:     $('meta[property="og:image"]').attr('content') || '',
-            hasOG:       !!$('meta[property="og:title"]').attr('content'),
-            lang:        $('html').attr('lang') || '',
-            keywords:    $('meta[name="keywords"]').attr('content') || '',
-        };
-
-        const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
-
-        return {
-            success:     true,
-            fetchLayer:  source,
-            html,
-            duration:    Date.now() - startTime,
-            visualDNA: {
-                dominantColors: dominantColors.length ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
-                googleFonts,
-            },
-            techStack: {
-                cms: /shopify|myshopify/i.test(html) ? 'Shopify'
-                    : /wp-content|wp-includes/i.test(html) ? 'WordPress'
-                    : /woocommerce/i.test(html) ? 'WooCommerce'
-                    : /__NEXT_DATA__/i.test(html) ? 'Next.js'
-                    : /__NUXT__/i.test(html) ? 'Nuxt.js' : 'Unknown',
-                hasSSL:       validUrl.startsWith('https'),
-                hasWhatsApp:  /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
-                hasSchema:    schemaTypes.length > 0,
-                hasGA4:       /gtag|googletagmanager/i.test(html),
-                hasGTM:       /googletagmanager\.com\/gtm/i.test(html),
-                hasFBPixel:   /connect\.facebook\.net|fbq/i.test(html),
-                hasTikTok:    /analytics\.tiktok\.com|ttq/i.test(html),
-                hasHotjar:    /hotjar/i.test(html),
-                hasClarity:   /clarity\.ms|clarity/i.test(html),
-                hasLiveChat:  /intercom|crisp|tidio/i.test(html),
-                hasCountdown: /countdown/i.test(html),
-                hasExitIntent: /exit-intent/i.test(html),
-                hasCDN:       /cloudflare|cdn\./i.test(html),
-                isMobile:     /<meta[^>]+name=["']viewport["']/i.test(html),
-            },
-            copyIntel: {
-                headlines:      { h1: h1List, h2: h2List, h3: h3List },
-                realCTAs:       ctaList,
-                heroText:       bodyText.substring(0, 300),
-                testimonials:   socialProofs,
-                guarantees:     [],
-                faq:            [],
-                bulletBenefits: [],
-                allButtons,
-                pageSections:   [],
-            },
-            priceIntel: pricing,   // ★ PriceIntelObserved from module
-            trustSignals: {
-                hasSSL:               validUrl.startsWith('https'),
-                hasWhatsApp:          /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
-                hasPhoneNumber:       phones.length > 0,
-                hasReviews:           socialProofs.length > 0,
-                hasMoneyBackGuarantee: /garantie|money back|refund/i.test(bodyText),
-                hasPaymentLogos:      /visa|mastercard|paypal|cmi/i.test(html),
-                hasLegalPages:        /mentions légales|privacy|conditions|terms/i.test(bodyText),
-                hasCOD:               /cash on delivery|paiement à la livraison/i.test(bodyText),
-                trustScore: null,
-            },
-            contacts:   { phones, emails },
-            schemaData: { types: unique(schemaTypes), count: unique(schemaTypes).length },
-            sections,
-            meta,
-            wordCount,
-            bodyText:   bodyText.substring(0, 10000),
-            trackingIntel: {
-                hasGoogleAnalytics: /gtag|google-analytics|googletagmanager/i.test(html),
-                hasGTM:             /googletagmanager\.com\/gtm/i.test(html),
-                hasFacebookPixel:   /connect\.facebook\.net|fbq/i.test(html),
-                hasTikTokPixel:     /analytics\.tiktok\.com|ttq/i.test(html),
-                hasHotjar:          /hotjar/i.test(html),
-                hasClarity:         /clarity\.ms|clarity/i.test(html),
-            },
-            performanceIntel: {
-                hasCountdown:      /countdown/i.test(html),
-                hasExitIntent:     /exit-intent/i.test(html),
-                hasLiveChat:       /intercom|crisp|tidio/i.test(html),
-                hasSSL:            validUrl.startsWith('https'),
-                hasCDN:            /cloudflare|cdn\./i.test(html),
-                isMobileOptimized: /<meta[^>]+name=["']viewport["']/i.test(html),
-            },
-            seoIntel: {
-                titleLength:       meta.title.length,
-                descriptionLength: meta.description.length,
-                keywordsMeta:      meta.keywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 20),
-                headingCounts:     { h1: h1List.length, h2: h2List.length, h3: h3List.length },
-            },
-            brand:        { fullTextSample: bodyText.substring(0, 10000), wordCount },
-            redirectIntel: { totalRedirects: 0, isFunnelRedirect: false, chain: [] },
-        };
-    };
-
-    let pw = null;
-    try {
-        console.log(`🧠 Smart scraping: ${validUrl}`);
-        pw = await playwrightWrapper.launchPlaywright(validUrl);
-        if (!pw) throw new Error('launchPlaywright returned null');
-
-        if (!pw.page && pw.html) {
-            if (typeof pw.html !== 'string' || pw.html.length < 500) {
-                throw new Error(`Fallback HTML too short (${pw.html?.length || 0} chars)`);
-            }
-            const result = extractFromHtml(pw.html, pw.provider || 'scrape.do');
-            // ★ log shows extractionStatus
-            console.log(
-                `✅ scrapeStealth HTML fallback OK — ${Date.now() - startTime}ms` +
-                ` | Layer: ${result.fetchLayer}` +
-                ` | Prix: ${result.priceIntel.primaryPrice ?? 'N/A'} ${result.priceIntel.currency ?? ''}` +
-                ` | Status: ${result.priceIntel.extractionStatus}`
-            );
-            return result;
-        }
-
-        if (!pw.page) {
-            throw new Error(`Browser launch failed — provider=${pw.provider || 'unknown'} and page is null`);
-        }
-
-        const html = await Promise.race([
-            pw.page.content(),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('page.content() timeout 15s')), 15000))
-        ]);
-
-        if (!html || typeof html !== 'string' || html.length < 500) {
-            throw new Error(`HTML too short (${html?.length || 0} chars) — page blocked or empty`);
-        }
-
-        const extracted = await pw.page.evaluate(() => {
-            // ── All browser-side extraction (unchanged) ───────────────
-            const unique   = (arr = []) => [...new Set((arr || []).filter(Boolean))];
-            const normText = (v) => String(v || '').replace(/\s+/g, ' ').trim();
-            const colorMap = new Map();
-            const IGNORE   = new Set(['rgba(0, 0, 0, 0)', 'transparent', 'rgb(0, 0, 0)', 'rgb(255, 255, 255)', '', 'rgba(0,0,0,0)']);
-            const targets  = document.querySelectorAll('body, header, nav, section, footer, h1, h2, button, a, [class*="hero"], [class*="btn"], [class*="cta"], [class*="banner"], [class*="primary"], [class*="brand"]');
-            targets.forEach(el => {
-                const cs = window.getComputedStyle(el);
-                ['backgroundColor', 'color', 'borderTopColor'].forEach(prop => {
-                    const val = cs[prop];
-                    if (val && !IGNORE.has(val)) colorMap.set(val, (colorMap.get(val) || 0) + 1);
-                });
-            });
-            const rootCS   = window.getComputedStyle(document.documentElement);
-            const cssVars  = ['--primary','--primary-color','--color-primary','--accent','--brand-color','--theme-color','--secondary','--main-color'];
-            const varColors = cssVars.map(v => rootCS.getPropertyValue(v).trim()).filter(v => v && (v.startsWith('#') || v.startsWith('rgb')));
-            const rgbToHex = (rgb) => {
-                const m = rgb.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
-                if (!m) return rgb;
-                return '#' + [m[1], m[2], m[3]].map(x => parseInt(x, 10).toString(16).padStart(2, '0')).join('');
-            };
-            const BAD = new Set(['#000000','#ffffff','#000','#fff']);
-            const dominantColors = unique([...varColors, ...[...colorMap.entries()].sort((a, b) => b[1] - a[1]).map(([c]) => c)]).map(rgbToHex).filter(c => c && !BAD.has(c)).slice(0, 5);
-
-            const tech = {
-                cms:           'Custom',
-                isWordPress:   !!(window.wp || document.querySelector('[class*="wp-content"],[id*="wp-"]')),
-                isShopify:     !!(window.Shopify || document.querySelector('[data-shopify]')),
-                isNextJS:      !!(window.__NEXT_DATA__ || document.getElementById('__NEXT_DATA__')),
-                isNuxtJS:      !!(window.__NUXT__ || document.getElementById('__nuxt')),
-                isReact:       !!(window.React || window.__REACT_DEVTOOLS_GLOBAL_HOOK__),
-                isVue:         !!(window.Vue || window.__vue_app__),
-                isWooCommerce: !!(window.woocommerce_params || document.querySelector('.woocommerce')),
-                hasJQuery:     !!(window.jQuery || window.$),
-                hasGA4:        !!(window.gtag || document.querySelector('[src*="gtag/js"],[src*="googletagmanager"]')),
-                hasGTM:        !!(window.google_tag_manager || document.querySelector('[src*="googletagmanager.com/gtm"]')),
-                hasFBPixel:    !!(window.fbq || document.querySelector('[src*="connect.facebook.net"]')),
-                hasTikTok:     !!(window.ttq || document.querySelector('[src*="analytics.tiktok.com"]')),
-                hasHotjar:     !!(window.hj || document.querySelector('[src*="hotjar.com"]')),
-                hasClarity:    !!(window.clarity || document.querySelector('[src*="clarity.ms"]')),
-                hasLiveChat:   !!(window.Intercom || window.Crisp || window.$crisp || window.tidioChatApi),
-                hasWhatsApp:   !!document.querySelector('a[href*="wa.me"], a[href*="api.whatsapp.com"], a[href*="whatsapp"]'),
-                hasCountdown:  !!document.querySelector('[id*="countdown"],[class*="countdown"],[data-countdown]'),
-                hasExitIntent: !!(window.exitIntent || document.querySelector('[class*="exit-intent"],[id*="exit-intent"]')),
-                hasSSL:        location.protocol === 'https:',
-                isMobile:      !!document.querySelector('meta[name="viewport"]'),
-                hasCDN:        !!(document.querySelector('[src*="cloudflare"],[src*="cdn."]') || window.__CF$cv$params),
-                hasSchema:     document.querySelectorAll('script[type="application/ld+json"]').length > 0,
-            };
-            if (tech.isShopify)     tech.cms = 'Shopify';
-            else if (tech.isNextJS) tech.cms = 'Next.js';
-            else if (tech.isNuxtJS) tech.cms = 'Nuxt.js';
-            else if (tech.isWooCommerce) tech.cms = 'WooCommerce';
-            else if (tech.isWordPress)   tech.cms = 'WordPress';
-            else if (tech.isReact)  tech.cms = 'React';
-            else if (tech.isVue)    tech.cms = 'Vue.js';
-
-            const h1List = unique([...document.querySelectorAll('h1')].map(e => normText(e.innerText))).slice(0, 8);
-            const h2List = unique([...document.querySelectorAll('h2')].map(e => normText(e.innerText))).slice(0, 12);
-            const h3List = unique([...document.querySelectorAll('h3')].map(e => normText(e.innerText))).slice(0, 12);
-
-            const ctaRegex = /(get started|start|book|buy|order|try|sign up|signup|subscribe|join|contact|demo|call|apply|shop|acheter|commander|essayer|devis|contactez|réserver|reserver|ابدأ|اشتر|اطلب|احجز|تواصل)/i;
-            const ctaList  = unique([...document.querySelectorAll('a, button, input[type="submit"], input[type="button"]')].map(el => {
-                const text = normText(el.innerText || el.value || el.getAttribute('aria-label') || '');
-                const href = normText(el.getAttribute('href') || '');
-                const cls  = (el.className || '').toString();
-                return { text, href, cls };
-            }).filter(({ text, href, cls }) => {
-                if (text.length < 2 || text.length > 80) return false;
-                const looksLikeCTA = ctaRegex.test(text) || /cta|btn|button|primary|submit|contact|pricing|demo|trial|whatsapp/i.test(cls) || /contact|pricing|demo|signup|trial|book|buy|order|whatsapp|wa\.me/i.test(href);
-                const looksLikeNav = /^(home|about|services|solutions|platform|pricing|blog|faq|contact)$/i.test(text);
-                return looksLikeCTA && !looksLikeNav;
-            }).map(x => x.text)).slice(0, 20);
-
-            const bodyText   = normText(document.body?.innerText || '');
-            const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
-            const phones     = unique((bodyText.match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
-            const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-            const emails     = unique((bodyText.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
-
-            const schemaJsonRaw = [...document.querySelectorAll('script[type="application/ld+json"]')].map(s => s.textContent || '').filter(Boolean);
-            const schemaTypes   = schemaJsonRaw.map(raw => {
-                try {
-                    const parsed = JSON.parse(raw);
-                    return parsed?.['@type'] || parsed?.['@graph']?.[0]?.['@type'] || null;
-                } catch { return null; }
-            }).flat().filter(Boolean);
-
-            const socialProofs = unique([...document.querySelectorAll('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')].map(e => normText(e.innerText).substring(0, 120))).slice(0, 5);
-
-            const hasAny = (selectors) => { try { return selectors.some(sel => document.querySelector(sel)); } catch { return false; } };
-            const sections = {
-                hasHero:     hasAny(['.hero', '#hero', '.banner', '.masthead', '.hero-section', '[class*="hero"]', '[id*="hero"]', '[class*="banner"]']),
-                hasFeatures: hasAny(['.feature', '.features', '#features', '.service', '.services', '#service', '.benefits', '.benefit', '.solutions', '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]']),
-                hasTrust:    hasAny(['.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees', '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar', '[class*="trust"]', '[id*="trust"]', '[class*="badge"]', '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]', '[class*="reassurance"]', '[class*="trusted"]']),
-                hasPricing:  hasAny(['.pricing', '#pricing', '.price', '.prices', '.plans', '.plan', '.tarifs', '.tarif', '.offres', '.offer', '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]']),
-                hasTestim:   hasAny(['.testimonial', '.testimonials', '.review', '.reviews', '.avis', '.ratings', '.social-proof', '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]']),
-                hasFAQ:      hasAny(['.faq', '#faq', 'details', '.accordion', '.questions', '.questions-frequentes', '[class*="faq"]', '[id*="faq"]']),
-                hasCTA:      hasAny(['.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section', '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]']),
-                hasFooter:   hasAny(['footer', '.footer', '#footer', '[class*="footer"]']),
-            };
-
-            const googleFonts = unique([...document.querySelectorAll('link[href*="fonts.googleapis.com"]')].map(l => {
-                const m = l.href.match(/family=([^&:]+)/);
-                return m ? decodeURIComponent(m[1]).replace(/\+/g, ' ') : null;
-            })).slice(0, 5);
-
-            const meta = {
-                title:       document.title || '',
-                description: document.querySelector('meta[name="description"]')?.content || '',
-                canonical:   document.querySelector('link[rel="canonical"]')?.href || '',
-                ogImage:     document.querySelector('meta[property="og:image"]')?.content || '',
-                hasOG:       !!document.querySelector('meta[property="og:title"]'),
-                lang:        document.documentElement.lang || '',
-                keywords:    document.querySelector('meta[name="keywords"]')?.content || '',
-            };
-
-            const domPriceTexts = unique([
-                ...[...document.querySelectorAll('[class*="price"], [id*="price"], .pricing, .plan, .offer')].map(el => normText(el.innerText || '')),
-                ...[...document.querySelectorAll('meta[itemprop="price"]')].map(el => normText(el.getAttribute('content') || '')),
-            ].filter(Boolean)).slice(0, 40);
-
-            return {
-                dominantColors: dominantColors.length > 0 ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
-                tech,
-                copy:        { h1List, h2List, h3List, ctaList },
-                contacts:    { phones, emails },
-                socialProofs,
-                schemaTypes,
-                schemaJsonRaw,
-                domPriceTexts,
-                sections,
-                googleFonts,
-                meta,
-                wordCount: bodyText.split(/\s+/).filter(Boolean).length,
-                bodyText:  bodyText.substring(0, 10000),
-            };
-        });
-
-        // ★ Module buildPriceIntelLocal — replaces local version
-        const pricing = buildPriceIntelLocal(
-            extracted.bodyText || '',
-            html,
-            extracted.domPriceTexts || [],
-            extracted.schemaJsonRaw || []
-        );
-
-        console.log(
-            `✅ scrapeStealth OK — ${Date.now() - startTime}ms` +
-            ` | Layer: ${pw.provider || 'browser'}` +
-            ` | Colors: ${extracted.dominantColors.join(',')}` +
-            ` | CMS: ${extracted.tech.cms}` +
-            ` | Prix: ${pricing.primaryPrice ?? 'N/A'} ${pricing.currency ?? ''}` +
-            ` | Status: ${pricing.extractionStatus}` +    // ★ new
-            ` | Range: ${pricing.priceRange ? `${pricing.priceRange.min}-${pricing.priceRange.max}` : 'N/A'}`
-        );
-
-        return {
-            success:     true,
-            fetchLayer:  pw.provider || 'playwright',
-            html,
-            duration:    Date.now() - startTime,
-            visualDNA:   { dominantColors: extracted.dominantColors, googleFonts: extracted.googleFonts },
-            techStack:   extracted.tech,
-            copyIntel: {
-                headlines:      { h1: extracted.copy.h1List, h2: extracted.copy.h2List, h3: extracted.copy.h3List },
-                realCTAs:       extracted.copy.ctaList,
-                heroText:       extracted.bodyText.substring(0, 300),
-                testimonials:   extracted.socialProofs,
-                guarantees:     [],
-                faq:            [],
-                bulletBenefits: [],
-                allButtons:     extracted.copy.ctaList,
-                pageSections:   [],
-            },
-            priceIntel: pricing,   // ★ PriceIntelObserved
-            trustSignals: {
-                hasSSL:               extracted.tech.hasSSL,
-                hasWhatsApp:          extracted.tech.hasWhatsApp,
-                hasPhoneNumber:       extracted.contacts.phones.length > 0,
-                hasReviews:           extracted.socialProofs.length > 0,
-                hasMoneyBackGuarantee: false,
-                hasPaymentLogos:      false,
-                hasLegalPages:        false,
-                hasCOD:               false,
-                trustScore:           null,
-            },
-            contacts:   extracted.contacts,
-            schemaData: { types: extracted.schemaTypes, count: extracted.schemaTypes.length },
-            sections:   extracted.sections,
-            meta:       extracted.meta,
-            wordCount:  extracted.wordCount,
-            bodyText:   extracted.bodyText,
-            trackingIntel: {
-                hasGoogleAnalytics: extracted.tech.hasGA4,
-                hasGTM:             extracted.tech.hasGTM,
-                hasFacebookPixel:   extracted.tech.hasFBPixel,
-                hasTikTokPixel:     extracted.tech.hasTikTok,
-                hasHotjar:          extracted.tech.hasHotjar,
-                hasClarity:         extracted.tech.hasClarity,
-            },
-            performanceIntel: {
-                hasCountdown:      extracted.tech.hasCountdown,
-                hasExitIntent:     extracted.tech.hasExitIntent,
-                hasLiveChat:       extracted.tech.hasLiveChat,
-                hasSSL:            extracted.tech.hasSSL,
-                hasCDN:            extracted.tech.hasCDN,
-                isMobileOptimized: extracted.tech.isMobile,
-            },
-            seoIntel: {
-                titleLength:       extracted.meta.title.length,
-                descriptionLength: extracted.meta.description.length,
-                keywordsMeta:      extracted.meta.keywords.split(',').map(k => k.trim()).filter(Boolean).slice(0, 20),
-                headingCounts:     { h1: extracted.copy.h1List.length, h2: extracted.copy.h2List.length, h3: extracted.copy.h3List.length },
-            },
-            brand:        { fullTextSample: extracted.bodyText, wordCount: extracted.wordCount },
-            redirectIntel: { totalRedirects: 0, isFunnelRedirect: false, chain: [] },
-        };
-
-    } catch (e) {
-        console.warn(`⚠️ scrapeStealth timeout/failed (${Date.now() - startTime}ms). Returning empty struct to trigger fallback. Cause: ${e.message}`);
-        return EMPTY_RESULT(e.message, pw?.provider || 'browser');
-    } finally {
-        try {
-            if (pw) await playwrightWrapper.closeBrowser(pw);
-        } catch (closeErr) {
-            console.warn('⚠️ Browser close warning:', closeErr.message);
-        }
-    }
-}
 
 
 // ═══════════════════════════════════════════════════════════════════

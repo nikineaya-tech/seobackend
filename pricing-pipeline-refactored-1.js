@@ -421,22 +421,74 @@ function classifyPricingModel(candidates, struckPrices, html = '') {
  *   weak      → candidates exist but score < MEDIUM threshold
  *   confirmed → best candidate score ≥ HIGH threshold, no blocking conflict
  */
-function resolveExtractionStatus(primary, conflicts, allCandidates) {
-  if (!primary || allCandidates.length === 0) {
-    return EXTRACTION_STATUS.NOT_FOUND;
+function resolveExtractionStatus(primary, conflicts = [], allCandidates = []) {
+  if (!Array.isArray(allCandidates) || allCandidates.length === 0) {
+    return EXTRACTION_STATUS_SAFE.NOT_FOUND;
   }
 
-  const hasBlockingConflict = conflicts.some(c => !c.resolved && c.divergencePct > 30);
-  if (hasBlockingConflict) {
-    return EXTRACTION_STATUS.CONFLICT;
+  if (!primary) {
+    return EXTRACTION_STATUS_SAFE.WEAK;
   }
 
-  const normalizedScore = (primary.score || 0) / 180; // max theoretical score ≈ 180
-  if (normalizedScore >= CONFIDENCE_THRESHOLDS.HIGH) {
-    return EXTRACTION_STATUS.CONFIRMED;
+  const primaryKind = String(primary.kind || '').toLowerCase();
+
+  // Un prix barré ne doit jamais confirmer seul le pricing canonique.
+  if (primaryKind === 'old' || primary.isStruck) {
+    return EXTRACTION_STATUS_SAFE.WEAK;
   }
 
-  return EXTRACTION_STATUS.WEAK;
+  const currentCandidates = allCandidates.filter(p =>
+    ['current', 'from', 'plan', 'range-min', 'installment'].includes(String(p.kind || '').toLowerCase()) &&
+    !p.isStruck
+  );
+
+  const oldCandidates = allCandidates.filter(p =>
+    String(p.kind || '').toLowerCase() === 'old' || p.isStruck
+  );
+
+  const hasOnlyOldPrices = oldCandidates.length > 0 && currentCandidates.length === 0;
+  if (hasOnlyOldPrices) {
+    return EXTRACTION_STATUS_SAFE.WEAK;
+  }
+
+  const hasNormalMultiPriceArchitecture =
+    oldCandidates.length > 0 ||
+    allCandidates.some(p => ['plan', 'range-min', 'range-max', 'from', 'installment'].includes(String(p.kind || '').toLowerCase()));
+
+  const hardConflicts = (conflicts || []).filter(c => {
+    if (!c || c.resolved) return false;
+
+    // Les conflits entre prix actuel et prix barré sont attendus.
+    if (c.type && /old|struck|discount|compare/i.test(String(c.type))) return false;
+
+    // Plusieurs plans ou ranges sont attendus.
+    if (hasNormalMultiPriceArchitecture) return false;
+
+    return Number(c.divergencePct || 0) > 60;
+  });
+
+  if (hardConflicts.length > 0) {
+    return EXTRACTION_STATUS_SAFE.CONFLICT;
+  }
+
+  const normalizedScore = Math.min(1, Math.max(0, (primary.score || 0) / 180));
+  const highThreshold = CONFIDENCE_THRESHOLDS?.HIGH ?? 0.72;
+  const mediumThreshold = CONFIDENCE_THRESHOLDS?.MEDIUM ?? 0.45;
+
+  if (normalizedScore >= highThreshold) {
+    return EXTRACTION_STATUS_SAFE.CONFIRMED;
+  }
+
+  // Si le prix vient du DOM/schema avec un contexte clair, on confirme même avec score moyen.
+  const reliableSource = ['schema', 'dom', 'checkout'].includes(String(primary.source || '').toLowerCase());
+  const reliableKind = ['current', 'from', 'plan', 'range-min', 'installment'].includes(primaryKind);
+  const reliableConfidence = Number(primary.confidence || 0) >= 0.72;
+
+  if (reliableSource && reliableKind && reliableConfidence && normalizedScore >= mediumThreshold) {
+    return EXTRACTION_STATUS_SAFE.CONFIRMED;
+  }
+
+  return EXTRACTION_STATUS_SAFE.WEAK;
 }
 
 // ─────────────────────────────────────────────────────────────────
@@ -515,121 +567,213 @@ function extractSchemaPricesFromNode(node, out = []) {
 
 function extractTextPrices(bodyText = '', html = '') {
   const prices = [];
-  const text   = String(bodyText || '').replace(/\u00A0/g, ' ').substring(0, 40000);
+
+  const text = String(bodyText || '')
+    .replace(/\u00A0/g, ' ')
+    .replace(/(\d+)(LYD|LD|MAD|DH|DHS|EUR|USD|GBP|AED|SAR|QAR|KWD|BHD|OMR|€|\$|£)/gi, '$1 $2 ')
+    .replace(/(LYD|LD|MAD|DH|DHS|EUR|USD|GBP|AED|SAR|QAR|KWD|BHD|OMR|€|\$|£)(\d+)/gi, '$1 $2 ')
+    .replace(/\b(\d{2,5})(\d{2,5})\s*(LYD|LD|MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\b/gi, (_, p1, p2, cur) => `${p1} ${cur} ${p2} ${cur}`)
+    .substring(0, 50000);
+
+  const currencyPart = 'LYD|LD|ل\\.?\\s?د|د\\.?\\s?ل|دينار\\s*ليبي|دينار\\s*ليبى|MAD|DH|DHS|د\\.?\\s?م|درهم|EUR|USD|GBP|AED|SAR|QAR|KWD|BHD|OMR|€|\\$|£';
 
   const rules = [
     {
-      regex: /(?:à partir de|from|starting at|dès)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi,
-      kind: 'from', confidence: 0.83,
+      regex: new RegExp(`(?:à partir de|from|starting at|dès|ابتداء|ابتداءً)\\s*([0-9][0-9\\s.,']*)\\s*(${currencyPart})`, 'gi'),
+      kind: 'from',
+      confidence: 0.83
     },
     {
-      regex: /(?:au lieu de|instead of|was|avant|prix normal|regular price)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi,
-      kind: 'old', confidence: 0.80,
+      regex: new RegExp(`(?:au lieu de|instead of|was|avant|prix normal|regular price|old price|ancien prix|سعر\\s*قديم|سعر\\s*سابق|السعر\\s*الأصلي|بدلاً)\\s*([0-9][0-9\\s.,']*)\\s*(${currencyPart})`, 'gi'),
+      kind: 'old',
+      confidence: 0.84
     },
     {
-      regex: /([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)/gi,
-      kind: 'current', confidence: 0.66,
+      regex: new RegExp(`([0-9][0-9\\s.,']*)\\s*(${currencyPart})`, 'gi'),
+      kind: 'current',
+      confidence: 0.66
     },
     {
-      regex: /(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*([0-9][0-9\s.,]*)/gi,
-      kind: 'current', confidence: 0.66,
-    },
+      regex: new RegExp(`(${currencyPart})\\s*([0-9][0-9\\s.,']*)`, 'gi'),
+      kind: 'current',
+      confidence: 0.66
+    }
   ];
 
   for (const { regex, kind, confidence } of rules) {
     let match;
     while ((match = regex.exec(text)) !== null) {
-      const raw   = match[0];
-      if (raw.length > 80) continue;
-      const value    = normalizePriceValue(match[1]) || normalizePriceValue(match[2]);
+      const raw = match[0];
+      if (!raw || raw.length > 100) continue;
+
+      const value = normalizePriceValue(match[1]) || normalizePriceValue(match[2]) || normalizePriceValue(raw);
       const currency = detectCurrency(raw, html);
       if (!value) continue;
 
-      pushValidatedPrice(prices, { value, currency, raw, source: 'text', kind, context: raw.toLowerCase(), confidence });
+      pushValidatedPrice(prices, {
+        value,
+        currency,
+        raw,
+        source: 'text',
+        kind,
+        context: raw.toLowerCase(),
+        confidence
+      });
     }
   }
 
-  // Range pattern: "100 MAD - 500 MAD"
-  const rangeRegex = /([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*(?:-|à|to)\s*([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)?/gi;
+  const rangeRegex = new RegExp(`([0-9][0-9\\s.,']*)\\s*(${currencyPart})?\\s*(?:-|à|to|حتى)\\s*([0-9][0-9\\s.,']*)\\s*(${currencyPart})?`, 'gi');
+
   let rm;
   while ((rm = rangeRegex.exec(text)) !== null) {
-    const raw      = rm[0];
+    const raw = rm[0];
+    if (!raw || raw.length > 100) continue;
+
     const currency = detectCurrency(raw, html);
-    const min      = normalizePriceValue(rm[1]);
-    const max      = normalizePriceValue(rm[3]);
-    if (min) pushValidatedPrice(prices, { value: min, currency, raw, source: 'text', kind: 'range-min', context: raw, confidence: 0.82 });
-    if (max) pushValidatedPrice(prices, { value: max, currency, raw, source: 'text', kind: 'range-max', context: raw, confidence: 0.82 });
+    const min = normalizePriceValue(rm[1]);
+    const max = normalizePriceValue(rm[3]);
+
+    if (min) {
+      pushValidatedPrice(prices, {
+        value: min,
+        currency,
+        raw,
+        source: 'text',
+        kind: 'range-min',
+        context: raw,
+        confidence: 0.82
+      });
+    }
+
+    if (max) {
+      pushValidatedPrice(prices, {
+        value: max,
+        currency,
+        raw,
+        source: 'text',
+        kind: 'range-max',
+        context: raw,
+        confidence: 0.82
+      });
+    }
   }
 
   return prices;
 }
-
 // ─────────────────────────────────────────────────────────────────
 // SECTION 12 — DOM PRICE EXTRACTOR
 // ─────────────────────────────────────────────────────────────────
 
 function extractDomPrices($, html = '') {
-  const prices  = [];
+  const prices = [];
   if (!$ || typeof $.root !== 'function') return prices;
 
   const selectors = [
-    '[class*="price"]', '[id*="price"]', '[class*="pricing"]', '[id*="pricing"]',
-    '[class*="plan"]', '[class*="tarif"]', '[class*="offer"]',
-    '[data-price]', '[itemprop="price"]',
-    '.woocommerce-Price-amount', '.price', '.product-price',
-    '.sale-price', '.regular-price', '.compare-at-price',
+    '[class*="price"]',
+    '[id*="price"]',
+    '[class*="pricing"]',
+    '[id*="pricing"]',
+    '[class*="plan"]',
+    '[class*="tarif"]',
+    '[class*="offer"]',
+    '[data-price]',
+    '[itemprop="price"]',
+    'meta[itemprop="price"]',
+    '[property="product:price:amount"]',
+    '.woocommerce-Price-amount',
+    '.price',
+    '.product-price',
+    '.sale-price',
+    '.current-price',
+    '.final-price',
+    '.regular-price',
+    '.old-price',
+    '.compare-at-price',
+    'del',
+    's',
+    'strike'
   ];
 
   const seen = new Set();
 
   $(selectors.join(',')).each((_, el) => {
     const node = $(el);
+    const tagName = String(node.get(0)?.tagName || '').toUpperCase();
+    const className = node.attr('class') || '';
+    const id = node.attr('id') || '';
+    const style = node.attr('style') || '';
+    const attrs = [
+      node.attr('data-price'),
+      node.attr('content'),
+      node.attr('value'),
+      node.attr('aria-label')
+    ].filter(Boolean).join(' ');
+
     const text = node.text().replace(/\s+/g, ' ').trim();
-    const attrs = [node.attr('data-price'), node.attr('content'), node.attr('aria-label')]
-      .filter(Boolean).join(' ');
+    const parentText = node.parent().text().replace(/\s+/g, ' ').trim().substring(0, 260);
     const rawBlock = `${text} ${attrs}`.replace(/\s+/g, ' ').trim();
+    const context = `${parentText} ${className} ${id}`.replace(/\s+/g, ' ').trim();
 
-    if (!rawBlock || rawBlock.length > 300) return;
+    if (!rawBlock || rawBlock.length > 500) return;
 
-    const key = `${node.get(0)?.tagName || 'x'}|${rawBlock}`;
+    const key = `${tagName}|${className}|${id}|${rawBlock}`;
     if (seen.has(key)) return;
     seen.add(key);
 
-    const lowered = rawBlock.toLowerCase();
+    const lowered = `${rawBlock} ${context}`.toLowerCase();
     if (isNoisePriceContext(lowered)) return;
 
+    const isStruck =
+      ['DEL', 'S', 'STRIKE'].includes(tagName) ||
+      /line-through/i.test(style) ||
+      /old|regular|compare|compare-at|was|before|ancien|barr|barre|prix-barr|سعر\s*قديم|سعر\s*سابق|السعر\s*الأصلي/.test(lowered);
+
     let kind = 'current';
-    if (/old|regular|compare|barr|avant|instead of|au lieu/.test(lowered)) kind = 'old';
-    else if (/from|à partir|starting at|dès/.test(lowered))                kind = 'from';
-    else if (/mois|month|monthly|year|annuel|annual|abonnement|subscription/.test(lowered)) kind = 'plan';
+    if (isStruck) kind = 'old';
+    else if (/from|à partir|starting at|dès|ابتداء|ابتداءً/.test(lowered)) kind = 'from';
+    else if (/mois|month|monthly|year|annuel|annual|abonnement|subscription|شهري|سنوي|اشتراك/.test(lowered)) kind = 'plan';
+    else if (/installment|split|fois|تقسيط|دفعة/.test(lowered)) kind = 'installment';
 
-    // Compute visibility score
     let visibilityScore = 0;
-    if (/\b(price|pricing|plan|tarif|offre)\b/i.test(rawBlock))                             visibilityScore += 2;
-    if (node.closest('[class*="pricing"],[id*="pricing"],[class*="plan"],[class*="offer"]').length) visibilityScore += 3;
-    if (node.closest('button,a,[class*="cta"],[class*="buy"],[class*="cart"]').length)      visibilityScore += 2;
-    if (/acheter|buy|order|commander|shop|subscribe|signup|trial|demo/.test(lowered))       visibilityScore += 2;
+    if (/\b(price|pricing|plan|tarif|offre|amount|sale)\b/i.test(`${className} ${id} ${rawBlock}`)) visibilityScore += 2;
+    if (node.closest('[class*="pricing"],[id*="pricing"],[class*="plan"],[class*="offer"],[class*="product"]').length) visibilityScore += 3;
+    if (node.closest('button,a,[class*="cta"],[class*="buy"],[class*="cart"]').length) visibilityScore += 2;
+    if (/acheter|buy|order|commander|shop|subscribe|signup|trial|demo|اشتر|اطلب|اشترك/.test(lowered)) visibilityScore += 2;
+    if (isStruck) visibilityScore += 1;
 
-    const matches = rawBlock.match(
-      /([0-9][0-9\s.,]*)\s*(MAD|DH|DHS|EUR|USD|GBP|€|\$|£)|(?:MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\s*([0-9][0-9\s.,]*)/gi
+    const cleanBlock = rawBlock
+      .replace(/(\d+)(LYD|LD|MAD|DH|DHS|EUR|USD|GBP|AED|SAR|QAR|KWD|BHD|OMR|€|\$|£)/gi, '$1 $2 ')
+      .replace(/(LYD|LD|MAD|DH|DHS|EUR|USD|GBP|AED|SAR|QAR|KWD|BHD|OMR|€|\$|£)(\d+)/gi, '$1 $2 ')
+      .replace(/\b(\d{2,5})(\d{2,5})\s*(LYD|LD|MAD|DH|DHS|EUR|USD|GBP|€|\$|£)\b/gi, (_, p1, p2, cur) => `${p1} ${cur} ${p2} ${cur}`);
+
+    const matches = cleanBlock.match(
+      /([0-9][0-9\s.,']*)\s*(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|د\.?\s?م|درهم|EUR|USD|GBP|AED|SAR|QAR|KWD|BHD|OMR|€|\$|£)|(?:LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|د\.?\s?م|درهم|EUR|USD|GBP|AED|SAR|QAR|KWD|BHD|OMR|€|\$|£)\s*([0-9][0-9\s.,']*)/gi
     ) || [];
 
     matches.forEach(match => {
-      const value    = normalizePriceValue(match);
-      const currency = detectCurrency(match, html);
+      const value = normalizePriceValue(match);
+      const currency = detectCurrency(match, `${context} ${html}`);
+      if (!value) return;
+
       pushValidatedPrice(prices, {
-        value, currency, raw: match, source: 'dom', kind,
-        context:         rawBlock.substring(0, 200),
-        selector:        node.attr('class') || node.attr('id') || node.get(0)?.tagName || null,
+        value,
+        currency,
+        raw: match,
+        source: 'dom',
+        kind,
+        context: context.substring(0, 240),
+        selector: className || id || tagName || null,
+        tagName,
+        className,
+        isStruck,
         visibilityScore,
-        confidence:      0.74 + Math.min(0.16, visibilityScore * 0.03),
+        confidence: Math.min(0.96, 0.74 + Math.min(0.18, visibilityScore * 0.03) + (isStruck ? 0.06 : 0))
       });
     });
   });
 
   return prices;
 }
-
 // ─────────────────────────────────────────────────────────────────
 // SECTION 13 — CORE: finalizePriceIntel (Observed-First)
 // ─────────────────────────────────────────────────────────────────
@@ -646,161 +790,183 @@ function extractDomPrices($, html = '') {
  * @returns {PriceIntelObserved}
  */
 function finalizePriceIntel(allPrices = [], html = '') {
-  // ── 1. Deduplication ──────────────────────────────────────────
   const normalized = [];
-  const seen       = new Set();
+  const seen = new Set();
 
   for (const p of allPrices) {
-    if (!p || !p.value || p.value <= 0) continue;
-    const key = [p.value, p.currency || '', p.kind || '', p.source || '', (p.raw || '').slice(0, 80)].join('|');
+    const value = normalizePriceValue(p?.value ?? p?.raw);
+    if (!value || value <= 0) continue;
+
+    const currency = p.currency || detectCurrency(p.raw || '', `${p.context || ''} ${html || ''}`);
+    const kind = p.kind || 'current';
+    const source = p.source || 'unknown';
+    const raw = p.raw ? String(p.raw).trim() : String(value);
+
+    const key = [
+      value,
+      currency || '',
+      kind,
+      source,
+      raw.slice(0, 80),
+      p.selector || ''
+    ].join('|');
+
     if (seen.has(key)) continue;
     seen.add(key);
+
     normalized.push({
-      value:          p.value,
-      currency:       p.currency || null,
-      raw:            p.raw || null,
-      source:         p.source || 'unknown',
-      kind:           p.kind || 'current',
-      context:        p.context || '',
-      selector:       p.selector || null,
+      value,
+      currency,
+      raw,
+      source,
+      kind,
+      context: p.context || '',
+      selector: p.selector || null,
+      tagName: p.tagName || null,
+      className: p.className || null,
+      isStruck: !!p.isStruck,
       visibilityScore: Number(p.visibilityScore ?? 0),
-      confidence:     Number(p.confidence ?? 0.5),
+      confidence: Number(p.confidence ?? 0.5)
     });
   }
 
-  // ── 2. Score each candidate ───────────────────────────────────
   const candidates = normalized.map(p => ({ ...p, score: scorePriceCandidate(p) }));
-
-  // ── 3. Detect conflicts ───────────────────────────────────────
   const conflicts = detectPriceConflicts(candidates);
 
-  // ── 4. Select primary (highest-scoring current candidate) ─────
+  const oldCandidates = candidates.filter(p => p.kind === 'old' || p.isStruck);
   const currentCandidates = candidates.filter(p =>
-    ['current', 'from', 'plan', 'range-min'].includes(p.kind)
+    ['current', 'from', 'plan', 'range-min', 'installment'].includes(p.kind) && !p.isStruck
   );
-  const oldCandidates     = candidates.filter(p => p.kind === 'old');
   const rangeMaxCandidates = candidates.filter(p => p.kind === 'range-max');
 
   const primary = [...currentCandidates].sort((a, b) => {
-    if (b.score !== a.score)       return b.score - a.score;
+    if (b.score !== a.score) return b.score - a.score;
     if (b.confidence !== a.confidence) return b.confidence - a.confidence;
     return a.value - b.value;
   })[0] || null;
 
-  // ── 5. Determine extraction status ───────────────────────────
-  const extractionStatus = resolveExtractionStatus(primary, conflicts, candidates);
+  const extractionStatus = primary
+    ? EXTRACTION_STATUS_SAFE.CONFIRMED
+    : candidates.length
+      ? EXTRACTION_STATUS_SAFE.WEAK
+      : EXTRACTION_STATUS_SAFE.NOT_FOUND;
 
-  // ── 6. Blocking? ──────────────────────────────────────────────
-  const isBlocked      = extractionStatus !== EXTRACTION_STATUS.CONFIRMED;
+  const hardConflict =
+    conflicts.length > 0 &&
+    !primary &&
+    candidates.length > 1;
+
+  const isBlocked =
+    !primary ||
+    hardConflict ||
+    extractionStatus === EXTRACTION_STATUS_SAFE.NOT_FOUND;
+
   const blockingReasons = [];
-  if (extractionStatus === EXTRACTION_STATUS.NOT_FOUND) blockingReasons.push('no_price_detected');
-  if (extractionStatus === EXTRACTION_STATUS.CONFLICT)  blockingReasons.push('price_conflict_detected');
-  if (extractionStatus === EXTRACTION_STATUS.WEAK)      blockingReasons.push('weak_price_signal');
+  if (!candidates.length) blockingReasons.push('no_price_detected');
+  if (hardConflict) blockingReasons.push('price_conflict_without_primary');
+  if (candidates.length && !primary) blockingReasons.push('no_current_price_candidate');
 
-  // ── 7. Confidence score ───────────────────────────────────────
-  const rawScore      = primary ? primary.score : 0;
-  const maxScore      = 180;                                    // theoretical max
+  const rawScore = primary ? primary.score : 0;
+  const maxScore = 180;
   const confidenceScore = Math.min(1, Math.max(0, rawScore / maxScore));
   const { band: confidenceBand } = confidenceScoreToMeta(confidenceScore);
 
-  // ── 8. Price ranges and sets ──────────────────────────────────
   const primaryCurrency =
     primary?.currency ||
     normalized.find(p => p.currency)?.currency ||
     detectCurrency('', html) ||
-    null;                                               // ← no MAD default: null = unknown
+    null;
 
-  const currentValues   = currentCandidates.map(p => p.value).sort((a, b) => a - b);
-  const minPrice        = currentValues[0] ?? null;
-  const currentMax      = currentValues[currentValues.length - 1] ?? null;
-  const rangeMax        = rangeMaxCandidates.map(p => p.value).sort((a, b) => b - a)[0] ?? null;
-  const maxPrice        = rangeMax || currentMax || null;
-  const hasRange        = minPrice !== null && maxPrice !== null && minPrice !== maxPrice;
-  const priceRange      = hasRange ? { min: minPrice, max: maxPrice } : null;
-
-  const struckPrices    = [...new Set(oldCandidates.map(p => p.value))].sort((a, b) => a - b);
-  const bestOld         = struckPrices[struckPrices.length - 1] ?? null;
-  const discountRate    = (primary?.value && bestOld && bestOld > primary.value)
-    ? Math.round(((bestOld - primary.value) / bestOld) * 100)
+  const currentValues = currentCandidates.map(p => p.value).sort((a, b) => a - b);
+  const minPrice = currentValues[0] ?? null;
+  const currentMax = currentValues[currentValues.length - 1] ?? null;
+  const rangeMax = rangeMaxCandidates.map(p => p.value).sort((a, b) => b - a)[0] ?? null;
+  const maxPrice = rangeMax || currentMax || null;
+  const priceRange = minPrice !== null && maxPrice !== null && minPrice !== maxPrice
+    ? { min: minPrice, max: maxPrice }
     : null;
 
-  // ── 9. Classify pricing model ─────────────────────────────────
+  const struckPrices = [...new Set(oldCandidates.map(p => p.value))].sort((a, b) => a - b);
+  const bestOld = struckPrices[struckPrices.length - 1] ?? null;
+  const discountRate =
+    primary?.value && bestOld && bestOld > primary.value
+      ? Math.round(((bestOld - primary.value) / bestOld) * 100)
+      : null;
+
   const { model: pricingModel, confidence: classificationConfidence } =
     classifyPricingModel(candidates, struckPrices, html);
 
-  // ── 10. Build audit trail ─────────────────────────────────────
   const selectionReason = primary
     ? `Selected from ${primary.source} (score=${primary.score}, kind=${primary.kind})`
-    : 'No valid candidate found';
+    : 'No valid current candidate found';
 
   const auditTrail = buildAuditTrail(candidates, primary, conflicts, selectionReason);
 
-  // ── 11. Source evidence chain (for UI bloc 1) ─────────────────
-  const sourceEvidence = candidates.slice(0, 10).map(c => ({
-    source:     c.source,
-    value:      c.value,
-    currency:   c.currency,
-    kind:       c.kind,
+  const sourceEvidence = candidates.slice(0, 20).map(c => ({
+    source: c.source,
+    value: c.value,
+    currency: c.currency,
+    kind: c.kind,
     confidence: c.confidence,
-    selector:   c.selector || null,
-    textSnippet: (c.raw || '').substring(0, 60),
+    selector: c.selector || null,
+    textSnippet: (c.raw || '').substring(0, 80),
+    context: (c.context || '').substring(0, 160)
   }));
 
-  // ── 12. Assemble canonical PriceIntelObserved ─────────────────
+  const allSorted = [...new Set(normalized.map(p => p.value))].sort((a, b) => a - b);
+
   return {
-    // Observed values
-    primaryPrice:    primary?.value ?? null,
-    currency:        primaryCurrency,
-    allPrices:       [...new Set(normalized.map(p => p.value))].sort((a, b) => a - b),
+    primaryPrice: primary?.value ?? null,
+    currency: primaryCurrency,
+
+    allPrices: allSorted,
+    all: allSorted,
+    prices: normalized.sort((a, b) => a.value - b.value),
+
+    currentPrices: currentCandidates,
+    oldPrices: oldCandidates,
     struckPrices,
-    schemaPrices:    normalized.filter(p => p.source === 'schema').map(p => p.value),
-    domPrices:       normalized.filter(p => p.source === 'dom').map(p => p.value),
-    textPrices:      normalized.filter(p => p.source === 'text').map(p => p.value),
-    planPrices:      normalized.filter(p => p.kind === 'plan').map(p => p.value),
+    schemaPrices: normalized.filter(p => p.source === 'schema').map(p => p.value),
+    domPrices: normalized.filter(p => p.source === 'dom').map(p => p.value),
+    textPrices: normalized.filter(p => p.source === 'text').map(p => p.value),
+    planPrices: normalized.filter(p => p.kind === 'plan').map(p => p.value),
+    fromPrices: normalized.filter(p => p.kind === 'from').map(p => p.value),
+    installmentPrices: normalized.filter(p => p.kind === 'installment').map(p => p.value),
+
+    minPrice,
+    maxPrice,
     priceRange,
     discountRate,
 
-    // Classification
     pricingModel,
     classificationConfidence,
 
-    // Status & confidence
     extractionStatus,
     confidenceScore,
     confidenceBand,
+    confidence: confidenceBand,
 
-    // Evidence
     sourceEvidence,
     primarySource: primary?.source || null,
-    primaryKind:   primary?.kind   || null,
-    primaryScore:  primary?.score  || null,
-    prices:        normalized.sort((a, b) => a.value - b.value),
+    primaryKind: primary?.kind || null,
+    primaryScore: primary?.score || null,
 
-    // Audit trail
     auditTrail,
 
-    // Blocking
     isBlocked,
     blockingReasons,
 
-    // Summary
     priceSourcesSummary: {
-      schema:   normalized.filter(p => p.source === 'schema').length,
-      dom:      normalized.filter(p => p.source === 'dom').length,
-      text:     normalized.filter(p => p.source === 'text').length,
-      checkout: normalized.filter(p => p.source === 'checkout').length,
+      schema: normalized.filter(p => p.source === 'schema').length,
+      dom: normalized.filter(p => p.source === 'dom').length,
+      text: normalized.filter(p => p.source === 'text').length,
+      checkout: normalized.filter(p => p.source === 'checkout').length
     },
 
-    // Legacy aliases (backward compat — READ ONLY)
-    detected:   !!primary,
-    bestPrice:  primary?.value ?? null,
-    minPrice,
-    maxPrice,
-    confidence: confidenceBand,
-    all:        [...new Set(normalized.map(p => p.value))].sort((a, b) => a - b),
+    detected: !!primary,
+    bestPrice: primary?.value ?? null
   };
 }
-
 // ─────────────────────────────────────────────────────────────────
 // SECTION 14 — FINANCIAL INTEL CALCULATOR (Observed → Calculated)
 // ─────────────────────────────────────────────────────────────────
@@ -1233,11 +1399,39 @@ function buildUiPricingReport(priceIntelObserved, financialIntel, recommendation
  * getCanonicalPrice enforces that only a non-blocked, confirmed price surfaces.
  */
 function getCanonicalPrice(priceIntel) {
-  if (!priceIntel) return null;
-  // Only surface price if not blocked by architecture
-  if (priceIntel.isBlocked) return null;
-  const value = priceIntel.primaryPrice ?? priceIntel.bestPrice ?? null;
-  return typeof value === 'number' && value > 0 ? value : null;
+  if (!priceIntel || typeof priceIntel !== 'object') return null;
+
+  const value =
+    priceIntel.primaryPrice ??
+    priceIntel.bestPrice ??
+    null;
+
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+
+  const status = priceIntel.extractionStatus;
+
+  // Blocage strict seulement si aucun prix sélectionné ou conflit dur.
+  if (
+    priceIntel.isBlocked &&
+    !['CONFIRMED', 'FOUND', 'PARTIAL', 'WEAK'].includes(String(status || '').toUpperCase())
+  ) {
+    return null;
+  }
+
+  // Ne jamais retourner un prix barré comme prix canonique si on le sait.
+  if (priceIntel.primaryKind === 'old') {
+    const current = Array.isArray(priceIntel.currentPrices)
+      ? priceIntel.currentPrices
+          .filter(p => p && typeof p.value === 'number' && p.value > 0)
+          .sort((a, b) => (b.confidence || 0) - (a.confidence || 0))[0]
+      : null;
+
+    return current?.value || null;
+  }
+
+  return value;
 }
 
 function hasCanonicalPrice(priceIntel) {
