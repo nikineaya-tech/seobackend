@@ -23,15 +23,7 @@
 // ─────────────────────────────────────────────────────────────────
 // SECTION 1 — CONSTANTS & CONFIDENCE THRESHOLDS
 // ─────────────────────────────────────────────────────────────────
- const EXTRACTION_STATUS_SAFE =
-  typeof EXTRACTIONSTATUS !== 'undefined' ? EXTRACTIONSTATUS :
-  typeof EXTRACTION_STATUS !== 'undefined' ? EXTRACTION_STATUS :
-  {
-    NOT_FOUND: 'NOT_FOUND',
-    WEAK: 'WEAK',
-    CONFLICT: 'CONFLICT',
-    CONFIRMED: 'CONFIRMED'
-  };
+ 
 const CONFIDENCE_THRESHOLDS = {
   HIGH:    0.85,   // Display + Finance + Recommendation
   MEDIUM:  0.65,   // Display + Finance only
@@ -139,7 +131,15 @@ function EMPTY_PRICE_INTEL_OBSERVED(reason = 'no_price_found') {
     prices:     [],
   };
 }
-
+const EXTRACTION_STATUS_SAFE =
+  typeof EXTRACTIONSTATUS !== 'undefined' ? EXTRACTIONSTATUS :
+  typeof EXTRACTION_STATUS !== 'undefined' ? EXTRACTION_STATUS :
+  {
+    NOT_FOUND: 'NOT_FOUND',
+    WEAK: 'WEAK',
+    CONFLICT: 'CONFLICT',
+    CONFIRMED: 'CONFIRMED'
+  };
 /**
  * Empty financial intel — all KPIs null when price is not confirmed.
  */
