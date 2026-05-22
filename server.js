@@ -1721,7 +1721,10 @@ async function scrapeStealth(validUrl) {
     CONFLICT: 'CONFLICT',
     CONFIRMED: 'CONFIRMED'
   };
-
+const EXTRACTION_NOT_FOUND =
+        (typeof EXTRACTIONSTATUS !== 'undefined' && EXTRACTIONSTATUS.NOT_FOUND) ||
+        (typeof EXTRACTION_STATUS !== 'undefined' && EXTRACTION_STATUS.NOT_FOUND) ||
+        'NOT_FOUND';
 
     const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
     const normText = (v) => String(v || '').replace(/\s+/g, ' ').trim();
