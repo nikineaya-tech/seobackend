@@ -230,12 +230,25 @@ function normalizePriceValue(raw) {
 }
 
 function detectCurrency(raw = '', extra = '') {
-  const str = `${raw} ${extra}`.toUpperCase();
-  if (/\bLYD\b|\bLD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
-  if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str))   return 'MAD';
-  if (/\bEUR\b|€/.test(str))   return 'EUR';
-  if (/\bUSD\b|US\$|\$/.test(str)) return 'USD';
-  if (/\bGBP\b|£/.test(str))   return 'GBP';
+  const rawStr = String(raw || '').toUpperCase();
+  const extraStr = String(extra || '').toUpperCase();
+
+  const patterns = {
+    MAD: /\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/,
+    EUR: /\bEUR\b|€/,
+    USD: /\bUSD\b|US\$|\$/,
+    GBP: /\bGBP\b|£/,
+    LYD: /\bLYD\b|\bLD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/,
+  };
+
+  for (const [currency, rx] of Object.entries(patterns)) {
+    if (rx.test(rawStr)) return currency;
+  }
+
+  for (const [currency, rx] of Object.entries(patterns)) {
+    if (rx.test(extraStr)) return currency;
+  }
+
   return null;
 }
 
@@ -390,28 +403,28 @@ function classifyPricingModel(candidates, struckPrices, html = '') {
   const planCandidates = candidates.filter(c => c.kind === 'plan');
   const distinctCurrentValues = [...new Set(currentCandidates.map(c => c.value))].sort((a, b) => a - b);
 
-  const hasRange       = distinctCurrentValues.length >= 2;
-  const hasPlans       = planCandidates.length >= 2;
+  const hasRange = distinctCurrentValues.length >= 2;
+  const hasPlans = planCandidates.length >= 2;
+  const hasAnyPlanSignal = planCandidates.length >= 1;
   const hasStruckPrice = struckPrices.length > 0;
   const hasBundleSignal = /bundle|pack|combo|offre.+inclu|inclut|formule/i.test(html);
-  const hasRecurrence  = /mois|month|monthly|année|annuel|annual|abonnement|subscription|per.?year|per.?month/i.test(html);
+  const hasRecurrence = /mois|month|monthly|année|annuel|annual|abonnement|subscription|per.?year|per.?month/i.test(html);
 
-  // Decoy detection: ≥3 plans, middle plan is proportionally expensive
   let isDecoy = false;
   if (distinctCurrentValues.length >= 3) {
     const [low, mid, high] = distinctCurrentValues;
-    const lowToMid  = (mid - low) / low;
+    const lowToMid = (mid - low) / low;
     const midToHigh = (high - mid) / mid;
-    isDecoy = midToHigh < lowToMid * 0.5; // middle is closer to high → decoy
+    isDecoy = midToHigh < lowToMid * 0.5;
   }
 
-  if (isDecoy)                                           return { model: 'decoy',        confidence: 0.75 };
-  if (hasBundleSignal && hasPlans)                       return { model: 'bundle',       confidence: 0.78 };
-  if (hasPlans && distinctCurrentValues.length >= 3)     return { model: 'tiered',       confidence: 0.80 };
-  if (hasPlans || hasRecurrence)                         return { model: 'subscription', confidence: 0.72 };
-  if (hasRange)                                          return { model: 'range',        confidence: 0.70 };
-  if (hasStruckPrice && distinctCurrentValues.length === 1) return { model: 'struck',   confidence: 0.74 };
-  if (distinctCurrentValues.length === 1)                return { model: 'single',      confidence: 0.80 };
+  if (isDecoy) return { model: 'decoy', confidence: 0.75 };
+  if (hasBundleSignal && hasPlans) return { model: 'bundle', confidence: 0.78 };
+  if (hasPlans && distinctCurrentValues.length >= 3) return { model: 'tiered', confidence: 0.80 };
+  if (hasPlans || (hasRecurrence && hasAnyPlanSignal)) return { model: 'subscription', confidence: 0.72 };
+  if (hasRange) return { model: 'range', confidence: 0.70 };
+  if (hasStruckPrice && distinctCurrentValues.length === 1) return { model: 'struck', confidence: 0.74 };
+  if (distinctCurrentValues.length === 1) return { model: 'single', confidence: 0.80 };
 
   return { model: 'unknown', confidence: 0 };
 }
@@ -614,8 +627,14 @@ function extractTextPrices(bodyText = '', html = '') {
       const raw = match[0];
       if (!raw || raw.length > 100) continue;
 
-      const value = normalizePriceValue(match[1]) || normalizePriceValue(match[2]) || normalizePriceValue(raw);
-      const currency = detectCurrency(raw, html);
+      const value =
+        normalizePriceValue(match[1]) ||
+        normalizePriceValue(match[2]) ||
+        normalizePriceValue(raw);
+
+      const localContext = raw.toLowerCase();
+      const currency = detectCurrency(raw, localContext);
+
       if (!value) continue;
 
       pushValidatedPrice(prices, {
@@ -624,22 +643,30 @@ function extractTextPrices(bodyText = '', html = '') {
         raw,
         source: 'text',
         kind,
-        context: raw.toLowerCase(),
+        context: localContext,
         confidence
       });
     }
   }
 
-  const rangeRegex = new RegExp(`([0-9][0-9\\s.,']*)\\s*(${currencyPart})?\\s*(?:-|à|to|حتى)\\s*([0-9][0-9\\s.,']*)\\s*(${currencyPart})?`, 'gi');
+  const rangeRegex = new RegExp(
+    `([0-9][0-9\\s.,']*)\\s*(${currencyPart})?\\s*(?:-|à|to|حتى)\\s*([0-9][0-9\\s.,']*)\\s*(${currencyPart})?`,
+    'gi'
+  );
 
   let rm;
   while ((rm = rangeRegex.exec(text)) !== null) {
     const raw = rm[0];
     if (!raw || raw.length > 100) continue;
 
-    const currency = detectCurrency(raw, html);
     const min = normalizePriceValue(rm[1]);
     const max = normalizePriceValue(rm[3]);
+
+    const localContext = raw;
+    const currency =
+      detectCurrency(raw) ||
+      detectCurrency(rm[2] || '') ||
+      detectCurrency(rm[4] || '');
 
     if (min) {
       pushValidatedPrice(prices, {
@@ -648,7 +675,7 @@ function extractTextPrices(bodyText = '', html = '') {
         raw,
         source: 'text',
         kind: 'range-min',
-        context: raw,
+        context: localContext,
         confidence: 0.82
       });
     }
@@ -660,7 +687,7 @@ function extractTextPrices(bodyText = '', html = '') {
         raw,
         source: 'text',
         kind: 'range-max',
-        context: raw,
+        context: localContext,
         confidence: 0.82
       });
     }
@@ -760,7 +787,9 @@ function extractDomPrices($, html = '') {
 
     matches.forEach(match => {
       const value = normalizePriceValue(match);
-      const currency = detectCurrency(match, `${context} ${html}`);
+      const localContext = `${match} ${context}`.trim();
+      const currency = detectCurrency(match, context);
+
       if (!value) return;
 
       pushValidatedPrice(prices, {
@@ -769,7 +798,7 @@ function extractDomPrices($, html = '') {
         raw: match,
         source: 'dom',
         kind,
-        context: context.substring(0, 240),
+        context: localContext.substring(0, 240),
         selector: className || id || tagName || null,
         tagName,
         className,
@@ -805,10 +834,16 @@ function finalizePriceIntel(allPrices = [], html = '') {
     const value = normalizePriceValue(p?.value ?? p?.raw);
     if (!value || value <= 0) continue;
 
-    const currency = p.currency || detectCurrency(p.raw || '', `${p.context || ''} ${html || ''}`);
+    const raw = p.raw ? String(p.raw).trim() : String(value);
+    const localContext = String(p.context || '').trim();
+
+    const currency =
+      p.currency ||
+      detectCurrency(raw, localContext) ||
+      null;
+
     const kind = p.kind || 'current';
     const source = p.source || 'unknown';
-    const raw = p.raw ? String(p.raw).trim() : String(value);
 
     const key = [
       value,
@@ -828,7 +863,7 @@ function finalizePriceIntel(allPrices = [], html = '') {
       raw,
       source,
       kind,
-      context: p.context || '',
+      context: localContext,
       selector: p.selector || null,
       tagName: p.tagName || null,
       className: p.className || null,
@@ -853,16 +888,9 @@ function finalizePriceIntel(allPrices = [], html = '') {
     return a.value - b.value;
   })[0] || null;
 
-  const extractionStatus = primary
-    ? EXTRACTION_STATUS_SAFE.CONFIRMED
-    : candidates.length
-      ? EXTRACTION_STATUS_SAFE.WEAK
-      : EXTRACTION_STATUS_SAFE.NOT_FOUND;
+  const extractionStatus = resolveExtractionStatus(primary, conflicts, candidates);
 
-  const hardConflict =
-    conflicts.length > 0 &&
-    !primary &&
-    candidates.length > 1;
+  const hardConflict = extractionStatus === EXTRACTION_STATUS_SAFE.CONFLICT;
 
   const isBlocked =
     !primary ||
@@ -881,8 +909,9 @@ function finalizePriceIntel(allPrices = [], html = '') {
 
   const primaryCurrency =
     primary?.currency ||
+    currentCandidates.find(p => p.currency)?.currency ||
+    oldCandidates.find(p => p.currency)?.currency ||
     normalized.find(p => p.currency)?.currency ||
-    detectCurrency('', html) ||
     null;
 
   const currentValues = currentCandidates.map(p => p.value).sort((a, b) => a - b);
@@ -1256,20 +1285,29 @@ function buildPriceIntelLocal(bodyText = '', html = '', domPriceTexts = [], sche
 
   // 2. DOM price texts (simplified — raw string array)
   domPriceTexts.forEach(raw => {
-    const text     = String(raw || '').replace(/\s+/g, ' ').trim();
-    const value    = normalizePriceValue(text);
-    const currency = detectCurrency(text, bodyText || html);
+    const text = String(raw || '').replace(/\s+/g, ' ').trim();
+    const value = normalizePriceValue(text);
+
+    // IMPORTANT: currency must come from local text only, not full body/html
+    const currency = detectCurrency(text);
+
     if (!value || value <= 0) return;
+
     pushValidatedPrice(prices, {
-      value, currency, raw: text, source: 'dom',
-      kind: 'current', confidence: 0.72,
+      value,
+      currency,
+      raw: text,
+      source: 'dom',
+      kind: 'current',
+      confidence: 0.72,
+      context: text.substring(0, 200)
     });
   });
 
   // 3. Schema prices
   schemaRaw.forEach(raw => {
     try {
-      const parsed  = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
       const entries = Array.isArray(parsed) ? parsed : [parsed];
       entries.forEach(entry => extractSchemaPricesFromNode(entry, prices));
     } catch (_) {}
@@ -1278,7 +1316,6 @@ function buildPriceIntelLocal(bodyText = '', html = '', domPriceTexts = [], sche
   // 4. Finalize through Observed-First pipeline
   return finalizePriceIntel(prices, html);
 }
-
 // ─────────────────────────────────────────────────────────────────
 // SECTION 17 — UI RENDERING HELPERS (separation contract)
 // ─────────────────────────────────────────────────────────────────
