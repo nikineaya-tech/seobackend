@@ -4816,11 +4816,63 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
         });
     }
 });
+
+// 🧠 DECISION LAYER : ASSIMILATION MÉTIER TEMPS RÉEL + FORMATAGE UI
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// 🔍 SCRAPE.DO GOOGLE SEARCH API (Extraction SERP Structurée)
+// ═══════════════════════════════════════════════════════════════════
+async function fetchScrapeDoSerp(keyword, lang = 'fr', geo = 'ma') {
+    const token = process.env.SCRAPE_DO_TOKEN;
+    if (!token) {
+        console.warn('⚠️ SCRAPE_DO_TOKEN manquant.');
+        return null;
+    }
+
+    try {
+        const res = await axios.get('https://api.scrape.do/plugin/google/search', {
+            params: {
+                token: token,
+                q: keyword,
+                hl: lang,
+                gl: geo
+            },
+            timeout: 15000 // Timeout de 15s
+        });
+
+        const data = res.data;
+        if (!data || !data.organic_results) return null;
+
+        // Extraction propre depuis le JSON structuré de Scrape.do
+        const domains = data.organic_results.slice(0, 5).map(r => {
+            try { return new URL(r.link).hostname.replace('www.', ''); } catch(e) { return null; }
+        }).filter(Boolean);
+
+        const paa = data.related_questions ? data.related_questions.map(q => q.question) : [];
+        const related = data.related_searches ? data.related_searches.map(r => r.query) : [];
+
+        console.log(`✅ [Scrape.do] SERP extraite pour "${keyword}": ${domains.length} domaines, ${paa.length} PAA`);
+
+        return {
+            domains: [...new Set(domains)],
+            paa: paa,
+            related: related,
+            serpDifficulty: "Évaluée par l'IA", // Sera affiné par le LLM
+            serpIntent: "Informationnelle/Commerciale" // Sera affiné par le LLM
+        };
+
+    } catch (e) {
+        console.warn(`⚠️ [Scrape.do] Erreur API: ${e.message}`);
+        return null;
+    }
+}
 app.post('/api/decision-layer', async (req, res) => {
+  const startTime = Date.now();
   try {
-    const {
+    let {
       lang = 'fr',
       keyword = '',
+      geo = 'ma', 
       marketInsights = {},
       marketDynamics = {},
       leaderMoat = {},
@@ -4832,6 +4884,95 @@ app.post('/api/decision-layer', async (req, res) => {
       actionRoadmap = []
     } = req.body || {};
 
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+
+    // ─────────────────────────────────────────────────────────────
+    // ÉTAPE 1 : ASSIMILATION MÉTIER (SCRAPE.DO + KEYWORDS EVERYWHERE)
+    // ─────────────────────────────────────────────────────────────
+    if (!actionRoadmap.length && keyword) {
+        console.log(`🧠 [DECISION-LAYER] Pipeline d'assimilation pour: "${keyword}"`);
+
+        // 1A. Fetch SERP via Scrape.do
+        const serpData = await fetchScrapeDoSerp(keyword, lang, geo);
+        
+        // 1B. Préparation des mots-clés pour Keywords Everywhere
+        let keywordsToAnalyze = [keyword];
+        if (serpData && serpData.related && serpData.related.length > 0) {
+            keywordsToAnalyze = [...keywordsToAnalyze, ...serpData.related.slice(0, 9)];
+        }
+
+        // 1C. Fetch Volumes via Keywords Everywhere
+        const keData = await fetchKeywordData(keywordsToAnalyze);
+
+        // 1D. Construction du Contexte Brutal pour le LLM
+        let keContextString = "";
+        if (keData) {
+            keContextString = "\n[MÉTRIQUES DE RECHERCHE - VOLUMES & BUDGET (NE PAS INVENTER)]\n";
+            for (const [kw, metrics] of Object.entries(keData)) {
+                keContextString += `- "${kw}" : ${metrics.vol} recherches/mois, CPC: $${metrics.cpc}, Concurrence Ads: ${metrics.competition}\n`;
+            }
+        }
+
+        const realityContext = `
+[RÉALITÉ DU MARCHÉ - DONNÉES TEMPS RÉEL (SCRAPE.DO)]
+${serpData ? `
+- Top domaines dominants (tes concurrents) : ${serpData.domains.slice(0, 3).join(', ')}
+- Questions EXACTES que les gens posent à Google (PAA) : ${serpData.paa.map(p => p.question).join(' | ')}
+` : ''}
+${keContextString}
+        `.trim();
+
+        const systemPrompt = `
+Tu es un stratège marketing expert. L'utilisateur te confie le marché "${keyword}".
+Rédige une analyse compétitive au format JSON STRICT.
+Langue de réponse demandée : ${lang === 'ar' ? 'Arabe' : lang === 'en' ? 'Anglais' : 'Français'}.
+
+${realityContext}
+
+FORMAT JSON ATTENDU :
+{
+  "marketInsights": { "difficulty": "facile/moyen/difficile", "serpIntent": "intention principale" },
+  "top3ReverseEngineering": { "commonSuccessFactors": ["Facteur 1", "Facteur 2"], "glaringWeaknesses": ["Faiblesse 1"] },
+  "leaderMoat": { "mainMoat": "Pourquoi le leader gagne", "summary": "Résumé" },
+  "swot": { "weaknesses": ["Faiblesse leader"], "opportunities": ["Demande mal servie"] },
+  "strategicBlueprint": { "uniqueAngle": "Le meilleur angle d'attaque" },
+  "winningMove": "Action principale",
+  "actionRoadmap": [
+    "Étape 1 basée sur le volume de recherche et les questions (PAA)",
+    "Étape 2 action spécifique logistique/marché",
+    "Étape 3 stratégie d'acquisition basée sur le CPC"
+  ]
+}
+
+RÈGLE ABSOLUE : Les étapes d'actions (actionRoadmap) DOIVENT répondre aux vraies questions (PAA) et utiliser les volumes fournis dans les données. Interdiction d'utiliser des tactiques SEO génériques.
+`;
+
+        // 1E. Appel LLM via OpenRouter (utilise ta fonction executeWithRetry si existante, sinon axios direct)
+        const aiResponse = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+            model: 'google/gemini-2.0-flash-001',
+            messages: [{ role: 'system', content: systemPrompt }],
+            response_format: { type: 'json_object' }
+        }, {
+            headers: { 'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`, 'Content-Type': 'application/json' }
+        });
+
+        const rawContent = aiResponse.data.choices[0].message.content;
+        const parsedIntel = extractJSON(rawContent) || {};
+
+        // Écrasement des variables avec l'intelligence générée
+        marketInsights = parsedIntel.marketInsights || marketInsights;
+        top3ReverseEngineering = parsedIntel.top3ReverseEngineering || top3ReverseEngineering;
+        leaderMoat = parsedIntel.leaderMoat || leaderMoat;
+        swot = parsedIntel.swot || swot;
+        strategicBlueprint = parsedIntel.strategicBlueprint || strategicBlueprint;
+        winningMove = parsedIntel.winningMove || winningMove;
+        actionRoadmap = parsedIntel.actionRoadmap || actionRoadmap;
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // ÉTAPE 2 : FORMATAGE UI / PRÉSENTATION
+    // ─────────────────────────────────────────────────────────────
     const safeArray = (v) => Array.isArray(v) ? v.filter(Boolean) : [];
     const firstNonEmpty = (...vals) => {
       for (const v of vals) {
@@ -4845,9 +4986,6 @@ app.post('/api/decision-layer', async (req, res) => {
       if (Array.isArray(v) && v.filter(Boolean).length) return v.filter(Boolean).join(' • ');
       return fallback;
     };
-
-    const isAr = lang === 'ar';
-    const isEn = lang === 'en';
 
     const mi = marketInsights || {};
     const md = marketDynamics || {};
@@ -5023,13 +5161,21 @@ app.post('/api/decision-layer', async (req, res) => {
       actionItems
     };
 
+    if (typeof updateMetrics === 'function') {
+        updateMetrics(req.method, req.path, 200, Date.now() - startTime);
+    }
+
     return res.json({
       success: true,
       lang,
+      durationMs: Date.now() - startTime,
       decisionLayer
     });
   } catch (error) {
     console.error('Decision layer error:', error);
+    if (typeof updateMetrics === 'function') {
+        updateMetrics(req.method, req.path, 500, Date.now() - startTime);
+    }
     return res.status(500).json({
       success: false,
       error: error.message || 'Decision layer generation failed'
