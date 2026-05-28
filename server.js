@@ -2897,6 +2897,102 @@ async function exchangeGSCCode(code) {
         return null;
     }
 }
+const BLOCKED_COMPETITOR_DOMAINS = [
+    'wikipedia.org',
+    'wikidata.org',
+    'medium.com',
+    'blogspot.com',
+    'wordpress.com',
+    'presse',
+    'news.google',
+    'google.com',
+    'youtube.com',
+    'youtu.be'
+];
+
+const SOCIAL_COMPETITOR_DOMAINS = [
+    'facebook.com',
+    'instagram.com',
+    'linkedin.com',
+    'x.com',
+    'twitter.com',
+    'tiktok.com',
+    'pinterest.com',
+    'snapchat.com',
+    'wa.me',
+    'whatsapp.com',
+    'telegram.me',
+    'telegram.org'
+];
+
+function safeHostname(rawUrl) {
+    try {
+        return new URL(rawUrl).hostname.replace(/^www\\./, '').toLowerCase();
+    } catch {
+        return '';
+    }
+}
+
+function safePath(rawUrl) {
+    try {
+        return new URL(rawUrl).pathname.toLowerCase();
+    } catch {
+        return '';
+    }
+}
+
+function isBlockedCompetitorUrl(rawUrl = '', title = '', snippet = '') {
+    const host = safeHostname(rawUrl);
+    const path = safePath(rawUrl);
+    const blob = `${title} ${snippet} ${path}`.toLowerCase();
+
+    if (!host) return true;
+    if (BLOCKED_COMPETITOR_DOMAINS.some(d => host.includes(d))) return true;
+
+    if (/\\b(wikipedia|wikidata|blog|article|guide|news|actualite|magazine|forum|wiki)\\b/i.test(blob)) {
+        return true;
+    }
+
+    if (/\\/blog\\/|\\/news\\/|\\/article\\/|\\/articles\\/|\\/guide\\/|\\/wiki\\//i.test(path)) {
+        return true;
+    }
+
+    return false;
+}
+
+function isOfficialLikeCompetitor(rawUrl = '', title = '', snippet = '') {
+    const host = safeHostname(rawUrl);
+    const path = safePath(rawUrl);
+    const blob = `${title} ${snippet} ${path}`.toLowerCase();
+
+    if (!host) return false;
+    if (SOCIAL_COMPETITOR_DOMAINS.some(d => host.includes(d))) return true;
+    if (/shop|store|boutique|product|products|category|collections|services|about|contact/i.test(path)) return true;
+    if (/officiel|official|boutique|store|shop|marque|brand/i.test(blob)) return true;
+
+    return true;
+}
+
+function geoBoostScore(rawUrl = '', geoData = {}, title = '', snippet = '') {
+    const host = safeHostname(rawUrl);
+    const blob = `${host} ${title} ${snippet}`.toLowerCase();
+    const gl = String(geoData?.gl || '').toLowerCase();
+    const location = String(geoData?.location || '').toLowerCase();
+
+    let score = 0;
+
+    if (gl === 'ma' && /\\.ma\\b|morocco|maroc/.test(blob)) score += 40;
+    if (gl === 'sa' && /\\.sa\\b|saudi|arabie saoudite|riyadh|jeddah/.test(blob)) score += 40;
+    if (gl === 'ae' && /\\.ae\\b|uae|emirates|dubai|abu dhabi/.test(blob)) score += 40;
+    if (gl === 'fr' && /\\.fr\\b|france|paris|lyon/.test(blob)) score += 40;
+    if (gl === 'dz' && /\\.dz\\b|algeria|algérie|alger/.test(blob)) score += 40;
+    if (gl === 'tn' && /\\.tn\\b|tunisia|tunisie|tunis/.test(blob)) score += 40;
+    if (gl === 'eg' && /\\.eg\\b|egypt|egypte|cairo/.test(blob)) score += 40;
+
+    if (location && blob.includes(location)) score += 20;
+
+    return score;
+}
 async function analyzeCompetitors(
     query,
     geo ,
@@ -3148,33 +3244,73 @@ async function analyzeCompetitors(
     console.log(`🔑 [WarRoom-V10.0] KE=${!!kwData} | GSC=${!!gscData} | PAA=${peopleAlsoAsk.length} | Related=${relatedSearches.length}`);
 
     // ── 5. ENRICHISSEMENT CONCURRENTS ─────────────────────────
-    const enrichedCompetitors = rawResults.slice(0, 10).map((r, i) => {
+    const filteredCompetitors = rawResults
+    .map((r, i) => {
         const url = r.link || r.url || '';
-        let domain = '';
-        try { domain = new URL(url).hostname.replace('www.', ''); } catch { domain = r.displayed_link || ''; }
+        const title = r.title || '';
+        const snippet = r.snippet || r.description || '';
+        const domain = safeHostname(url) || String(r.displayedlink || '').toLowerCase();
 
-        let type = isAr ? 'عام' : isEn ? 'General' : 'Général';
-        if (/\/product|\/shop|\/boutique/i.test(url))   type = isAr ? '🛒 تجارة إلكترونية' : '🛒 E-commerce';
-        else if (/\/blog|\/guide|\/article/i.test(url)) type = isAr ? '📝 مدونة' : isEn ? '📝 Blog' : '📝 Blog/Média';
-        else if (domain.includes('youtube'))            type = '🎥 YouTube';
-        else if (domain.includes('wikipedia'))          type = '📚 Wikipedia';
-
-        const posScore  = 100 - i * 10;
-        const richScore = (r.sitelinks ? 20 : 0) + (r.rich_snippet ? 20 : 0);
+        const blocked = isBlockedCompetitorUrl(url, title, snippet);
+        const officialLike = isOfficialLikeCompetitor(url, title, snippet);
+        const geoScore = geoBoostScore(url, geoData, title, snippet);
 
         return {
-            position:           i + 1,
-            title:              r.title || (isAr ? 'بدون عنوان' : isEn ? 'No title' : 'Sans titre'),
-            url, domain,
-            snippet:            r.snippet || r.description || '',
-            type,
-            dominance:          Math.min(posScore + richScore, 100),
-            estimatedAuthority: i <= 2 ? (isAr ? 'عالية جداً' : isEn ? 'Very High'  : 'Très Haute')
-                                       : i <= 5 ? (isAr ? 'عالية'    : isEn ? 'High'       : 'Haute')
-                                                : (isAr ? 'متوسطة'   : isEn ? 'Medium'     : 'Moyenne'),
-            sitelinks: Array.isArray(r.sitelinks) ? r.sitelinks.length : (r.sitelinks || 0),
+            raw: r,
+            url,
+            title,
+            snippet,
+            domain,
+            originalPosition: i + 1,
+            blocked,
+            officialLike,
+            geoScore
         };
-    });
+    })
+    .filter(x => !x.blocked && x.officialLike)
+    .sort((a, b) => {
+        const scoreA = (100 - a.originalPosition * 5) + a.geoScore;
+        const scoreB = (100 - b.originalPosition * 5) + b.geoScore;
+        return scoreB - scoreA;
+    })
+    .slice(0, 10);
+
+const enrichedCompetitors = filteredCompetitors.map((x, i) => {
+    const r = x.raw;
+    const url = x.url;
+    const domain = x.domain;
+
+    let type = isAr ? 'عام' : isEn ? 'General' : 'Général';
+
+    if (SOCIAL_COMPETITOR_DOMAINS.some(d => domain.includes(d))) {
+        type = isAr ? 'شبكات اجتماعية' : isEn ? 'Social Profile' : 'Réseau social';
+    } else if (/shop|store|boutique|product|products|category|collections/i.test(url)) {
+        type = isAr ? 'متجر إلكتروني' : isEn ? 'E-commerce' : 'E-commerce';
+    } else {
+        type = isAr ? 'موقع رسمي' : isEn ? 'Official Website' : 'Site officiel';
+    }
+
+    const posScore = 100 - i * 10;
+    const richScore = (r.sitelinks ? 20 : 0) + (r.richsnippet ? 20 : 0);
+    const geoScore = x.geoScore;
+
+    return {
+        position: i + 1,
+        title: r.title || (isAr ? 'بدون عنوان' : isEn ? 'No title' : 'Sans titre'),
+        url,
+        domain,
+        snippet: r.snippet || r.description || '',
+        type,
+        dominance: Math.min(posScore + richScore + Math.min(geoScore, 30), 100),
+        estimatedAuthority:
+            i < 2
+                ? (isAr ? 'مرتفعة جداً' : isEn ? 'Very High' : 'Très Haute')
+                : i < 5
+                    ? (isAr ? 'مرتفعة' : isEn ? 'High' : 'Haute')
+                    : (isAr ? 'متوسطة' : isEn ? 'Medium' : 'Moyenne'),
+        sitelinks: Array.isArray(r.sitelinks) ? r.sitelinks.length : (r.sitelinks ? 1 : 0)
+    };
+});
 
     // ── 6. SCRAPING MOAT LEADER (SCRAPE.DO) ───────────────────
     let leaderMoat = { status: ND };
