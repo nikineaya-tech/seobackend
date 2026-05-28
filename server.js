@@ -3199,12 +3199,47 @@ async function analyzeCompetitors(
 
             if (htmlString) {
                 const $ = cheerio.load(htmlString);
+                const socialChannelMap = [
+  { key: 'Facebook',  patterns: ['facebook.com', 'fb.com'] },
+  { key: 'Instagram', patterns: ['instagram.com'] },
+  { key: 'LinkedIn',  patterns: ['linkedin.com'] },
+  { key: 'X',         patterns: ['x.com', 'twitter.com'] },
+  { key: 'YouTube',   patterns: ['youtube.com', 'youtu.be'] },
+  { key: 'TikTok',    patterns: ['tiktok.com'] },
+  { key: 'Pinterest', patterns: ['pinterest.com'] },
+  { key: 'Snapchat',  patterns: ['snapchat.com'] },
+  { key: 'WhatsApp',  patterns: ['wa.me', 'whatsapp.com'] },
+  { key: 'Telegram',  patterns: ['t.me', 'telegram.me', 'telegram.org'] }
+];
+
+const outboundLinks = Array.isArray(externalOutboundLinkObjects)
+  ? externalOutboundLinkObjects
+  : [];
+
+const channelEvidence = socialChannelMap
+  .map(ch => {
+    const matched = outboundLinks.find(link =>
+      typeof link?.normalized === 'string' &&
+      ch.patterns.some(p => link.normalized.toLowerCase().includes(p))
+    );
+
+    return matched
+      ? {
+          channel: ch.key,
+          url: matched.normalized,
+          text: matched.text || ch.key
+        }
+      : null;
+  })
+  .filter(Boolean);
                 leaderMoat = {
                     brandAuthority: {
-                        hasWikipediaLinks:      htmlString.includes('wikipedia.org'),
-                        socialLinksCount:       (htmlString.match(/facebook|instagram|linkedin|twitter/g) || []).length,
-                        hasTrustpilotOrReviews: /trustpilot|reviews|rating|avis/i.test(htmlString)
-                    },
+  hasWikipediaLinks: htmlString.includes('wikipedia.org'),
+  socialChannels: channelEvidence.map(x => x.channel),
+  socialLinksCount: channelEvidence.length,
+  channelEvidence,
+  hasTrustpilotOrReviews: /trustpilot|reviews|rating|avis/i.test(htmlString)
+},
                     technicalMoat: {
                         schemaTagsCount: $('script[type="application/ld+json"]').length,
                         hasFaqSection:   /faq|questions/i.test(htmlString)
@@ -5072,19 +5107,35 @@ RÈGLE ABSOLUE : Les étapes d'actions (actionRoadmap) DOIVENT répondre aux vra
       safeArray(rev.commonSuccessFactors),
       isAr ? 'السلطة والثقة والتنفيذ' : isEn ? 'authority, trust, and execution' : 'l’autorité, la confiance et l’exécution'
     );
+const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
+  ? lm.brandAuthority.channelEvidence
+      .map(item => {
+        const safeUrl = typeof item?.url === 'string' ? item.url.trim() : '';
+        const safeName = typeof item?.channel === 'string' ? item.channel.trim() : 'Link';
 
-    const proofItems = [
-      firstNonEmpty(
-        lm.brandAuthority?.summary,
-        lm.brandAuthority?.reasoning,
-        lm.brandAuthority?.socialLinksCount !== undefined
-          ? (isAr
-              ? `حضور العلامة موزع على ${lm.brandAuthority.socialLinksCount} قنوات.`
-              : isEn
-                ? `Brand presence is spread across ${lm.brandAuthority.socialLinksCount} channels.`
-                : `La présence de la marque est répartie sur ${lm.brandAuthority.socialLinksCount} canaux.`)
-          : ''
-      ),
+        if (!safeUrl || !/^https?:\/\//i.test(safeUrl)) return null;
+
+        return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeName}</a>`;
+      })
+      .filter(Boolean)
+  : [];
+    firstNonEmpty(
+  lm.brandAuthority?.summary,
+  lm.brandAuthority?.reasoning,
+  clickableChannels.length
+    ? (isAr
+        ? `حضور العلامة موجود على ${clickableChannels.length} قنوات: ${clickableChannels.join('، ')}.`
+        : isEn
+          ? `Brand presence is visible across ${clickableChannels.length} channels: ${clickableChannels.join(', ')}.`
+          : `La marque est présente sur ${clickableChannels.length} canaux : ${clickableChannels.join(', ')}.`)
+    : lm.brandAuthority?.socialLinksCount !== undefined
+      ? (isAr
+          ? `تم رصد حضور للعلامة على ${lm.brandAuthority.socialLinksCount} قنوات، لكن الروابط غير متاحة.`
+          : isEn
+            ? `The brand is present on ${lm.brandAuthority.socialLinksCount} channels, but the URLs are unavailable.`
+            : `La marque est présente sur ${lm.brandAuthority.socialLinksCount} canaux, mais les URLs sont indisponibles.`)
+      : ''
+),
       firstNonEmpty(
         lm.contentStrategy?.summary,
         lm.technicalMoat?.summary,
