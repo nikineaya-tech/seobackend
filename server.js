@@ -2953,7 +2953,7 @@ function isBlockedCompetitorUrl(rawUrl = '', title = '', snippet = '') {
         return true;
     }
 
-    if (/\\/blog\\/|\\/news\\/|\\/article\\/|\\/articles\\/|\\/guide\\/|\\/wiki\\//i.test(path)) {
+   if (/\/(blog|news|article|articles|guide|wiki)\//i.test(path)) {
         return true;
     }
 
