@@ -5119,40 +5119,42 @@ const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
       })
       .filter(Boolean)
   : [];
-    firstNonEmpty(
-  lm.brandAuthority?.summary,
-  lm.brandAuthority?.reasoning,
-  clickableChannels.length
-    ? (isAr
-        ? `حضور العلامة موجود على ${clickableChannels.length} قنوات: ${clickableChannels.join('، ')}.`
-        : isEn
-          ? `Brand presence is visible across ${clickableChannels.length} channels: ${clickableChannels.join(', ')}.`
-          : `La marque est présente sur ${clickableChannels.length} canaux : ${clickableChannels.join(', ')}.`)
-    : lm.brandAuthority?.socialLinksCount !== undefined
+  const proofItems = [
+  firstNonEmpty(
+    lm.brandAuthority?.summary,
+    lm.brandAuthority?.reasoning,
+    clickableChannels.length
       ? (isAr
-          ? `تم رصد حضور للعلامة على ${lm.brandAuthority.socialLinksCount} قنوات، لكن الروابط غير متاحة.`
+          ? `حضور العلامة موجود على ${clickableChannels.length} قنوات: ${clickableChannels.join('، ')}.`
           : isEn
-            ? `The brand is present on ${lm.brandAuthority.socialLinksCount} channels, but the URLs are unavailable.`
-            : `La marque est présente sur ${lm.brandAuthority.socialLinksCount} canaux, mais les URLs sont indisponibles.`)
-      : ''
-),
-      firstNonEmpty(
-        lm.contentStrategy?.summary,
-        lm.technicalMoat?.summary,
-        safeArray(rev.commonSuccessFactors)[1],
-        rev.trafficStrategyGuess
-      ),
-      firstNonEmpty(
-        lm.unfairAdvantage,
-        lm.competitiveEdge,
-        safeArray(rev.commonSuccessFactors)[2],
-        isAr
-          ? 'لديه أفضلية تتراكم مع الوقت.'
-          : isEn
-            ? 'It has an advantage that compounds over time.'
-            : 'Il possède un avantage qui se renforce avec le temps.'
-      )
-    ].filter(Boolean).slice(0, 3);
+            ? `Brand presence is visible across ${clickableChannels.length} channels: ${clickableChannels.join(', ')}.`
+            : `La marque est présente sur ${clickableChannels.length} canaux : ${clickableChannels.join(', ')}.`)
+      : lm.brandAuthority?.socialLinksCount !== undefined
+        ? (isAr
+            ? `تم رصد حضور للعلامة على ${lm.brandAuthority.socialLinksCount} قنوات، لكن الروابط غير متاحة.`
+            : isEn
+              ? `The brand is present on ${lm.brandAuthority.socialLinksCount} channels, but the URLs are unavailable.`
+              : `La marque est présente sur ${lm.brandAuthority.socialLinksCount} canaux, mais les URLs sont indisponibles.`)
+        : ''
+  ),
+  firstNonEmpty(
+    lm.contentStrategy?.summary,
+    lm.technicalMoat?.summary,
+    safeArray(rev.commonSuccessFactors)[1],
+    rev.trafficStrategyGuess
+  ),
+  firstNonEmpty(
+    lm.unfairAdvantage,
+    lm.competitiveEdge,
+    safeArray(rev.commonSuccessFactors)[2],
+    isAr
+      ? 'لديه أفضلية تتراكم مع الوقت.'
+      : isEn
+        ? 'It has an advantage that compounds over time.'
+        : 'Il possède un avantage qui se renforce avec le temps.'
+  )
+].filter(Boolean).slice(0, 3);
+    
 
     const weakness = firstNonEmpty(
       prod.weakestProductFeature,
