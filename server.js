@@ -4772,38 +4772,38 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
     const isProd    = process.env.NODE_ENV === 'production';
 
     try {
-        let {
-            query,
-            geo          = 'Morocco',
-            lang         = 'fr',
-            url,
-            forceRefresh = false
-        } = req.body;
+    let {
+        query,
+        geo,
+        lang = 'fr',
+        url,
+        forceRefresh = false
+    } = req.body || {};
 
-        // ── PATCH 1 : Validation query ────────────────────────
-        if (!query || !query.trim()) {
-            return res.status(400).json({
-                success: false,
-                error:   'Query is required',
-                message: 'Veuillez fournir un mot-clé ou une URL.'
-            });
-        }
-        if (query.trim().length > 300) {
-            return res.status(400).json({
-                success: false,
-                error:   'Query too long',
-                message: 'Maximum 300 caractères autorisés.'
-            });
-        }
+    // ── PATCH 1 : Validation query ────────────────────────
+    if (!query || !query.trim()) {
+        return res.status(400).json({
+            success: false,
+            error: 'Query is required',
+            message: 'Veuillez fournir un mot-clé ou une URL.'
+        });
+    }
 
-        // ── PATCH 2 : Whitelist geo + lang ────────────────────
-        const ALLOWED_LANGS = ['fr', 'ar', 'en'];
-        const ALLOWED_GEOS  = [
-            'Morocco', 'France', 'Algeria',
-            'Tunisia', 'Libya', 'Belgium', 'Switzerland'
-        ];
-        if (!ALLOWED_LANGS.includes(lang)) lang = 'fr';
-        if (!ALLOWED_GEOS.includes(geo))   geo  = 'Morocco';
+    if (query.trim().length > 300) {
+        return res.status(400).json({
+            success: false,
+            error: 'Query too long',
+            message: 'Maximum 300 caractères autorisés.'
+        });
+    }
+
+    // ── PATCH 2 : Validation lang + résolution geo réelle ─
+    const ALLOWED_LANGS = ['fr', 'ar', 'en'];
+    if (!ALLOWED_LANGS.includes(lang)) lang = 'fr';
+
+    const rawGeo = String(geo || '').trim();
+    const geoData = resolveSerpGeo(rawGeo || 'Morocco');
+    const safeGeo = geoData.location || 'Morocco';
 
         // ── PATCH 3 : Validation URL anti-SSRF ───────────────
         const isValidUrl = (u) => {
@@ -4822,9 +4822,8 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
         const safeForceRefresh = Boolean(forceRefresh) && !!req.user?.isAdmin;
 
         console.log(
-            `\n⚔️ [/api/competitors] DÉMARRAGE WAR ROOM | ` +
-            `query="${query.trim()}" | geo=${geo} | lang=${lang}`
-        );
+    `[api/competitors] DÉMARRAGE WAR ROOM | query="${query.trim()}" | rawGeo="${rawGeo}" | resolvedGeo="${safeGeo}" | gl="${geoData.gl}" | lang="${lang}"`
+);
 
         // 1. Scraping du site utilisateur (si fourni) pour benchmark
         let userSiteData = null;
@@ -4854,17 +4853,10 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
             )
         );
 
-        const result = await Promise.race([
-            analyzeCompetitors(
-                query.trim(),
-                geo,
-                lang,
-                userSiteData,
-                safeForceRefresh
-            ),
-            timeoutPromise
-        ]);
-
+       const result = await Promise.race([
+    analyzeCompetitors(query.trim(), safeGeo, lang, userSiteData, safeForceRefresh),
+    timeoutPromise
+]);
         // 3. Métriques & Logs
         const elapsed = Date.now() - startTime;
         if (result.success) {
