@@ -1042,14 +1042,12 @@ class InputValidator {
      * 🌍 SANITIZE GEO (Location validation)
      */
     static sanitizeGeo(geo) {
-        if (!geo) return 'Morocco';
-        
-        let cleaned = geo.trim()
-            .replace(/[^a-zA-ZÀ-ÿ\u0600-\u06FF\s\-,]/g, '') // Allow accents + Arabic
-            .substring(0, 100);
-        
-        return cleaned || 'Morocco';
-    }
+  if (!geo) return '';
+  const cleaned = String(geo).trim()
+    .replace(/[^a-zA-ZÀ-ÿ\u0600-\u06FF\s\-,]/g, '')
+    .substring(0, 100);
+  return cleaned;
+}
     
     /**
      * 🔤 VALIDATE LANGUAGE (ISO 639-1)
@@ -1358,7 +1356,9 @@ async function fetchSerpKeywordIntel(query, lang = 'fr', geo = 'ma') {
 // ═══════════════════════════════════════════════════════════════════
 
 function resolveSerpGeo(input) {
-    if (!input) return { location: 'Morocco', gl: 'ma', google_domain: 'google.co.ma' };
+  if (!input || !String(input).trim()) {
+    throw new Error('Invalid or missing geo input');
+  };
     
     const cleanInput = input.trim().toLowerCase();
     
@@ -2899,7 +2899,7 @@ async function exchangeGSCCode(code) {
 }
 async function analyzeCompetitors(
     query,
-    geo          = 'Morocco',
+    geo ,
     lang         = 'fr',
     userSiteData = null,
     forceRefresh = false,
