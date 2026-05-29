@@ -12637,47 +12637,52 @@ async function scrapeSiteData(url, lang = 'fr') {
             }
         });
 
-        const h1Main      = enriched.copyIntel?.headlines?.h1?.[0] || '';
-        const phonesCount = enriched.contacts?.phones?.length || 0;
-        const sectionsFound = Object.values(enriched.sections || {}).filter(Boolean).length;
+       const h1Main = enriched.copyIntel?.headlines?.h1?.[0] || '';
+const phonesCount = enriched.contacts?.phones?.length || 0;
+const sectionsFound = Object.values(enriched.sections || {}).filter(Boolean).length;
 
-        // ★ getCanonicalPrice — null if priceIntel.isBlocked
-        const detectedPrice = getCanonicalPrice(priceIntel);
+const safePriceIntel =
+    enriched?.priceIntel ||
+    base?.priceIntel ||
+    EMPTY_SCRAPE_RESULT().priceIntel;
 
-        const scrapedData = {
-            ...enriched,
+const detectedPrice = getCanonicalPrice(safePriceIntel);
 
-            meta: {
-                ...enriched.meta,
-                language: enriched.meta?.lang || enriched.meta?.language || 'N/A'
-            },
+const scrapedData = {
+    ...enriched,
+    priceIntel: safePriceIntel,
 
-            structure: {
-                h1:      { count: enriched.seoIntel?.headingCounts?.h1 || 0, text: h1Main },
-                h2Count: enriched.seoIntel?.headingCounts?.h2 || 0,
-                h3Count: enriched.seoIntel?.headingCounts?.h3 || 0,
-                headings: {
-                    h1: enriched.copyIntel?.headlines?.h1 || [],
-                    h2: enriched.copyIntel?.headlines?.h2 || [],
-                    h3: enriched.copyIntel?.headlines?.h3 || []
-                }
-            },
+    meta: {
+        ...enriched.meta,
+        language: enriched.meta?.lang || enriched.meta?.language || 'N/A'
+    },
 
-            content: {
-                wordCount:  enriched.contentIntel?.wordCount || enriched.seoIntel?.wordCount || 0,
-                hasWhatsApp: enriched.techStack?.hasWhatsApp || false
-            },
+    structure: {
+        h1: { count: enriched.seoIntel?.headingCounts?.h1 || 0, text: h1Main },
+        h2Count: enriched.seoIntel?.headingCounts?.h2 || 0,
+        h3Count: enriched.seoIntel?.headingCounts?.h3 || 0,
+        headings: {
+            h1: enriched.copyIntel?.headlines?.h1 || [],
+            h2: enriched.copyIntel?.headlines?.h2 || [],
+            h3: enriched.copyIntel?.headlines?.h3 || []
+        }
+    },
 
-            schema: {
-                exists: (enriched.schemaData?.count || 0) > 0,
-                types:  enriched.schemaData?.types || []
-            },
+    content: {
+        wordCount: enriched.contentIntel?.wordCount || enriched.seoIntel?.wordCount || 0,
+        hasWhatsApp: enriched.techStack?.hasWhatsApp || false
+    },
 
-            sectionsFound,
-            h1:     h1Main || null,
-            price:  detectedPrice,   // ★ null if not confirmed
-            phones: phonesCount
-        };
+    schema: {
+        exists: (enriched.schemaData?.count || 0) > 0,
+        types: enriched.schemaData?.types || []
+    },
+
+    sectionsFound,
+    h1: h1Main || null,
+    price: detectedPrice,
+    phones: phonesCount
+};
 
         cache.set(cacheKey, scrapedData);
 
