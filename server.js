@@ -3313,85 +3313,118 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
 });
 
     // ── 6. SCRAPING MOAT LEADER (SCRAPE.DO) ───────────────────
-    let leaderMoat = { status: ND };
-    try {
-        const leaderUrl = enrichedCompetitors[0]?.url;
-        if (leaderUrl) {
-            console.log(`[WarRoom-V10.0] Scraping Leader via SCRAPE.DO : ${leaderUrl}`);
-            const token = process.env.SCRAPE_DO_TOKEN;
-            let htmlString = '';
+  let leaderMoat = { status: ND };
 
-            if (token) {
-                const proxyUrl = `http://api.scrape.do?token=${token}&url=${encodeURIComponent(leaderUrl)}`;
-                const proxyRes = await axios.get(proxyUrl, { timeout: 20000 });
-                htmlString = typeof proxyRes.data === 'string' ? proxyRes.data.toLowerCase() : '';
-            } else {
-                const res = await axios.get(leaderUrl, {
-                    timeout: 10000,
-                    headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0' }
-                });
-                htmlString = typeof res.data === 'string' ? res.data.toLowerCase() : '';
-            }
+try {
+    const leaderUrl = enrichedCompetitors[0]?.url;
 
-            if (htmlString) {
-                const $ = cheerio.load(htmlString);
-                const socialChannelMap = [
-  { key: 'Facebook',  patterns: ['facebook.com', 'fb.com'] },
-  { key: 'Instagram', patterns: ['instagram.com'] },
-  { key: 'LinkedIn',  patterns: ['linkedin.com'] },
-  { key: 'X',         patterns: ['x.com', 'twitter.com'] },
-  { key: 'YouTube',   patterns: ['youtube.com', 'youtu.be'] },
-  { key: 'TikTok',    patterns: ['tiktok.com'] },
-  { key: 'Pinterest', patterns: ['pinterest.com'] },
-  { key: 'Snapchat',  patterns: ['snapchat.com'] },
-  { key: 'WhatsApp',  patterns: ['wa.me', 'whatsapp.com'] },
-  { key: 'Telegram',  patterns: ['t.me', 'telegram.me', 'telegram.org'] }
-];
+    if (leaderUrl) {
+        console.log(`[WarRoom-V10.0] Scraping Leader via SCRAPE.DO: ${leaderUrl}`);
 
-const outboundLinks = Array.isArray(externalOutboundLinkObjects)
-  ? externalOutboundLinkObjects
-  : [];
+        const token = process.env.SCRAPEDOTOKEN;
+        let htmlString = '';
 
-const channelEvidence = socialChannelMap
-  .map(ch => {
-    const matched = outboundLinks.find(link =>
-      typeof link?.normalized === 'string' &&
-      ch.patterns.some(p => link.normalized.toLowerCase().includes(p))
-    );
-
-    return matched
-      ? {
-          channel: ch.key,
-          url: matched.normalized,
-          text: matched.text || ch.key
+        if (token) {
+            const proxyUrl = `http://api.scrape.do/?token=${token}&url=${encodeURIComponent(leaderUrl)}`;
+            const proxyRes = await axios.get(proxyUrl, { timeout: 20000 });
+            htmlString = typeof proxyRes.data === 'string' ? proxyRes.data.toLowerCase() : '';
+        } else {
+            const res = await axios.get(leaderUrl, {
+                timeout: 10000,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0'
+                }
+            });
+            htmlString = typeof res.data === 'string' ? res.data.toLowerCase() : '';
         }
-      : null;
-  })
-  .filter(Boolean);
-                leaderMoat = {
-                    brandAuthority: {
-  hasWikipediaLinks: htmlString.includes('wikipedia.org'),
-  socialChannels: channelEvidence.map(x => x.channel),
-  socialLinksCount: channelEvidence.length,
-  channelEvidence,
-  hasTrustpilotOrReviews: /trustpilot|reviews|rating|avis/i.test(htmlString)
-},
-                    technicalMoat: {
-                        schemaTagsCount: $('script[type="application/ld+json"]').length,
-                        hasFaqSection:   /faq|questions/i.test(htmlString)
-                    },
-                    contentStrategy: {
-                        hasBlog:       /blog|actualites|news/i.test(htmlString),
-                        semanticCloud: $('h1, h2, h3').map((_, el) => $(el).text().trim()).get().join(' ').substring(0, 300)
+
+        if (htmlString) {
+            const $ = cheerio.load(htmlString);
+
+            const socialChannelMap = [
+                { key: 'Facebook', patterns: ['facebook.com', 'fb.com'] },
+                { key: 'Instagram', patterns: ['instagram.com'] },
+                { key: 'LinkedIn', patterns: ['linkedin.com'] },
+                { key: 'X', patterns: ['x.com', 'twitter.com'] },
+                { key: 'YouTube', patterns: ['youtube.com', 'youtu.be'] },
+                { key: 'TikTok', patterns: ['tiktok.com'] },
+                { key: 'Pinterest', patterns: ['pinterest.com'] },
+                { key: 'Snapchat', patterns: ['snapchat.com'] },
+                { key: 'WhatsApp', patterns: ['wa.me', 'whatsapp.com'] },
+                { key: 'Telegram', patterns: ['t.me', 'telegram.me', 'telegram.org'] }
+            ];
+
+            const leaderHost = new URL(leaderUrl).hostname.replace(/^www\\./, '').toLowerCase();
+
+            const outboundLinks = $('a[href]')
+                .map((i, el) => {
+                    const href = ($(el).attr('href') || '').trim();
+                    const text = ($(el).text() || '').trim();
+
+                    if (!href || /^(#|javascript:|mailto:|tel:|sms:|data:)/i.test(href)) {
+                        return null;
                     }
-                };
-                console.log(`[WarRoom-V10.0] Leader Moat extrait avec succès.`);
-            }
+
+                    try {
+                        const normalized = new URL(href, leaderUrl).href;
+                        const host = new URL(normalized).hostname.replace(/^www\\./, '').toLowerCase();
+
+                        if (host === leaderHost) return null;
+
+                        return { normalized, text };
+                    } catch {
+                        return null;
+                    }
+                })
+                .get()
+                .filter(Boolean)
+                .slice(0, 30);
+
+            const channelEvidence = socialChannelMap
+                .map(ch => {
+                    const matched = outboundLinks.find(link =>
+                        typeof link?.normalized === 'string' &&
+                        ch.patterns.some(p => link.normalized.toLowerCase().includes(p))
+                    );
+
+                    return matched
+                        ? { channel: ch.key, url: matched.normalized, text: matched.text || ch.key }
+                        : null;
+                })
+                .filter(Boolean);
+
+            leaderMoat = {
+                brandAuthority: {
+                    hasWikipediaLinks: htmlString.includes('wikipedia.org'),
+                    socialChannels: channelEvidence.map(x => x.channel),
+                    socialLinksCount: channelEvidence.length,
+                    channelEvidence,
+                    hasTrustpilotOrReviews: /trustpilot|reviews|rating|avis/i.test(htmlString)
+                },
+                technicalMoat: {
+                    schemaTagsCount: $('script[type=\"application/ld+json\"]').length,
+                    hasFaqSection: /faq|questions/i.test(htmlString)
+                },
+                contentStrategy: {
+                    hasBlog: /blog|actualites|news/i.test(htmlString)
+                },
+                semanticCloud: $('h1, h2, h3')
+                    .map((i, el) => $(el).text().trim())
+                    .get()
+                    .join(' | ')
+                    .substring(0, 300)
+            };
         }
-    } catch (e) {
-        console.warn(`[WarRoom-V10.0] Leader Moat Error: ${e.message}`);
-        leaderMoat = { status: 'error', snippet: enrichedCompetitors[0]?.snippet?.substring(0, 200) || ND };
     }
+
+    console.log('[WarRoom-V10.0] Leader Moat extrait avec succès.');
+} catch (e) {
+    console.warn('[WarRoom-V10.0] Leader Moat Error:', e.message);
+    leaderMoat = {
+        status: 'error',
+        snippet: enrichedCompetitors[0]?.snippet?.substring(0, 200) || ND
+    };
+}
 
     // ── 7. ENRICHISSEMENT KE → volume réel ───────────────────
     const mainKwData = kwData?.[cleanQuery] || null;
