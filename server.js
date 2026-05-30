@@ -3011,15 +3011,15 @@ async function analyzeCompetitors(
 
     console.log(`[WarRoom-V10.0] Query="${query}" | Geo=${geo} | Lang=${langObj.name} (${langObj.code})`);
 
-    const GPT_BOT = {
-        name:        'Competitor Research Assistant',
-        url:         'https://chatgpt.com/g/g-673ba23144bc819199fa36907952822b-competitor-research-assistant',
-        description: isAr
-            ? 'استخدم مساعد GPT للتحليل اليدوي.'
-            : isEn
-                ? 'Use our GPT Assistant for manual analysis.'
-                : "Utilisez notre Assistant GPT pour continuer l'analyse manuelle."
-    };
+  const GPT_BOT = {
+    name: 'Competitor Research Assistant',
+    url: 'https://chatgpt.com/g/g-673ba23144bc819199fa36907952822b-competitor-research-assistant',
+    description: isAr
+        ? 'استخدم مساعد GPT للتحليل اليدوي.'
+        : isEn
+            ? 'Use our GPT Assistant for manual analysis.'
+            : "Utilisez notre Assistant GPT pour continuer l'analyse manuelle."
+};
 
     // ── 2. VALIDATION ─────────────────────────────────────────
     const cleanQuery = InputValidator.sanitizeQuery(query || '');
