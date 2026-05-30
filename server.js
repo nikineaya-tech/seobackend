@@ -4199,7 +4199,7 @@ JSON uniquement :
         shopping: shoppingData
     },
     ...mergedData,
-    externalBot: GPTBOT
+    externalBot: GPT_BOT
 };
 
     cache.set(cacheKey, finalResult);
