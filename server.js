@@ -3149,100 +3149,249 @@ async function analyzeCompetitors(
         };
     }
 
-    // ── 4d — Extras SERP ─────────────────────────────────────
-    const peopleAlsoAsk   = serpExtrasStore.peopleAlsoAsk;
-    const relatedSearches = serpExtrasStore.relatedSearches;
-    const knowledgeGraph  = serpExtrasStore.knowledgeGraph;
+  // ── 4d — Extras SERP ─────────────────────────────────────
+let peopleAlsoAsk = Array.isArray(serpExtrasStore.peopleAlsoAsk)
+    ? serpExtrasStore.peopleAlsoAsk
+    : [];
 
-    // ── 4e — ACQUISITION PARALLÈLE KE + GSC ──────────────────
-    // FIX BUG #1 : Promise.allSettled était totalement absent → keResult is not defined
-    console.log(`[WarRoom-V10.0] Acquisition parallèle GOOGLE INTEL + GSC...`);
+let relatedSearches = Array.isArray(serpExtrasStore.relatedSearches)
+    ? serpExtrasStore.relatedSearches
+    : [];
 
-    const [keResult, gscResult] = await Promise.allSettled([
+let knowledgeGraph = serpExtrasStore.knowledgeGraph || null;
 
-        // ── Keywords Everywhere ──────────────────────────────
-        (async () => {
-            if (!process.env.KE_API_KEY) return null;
-            try {
-                const keywords = [
-                    cleanQuery,
-                    ...relatedSearches.slice(0, 4).map(r => r.query || r).filter(Boolean)
-                ];
-                const res = await axios.post(
-                    'https://api.keywordseverywhere.com/v1/get_keyword_data',
-                    { country: geoData.gl, currency: 'USD', dataSource: 'gkp', keywords },
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${process.env.KE_API_KEY}`,
-                            'Content-Type':  'application/json'
-                        },
-                        timeout: CONFIG.TIMEOUT_MEDIUM
-                    }
-                );
-                if (!res.data?.data?.length) return null;
-                const kwMap = {};
-                res.data.data.forEach(item => {
-                    kwMap[item.keyword] = {
-                        vol:         item.vol             || 0,
-                        cpc:         item.cpc?.value      || 0,
-                        competition: item.competition     || 0,
-                        trend:       item.trend           || []
-                    };
-                });
-                console.log(`✅ [WarRoom-V10.0] KE OK — ${Object.keys(kwMap).length} keywords enrichis`);
-                return kwMap;
-            } catch (e) {
-                console.warn('[WarRoom-V10.0] KE error:', e.message);
-                return null;
-            }
-        })(),
 
-        // ── Google Search Console ────────────────────────────
-        (async () => {
-            if (!gscAccessToken) return null;
-            try {
-                const siteUrl = userSiteData?.url;
-                if (!siteUrl) return null;
-                const endDate   = new Date().toISOString().split('T')[0];
-                const startDate = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().split('T')[0];
-                const res = await axios.post(
-                    `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
-                    {
-                        startDate,
-                        endDate,
-                        dimensions: ['query'],
-                        rowLimit:   20
+// ── 4e — ACQUISITION PARALLÈLE SCRAPE.DO + GSC ───────────
+// ── 4e — ACQUISITION PARALLÈLE SCRAPE.DO + GSC ───────────
+console.log(`[WarRoom-V10.0] Acquisition parallèle SCRAPE.DO INTEL + GSC + MAPS + TRENDS + SHOPPING...`);
+
+const isProductIntent = /(prix|tarif|acheter|achat|product|produit|shop|boutique|ecommerce|e-commerce|commande)/i.test(cleanQuery);
+
+const [
+    scrapeDoSerpResult,
+    kwResult,
+    mapsResult,
+    trendsResult,
+    shoppingResult,
+    gscResult
+] = await Promise.allSettled([
+
+    // ── Scrape.do Google Search SERP enrichi ─────────────
+    (async () => {
+        if (!process.env.SCRAPEDOTOKEN) return null;
+        try {
+            const res = await axios.get(
+                'https://api.scrape.do/plugin/google/search',
+                {
+                    params: {
+                        token: process.env.SCRAPEDOTOKEN,
+                        q: cleanQuery,
+                        hl: googleLang,
+                        gl: geoData.gl
                     },
-                    {
-                        headers: { 'Authorization': `Bearer ${gscAccessToken}` },
-                        timeout: CONFIG.TIMEOUT_MEDIUM
+                    timeout: CONFIG.TIMEOUT_MEDIUM
+                }
+            );
+
+            const data = res.data || {};
+
+            const organic = Array.isArray(data.organicResults)
+                ? data.organicResults
+                : Array.isArray(data.organicresults)
+                    ? data.organicresults
+                    : [];
+
+            const paa = Array.isArray(data.relatedQuestions)
+                ? data.relatedQuestions
+                : Array.isArray(data.relatedquestions)
+                    ? data.relatedquestions
+                    : [];
+
+            const related = Array.isArray(data.relatedSearches)
+                ? data.relatedSearches
+                : Array.isArray(data.relatedsearches)
+                    ? data.relatedsearches
+                    : [];
+
+            const domains = organic
+                .map(r => {
+                    try {
+                        return new URL(r.link).hostname.replace(/^www\./, '');
+                    } catch {
+                        return null;
                     }
-                );
-                if (!res.data?.rows?.length) return null;
-                const rows = res.data.rows.map(r => ({
-                    query:       r.keys[0],
-                    clicks:      r.clicks,
-                    impressions: r.impressions,
-                    ctr:         parseFloat((r.ctr * 100).toFixed(2)),
-                    position:    parseFloat(r.position.toFixed(1))
-                }));
-                console.log(`✅ [WarRoom-V10.0] GSC OK — ${rows.length} queries récupérées`);
-                return rows;
-            } catch (e) {
-                console.warn('[WarRoom-V10.0] GSC error:', e.message);
-                return null;
-            }
-        })()
-    ]);
+                })
+                .filter(Boolean);
 
-    const kwData  = (keResult.status  === 'fulfilled' && keResult.value)  ? keResult.value  : null;
-    const gscData = (gscResult.status === 'fulfilled' && gscResult.value) ? gscResult.value : null;
+            return {
+                organic,
+                paa,
+                related,
+                knowledgeGraph: data.knowledgeGraph || data.knowledgegraph || null,
+                domains: [...new Set(domains)].slice(0, 10),
+                raw: data
+            };
+        } catch (e) {
+            console.warn('[WarRoom-V10.0] Scrape.do Search error:', e.message);
+            return null;
+        }
+    })(),
 
-   if (!kwData) console.warn(`[WarRoom-V10.0] Google/Scrape.do intel indisponible — fallback estimations IA`);
-    if (!gscData) console.log('ℹ️ [WarRoom-V10.0] GSC non connecté — analyse sans données réelles');
+    // ── Scrape.do keyword intel estimé depuis SERP ───────
+    (async () => {
+        try {
+            const seedKeywords = [
+                cleanQuery,
+                ...relatedSearches.slice(0, 4).map(r => r?.query || r).filter(Boolean)
+            ];
+            const data = await fetchKeywordData(seedKeywords);
+            return data || null;
+        } catch (e) {
+            console.warn('[WarRoom-V10.0] Scrape.do Keyword Intel error:', e.message);
+            return null;
+        }
+    })(),
 
-    console.log(`🔑 [WarRoom-V10.0] KE=${!!kwData} | GSC=${!!gscData} | PAA=${peopleAlsoAsk.length} | Related=${relatedSearches.length}`);
+    // ── Scrape.do Maps ────────────────────────────────────
+    (async () => {
+        if (!process.env.SCRAPEDOTOKEN) return null;
+        try {
+            const res = await axios.get(
+                'https://api.scrape.do/plugin/google/maps/search',
+                {
+                    params: {
+                        token: process.env.SCRAPEDOTOKEN,
+                        q: cleanQuery,
+                        hl: googleLang,
+                        gl: geoData.gl
+                    },
+                    timeout: CONFIG.TIMEOUT_MEDIUM
+                }
+            );
 
+            return res.data || null;
+        } catch (e) {
+            console.warn('[WarRoom-V10.0] Scrape.do Maps error:', e.message);
+            return null;
+        }
+    })(),
+
+    // ── Scrape.do Trends ──────────────────────────────────
+    (async () => {
+        if (!process.env.SCRAPEDOTOKEN) return null;
+        try {
+            const res = await axios.get(
+                'https://api.scrape.do/plugin/google/trends',
+                {
+                    params: {
+                        token: process.env.SCRAPEDOTOKEN,
+                        q: cleanQuery,
+                        geo: String(geoData.gl || '').toUpperCase()
+                    },
+                    timeout: CONFIG.TIMEOUT_MEDIUM
+                }
+            );
+
+            return res.data || null;
+        } catch (e) {
+            console.warn('[WarRoom-V10.0] Scrape.do Trends error:', e.message);
+            return null;
+        }
+    })(),
+
+    // ── Scrape.do Shopping ────────────────────────────────
+    (async () => {
+        if (!process.env.SCRAPEDOTOKEN || !isProductIntent) return null;
+        try {
+            const res = await axios.get(
+                'https://api.scrape.do/plugin/google/shopping',
+                {
+                    params: {
+                        token: process.env.SCRAPEDOTOKEN,
+                        q: cleanQuery,
+                        hl: googleLang,
+                        gl: geoData.gl
+                    },
+                    timeout: CONFIG.TIMEOUT_MEDIUM
+                }
+            );
+
+            return res.data || null;
+        } catch (e) {
+            console.warn('[WarRoom-V10.0] Scrape.do Shopping error:', e.message);
+            return null;
+        }
+    })(),
+
+    // ── Google Search Console ─────────────────────────────
+    (async () => {
+        if (!gscAccessToken) return null;
+        try {
+            const siteUrl = userSiteData?.url;
+            if (!siteUrl) return null;
+
+            const endDate = new Date().toISOString().split('T')[0];
+            const startDate = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().split('T')[0];
+
+            const res = await axios.post(
+                `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
+                {
+                    startDate,
+                    endDate,
+                    dimensions: ['query'],
+                    rowLimit: 20
+                },
+                {
+                    headers: { 'Authorization': `Bearer ${gscAccessToken}` },
+                    timeout: CONFIG.TIMEOUT_MEDIUM
+                }
+            );
+
+            if (!res.data?.rows?.length) return null;
+
+            return res.data.rows.map(r => ({
+                query: r.keys?.[0],
+                clicks: r.clicks,
+                impressions: r.impressions,
+                ctr: parseFloat((r.ctr * 100).toFixed(2)),
+                position: parseFloat(r.position.toFixed(1))
+            }));
+        } catch (e) {
+            console.warn('[WarRoom-V10.0] GSC error:', e.message);
+            return null;
+        }
+    })()
+]);
+
+const scrapeDoSerpData =
+    (scrapeDoSerpResult.status === 'fulfilled' && scrapeDoSerpResult.value)
+        ? scrapeDoSerpResult.value
+        : null;
+
+const kwData =
+    (kwResult.status === 'fulfilled' && kwResult.value)
+        ? kwResult.value
+        : null;
+
+const mapsData =
+    (mapsResult.status === 'fulfilled' && mapsResult.value)
+        ? mapsResult.value
+        : null;
+
+const trendsData =
+    (trendsResult.status === 'fulfilled' && trendsResult.value)
+        ? trendsResult.value
+        : null;
+
+const shoppingData =
+    (shoppingResult.status === 'fulfilled' && shoppingResult.value)
+        ? shoppingResult.value
+        : null;
+
+const gscData =
+    (gscResult.status === 'fulfilled' && gscResult.value)
+        ? gscResult.value
+        : null;
     // ── 5. ENRICHISSEMENT CONCURRENTS ─────────────────────────
     const filteredCompetitors = rawResults
     .map((r, i) => {
@@ -3520,92 +3669,460 @@ try {
         uxTeardown:       { competitor: 'Friction au paiement',                user: ND, killShot: 'Checkout natif Apple/Google Pay sans champs inutiles' }
     };
 
-    // ── 10. mergedData INITIAL ────────────────────────────────
-    let mergedData = {
-        winningMove:    fallbackWinningMove,
-        actionRoadmap:  fallbackRoadmap,
-        marketDynamics: {
-            porterVerdict:  isAr ? 'سوق تنافسي'          : isEn ? 'Competitive market'             : 'Marché concurrentiel',
-            threatLevel:    'Medium',
-            barrierToEntry: isAr ? 'سلطة النطاق والقِدَم' : isEn ? 'Domain authority and seniority' : 'Autorité de domaine et ancienneté'
-        },
-        marketInsights: {
-            difficulty:          typeof calculateDifficulty === 'function' ? calculateDifficulty(enrichedCompetitors) : 'unknown',
-            serpIntent:          typeof analyzeSERPIntent   === 'function' ? analyzeSERPIntent(enrichedCompetitors)   : (isAr ? 'مختلط' : isEn ? 'mixed' : 'mixte'),
-            volume:              realVolume,
-            trend:               realTrend,
-            vocabulary:          [cleanQuery],
-            sophisticationLevel: '3',
-            awarenessLevel:      'Solution Aware',
-            peopleAlsoAsk:       peopleAlsoAsk.slice(0, 4),
-            relatedSearches:     relatedSearches.slice(0, 4)
-        },
-        keywordStrategy: {
-            primary:     [cleanQuery],
-            longTail: kwData
-                ? Object.keys(kwData).filter(k => k !== cleanQuery).slice(0, 4)
-                : [
-                    (isAr ? 'مراجعة ' : isEn ? 'Review '  : 'Avis ')     + cleanQuery,
-                    (isAr ? 'أفضل '   : isEn ? 'Best '    : 'Meilleur ') + cleanQuery + ' ' + geoData.location
-                  ],
-            missingGaps: [(isAr ? 'بديل ' : isEn ? 'Alternative to ' : 'Alternative ') + leaderDomain]
-        },
-        swot:               fallbackSwot,
-        blueOceanStrategy: {
-            eliminate:       [isAr ? 'الرسوم الخفية والعمليات الغامضة' : isEn ? 'Hidden fees and opaque processes'    : 'Frais cachés et processus opaques'],
-            reduce:          [isAr ? 'النماذج الطويلة المعقدة'          : isEn ? 'Long and complex forms'             : 'Formulaires trop longs'],
-            raise:           [isAr ? 'الطمأنينة والدليل الاجتماعي'      : isEn ? 'Reassurance and social proof'       : 'Réassurance et preuve sociale'],
-            create:          [isAr ? 'مرافقة شخصية بعد الشراء'         : isEn ? 'Personalized post-purchase support' : 'Accompagnement post-achat personnalisé'],
-            currentRedOcean: [isAr ? 'حرب الأسعار'                     : isEn ? 'Price war'                         : 'Prix bas, même promesse que tous'],
-            blueOceanMoves:  [isAr ? 'ضمان استثنائي + حزمة حصرية'      : isEn ? 'Extreme guarantee + exclusive bundle' : 'Garantie extrême + Bundle exclusif'],
-            positioningMap:  [isAr ? 'فاخر وبأسعار معقولة'             : isEn ? 'Premium accessible'                : 'Premium accessible']
-        },
-        comparisonScores: {
-            user:       hasUserSite ? [40, 50, 40, 30, 50, 20] : [50, 45, 55, 40, 60, 45],
-            competitor: [85, 90, 75, 80, 85, 90],
-            labels: isAr
-                ? ['السلطة', 'العرض/الخدمة', 'التقنية', 'التحويل', 'الكتابة', 'الثقة']
+   
+
+let mergedData = {
+    winningMove: fallbackWinningMove,
+    actionRoadmap: fallbackRoadmap,
+
+    marketDynamics: {
+        porterVerdict: isAr
+            ? 'سوق تنافسي'
+            : isEn
+                ? 'Competitive market'
+                : 'Marché concurrentiel',
+        threatLevel: 'Medium',
+        barrierToEntry: isAr
+            ? 'سلطة النطاق والقِدَم'
+            : isEn
+                ? 'Domain authority and seniority'
+                : 'Autorité de domaine et ancienneté'
+    },
+
+   marketInsights: {
+    difficulty: typeof calculateDifficulty === 'function'
+        ? calculateDifficulty(enrichedCompetitors)
+        : 'unknown',
+
+    serpIntent: typeof analyzeSERPIntent === 'function'
+        ? analyzeSERPIntent(enrichedCompetitors, cleanQuery, langObj.code)
+        : (isAr ? 'مختلط' : isEn ? 'mixed' : 'mixte'),
+
+    volume: realVolume,
+    trend: realTrend,
+    vocabulary: [cleanQuery],
+    sophisticationLevel: '3',
+    awarenessLevel: 'Solution Aware',
+
+    peopleAlsoAsk: peopleAlsoAsk.slice(0, 4),
+    relatedSearches: relatedSearches.slice(0, 4),
+
+    realDataSources: {
+        scrapeDoSearch: !!scrapeDoSerpData,
+        scrapeDoMaps: !!mapsData,
+        scrapeDoTrends: !!trendsData,
+        scrapeDoShopping: !!shoppingData,
+        gsc: !!gscData
+    },
+
+    mapsIntel: {
+        placesCount: mapsPlaces.length,
+        avgRating: avgMapRating,
+        totalReviews: totalMapReviews,
+        topPlaces: mapsPlaces.slice(0, 5)
+    },
+
+    trendsIntel: {
+        latestMomentum: trendsMomentum,
+        interestOverTime: trendsSeries.slice(-12),
+        topRegions: trendsRegions.slice(0, 5),
+        relatedQueries: trendsQueries.slice(0, 8)
+    },
+
+    shoppingIntel: {
+        active: !!shoppingData,
+        productsCount: shoppingProducts.length,
+        minPrice: shoppingPriceMin,
+        maxPrice: shoppingPriceMax,
+        topProducts: shoppingProducts.slice(0, 8)
+    },
+
+    topDomainsObserved: scrapeDoSerpData?.domains?.slice(0, 6) || []
+},
+    keywordStrategy: {
+        primary: [cleanQuery],
+        longTail: kwData && longTailKeywords.length
+            ? longTailKeywords
+            : [
+                (isAr ? 'مراجعة ' : isEn ? 'Review ' : 'Avis ') + cleanQuery,
+                (isAr ? 'أفضل ' : isEn ? 'Best ' : 'Meilleur ') + cleanQuery + ' ' + geoData.location
+            ],
+        missingGaps: [
+            (isAr ? 'بديل ' : isEn ? 'Alternative to ' : 'Alternative ') + leaderDomain
+        ]
+    },
+
+    swot: fallbackSwot,
+
+    blueOceanStrategy: {
+        eliminate: [
+            isAr
+                ? 'الرسوم الخفية والعمليات الغامضة'
                 : isEn
+                    ? 'Hidden fees and opaque processes'
+                    : 'Frais cachés et processus opaques'
+        ],
+        reduce: [
+            isAr
+                ? 'النماذج الطويلة المعقدة'
+                : isEn
+                    ? 'Long and complex forms'
+                    : 'Formulaires trop longs'
+        ],
+        raise: [
+            isAr
+                ? 'الطمأنينة والدليل الاجتماعي'
+                : isEn
+                    ? 'Reassurance and social proof'
+                    : 'Réassurance et preuve sociale'
+        ],
+        create: [
+            isAr
+                ? 'مرافقة شخصية بعد الشراء'
+                : isEn
+                    ? 'Personalized post-purchase support'
+                    : 'Accompagnement post-achat personnalisé'
+        ],
+        currentRedOcean: [
+            isAr
+                ? 'حرب الأسعار'
+                : isEn
+                    ? 'Price war'
+                    : 'Prix bas, même promesse que tous'
+        ],
+        blueOceanMoves: [
+            isAr
+                ? 'ضمان استثنائي + حزمة حصرية'
+                : isEn
+                    ? 'Extreme guarantee + exclusive bundle'
+                    : 'Garantie extrême + Bundle exclusif'
+        ],
+        positioningMap: [
+            isAr
+                ? 'فاخر وبأسعار معقولة'
+                : isEn
+                    ? 'Premium accessible'
+                    : 'Premium accessible'
+        ]
+    },
+
+    comparisonScores: {
+        user: hasUserSite ? [40, 50, 40, 30, 50, 20] : [50, 45, 55, 40, 60, 45],
+        competitor: [85, 90, 75, 80, 85, 90],
+        labels: isAr
+            ? ['السلطة', 'العرض/الخدمة', 'التقنية', 'التحويل', 'الكتابة', 'الثقة']
+            : isEn
                 ? ['Authority', 'Offer/Service', 'Technical', 'Conversion', 'Copywriting', 'Trust']
                 : ['Autorité', 'Offre/Service', 'Technique', 'Conversion', 'Copywriting', 'Confiance']
-        },
-        productServiceAudit: {
-            coreOffering:           isAr ? 'عرض قياسي في السوق'                   : isEn ? 'Standard market offer'                         : 'Offre standard du marché',
-            pricingStrategy:        isAr ? 'سعر متوسط بدون تمييز'                 : isEn ? 'Median price, no differentiation'              : 'Prix médian sans différenciation',
-            uniqueValueProposition: ND,
-            weakestProductFeature:  isAr ? 'غياب الشفافية في الضمان'              : isEn ? 'Lack of guarantee transparency'                : 'Manque de transparence sur la garantie',
-            killShotFeature:        isAr ? 'جدول مقارنة عام مع ضمان مدى الحياة'  : isEn ? 'Public comparison table with lifetime guarantee' : 'Tableau comparatif public avec garantie à vie'
-        },
-        top3ReverseEngineering: {
-            commonSuccessFactors: [ND],
-            glaringWeaknesses:    [ND],
-            trafficStrategyGuess: ND
-        },
-        grandSlamOfferBlueprint: {
-            dreamOutcome:        ND,
-            perceivedLikelihood: ND,
-            timeDelay:           ND,
-            effortAndSacrifice:  ND,
-            theIrresistibleOffer: ND
-        },
-        duelComparison:      fallbackDuel,
-        semanticDifferences: [],
-        masteringTechniques: {
-            trafficSources:   ND,
-            retentionLoop:    ND,
-            monetizationHack: ND
-        },
-        gscInsights: gscData ? {
-            available:  true,
+    },
+
+    productServiceAudit: {
+        coreOffering: isAr
+            ? 'عرض قياسي في السوق'
+            : isEn
+                ? 'Standard market offer'
+                : 'Offre standard du marché',
+
+        pricingStrategy: shoppingPriceMin !== null && shoppingPriceMax !== null
+            ? (
+                isAr
+                    ? `نطاق سعري مرصود من ${shoppingPriceMin} إلى ${shoppingPriceMax}`
+                    : isEn
+                        ? `Observed price range from ${shoppingPriceMin} to ${shoppingPriceMax}`
+                        : `Fourchette de prix observée de ${shoppingPriceMin} à ${shoppingPriceMax}`
+            )
+            : (
+                isAr
+                    ? 'سعر متوسط بدون تمييز'
+                    : isEn
+                        ? 'Median price, no differentiation'
+                        : 'Prix médian sans différenciation'
+            ),
+
+        uniqueValueProposition: ND,
+
+        weakestProductFeature: isAr
+            ? 'غياب الشفافية في الضمان'
+            : isEn
+                ? 'Lack of guarantee transparency'
+                : 'Manque de transparence sur la garantie',
+
+        killShotFeature: isAr
+            ? 'جدول مقارنة عام مع ضمان مدى الحياة'
+            : isEn
+                ? 'Public comparison table with lifetime guarantee'
+                : 'Tableau comparatif public avec garantie à vie'
+    },
+
+    top3ReverseEngineering: {
+        commonSuccessFactors: [ND],
+        glaringWeaknesses: [ND],
+        trafficStrategyGuess: ND
+    },
+
+    grandSlamOfferBlueprint: {
+        dreamOutcome: ND,
+        perceivedLikelihood: ND,
+        timeDelay: ND,
+        effortAndSacrifice: ND,
+        theIrresistibleOffer: ND
+    },
+
+    duelComparison: fallbackDuel,
+    semanticDifferences: [],
+
+    masteringTechniques: {
+        trafficSources: ND,
+        retentionLoop: ND,
+        monetizationHack: ND
+    },
+
+    gscInsights: gscData
+        ? {
+            available: true,
             topQueries: gscData.slice(0, 10),
             summary: {
-                totalClicks:      gscData.reduce((a, r) => a + r.clicks, 0),
+                totalClicks: gscData.reduce((a, r) => a + r.clicks, 0),
                 totalImpressions: gscData.reduce((a, r) => a + r.impressions, 0),
-                avgPosition:      parseFloat((gscData.reduce((a, r) => a + parseFloat(r.position), 0) / gscData.length).toFixed(1))
+                avgPosition: parseFloat(
+                    (
+                        gscData.reduce((a, r) => a + parseFloat(r.position), 0) /
+                        gscData.length
+                    ).toFixed(1)
+                )
             }
-        } : { available: false }
-    };
+        }
+        : { available: false }
+};
+// ── 10. mergedData INITIAL ────────────────────────────────
+const normalizedKwKeys = Object.keys(kwData || {});
+const normalizedCleanQuery = String(cleanQuery || '').trim().toLowerCase();
 
+const longTailKeywords = normalizedKwKeys.filter(
+    k => String(k).trim().toLowerCase() !== normalizedCleanQuery
+).slice(0, 4);
+
+const topObservedDomains = Array.isArray(scrapeDoSerpData?.domains)
+    ? scrapeDoSerpData.domains.slice(0, 6)
+    : [];
+
+const trendsSeries = Array.isArray(trendsData?.interestOverTime)
+    ? trendsData.interestOverTime
+    : Array.isArray(trendsData?.interest_over_time?.timeline_data)
+        ? trendsData.interest_over_time.timeline_data.map(x => ({
+            date: x.date,
+            value: x?.values?.[0]?.extracted_value ?? x?.values?.[0]?.value ?? null
+        }))
+        : [];
+
+const trendsRegions = Array.isArray(trendsData?.interestByRegion)
+    ? trendsData.interestByRegion
+    : Array.isArray(trendsData?.interest_by_region)
+        ? trendsData.interest_by_region
+        : [];
+
+const trendsQueries = Array.isArray(trendsData?.relatedQueries)
+    ? trendsData.relatedQueries
+    : Array.isArray(trendsData?.related_queries)
+        ? trendsData.related_queries
+        : [];
+
+const mapsPlaces = Array.isArray(mapsData?.places)
+    ? mapsData.places
+    : Array.isArray(mapsData?.localResults)
+        ? mapsData.localResults
+        : Array.isArray(mapsData?.local_results)
+            ? mapsData.local_results
+            : Array.isArray(mapsData?.place_results)
+                ? mapsData.place_results
+                : mapsData?.place_results
+                    ? [mapsData.place_results]
+                    : [];
+
+const shoppingProducts = Array.isArray(shoppingData?.products)
+    ? shoppingData.products
+    : Array.isArray(shoppingData?.shopping_results)
+        ? shoppingData.shopping_results
+        : [];
+
+const avgMapRating = mapsPlaces.length
+    ? Number(
+        (
+            mapsPlaces.reduce((a, p) => a + (Number(p.rating) || 0), 0) /
+            mapsPlaces.length
+        ).toFixed(1)
+    )
+    : null;
+
+const totalMapReviews = mapsPlaces.reduce(
+    (a, p) => a + (Number(p.reviews) || Number(p.reviewsCount) || Number(p.reviews_count) || 0),
+    0
+);
+
+const shoppingPrices = shoppingProducts
+    .map(p =>
+        Number(
+            p.price ??
+            p.extracted_price ??
+            p.price_value
+        )
+    )
+    .filter(n => Number.isFinite(n) && n > 0);
+
+const shoppingPriceMin = shoppingPrices.length ? Math.min(...shoppingPrices) : null;
+const shoppingPriceMax = shoppingPrices.length ? Math.max(...shoppingPrices) : null;
+
+const trendsMomentum = trendsSeries.length
+    ? Number(
+        trendsSeries[trendsSeries.length - 1]?.value ??
+        trendsSeries[trendsSeries.length - 1]?.extracted_value ??
+        0
+    )
+    : null;
+
+let mergedData = {
+    winningMove: fallbackWinningMove,
+    actionRoadmap: fallbackRoadmap,
+    marketDynamics: {
+        porterVerdict: isAr ? 'سوق تنافسي' : isEn ? 'Competitive market' : 'Marché concurrentiel',
+        threatLevel: 'Medium',
+        barrierToEntry: isAr ? 'سلطة النطاق والقِدَم' : isEn ? 'Domain authority and seniority' : 'Autorité de domaine et ancienneté'
+    },
+    marketInsights: {
+        difficulty: typeof calculateDifficulty === 'function'
+            ? calculateDifficulty(enrichedCompetitors)
+            : 'unknown',
+
+        serpIntent: typeof analyzeSERPIntent === 'function'
+            ? analyzeSERPIntent(enrichedCompetitors, cleanQuery, langObj.code)
+            : (isAr ? 'مختلط' : isEn ? 'mixed' : 'mixte'),
+
+        volume: realVolume,
+        trend: realTrend,
+        vocabulary: [cleanQuery],
+        sophisticationLevel: '3',
+        awarenessLevel: 'Solution Aware',
+
+        peopleAlsoAsk: peopleAlsoAsk.slice(0, 4),
+        relatedSearches: relatedSearches.slice(0, 4),
+
+        realDataSources: {
+            scrapeDoSearch: !!scrapeDoSerpData,
+            scrapeDoMaps: !!mapsData,
+            scrapeDoTrends: !!trendsData,
+            scrapeDoShopping: !!shoppingData,
+            gsc: !!gscData
+        },
+
+        mapsIntel: {
+            placesCount: mapsPlaces.length,
+            avgRating: avgMapRating,
+            totalReviews: totalMapReviews,
+            topPlaces: mapsPlaces.slice(0, 5)
+        },
+
+        trendsIntel: {
+            latestMomentum: trendsMomentum,
+            interestOverTime: trendsSeries.slice(-12),
+            topRegions: trendsRegions.slice(0, 5),
+            relatedQueries: trendsQueries.slice(0, 8)
+        },
+
+        shoppingIntel: {
+            active: !!shoppingData,
+            productsCount: shoppingProducts.length,
+            minPrice: shoppingPriceMin,
+            maxPrice: shoppingPriceMax,
+            topProducts: shoppingProducts.slice(0, 8)
+        },
+
+        topDomainsObserved: topObservedDomains
+    },
+
+    keywordStrategy: {
+        primary: [cleanQuery],
+        longTail: kwData && longTailKeywords.length
+            ? longTailKeywords
+            : [
+                (isAr ? 'مراجعة ' : isEn ? 'Review ' : 'Avis ') + cleanQuery,
+                (isAr ? 'أفضل ' : isEn ? 'Best ' : 'Meilleur ') + cleanQuery + ' ' + geoData.location
+            ],
+        missingGaps: [(isAr ? 'بديل ' : isEn ? 'Alternative to ' : 'Alternative ') + leaderDomain]
+    },
+
+    swot: fallbackSwot,
+
+    blueOceanStrategy: {
+        eliminate: [isAr ? 'الرسوم الخفية والعمليات الغامضة' : isEn ? 'Hidden fees and opaque processes' : 'Frais cachés et processus opaques'],
+        reduce: [isAr ? 'النماذج الطويلة المعقدة' : isEn ? 'Long and complex forms' : 'Formulaires trop longs'],
+        raise: [isAr ? 'الطمأنينة والدليل الاجتماعي' : isEn ? 'Reassurance and social proof' : 'Réassurance et preuve sociale'],
+        create: [isAr ? 'مرافقة شخصية بعد الشراء' : isEn ? 'Personalized post-purchase support' : 'Accompagnement post-achat personnalisé'],
+        currentRedOcean: [isAr ? 'حرب الأسعار' : isEn ? 'Price war' : 'Prix bas, même promesse que tous'],
+        blueOceanMoves: [isAr ? 'ضمان استثنائي + حزمة حصرية' : isEn ? 'Extreme guarantee + exclusive bundle' : 'Garantie extrême + Bundle exclusif'],
+        positioningMap: [isAr ? 'فاخر وبأسعار معقولة' : isEn ? 'Premium accessible' : 'Premium accessible']
+    },
+
+    comparisonScores: {
+        user: hasUserSite ? [40, 50, 40, 30, 50, 20] : [50, 45, 55, 40, 60, 45],
+        competitor: [85, 90, 75, 80, 85, 90],
+        labels: isAr
+            ? ['السلطة', 'العرض/الخدمة', 'التقنية', 'التحويل', 'الكتابة', 'الثقة']
+            : isEn
+                ? ['Authority', 'Offer/Service', 'Technical', 'Conversion', 'Copywriting', 'Trust']
+                : ['Autorité', 'Offre/Service', 'Technique', 'Conversion', 'Copywriting', 'Confiance']
+    },
+
+    productServiceAudit: {
+        coreOffering: isAr ? 'عرض قياسي في السوق' : isEn ? 'Standard market offer' : 'Offre standard du marché',
+        pricingStrategy: shoppingPriceMin !== null && shoppingPriceMax !== null
+            ? (
+                isAr
+                    ? `نطاق سعري مرصود من ${shoppingPriceMin} إلى ${shoppingPriceMax}`
+                    : isEn
+                        ? `Observed price range from ${shoppingPriceMin} to ${shoppingPriceMax}`
+                        : `Fourchette de prix observée de ${shoppingPriceMin} à ${shoppingPriceMax}`
+            )
+            : (isAr ? 'سعر متوسط بدون تمييز' : isEn ? 'Median price, no differentiation' : 'Prix médian sans différenciation'),
+        uniqueValueProposition: ND,
+        weakestProductFeature: isAr ? 'غياب الشفافية في الضمان' : isEn ? 'Lack of guarantee transparency' : 'Manque de transparence sur la garantie',
+        killShotFeature: isAr ? 'جدول مقارنة عام مع ضمان مدى الحياة' : isEn ? 'Public comparison table with lifetime guarantee' : 'Tableau comparatif public avec garantie à vie'
+    },
+
+    top3ReverseEngineering: {
+        commonSuccessFactors: [ND],
+        glaringWeaknesses: [ND],
+        trafficStrategyGuess: ND
+    },
+
+    grandSlamOfferBlueprint: {
+        dreamOutcome: ND,
+        perceivedLikelihood: ND,
+        timeDelay: ND,
+        effortAndSacrifice: ND,
+        theIrresistibleOffer: ND
+    },
+
+    duelComparison: fallbackDuel,
+    semanticDifferences: [],
+
+    masteringTechniques: {
+        trafficSources: ND,
+        retentionLoop: ND,
+        monetizationHack: ND
+    },
+
+    gscInsights: gscData
+        ? {
+            available: true,
+            topQueries: gscData.slice(0, 10),
+            summary: {
+                totalClicks: gscData.reduce((a, r) => a + r.clicks, 0),
+                totalImpressions: gscData.reduce((a, r) => a + r.impressions, 0),
+                avgPosition: parseFloat((gscData.reduce((a, r) => a + parseFloat(r.position), 0) / gscData.length).toFixed(1))
+            }
+        }
+        : { available: false }
+};
     // ── 11. SYSTEM BASE ───────────────────────────────────────
     const forceLanguageLine = isAr
         ? 'CRITICAL RULE: You MUST translate ALL JSON string values to Arabic (العربية). Absolutely NO French or English.'
@@ -3887,19 +4404,25 @@ JSON uniquement :
     const elapsed = Date.now() - startTime;
     console.log(`✅ [WarRoom-V10.0] Terminé en ${elapsed}ms`);
 
-    const finalResult = {
-        success:    true,
-        source,
-        elapsed,
-        query:      cleanQuery,
-        geo:        geoData.location,
-        lang:       langObj.code,
-        competitors: enrichedCompetitors,
-        leaderMoat,
-        knowledgeGraph,
-        ...mergedData,
-        externalBot: GPT_BOT
-    };
+   const finalResult = {
+    success: true,
+    source,
+    elapsed,
+    query: cleanQuery,
+    geo: geoData.location,
+    lang: langObj.code,
+    competitors: enrichedCompetitors,
+    leaderMoat,
+    knowledgeGraph,
+    googleRealData: {
+        serp: scrapeDoSerpData,
+        maps: mapsData,
+        trends: trendsData,
+        shopping: shoppingData
+    },
+    ...mergedData,
+    externalBot: GPTBOT
+};
 
     cache.set(cacheKey, finalResult);
     return finalResult;
@@ -5080,47 +5603,126 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
 // ═══════════════════════════════════════════════════════════════════
 // 🔍 SCRAPE.DO GOOGLE SEARCH API (Extraction SERP Structurée)
 // ═══════════════════════════════════════════════════════════════════
-async function fetchScrapeDoSerp(keyword, lang = 'fr', geo = 'ma') {
-    const token = process.env.SCRAPE_DO_TOKEN;
-    if (!token) {
-        console.warn('⚠️ SCRAPE_DO_TOKEN manquant.');
-        return null;
-    }
+async function fetchScrapeDoSerp(query, hl = 'fr', gl = 'ma') {
+    const token = process.env.SCRAPEDOTOKEN;
+    if (!token || !query) return null;
 
     try {
         const res = await axios.get('https://api.scrape.do/plugin/google/search', {
-            params: {
-                token: token,
-                q: keyword,
-                hl: lang,
-                gl: geo
-            },
-            timeout: 15000 // Timeout de 15s
+            params: { token, q: query, hl, gl },
+            timeout: 15000
         });
 
-        const data = res.data;
-        if (!data || !data.organic_results) return null;
+        const data = res.data || {};
+        const organic = Array.isArray(data.organicResults || data.organicresults) ? (data.organicResults || data.organicresults) : [];
+        const paa = Array.isArray(data.relatedQuestions || data.relatedquestions) ? (data.relatedQuestions || data.relatedquestions) : [];
+        const related = Array.isArray(data.relatedSearches || data.relatedsearches) ? (data.relatedSearches || data.relatedsearches) : [];
 
-        // Extraction propre depuis le JSON structuré de Scrape.do
-        const domains = data.organic_results.slice(0, 5).map(r => {
-            try { return new URL(r.link).hostname.replace('www.', ''); } catch(e) { return null; }
-        }).filter(Boolean);
-
-        const paa = data.related_questions ? data.related_questions.map(q => q.question) : [];
-        const related = data.related_searches ? data.related_searches.map(r => r.query) : [];
-
-        console.log(`✅ [Scrape.do] SERP extraite pour "${keyword}": ${domains.length} domaines, ${paa.length} PAA`);
+        const domains = organic
+            .map(r => {
+                try { return new URL(r.link).hostname.replace(/^www\./, ''); }
+                catch { return null; }
+            })
+            .filter(Boolean);
 
         return {
-            domains: [...new Set(domains)],
-            paa: paa,
-            related: related,
-            serpDifficulty: "Évaluée par l'IA", // Sera affiné par le LLM
-            serpIntent: "Informationnelle/Commerciale" // Sera affiné par le LLM
+            organic,
+            paa,
+            related,
+            domains: [...new Set(domains)].slice(0, 10),
+            knowledgeGraph: data.knowledgeGraph || data.knowledgegraph || null,
+            raw: data
         };
-
     } catch (e) {
-        console.warn(`⚠️ [Scrape.do] Erreur API: ${e.message}`);
+        console.warn('[SCRAPE.DO] Search error:', e.message);
+        return null;
+    }
+}
+
+async function fetchScrapeDoMaps(query, hl = 'fr', gl = 'ma') {
+    const token = process.env.SCRAPEDOTOKEN;
+    if (!token || !query) return null;
+
+    try {
+        const res = await axios.get('https://api.scrape.do/plugin/google/maps/search', {
+            params: { token, q: query, hl, gl },
+            timeout: 15000
+        });
+
+        const data = res.data || {};
+        const places = Array.isArray(data.places) ? data.places : Array.isArray(data.localResults) ? data.localResults : [];
+
+        return {
+            places: places.slice(0, 10).map((p, i) => ({
+                position: i + 1,
+                title: p.title || p.name || 'ND',
+                rating: p.rating ?? null,
+                reviews: p.reviews ?? p.reviewsCount ?? null,
+                phone: p.phone || null,
+                website: p.website || p.link || null,
+                category: p.category || p.type || null,
+                address: p.address || null
+            })),
+            raw: data
+        };
+    } catch (e) {
+        console.warn('[SCRAPE.DO] Maps error:', e.message);
+        return null;
+    }
+}
+
+async function fetchScrapeDoTrends(query, hl = 'fr', gl = 'ma') {
+    const token = process.env.SCRAPEDOTOKEN;
+    if (!token || !query) return null;
+
+    try {
+        const res = await axios.get('https://api.scrape.do/plugin/google/trends/search', {
+            params: { token, q: query, hl, gl },
+            timeout: 15000
+        });
+
+        const data = res.data || {};
+        return {
+            interestOverTime: data.interestOverTime || data.interest_over_time || [],
+            interestByRegion: data.interestByRegion || data.interest_by_region || [],
+            relatedQueries: data.relatedQueries || data.related_queries || [],
+            relatedTopics: data.relatedTopics || data.related_topics || [],
+            raw: data
+        };
+    } catch (e) {
+        console.warn('[SCRAPE.DO] Trends error:', e.message);
+        return null;
+    }
+}
+
+async function fetchScrapeDoShopping(query, hl = 'fr', gl = 'ma') {
+    const token = process.env.SCRAPEDOTOKEN;
+    if (!token || !query) return null;
+
+    try {
+        const res = await axios.get('https://api.scrape.do/plugin/google/shopping/search', {
+            params: { token, q: query, hl, gl },
+            timeout: 15000
+        });
+
+        const data = res.data || {};
+        const products = Array.isArray(data.products) ? data.products : [];
+
+        return {
+            products: products.slice(0, 20).map((p, i) => ({
+                position: i + 1,
+                title: p.title || 'ND',
+                price: p.price ?? null,
+                oldPrice: p.oldPrice ?? p.old_price ?? null,
+                currency: p.currency || null,
+                seller: p.seller || p.source || null,
+                rating: p.rating ?? null,
+                reviews: p.reviews ?? null
+            })),
+            raw: data
+        };
+    } catch (e) {
+        console.warn('[SCRAPE.DO] Shopping error:', e.message);
         return null;
     }
 }
