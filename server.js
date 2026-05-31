@@ -1813,8 +1813,21 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
   const runs = await Promise.all(
     sources.map(async (s) => {
       const fallbackInput = {};
-      if (u) fallbackInput.startUrls = [{ url: u }];
-      if (q) fallbackInput.searchTerms = [q];
+      if (u) {
+        fallbackInput.url = u;
+        fallbackInput.urls = [u];
+        fallbackInput.startUrls = [{ url: u }];
+      }
+      if (q) {
+        fallbackInput.q = q;
+        fallbackInput.query = q;
+        fallbackInput.search = q;
+        fallbackInput.keyword = q;
+        fallbackInput.keywords = [q];
+        fallbackInput.searchTerms = [q];
+      }
+      fallbackInput.maxItems = limit;
+      fallbackInput.limit = limit;
 
       const input = (inputsBySource && inputsBySource[s.key]) ? inputsBySource[s.key] : fallbackInput;
       const out = await runApifyActor(s.actor, input, limit);
