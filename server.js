@@ -145,6 +145,7 @@ const CONFIG = {
     APIFY_ENABLED: ['1', 'true', 'yes', 'on'].includes(String(process.env.APIFY_ENABLED || 'false').toLowerCase()),
 APIFY_API_TOKEN: process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || '',
 APIFY_TIMEOUT_MS: Number(process.env.APIFY_TIMEOUT_MS || 45000),
+APIFY_SOFT_TIMEOUT_MS: Number(process.env.APIFY_SOFT_TIMEOUT_MS || 9000),
 APIFY_MAX_ITEMS_PER_SOURCE: Number(process.env.APIFY_MAX_ITEMS_PER_SOURCE || 20),
 APIFY_MAX_SOURCES_PER_RUN: Number(process.env.APIFY_MAX_SOURCES_PER_RUN || 3),
 INTEL_ECO_MODE: ['1', 'true', 'yes', 'on'].includes(String(process.env.INTEL_ECO_MODE || 'true').toLowerCase()),
@@ -1823,9 +1824,11 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
 
   const links = { ads: new Set(), posts: new Set(), comments: new Set(), reviews: new Set(), all: new Set() };
   const studiesBottom = [];
+  let totalItemsCollected = 0;
 
   for (const run of runs) {
     if (!run.success) continue;
+    totalItemsCollected += Array.isArray(run.items) ? run.items.length : 0;
 
     for (const item of run.items) {
       const itemLinks = Array.from(apifyCollectLinksDeep(item));
@@ -1840,6 +1843,32 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
         link: itemLinks[0] || null
       });
     }
+  }
+
+  if (totalItemsCollected === 0) {
+    return {
+      success: true,
+      triggered: true,
+      reason: 'NO_ITEMS',
+      preflight: gate,
+      runs: runs.map(r => ({
+        source: r.source,
+        actorId: r.actorId,
+        success: r.success,
+        count: (r.items || []).length,
+        error: r.error || null
+      })),
+      links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
+      guideTop: {
+        title: 'Guide concret',
+        steps: [
+          'Identifier les ads et posts les plus répétés',
+          'Comparer promesse marketing vs objections commentaires',
+          'Transformer en 3 quick wins funnel + copy'
+        ]
+      },
+      studiesBottom: []
+    };
   }
 
   return {
@@ -4422,12 +4451,26 @@ let apifyData = {
 };
 
 try {
-    apifyData = await callApify({
+    const apifyPromise = callApify({
         query: cleanQuery,
         url: userSiteData?.url || '',
         preflight: apifyPreflight,
         inputsBySource: {}
     });
+
+    const softTimeoutMs = Math.max(1500, Number(CONFIG.APIFY_SOFT_TIMEOUT_MS || 9000));
+    const apifyTimeoutPromise = new Promise(resolve =>
+        setTimeout(() => resolve({
+            success: true,
+            triggered: false,
+            reason: 'APIFY_SOFT_TIMEOUT',
+            timeoutMs: softTimeoutMs,
+            links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
+            runs: []
+        }), softTimeoutMs)
+    );
+
+    apifyData = await Promise.race([apifyPromise, apifyTimeoutPromise]);
 } catch (e) {
     console.warn('[WarRoom-V10.0] Apify layer error:', e.message);
     apifyData = {
@@ -4439,7 +4482,7 @@ try {
 }
 
 console.log(
-    `[WarRoom-V10.0] DATA-LAYER | triggered=${Boolean(apifyData?.triggered)} | reason=${apifyData?.reason || 'N/A'} | links=${apifyData?.links?.all?.length || 0}`
+    `[WarRoom-V10.0] DATA-LAYER | triggered=${Boolean(apifyData?.triggered)} | reason=${apifyData?.reason || 'N/A'} | links=${apifyData?.links?.all?.length || 0} | runs=${Array.isArray(apifyData?.runs) ? apifyData.runs.map(r => `${r.source}:${r.count || 0}${r.error ? ':err' : ''}`).join(',') : 'n/a'}`
 );
 
 const finalResult = {
