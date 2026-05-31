@@ -4408,6 +4408,10 @@ try {
     };
 }
 
+console.log(
+    `[WarRoom-V10.0] DATA-LAYER | triggered=${Boolean(apifyData?.triggered)} | reason=${apifyData?.reason || 'N/A'} | links=${apifyData?.links?.all?.length || 0}`
+);
+
 const finalResult = {
     success: true,
     source,
@@ -5756,6 +5760,7 @@ app.post('/api/decision-layer', async (req, res) => {
       winningMove = '',
       actionRoadmap = []
     } = req.body || {};
+    const apifyPayload = req.body?.apify || req.body?.fieldIntel || null;
 
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
@@ -6060,7 +6065,8 @@ const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
       success: true,
       lang,
       durationMs: Date.now() - startTime,
-      decisionLayer
+      decisionLayer,
+      apify: apifyPayload
     });
   } catch (error) {
     console.error('Decision layer error:', error);
