@@ -146,6 +146,11 @@ const CONFIG = {
 APIFY_API_TOKEN: process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || '',
 APIFY_TIMEOUT_MS: Number(process.env.APIFY_TIMEOUT_MS || 45000),
 APIFY_MAX_ITEMS_PER_SOURCE: Number(process.env.APIFY_MAX_ITEMS_PER_SOURCE || 20),
+APIFY_MAX_SOURCES_PER_RUN: Number(process.env.APIFY_MAX_SOURCES_PER_RUN || 3),
+INTEL_ECO_MODE: ['1', 'true', 'yes', 'on'].includes(String(process.env.INTEL_ECO_MODE || 'true').toLowerCase()),
+SCRAPEDO_ENABLE_MAPS: ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPEDO_ENABLE_MAPS || 'false').toLowerCase()),
+SCRAPEDO_ENABLE_TRENDS: ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPEDO_ENABLE_TRENDS || 'false').toLowerCase()),
+SCRAPEDO_ENABLE_SHOPPING: ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPEDO_ENABLE_SHOPPING || 'true').toLowerCase()),
 
 APIFY_META_ADS_ACTOR: process.env.APIFY_META_ADS_ACTOR || '',
 APIFY_GOOGLE_ADS_ACTOR: process.env.APIFY_GOOGLE_ADS_ACTOR || '',
@@ -1769,7 +1774,7 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
   const q = String(query || '').trim();
   const u = apifyNormalizeHttpUrl(url);
 
-  const sources = [
+  const allSources = [
     { key: 'meta_ads',          actor: CONFIG.APIFY_META_ADS_ACTOR,          bucket: 'ads'      },
     { key: 'google_ads',        actor: CONFIG.APIFY_GOOGLE_ADS_ACTOR,        bucket: 'ads'      },
     { key: 'tiktok_ads',        actor: CONFIG.APIFY_TIKTOK_ADS_ACTOR,        bucket: 'ads'      },
@@ -1781,11 +1786,28 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
     { key: 'trustpilot_reviews',actor: CONFIG.APIFY_TRUSTPILOT_REVIEWS_ACTOR,bucket: 'reviews'  }
   ].filter(s => s.actor);
 
+  let sources = allSources;
+  if (CONFIG.INTEL_ECO_MODE) {
+    const isB2B = /(saas|crm|erp|b2b|software|logiciel|plateforme|agency|agence)/i.test(q);
+    const isCommerce = /(prix|tarif|acheter|achat|shop|store|ecommerce|e-commerce|promo)/i.test(q);
+    const preferredOrder = isB2B
+      ? ['linkedin_posts', 'google_reviews', 'meta_ads', 'trustpilot_reviews']
+      : isCommerce
+      ? ['meta_ads', 'google_ads', 'tiktok_ads', 'google_reviews']
+      : ['meta_ads', 'google_reviews', 'linkedin_posts', 'trustpilot_reviews'];
+
+    const sourceByKey = new Map(allSources.map(s => [s.key, s]));
+    sources = preferredOrder.map(k => sourceByKey.get(k)).filter(Boolean);
+    if (!sources.length) sources = allSources;
+  }
+
   if (!sources.length) {
     return { success: true, triggered: false, reason: 'NO_ACTOR_CONFIGURED', preflight: gate };
   }
 
   const limit = Number(CONFIG.APIFY_MAX_ITEMS_PER_SOURCE || 20);
+  const maxSources = Math.max(1, Number(CONFIG.APIFY_MAX_SOURCES_PER_RUN || 3));
+  sources = sources.slice(0, maxSources);
 
   const runs = await Promise.all(
     sources.map(async (s) => {
@@ -3357,6 +3379,14 @@ let knowledgeGraph = serpExtrasStore.knowledgeGraph || null;
 console.log(`[WarRoom-V10.0] Acquisition parallèle SCRAPE.DO INTEL + GSC + MAPS + TRENDS + SHOPPING...`);
 
 const isProductIntent = /(prix|tarif|acheter|achat|product|produit|shop|boutique|ecommerce|e-commerce|commande)/i.test(cleanQuery);
+const isLocalIntent = /(maroc|morocco|casablanca|rabat|tanger|fes|marrakech|agadir|sale|meknes|near me|local|proche|pres de moi|près de moi)/i.test(cleanQuery);
+const shouldRunMaps = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_MAPS || isLocalIntent;
+const shouldRunTrends = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_TRENDS;
+const shouldRunShopping = isProductIntent && (!CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_SHOPPING);
+
+console.log(
+    `[WarRoom-V10.0] COST-MODE eco=${CONFIG.INTEL_ECO_MODE} | maps=${shouldRunMaps} | trends=${shouldRunTrends} | shopping=${shouldRunShopping}`
+);
 
 const [
     scrapeDoSerpResult,
@@ -3445,7 +3475,7 @@ const [
 
     // ── Scrape.do Maps ────────────────────────────────────
     (async () => {
-        if (!process.env.SCRAPEDOTOKEN) return null;
+        if (!process.env.SCRAPEDOTOKEN || !shouldRunMaps) return null;
         try {
             const res = await axios.get(
                 'https://api.scrape.do/plugin/google/maps/search',
@@ -3469,7 +3499,7 @@ const [
 
     // ── Scrape.do Trends ──────────────────────────────────
     (async () => {
-        if (!process.env.SCRAPEDOTOKEN) return null;
+        if (!process.env.SCRAPEDOTOKEN || !shouldRunTrends) return null;
         try {
             const res = await axios.get(
                 'https://api.scrape.do/plugin/google/trends',
@@ -3492,7 +3522,7 @@ const [
 
     // ── Scrape.do Shopping ────────────────────────────────
     (async () => {
-        if (!process.env.SCRAPEDOTOKEN || !isProductIntent) return null;
+        if (!process.env.SCRAPEDOTOKEN || !shouldRunShopping) return null;
         try {
             const res = await axios.get(
                 'https://api.scrape.do/plugin/google/shopping',
@@ -5468,6 +5498,17 @@ const warRoomLimiter = rateLimit({
 // ════════════════════════════════════════════════════════════════════
 // ⚔️ ROUTE : COMPETITORS ENDPOINT (WAR ROOM V11)
 // ════════════════════════════════════════════════════════════════════
+const competitorsInFlight = new Map();
+function buildCompetitorsRequestKey({ query = '', geo = '', lang = 'fr', url = '', forceRefresh = false }) {
+    return [
+        String(query).trim().toLowerCase(),
+        String(geo).trim().toLowerCase(),
+        String(lang).trim().toLowerCase(),
+        String(url).trim().toLowerCase(),
+        forceRefresh ? 'force' : 'normal'
+    ].join('|');
+}
+
 app.post('/api/competitors', warRoomLimiter, async (req, res) => {
     const startTime = Date.now();
     const isProd    = process.env.NODE_ENV === 'production';
@@ -5554,8 +5595,29 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
             )
         );
 
+        const inFlightKey = buildCompetitorsRequestKey({
+            query: query.trim(),
+            geo: safeGeo,
+            lang,
+            url: url || '',
+            forceRefresh: safeForceRefresh
+        });
+
+        let analysisPromise = competitorsInFlight.get(inFlightKey);
+        if (analysisPromise) {
+            console.log(`🧠 [api/competitors] IN-FLIGHT REUSE: ${inFlightKey}`);
+        } else {
+            analysisPromise = analyzeCompetitors(query.trim(), safeGeo, lang, userSiteData, safeForceRefresh);
+            competitorsInFlight.set(inFlightKey, analysisPromise);
+            analysisPromise.finally(() => {
+                if (competitorsInFlight.get(inFlightKey) === analysisPromise) {
+                    competitorsInFlight.delete(inFlightKey);
+                }
+            });
+        }
+
        const result = await Promise.race([
-    analyzeCompetitors(query.trim(), safeGeo, lang, userSiteData, safeForceRefresh),
+    analysisPromise,
     timeoutPromise
 ]);
         // 3. Métriques & Logs
