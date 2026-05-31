@@ -4370,15 +4370,11 @@ JSON uniquement :
     if (r4.semanticDifferences)     mergedData.semanticDifferences     = r4.semanticDifferences;
 
     // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
-    const elapsed = Date.now() - startTime;
-    console.log(`✅ [WarRoom-V10.0] Terminé en ${elapsed}ms`);
-const apify = await callApify({
-  query: cleanQuery,
-  url: userSiteData?.url || '',
-  preflight,
-  inputsBySource: {} // optionnel
-});
-// ── APIFY PRE-FLIGHT (ne déclenche que si zéro bug IA) ─────────
+  // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
+const elapsed = Date.now() - startTime;
+console.log(`✅ [WarRoom-V10.0] Terminé en ${elapsed}ms`);
+
+// ── DATA PRE-FLIGHT (ne déclenche que si zéro bug IA) ─────
 const aiFailures = [a1, a2, a3, a4].filter(x => x.status !== 'fulfilled').length;
 
 const apifyPreflight = {
@@ -4399,7 +4395,7 @@ try {
         query: cleanQuery,
         url: userSiteData?.url || '',
         preflight: apifyPreflight,
-        inputsBySource: {} // optionnel: tu peux injecter req.body.apifyInput au niveau route
+        inputsBySource: {}
     });
 } catch (e) {
     console.warn('[WarRoom-V10.0] Apify layer error:', e.message);
@@ -4410,7 +4406,8 @@ try {
         error: e.message
     };
 }
-   const finalResult = {
+
+const finalResult = {
     success: true,
     source,
     elapsed,
@@ -4428,11 +4425,11 @@ try {
     },
     ...mergedData,
     externalBot: GPT_BOT,
-    apify
+    apify: apifyData
 };
 
-    cache.set(cacheKey, finalResult);
-    return finalResult;
+cache.set(cacheKey, finalResult);
+return finalResult;
 }
 
 
