@@ -3589,7 +3589,7 @@ const gscData =
         const url = r.link || r.url || '';
         const title = r.title || '';
         const snippet = r.snippet || r.description || '';
-        const domain = safeHostname(url) || String(r.displayedlink || '').toLowerCase();
+        const domain = safeHostname(url) || String(r.displayed_link || r.displayedLink || r.displayedlink || '').toLowerCase();
 
         const blocked = isBlockedCompetitorUrl(url, title, snippet);
         const officialLike = isOfficialLikeCompetitor(url, title, snippet);
@@ -3631,7 +3631,8 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
     }
 
     const posScore = 100 - i * 10;
-    const richScore = (r.sitelinks ? 20 : 0) + (r.richsnippet ? 20 : 0);
+    const hasRichSnippet = Boolean(r.rich_snippet || r.richSnippet || r.richsnippet);
+    const richScore = (r.sitelinks ? 20 : 0) + (hasRichSnippet ? 20 : 0);
     const geoScore = x.geoScore;
 
     return {
@@ -8552,7 +8553,7 @@ const finalResponse = {
 
         cache.set(cacheKey, finalResponse);
         console.log(`✅ [${requestId}] V12 GOD TIER DONE — ${finalResponse.meta.duration} | Score: ${finalResponse.globalScoring?.overall}/100`);
-        finalResponse.apify = await callApify({
+        /* finalResponse.apify = await callApify({
   query: cleanQuery || req.body?.query || '',
   url: validUrl || req.body?.url || '',
   preflight: {
@@ -8564,7 +8565,7 @@ const finalResponse = {
       : 0
   },
   inputsBySource: req.body?.apifyInput || {}
-});
+}); */
 
 // ── APIFY PRE-FLIGHT FUNNEL ────────────────────────────────────
 try {
