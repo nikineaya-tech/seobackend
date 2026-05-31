@@ -142,6 +142,22 @@ console.log('🔧 Trust proxy enabled for Render.com');
 // ═══════════════════════════════════════════════════════════════════
 
 const CONFIG = {
+    APIFY_ENABLED: ['1', 'true', 'yes', 'on'].includes(String(process.env.APIFY_ENABLED || 'false').toLowerCase()),
+APIFY_API_TOKEN: process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || '',
+APIFY_TIMEOUT_MS: Number(process.env.APIFY_TIMEOUT_MS || 45000),
+APIFY_MAX_ITEMS_PER_SOURCE: Number(process.env.APIFY_MAX_ITEMS_PER_SOURCE || 20),
+
+APIFY_META_ADS_ACTOR: process.env.APIFY_META_ADS_ACTOR || '',
+APIFY_GOOGLE_ADS_ACTOR: process.env.APIFY_GOOGLE_ADS_ACTOR || '',
+APIFY_TIKTOK_ADS_ACTOR: process.env.APIFY_TIKTOK_ADS_ACTOR || '',
+
+APIFY_FACEBOOK_COMMENTS_ACTOR: process.env.APIFY_FACEBOOK_COMMENTS_ACTOR || '',
+APIFY_INSTAGRAM_COMMENTS_ACTOR: process.env.APIFY_INSTAGRAM_COMMENTS_ACTOR || '',
+APIFY_TIKTOK_COMMENTS_ACTOR: process.env.APIFY_TIKTOK_COMMENTS_ACTOR || '',
+
+APIFY_LINKEDIN_POSTS_ACTOR: process.env.APIFY_LINKEDIN_POSTS_ACTOR || '',
+APIFY_GOOGLE_REVIEWS_ACTOR: process.env.APIFY_GOOGLE_REVIEWS_ACTOR || '',
+APIFY_TRUSTPILOT_REVIEWS_ACTOR: process.env.APIFY_TRUSTPILOT_REVIEWS_ACTOR || '',
     // API Keys
     SERPAPI_KEY: process.env.SERPAPI_KEY,
     SERPER_API_KEY: process.env.SERPER_API_KEY,
@@ -1659,7 +1675,182 @@ function handleError(error, context = 'API') {
     
     return errorResponse;
 }
+// ===================== APIFY LAYER (COMPACT) =====================
+function apifyNormalizeHttpUrl(v) {
+  const s = String(v || '').trim();
+  if (!/^https?:\/\//i.test(s)) return null;
+  try { return new URL(s).toString(); } catch { return null; }
+}
 
+function apifyCollectLinksDeep(value, out = new Set(), depth = 0) {
+  if (depth > 4 || value == null) return out;
+
+  if (typeof value === 'string') {
+    const direct = apifyNormalizeHttpUrl(value);
+    if (direct) out.add(direct);
+    const found = value.match(/https?:\/\/[^\s"'<>]+/gi) || [];
+    for (const f of found) {
+      const u = apifyNormalizeHttpUrl(f);
+      if (u) out.add(u);
+    }
+    return out;
+  }
+
+  if (Array.isArray(value)) {
+    for (const it of value) apifyCollectLinksDeep(it, out, depth + 1);
+    return out;
+  }
+
+  if (typeof value === 'object') {
+    for (const v of Object.values(value)) apifyCollectLinksDeep(v, out, depth + 1);
+  }
+  return out;
+}
+
+function buildApifyPreflight(preflight = {}) {
+  const p = preflight && typeof preflight === 'object' ? preflight : {};
+  const hasFatalError = !!(p.hasFatalError || p.crashed || p.routeCrashed);
+  const criticalCount = Number(
+    p.criticalCount || p.criticalIssuesCount ||
+    (Array.isArray(p.criticalIssues) ? p.criticalIssues.length : 0) || 0
+  );
+  const bugCount = Number(
+    p.bugCount || p.errorCount ||
+    (Array.isArray(p.errors) ? p.errors.length : 0) ||
+    (Array.isArray(p.bugs) ? p.bugs.length : 0) || 0
+  );
+
+  const blockers = [];
+  if (hasFatalError) blockers.push('fatal_error');
+  if (criticalCount > 0) blockers.push(`critical:${criticalCount}`);
+  if (bugCount > 0) blockers.push(`bugs:${bugCount}`);
+
+  return { ok: blockers.length === 0, blockers, hasFatalError, criticalCount, bugCount };
+}
+
+async function runApifyActor(actorId, input = {}, limit = 20) {
+  if (!actorId || !CONFIG.APIFY_API_TOKEN) {
+    return { success: false, actorId, items: [], error: 'MISSING_ACTOR_OR_TOKEN' };
+  }
+
+  const endpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items`;
+  const qs = new URLSearchParams({
+    token: CONFIG.APIFY_API_TOKEN,
+    format: 'json',
+    clean: '1',
+    limit: String(Math.max(1, Number(limit || 20))),
+    timeout: String(Math.max(10, Math.ceil(Number(CONFIG.APIFY_TIMEOUT_MS || 45000) / 1000)))
+  });
+
+  try {
+    const res = await axios.post(`${endpoint}?${qs.toString()}`, input, {
+      timeout: Number(CONFIG.APIFY_TIMEOUT_MS || 45000),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    return { success: true, actorId, items: Array.isArray(res.data) ? res.data : [] };
+  } catch (e) {
+    return { success: false, actorId, items: [], error: e.message };
+  }
+}
+
+async function callApify({ query = '', url = '', preflight = {}, inputsBySource = {} } = {}) {
+  const gate = buildApifyPreflight(preflight);
+
+  if (!CONFIG.APIFY_ENABLED) {
+    return { success: true, triggered: false, reason: 'APIFY_DISABLED', preflight: gate };
+  }
+  if (!CONFIG.APIFY_API_TOKEN) {
+    return { success: false, triggered: false, reason: 'MISSING_APIFY_API_TOKEN', preflight: gate };
+  }
+  if (!gate.ok) {
+    return { success: true, triggered: false, reason: 'PREFLIGHT_BLOCKED', preflight: gate };
+  }
+
+  const q = String(query || '').trim();
+  const u = apifyNormalizeHttpUrl(url);
+
+  const sources = [
+    { key: 'meta_ads',          actor: CONFIG.APIFY_META_ADS_ACTOR,          bucket: 'ads'      },
+    { key: 'google_ads',        actor: CONFIG.APIFY_GOOGLE_ADS_ACTOR,        bucket: 'ads'      },
+    { key: 'tiktok_ads',        actor: CONFIG.APIFY_TIKTOK_ADS_ACTOR,        bucket: 'ads'      },
+    { key: 'linkedin_posts',    actor: CONFIG.APIFY_LINKEDIN_POSTS_ACTOR,    bucket: 'posts'    },
+    { key: 'facebook_comments', actor: CONFIG.APIFY_FACEBOOK_COMMENTS_ACTOR, bucket: 'comments' },
+    { key: 'instagram_comments',actor: CONFIG.APIFY_INSTAGRAM_COMMENTS_ACTOR,bucket: 'comments' },
+    { key: 'tiktok_comments',   actor: CONFIG.APIFY_TIKTOK_COMMENTS_ACTOR,   bucket: 'comments' },
+    { key: 'google_reviews',    actor: CONFIG.APIFY_GOOGLE_REVIEWS_ACTOR,    bucket: 'reviews'  },
+    { key: 'trustpilot_reviews',actor: CONFIG.APIFY_TRUSTPILOT_REVIEWS_ACTOR,bucket: 'reviews'  }
+  ].filter(s => s.actor);
+
+  if (!sources.length) {
+    return { success: true, triggered: false, reason: 'NO_ACTOR_CONFIGURED', preflight: gate };
+  }
+
+  const limit = Number(CONFIG.APIFY_MAX_ITEMS_PER_SOURCE || 20);
+
+  const runs = await Promise.all(
+    sources.map(async (s) => {
+      const fallbackInput = {};
+      if (u) fallbackInput.startUrls = [{ url: u }];
+      if (q) fallbackInput.searchTerms = [q];
+
+      const input = (inputsBySource && inputsBySource[s.key]) ? inputsBySource[s.key] : fallbackInput;
+      const out = await runApifyActor(s.actor, input, limit);
+      return { ...out, source: s.key, bucket: s.bucket };
+    })
+  );
+
+  const links = { ads: new Set(), posts: new Set(), comments: new Set(), reviews: new Set(), all: new Set() };
+  const studiesBottom = [];
+
+  for (const run of runs) {
+    if (!run.success) continue;
+
+    for (const item of run.items) {
+      const itemLinks = Array.from(apifyCollectLinksDeep(item));
+      for (const l of itemLinks) {
+        links.all.add(l);
+        links[run.bucket].add(l);
+      }
+
+      studiesBottom.push({
+        source: run.source,
+        text: String(item.text || item.message || item.caption || item.body || item.description || '').slice(0, 500),
+        link: itemLinks[0] || null
+      });
+    }
+  }
+
+  return {
+    success: true,
+    triggered: true,
+    reason: 'OK',
+    preflight: gate,
+    runs: runs.map(r => ({
+      source: r.source,
+      actorId: r.actorId,
+      success: r.success,
+      count: (r.items || []).length,
+      error: r.error || null
+    })),
+    links: {
+      ads: Array.from(links.ads),
+      posts: Array.from(links.posts),
+      comments: Array.from(links.comments),
+      reviews: Array.from(links.reviews),
+      all: Array.from(links.all)
+    },
+    guideTop: {
+      title: 'Guide concret',
+      steps: [
+        'Identifier les ads et posts les plus répétés',
+        'Comparer promesse marketing vs objections commentaires',
+        'Transformer en 3 quick wins funnel + copy'
+      ]
+    },
+    studiesBottom: studiesBottom.slice(0, 30)
+  };
+}
+// =================== END APIFY LAYER ===================
 console.log('✅ handleError loaded - Contextual error handling');
 
 console.log('\n✅ PARTIE 3/5: Validators + Retry + Utilities loaded successfully\n');
@@ -4181,7 +4372,44 @@ JSON uniquement :
     // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
     const elapsed = Date.now() - startTime;
     console.log(`✅ [WarRoom-V10.0] Terminé en ${elapsed}ms`);
+const apify = await callApify({
+  query: cleanQuery,
+  url: userSiteData?.url || '',
+  preflight,
+  inputsBySource: {} // optionnel
+});
+// ── APIFY PRE-FLIGHT (ne déclenche que si zéro bug IA) ─────────
+const aiFailures = [a1, a2, a3, a4].filter(x => x.status !== 'fulfilled').length;
 
+const apifyPreflight = {
+    ok: aiFailures === 0,
+    hasFatalError: false,
+    bugCount: aiFailures,
+    criticalCount: 0
+};
+
+let apifyData = {
+    success: true,
+    triggered: false,
+    reason: 'NOT_CALLED'
+};
+
+try {
+    apifyData = await callApify({
+        query: cleanQuery,
+        url: userSiteData?.url || '',
+        preflight: apifyPreflight,
+        inputsBySource: {} // optionnel: tu peux injecter req.body.apifyInput au niveau route
+    });
+} catch (e) {
+    console.warn('[WarRoom-V10.0] Apify layer error:', e.message);
+    apifyData = {
+        success: false,
+        triggered: false,
+        reason: 'APIFY_RUNTIME_ERROR',
+        error: e.message
+    };
+}
    const finalResult = {
     success: true,
     source,
@@ -4199,7 +4427,8 @@ JSON uniquement :
         shopping: shoppingData
     },
     ...mergedData,
-    externalBot: GPT_BOT
+    externalBot: GPT_BOT,
+    apify
 };
 
     cache.set(cacheKey, finalResult);
@@ -5375,7 +5604,15 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
         });
     }
 });
-
+app.post('/api/apify-intel', async (req, res) => {
+  try {
+    const { query = '', url = '', preflight = {}, inputsBySource = {} } = req.body || {};
+    const apify = await callApify({ query, url, preflight, inputsBySource });
+    res.json({ success: true, apify });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 // 🧠 DECISION LAYER : ASSIMILATION MÉTIER TEMPS RÉEL + FORMATAGE UI
 // ═══════════════════════════════════════════════════════════════════
 // ═══════════════════════════════════════════════════════════════════
@@ -8318,6 +8555,50 @@ const finalResponse = {
 
         cache.set(cacheKey, finalResponse);
         console.log(`✅ [${requestId}] V12 GOD TIER DONE — ${finalResponse.meta.duration} | Score: ${finalResponse.globalScoring?.overall}/100`);
+        finalResponse.apify = await callApify({
+  query: cleanQuery || req.body?.query || '',
+  url: validUrl || req.body?.url || '',
+  preflight: {
+    ok: finalResponse?.success === true && !(finalResponse?.error),
+    hasFatalError: finalResponse?.success !== true,
+    bugCount: 0,
+    criticalCount: Array.isArray(finalResponse?.techAudit?.criticalIssues)
+      ? finalResponse.techAudit.criticalIssues.length
+      : 0
+  },
+  inputsBySource: req.body?.apifyInput || {}
+});
+
+// ── APIFY PRE-FLIGHT FUNNEL ────────────────────────────────────
+try {
+    const criticalIssuesCount = Array.isArray(finalResponse?.techAudit?.criticalIssues)
+        ? finalResponse.techAudit.criticalIssues.length
+        : 0;
+
+    const funnelPreflight = {
+        ok: Boolean(finalResponse?.success) &&
+            !finalResponse?.error &&
+            criticalIssuesCount === 0,
+        hasFatalError: !finalResponse?.success,
+        bugCount: 0,
+        criticalCount: criticalIssuesCount
+    };
+
+    finalResponse.apify = await callApify({
+        query: cleanQuery || req.body?.query || '',
+        url: validUrl || req.body?.url || '',
+        preflight: funnelPreflight,
+        inputsBySource: req.body?.apifyInput || {}
+    });
+} catch (e) {
+    console.warn('[Funnel] Apify layer error:', e.message);
+    finalResponse.apify = {
+        success: false,
+        triggered: false,
+        reason: 'APIFY_RUNTIME_ERROR',
+        error: e.message
+    };
+}
         res.json(finalResponse);
 
     } catch (error) {
