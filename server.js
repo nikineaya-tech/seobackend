@@ -2017,6 +2017,149 @@ function buildApifyIntel(recordsByBucket = {}) {
   return { ads, posts, comments, reviews };
 }
 
+function apifyExtractDomain(url = '') {
+  try {
+    const host = new URL(String(url || '').trim()).hostname.toLowerCase();
+    return host.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+function apifyLangLocale(lang = 'fr', countryCode = 'MA') {
+  const cc = String(countryCode || 'MA').toUpperCase();
+  if (lang === 'ar') return `ar-${cc}`;
+  if (lang === 'en') return `en-${cc}`;
+  return `fr-${cc}`;
+}
+
+function apifyBuildQueryVariants({ query = '', url = '', lang = 'fr', geoLocation = 'Morocco' } = {}) {
+  const q = String(query || '').replace(/\s+/g, ' ').trim();
+  const domain = apifyExtractDomain(url);
+  const domainLabel = domain ? domain.split('.').slice(0, -1).join(' ') || domain : '';
+
+  const terms = new Set();
+  if (q) terms.add(q);
+  if (q && geoLocation) terms.add(`${q} ${geoLocation}`);
+  if (domainLabel && q) terms.add(`${domainLabel} ${q}`);
+  if (domainLabel) terms.add(domainLabel);
+
+  if (lang === 'ar') {
+    if (q) terms.add(`مراجعات ${q}`);
+    if (q) terms.add(`تجربة ${q}`);
+    if (q) terms.add(`سعر ${q}`);
+  } else if (lang === 'en') {
+    if (q) terms.add(`${q} reviews`);
+    if (q) terms.add(`${q} pricing`);
+    if (q) terms.add(`${q} complaints`);
+  } else {
+    if (q) terms.add(`avis ${q}`);
+    if (q) terms.add(`prix ${q}`);
+    if (q) terms.add(`retours ${q}`);
+  }
+
+  return Array.from(terms).filter(Boolean).slice(0, 8);
+}
+
+function apifyBuildSourceInput(sourceKey, ctx = {}) {
+  const {
+    url = '',
+    query = '',
+    queryVariants = [],
+    geoData = { location: 'Morocco', gl: 'ma' },
+    lang = 'fr',
+    limit = 20
+  } = ctx;
+
+  const domain = apifyExtractDomain(url);
+  const countryCode = String(geoData?.gl || 'ma').toUpperCase();
+  const locale = apifyLangLocale(lang, countryCode);
+  const primaryQuery = queryVariants[0] || query || domain || '';
+
+  const base = {
+    maxItems: limit,
+    limit,
+    country: countryCode,
+    countryCode,
+    geo: countryCode,
+    language: lang,
+    locale,
+    searchTerms: queryVariants.length ? queryVariants : [primaryQuery].filter(Boolean),
+    keywords: queryVariants.length ? queryVariants : [primaryQuery].filter(Boolean),
+    query: primaryQuery,
+    q: primaryQuery
+  };
+
+  if (url) {
+    base.url = url;
+    base.urls = [url];
+    base.startUrls = [{ url }];
+  }
+
+  // Actor-specific envelopes with many common alias keys to maximize compatibility.
+  switch (sourceKey) {
+    case 'meta_ads':
+    case 'google_ads':
+    case 'tiktok_ads':
+      return {
+        ...base,
+        adQuery: primaryQuery,
+        search: primaryQuery,
+        keyword: primaryQuery,
+        keywords: base.keywords,
+        searchTerms: base.searchTerms,
+        country: countryCode,
+        countries: [countryCode],
+        advertiserDomain: domain || undefined
+      };
+
+    case 'linkedin_posts':
+      return {
+        ...base,
+        search: primaryQuery,
+        keyword: primaryQuery,
+        keywords: base.keywords,
+        query: primaryQuery,
+        company: domain || undefined
+      };
+
+    case 'facebook_comments':
+    case 'instagram_comments':
+    case 'tiktok_comments':
+      return {
+        ...base,
+        postQuery: primaryQuery,
+        search: primaryQuery,
+        keyword: primaryQuery,
+        keywords: base.keywords,
+        profile: domain || undefined
+      };
+
+    case 'google_reviews':
+      return {
+        ...base,
+        searchStringsArray: queryVariants.length ? queryVariants : [primaryQuery].filter(Boolean),
+        searchTerms: base.searchTerms,
+        query: `${primaryQuery} ${geoData?.location || ''}`.trim(),
+        placeQueries: queryVariants.length ? queryVariants : [primaryQuery].filter(Boolean),
+        includeReviews: true
+      };
+
+    case 'trustpilot_reviews': {
+      const trustpilotUrl = domain ? `https://www.trustpilot.com/review/${domain}` : null;
+      return {
+        ...base,
+        startUrls: trustpilotUrl ? [{ url: trustpilotUrl }] : (url ? [{ url }] : []),
+        domain: domain || undefined,
+        includeReviews: true
+      };
+    }
+
+    default:
+      return base;
+  }
+}
+
 async function runApifyActor(actorId, input = {}, limit = 20) {
   if (!actorId || !CONFIG.APIFY_API_TOKEN) {
     return { success: false, actorId, items: [], error: 'MISSING_ACTOR_OR_TOKEN' };
@@ -2045,7 +2188,7 @@ async function runApifyActor(actorId, input = {}, limit = 20) {
   }
 }
 
-async function callApify({ query = '', url = '', preflight = {}, inputsBySource = {} } = {}) {
+async function callApify({ query = '', url = '', geo = '', lang = 'fr', preflight = {}, inputsBySource = {} } = {}) {
   const gate = buildApifyPreflight(preflight);
   const emptyIntel = { ads: [], posts: [], comments: [], reviews: [] };
   const emptyLinks = { ads: [], posts: [], comments: [], reviews: [], all: [] };
@@ -2062,6 +2205,7 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
 
   const q = String(query || '').trim();
   const u = apifyNormalizeHttpUrl(url);
+  const geoData = resolveSerpGeo(String(geo || '').trim() || 'Morocco');
 
   const allSources = [
     { key: 'meta_ads',          actor: CONFIG.APIFY_META_ADS_ACTOR,          bucket: 'ads'      },
@@ -2097,29 +2241,37 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
   const limit = Number(CONFIG.APIFY_MAX_ITEMS_PER_SOURCE || 20);
   const maxSources = Math.max(1, Number(CONFIG.APIFY_MAX_SOURCES_PER_RUN || 3));
   sources = sources.slice(0, maxSources);
+  const queryVariants = apifyBuildQueryVariants({
+    query: q,
+    url: u || '',
+    lang,
+    geoLocation: geoData.location || 'Morocco'
+  });
 
   const runs = await Promise.all(
     sources.map(async (s) => {
-      const fallbackInput = {};
-      if (u) {
-        fallbackInput.url = u;
-        fallbackInput.urls = [u];
-        fallbackInput.startUrls = [{ url: u }];
-      }
-      if (q) {
-        fallbackInput.q = q;
-        fallbackInput.query = q;
-        fallbackInput.search = q;
-        fallbackInput.keyword = q;
-        fallbackInput.keywords = [q];
-        fallbackInput.searchTerms = [q];
-      }
-      fallbackInput.maxItems = limit;
-      fallbackInput.limit = limit;
+      const fallbackInput = apifyBuildSourceInput(s.key, {
+        url: u || '',
+        query: q,
+        queryVariants,
+        geoData,
+        lang,
+        limit
+      });
 
       const input = (inputsBySource && inputsBySource[s.key]) ? inputsBySource[s.key] : fallbackInput;
       const out = await runApifyActor(s.actor, input, limit);
-      return { ...out, source: s.key, bucket: s.bucket };
+      return {
+        ...out,
+        source: s.key,
+        bucket: s.bucket,
+        inputHints: {
+          query: input.query || input.q || null,
+          terms: Array.isArray(input.searchTerms) ? input.searchTerms.slice(0, 3) : [],
+          country: input.country || input.countryCode || null,
+          hasUrl: Boolean(input.url || (Array.isArray(input.startUrls) && input.startUrls.length))
+        }
+      };
     })
   );
 
@@ -2179,7 +2331,8 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
         actorId: r.actorId,
         success: r.success,
         count: (r.items || []).length,
-        error: r.error || null
+        error: r.error || null,
+        inputHints: r.inputHints || null
       })),
       links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
       guideTop: {
@@ -2209,7 +2362,8 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
       actorId: r.actorId,
       success: r.success,
       count: (r.items || []).length,
-      error: r.error || null
+      error: r.error || null,
+      inputHints: r.inputHints || null
     })),
     links: {
       ads: Array.from(links.ads),
@@ -4786,6 +4940,8 @@ try {
     const apifyPromise = callApify({
         query: cleanQuery,
         url: userSiteData?.url || '',
+        geo: geoData?.location || geo,
+        lang: langObj?.code || 'fr',
         preflight: apifyPreflight,
         inputsBySource: {}
     });
@@ -6048,8 +6204,8 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
 });
 app.post('/api/apify-intel', async (req, res) => {
   try {
-    const { query = '', url = '', preflight = {}, inputsBySource = {} } = req.body || {};
-    const apify = await callApify({ query, url, preflight, inputsBySource });
+    const { query = '', url = '', geo = '', lang = 'fr', preflight = {}, inputsBySource = {} } = req.body || {};
+    const apify = await callApify({ query, url, geo, lang, preflight, inputsBySource });
     res.json({ success: true, apify });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -9032,6 +9188,8 @@ try {
     finalResponse.apify = await callApify({
         query: funnelQuery,
         url: validUrl || req.body?.url || '',
+        geo: req.body?.geo || req.body?.country || '',
+        lang: validLang || 'fr',
         preflight: funnelPreflight,
         inputsBySource: req.body?.apifyInput || {}
     });
