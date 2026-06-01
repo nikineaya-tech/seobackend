@@ -1734,6 +1734,170 @@ function buildApifyPreflight(preflight = {}) {
   return { ok: blockers.length === 0, blockers, hasFatalError, criticalCount, bugCount };
 }
 
+function apifyNum(v, fallback = 0) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function apifyExtractText(item = {}) {
+  const candidates = [
+    item.text, item.message, item.comment, item.commentText, item.caption,
+    item.body, item.description, item.content, item.reviewText, item.title,
+    item.headline, item.hook, item.question
+  ];
+  const first = candidates.find(v => typeof v === 'string' && v.trim().length > 3);
+  if (first) return first.trim();
+  return '';
+}
+
+function apifyExtractHashtags(text = '') {
+  const tags = String(text).match(/#[\p{L}\p{N}_-]+/gu) || [];
+  return [...new Set(tags.map(t => t.toLowerCase()))];
+}
+
+function apifyKeywordCloud(texts = [], limit = 12) {
+  const stop = new Set([
+    'the','and','for','with','this','that','from','your','have','vous','pour','avec',
+    'dans','mais','sans','plus','moins','une','des','les','aux','sur','est','are',
+    'qui','quoi','comment','when','where','quoi','اذا','هذا','هذه','على','مع','من'
+  ]);
+  const freq = {};
+  for (const txt of texts) {
+    const words = String(txt).toLowerCase().match(/[\p{L}\p{N}]{3,}/gu) || [];
+    for (const w of words) {
+      if (stop.has(w)) continue;
+      freq[w] = (freq[w] || 0) + 1;
+    }
+  }
+  return Object.entries(freq).sort((a, b) => b[1] - a[1]).slice(0, limit).map(([word, count]) => ({ word, count }));
+}
+
+function apifyBuildSocialListeningIntel(recordsByBucket = {}) {
+  const posts = [...(recordsByBucket.posts || []), ...(recordsByBucket.ads || [])];
+  const comments = [...(recordsByBucket.comments || []), ...(recordsByBucket.reviews || [])];
+  const postTexts = posts.map(r => r.text).filter(Boolean);
+  const commentTexts = comments.map(r => r.text).filter(Boolean);
+
+  const negativeSignals = /(scam|arnaque|fake|nul|mauvais|late|retard|bad|poor|problem|probl[eè]me|expensive|cher|co[uû]teux|support)/i;
+  const positiveSignals = /(great|excellent|top|recommand|love|satisfait|rapide|qualit[eé]|parfait|awesome)/i;
+  const questionSignals = /(\\?|comment|how|can|possible|est-ce|disponible|livraison|delivery|prix|price|refund|garantie)/i;
+
+  let sentiment = 0;
+  for (const t of commentTexts) {
+    if (positiveSignals.test(t)) sentiment += 1;
+    if (negativeSignals.test(t)) sentiment -= 1;
+  }
+  const sentimentScore = commentTexts.length ? Math.max(-100, Math.min(100, Math.round((sentiment / commentTexts.length) * 100))) : 0;
+
+  const topComplaints = commentTexts.filter(t => negativeSignals.test(t)).slice(0, 8);
+  const topPraises = commentTexts.filter(t => positiveSignals.test(t)).slice(0, 8);
+  const purchaseQuestions = commentTexts.filter(t => questionSignals.test(t)).slice(0, 12);
+
+  const trustConcerns = commentTexts.filter(t => /(scam|arnaque|trust|fiable|legit|s[ée]rieux|authentic)/i.test(t)).slice(0, 8);
+  const priceConcerns = commentTexts.filter(t => /(price|prix|cher|expensive|discount|promo|co[uû]t)/i.test(t)).slice(0, 8);
+  const deliveryConcerns = commentTexts.filter(t => /(delivery|livraison|retard|delay|ship|shipping)/i.test(t)).slice(0, 8);
+  const supportConcerns = commentTexts.filter(t => /(support|sav|service client|reply|r[eé]ponse|whatsapp)/i.test(t)).slice(0, 8);
+
+  const topPosts = posts
+    .sort((a, b) => (b.engagement || 0) - (a.engagement || 0))
+    .slice(0, 12)
+    .map(p => ({
+      source: p.source,
+      text: p.text,
+      link: p.link || null,
+      engagement: p.engagement || 0,
+      hashtags: p.hashtags || []
+    }));
+
+  const dominantTopics = apifyKeywordCloud(postTexts.concat(commentTexts), 10).map(x => x.word);
+  const hashtags = [...new Set(posts.flatMap(p => p.hashtags || []))].slice(0, 20);
+  const viralHooks = topPosts.map(p => String(p.text).split(/[.!?\\n]/)[0]).filter(Boolean).slice(0, 10);
+
+  const contentFormats = {
+    shortText: posts.filter(p => (p.text || '').length < 120).length,
+    longText: posts.filter(p => (p.text || '').length >= 120).length,
+    withLink: posts.filter(p => !!p.link).length
+  };
+
+  const commentsIntel = {
+    totalCommentsAnalyzed: commentTexts.length,
+    sentimentScore,
+    topComplaints,
+    topPraises,
+    objections: topComplaints.slice(0, 8),
+    purchaseQuestions,
+    productRequests: commentTexts.filter(t => /(add|ajouter|feature|fonction|version|option)/i.test(t)).slice(0, 8),
+    trustConcerns,
+    priceConcerns,
+    deliveryConcerns,
+    supportConcerns,
+    exactCustomerLanguage: commentTexts.slice(0, 20)
+  };
+
+  const adCommentTexts = [...(recordsByBucket.comments || [])]
+    .filter(r => /(ads|meta|facebook|instagram|tiktok)/i.test(r.source || ''))
+    .map(r => r.text)
+    .filter(Boolean);
+
+  const adCommentsIntel = {
+    objectionsUnderAds: adCommentTexts.filter(t => negativeSignals.test(t)).slice(0, 10),
+    repeatedQuestions: adCommentTexts.filter(t => questionSignals.test(t)).slice(0, 10),
+    negativeSignals: adCommentTexts.filter(t => negativeSignals.test(t)).slice(0, 10),
+    buyingIntentSignals: adCommentTexts.filter(t => /(buy|acheter|commande|order|how much|prix)/i.test(t)).slice(0, 10),
+    competitorWeaknesses: adCommentTexts.filter(t => /(slow|retard|bad|nul|scam|cher|expensive)/i.test(t)).slice(0, 10),
+    counterCopyIdeas: adCommentTexts.filter(t => /(want|besoin|need|cherche|souhaite|wish)/i.test(t)).slice(0, 10)
+  };
+
+  const painWords = apifyKeywordCloud(topComplaints, 12).map(x => x.word);
+  const desireWords = apifyKeywordCloud(topPraises, 12).map(x => x.word);
+  const objectionPhrases = topComplaints.slice(0, 12);
+  const emotionalTriggers = [...new Set([...painWords.slice(0, 6), ...desireWords.slice(0, 6)])];
+
+  const marketLanguageBank = {
+    painWords,
+    desireWords,
+    objectionPhrases,
+    emotionalTriggers,
+    phrasesToUseInAds: purchaseQuestions.slice(0, 8),
+    phrasesToUseOnLandingPage: topPraises.slice(0, 8)
+  };
+
+  const customerVoiceVerdict = {
+    mainPain: topComplaints[0] || null,
+    mainObjection: objectionPhrases[0] || null,
+    mainDesire: topPraises[0] || null,
+    copyAngle: topComplaints[0] ? 'Address objection directly with proof and clarity.' : null,
+    offerFix: trustConcerns.length || deliveryConcerns.length || priceConcerns.length
+      ? 'Add guarantee, proof, delivery clarity, and responsive support.'
+      : null,
+    adHook: objectionPhrases[0]
+      ? `Tired of this: "${objectionPhrases[0].slice(0, 90)}"?`
+      : null
+  };
+
+  return {
+    socialListeningIntel: {
+      postsIntel: {
+        topPosts,
+        dominantTopics,
+        contentFormats,
+        engagementPatterns: {
+          avgEngagement: topPosts.length ? Math.round(topPosts.reduce((a, p) => a + (p.engagement || 0), 0) / topPosts.length) : 0,
+          highEngagementPosts: topPosts.filter(p => (p.engagement || 0) > 0).length
+        },
+        postingFrequency: null,
+        viralHooks,
+        hashtags,
+        creatorAngles: viralHooks.slice(0, 8)
+      },
+      commentsIntel,
+      adCommentsIntel,
+      marketLanguageBank
+    },
+    customerVoiceVerdict
+  };
+}
+
 async function runApifyActor(actorId, input = {}, limit = 20) {
   if (!actorId || !CONFIG.APIFY_API_TOKEN) {
     return { success: false, actorId, items: [], error: 'MISSING_ACTOR_OR_TOKEN' };
@@ -1837,6 +2001,7 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
 
   const links = { ads: new Set(), posts: new Set(), comments: new Set(), reviews: new Set(), all: new Set() };
   const studiesBottom = [];
+  const recordsByBucket = { ads: [], posts: [], comments: [], reviews: [] };
   let totalItemsCollected = 0;
 
   for (const run of runs) {
@@ -1845,6 +2010,26 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
 
     for (const item of run.items) {
       const itemLinks = Array.from(apifyCollectLinksDeep(item));
+      const text = apifyExtractText(item);
+      const likes = apifyNum(item.likes ?? item.likeCount ?? item.reactions ?? item.reactionCount, 0);
+      const commentsCount = apifyNum(item.commentsCount ?? item.commentCount ?? item.comments, 0);
+      const shares = apifyNum(item.shares ?? item.shareCount, 0);
+      const engagement = likes + commentsCount + shares;
+      const record = {
+        source: run.source,
+        bucket: run.bucket,
+        text,
+        link: itemLinks[0] || null,
+        hashtags: apifyExtractHashtags(text),
+        likes,
+        commentsCount,
+        shares,
+        engagement,
+        createdAt: item.createdAt || item.timestamp || item.date || null,
+        author: item.author || item.username || item.userName || null
+      };
+      recordsByBucket[run.bucket].push(record);
+
       for (const l of itemLinks) {
         links.all.add(l);
         links[run.bucket].add(l);
@@ -1852,7 +2037,7 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
 
       studiesBottom.push({
         source: run.source,
-        text: String(item.text || item.message || item.caption || item.body || item.description || '').slice(0, 500),
+        text: String(text || '').slice(0, 500),
         link: itemLinks[0] || null
       });
     }
@@ -1880,9 +2065,12 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
           'Transformer en 3 quick wins funnel + copy'
         ]
       },
-      studiesBottom: []
+      studiesBottom: [],
+      ...apifyBuildSocialListeningIntel(recordsByBucket)
     };
   }
+
+  const socialIntel = apifyBuildSocialListeningIntel(recordsByBucket);
 
   return {
     success: true,
@@ -1911,7 +2099,8 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
         'Transformer en 3 quick wins funnel + copy'
       ]
     },
-    studiesBottom: studiesBottom.slice(0, 30)
+    studiesBottom: studiesBottom.slice(0, 30),
+    ...socialIntel
   };
 }
 // =================== END APIFY LAYER ===================
