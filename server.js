@@ -1898,14 +1898,133 @@ function apifyBuildSocialListeningIntel(recordsByBucket = {}) {
   };
 }
 
+function apifyPlatformFromSource(source = '') {
+  const s = String(source || '').toLowerCase();
+  if (s.includes('meta') || s.includes('facebook') || s.includes('instagram')) return 'Meta';
+  if (s.includes('tiktok')) return 'TikTok';
+  if (s.includes('linkedin')) return 'LinkedIn';
+  if (s.includes('google')) return 'Google';
+  if (s.includes('trustpilot')) return 'Trustpilot';
+  return 'Unknown';
+}
+
+function normalizeEvidenceLink(item = {}, type = 'post') {
+  const sourceUrl =
+    item.url ||
+    item.link ||
+    item.postUrl ||
+    item.adUrl ||
+    item.commentUrl ||
+    item.permalink ||
+    item.facebookUrl ||
+    item.instagramUrl ||
+    item.tiktokUrl ||
+    null;
+
+  return {
+    type,
+    platform: item.platform || item.source || apifyPlatformFromSource(item.source) || null,
+    sourceUrl: sourceUrl || null,
+    postUrl: item.postUrl || item.url || item.link || null,
+    commentUrl: item.commentUrl || null,
+    adUrl: item.adUrl || (type === 'ad' ? (item.url || item.link || null) : null),
+    landingPageUrl: item.landingPageUrl || item.ctaUrl || item.destinationUrl || null,
+    text: item.text || item.comment || item.caption || item.body || '',
+    author: item.author || item.username || item.ownerUsername || null,
+    publishedAt: item.date || item.timestamp || item.createdAt || null,
+    engagement: {
+      likes: item.likes || item.likesCount || null,
+      comments: item.comments || item.commentsCount || null,
+      shares: item.shares || item.sharesCount || null
+    },
+    raw: item
+  };
+}
+
+function buildApifyIntel(recordsByBucket = {}) {
+  const ads = (recordsByBucket.ads || []).map((r) => {
+    const ev = normalizeEvidenceLink({
+      ...r,
+      platform: apifyPlatformFromSource(r.source),
+      adUrl: r.link || null,
+      evidenceUrl: r.link || null
+    }, 'ad');
+    return {
+      hook: (r.text || '').slice(0, 180) || null,
+      platform: ev.platform,
+      adUrl: ev.adUrl,
+      landingPageUrl: ev.landingPageUrl,
+      evidenceUrl: ev.sourceUrl,
+      engagement: ev.engagement,
+      source: r.source
+    };
+  }).slice(0, 20);
+
+  const posts = (recordsByBucket.posts || []).map((r) => {
+    const ev = normalizeEvidenceLink({
+      ...r,
+      platform: apifyPlatformFromSource(r.source),
+      postUrl: r.link || null
+    }, 'post');
+    return {
+      caption: (r.text || '').slice(0, 280) || '',
+      postUrl: ev.postUrl,
+      engagement: ev.engagement,
+      source: r.source,
+      evidenceUrl: ev.sourceUrl
+    };
+  }).slice(0, 30);
+
+  const comments = (recordsByBucket.comments || []).map((r) => {
+    const txt = r.text || '';
+    const negative = /(scam|arnaque|fake|nul|mauvais|late|retard|bad|poor|problem|probl[eè]me|expensive|cher|co[uû]teux|support)/i.test(txt);
+    let painPoint = null;
+    if (/(delivery|livraison|retard|delay|ship|shipping)/i.test(txt)) painPoint = 'delivery';
+    else if (/(price|prix|cher|expensive|discount|promo|co[uû]t)/i.test(txt)) painPoint = 'price';
+    else if (/(support|sav|service client|reply|r[eé]ponse|whatsapp)/i.test(txt)) painPoint = 'support';
+    else if (/(scam|arnaque|trust|fiable|legit|s[ée]rieux|authentic)/i.test(txt)) painPoint = 'trust';
+
+    const ev = normalizeEvidenceLink({
+      ...r,
+      platform: apifyPlatformFromSource(r.source),
+      commentUrl: r.link || null,
+      postUrl: r.link || null
+    }, 'comment');
+    return {
+      quote: txt.slice(0, 280),
+      sentiment: negative ? 'negative' : 'neutral_or_positive',
+      painPoint,
+      commentUrl: ev.commentUrl || ev.sourceUrl,
+      postUrl: ev.postUrl,
+      source: r.source
+    };
+  }).slice(0, 40);
+
+  const reviews = (recordsByBucket.reviews || []).map((r) => {
+    const ev = normalizeEvidenceLink({
+      ...r,
+      platform: apifyPlatformFromSource(r.source),
+      reviewUrl: r.link || null
+    }, 'review');
+    return {
+      quote: (r.text || '').slice(0, 280),
+      rating: null,
+      reviewUrl: ev.sourceUrl,
+      source: r.source
+    };
+  }).slice(0, 30);
+
+  return { ads, posts, comments, reviews };
+}
+
 async function runApifyActor(actorId, input = {}, limit = 20) {
   if (!actorId || !CONFIG.APIFY_API_TOKEN) {
     return { success: false, actorId, items: [], error: 'MISSING_ACTOR_OR_TOKEN' };
   }
 
-  const endpoint = `https://api.apify.com/v2/acts/${encodeURIComponent(actorId)}/run-sync-get-dataset-items`;
+  const safeActorId = String(actorId || '').replace('/', '~');
+  const endpoint = `https://api.apify.com/v2/actors/${encodeURIComponent(safeActorId)}/run-sync-get-dataset-items`;
   const qs = new URLSearchParams({
-    token: CONFIG.APIFY_API_TOKEN,
     format: 'json',
     clean: '1',
     limit: String(Math.max(1, Number(limit || 20))),
@@ -1915,25 +2034,30 @@ async function runApifyActor(actorId, input = {}, limit = 20) {
   try {
     const res = await axios.post(`${endpoint}?${qs.toString()}`, input, {
       timeout: Number(CONFIG.APIFY_TIMEOUT_MS || 45000),
-      headers: { 'Content-Type': 'application/json' }
+      headers: {
+        Authorization: `Bearer ${CONFIG.APIFY_API_TOKEN}`,
+        'Content-Type': 'application/json'
+      }
     });
-    return { success: true, actorId, items: Array.isArray(res.data) ? res.data : [] };
+    return { success: true, actorId: safeActorId, items: Array.isArray(res.data) ? res.data : [] };
   } catch (e) {
-    return { success: false, actorId, items: [], error: e.message };
+    return { success: false, actorId: safeActorId, items: [], error: e.message };
   }
 }
 
 async function callApify({ query = '', url = '', preflight = {}, inputsBySource = {} } = {}) {
   const gate = buildApifyPreflight(preflight);
+  const emptyIntel = { ads: [], posts: [], comments: [], reviews: [] };
+  const emptyLinks = { ads: [], posts: [], comments: [], reviews: [], all: [] };
 
   if (!CONFIG.APIFY_ENABLED) {
-    return { success: true, triggered: false, reason: 'APIFY_DISABLED', preflight: gate };
+    return { success: true, triggered: false, reason: 'APIFY_DISABLED', preflight: gate, links: emptyLinks, apifyIntel: emptyIntel };
   }
   if (!CONFIG.APIFY_API_TOKEN) {
-    return { success: false, triggered: false, reason: 'MISSING_APIFY_API_TOKEN', preflight: gate };
+    return { success: false, triggered: false, reason: 'MISSING_APIFY_API_TOKEN', preflight: gate, links: emptyLinks, apifyIntel: emptyIntel };
   }
   if (!gate.ok) {
-    return { success: true, triggered: false, reason: 'PREFLIGHT_BLOCKED', preflight: gate };
+    return { success: true, triggered: false, reason: 'PREFLIGHT_BLOCKED', preflight: gate, links: emptyLinks, apifyIntel: emptyIntel };
   }
 
   const q = String(query || '').trim();
@@ -1967,7 +2091,7 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
   }
 
   if (!sources.length) {
-    return { success: true, triggered: false, reason: 'NO_ACTOR_CONFIGURED', preflight: gate };
+    return { success: true, triggered: false, reason: 'NO_ACTOR_CONFIGURED', preflight: gate, links: emptyLinks, apifyIntel: emptyIntel };
   }
 
   const limit = Number(CONFIG.APIFY_MAX_ITEMS_PER_SOURCE || 20);
@@ -2044,6 +2168,7 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
   }
 
   if (totalItemsCollected === 0) {
+    const apifyIntel = buildApifyIntel(recordsByBucket);
     return {
       success: true,
       triggered: true,
@@ -2066,10 +2191,12 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
         ]
       },
       studiesBottom: [],
+      apifyIntel,
       ...apifyBuildSocialListeningIntel(recordsByBucket)
     };
   }
 
+  const apifyIntel = buildApifyIntel(recordsByBucket);
   const socialIntel = apifyBuildSocialListeningIntel(recordsByBucket);
 
   return {
@@ -2100,6 +2227,7 @@ async function callApify({ query = '', url = '', preflight = {}, inputsBySource 
       ]
     },
     studiesBottom: studiesBottom.slice(0, 30),
+    apifyIntel,
     ...socialIntel
   };
 }
@@ -4649,7 +4777,9 @@ const apifyPreflight = {
 let apifyData = {
     success: true,
     triggered: false,
-    reason: 'NOT_CALLED'
+    reason: 'NOT_CALLED',
+    links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
+    apifyIntel: { ads: [], posts: [], comments: [], reviews: [] }
 };
 
 try {
@@ -4668,7 +4798,8 @@ try {
             reason: 'APIFY_SOFT_TIMEOUT',
             timeoutMs: softTimeoutMs,
             links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
-            runs: []
+            runs: [],
+            apifyIntel: { ads: [], posts: [], comments: [], reviews: [] }
         }), softTimeoutMs)
     );
 
@@ -4679,7 +4810,9 @@ try {
         success: false,
         triggered: false,
         reason: 'APIFY_RUNTIME_ERROR',
-        error: e.message
+        error: e.message,
+        links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
+        apifyIntel: { ads: [], posts: [], comments: [], reviews: [] }
     };
 }
 
@@ -8908,7 +9041,9 @@ try {
         success: false,
         triggered: false,
         reason: 'APIFY_RUNTIME_ERROR',
-        error: e.message
+        error: e.message,
+        links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
+        apifyIntel: { ads: [], posts: [], comments: [], reviews: [] }
     };
 }
         res.json(finalResponse);
