@@ -8706,8 +8706,9 @@ try {
         criticalCount: criticalIssuesCount
     };
 
+    const funnelQuery = String(req.body?.query || req.body?.keyword || '').trim() || validUrl;
     finalResponse.apify = await callApify({
-        query: cleanQuery || req.body?.query || '',
+        query: funnelQuery,
         url: validUrl || req.body?.url || '',
         preflight: funnelPreflight,
         inputsBySource: req.body?.apifyInput || {}
