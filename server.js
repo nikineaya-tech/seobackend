@@ -144,14 +144,18 @@ console.log('🔧 Trust proxy enabled for Render.com');
 const CONFIG = {
     APIFY_ENABLED: ['1', 'true', 'yes', 'on'].includes(String(process.env.APIFY_ENABLED || 'false').toLowerCase()),
 APIFY_API_TOKEN: process.env.APIFY_API_TOKEN || process.env.APIFY_TOKEN || '',
-APIFY_TIMEOUT_MS: Number(process.env.APIFY_TIMEOUT_MS || 45000),
-APIFY_SOFT_TIMEOUT_MS: Number(process.env.APIFY_SOFT_TIMEOUT_MS || 9000),
-APIFY_MAX_ITEMS_PER_SOURCE: Number(process.env.APIFY_MAX_ITEMS_PER_SOURCE || 20),
-APIFY_MAX_SOURCES_PER_RUN: Number(process.env.APIFY_MAX_SOURCES_PER_RUN || 3),
+APIFY_TIMEOUT_MS: Number(process.env.APIFY_TIMEOUT_MS || 20000),
+APIFY_SOFT_TIMEOUT_MS: Number(process.env.APIFY_SOFT_TIMEOUT_MS || 4500),
+APIFY_MAX_ITEMS_PER_SOURCE: Number(process.env.APIFY_MAX_ITEMS_PER_SOURCE || 5),
+APIFY_MAX_SOURCES_PER_RUN: Number(process.env.APIFY_MAX_SOURCES_PER_RUN || 2),
+APIFY_MIN_CONTEXT_TERMS: Number(process.env.APIFY_MIN_CONTEXT_TERMS || 3),
+APIFY_REQUIRE_CONTEXT: ['1', 'true', 'yes', 'on'].includes(String(process.env.APIFY_REQUIRE_CONTEXT || 'true').toLowerCase()),
 INTEL_ECO_MODE: ['1', 'true', 'yes', 'on'].includes(String(process.env.INTEL_ECO_MODE || 'true').toLowerCase()),
+SCRAPEDO_ENABLE_SEARCH_ENRICH: ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPEDO_ENABLE_SEARCH_ENRICH || 'false').toLowerCase()),
+SCRAPEDO_ENABLE_KEYWORDS: ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPEDO_ENABLE_KEYWORDS || 'false').toLowerCase()),
 SCRAPEDO_ENABLE_MAPS: ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPEDO_ENABLE_MAPS || 'false').toLowerCase()),
 SCRAPEDO_ENABLE_TRENDS: ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPEDO_ENABLE_TRENDS || 'false').toLowerCase()),
-SCRAPEDO_ENABLE_SHOPPING: ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPEDO_ENABLE_SHOPPING || 'true').toLowerCase()),
+SCRAPEDO_ENABLE_SHOPPING: ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPEDO_ENABLE_SHOPPING || 'false').toLowerCase()),
 
 APIFY_META_ADS_ACTOR: process.env.APIFY_META_ADS_ACTOR || '',
 APIFY_GOOGLE_ADS_ACTOR: process.env.APIFY_GOOGLE_ADS_ACTOR || '',
@@ -2033,8 +2037,98 @@ function apifyLangLocale(lang = 'fr', countryCode = 'MA') {
   return `fr-${cc}`;
 }
 
-function apifyBuildQueryVariants({ query = '', url = '', lang = 'fr', geoLocation = 'Morocco' } = {}) {
-  const q = String(query || '').replace(/\s+/g, ' ').trim();
+function apifyCleanSearchTerm(value = '', maxLen = 90) {
+  const s = String(value || '')
+    .replace(/https?:\/\/\S+/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!s || s.length < 2) return '';
+  return s.slice(0, maxLen).trim();
+}
+
+function apifyAddTerms(set, values = [], maxLen = 90) {
+  for (const value of Array.isArray(values) ? values : [values]) {
+    if (value == null) continue;
+    if (typeof value === 'object') {
+      apifyAddTerms(set, [
+        value.query, value.question, value.word, value.keyword, value.title,
+        value.domain, value.name, value.label, value.text, value.snippet
+      ], maxLen);
+      continue;
+    }
+    const term = apifyCleanSearchTerm(value, maxLen);
+    if (term) set.add(term);
+  }
+}
+
+function apifyBuildResearchContext(ctx = {}) {
+  const keywords = new Set();
+  const competitorTerms = new Set();
+  const funnelTerms = new Set();
+  const urls = new Set();
+  const domains = new Set();
+
+  apifyAddTerms(keywords, ctx.query);
+  apifyAddTerms(keywords, ctx.keywords);
+  apifyAddTerms(keywords, ctx.keywordStrategy?.primary);
+  apifyAddTerms(keywords, ctx.keywordStrategy?.longTail);
+  apifyAddTerms(keywords, ctx.keywordStrategy?.missingGaps);
+  apifyAddTerms(keywords, ctx.marketInsights?.vocabulary);
+  apifyAddTerms(keywords, ctx.marketInsights?.relatedSearches);
+  apifyAddTerms(keywords, ctx.googleRealData?.trends?.relatedQueries);
+  apifyAddTerms(keywords, ctx.googleRealData?.trends?.related_queries);
+  apifyAddTerms(keywords, ctx.googleRealData?.trends?.topRegions);
+  apifyAddTerms(keywords, ctx.googleRealData?.shopping?.topProducts);
+  apifyAddTerms(keywords, ctx.googleRealData?.maps?.topPlaces);
+  apifyAddTerms(keywords, ctx.trendsQueries);
+  apifyAddTerms(keywords, ctx.trendsRegions);
+  apifyAddTerms(keywords, ctx.shoppingProducts);
+  apifyAddTerms(keywords, ctx.mapsPlaces);
+  apifyAddTerms(keywords, ctx.relatedSearches);
+  apifyAddTerms(keywords, ctx.peopleAlsoAsk);
+  apifyAddTerms(keywords, Object.keys(ctx.kwData || {}));
+
+  for (const c of Array.isArray(ctx.competitors) ? ctx.competitors : []) {
+    apifyAddTerms(competitorTerms, [c.domain, c.title, c.snippet], 70);
+    const u = apifyNormalizeHttpUrl(c.url);
+    if (u) urls.add(u);
+    const d = c.domain || apifyExtractDomain(c.url);
+    if (d) domains.add(d);
+  }
+
+  const funnel = ctx.funnel || {};
+  apifyAddTerms(funnelTerms, [
+    funnel.h1, funnel.title, funnel.heroText, funnel.productOrService,
+    funnel.niche, funnel.offer,
+    funnel.price ? `${funnel.price} ${funnel.currency || ''}` : null
+  ], 90);
+  apifyAddTerms(funnelTerms, funnel.h2s, 70);
+  apifyAddTerms(funnelTerms, funnel.h3s, 70);
+  apifyAddTerms(funnelTerms, funnel.ctas, 60);
+  apifyAddTerms(funnelTerms, funnel.sectionsDetected, 50);
+
+  for (const u of Array.isArray(ctx.urls) ? ctx.urls : []) {
+    const normalized = apifyNormalizeHttpUrl(u);
+    if (normalized) urls.add(normalized);
+  }
+
+  const domainFromUrl = apifyExtractDomain(ctx.url);
+  if (domainFromUrl) domains.add(domainFromUrl);
+  apifyAddTerms(domains, ctx.topDomainsObserved, 80);
+
+  return {
+    keywords: Array.from(keywords).slice(0, 16),
+    competitorTerms: Array.from(competitorTerms).slice(0, 12),
+    funnelTerms: Array.from(funnelTerms).slice(0, 12),
+    urls: Array.from(urls).slice(0, 12),
+    domains: Array.from(domains).slice(0, 10)
+  };
+}
+
+function apifyBuildQueryVariants({ query = '', url = '', lang = 'fr', geoLocation = 'Morocco', researchContext = {} } = {}) {
+  const rawQuery = String(query || '').replace(/\s+/g, ' ').trim();
+  const q = apifyNormalizeHttpUrl(rawQuery) ? '' : apifyCleanSearchTerm(rawQuery);
   const domain = apifyExtractDomain(url);
   const domainLabel = domain ? domain.split('.').slice(0, -1).join(' ') || domain : '';
 
@@ -2043,6 +2137,11 @@ function apifyBuildQueryVariants({ query = '', url = '', lang = 'fr', geoLocatio
   if (q && geoLocation) terms.add(`${q} ${geoLocation}`);
   if (domainLabel && q) terms.add(`${domainLabel} ${q}`);
   if (domainLabel) terms.add(domainLabel);
+  apifyAddTerms(terms, [
+    ...(researchContext.keywords || []),
+    ...(researchContext.funnelTerms || []),
+    ...(researchContext.competitorTerms || [])
+  ].slice(0, 10));
 
   if (lang === 'ar') {
     if (q) terms.add(`مراجعات ${q}`);
@@ -2058,7 +2157,16 @@ function apifyBuildQueryVariants({ query = '', url = '', lang = 'fr', geoLocatio
     if (q) terms.add(`retours ${q}`);
   }
 
-  return Array.from(terms).filter(Boolean).slice(0, 8);
+  for (const seed of Array.from(terms).slice(0, 5)) {
+    if (geoLocation) terms.add(`${seed} ${geoLocation}`);
+    terms.add(`avis ${seed}`);
+    terms.add(`${seed} reviews`);
+    terms.add(`prix ${seed}`);
+    terms.add(`${seed} complaints`);
+    terms.add(`${seed} objections`);
+  }
+
+  return Array.from(terms).filter(Boolean).slice(0, 14);
 }
 
 function apifyBuildSourceInput(sourceKey, ctx = {}) {
@@ -2068,7 +2176,8 @@ function apifyBuildSourceInput(sourceKey, ctx = {}) {
     queryVariants = [],
     geoData = { location: 'Morocco', gl: 'ma' },
     lang = 'fr',
-    limit = 20
+    limit = 20,
+    researchContext = {}
   } = ctx;
 
   const domain = apifyExtractDomain(url);
@@ -2086,8 +2195,14 @@ function apifyBuildSourceInput(sourceKey, ctx = {}) {
     locale,
     searchTerms: queryVariants.length ? queryVariants : [primaryQuery].filter(Boolean),
     keywords: queryVariants.length ? queryVariants : [primaryQuery].filter(Boolean),
+    keyword: primaryQuery,
     query: primaryQuery,
-    q: primaryQuery
+    q: primaryQuery,
+    marketContext: {
+      terms: queryVariants.slice(0, 8),
+      domains: (researchContext.domains || []).slice(0, 5),
+      urls: (researchContext.urls || []).slice(0, 5)
+    }
   };
 
   if (url) {
@@ -2110,7 +2225,9 @@ function apifyBuildSourceInput(sourceKey, ctx = {}) {
         searchTerms: base.searchTerms,
         country: countryCode,
         countries: [countryCode],
-        advertiserDomain: domain || undefined
+        advertiserDomain: domain || undefined,
+        advertiserDomains: (researchContext.domains || []).length ? researchContext.domains.slice(0, 5) : undefined,
+        pageNames: (researchContext.competitorTerms || []).slice(0, 8)
       };
 
     case 'linkedin_posts':
@@ -2120,7 +2237,8 @@ function apifyBuildSourceInput(sourceKey, ctx = {}) {
         keyword: primaryQuery,
         keywords: base.keywords,
         query: primaryQuery,
-        company: domain || undefined
+        company: domain || undefined,
+        companies: (researchContext.domains || []).slice(0, 5)
       };
 
     case 'facebook_comments':
@@ -2132,7 +2250,11 @@ function apifyBuildSourceInput(sourceKey, ctx = {}) {
         search: primaryQuery,
         keyword: primaryQuery,
         keywords: base.keywords,
-        profile: domain || undefined
+        profile: domain || undefined,
+        profiles: (researchContext.urls || []).slice(0, 5),
+        startUrls: (researchContext.urls || []).length
+          ? researchContext.urls.slice(0, 5).map(url => ({ url }))
+          : base.startUrls
       };
 
     case 'google_reviews':
@@ -2142,6 +2264,7 @@ function apifyBuildSourceInput(sourceKey, ctx = {}) {
         searchTerms: base.searchTerms,
         query: `${primaryQuery} ${geoData?.location || ''}`.trim(),
         placeQueries: queryVariants.length ? queryVariants : [primaryQuery].filter(Boolean),
+        searchLocations: [geoData?.location || 'Morocco'],
         includeReviews: true
       };
 
@@ -2188,7 +2311,7 @@ async function runApifyActor(actorId, input = {}, limit = 20) {
   }
 }
 
-async function callApify({ query = '', url = '', geo = '', lang = 'fr', preflight = {}, inputsBySource = {} } = {}) {
+async function callApify({ query = '', url = '', geo = '', lang = 'fr', preflight = {}, inputsBySource = {}, researchContext = {} } = {}) {
   const gate = buildApifyPreflight(preflight);
   const emptyIntel = { ads: [], posts: [], comments: [], reviews: [] };
   const emptyLinks = { ads: [], posts: [], comments: [], reviews: [], all: [] };
@@ -2206,6 +2329,11 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
   const q = String(query || '').trim();
   const u = apifyNormalizeHttpUrl(url);
   const geoData = resolveSerpGeo(String(geo || '').trim() || 'Morocco');
+  const normalizedResearchContext = apifyBuildResearchContext({
+    ...researchContext,
+    query: q,
+    url: u || url
+  });
 
   const allSources = [
     { key: 'meta_ads',          actor: CONFIG.APIFY_META_ADS_ACTOR,          bucket: 'ads'      },
@@ -2245,8 +2373,34 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
     query: q,
     url: u || '',
     lang,
-    geoLocation: geoData.location || 'Morocco'
+    geoLocation: geoData.location || 'Morocco',
+    researchContext: normalizedResearchContext
   });
+  const contextTermCount = new Set([
+    ...(normalizedResearchContext.keywords || []),
+    ...(normalizedResearchContext.funnelTerms || []),
+    ...(normalizedResearchContext.competitorTerms || []),
+    ...queryVariants
+  ].filter(Boolean)).size;
+
+  if (CONFIG.APIFY_REQUIRE_CONTEXT && contextTermCount < CONFIG.APIFY_MIN_CONTEXT_TERMS) {
+    return {
+      success: true,
+      triggered: false,
+      reason: 'INSUFFICIENT_RESEARCH_CONTEXT',
+      preflight: gate,
+      links: emptyLinks,
+      apifyIntel: emptyIntel,
+      searchPlan: {
+        variants: queryVariants.slice(0, 10),
+        context: normalizedResearchContext,
+        geo: geoData.location || 'Morocco',
+        lang,
+        contextTermCount,
+        minContextTerms: CONFIG.APIFY_MIN_CONTEXT_TERMS
+      }
+    };
+  }
 
   const runs = await Promise.all(
     sources.map(async (s) => {
@@ -2256,7 +2410,8 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
         queryVariants,
         geoData,
         lang,
-        limit
+        limit,
+        researchContext: normalizedResearchContext
       });
 
       const input = (inputsBySource && inputsBySource[s.key]) ? inputsBySource[s.key] : fallbackInput;
@@ -2269,6 +2424,11 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
           query: input.query || input.q || null,
           terms: Array.isArray(input.searchTerms) ? input.searchTerms.slice(0, 3) : [],
           country: input.country || input.countryCode || null,
+          contextTerms: [
+            ...(normalizedResearchContext.keywords || []),
+            ...(normalizedResearchContext.funnelTerms || []),
+            ...(normalizedResearchContext.competitorTerms || [])
+          ].slice(0, 5),
           hasUrl: Boolean(input.url || (Array.isArray(input.startUrls) && input.startUrls.length))
         }
       };
@@ -2335,6 +2495,12 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
         inputHints: r.inputHints || null
       })),
       links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
+      searchPlan: {
+        variants: queryVariants.slice(0, 10),
+        context: normalizedResearchContext,
+        geo: geoData.location || 'Morocco',
+        lang
+      },
       guideTop: {
         title: 'Guide concret',
         steps: [
@@ -2371,6 +2537,12 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
       comments: Array.from(links.comments),
       reviews: Array.from(links.reviews),
       all: Array.from(links.all)
+    },
+    searchPlan: {
+      variants: queryVariants.slice(0, 10),
+      context: normalizedResearchContext,
+      geo: geoData.location || 'Morocco',
+      lang
     },
     guideTop: {
       title: 'Guide concret',
@@ -3893,12 +4065,14 @@ console.log(`[WarRoom-V10.0] Acquisition parallèle SCRAPE.DO INTEL + GSC + MAPS
 
 const isProductIntent = /(prix|tarif|acheter|achat|product|produit|shop|boutique|ecommerce|e-commerce|commande)/i.test(cleanQuery);
 const isLocalIntent = /(maroc|morocco|casablanca|rabat|tanger|fes|marrakech|agadir|sale|meknes|near me|local|proche|pres de moi|près de moi)/i.test(cleanQuery);
-const shouldRunMaps = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_MAPS || isLocalIntent;
+const shouldRunSearchEnrich = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_SEARCH_ENRICH;
+const shouldRunKeywords = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_KEYWORDS;
+const shouldRunMaps = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_MAPS;
 const shouldRunTrends = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_TRENDS;
 const shouldRunShopping = isProductIntent && (!CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_SHOPPING);
 
 console.log(
-    `[WarRoom-V10.0] COST-MODE eco=${CONFIG.INTEL_ECO_MODE} | maps=${shouldRunMaps} | trends=${shouldRunTrends} | shopping=${shouldRunShopping}`
+    `[WarRoom-V10.0] COST-MODE eco=${CONFIG.INTEL_ECO_MODE} | scrapeSearch=${shouldRunSearchEnrich} | kw=${shouldRunKeywords} | maps=${shouldRunMaps} | trends=${shouldRunTrends} | shopping=${shouldRunShopping}`
 );
 
 const [
@@ -3912,7 +4086,7 @@ const [
 
     // ── Scrape.do Google Search SERP enrichi ─────────────
     (async () => {
-        if (!process.env.SCRAPEDOTOKEN) return null;
+        if (!process.env.SCRAPEDOTOKEN || !shouldRunSearchEnrich) return null;
         try {
             const res = await axios.get(
                 'https://api.scrape.do/plugin/google/search',
@@ -3974,6 +4148,7 @@ const [
     // ── Scrape.do keyword intel estimé depuis SERP ───────
     (async () => {
         try {
+            if (!shouldRunKeywords) return null;
             const seedKeywords = [
                 cleanQuery,
                 ...relatedSearches.slice(0, 4).map(r => r?.query || r).filter(Boolean)
@@ -4937,13 +5112,50 @@ let apifyData = {
 };
 
 try {
+    const apifyResearchContext = {
+        query: cleanQuery,
+        url: userSiteData?.url || '',
+        keywordStrategy: mergedData.keywordStrategy,
+        marketInsights: mergedData.marketInsights,
+        relatedSearches,
+        peopleAlsoAsk,
+        kwData,
+        trendsQueries,
+        trendsRegions,
+        shoppingProducts,
+        mapsPlaces,
+        topDomainsObserved,
+        googleRealData: {
+            trends: mergedData.marketInsights?.trendsIntel || trendsData,
+            shopping: mergedData.marketInsights?.shoppingIntel || shoppingData,
+            maps: mergedData.marketInsights?.mapsIntel || mapsData
+        },
+        competitors: enrichedCompetitors.slice(0, 6),
+        urls: [
+            ...enrichedCompetitors.slice(0, 6).map(c => c.url).filter(Boolean),
+            ...(leaderMoat?.brandAuthority?.channelEvidence || []).map(x => x.url).filter(Boolean)
+        ],
+        keywords: [
+            mergedData.winningMove,
+            mergedData.productServiceAudit?.coreOffering,
+            mergedData.productServiceAudit?.uniqueValueProposition,
+            mergedData.grandSlamOfferBlueprint?.theIrresistibleOffer
+        ].filter(Boolean),
+        funnel: {
+            productOrService: mergedData.productServiceAudit?.coreOffering || cleanQuery,
+            offer: mergedData.grandSlamOfferBlueprint?.theIrresistibleOffer || mergedData.winningMove,
+            niche: cleanQuery
+        }
+    };
+
     const apifyPromise = callApify({
         query: cleanQuery,
         url: userSiteData?.url || '',
         geo: geoData?.location || geo,
         lang: langObj?.code || 'fr',
         preflight: apifyPreflight,
-        inputsBySource: {}
+        inputsBySource: {},
+        researchContext: apifyResearchContext
     });
 
     const softTimeoutMs = Math.max(1500, Number(CONFIG.APIFY_SOFT_TIMEOUT_MS || 9000));
@@ -6204,8 +6416,8 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
 });
 app.post('/api/apify-intel', async (req, res) => {
   try {
-    const { query = '', url = '', geo = '', lang = 'fr', preflight = {}, inputsBySource = {} } = req.body || {};
-    const apify = await callApify({ query, url, geo, lang, preflight, inputsBySource });
+    const { query = '', url = '', geo = '', lang = 'fr', preflight = {}, inputsBySource = {}, researchContext = {} } = req.body || {};
+    const apify = await callApify({ query, url, geo, lang, preflight, inputsBySource, researchContext });
     res.json({ success: true, apify });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -9184,14 +9396,46 @@ try {
         criticalCount: criticalIssuesCount
     };
 
-    const funnelQuery = String(req.body?.query || req.body?.keyword || '').trim() || validUrl;
+    const funnelResearchContext = {
+        query: String(req.body?.query || req.body?.keyword || '').trim(),
+        url: validUrl,
+        keywords: [
+            finalResponse?.projectIdentity?.niche,
+            finalResponse?.projectIdentity?.productOrService,
+            finalResponse?.strategicBlueprint?.coreHook,
+            finalResponse?.strategicBlueprint?.killShotName,
+            finalResponse?.auditSummary?.verdict
+        ].filter(Boolean),
+        funnel: {
+            h1: finalResponse?.rawIntel?.h1 || h1Main,
+            h2s: finalResponse?.rawIntel?.h2s || h2List,
+            h3s: finalResponse?.rawIntel?.h3s || h3List,
+            ctas: finalResponse?.rawIntel?.ctas || ctaList,
+            sectionsDetected: finalResponse?.rawIntel?.sectionsDetected || [],
+            price: finalResponse?.rawIntel?.detectedPrice || detectedPrice,
+            currency: finalResponse?.rawIntel?.currency || currency,
+            niche: finalResponse?.projectIdentity?.niche || null,
+            productOrService: finalResponse?.projectIdentity?.productOrService || null,
+            offer: finalResponse?.strategicBlueprint?.coreHook || null
+        },
+        relatedSearches: [
+            ...(finalResponse?.auditIssues || []).map(x => x.title || x.key).filter(Boolean),
+            ...(finalResponse?.auditQuickWins || []).map(x => x.title || x.action).filter(Boolean)
+        ]
+    };
+
+    const funnelQuery = String(req.body?.query || req.body?.keyword || '').trim()
+        || finalResponse?.rawIntel?.h1
+        || finalResponse?.projectIdentity?.niche
+        || validUrl;
     finalResponse.apify = await callApify({
         query: funnelQuery,
         url: validUrl || req.body?.url || '',
         geo: req.body?.geo || req.body?.country || '',
         lang: validLang || 'fr',
         preflight: funnelPreflight,
-        inputsBySource: req.body?.apifyInput || {}
+        inputsBySource: req.body?.apifyInput || {},
+        researchContext: funnelResearchContext
     });
 } catch (e) {
     console.warn('[Funnel] Apify layer error:', e.message);
@@ -9204,6 +9448,7 @@ try {
         apifyIntel: { ads: [], posts: [], comments: [], reviews: [] }
     };
 }
+        cache.set(cacheKey, finalResponse);
         res.json(finalResponse);
 
     } catch (error) {
