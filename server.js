@@ -1902,6 +1902,38 @@ function apifyBuildSocialListeningIntel(recordsByBucket = {}) {
   };
 }
 
+function apifyBuildGuideTop(reason = 'CONTEXT_ONLY') {
+  const label = String(reason || '').replace(/_/g, ' ').toLowerCase();
+  return {
+    title: 'Guide concret',
+    reason: label,
+    steps: [
+      'Reconstruire les mots de recherche depuis la SERP, le funnel, les concurrents et le pays cible.',
+      'Chercher les preuves terrain utiles: ads, posts, commentaires, avis, questions achat et objections.',
+      'Transformer les liens trouves en hooks, garanties, CTA, H1, angles ads et quick wins funnel.'
+    ]
+  };
+}
+
+function apifyEmptyDisplayResponse(reason, gate, links, apifyIntel, extra = {}) {
+  const recordsByBucket = { ads: [], posts: [], comments: [], reviews: [] };
+  return {
+    success: true,
+    triggered: true,
+    actorTriggered: false,
+    collectionSkipped: true,
+    reason,
+    preflight: gate,
+    links,
+    apifyIntel,
+    guideTop: apifyBuildGuideTop(reason),
+    studiesBottom: [],
+    runs: [],
+    ...apifyBuildSocialListeningIntel(recordsByBucket),
+    ...extra
+  };
+}
+
 function apifyPlatformFromSource(source = '') {
   const s = String(source || '').toLowerCase();
   if (s.includes('meta') || s.includes('facebook') || s.includes('instagram')) return 'Meta';
@@ -2317,13 +2349,20 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
   const emptyLinks = { ads: [], posts: [], comments: [], reviews: [], all: [] };
 
   if (!CONFIG.APIFY_ENABLED) {
-    return { success: true, triggered: false, reason: 'APIFY_DISABLED', preflight: gate, links: emptyLinks, apifyIntel: emptyIntel };
+    return apifyEmptyDisplayResponse('APIFY_DISABLED', gate, emptyLinks, emptyIntel, {
+      searchPlan: { variants: [], context: {}, geo: null, lang }
+    });
   }
   if (!CONFIG.APIFY_API_TOKEN) {
-    return { success: false, triggered: false, reason: 'MISSING_APIFY_API_TOKEN', preflight: gate, links: emptyLinks, apifyIntel: emptyIntel };
+    return apifyEmptyDisplayResponse('MISSING_APIFY_API_TOKEN', gate, emptyLinks, emptyIntel, {
+      success: false,
+      searchPlan: { variants: [], context: {}, geo: null, lang }
+    });
   }
   if (!gate.ok) {
-    return { success: true, triggered: false, reason: 'PREFLIGHT_BLOCKED', preflight: gate, links: emptyLinks, apifyIntel: emptyIntel };
+    return apifyEmptyDisplayResponse('PREFLIGHT_BLOCKED', gate, emptyLinks, emptyIntel, {
+      searchPlan: { variants: [], context: {}, geo: null, lang }
+    });
   }
 
   const q = String(query || '').trim();
@@ -2363,7 +2402,14 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
   }
 
   if (!sources.length) {
-    return { success: true, triggered: false, reason: 'NO_ACTOR_CONFIGURED', preflight: gate, links: emptyLinks, apifyIntel: emptyIntel };
+    return apifyEmptyDisplayResponse('NO_ACTOR_CONFIGURED', gate, emptyLinks, emptyIntel, {
+      searchPlan: {
+        variants: [],
+        context: normalizedResearchContext,
+        geo: geoData.location || 'Morocco',
+        lang
+      }
+    });
   }
 
   const limit = Number(CONFIG.APIFY_MAX_ITEMS_PER_SOURCE || 20);
@@ -2384,13 +2430,7 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
   ].filter(Boolean)).size;
 
   if (CONFIG.APIFY_REQUIRE_CONTEXT && contextTermCount < CONFIG.APIFY_MIN_CONTEXT_TERMS) {
-    return {
-      success: true,
-      triggered: false,
-      reason: 'INSUFFICIENT_RESEARCH_CONTEXT',
-      preflight: gate,
-      links: emptyLinks,
-      apifyIntel: emptyIntel,
+    return apifyEmptyDisplayResponse('INSUFFICIENT_RESEARCH_CONTEXT', gate, emptyLinks, emptyIntel, {
       searchPlan: {
         variants: queryVariants.slice(0, 10),
         context: normalizedResearchContext,
@@ -2399,7 +2439,7 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
         contextTermCount,
         minContextTerms: CONFIG.APIFY_MIN_CONTEXT_TERMS
       }
-    };
+    });
   }
 
   const runs = await Promise.all(
@@ -3891,6 +3931,56 @@ function geoBoostScore(rawUrl = '', geoData = {}, title = '', snippet = '') {
 
     return score;
 }
+
+function geoMatchDetailsV2(rawUrl = '', geoData = {}, title = '', snippet = '') {
+    const host = safeHostname(rawUrl);
+    const blob = `${host} ${title} ${snippet}`.toLowerCase();
+    const gl = String(geoData?.gl || '').toLowerCase();
+    const location = String(geoData?.location || '').toLowerCase();
+    const matchedTerms = [];
+    let score = 0;
+
+    if (gl && host.endsWith(`.${gl}`)) {
+        score += 45;
+        matchedTerms.push(`tld:.${gl}`);
+    }
+
+    const aliasesByGl = {
+        ma: ['morocco', 'maroc', 'casablanca', 'rabat', 'marrakech', 'tanger', 'tangier', 'fes', 'fez', 'agadir', 'meknes'],
+        sa: ['saudi', 'arabie saoudite', 'riyadh', 'jeddah', 'dammam', 'mecca', 'medina'],
+        ae: ['uae', 'emirates', 'dubai', 'abu dhabi', 'sharjah'],
+        fr: ['france', 'paris', 'lyon', 'marseille', 'toulouse'],
+        dz: ['algeria', 'algerie', 'alger', 'oran', 'constantine'],
+        tn: ['tunisia', 'tunisie', 'tunis', 'sfax'],
+        eg: ['egypt', 'egypte', 'cairo', 'alexandria', 'giza']
+    };
+
+    for (const alias of aliasesByGl[gl] || []) {
+        if (blob.includes(alias)) {
+            score += 12;
+            matchedTerms.push(alias);
+        }
+    }
+
+    const locationTokens = location
+        .split(/[\s,]+/)
+        .map(x => x.trim())
+        .filter(x => x.length >= 4 && !['morocco', 'france', 'algeria', 'tunisia', 'egypt', 'saudi', 'arabia'].includes(x));
+
+    for (const token of locationTokens) {
+        if (blob.includes(token)) {
+            score += 15;
+            matchedTerms.push(`loc:${token}`);
+        }
+    }
+
+    return {
+        score: Math.min(score, 80),
+        matchedTerms: [...new Set(matchedTerms)].slice(0, 8),
+        geoTarget: geoData?.location || null,
+        gl
+    };
+}
 async function analyzeCompetitors(
     query,
     geo ,
@@ -4311,7 +4401,8 @@ const gscData =
 
         const blocked = isBlockedCompetitorUrl(url, title, snippet);
         const officialLike = isOfficialLikeCompetitor(url, title, snippet);
-        const geoScore = geoBoostScore(url, geoData, title, snippet);
+        const geoMatch = geoMatchDetailsV2(url, geoData, title, snippet);
+        const geoScore = Math.max(geoBoostScore(url, geoData, title, snippet), geoMatch.score || 0);
 
         return {
             raw: r,
@@ -4322,13 +4413,14 @@ const gscData =
             originalPosition: i + 1,
             blocked,
             officialLike,
-            geoScore
+            geoScore,
+            geoMatch
         };
     })
     .filter(x => !x.blocked && x.officialLike)
     .sort((a, b) => {
-        const scoreA = (100 - a.originalPosition * 5) + a.geoScore;
-        const scoreB = (100 - b.originalPosition * 5) + b.geoScore;
+        const scoreA = (100 - a.originalPosition * 5) + (a.geoScore * 1.35);
+        const scoreB = (100 - b.originalPosition * 5) + (b.geoScore * 1.35);
         return scoreB - scoreA;
     })
     .slice(0, 10);
@@ -4361,6 +4453,10 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
         snippet: r.snippet || r.description || '',
         type,
         dominance: Math.min(posScore + richScore + Math.min(geoScore, 30), 100),
+        geoMatchScore: geoScore,
+        geoMatched: geoScore > 0,
+        geoTarget: x.geoMatch?.geoTarget || geoData.location,
+        geoSignals: x.geoMatch?.matchedTerms || [],
         estimatedAuthority:
             i < 2
                 ? (isAr ? 'مرتفعة جداً' : isEn ? 'Very High' : 'Très Haute')
@@ -5160,15 +5256,19 @@ try {
 
     const softTimeoutMs = Math.max(1500, Number(CONFIG.APIFY_SOFT_TIMEOUT_MS || 9000));
     const apifyTimeoutPromise = new Promise(resolve =>
-        setTimeout(() => resolve({
-            success: true,
-            triggered: false,
-            reason: 'APIFY_SOFT_TIMEOUT',
-            timeoutMs: softTimeoutMs,
-            links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
-            runs: [],
-            apifyIntel: { ads: [], posts: [], comments: [], reviews: [] }
-        }), softTimeoutMs)
+        setTimeout(() => {
+            const fallbackLinks = { ads: [], posts: [], comments: [], reviews: [], all: [] };
+            const fallbackIntel = { ads: [], posts: [], comments: [], reviews: [] };
+            resolve(apifyEmptyDisplayResponse('APIFY_SOFT_TIMEOUT', apifyPreflight, fallbackLinks, fallbackIntel, {
+                timeoutMs: softTimeoutMs,
+                searchPlan: {
+                    variants: (apifyResearchContext?.keywords || []).slice(0, 10),
+                    context: apifyResearchContext,
+                    geo: geoData?.location || geo,
+                    lang: langObj?.code || 'fr'
+                }
+            }));
+        }, softTimeoutMs)
     );
 
     apifyData = await Promise.race([apifyPromise, apifyTimeoutPromise]);
@@ -5176,11 +5276,16 @@ try {
     console.warn('[WarRoom-V10.0] Apify layer error:', e.message);
     apifyData = {
         success: false,
-        triggered: false,
-        reason: 'APIFY_RUNTIME_ERROR',
-        error: e.message,
-        links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
-        apifyIntel: { ads: [], posts: [], comments: [], reviews: [] }
+        ...apifyEmptyDisplayResponse(
+            'APIFY_RUNTIME_ERROR',
+            apifyPreflight,
+            { ads: [], posts: [], comments: [], reviews: [], all: [] },
+            { ads: [], posts: [], comments: [], reviews: [] },
+            {
+                success: false,
+                error: e.message
+            }
+        )
     };
 }
 
@@ -5194,6 +5299,12 @@ const finalResult = {
     elapsed,
     query: cleanQuery,
     geo: geoData.location,
+    serpGeo: {
+        requested: geo,
+        location: geoData.location,
+        gl: geoData.gl,
+        hl: googleLang
+    },
     lang: langObj.code,
     competitors: enrichedCompetitors,
     leaderMoat,
@@ -9439,14 +9550,22 @@ try {
     });
 } catch (e) {
     console.warn('[Funnel] Apify layer error:', e.message);
-    finalResponse.apify = {
-        success: false,
-        triggered: false,
-        reason: 'APIFY_RUNTIME_ERROR',
-        error: e.message,
-        links: { ads: [], posts: [], comments: [], reviews: [], all: [] },
-        apifyIntel: { ads: [], posts: [], comments: [], reviews: [] }
-    };
+    finalResponse.apify = apifyEmptyDisplayResponse(
+        'APIFY_RUNTIME_ERROR',
+        { ok: false, hasFatalError: false, bugCount: 1, criticalCount: 0 },
+        { ads: [], posts: [], comments: [], reviews: [], all: [] },
+        { ads: [], posts: [], comments: [], reviews: [] },
+        {
+            success: false,
+            error: e.message,
+            searchPlan: {
+                variants: [],
+                context: {},
+                geo: req.body?.geo || req.body?.country || null,
+                lang: validLang || 'fr'
+            }
+        }
+    );
 }
         cache.set(cacheKey, finalResponse);
         res.json(finalResponse);
