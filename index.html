@@ -2200,6 +2200,213 @@ table tbody td {
   border-color: rgba(56, 189, 248, 0.36);
 }
 
+/* ==========================================================================
+   3D SAAS MOTION + PREMIUM LOADER
+   ========================================================================== */
+@keyframes premiumSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes premiumOrbit {
+  0% { transform: rotate(0deg) translateX(36px) rotate(0deg); opacity: 0.55; }
+  50% { opacity: 1; }
+  100% { transform: rotate(360deg) translateX(36px) rotate(-360deg); opacity: 0.55; }
+}
+
+@keyframes loaderScan {
+  0% { transform: translateX(-120%); opacity: 0; }
+  20%, 80% { opacity: 1; }
+  100% { transform: translateX(120%); opacity: 0; }
+}
+
+@keyframes loaderGlowPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.16), 0 28px 90px rgba(2, 6, 23, 0.62); }
+  50% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0), 0 34px 110px rgba(56, 189, 248, 0.16); }
+}
+
+.main-wrapper {
+  perspective: 1400px;
+}
+
+.card,
+.result-card,
+.nav-tabs,
+.table-container,
+.magic-box {
+  transform-style: preserve-3d;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card:hover,
+  .result-card:hover {
+    transform: translateY(-4px) rotateX(0.7deg) rotateY(-0.7deg);
+  }
+
+  .nav-btn:hover,
+  .btn:hover,
+  .btn-gen:hover,
+  #btn-export-global:hover {
+    transform: translateY(-2px) translateZ(12px);
+  }
+}
+
+.card::after,
+.result-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent 24%, transparent 72%, rgba(56,189,248,0.08));
+  opacity: 0;
+  transition: opacity 0.28s ease;
+}
+
+.card:hover::after,
+.result-card:hover::after {
+  opacity: 1;
+}
+
+.loading-state {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(56, 189, 248, 0.12), transparent 32%),
+    radial-gradient(circle at 52% 50%, rgba(167, 139, 250, 0.10), transparent 36%),
+    rgba(7, 11, 22, 0.96);
+  backdrop-filter: blur(18px);
+}
+
+.loading-content {
+  position: relative;
+  isolation: isolate;
+  width: min(520px, calc(100vw - 34px));
+  padding: 34px 28px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.96)),
+    linear-gradient(135deg, rgba(56, 189, 248, 0.10), rgba(167, 139, 250, 0.08));
+  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow: hidden;
+  animation: loaderGlowPulse 2.8s ease-in-out infinite;
+}
+
+.loading-content::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 44%;
+  left: 0;
+  z-index: -1;
+  background: linear-gradient(90deg, transparent, rgba(56,189,248,0.12), transparent);
+  animation: loaderScan 2.6s ease-in-out infinite;
+}
+
+.loading-content::after {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  z-index: -1;
+  border: 1px solid rgba(56, 189, 248, 0.08);
+  border-radius: 8px;
+}
+
+.loading-spinner {
+  position: relative;
+  width: 92px !important;
+  height: 92px !important;
+  margin-inline: auto;
+  border: 0 !important;
+  border-radius: 50%;
+  background:
+    conic-gradient(from 90deg, #38bdf8, #2dd4bf, #a78bfa, #f59e0b, #38bdf8);
+  box-shadow: 0 0 46px rgba(56, 189, 248, 0.28);
+  animation: premiumSpin 1.15s linear infinite;
+}
+
+.loading-spinner::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: #07101f;
+  box-shadow: inset 0 0 18px rgba(56, 189, 248, 0.18);
+}
+
+.loading-spinner::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4.5px 0 0 -4.5px;
+  border-radius: 50%;
+  background: #e0f2fe;
+  box-shadow: 0 0 18px rgba(224, 242, 254, 0.9);
+  animation: premiumOrbit 1.75s linear infinite;
+}
+
+.loading-spinner-icon {
+  width: 44px;
+  height: 44px;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 0 24px rgba(56, 189, 248, 0.18);
+}
+
+.loading-title {
+  margin-top: 18px;
+  font-size: clamp(1.2rem, 3vw, 1.55rem);
+  letter-spacing: 0;
+  background: linear-gradient(90deg, #f8fafc, #a5f3fc, #c4b5fd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.loading-subtitle {
+  max-width: 380px;
+  margin-inline: auto;
+  color: #aab7ca;
+  line-height: 1.55;
+}
+
+.loading-phases {
+  margin-top: 22px;
+}
+
+.loading-phase {
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
+}
+
+.loading-phase.active {
+  background: linear-gradient(135deg, rgba(56,189,248,0.16), rgba(167,139,250,0.12));
+  border-color: rgba(125, 211, 252, 0.42);
+  box-shadow: 0 12px 28px rgba(56,189,248,0.14), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+
+.loading-phase.done {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.34);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner,
+  .loading-spinner::after,
+  .loading-content,
+  .loading-content::before,
+  .loading-phase.active i {
+    animation: none !important;
+  }
+}
+
 @media (max-width: 768px) {
   main {
     padding-top: 18px;
@@ -2217,6 +2424,447 @@ table tbody td {
   .card,
   .result-card {
     border-radius: 8px !important;
+  }
+}
+
+/* ==========================================================================
+   MOBILE PRODUCT PASS - readable command center on small screens
+   ========================================================================== */
+@media (max-width: 768px) {
+  body {
+    background: #070b16;
+    overflow-x: hidden;
+  }
+
+  .main-wrapper {
+    overflow-x: clip;
+  }
+
+  .container {
+    width: 100%;
+    padding-inline: 12px;
+  }
+
+  .header {
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+  }
+
+  .header-content {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .logo {
+    min-width: 0;
+    font-size: 1rem;
+    line-height: 1.1;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 0.95rem;
+  }
+
+  .logo-badge {
+    padding: 2px 8px;
+    font-size: 0.58rem;
+  }
+
+  .nav-tabs {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 5px;
+    gap: 5px;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .nav-btn {
+    flex: 0 0 auto;
+    min-width: max-content;
+    min-height: 38px;
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    scroll-snap-align: start;
+  }
+
+  .nav-btn i {
+    font-size: 0.88rem;
+  }
+
+  .server-status,
+  .lang-selector {
+    min-height: 34px;
+    padding: 6px 9px;
+    font-size: 0.7rem;
+  }
+
+  main {
+    padding: 14px 0 34px;
+  }
+
+  .card {
+    padding: 16px !important;
+    margin-bottom: 14px;
+  }
+
+  .card-header {
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+  }
+
+  .card-header > div {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .card-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: clamp(1.18rem, 5vw, 1.55rem) !important;
+    line-height: 1.18;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .card-title i {
+    width: 30px;
+    height: 30px;
+    margin-top: 1px;
+    flex: 0 0 30px;
+  }
+
+  .card-subtitle {
+    font-size: 0.86rem !important;
+    line-height: 1.55;
+    margin-top: 8px;
+  }
+
+  .form-group {
+    margin-bottom: 14px;
+  }
+
+  .form-label {
+    font-size: 0.72rem;
+    line-height: 1.35;
+  }
+
+  .input-field,
+  .select-field,
+  .textarea-field {
+    min-height: 46px;
+    font-size: 16px;
+    padding-block: 11px;
+  }
+
+  .input-wrapper .input-field,
+  .input-wrapper .select-field {
+    padding-inline-start: 42px;
+  }
+
+  .btn,
+  .btn-gen,
+  .btn-lg,
+  button[type="submit"] {
+    width: 100% !important;
+    min-height: 48px !important;
+    height: auto !important;
+    padding: 12px 14px !important;
+    font-size: 0.88rem !important;
+    line-height: 1.25;
+    white-space: normal;
+  }
+
+  .pill-content {
+    min-height: 42px;
+    justify-content: flex-start;
+    text-align: start;
+  }
+
+  .results-container {
+    margin-top: 18px;
+  }
+
+  .result-card {
+    padding: 14px !important;
+    margin-bottom: 14px !important;
+    overflow: hidden;
+  }
+
+  .result-card h3,
+  .result-card h4 {
+    font-size: 0.94rem !important;
+    line-height: 1.35 !important;
+    overflow-wrap: anywhere;
+  }
+
+  .result-card [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .result-card [style*="grid-template-columns:auto 1fr auto"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .result-card [style*="grid-template-columns:repeat(6,1fr)"] {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+
+  .result-card canvas {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+
+  .result-card a,
+  .result-card span,
+  .result-card div,
+  .result-card p,
+  .result-card small,
+  .result-card strong {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  table {
+    min-width: 640px;
+  }
+
+  .table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .toast-container {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    max-width: none;
+  }
+
+  .toast {
+    width: 100%;
+    font-size: 0.82rem;
+  }
+}
+
+@media (max-width: 420px) {
+  .container {
+    padding-inline: 9px;
+  }
+
+  .header-content {
+    padding: 8px 9px;
+  }
+
+  .card {
+    padding: 13px !important;
+  }
+
+  .card-title {
+    font-size: 1.08rem !important;
+  }
+
+  .nav-btn {
+    padding: 7px 10px;
+    font-size: 0.74rem;
+  }
+
+  .server-status span {
+    display: none;
+  }
+
+  .result-card {
+    padding: 12px !important;
+  }
+}
+
+@media (max-width: 390px) {
+  body {
+    font-size: 14px;
+  }
+
+  .header {
+    backdrop-filter: blur(18px);
+  }
+
+  .header-content {
+    grid-template-columns: 1fr 42px;
+    gap: 8px;
+  }
+
+  .logo {
+    gap: 8px;
+  }
+
+  .logo > div:last-child {
+    min-width: 0;
+  }
+
+  .logo > div:last-child > div:first-child {
+    max-width: 170px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .lang-selector {
+    width: 42px;
+    min-width: 42px;
+    padding: 6px;
+    text-align: center;
+  }
+
+  .server-status {
+    display: none;
+  }
+
+  .nav-tabs {
+    border-radius: 8px;
+    background: rgba(2, 6, 23, 0.72);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 10px 28px rgba(0,0,0,0.22);
+  }
+
+  .nav-btn {
+    min-height: 36px;
+    border-radius: 7px;
+    gap: 6px;
+  }
+
+  .nav-btn span {
+    max-width: 118px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  main {
+    padding-top: 10px;
+  }
+
+  .card {
+    border-radius: 8px !important;
+    padding: 12px !important;
+  }
+
+  .card-header {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+  }
+
+  .card-title {
+    display: grid;
+    grid-template-columns: 30px 1fr;
+    gap: 8px;
+    font-size: 1rem !important;
+  }
+
+  .card-title .highlight {
+    display: block;
+    grid-column: 2;
+    margin-top: -2px;
+  }
+
+  .card-subtitle {
+    font-size: 0.8rem !important;
+    color: #aab7ca;
+  }
+
+  .form-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.45px;
+  }
+
+  .input-field,
+  .select-field,
+  .textarea-field {
+    border-radius: 7px;
+    min-height: 44px;
+  }
+
+  .input-icon {
+    left: 13px;
+  }
+
+  [dir="rtl"] .input-icon {
+    right: 13px;
+    left: auto;
+  }
+
+  .btn,
+  .btn-gen,
+  button[type="submit"] {
+    border-radius: 7px !important;
+    min-height: 46px !important;
+    font-weight: 850;
+    box-shadow: 0 12px 24px rgba(56, 189, 248, 0.14);
+  }
+
+  .results-container {
+    margin-top: 14px;
+  }
+
+  .result-card {
+    border-radius: 8px !important;
+    padding: 11px !important;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.28) !important;
+  }
+
+  .result-card h3 {
+    gap: 7px !important;
+    margin-bottom: 10px !important;
+  }
+
+  .result-card [style*="font-size:1.75rem"] {
+    font-size: 1.35rem !important;
+  }
+
+  .result-card [style*="width:86px"] {
+    width: 72px !important;
+    height: 72px !important;
+  }
+
+  .result-card [style*="grid-template-columns:repeat(3,1fr)"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  .result-card [style*="display:flex"][style*="justify-content:space-between"] {
+    align-items: flex-start !important;
+  }
+
+  .result-card a[target="_blank"] {
+    display: inline-block;
+    max-width: 100%;
+    padding: 2px 0;
+  }
+
+  .loading-content {
+    width: calc(100vw - 24px);
+    padding: 18px 14px;
+    border-radius: 8px;
+  }
+
+  .loading-title {
+    font-size: 1rem;
+  }
+
+  .loading-subtitle {
+    font-size: 0.78rem;
+  }
+
+  .loading-phase {
+    min-height: 38px;
+    font-size: 0.76rem;
+    border-radius: 7px;
   }
 }
 
@@ -3502,7 +4150,116 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
+        function applyPremiumMicrocopy() {
+            const premiumCopy = {
+                fr: {
+                    tab1_title: 'Market Intelligence',
+                    tab1_title_highlight: 'Concurrents',
+                    tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrete peut vous faire prendre sa place.',
+                    label_keyword: 'Marche, niche ou requete a analyser',
+                    placeholder_keyword: 'Ex: SaaS marketing all-in-one Maroc',
+                    label_url: 'Votre site pour benchmark direct',
+                    placeholder_url: 'https://votre-site.com',
+                    label_country: 'Pays et SERP cible',
+                    label_analysis_lang: 'Langue du rapport',
+                    btn_analyze: 'REVELER LES OPPORTUNITES',
+                    loading_comp_title: 'Lecture du marche en cours...',
+                    loading_comp_sub: 'SERP, concurrents, signaux sociaux et angles de conversion sont consolides.',
+                    phase_comp_1: 'Top concurrents geo',
+                    phase_comp_2: 'Failles et objections',
+                    phase_comp_3: 'Plan de conquete',
+                    tab2_title: 'Website & Funnel Audit',
+                    tab2_subtitle: 'Transformez une page concurrente en plan clair: promesse, preuves, objections, CTA et quick wins.',
+                    label_funnel_url: 'URL du site ou de la landing page',
+                    placeholder_funnel_url: 'https://concurrent.com/landing-page',
+                    label_funnel_style: 'Angle de recommandation',
+                    funnel_power_engine: 'Analyse conversion active:',
+                    btn_funnel: 'AUDITER LE FUNNEL',
+                    loading_funnel_title: 'Audit de conversion en cours...',
+                    loading_funnel_sub: 'L IA reconstruit le parcours, les frictions, la preuve sociale et les opportunites.',
+                    tab3_title: 'Technical Growth Audit',
+                    tab3_highlight: 'SEO + IA',
+                    tab3_subtitle: 'Verifiez les fondations techniques qui bloquent indexation, performance, confiance et visibilite IA.',
+                    label_tech_url: 'URL a diagnostiquer',
+                    btn_technical: 'LANCER LE DIAGNOSTIC',
+                    tab4_title: 'Keyword Opportunity',
+                    tab4_highlight: 'Engine',
+                    tab4_subtitle: 'Trouvez les requetes qui melangent intention, rentabilite et facilite d execution.',
+                    label_seed: 'Mot-cle de depart',
+                    placeholder_seed: 'Ex: formation marketing SaaS',
+                    btn_keywords: 'TROUVER LES MOTS-CLES GAGNANTS'
+                },
+                en: {
+                    tab1_title: 'Market Intelligence',
+                    tab1_title_highlight: 'Competitors',
+                    tab1_subtitle: 'See who wins, why they win, and the exact move that can help you take the market.',
+                    label_keyword: 'Market, niche, or search query',
+                    placeholder_keyword: 'Ex: all-in-one marketing SaaS Morocco',
+                    label_url: 'Your website for direct benchmark',
+                    placeholder_url: 'https://your-site.com',
+                    label_country: 'Target country and SERP',
+                    label_analysis_lang: 'Report language',
+                    btn_analyze: 'REVEAL MARKET OPPORTUNITIES',
+                    loading_comp_title: 'Reading the market...',
+                    loading_comp_sub: 'SERP, competitors, social signals, and conversion angles are being consolidated.',
+                    phase_comp_1: 'Geo top competitors',
+                    phase_comp_2: 'Weaknesses and objections',
+                    phase_comp_3: 'Conquest plan',
+                    tab2_title: 'Website & Funnel Audit',
+                    tab2_subtitle: 'Turn any competitor page into a clear plan: promise, proof, objections, CTA, and quick wins.',
+                    label_funnel_url: 'Website or landing page URL',
+                    placeholder_funnel_url: 'https://competitor.com/landing-page',
+                    label_funnel_style: 'Recommendation angle',
+                    funnel_power_engine: 'Conversion analysis active:',
+                    btn_funnel: 'AUDIT THE FUNNEL',
+                    loading_funnel_title: 'Conversion audit running...',
+                    loading_funnel_sub: 'AI rebuilds the journey, friction, social proof, and opportunities.',
+                    tab3_title: 'Technical Growth Audit',
+                    tab3_highlight: 'SEO + AI',
+                    tab3_subtitle: 'Check the technical foundations blocking indexing, performance, trust, and AI visibility.',
+                    label_tech_url: 'URL to diagnose',
+                    btn_technical: 'RUN THE DIAGNOSIS',
+                    tab4_title: 'Keyword Opportunity',
+                    tab4_highlight: 'Engine',
+                    tab4_subtitle: 'Find queries that combine intent, profitability, and execution ease.',
+                    label_seed: 'Seed keyword',
+                    placeholder_seed: 'Ex: SaaS marketing training',
+                    btn_keywords: 'FIND WINNING KEYWORDS'
+                },
+                ar: {
+                    tab1_title: 'Market Intelligence',
+                    tab1_title_highlight: 'Competitors',
+                    tab1_subtitle: 'افهم من يربح في السوق، لماذا يربح، وما الحركة العملية التي تقربك منه.',
+                    label_keyword: 'السوق أو المجال أو كلمة البحث',
+                    placeholder_keyword: 'مثال: SaaS marketing Maroc',
+                    label_url: 'موقعك للمقارنة المباشرة',
+                    label_country: 'البلد ونتائج البحث المستهدفة',
+                    label_analysis_lang: 'لغة التقرير',
+                    btn_analyze: 'اكشف فرص السوق',
+                    tab2_title: 'Website & Funnel Audit',
+                    tab2_subtitle: 'حوّل صفحة المنافس إلى خطة واضحة: الوعد، الدليل، الاعتراضات، CTA، والانتصارات السريعة.',
+                    label_funnel_url: 'رابط الموقع أو صفحة الهبوط',
+                    label_funnel_style: 'زاوية التوصية',
+                    funnel_power_engine: 'تحليل التحويل مفعل:',
+                    btn_funnel: 'تدقيق الفانل',
+                    tab3_title: 'Technical Growth Audit',
+                    tab3_highlight: 'SEO + AI',
+                    tab3_subtitle: 'افحص الأسس التقنية التي تعطل الفهرسة، السرعة، الثقة، والظهور أمام الذكاء الاصطناعي.',
+                    tab4_title: 'Keyword Opportunity',
+                    tab4_highlight: 'Engine',
+                    tab4_subtitle: 'اكتشف الكلمات التي تجمع بين النية، الربحية، وسهولة التنفيذ.',
+                    btn_keywords: 'اكتشف الكلمات الرابحة'
+                }
+            };
+
+            Object.keys(premiumCopy).forEach(lang => {
+                TRANSLATIONS[lang] = { ...(TRANSLATIONS[lang] || {}), ...premiumCopy[lang] };
+            });
+        }
+
         const i18n = new I18n();
+        applyPremiumMicrocopy();
+        i18n.setLanguage(i18n.currentLang || STATE.currentLang || 'fr');
         
         // ═══════════════════════════════════════════════════════════════════
         // 🍞 TOAST NOTIFICATION SYSTEM
@@ -5179,6 +5936,7 @@ console.log('DECISION LAYER PREVIEW:', decisionLayerHtml?.slice(0, 300));
 
 ${fieldStudiesBottomHtml}
     `;
+    cleanRenderedOutput(container);
     container.classList.add('active');
 
     // ── Radar chart (double rAF pour garantir le rendu DOM) ─────
@@ -8208,13 +8966,46 @@ function getScoreBadgeClass(score) {
 }
 
 function escapeHtml(text) {
-    if (!text) return '';
+    if (text === null || text === undefined) return '';
+    if (typeof text === 'number') return Number.isFinite(text) ? String(text) : '';
+    if (typeof text === 'boolean') return text ? 'true' : 'false';
+    if (typeof text === 'object') {
+        try {
+            text = JSON.stringify(text);
+        } catch {
+            return '';
+        }
+    }
+    text = String(text);
+    if (/^\s*(null|undefined|nan|\[object object\])\s*$/i.test(text)) return '';
     return text
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+function cleanRenderedOutput(root) {
+    if (!root) return;
+
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const dirtyToken = /(\bnull\b|\bundefined\b|\bNaN\b|\[object Object\])/gi;
+    const emptyDash = /^\s*(?:[-–—:|/()\[\]{}.,;]+)?\s*$/;
+    const textNodes = [];
+
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+
+    textNodes.forEach(node => {
+        const original = node.nodeValue || '';
+        const cleaned = original.replace(dirtyToken, '').replace(/\s{2,}/g, ' ');
+        node.nodeValue = cleaned;
+
+        const parent = node.parentElement;
+        if (parent && emptyDash.test(parent.textContent || '') && !parent.querySelector('img,canvas,svg,a,button,input,select,textarea')) {
+            parent.style.display = 'none';
+        }
+    });
 }
 
 function setButtonLoading(btnId, loading) {
@@ -11415,6 +12206,7 @@ const auditIssuesHtml = `
     ${fieldStudiesBottomHtml}
     <div id="magicPromptPlaceholder"></div>
   </div>`;
+    cleanRenderedOutput(container);
 
     showResults('resultsFunnel');
 
@@ -11547,8 +12339,19 @@ const auditIssuesHtml = `
 // ════════════════════════════════════════════════════════════════
 
 function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
+    if (str === null || str === undefined) return '';
+    if (typeof str === 'number') return Number.isFinite(str) ? String(str) : '';
+    if (typeof str === 'boolean') return str ? 'true' : 'false';
+    if (typeof str === 'object') {
+        try {
+            str = JSON.stringify(str);
+        } catch {
+            return '';
+        }
+    }
+    str = String(str);
+    if (/^\s*(null|undefined|nan|\[object object\])\s*$/i.test(str)) return '';
+    return str
         .replace(/&/g,  '&amp;')
         .replace(/</g,  '&lt;')
         .replace(/>/g,  '&gt;')
