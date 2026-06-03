@@ -2919,7 +2919,7 @@ table tbody td {
                 <!-- Logo -->
                 <a href="#" class="logo">
                     <span class="logo-mark" aria-hidden="true">
-                        <img src="assets/seo-saas-logo.jpg" alt="">
+                        <span class="logo-mark-core">DAKA</span>
                     </span>
                     <div>
                         <div data-i18n="appname">SEO Gen Pro</div>
@@ -3098,20 +3098,42 @@ table tbody td {
                 </div>
             </div>
 
-            <details class="context-panel" style="margin:14px 0 18px;border:1px solid rgba(255,255,255,.08);border-radius:14px;background:rgba(255,255,255,.025);padding:12px 14px;">
-                <summary style="cursor:pointer;color:#cbd5e1;font-weight:800;font-size:.86rem;display:flex;align-items:center;gap:8px;">
-                    <i class="fas fa-sliders"></i>
-                    <span>Contexte utile pour une reponse plus concrete</span>
-                </summary>
-                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:14px;">
-                    <input id="compOffer" class="input-field" type="text" placeholder="Offre / produit exact">
-                    <input id="compAudience" class="input-field" type="text" placeholder="Audience cible">
-                    <input id="compObjective" class="input-field" type="text" placeholder="Objectif: vendre, leads, notoriete">
-                    <input id="compPriceRange" class="input-field" type="text" placeholder="Prix ou budget si connu">
-                    <input id="compKnownCompetitors" class="input-field" type="text" placeholder="Concurrents connus, separes par virgule">
-                    <input id="compCityRegion" class="input-field" type="text" placeholder="Ville / region prioritaire">
+            <section class="context-brief context-brief-competitors" aria-label="Brief business optionnel">
+                <div class="context-brief-head">
+                    <span class="context-brief-icon"><i class="fas fa-bullseye"></i></span>
+                    <div>
+                        <h3>Rendez le rapport 3x plus concret</h3>
+                        <p>Ajoutez votre offre, votre cible et votre objectif pour recevoir des actions adaptées à votre vraie situation.</p>
+                    </div>
+                    <span class="context-brief-badge">Optionnel · recommandé</span>
                 </div>
-            </details>
+                <div class="context-brief-grid">
+                    <label class="context-field">
+                        <span>Offre exacte</span>
+                        <input id="compOffer" class="input-field" type="text" placeholder="Ex: SaaS marketing + formation intégrée">
+                    </label>
+                    <label class="context-field">
+                        <span>Client idéal</span>
+                        <input id="compAudience" class="input-field" type="text" placeholder="Ex: PME marocaines, coachs, e-commerçants">
+                    </label>
+                    <label class="context-field">
+                        <span>Objectif prioritaire</span>
+                        <input id="compObjective" class="input-field" type="text" placeholder="Ex: vendre, générer des leads, prendre des RDV">
+                    </label>
+                    <label class="context-field">
+                        <span>Prix, panier ou budget</span>
+                        <input id="compPriceRange" class="input-field" type="text" placeholder="Ex: 499 DH/mois, panier 900 DH, budget 200 DH/j">
+                    </label>
+                    <label class="context-field">
+                        <span>Concurrents déjà connus</span>
+                        <input id="compKnownCompetitors" class="input-field" type="text" placeholder="Ex: site1.com, marque2, page Instagram">
+                    </label>
+                    <label class="context-field">
+                        <span>Zone à gagner</span>
+                        <input id="compCityRegion" class="input-field" type="text" placeholder="Ex: Maroc, Casablanca, MENA francophone">
+                    </label>
+                </div>
+            </section>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                 <div class="form-group">
@@ -3146,6 +3168,21 @@ table tbody td {
             </button>
         </form>
 
+        <a class="expert-bubble expert-bubble-competitors"
+           href="https://chatgpt.com/g/g-673ba23144bc819199fa36907952822b-competitor-research-assistant"
+           target="_blank"
+           rel="noopener noreferrer"
+           aria-label="Parler avec l'expert en competitor research">
+            <span class="expert-bubble-orb" aria-hidden="true">
+                <span></span>
+            </span>
+            <span class="expert-bubble-copy">
+                <strong>Besoin d'un résumé clair ?</strong>
+                <small>Parlez avec l'expert en recherche concurrentielle</small>
+            </span>
+            <i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i>
+        </a>
+
         <div id="resultsCompetitors" class="results-container"></div>
         <button id="btn-export-competitors-pdf"
         class="btn-pdf no-print"
@@ -3178,20 +3215,42 @@ table tbody td {
                         </div>
                     </div>
 
-                    <details class="context-panel">
-                        <summary>
-                            <i class="fas fa-bullseye"></i>
-                            <span>Contexte business pour des actions plus concretes</span>
-                        </summary>
-                        <div class="context-grid">
-                            <input id="funnelOffer" class="input-field" type="text" placeholder="Votre offre ou celle observee">
-                            <input id="funnelAudience" class="input-field" type="text" placeholder="Audience visee">
-                            <input id="funnelObjective" class="input-field" type="text" placeholder="Objectif: vente, demo, lead, WhatsApp">
-                            <input id="funnelPriceRange" class="input-field" type="text" placeholder="Prix / panier moyen si connu">
-                            <input id="funnelKnownCompetitors" class="input-field" type="text" placeholder="Concurrents ou pages de reference">
-                            <input id="funnelCityRegion" class="input-field" type="text" placeholder="Pays, ville ou region cible">
+                    <section class="context-brief context-brief-funnel" aria-label="Brief conversion optionnel">
+                        <div class="context-brief-head">
+                            <span class="context-brief-icon"><i class="fas fa-route"></i></span>
+                            <div>
+                                <h3>Donnez le contexte de la page</h3>
+                                <p>Plus vous précisez l'offre et l'objectif, plus les corrections seront concrètes: textes, preuves, prix, CTA et objections.</p>
+                            </div>
+                            <span class="context-brief-badge">Pour un plan réaliste</span>
                         </div>
-                    </details>
+                        <div class="context-brief-grid">
+                            <label class="context-field">
+                                <span>Offre ou promesse</span>
+                                <input id="funnelOffer" class="input-field" type="text" placeholder="Ex: audit marketing, formation, produit e-commerce">
+                            </label>
+                            <label class="context-field">
+                                <span>Audience visée</span>
+                                <input id="funnelAudience" class="input-field" type="text" placeholder="Ex: entrepreneurs débutants, PME, mamans, agences">
+                            </label>
+                            <label class="context-field">
+                                <span>Action attendue</span>
+                                <input id="funnelObjective" class="input-field" type="text" placeholder="Ex: achat, appel, formulaire, WhatsApp, démo">
+                            </label>
+                            <label class="context-field">
+                                <span>Prix ou valeur</span>
+                                <input id="funnelPriceRange" class="input-field" type="text" placeholder="Ex: 1 500 DH, abonnement 49€/mois, panier 700 DH">
+                            </label>
+                            <label class="context-field">
+                                <span>Pages à comparer</span>
+                                <input id="funnelKnownCompetitors" class="input-field" type="text" placeholder="Ex: concurrent.com, page de référence, marque">
+                            </label>
+                            <label class="context-field">
+                                <span>Marché ciblé</span>
+                                <input id="funnelCityRegion" class="input-field" type="text" placeholder="Ex: Maroc, France, Casablanca, GCC">
+                            </label>
+                        </div>
+                    </section>
 
                     <div style="background: rgba(16, 185, 129, 0.05); border: 1px dashed #10b981; padding: 15px; border-radius: 12px; margin-bottom: 25px; display: flex; align-items: center; gap: 15px;">
                         <i class="fas fa-microchip" style="font-size: 1.5rem; color: #10b981;"></i>
@@ -4123,10 +4182,30 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     _syncKwLangs(); // Init au chargement
 
-    /* Sync analysisLang / techLang ───────────────────────────────── */
-    document.querySelectorAll('input[name="techLang"], input[name="analysisLang"]').forEach(el => {
+    /* Sync all report language controls ───────────────────────────── */
+    const syncReportLanguage = (lang) => {
+        if (!lang || !['fr', 'ar', 'en'].includes(lang)) return;
+        STATE.currentLang = lang;
+        localStorage.setItem('preferredLang', lang);
+        localStorage.setItem('preferred_lang', lang);
+        document.querySelectorAll('#analysisLang, #funnelLang, #langSelector').forEach(el => {
+            if (el && el.value !== lang) el.value = lang;
+        });
+        document.querySelectorAll('input[name="techLang"]').forEach(el => {
+            el.checked = el.value === lang;
+        });
+        if (window.i18n && typeof window.i18n.setLanguage === 'function' && window.i18n.currentLang !== lang) {
+            window.i18n.setLanguage(lang);
+        }
+    };
+
+    document.querySelectorAll('#analysisLang, #funnelLang, #langSelector').forEach(el => {
+        el.addEventListener('change', () => syncReportLanguage(el.value));
+    });
+
+    document.querySelectorAll('input[name="techLang"]').forEach(el => {
         el.addEventListener('change', () => {
-            if (el.checked) STATE.currentLang = el.value;
+            if (el.checked) syncReportLanguage(el.value);
         });
     });
 
@@ -4134,7 +4213,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[data-lang-switch]').forEach(btn => {
         btn.addEventListener('click', () => {
             const l = btn.dataset.langSwitch;
-            if (l) { STATE.currentLang = l; localStorage.setItem('preferredLang', l); }
+            if (l) syncReportLanguage(l);
         });
     });
 
@@ -4155,7 +4234,10 @@ document.addEventListener('DOMContentLoaded', () => {
         class I18n {
             constructor() {
                 this.translations = TRANSLATIONS;
-                this.currentLang = localStorage.getItem('preferred_lang') || 'fr';
+                this.currentLang = localStorage.getItem('preferredLang')
+                    || localStorage.getItem('preferred_lang')
+                    || STATE.currentLang
+                    || 'fr';
                 this.init();
             }
             
@@ -4163,7 +4245,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.setLanguage(this.currentLang);
                 
                 // Language selector event
-                document.getElementById('langSelector').addEventListener('change', (e) => {
+                document.getElementById('langSelector')?.addEventListener('change', (e) => {
                     this.setLanguage(e.target.value);
                 });
             }
@@ -4177,6 +4259,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.currentLang = lang;
                 STATE.currentLang = lang;
                 localStorage.setItem('preferred_lang', lang);
+                localStorage.setItem('preferredLang', lang);
                 
                 // Update HTML lang attribute
                 document.documentElement.lang = lang;
@@ -4192,7 +4275,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.translatePage();
                 
                 // Update language selector
-                document.getElementById('langSelector').value = lang;
+                document.getElementById('langSelector') && (document.getElementById('langSelector').value = lang);
+                document.getElementById('analysisLang') && (document.getElementById('analysisLang').value = lang);
+                document.getElementById('funnelLang') && (document.getElementById('funnelLang').value = lang);
+                document.querySelectorAll('input[name="techLang"]').forEach(el => {
+                    el.checked = el.value === lang;
+                });
                 
                 if (CONFIG.DEBUG_MODE) console.log(`✅ Language changed to: ${lang}`);
             }
@@ -4341,6 +4429,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const i18n = new I18n();
+        window.i18n = i18n;
         applyPremiumMicrocopy();
         i18n.setLanguage(i18n.currentLang || STATE.currentLang || 'fr');
         
@@ -9280,6 +9369,10 @@ async function analyzeFunnel(e) {
   const url   = elUrl?.value.trim();
   const lang  = document.getElementById('funnelLang')?.value  || 'fr';
   const angle = document.getElementById('funnelAngle')?.value || 'aggressive';
+  STATE.currentLang = lang;
+  if (window.i18n && typeof window.i18n.setLanguage === 'function' && window.i18n.currentLang !== lang) {
+    window.i18n.setLanguage(lang);
+  }
 
   if (!url)
     return toast.warning(STATE.currentLang === 'ar'
@@ -9874,13 +9967,21 @@ const auditSummary = data.auditSummary || data.spyReport?.auditSummary || {
 const auditQuickWins = Array.isArray(data.auditQuickWins)
   ? data.auditQuickWins
   : (Array.isArray(data.spyReport?.auditQuickWins) ? data.spyReport.auditQuickWins : []);
+const pickScore = (...vals) => {
+  for (const val of vals) {
+    const n = Number(val);
+    if (Number.isFinite(n) && n > 0) return Math.max(0, Math.min(100, Math.round(n)));
+  }
+  return null;
+};
+
 const auditScorecard = data.auditScorecard || data.spyReport?.auditScorecard || {
-  structure: data.pageArchitecture?.structureScore || data.rawIntel?.localScore || 0,
-  clarity: Math.round(((data.aidaAnalysis?.attention?.score || 0) + (data.aidaAnalysis?.interest?.score || 0)) / 2),
-  trust: data.rawIntel?.socialProofsCount > 0 ? 70 : 30,
-  offer: (data.rawIntel?.detectedPrice || data.rawIntel?.sectionsDetected?.includes?.('PRICING')) ? 70 : 35,
-  cta: data.rawIntel?.ctas?.length ? 70 : 20,
-  friction: Math.max(0, 100 - (data.rawIntel?.localScore || 0))
+  structure: pickScore(data.pageArchitecture?.structureScore, data.rawIntel?.localScore),
+  clarity: pickScore(data.aidaAnalysis?.attention?.score, data.aidaAnalysis?.interest?.score),
+  trust: pickScore(data.globalScoring?.breakdown?.trust?.score, data.trustAudit?.trustScore),
+  offer: pickScore(data.offerAnalysis?.score, data.pricingPsychology?.score),
+  cta: pickScore(data.ctaAnalysis?.score, data.aidaAnalysis?.action?.score),
+  friction: pickScore(data.frictionAnalysis?.score, data.conversionFriction?.score)
 };
 
 const auditIssues = Array.isArray(data.auditIssues)
@@ -10330,12 +10431,12 @@ const decisionProofHtml = renderDecisionProofPanel(data, { isAr, isEn, dir, esc:
 
     // Scores
     // BUG-FIX seoScore : lire depuis scoringMatrix.seo (clé corrigée dans la normalisation)
-    const score      = scores.global     || data.globalScore || 0;
-    const seoScore   = scores.seo        || data.globalScoring?.breakdown?.seo?.score   || 0;
-    const trustScore = scores.trust      || tru.trustScore   || 0;
-    const convScore  = scores.conversion || 0;
-    const perfScore  = scores.performance|| 0;
-    const funScore   = scores.funnel     || 0;
+    const score      = pickScore(scores.global, data.globalScore) || 0;
+    const seoScore   = pickScore(scores.seo, data.globalScoring?.breakdown?.seo?.score);
+    const trustScore = pickScore(scores.trust, tru.trustScore);
+    const convScore  = pickScore(scores.conversion);
+    const perfScore  = pickScore(scores.performance);
+    const funScore   = pickScore(scores.funnel);
 
     // Identity
     const siteType  = identity.siteType         || data.siteType  || null;
@@ -10795,12 +10896,21 @@ const visualHierarchyHtml =
                 { label: 'Global', v: score,      c: `#${scoreColor}` },
             ].map(s => `
                 <div style="text-align:center;">
-                    <div style="font-size:0.78rem;font-weight:800;color:${s.c};">${s.v}</div>
+                    ${(() => {
+                        const n = Number(s.v);
+                        const hasScore = Number.isFinite(n);
+                        const label = hasScore ? n : (isAr ? 'للفحص' : isEn ? 'Check' : 'À vérifier');
+                        const width = hasScore ? Math.max(0, Math.min(100, n)) : 0;
+                        const color = hasScore ? s.c : '#64748b';
+                        return `
+                    <div style="font-size:0.78rem;font-weight:800;color:${color};">${label}</div>
                     <div style="height:3px;background:rgba(255,255,255,0.05);
                          border-radius:3px;margin:3px 0;overflow:hidden;">
-                        <div style="height:100%;width:${s.v}%;background:${s.c};
+                        <div style="height:100%;width:${width}%;background:${color};
                              border-radius:3px;transition:width 1.5s ease;"></div>
                     </div>
+                        `;
+                    })()}
                     <div style="font-size:0.58rem;color:#475569;text-transform:uppercase;
                          letter-spacing:0.5px;">${s.label}</div>
                 </div>`).join('')}
@@ -12318,11 +12428,16 @@ const designHtml = design.primary || design.fontMain || design.style ? `
     // 🏗️ ASSEMBLAGE FINAL
     // ══════════════════════════════════════════════════
 
-    const scorePill = (label, value, color) => `
+    const scorePill = (label, value, color) => {
+        const n = Number(value);
+        const hasScore = Number.isFinite(n);
+        const shown = hasScore ? `${Math.max(0, Math.min(100, Math.round(n)))}/100` : (isAr ? 'للفحص' : isEn ? 'To verify' : 'À vérifier');
+        return `
 <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
     <div style="font-size:0.72rem;color:#64748b;margin-bottom:6px;">${escapeHtml(label)}</div>
-    <div style="font-size:1.05rem;font-weight:800;color:${color};">${value ?? 0}/100</div>
+    <div style="font-size:1.05rem;font-weight:800;color:${hasScore ? color : '#64748b'};">${shown}</div>
 </div>`;
+    };
 // --- Audit blocks: init BEFORE any template uses them ---
 
 
@@ -13236,23 +13351,61 @@ const PDF_EXPORT = {
 .logo-mark {
     width: 54px;
     height: 54px;
-    border-radius: 16px;
+    border-radius: 18px;
     overflow: hidden;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
-    background: linear-gradient(135deg, #7c3aed, #d946ef);
+    position: relative;
+    isolation: isolate;
+    background:
+        radial-gradient(circle at 24% 18%, rgba(255,255,255,.86) 0 1px, transparent 2px),
+        radial-gradient(circle at 72% 22%, rgba(196,181,253,.78) 0 1px, transparent 2px),
+        radial-gradient(circle at 38% 78%, rgba(34,211,238,.72) 0 1px, transparent 2px),
+        radial-gradient(circle at 70% 78%, rgba(236,72,153,.58) 0 1px, transparent 2px),
+        radial-gradient(circle at 35% 30%, rgba(139,92,246,.44), transparent 42%),
+        radial-gradient(circle at 72% 68%, rgba(6,182,212,.2), transparent 42%),
+        linear-gradient(145deg, #050816 0%, #111827 48%, #1e1b4b 100%);
     box-shadow:
-        0 16px 38px rgba(139, 92, 246, 0.32),
-        inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+        0 18px 44px rgba(9, 12, 28, 0.55),
+        0 0 34px rgba(139, 92, 246, 0.28),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.16);
 }
 
-.logo-mark img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
+.logo-mark::before {
+    content: "";
+    position: absolute;
+    width: 94%;
+    height: 94%;
+    border-radius: inherit;
+    background:
+        conic-gradient(from 120deg, transparent, rgba(139,92,246,.58), rgba(34,211,238,.28), transparent 72%);
+    filter: blur(9px);
+    opacity: .85;
+    animation: dakaGalaxySpin 8s linear infinite;
+}
+
+.logo-mark::after {
+    content: "";
+    position: absolute;
+    inset: 7px;
+    border-radius: 14px;
+    border: 1px solid rgba(255,255,255,.13);
+    box-shadow: inset 0 0 18px rgba(255,255,255,.06);
+}
+
+.logo-mark-core {
+    position: relative;
+    z-index: 2;
+    font-family: Inter, Cairo, Almarai, sans-serif;
+    font-size: .7rem;
+    font-weight: 1000;
+    letter-spacing: .09em;
+    color: #c084fc;
+    text-shadow:
+        0 0 12px rgba(192,132,252,.78),
+        0 2px 10px rgba(0,0,0,.42);
 }
 
 .loading-state {
@@ -13394,6 +13547,200 @@ const PDF_EXPORT = {
     background: rgba(236, 253, 245, 0.9) !important;
 }
 
+.context-brief {
+    margin: 18px 0 22px;
+    padding: 18px;
+    border-radius: 18px;
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 7% 12%, rgba(139, 92, 246, 0.18), transparent 34%),
+        radial-gradient(circle at 92% 8%, rgba(34, 211, 238, 0.1), transparent 32%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(30, 41, 59, 0.84));
+    border: 1px solid rgba(167, 139, 250, 0.24);
+    box-shadow: 0 20px 46px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.context-brief::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+    transform: translateX(-100%);
+    animation: contextBriefShine 7s ease-in-out infinite;
+}
+
+.context-brief-head {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.context-brief-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 15px;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    background: linear-gradient(135deg, #8b5cf6, #ec4899);
+    box-shadow: 0 14px 32px rgba(139, 92, 246, 0.28);
+}
+
+.context-brief-head h3 {
+    margin: 0 0 4px;
+    color: #ffffff;
+    font-size: clamp(1rem, 2vw, 1.2rem);
+    line-height: 1.25;
+    font-family: Cairo, Inter, sans-serif;
+}
+
+.context-brief-head p {
+    margin: 0;
+    color: #94a3b8;
+    font-size: 0.84rem;
+    line-height: 1.55;
+}
+
+.context-brief-badge {
+    justify-self: end;
+    color: #c4b5fd;
+    background: rgba(139, 92, 246, 0.13);
+    border: 1px solid rgba(139, 92, 246, 0.28);
+    border-radius: 999px;
+    padding: 7px 11px;
+    font-size: 0.68rem;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.context-brief-grid {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.context-field {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+}
+
+.context-field span {
+    color: #dbeafe;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+}
+
+.context-field .input-field {
+    height: 48px;
+    background: rgba(2, 6, 23, 0.42);
+    border-color: rgba(148, 163, 184, 0.18);
+}
+
+.context-field .input-field:focus {
+    border-color: rgba(139, 92, 246, 0.7);
+    box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.14);
+}
+
+.expert-bubble {
+    margin: 12px 0 18px;
+    min-height: 72px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 13px 15px;
+    border-radius: 20px;
+    text-decoration: none;
+    background:
+        radial-gradient(circle at 12% 30%, rgba(139, 92, 246, 0.22), transparent 30%),
+        linear-gradient(135deg, rgba(17, 24, 39, 0.96), rgba(30, 41, 59, 0.88));
+    border: 1px solid rgba(139, 92, 246, 0.26);
+    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.18);
+    transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.expert-bubble:hover {
+    transform: translateY(-2px);
+    border-color: rgba(196, 181, 253, 0.5);
+    box-shadow: 0 22px 46px rgba(139, 92, 246, 0.18);
+}
+
+.expert-bubble-orb {
+    width: 46px;
+    height: 46px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background:
+        radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.86), transparent 23%),
+        conic-gradient(from 180deg, #8b5cf6, #ec4899, #22d3ee, #8b5cf6);
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.36);
+}
+
+.expert-bubble-orb span {
+    width: 22px;
+    height: 22px;
+    border-radius: inherit;
+    background: rgba(255, 255, 255, 0.58);
+    filter: blur(1px);
+}
+
+.expert-bubble-copy {
+    min-width: 0;
+    display: grid;
+    gap: 3px;
+}
+
+.expert-bubble-copy strong {
+    color: #ffffff;
+    font-size: 0.95rem;
+    line-height: 1.25;
+}
+
+.expert-bubble-copy small {
+    color: #94a3b8;
+    font-size: 0.76rem;
+    line-height: 1.45;
+}
+
+.expert-bubble > i {
+    color: #c4b5fd;
+}
+
+.decision-proof-panel h2,
+.result-card h1,
+.result-card h2,
+.result-card h3,
+.result-card p {
+    overflow-wrap: anywhere;
+}
+
+.decision-proof-panel h2 {
+    display: block !important;
+    max-height: none !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    -webkit-line-clamp: unset !important;
+    white-space: normal !important;
+}
+
+@keyframes contextBriefShine {
+    0%, 72% { transform: translateX(-120%); opacity: 0; }
+    82% { opacity: 1; }
+    100% { transform: translateX(120%); opacity: 0; }
+}
+
 @keyframes dakaOrbFloat {
     0%, 100% { transform: translateY(0) scale(1); }
     50% { transform: translateY(-10px) scale(1.018); }
@@ -13408,6 +13755,10 @@ const PDF_EXPORT = {
 @keyframes dakaOrbRibbon {
     0%, 100% { transform: rotate(-8deg) translate3d(-5%, -3%, 0) scale(1); opacity: 0.74; }
     50% { transform: rotate(14deg) translate3d(5%, 4%, 0) scale(1.08); opacity: 0.96; }
+}
+
+@keyframes dakaGalaxySpin {
+    to { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {
@@ -13427,6 +13778,33 @@ const PDF_EXPORT = {
         font-size: clamp(1rem, 5vw, 1.35rem);
         letter-spacing: 0.14em;
         padding: 9px 16px;
+    }
+
+    .context-brief {
+        padding: 15px;
+        border-radius: 16px;
+    }
+
+    .context-brief-head {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .context-brief-badge {
+        grid-column: 1 / -1;
+        justify-self: start;
+    }
+
+    .context-brief-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .expert-bubble {
+        grid-template-columns: auto minmax(0, 1fr);
+        border-radius: 16px;
+    }
+
+    .expert-bubble > i {
+        display: none;
     }
 }
 </style>
