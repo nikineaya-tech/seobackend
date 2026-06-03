@@ -2598,6 +2598,359 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
   };
 }
 // =================== END APIFY LAYER ===================
+
+// =================== PROOF MODEL LAYER ===================
+function truthLang(lang = 'fr') {
+  const code = String(lang || 'fr').toLowerCase().slice(0, 2);
+  if (code === 'ar') {
+    return {
+      observed: 'مرصود',
+      deduced: 'مستنتج',
+      recommended: 'موصى به',
+      unavailable: 'غير متاح',
+      method: 'طريقة الحساب',
+      confidence: 'الثقة',
+      executiveTitle: 'ما يجب فعله الآن',
+      proofTitle: 'مصادر القرار',
+      noSource: 'لا يوجد مصدر موثوق'
+    };
+  }
+  if (code === 'en') {
+    return {
+      observed: 'Observed',
+      deduced: 'Deduced',
+      recommended: 'Recommended',
+      unavailable: 'Unavailable',
+      method: 'Calculation method',
+      confidence: 'Confidence',
+      executiveTitle: 'What to do now',
+      proofTitle: 'Decision sources',
+      noSource: 'No reliable source'
+    };
+  }
+  return {
+    observed: 'Observe',
+    deduced: 'Deduit',
+    recommended: 'Recommande',
+    unavailable: 'Non disponible',
+    method: 'Methode de calcul',
+    confidence: 'Confiance',
+    executiveTitle: 'Ce qu il faut faire maintenant',
+    proofTitle: 'Sources de decision',
+    noSource: 'Aucune source fiable'
+  };
+}
+
+function cleanProofText(value, max = 240) {
+  if (value == null) return null;
+  const text = String(value).replace(/\s+/g, ' ').trim();
+  if (!text || /^(-|--|---|n\/a|null|undefined)$/i.test(text)) return null;
+  return text.length > max ? `${text.slice(0, max - 1).trim()}...` : text;
+}
+
+function cleanProofArray(values, limit = 5, max = 180) {
+  return (Array.isArray(values) ? values : [values])
+    .map(v => typeof v === 'object'
+      ? cleanProofText(v?.title || v?.query || v?.question || v?.url || v?.link || v?.text || v?.domain || v?.name, max)
+      : cleanProofText(v, max)
+    )
+    .filter(Boolean)
+    .slice(0, limit);
+}
+
+function proofFact({
+  type = 'observed',
+  title,
+  value,
+  source = null,
+  confidence = 'MEDIUM',
+  evidence = [],
+  formula = null,
+  inputs = null,
+  caveat = null
+}) {
+  return {
+    type,
+    title: cleanProofText(title, 120) || 'Insight',
+    value: value == null || value === '' ? null : value,
+    source: cleanProofText(source, 120),
+    confidence: typeof normalizeConfidence === 'function' ? normalizeConfidence(confidence || 'MEDIUM') : (confidence || 'MEDIUM'),
+    evidence: cleanProofArray(evidence, 6, 220),
+    formula: cleanProofText(formula, 260),
+    inputs: inputs || null,
+    caveat: cleanProofText(caveat, 220)
+  };
+}
+
+function proofIntegrity(proofModel = {}) {
+  const observed = proofModel.observed || [];
+  const deduced = proofModel.deduced || [];
+  const recommended = proofModel.recommended || [];
+  const unavailable = proofModel.unavailable || [];
+  return {
+    realDataFirst: true,
+    factsAreSeparated: true,
+    counts: {
+      observed: observed.length,
+      deduced: deduced.length,
+      recommended: recommended.length,
+      unavailable: unavailable.length
+    },
+    warnings: unavailable.map(x => x.title).slice(0, 6)
+  };
+}
+
+function buildExecutiveBrief({ lang = 'fr', priority, why, actions = [], confidence = 'MEDIUM', evidenceCount = 0 }) {
+  const L = truthLang(lang);
+  return {
+    title: L.executiveTitle,
+    priority: cleanProofText(priority, 220),
+    why: cleanProofText(why, 260),
+    actions: cleanProofArray(actions, 5, 180),
+    confidence: typeof normalizeConfidence === 'function' ? normalizeConfidence(confidence) : confidence,
+    evidenceCount: Number(evidenceCount || 0)
+  };
+}
+
+function buildCompetitorProofModel(ctx = {}) {
+  const {
+    lang = 'fr', cleanQuery = '', geoData = {}, source = 'unknown',
+    enrichedCompetitors = [], mainKwData = null, realVolume = null,
+    mergedData = {}, apifyData = {}, peopleAlsoAsk = [], relatedSearches = [],
+    userIntentContext = {}
+  } = ctx;
+  const L = truthLang(lang);
+  const competitorUrls = enrichedCompetitors.map(c => c.url).filter(Boolean).slice(0, 8);
+  const socialLinks = apifyData?.links?.all || [];
+  const sourceCounts = apifyData?.apifyIntel ? {
+    ads: (apifyData.apifyIntel.ads || []).length,
+    posts: (apifyData.apifyIntel.posts || []).length,
+    comments: (apifyData.apifyIntel.comments || []).length,
+    reviews: (apifyData.apifyIntel.reviews || []).length
+  } : { ads: 0, posts: 0, comments: 0, reviews: 0 };
+
+  const observed = [
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Market analyzed' : lang === 'ar' ? 'السوق المحلل' : 'Marche analyse', value: cleanQuery, source: 'User input', confidence: 'HIGH' }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Target country' : lang === 'ar' ? 'البلد المستهدف' : 'Pays cible', value: geoData.location || null, source: 'Geo resolver', confidence: 'HIGH', inputs: { gl: geoData.gl || null, hl: geoData.hl || null } }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Competitors found' : lang === 'ar' ? 'المنافسون المرصودون' : 'Concurrents trouves', value: enrichedCompetitors.length, source, confidence: enrichedCompetitors.length ? 'HIGH' : 'LOW', evidence: competitorUrls }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Search volume' : lang === 'ar' ? 'حجم البحث' : 'Volume de recherche', value: mainKwData ? realVolume : null, source: mainKwData ? 'Keyword provider' : L.noSource, confidence: mainKwData ? 'HIGH' : 'LOW', caveat: mainKwData ? null : L.unavailable }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Field evidence collected' : lang === 'ar' ? 'روابط الادلة الميدانية' : 'Preuves terrain collectees', value: socialLinks.length, source: 'Social and review actors', confidence: socialLinks.length ? 'MEDIUM' : 'LOW', evidence: socialLinks.slice(0, 6), inputs: sourceCounts })
+  ];
+
+  const deduced = [
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'Market difficulty' : lang === 'ar' ? 'صعوبة السوق' : 'Difficulte du marche', value: mergedData.marketInsights?.difficulty || null, source: 'Top competitors + market signals', confidence: 'MEDIUM', formula: 'difficulty = SERP strength + competitor count + authority labels + geo relevance', inputs: { competitors: enrichedCompetitors.length, topDominance: enrichedCompetitors[0]?.dominance || null, source } }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'Search intent' : lang === 'ar' ? 'نية البحث' : 'Intention de recherche', value: mergedData.marketInsights?.serpIntent || null, source: 'Titles, snippets, PAA, related searches', confidence: 'MEDIUM', formula: 'intent = classification of top titles/snippets + query wording', inputs: { paa: cleanProofArray(peopleAlsoAsk, 4), related: cleanProofArray(relatedSearches, 4) } }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'User context used' : lang === 'ar' ? 'سياق المستخدم المستعمل' : 'Contexte utilisateur utilise', value: Object.values(userIntentContext || {}).filter(Boolean).length, source: 'Optional form context', confidence: Object.values(userIntentContext || {}).filter(Boolean).length ? 'HIGH' : 'LOW', inputs: userIntentContext })
+  ];
+
+  const recommended = [
+    proofFact({ type: 'recommended', title: lang === 'en' ? 'Priority move' : lang === 'ar' ? 'القرار الاول' : 'Priorite concrete', value: mergedData.winningMove || null, source: 'Observed + deduced synthesis', confidence: 'MEDIUM', evidence: competitorUrls.slice(0, 3) }),
+    ...cleanProofArray(mergedData.actionRoadmap || [], 4).map((action, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Action ${i + 1}` : lang === 'ar' ? `الخطوة ${i + 1}` : `Action ${i + 1}`, value: action, source: 'Action roadmap', confidence: 'MEDIUM' }))
+  ];
+
+  const unavailable = [];
+  if (!mainKwData) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Real keyword volume' : lang === 'ar' ? 'حجم البحث الحقيقي' : 'Volume reel du mot cle', source: L.noSource, confidence: 'LOW' }));
+  if (!socialLinks.length) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Social proof links' : lang === 'ar' ? 'روابط اجتماعية موثقة' : 'Liens sociaux verifies', source: L.noSource, confidence: 'LOW' }));
+
+  return { title: L.proofTitle, labels: L, observed, deduced, recommended, unavailable };
+}
+
+function buildFunnelProofModel(ctx = {}) {
+  const {
+    lang = 'fr', validUrl = '', auditSummary = {}, auditScorecard = {},
+    auditQuickWins = [], auditEvidence = {}, ctaList = [],
+    sectionsDetailed = [], socialProofs = [], detectedPrice = 0, currency = 'MAD',
+    localScore = 0, v12Traffic = null, v12Basket = null, v12StealPot = null,
+    apifyData = {}, userIntentContext = {}
+  } = ctx;
+  const L = truthLang(lang);
+  const proofLinks = [
+    ...(auditEvidence.ctas || []),
+    ...(auditEvidence.pricing || []),
+    ...(auditEvidence.trust || []),
+    ...(apifyData?.links?.all || [])
+  ];
+
+  const observed = [
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Audited page' : lang === 'ar' ? 'الصفحة المدققة' : 'Page auditee', value: validUrl, source: 'Direct scrape', confidence: 'HIGH', evidence: [validUrl] }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Visible sections' : lang === 'ar' ? 'اقسام الصفحة' : 'Sections visibles', value: sectionsDetailed.length, source: 'HTML extraction', confidence: sectionsDetailed.length ? 'HIGH' : 'LOW' }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Calls to action' : lang === 'ar' ? 'ازرار الدعوة للفعل' : 'Appels a action', value: ctaList.length, source: 'HTML extraction', confidence: ctaList.length ? 'HIGH' : 'LOW', evidence: ctaList.slice(0, 6) }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Price detected' : lang === 'ar' ? 'السعر المرصود' : 'Prix detecte', value: detectedPrice > 0 ? `${detectedPrice} ${currency}` : null, source: detectedPrice > 0 ? 'Page text/schema' : L.noSource, confidence: detectedPrice > 0 ? 'MEDIUM' : 'LOW' }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Trust proof found' : lang === 'ar' ? 'ادلة الثقة' : 'Preuves de confiance', value: socialProofs.length, source: 'Page extraction', confidence: socialProofs.length ? 'MEDIUM' : 'LOW', evidence: socialProofs.slice(0, 5) })
+  ];
+
+  const deduced = [
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'Page score' : lang === 'ar' ? 'نقطة الصفحة' : 'Score de la page', value: auditSummary.overallScore || localScore || 0, source: 'Weighted audit model', confidence: auditSummary.confidence || 'MEDIUM', formula: 'score = structure + clarity + trust + offer + CTA - friction penalties', inputs: auditScorecard }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'Revenue model status' : lang === 'ar' ? 'حالة نموذج العائد' : 'Statut du modele financier', value: v12Traffic && v12Basket ? v12StealPot : null, source: v12Traffic && v12Basket ? 'Model-based estimate' : L.noSource, confidence: 'LOW', formula: 'potential = estimated traffic x assumed conversion lift x observed/estimated basket', inputs: { traffic: v12Traffic, basket: v12Basket, stealPotential: v12StealPot }, caveat: lang === 'en' ? 'Not a real revenue figure unless traffic and basket are observed.' : lang === 'ar' ? 'ليس رقما حقيقيا للعائد بدون زيارات وسعر موثقين.' : 'Ce n est pas un chiffre reel sans trafic et panier observes.' }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'User context used' : lang === 'ar' ? 'سياق المستخدم المستعمل' : 'Contexte utilisateur utilise', value: Object.values(userIntentContext || {}).filter(Boolean).length, source: 'Optional form context', confidence: Object.values(userIntentContext || {}).filter(Boolean).length ? 'HIGH' : 'LOW', inputs: userIntentContext })
+  ];
+
+  const recommended = cleanProofArray(auditQuickWins.map(x => x.title || x.action || x.howTo), 5).map((action, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Fix ${i + 1}` : lang === 'ar' ? `تحسين ${i + 1}` : `Correction ${i + 1}`, value: action, source: 'Audit quick wins', confidence: auditQuickWins[i]?.confidence || 'MEDIUM', evidence: proofLinks.slice(0, 4) }));
+  const unavailable = [];
+  if (!detectedPrice) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Verified price' : lang === 'ar' ? 'سعر موثق' : 'Prix verifie', source: L.noSource, confidence: 'LOW' }));
+  if (!v12Traffic) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Verified traffic' : lang === 'ar' ? 'زيارات موثقة' : 'Trafic verifie', source: L.noSource, confidence: 'LOW' }));
+
+  return { title: L.proofTitle, labels: L, observed, deduced, recommended, unavailable };
+}
+
+function buildTechnicalProofModel(ctx = {}) {
+  const { lang = 'fr', validUrl = '', extraction = {}, seoAudit = {}, metrics = {}, traffic = {}, actionRoadmap = [], criticalIssues = [], userIntentContext = {} } = ctx;
+  const L = truthLang(lang);
+  const observed = [
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Audited URL' : lang === 'ar' ? 'الرابط المدقق' : 'URL auditee', value: validUrl, source: 'Direct scrape', confidence: 'HIGH', evidence: [validUrl] }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Title length' : lang === 'ar' ? 'طول العنوان' : 'Longueur du titre', value: seoAudit?.title?.length ?? extraction?.titleLength ?? null, source: 'HTML head', confidence: 'HIGH' }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Images without ALT' : lang === 'ar' ? 'صور بدون وصف' : 'Images sans ALT', value: seoAudit?.images?.missingAlt ?? extraction?.missingAlt ?? null, source: 'HTML images', confidence: 'HIGH' }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Structured data' : lang === 'ar' ? 'بيانات منظمة' : 'Donnees structurees', value: seoAudit?.schema?.exists ? seoAudit.schema.types : null, source: 'JSON-LD extraction', confidence: seoAudit?.schema?.exists ? 'HIGH' : 'LOW' })
+  ];
+  const deduced = [
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'Technical score' : lang === 'ar' ? 'النقطة التقنية' : 'Score technique', value: extraction?.seoScore || null, source: 'Weighted technical checks', confidence: 'MEDIUM', formula: 'score = title + description + headings + schema + images + links + security + mobile', inputs: { metrics, traffic } }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'User context used' : lang === 'ar' ? 'سياق المستخدم المستعمل' : 'Contexte utilisateur utilise', value: Object.values(userIntentContext || {}).filter(Boolean).length, source: 'Optional form context', confidence: Object.values(userIntentContext || {}).filter(Boolean).length ? 'HIGH' : 'LOW', inputs: userIntentContext })
+  ];
+  const recommended = cleanProofArray([...(criticalIssues || []), ...(actionRoadmap || [])], 5).map((x, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Fix ${i + 1}` : lang === 'ar' ? `تحسين ${i + 1}` : `Correction ${i + 1}`, value: x, source: 'Technical audit', confidence: 'MEDIUM' }));
+  const unavailable = [];
+  if (!metrics || !Object.keys(metrics).length) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Lab speed metrics' : lang === 'ar' ? 'مقاييس السرعة' : 'Mesures vitesse labo', source: L.noSource, confidence: 'LOW' }));
+  return { title: L.proofTitle, labels: L, observed, deduced, recommended, unavailable };
+}
+
+function safeUserContextFromBody(body = {}) {
+  const ctx = body?.context || body?.businessContext || {};
+  return {
+    offer: cleanProofText(ctx.offer || body.offer, 180),
+    audience: cleanProofText(ctx.audience || body.audience, 180),
+    objective: cleanProofText(ctx.objective || body.objective, 160),
+    priceRange: cleanProofText(ctx.priceRange || body.priceRange, 80),
+    knownCompetitors: cleanProofArray(ctx.knownCompetitors || body.knownCompetitors, 4, 120),
+    cityOrRegion: cleanProofText(ctx.cityOrRegion || body.cityOrRegion, 90)
+  };
+}
+
+function isPublicHttpUrl(rawUrl = '') {
+  try {
+    const u = new URL(String(rawUrl || '').trim());
+    if (!['http:', 'https:'].includes(u.protocol)) return false;
+    const host = u.hostname.toLowerCase();
+    if (
+      host === 'localhost' ||
+      host === '0.0.0.0' ||
+      host === '127.0.0.1' ||
+      host === '::1' ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host) ||
+      /^169\.254\./.test(host)
+    ) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function buildScrapeReliability(scrape = {}, extracted = {}) {
+  const wordCount = Number(extracted.wordCount || scrape?.brand?.wordCount || 0);
+  const htmlLength = Number((scrape?.html || '').length || 0);
+  const evidenceCount =
+    Number((extracted.ctaList || []).length || 0) +
+    Number((extracted.sectionsDetailed || []).length || 0) +
+    Number((extracted.socialProofs || []).length || 0);
+  const blocked = Boolean(scrape?.scrapedBlocked || scrape?.blocked || scrape?.error);
+  const confidence = blocked ? 'LOW' : htmlLength > 20000 || wordCount > 400 ? 'HIGH' : htmlLength > 3000 || wordCount > 120 ? 'MEDIUM' : 'LOW';
+  return {
+    fetchLayer: scrape?.fetchLayer || scrape?.source || 'unknown',
+    blocked,
+    htmlLength,
+    wordCount,
+    evidenceCount,
+    confidence: typeof normalizeConfidence === 'function' ? normalizeConfidence(confidence) : confidence,
+    caveat: confidence === 'LOW'
+      ? 'Extraction limited: conclusions must be checked against visible evidence.'
+      : null
+  };
+}
+
+function buildConcreteFunnelActionPlan(ctx = {}) {
+  const {
+    lang = 'fr', auditIssues = [], auditQuickWins = [], auditEvidence = {},
+    ctaList = [], h1Main = '', detectedPrice = 0, socialProofs = [],
+    userIntentContext = {}
+  } = ctx;
+  const isAr = lang === 'ar';
+  const isEn = lang === 'en';
+  const offer = cleanProofText(userIntentContext.offer, 120);
+  const audience = cleanProofText(userIntentContext.audience, 120);
+  const primaryCta = cleanProofText(ctaList[0], 80);
+  const currentH1 = cleanProofText(h1Main, 160);
+  const evidence = [
+    ...cleanProofArray(auditEvidence.hero || [], 2),
+    ...cleanProofArray(auditEvidence.ctas || [], 2),
+    ...cleanProofArray(auditEvidence.pricing || [], 2),
+    ...cleanProofArray(auditEvidence.trust || [], 2)
+  ];
+
+  const h1Replacement = isAr
+    ? `حوّل ${offer || 'عرضك'} إلى نتيجة واضحة بدون مخاطرة`
+    : isEn
+    ? `Turn ${offer || 'your offer'} into a clear result with less risk`
+    : `Transformez ${offer || 'votre offre'} en resultat clair, sans risque`;
+
+  const ctaReplacement = isAr
+    ? 'احصل على التشخيص الآن'
+    : isEn
+    ? 'Get my diagnosis now'
+    : 'Obtenir mon diagnostic maintenant';
+
+  const proofBlock = isAr
+    ? 'أضف: نتيجة عميل، رقم موثق، ضمان، وسؤال شائع قبل الشراء.'
+    : isEn
+    ? 'Add: customer result, verified number, guarantee, and pre-purchase question.'
+    : 'Ajouter: resultat client, chiffre verifie, garantie, et question avant achat.';
+
+  const actions = [
+    {
+      zone: 'hero',
+      problemObserved: currentH1 ? (isEn ? 'Main promise can be made more concrete.' : isAr ? 'الوعد الرئيسي يحتاج وضوحا اكثر.' : 'La promesse principale peut devenir plus concrete.') : (isEn ? 'Main promise not clearly detected.' : isAr ? 'لم يتم رصد وعد رئيسي واضح.' : 'Promesse principale peu visible.'),
+      changeNow: isEn ? 'Rewrite the first headline around outcome, risk reduction, and audience.' : isAr ? 'أعد كتابة العنوان حول النتيجة وتقليل المخاطرة والجمهور.' : 'Reecrire le premier titre autour du resultat, de la reduction du risque et de l audience.',
+      replacementExample: h1Replacement,
+      evidence: currentH1 ? [currentH1] : evidence.slice(0, 2),
+      confidence: currentH1 ? 'HIGH' : 'MEDIUM'
+    },
+    {
+      zone: 'cta',
+      problemObserved: primaryCta ? (isEn ? 'CTA exists but can be more action-oriented.' : isAr ? 'زر الدعوة موجود ويمكن جعله اكثر عملية.' : 'Le CTA existe mais peut devenir plus actionnable.') : (isEn ? 'No clear CTA detected.' : isAr ? 'لم يتم رصد زر واضح.' : 'CTA clair non detecte.'),
+      changeNow: isEn ? 'Use one repeated CTA verb across hero, pricing, and final section.' : isAr ? 'استعمل نفس فعل الدعوة في الاعلى والسعر والنهاية.' : 'Utiliser le meme verbe CTA dans le hero, le prix et la derniere section.',
+      replacementExample: ctaReplacement,
+      evidence: primaryCta ? [primaryCta] : evidence.slice(0, 2),
+      confidence: primaryCta ? 'HIGH' : 'MEDIUM'
+    },
+    {
+      zone: 'trust',
+      problemObserved: socialProofs.length ? (isEn ? 'Trust exists but should be closer to the CTA.' : isAr ? 'الثقة موجودة ويجب تقريبها من زر الفعل.' : 'La preuve existe mais doit etre rapprochee du CTA.') : (isEn ? 'Trust proof is missing or too weak.' : isAr ? 'ادلة الثقة ضعيفة او مفقودة.' : 'Preuves de confiance faibles ou absentes.'),
+      changeNow: isEn ? 'Place proof before every decisive CTA.' : isAr ? 'ضع الدليل قبل كل زر قرار.' : 'Placer une preuve avant chaque CTA decisif.',
+      replacementExample: proofBlock,
+      evidence: cleanProofArray(socialProofs, 3).length ? cleanProofArray(socialProofs, 3) : evidence.slice(0, 3),
+      confidence: socialProofs.length ? 'HIGH' : 'MEDIUM'
+    },
+    {
+      zone: 'offer',
+      problemObserved: detectedPrice ? (isEn ? 'Price is visible; the value stack must justify it.' : isAr ? 'السعر ظاهر ويحتاج تبرير قيمة.' : 'Le prix est visible; la valeur doit le justifier.') : (isEn ? 'No verified price found.' : isAr ? 'لم يتم رصد سعر موثق.' : 'Aucun prix verifie detecte.'),
+      changeNow: isEn ? 'Show deliverables, guarantee, and expected result in the same block.' : isAr ? 'اعرض المخرجات والضمان والنتيجة المتوقعة في نفس القسم.' : 'Afficher livrables, garantie et resultat attendu dans le meme bloc.',
+      replacementExample: isEn ? 'What you get: deliverable, time, proof, guarantee.' : isAr ? 'ما تحصل عليه: مخرج، مدة، دليل، ضمان.' : 'Ce que vous obtenez: livrable, delai, preuve, garantie.',
+      evidence: detectedPrice ? [`${detectedPrice}`] : evidence.slice(0, 2),
+      confidence: detectedPrice ? 'HIGH' : 'LOW'
+    }
+  ];
+
+  const aiWins = cleanProofArray(auditQuickWins.map(x => x.title || x.howTo || x.action), 3).map((x, i) => ({
+    zone: `quick_win_${i + 1}`,
+    problemObserved: cleanProofArray(auditIssues.map(y => y.title || y.issue), 3)[i] || null,
+    changeNow: x,
+    replacementExample: null,
+    evidence: evidence.slice(0, 3),
+    confidence: auditQuickWins[i]?.confidence || 'MEDIUM'
+  }));
+
+  return actions.concat(aiWins).slice(0, 7);
+}
+// =================== END PROOF MODEL LAYER ===================
 console.log('✅ handleError loaded - Contextual error handling');
 
 console.log('\n✅ PARTIE 3/5: Validators + Retry + Utilities loaded successfully\n');
@@ -3987,7 +4340,8 @@ async function analyzeCompetitors(
     lang         = 'fr',
     userSiteData = null,
     forceRefresh = false,
-    gscAccessToken = null   // Optionnel : token GSC de l'utilisateur
+    gscAccessToken = null,   // Optionnel : token GSC de l'utilisateur
+    userIntentContext = {}
 ) {
     const startTime = Date.now();
 
@@ -4017,9 +4371,10 @@ async function analyzeCompetitors(
 
     const geoData    = resolveSerpGeo(geo);
     const googleLang = langObj.serpHl;
+    const contextKey = cleanProofText(JSON.stringify(userIntentContext || {}), 220) || 'no-context';
 
     // ── 3. CACHE ──────────────────────────────────────────────
-    const cacheKey = `warroom-v10.0:${cleanQuery}:${geoData.gl}:${langObj.code}`;
+    const cacheKey = `warroom-v10.0:${cleanQuery}:${geoData.gl}:${langObj.code}:${contextKey}`;
 
     if (forceRefresh) {
         cache.cache.delete(cacheKey);
@@ -5020,6 +5375,7 @@ ${keContext}
 
 Applique le framework Eugene Schwartz pour déduire le niveau de conscience et sophistication du marché.
 INSTRUCTION CRITIQUE: Pour 'vocabulary', donne exactement 4 mots-clés pertinents.
+IMPORTANT: N'invente jamais un volume, un trafic, un revenu ou un CPC. Si la source reelle manque, ecris exactement "${ND}".
 ${keContext ? `IMPORTANT: Le volume réel est fourni par Keywords Everywhere ci-dessus. Utilise ces chiffres EXACTS dans "volume". N'invente pas de chiffres.` : ''}
 
 JSON uniquement :
@@ -5027,7 +5383,7 @@ JSON uniquement :
   "marketInsights": {
     "difficulty": "TRADUIS STRICTEMENT EN ${L} : facile | moyen | difficile | saturé",
     "serpIntent":  "TRADUIS STRICTEMENT EN ${L} : informationnel | transactionnel | commercial | mixte",
-    "volume":      "${mainKwData ? realVolume : 'Estime un volume mensuel réaliste'}",
+    "volume":      "${mainKwData ? realVolume : ND}",
     "vocabulary":  ["mot_cle_1", "mot_cle_2", "mot_cle_3", "mot_cle_4"],
     "sophisticationLevel": "Niveau 1 à 5",
     "awarenessLevel": "Unaware | Problem Aware | Solution Aware | Product Aware | Most Aware",
@@ -5293,6 +5649,32 @@ console.log(
     `[WarRoom-V10.0] DATA-LAYER | triggered=${Boolean(apifyData?.triggered)} | reason=${apifyData?.reason || 'N/A'} | links=${apifyData?.links?.all?.length || 0} | runs=${Array.isArray(apifyData?.runs) ? apifyData.runs.map(r => `${r.source}:${r.count || 0}${r.error ? ':err' : ''}`).join(',') : 'n/a'}`
 );
 
+const proofModel = buildCompetitorProofModel({
+    lang: langObj.code,
+    cleanQuery,
+    geoData,
+    source,
+    enrichedCompetitors,
+    mainKwData,
+    realVolume,
+    mergedData,
+    apifyData,
+    peopleAlsoAsk,
+    relatedSearches,
+    userIntentContext
+});
+const executiveBrief = buildExecutiveBrief({
+    lang: langObj.code,
+    priority: mergedData.winningMove,
+    why: enrichedCompetitors[0]?.domain
+        ? `${enrichedCompetitors[0].domain} is the current observed leader for this request.`
+        : null,
+    actions: mergedData.actionRoadmap || [],
+    confidence: enrichedCompetitors.length ? 'MEDIUM' : 'LOW',
+    evidenceCount: (apifyData?.links?.all || []).length + enrichedCompetitors.length
+});
+const dataIntegrity = proofIntegrity(proofModel);
+
 const finalResult = {
     success: true,
     source,
@@ -5317,7 +5699,10 @@ const finalResult = {
     },
     ...mergedData,
     externalBot: GPT_BOT,
-    apify: apifyData
+    apify: apifyData,
+    proofModel,
+    executiveBrief,
+    dataIntegrity
 };
 
 cache.set(cacheKey, finalResult);
@@ -6376,7 +6761,8 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
         geo,
         lang = 'fr',
         url,
-        forceRefresh = false
+        forceRefresh = false,
+        context = {}
     } = req.body || {};
 
     // ── PATCH 1 : Validation query ────────────────────────
@@ -6419,6 +6805,14 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
 
         // ── PATCH 4 : forceRefresh réservé admin ─────────────
         const safeForceRefresh = Boolean(forceRefresh) && !!req.user?.isAdmin;
+        const safeContext = {
+            offer: cleanProofText(context?.offer, 180),
+            audience: cleanProofText(context?.audience, 180),
+            objective: cleanProofText(context?.objective, 160),
+            priceRange: cleanProofText(context?.priceRange, 80),
+            knownCompetitors: cleanProofArray(context?.knownCompetitors, 4, 120),
+            cityOrRegion: cleanProofText(context?.cityOrRegion, 90)
+        };
 
         console.log(
     `[api/competitors] DÉMARRAGE WAR ROOM | query="${query.trim()}" | rawGeo="${rawGeo}" | resolvedGeo="${safeGeo}" | gl="${geoData.gl}" | lang="${lang}"`
@@ -6457,14 +6851,15 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
             geo: safeGeo,
             lang,
             url: url || '',
-            forceRefresh: safeForceRefresh
+            forceRefresh: safeForceRefresh,
+            context: safeContext
         });
 
         let analysisPromise = competitorsInFlight.get(inFlightKey);
         if (analysisPromise) {
             console.log(`🧠 [api/competitors] IN-FLIGHT REUSE: ${inFlightKey}`);
         } else {
-            analysisPromise = analyzeCompetitors(query.trim(), safeGeo, lang, userSiteData, safeForceRefresh);
+            analysisPromise = analyzeCompetitors(query.trim(), safeGeo, lang, userSiteData, safeForceRefresh, null, safeContext);
             competitorsInFlight.set(inFlightKey, analysisPromise);
             analysisPromise.finally(() => {
                 if (competitorsInFlight.get(inFlightKey) === analysisPromise) {
@@ -7966,6 +8361,7 @@ app.post('/api/analyze-funnel', analysisLimiter, async (req, res) => {
 
     try {
         const { url, userLang = 'fr', salesAngle = 'aggressive', mode = 'deep' } = req.body;
+        const safeContext = safeUserContextFromBody(req.body);
 
         // ── 0. VALIDATION URL (Intégrée depuis la correction) ─────────
         if (!url || typeof url !== 'string') {
@@ -7982,6 +8378,15 @@ app.post('/api/analyze-funnel', analysisLimiter, async (req, res) => {
             return res.status(400).json({
                 success: false, error: 'URL invalide', message: `URL non valide : ${url}`,
                 requestId, performance: { totalTime: Date.now() - startTime }
+            });
+        }
+        if (!isPublicHttpUrl(targetUrl)) {
+            return res.status(400).json({
+                success: false,
+                error: 'URL_FORBIDDEN',
+                message: 'URL publique http/https requise.',
+                requestId,
+                performance: { totalTime: Date.now() - startTime }
             });
         }
 
@@ -8002,7 +8407,8 @@ const langInstr = isAr
   ? 'Answer ONLY in English. No French. No Arabic.'
   : 'Réponds UNIQUEMENT en Français. Aucun mot en anglais ou arabe.';
         // ── 2. CACHE ──────────────────────────────────────────────────
-        const cacheKey = `funnelspy_v12_${validUrl}_${userLang}_${mode}`;
+        const contextKey = cleanProofText(JSON.stringify(safeContext || {}), 220) || 'no-context';
+        const cacheKey = `funnelspy_v12_${validUrl}_${userLang}_${mode}_${contextKey}`;
         const cached   = cache.get(cacheKey);
         if (cached && !req.body.skipCache) {
             console.log(`💾 [${requestId}] Cache HIT — ${validUrl}`);
@@ -9330,6 +9736,51 @@ const auditSectionMap = buildSectionMap();
 const auditEvidence = buildEvidence();
 const auditIssues = buildAuditIssues();
 const auditQuickWins = buildQuickWinsAudit();
+const concreteActionPlan = buildConcreteFunnelActionPlan({
+    lang: validLang,
+    auditIssues,
+    auditQuickWins,
+    auditEvidence,
+    ctaList,
+    h1Main,
+    detectedPrice,
+    socialProofs,
+    userIntentContext: safeContext
+});
+const scrapeReliability = buildScrapeReliability(scrape, {
+    wordCount,
+    ctaList,
+    sectionsDetailed,
+    socialProofs
+});
+const proofModel = buildFunnelProofModel({
+    lang: validLang,
+    validUrl,
+    auditSummary,
+    auditScorecard,
+    auditIssues,
+    auditQuickWins,
+    auditEvidence,
+    ctaList,
+    sectionsDetailed,
+    socialProofs,
+    detectedPrice,
+    currency,
+    localScore,
+    v12Traffic,
+    v12Basket,
+    v12StealPot,
+    userIntentContext: safeContext
+});
+const executiveBrief = buildExecutiveBrief({
+    lang: validLang,
+    priority: concreteActionPlan[0]?.changeNow || auditSummary.verdict || null,
+    why: auditSummary.topWeaknesses?.[0] || auditSummary.topStrengths?.[0] || null,
+    actions: concreteActionPlan.map(x => x.changeNow).filter(Boolean).slice(0, 4),
+    confidence: scrapeReliability.confidence === 'HIGH' ? 'MEDIUM' : 'LOW',
+    evidenceCount: (auditEvidence.ctas || []).length + (auditEvidence.pricing || []).length + (auditEvidence.trust || []).length
+});
+const dataIntegrity = proofIntegrity(proofModel);
 // ─────────────────────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════
 // 📦 ASSEMBLAGE RÉPONSE FINALE GOD TIER
@@ -9390,6 +9841,11 @@ const finalResponse = {
     auditIssues,
     auditQuickWins,
     auditEvidence,
+    concreteActionPlan,
+    proofModel,
+    executiveBrief,
+    dataIntegrity,
+    scrapeReliability,
 
     aiRewritePrompt:      magicPrompt,
     magicPromptAvailable: true,
@@ -9548,6 +10004,27 @@ try {
         inputsBySource: req.body?.apifyInput || {},
         researchContext: funnelResearchContext
     });
+    finalResponse.proofModel = buildFunnelProofModel({
+        lang: validLang,
+        validUrl,
+        auditSummary,
+        auditScorecard,
+        auditIssues,
+        auditQuickWins,
+        auditEvidence,
+        ctaList,
+        sectionsDetailed,
+        socialProofs,
+        detectedPrice,
+        currency,
+        localScore,
+        v12Traffic,
+        v12Basket,
+        v12StealPot,
+        apifyData: finalResponse.apify,
+        userIntentContext: safeContext
+    });
+    finalResponse.dataIntegrity = proofIntegrity(finalResponse.proofModel);
 } catch (e) {
     console.warn('[Funnel] Apify layer error:', e.message);
     finalResponse.apify = apifyEmptyDisplayResponse(
@@ -11209,9 +11686,13 @@ app.post('/api/technical-seo', async (req, res) => {
 
     try {
         const { url, lang = 'fr' } = req.body;
+        const safeContext = safeUserContextFromBody(req.body);
         if (!url) return res.status(400).json({ success: false, error: 'URL_REQUIRED', message: 'URL obligatoire.' });
 
         const validUrl       = InputValidator.sanitizeURL(url);
+        if (!isPublicHttpUrl(validUrl)) {
+            return res.status(400).json({ success: false, error: 'URL_FORBIDDEN', message: 'URL publique http/https requise.', requestId });
+        }
         const isAr           = lang === 'ar';
         const isEn           = lang === 'en';
         const targetLangName = isAr ? 'Arabe (العربية)' : isEn ? 'English' : 'Français';
@@ -11219,7 +11700,8 @@ app.post('/api/technical-seo', async (req, res) => {
         console.log(`\n🚀 [${requestId}] DEEP INTEL lancé : ${validUrl} | Lang: ${lang}`);
 
         // ── CACHE CHECK ──────────────────────────────────────────
-        const cacheKey = `techseo-v7-${validUrl}-${lang}`;
+        const contextKey = cleanProofText(JSON.stringify(safeContext || {}), 220) || 'no-context';
+        const cacheKey = `techseo-v7-${validUrl}-${lang}-${contextKey}`;
         const cached   = cache.get(cacheKey);
         if (cached) {
             console.log(`${requestId} Cache HIT`);
@@ -11644,6 +12126,33 @@ Return this exact JSON (language: ${targetLangName}):
                 fromCache    : false
             }
         };
+
+        finalResponse.proofModel = buildTechnicalProofModel({
+            lang,
+            validUrl,
+            extraction: finalResponse.extraction,
+            seoAudit: finalResponse.seoAudit,
+            metrics: finalResponse.metrics,
+            traffic: finalResponse.traffic,
+            actionRoadmap: finalResponse.actionRoadmap,
+            criticalIssues: finalResponse.criticalIssues,
+            userIntentContext: safeContext
+        });
+        finalResponse.executiveBrief = buildExecutiveBrief({
+            lang,
+            priority: cleanProofArray(finalResponse.criticalIssues, 1)[0] || finalResponse.globalReport?.verdict || null,
+            why: finalResponse.seoAudit?.title?.status || finalResponse.seoAudit?.description?.status || null,
+            actions: cleanProofArray(finalResponse.actionRoadmap, 4),
+            confidence: finalResponse.extraction?.wordCount > 120 ? 'MEDIUM' : 'LOW',
+            evidenceCount: finalResponse.proofModel.observed.length
+        });
+        finalResponse.dataIntegrity = proofIntegrity(finalResponse.proofModel);
+        finalResponse.scrapeReliability = buildScrapeReliability(scrapeResult, {
+            wordCount,
+            ctaList: [],
+            sectionsDetailed: h2List,
+            socialProofs: []
+        });
 
         cache.set(cacheKey, finalResponse);
         if (typeof updateMetrics === 'function')
