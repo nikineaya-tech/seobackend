@@ -2918,7 +2918,9 @@ table tbody td {
 
                 <!-- Logo -->
                 <a href="#" class="logo">
-                    <span class="logo-icon">🚀</span>
+                    <span class="logo-mark" aria-hidden="true">
+                        <img src="assets/seo-saas-logo.jpg" alt="">
+                    </span>
                     <div>
                         <div data-i18n="appname">SEO Gen Pro</div>
                         <div class="logo-badge" data-i18n="appbadge">AI PRO</div>
@@ -3389,8 +3391,7 @@ table tbody td {
 
     </div> <div id="loadingState" class="loading-state">
         <div class="loading-orb">
-            <div class="loading-spinner" style="border-top-color: var(--accent-secondary);"></div>
-            <i class="fas fa-chess-queen loading-spinner-icon" style="color: var(--accent-secondary);"></i>
+            <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
         <div class="loading-title" data-i18n="loading_comp_title">Analyse Stratégique des Leaders...</div>
         <div class="loading-subtitle" data-i18n="loading_comp_sub">Décryptage des secrets de réussite de vos concurrents.</div>
@@ -3405,8 +3406,7 @@ table tbody td {
 
     <div id="loadingFunnel" class="loading-state">
         <div class="loading-orb">
-            <div class="loading-spinner" style="border-top-color: #10b981;"></div>
-            <i class="fas fa-user-secret loading-spinner-icon" style="color: #10b981;"></i>
+            <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
         <div class="loading-title" data-i18n="loading_funnel_title">Audit de Conversion en cours...</div>
         <div class="loading-subtitle" data-i18n="loading_funnel_sub">Évaluation du potentiel de revenus et des leviers psychologiques.</div>
@@ -3422,8 +3422,7 @@ table tbody td {
 
     <div id="loadingTechnical" class="loading-state">
         <div class="loading-orb">
-            <div class="loading-spinner" style="border-top-color: #3b82f6;"></div>
-            <i class="fas fa-microchip loading-spinner-icon" style="color: #3b82f6;"></i>
+            <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
         <div class="loading-title" data-i18n="loading_tech_title">Diagnostic de Performance...</div>
         <div class="loading-subtitle" data-i18n="loading_tech_sub">Inspection de l'infrastructure pour maximiser votre visibilité.</div>
@@ -3439,8 +3438,7 @@ table tbody td {
 
     <div id="loadingKeywords" class="loading-state">
         <div class="loading-orb">
-            <div class="loading-spinner" style="border-top-color: #06b6d4;"></div>
-            <i class="fas fa-key loading-spinner-icon" style="color: #06b6d4;"></i>
+            <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
         <div class="loading-title" data-i18n="loading_kw_title">Recherche de Pépites Sémantiques...</div>
         <div class="loading-subtitle" data-i18n="loading_kw_sub">Notre IA identifie les mots-clés les plus rentables pour votre niche.</div>
@@ -3579,8 +3577,7 @@ table tbody td {
 
    <div id="loadingKeywords" class="loading-state">
         <div class="loading-orb">
-            <div class="loading-spinner" style="border-top-color: #06b6d4;"></div>
-            <i class="fas fa-key loading-spinner-icon" style="color: #06b6d4;"></i>
+            <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
         <div class="loading-title" data-i18n="loading_kw_title">Recherche de Pépites Sémantiques...</div>
         <div class="loading-subtitle" data-i18n="loading_kw_sub">Notre IA identifie les mots-clés les plus rentables pour votre niche.</div>
@@ -13234,6 +13231,205 @@ const PDF_EXPORT = {
 };
 
     </script>
+
+<style id="daka-brand-loader-style">
+.logo-mark {
+    width: 54px;
+    height: 54px;
+    border-radius: 16px;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    background: linear-gradient(135deg, #7c3aed, #d946ef);
+    box-shadow:
+        0 16px 38px rgba(139, 92, 246, 0.32),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+}
+
+.logo-mark img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.loading-state {
+    background:
+        radial-gradient(circle at 50% 32%, rgba(255, 255, 255, 0.98), rgba(246, 241, 255, 0.96) 42%, rgba(238, 242, 255, 0.94) 100%) !important;
+    color: #111827 !important;
+}
+
+.loading-state .loading-content {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.loading-state .loading-content::before,
+.loading-state .loading-content::after {
+    display: none !important;
+}
+
+.loading-state .loading-orb {
+    width: clamp(220px, 34vw, 380px) !important;
+    height: clamp(220px, 34vw, 380px) !important;
+    margin: 0 auto 24px !important;
+    position: relative !important;
+    display: grid !important;
+    place-items: center !important;
+    filter: drop-shadow(0 34px 70px rgba(139, 92, 246, 0.22));
+}
+
+.brand-loader-orb {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 30% 24%, rgba(255, 255, 255, 0.98) 0 7%, rgba(255, 255, 255, 0.48) 8% 24%, transparent 38%),
+        radial-gradient(circle at 35% 62%, rgba(34, 211, 238, 0.42), transparent 34%),
+        radial-gradient(circle at 68% 28%, rgba(236, 72, 153, 0.38), transparent 36%),
+        conic-gradient(from 210deg, #7c3aed, #a855f7, #ec4899, #22d3ee, #8b5cf6, #7c3aed);
+    box-shadow:
+        inset 0 0 32px rgba(255, 255, 255, 0.72),
+        inset -34px -28px 70px rgba(76, 29, 149, 0.28),
+        inset 26px 24px 60px rgba(255, 255, 255, 0.42),
+        0 0 0 1px rgba(255, 255, 255, 0.72);
+    animation: dakaOrbFloat 4.6s ease-in-out infinite, dakaOrbHue 9s linear infinite;
+}
+
+.brand-loader-orb::before,
+.brand-loader-orb::after {
+    content: "";
+    position: absolute;
+    inset: 8%;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.brand-loader-orb::before {
+    background:
+        linear-gradient(132deg, transparent 16%, rgba(255, 255, 255, 0.62) 36%, rgba(255, 255, 255, 0.12) 48%, transparent 66%),
+        radial-gradient(ellipse at 72% 20%, rgba(255, 255, 255, 0.58), transparent 42%);
+    filter: blur(5px);
+    mix-blend-mode: screen;
+    animation: dakaOrbRibbon 5.8s ease-in-out infinite;
+}
+
+.brand-loader-orb::after {
+    inset: 1.5%;
+    border: 2px solid rgba(255, 255, 255, 0.72);
+    box-shadow: inset 0 0 44px rgba(255, 255, 255, 0.38);
+}
+
+.brand-loader-orb span {
+    position: relative;
+    z-index: 2;
+    padding: 11px 20px 10px;
+    border-radius: 999px;
+    color: #ffffff;
+    background: rgba(17, 24, 39, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.36);
+    box-shadow:
+        0 18px 44px rgba(76, 29, 149, 0.22),
+        inset 0 1px 0 rgba(255, 255, 255, 0.36);
+    backdrop-filter: blur(10px);
+    font-family: Inter, Cairo, Almarai, sans-serif;
+    font-size: clamp(1.15rem, 4vw, 2rem);
+    font-weight: 1000;
+    letter-spacing: 0.18em;
+    text-shadow: 0 3px 12px rgba(76, 29, 149, 0.38);
+}
+
+.loading-state .loading-title {
+    width: fit-content;
+    max-width: min(88vw, 620px);
+    margin: 0 auto 12px !important;
+    padding: 12px 24px !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.72) !important;
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+    background-clip: padding-box !important;
+    box-shadow:
+        0 18px 45px rgba(139, 92, 246, 0.14),
+        inset 0 1px 0 rgba(255, 255, 255, 0.82) !important;
+}
+
+.loading-state .loading-subtitle,
+.loading-state .loading-tip {
+    color: #64748b !important;
+}
+
+.loading-state .loading-progress-wrap {
+    background: rgba(139, 92, 246, 0.12) !important;
+    border: 1px solid rgba(139, 92, 246, 0.12) !important;
+}
+
+.loading-state .loading-progress-bar {
+    background: linear-gradient(90deg, #8b5cf6, #ec4899, #22d3ee) !important;
+}
+
+.loading-state .loading-phase {
+    background: rgba(255, 255, 255, 0.58) !important;
+    border-color: rgba(139, 92, 246, 0.13) !important;
+    color: #64748b !important;
+}
+
+.loading-state .loading-phase.active {
+    color: #6d28d9 !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    border-color: rgba(139, 92, 246, 0.3) !important;
+    box-shadow: 0 14px 30px rgba(139, 92, 246, 0.14) !important;
+}
+
+.loading-state .loading-phase.done {
+    color: #059669 !important;
+    background: rgba(236, 253, 245, 0.9) !important;
+}
+
+@keyframes dakaOrbFloat {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-10px) scale(1.018); }
+}
+
+@keyframes dakaOrbHue {
+    0% { filter: saturate(1) brightness(1); }
+    50% { filter: saturate(1.12) brightness(1.04); }
+    100% { filter: saturate(1) brightness(1); }
+}
+
+@keyframes dakaOrbRibbon {
+    0%, 100% { transform: rotate(-8deg) translate3d(-5%, -3%, 0) scale(1); opacity: 0.74; }
+    50% { transform: rotate(14deg) translate3d(5%, 4%, 0) scale(1.08); opacity: 0.96; }
+}
+
+@media (max-width: 768px) {
+    .logo-mark {
+        width: 42px;
+        height: 42px;
+        border-radius: 13px;
+    }
+
+    .loading-state .loading-orb {
+        width: min(72vw, 280px) !important;
+        height: min(72vw, 280px) !important;
+        margin-bottom: 18px !important;
+    }
+
+    .brand-loader-orb span {
+        font-size: clamp(1rem, 5vw, 1.35rem);
+        letter-spacing: 0.14em;
+        padding: 9px 16px;
+    }
+}
+</style>
 
 </body>
 </html>
