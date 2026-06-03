@@ -5576,7 +5576,7 @@ try {
         trendsRegions,
         shoppingProducts,
         mapsPlaces,
-        topDomainsObserved,
+        topDomainsObserved: topObservedDomains,
         googleRealData: {
             trends: mergedData.marketInsights?.trendsIntel || trendsData,
             shopping: mergedData.marketInsights?.shoppingIntel || shoppingData,
@@ -5601,14 +5601,23 @@ try {
     };
 
     const apifyPromise = callApify({
-        query: cleanQuery,
-        url: userSiteData?.url || '',
-        geo: geoData?.location || geo,
-        lang: langObj?.code || 'fr',
-        preflight: apifyPreflight,
-        inputsBySource: {},
-        researchContext: apifyResearchContext
-    });
+    query: cleanQuery,
+    url: userSiteData?.url || '',
+    geo: geoData?.location || geo,
+    lang: langObj?.code || 'fr',
+    preflight: apifyPreflight,
+    inputsBySource: {},
+    researchContext: apifyResearchContext
+}).catch(e => {
+    console.warn('[WarRoom-V10.0] Apify async failed:', e.message);
+    return apifyEmptyDisplayResponse(
+        'APIFY_RUNTIME_ERROR',
+        apifyPreflight,
+        { ads: [], posts: [], comments: [], reviews: [], all: [] },
+        { ads: [], posts: [], comments: [], reviews: [] },
+        { success: false, error: e.message }
+    );
+});
 
     const softTimeoutMs = Math.max(1500, Number(CONFIG.APIFY_SOFT_TIMEOUT_MS || 9000));
     const apifyTimeoutPromise = new Promise(resolve =>
@@ -6031,11 +6040,14 @@ async function callOpenRouterAPI(prompt, options = {}) {
             console.log(`🤖 [${i + 1}/${allModels.length}] Trying model: ${modelId}${isFreeModel ? ' (FREE)' : ''} [Timeout: ${modelTimeout}ms]`);
 
             const payload = {
-                model:       modelId,
-                temperature,
-                max_tokens:  maxTokens,
-                top_p:       0.9,
-                messages: [
+    model:       modelId,
+    temperature,
+    max_tokens:  maxTokens,
+    top_p:       0.9,
+    response_format: expectedFormat === 'json'
+        ? { type: 'json_object' }
+        : undefined,
+    messages: [
                     {
                         role:    'system',
                         content: systemPrompt + (expectedFormat === 'json' ? ' IMPORTANT: Return strictly valid JSON only. No markdown. No explanation.' : '')
