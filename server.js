@@ -15528,7 +15528,7 @@ function buildPDFFromReport(R) {
     fill(C.bg1); doc.rect(0,0,W,H,'F');
     var bw = CW/3;
     [C.blue,C.purple,C.cyan].forEach(function(c,i){ fill(c); doc.rect(ML+i*bw,0,bw,1.8,'F'); });
-    norm(6); tc(C.muted); doc.text('SEO Gen Pro — Multi-AI Report', W/2, H-4, {align:'center'});
+    norm(6); tc(C.muted); doc.text('Daka — Rapport strategique', W/2, H-4, {align:'center'});
     y = 18;
   }
 
@@ -15636,13 +15636,13 @@ function buildPDFFromReport(R) {
   // ══════════════════════════════════════════════════════════════
   newPage(); y=36;
   bold(26); tc(C.white);  doc.text('SEO GEN PRO', W/2, y, {align:'center'}); y+=10;
-  bold(11); tc(C.purple); doc.text('RAPPORT COMPLET MULTI-AI', W/2, y, {align:'center'}); y+=10;
+  bold(11); tc(C.purple); doc.text('RAPPORT COMPLET DAKA', W/2, y, {align:'center'}); y+=10;
 
   var sects = [];
   if (R.biz)     sects.push('Concurrents');
   if (R.funnel)  sects.push('Funnel AIDA');
   if (R.tech)    sects.push('SEO Technique');
-  if (R.keywords)sects.push('Keywords IA');
+  if (R.keywords)sects.push('Mots-cles');
 
   if (sects.length) {
     var bwP = (CW-(sects.length-1)*3)/sects.length;
@@ -15958,7 +15958,7 @@ function buildPDFFromReport(R) {
   }
 
   // ══════════════════════════════════════════════════════════════
-  // SECTION KEYWORDS IA
+  // SECTION MOTS-CLES
   // ══════════════════════════════════════════════════════════════
   if (R.keywords) {
     newPage();
@@ -15968,7 +15968,7 @@ function buildPDFFromReport(R) {
     var clusters = (KW.clusters||[]).slice(0,10);
     var paa      = (KW.paaQuestions||[]).slice(0,10);
 
-    secTitle(isEn?'AI KEYWORDS — STRATEGIC ANALYSIS':'KEYWORDS IA — ANALYSE STRATEGIQUE', C.cyan);
+    secTitle(isEn?'KEYWORDS — STRATEGIC ANALYSIS':'MOTS-CLES — ANALYSE STRATEGIQUE', C.cyan);
     twoCol([
       {label:'Seed Keyword',     value:san(KW.seed||'---',40),                        color:C.purple},
       {label:'Target Languages', value:(KW.languages||[]).join(', ')||'---',          color:C.blue},
