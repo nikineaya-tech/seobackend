@@ -4550,6 +4550,10 @@ const DakaSound = (() => {
     let enabled = localStorage.getItem('dakaSound') !== 'off';
     let ambient = null;
     let activeLoaders = 0;
+    const LOADER_MASTER_VOLUME = 0.28;
+    const LOADER_PAD_VOLUME = 0.42;
+    const LOADER_ARP_BUS_VOLUME = 0.72;
+    const LOADER_ARP_NOTE_VOLUME = 0.44;
 
     const ensure = () => {
         if (!enabled) return null;
@@ -4589,7 +4593,7 @@ const DakaSound = (() => {
         const c = ensure();
         if (!c) return;
         const master = c.createGain();
-        master.gain.value = kind === 'primary' ? 0.14 : 0.09;
+        master.gain.value = kind === 'primary' ? 0.18 : 0.1;
         master.connect(c.destination);
         tone(kind === 'primary' ? 660 : 520, 0, 0.09, 0.8, 'sine', master);
         tone(kind === 'primary' ? 990 : 780, 0.035, 0.11, 0.45, 'triangle', master);
@@ -4602,7 +4606,7 @@ const DakaSound = (() => {
 
         const master = c.createGain();
         master.gain.setValueAtTime(0.0001, c.currentTime);
-        master.gain.exponentialRampToValueAtTime(0.16, c.currentTime + 0.9);
+        master.gain.exponentialRampToValueAtTime(LOADER_MASTER_VOLUME, c.currentTime + 0.9);
 
         const lfo = c.createOscillator();
         const lfoGain = c.createGain();
@@ -4624,7 +4628,7 @@ const DakaSound = (() => {
             const gain = c.createGain();
             osc.type = i % 2 ? 'triangle' : 'sine';
             osc.frequency.value = freq;
-            gain.gain.value = 0.3 / freqs.length;
+            gain.gain.value = LOADER_PAD_VOLUME / freqs.length;
             osc.connect(gain);
             gain.connect(filter);
             osc.start();
@@ -4633,13 +4637,13 @@ const DakaSound = (() => {
 
         lfo.start();
         const arpGain = c.createGain();
-        arpGain.gain.value = 0.5;
+        arpGain.gain.value = LOADER_ARP_BUS_VOLUME;
         arpGain.connect(filter);
         const arpNotes = [261.63, 329.63, 392, 523.25, 392, 329.63];
         let arpStep = 0;
         const arpTimer = setInterval(() => {
             if (!ambient || !enabled) return;
-            tone(arpNotes[arpStep % arpNotes.length], 0, 0.42, 0.32, 'triangle', arpGain);
+            tone(arpNotes[arpStep % arpNotes.length], 0, 0.42, LOADER_ARP_NOTE_VOLUME, 'triangle', arpGain);
             arpStep += 1;
         }, 720);
 
