@@ -8,7 +8,7 @@
    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://seobackend-f81n.onrender.com http://localhost:10000;">
 
     <title>Daka - Intelligence marketing et croissance</title>
-    <meta name="description" content="Daka transforme les signaux du marche, les pages et les concurrents en actions concretes pour mieux vendre.">
+    <meta name="description" content="Daka transforme les signaux du marché, les pages et les concurrents en actions concrètes pour mieux vendre.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -192,20 +192,17 @@ body::before {
 main          { flex:1; padding:var(--spacing-2xl) 0; }
 
 /* ══════════════════════════════════════════════════════════════
-   LOADER FULLSCREEN SYSTEM
+   LOADER STRUCTURE — visual design is defined in daka-brand-loader-style
    ══════════════════════════════════════════════════════════════ */
 .loading-state {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(10,14,39,0.97);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  z-index: 999999; /* Z-index très élevé */
+  z-index: 999999;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  padding: clamp(18px, 4vw, 44px);
   text-align: center;
   animation: loaderFadeIn 0.35s ease;
 }
@@ -216,41 +213,6 @@ body.loading-active { overflow: hidden !important; }
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-
-.loading-orb { position: relative; width: 88px; height: 88px; margin-bottom: 22px; }
-.loading-spinner {
-  width: 100%; height: 100%;
-  border: 3px solid rgba(255,255,255,0.05);
-  border-top-color: var(--accent-secondary, #8b5cf6);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  box-shadow: 0 0 30px rgba(139,92,246,0.3);
-}
-.loading-spinner-icon {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 1.5rem;
-  color: var(--accent-secondary);
-  animation: pulse 2s infinite;
-}
-
-.loading-title { font-size: 1.4rem; font-weight: 900; font-family: 'Cairo'; color: white; margin-bottom: 8px; }
-.loading-subtitle { font-size: 0.9rem; color: #94a3b8; margin-bottom: 25px; }
-
-/* Progress Bar */
-.loading-progress-wrap { width: 340px; max-width: 85vw; height: 5px; background: rgba(255,255,255,0.05); border-radius: 10px; overflow: hidden; margin-bottom: 25px; }
-.loading-progress-bar { height: 100%; width: 0%; background: linear-gradient(90deg, #6366f1, #8b5cf6, #06b6d4); border-radius: 10px; transition: width 0.4s ease; }
-
-/* Phases Stepper */
-.loading-phases { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
-.loading-phase { padding: 6px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; color: #64748b; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); transition: all 0.3s ease; }
-.loading-phase i { margin-right: 6px; opacity: 0.5; }
-.loading-phase.active { color: white; background: rgba(139,92,246,0.2); border-color: rgba(139,92,246,0.5); transform: translateY(-2px); box-shadow: 0 5px 15px rgba(139,92,246,0.2); }
-.loading-phase.active i { opacity: 1; color: #c4b5fd; animation: spin 1.5s linear infinite; }
-.loading-phase.done { color: #10b981; background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); }
-.loading-phase.done i::before { content: '\f00c'; font-family: 'Font Awesome 6 Free'; font-weight: 900; opacity: 1; }
-
-.loading-tip { margin-top: 15px; font-size: 0.85rem; color: #94a3b8; font-style: italic; transition: opacity 0.3s ease; }
 /* ═══════════════════════════════════════════════════════════════
    HEADER
 ═══════════════════════════════════════════════════════════════ */
@@ -1087,15 +1049,6 @@ body.loading-active { overflow: hidden !important; }
     .btn-lg { padding: 12px !important; font-size: 0.95rem !important; }
     .input-field, .select-field { font-size: 0.9rem !important; }
 
-    /* Loaders plus compacts */
-    .loading-orb { width: 60px !important; height: 60px !important; margin-bottom: 10px !important; }
-    .loading-title { font-size: 1.1rem !important; }
-
-    /* Transformation des pilules de loading en colonne */
-    .loading-phases { flex-direction: column; align-items: stretch; width: 100%; max-width: 250px; margin: 0 auto; }
-    .loading-phase { text-align: left; padding: 10px 15px !important; }
-    [dir="rtl"] .loading-phase { text-align: right; }
-
     /* Raccourcir le menu du haut (On garde juste les icônes) */
     .nav-btn span:not(.step-icon) { display: none; }
     .nav-btn { padding: 10px 15px !important; }
@@ -1658,12 +1611,6 @@ table tbody tr td:last-child  { border-radius:12px 0 0 12px; }
   .score-value     { font-size:2rem !important; }
   .score-circle-mini { width:55px !important; height:55px !important; font-size:1.1rem !important; }
 
-  /* ── Loader ── */
-  .loading-title    { font-size:1.2rem; }
-  .loading-subtitle { font-size:0.88rem; }
-  .loading-phases   { flex-direction:row; gap:6px; }
-  .loading-phase    { font-size:0.75rem; padding:5px 11px; }
-
   /* ── Toast ── */
   .toast-container {
     right     : 10px !important;
@@ -1750,15 +1697,6 @@ table tbody tr td:last-child  { border-radius:12px 0 0 12px; }
   .score-circle-mini { width:50px  !important; height:50px  !important; font-size:1rem !important; }
   .score-container   { padding:var(--spacing-md); gap:var(--spacing-md); }
 
-  /* ── Loader ── */
-  .loading-spinner      { width:68px !important; height:68px !important; }
-  .loading-title        { font-size:1rem !important; }
-  .loading-subtitle     { font-size:0.82rem !important; max-width:90vw; }
-  .loading-progress-wrap{ width:92vw; }
-  .loading-phases       { gap:5px; }
-  .loading-phase        { font-size:0.7rem; padding:5px 10px; }
-  .loading-tip          { font-size:0.74rem; }
-
   /* ── Toast ── */
   .toast        { padding:10px 14px !important; font-size:0.82rem !important; }
   .toast-title  { font-size:0.82rem; }
@@ -1817,11 +1755,6 @@ table tbody tr td:last-child  { border-radius:12px 0 0 12px; }
   /* Score */
   .score-circle  { width:80px !important; height:80px !important; }
   .score-value   { font-size:1.5rem !important; }
-
-  /* Loader */
-  .loading-spinner { width:58px !important; height:58px !important; }
-  .loading-title   { font-size:0.9rem !important; }
-  .loading-phase   { font-size:0.65rem; padding:4px 8px; }
 
   /* Container padding */
   .container { padding:0 10px; }
@@ -2227,44 +2160,9 @@ table tbody td {
   border-bottom: 1px solid rgba(148, 163, 184, 0.08);
 }
 
-.loading-state {
-  background: rgba(7, 11, 22, 0.96);
-}
-
-.loading-spinner {
-  border-top-color: #38bdf8;
-  box-shadow: 0 0 34px rgba(56, 189, 248, 0.2);
-}
-
-.loading-phase.active {
-  background: rgba(56, 189, 248, 0.12);
-  border-color: rgba(56, 189, 248, 0.36);
-}
-
 /* ==========================================================================
-   3D SAAS MOTION + PREMIUM LOADER
+   3D SAAS MOTION
    ========================================================================== */
-@keyframes premiumSpin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes premiumOrbit {
-  0% { transform: rotate(0deg) translateX(36px) rotate(0deg); opacity: 0.55; }
-  50% { opacity: 1; }
-  100% { transform: rotate(360deg) translateX(36px) rotate(-360deg); opacity: 0.55; }
-}
-
-@keyframes loaderScan {
-  0% { transform: translateX(-120%); opacity: 0; }
-  20%, 80% { opacity: 1; }
-  100% { transform: translateX(120%); opacity: 0; }
-}
-
-@keyframes loaderGlowPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.16), 0 28px 90px rgba(2, 6, 23, 0.62); }
-  50% { box-shadow: 0 0 0 10px rgba(56, 189, 248, 0), 0 34px 110px rgba(56, 189, 248, 0.16); }
-}
-
 .main-wrapper {
   perspective: 1400px;
 }
@@ -2306,146 +2204,6 @@ table tbody td {
 .card:hover::after,
 .result-card:hover::after {
   opacity: 1;
-}
-
-.loading-state {
-  background:
-    radial-gradient(circle at 50% 42%, rgba(56, 189, 248, 0.12), transparent 32%),
-    radial-gradient(circle at 52% 50%, rgba(167, 139, 250, 0.10), transparent 36%),
-    rgba(7, 11, 22, 0.96);
-  backdrop-filter: blur(18px);
-}
-
-.loading-content {
-  position: relative;
-  isolation: isolate;
-  width: min(520px, calc(100vw - 34px));
-  padding: 34px 28px;
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.96)),
-    linear-gradient(135deg, rgba(56, 189, 248, 0.10), rgba(167, 139, 250, 0.08));
-  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.52), inset 0 1px 0 rgba(255,255,255,0.06);
-  overflow: hidden;
-  animation: loaderGlowPulse 2.8s ease-in-out infinite;
-}
-
-.loading-content::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 44%;
-  left: 0;
-  z-index: -1;
-  background: linear-gradient(90deg, transparent, rgba(56,189,248,0.12), transparent);
-  animation: loaderScan 2.6s ease-in-out infinite;
-}
-
-.loading-content::after {
-  content: "";
-  position: absolute;
-  inset: 10px;
-  z-index: -1;
-  border: 1px solid rgba(56, 189, 248, 0.08);
-  border-radius: 8px;
-}
-
-.loading-spinner {
-  position: relative;
-  width: 92px !important;
-  height: 92px !important;
-  margin-inline: auto;
-  border: 0 !important;
-  border-radius: 50%;
-  background:
-    conic-gradient(from 90deg, #38bdf8, #2dd4bf, #a78bfa, #f59e0b, #38bdf8);
-  box-shadow: 0 0 46px rgba(56, 189, 248, 0.28);
-  animation: premiumSpin 1.15s linear infinite;
-}
-
-.loading-spinner::before {
-  content: "";
-  position: absolute;
-  inset: 9px;
-  border-radius: 50%;
-  background: #07101f;
-  box-shadow: inset 0 0 18px rgba(56, 189, 248, 0.18);
-}
-
-.loading-spinner::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 9px;
-  height: 9px;
-  margin: -4.5px 0 0 -4.5px;
-  border-radius: 50%;
-  background: #e0f2fe;
-  box-shadow: 0 0 18px rgba(224, 242, 254, 0.9);
-  animation: premiumOrbit 1.75s linear infinite;
-}
-
-.loading-spinner-icon {
-  width: 44px;
-  height: 44px;
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: rgba(15, 23, 42, 0.88);
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  box-shadow: 0 0 24px rgba(56, 189, 248, 0.18);
-}
-
-.loading-title {
-  margin-top: 18px;
-  font-size: clamp(1.2rem, 3vw, 1.55rem);
-  letter-spacing: 0;
-  background: linear-gradient(90deg, #f8fafc, #a5f3fc, #c4b5fd);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.loading-subtitle {
-  max-width: 380px;
-  margin-inline: auto;
-  color: #aab7ca;
-  line-height: 1.55;
-}
-
-.loading-phases {
-  margin-top: 22px;
-}
-
-.loading-phase {
-  border-radius: 8px;
-  background: rgba(15, 23, 42, 0.72);
-  border: 1px solid rgba(148, 163, 184, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.035);
-}
-
-.loading-phase.active {
-  background: linear-gradient(135deg, rgba(56,189,248,0.16), rgba(167,139,250,0.12));
-  border-color: rgba(125, 211, 252, 0.42);
-  box-shadow: 0 12px 28px rgba(56,189,248,0.14), inset 0 1px 0 rgba(255,255,255,0.08);
-}
-
-.loading-phase.done {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.34);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .loading-spinner,
-  .loading-spinner::after,
-  .loading-content,
-  .loading-content::before,
-  .loading-phase.active i {
-    animation: none !important;
-  }
 }
 
 @media (max-width: 768px) {
@@ -2888,25 +2646,6 @@ table tbody td {
     padding: 2px 0;
   }
 
-  .loading-content {
-    width: calc(100vw - 24px);
-    padding: 18px 14px;
-    border-radius: 8px;
-  }
-
-  .loading-title {
-    font-size: 1rem;
-  }
-
-  .loading-subtitle {
-    font-size: 0.78rem;
-  }
-
-  .loading-phase {
-    min-height: 38px;
-    font-size: 0.76rem;
-    border-radius: 7px;
-  }
 }
 
     </style>
@@ -3040,7 +2779,7 @@ table tbody td {
                 <div style="flex: 1;">
                     <h1 class="card-title">
                         <i class="fas fa-chess-queen" style="color: var(--accent-secondary);"></i>
-                        <span data-i18n="tab1_title">Lecture du marche</span>
+                        <span data-i18n="tab1_title">Lecture du marché</span>
                         <span class="highlight" data-i18n="tab1_title_highlight">Concurrents</span>
                     </h1>
                     <p class="card-subtitle" data-i18n="tab1_subtitle">
@@ -3244,7 +2983,7 @@ table tbody td {
                     <div style="background: rgba(16, 185, 129, 0.05); border: 1px dashed #10b981; padding: 15px; border-radius: 12px; margin-bottom: 25px; display: flex; align-items: center; gap: 15px;">
                         <i class="fas fa-microchip" style="font-size: 1.5rem; color: #10b981;"></i>
                         <div style="font-size: 0.8rem; color: #a7f3d0;">
-                            <strong data-i18n="funnel_power_engine">Analyse active :</strong> Le moteur reconstruit le parcours, les frictions et les opportunites.
+                            <strong data-i18n="funnel_power_engine">Analyse active :</strong> Le moteur reconstruit le parcours, les frictions et les opportunités.
                         </div>
                     </div>
 
@@ -3441,8 +3180,8 @@ table tbody td {
         <div class="loading-orb">
             <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
-        <div class="loading-title" data-i18n="loading_comp_title">Daka lit votre marche...</div>
-        <div class="loading-subtitle" data-i18n="loading_comp_sub">Nous reperons les preuves, les failles et les actions utiles.</div>
+        <div class="loading-title" data-i18n="loading_comp_title">Daka lit votre marché...</div>
+        <div class="loading-subtitle" data-i18n="loading_comp_sub">Nous repérons les preuves, les failles et les actions utiles.</div>
         <div class="loading-progress-wrap"><div class="loading-progress-bar" id="loadingBarCompetitors"></div></div>
         <div class="loading-phases">
             <div class="loading-phase"><i class="fas fa-globe"></i> <span data-i18n="phase_comp_1">Cartographie du marché</span></div>
@@ -3472,8 +3211,8 @@ table tbody td {
         <div class="loading-orb">
             <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
-        <div class="loading-title" data-i18n="loading_tech_title">Daka verifie les fondations...</div>
-        <div class="loading-subtitle" data-i18n="loading_tech_sub">Nous controlons ce qui bloque la confiance, la lecture et la vitesse.</div>
+        <div class="loading-title" data-i18n="loading_tech_title">Daka vérifie les fondations...</div>
+        <div class="loading-subtitle" data-i18n="loading_tech_sub">Nous contrôlons ce qui bloque la confiance, la lecture et la vitesse.</div>
         <div class="loading-progress-wrap"><div class="loading-progress-bar" id="loadingBarTechnical" style="background: linear-gradient(90deg, #3b82f6, #60a5fa)"></div></div>
         <div class="loading-phases">
             <div class="loading-phase"><i class="fas fa-sitemap"></i> <span data-i18n="phase_tech_1">Architecture du site</span></div>
@@ -3488,8 +3227,8 @@ table tbody td {
         <div class="loading-orb">
             <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
-        <div class="loading-title" data-i18n="loading_kw_title">Daka prepare les opportunites...</div>
-        <div class="loading-subtitle" data-i18n="loading_kw_sub">Le moteur identifie les demandes les plus rentables pour votre marche.</div>
+        <div class="loading-title" data-i18n="loading_kw_title">Daka prépare les opportunités...</div>
+        <div class="loading-subtitle" data-i18n="loading_kw_sub">Le moteur identifie les demandes les plus rentables pour votre marché.</div>
         <div class="loading-progress-wrap">
             <div class="loading-progress-bar" id="loadingBarKeywords" style="background: linear-gradient(90deg, #0ea5e9, #06b6d4);"></div>
         </div>
@@ -3628,7 +3367,7 @@ table tbody td {
             <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
         <div class="loading-title" data-i18n="loading_kw_title">Recherche de Pépites Sémantiques...</div>
-        <div class="loading-subtitle" data-i18n="loading_kw_sub">Le moteur identifie les demandes les plus rentables pour votre marche.</div>
+        <div class="loading-subtitle" data-i18n="loading_kw_sub">Le moteur identifie les demandes les plus rentables pour votre marché.</div>
         <div class="loading-progress-wrap">
             <div class="loading-progress-bar" id="loadingBarKeywords" style="background: linear-gradient(90deg, #0ea5e9, #06b6d4);"></div>
         </div>
@@ -3698,7 +3437,7 @@ navkeywords: 'Mots-clés',
         // --- Tab 1: Competitors (Concurrents) ---
         tab1_title: 'Lecture du marché',
         tab1_title_highlight: 'Concurrents',
-        tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrete peut vous faire prendre sa place.',
+        tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrète peut vous faire prendre sa place.',
         label_keyword: '🎯 Mot-clé cible',
         placeholder_keyword: 'Ex: chaussures running Maroc',
         label_url: '🔗 URL à analyser (optionnel)',
@@ -3709,8 +3448,8 @@ navkeywords: 'Mots-clés',
         btn_analyze: 'LANCER L\'EXTRACTION STRATÉGIQUE',
 
         // --- Loading States Tab 1 (Competitors) ---
-        loading_comp_title: 'Analyse Stratégique des Leaders...',
-        loading_comp_sub: 'Décryptage des secrets de réussite de vos concurrents.',
+        loading_comp_title: 'Daka lit votre marché...',
+        loading_comp_sub: 'Pendant votre café, les forces et failles des concurrents se transforment en actions.',
         phase_comp_1: 'Cartographie du marché',
         phase_comp_2: 'Détection des faiblesses',
         phase_comp_3: 'Parts de marché à voler',
@@ -3728,17 +3467,17 @@ navkeywords: 'Mots-clés',
         btn_funnel: 'LANCER L\'INFILTRATION',
 
         // --- Loading States Tab 2 (Funnel) ---
-        loading_funnel_title: 'Audit de Conversion en cours...',
-        loading_funnel_sub: 'Évaluation du potentiel de revenus et des leviers psychologiques.',
+        loading_funnel_title: 'Daka reconstruit la page...',
+        loading_funnel_sub: 'Pendant votre pause, Daka cherche où la page perd des clients.',
         phase_funnel_1: 'Parcours client',
         phase_funnel_2: 'Impact visuel',
         phase_funnel_3: 'Argumentaire de vente',
         phase_funnel_4: 'Potentiel de rentabilité',
 
         // --- Tab 3: Technical (Audit) ---
-        tab3_title: 'Verifier les bases du site',
-        tab3_highlight: 'Priorites claires',
-        tab3_subtitle: 'Detectez ce qui bloque confiance, lecture, vitesse et structure.',
+        tab3_title: 'Vérifier les bases du site',
+        tab3_highlight: 'Priorités claires',
+        tab3_subtitle: 'Détectez ce qui bloque confiance, lecture, vitesse et structure.',
         label_tech_url: '🔗 URL à auditer',
         placeholder_tech_url: 'https://votre-site.com',
         label_checks: '🔍 Éléments à vérifier',
@@ -3749,11 +3488,11 @@ navkeywords: 'Mots-clés',
         btn_technical: 'GÉNÉRER L\'AUDIT EXPERT & CODES',
 
         // --- Loading States Tab 3 (Technical) ---
-        loading_tech_title: 'Diagnostic de Performance...',
-        loading_tech_sub: 'Inspection de l\'infrastructure pour maximiser votre visibilité.',
+        loading_tech_title: 'Daka vérifie les fondations...',
+        loading_tech_sub: 'Pendant votre café, les blocages invisibles sont classés par priorité.',
         phase_tech_1: 'Architecture du site',
         phase_tech_2: 'Autorité sémantique',
-        phase_tech_3: 'Compatibilite lecture',
+        phase_tech_3: 'Compatibilité lecture',
         phase_tech_4: 'Fondations techniques',
         phase_tech_dom: 'DOM Scraping', // Fallbacks si code legacy
         phase_tech_lsi: 'Semantic LSI',
@@ -3769,8 +3508,8 @@ navkeywords: 'Mots-clés',
         btn_keywords: 'TROUVER LES MOTS-CLES GAGNANTS',
 
         // --- Loading States Tab 4 (Keywords) ---
-        loading_kw_title: 'Recherche de Pépites Sémantiques...',
-        loading_kw_sub: 'Le moteur identifie les demandes les plus rentables pour votre marche.',
+        loading_kw_title: 'Daka prépare les opportunités...',
+        loading_kw_sub: 'Pendant que vous respirez, Daka trie les demandes qui peuvent rapporter.',
         step_kw_1: 'Tendances du marché',
         step_kw_2: 'Opportunités rentables',
         step_kw_3: 'Intentions d\'achat',
@@ -3798,10 +3537,10 @@ navkeywords: 'Mots-clés',
 navkeywords: 'الكلمات المفتاحية',
         // --- Navigation ---
         navcompetitors: 'المنافسون',
-        navfunnel: 'قمع AIDA',
-        navtechnical: 'SEO تقني',
+        navfunnel: 'مسار التحويل',
+        navtechnical: 'فحص الموقع',
         tab4_title: 'مولد',
-        tab4_highlight: 'الكلمات بالذكاء الاصطناعي',
+        tab4_highlight: 'الكلمات الرابحة',
         tab4_subtitle: 'استخراج دلالي متقدم متعدد اللغات — الحجم · الصعوبة · النقرة · النية',
 
         // --- Server Status ---
@@ -4301,12 +4040,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             terms: 'Terms'
                         }
                         : {
-                            powered: 'Propulse par',
-                            engine: 'moteur Daka d intelligence marche',
-                            made: 'Cree par',
+                            powered: 'Propulsé par',
+                            engine: 'moteur Daka d’intelligence marché',
+                            made: 'Créé par',
                             author: 'Daka Team',
-                            rights: 'Tous droits reserves',
-                            privacy: 'Confidentialite',
+                            rights: 'Tous droits réservés',
+                            privacy: 'Confidentialité',
                             terms: 'Conditions'
                         };
 
@@ -4367,71 +4106,71 @@ document.addEventListener('DOMContentLoaded', () => {
             const premiumCopy = {
                 fr: {
                     appbadge: 'PRO',
-                    tab1_title: 'Lecture du marche',
+                    tab1_title: 'Lecture du marché',
                     tab1_title_highlight: 'Concurrents',
-                    tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrete peut vous faire prendre sa place.',
-                    label_keyword: 'Marche, niche ou requete a analyser',
+                    tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrète peut vous faire prendre sa place.',
+                    label_keyword: 'Marché, niche ou requête à analyser',
                     placeholder_keyword: 'Ex: SaaS marketing all-in-one Maroc',
                     label_url: 'Votre site pour benchmark direct',
                     placeholder_url: 'https://votre-site.com',
-                    label_country: 'Pays et marche cible',
+                    label_country: 'Pays et marché cible',
                     label_analysis_lang: 'Langue du rapport',
-                    btn_analyze: 'REVELER LES OPPORTUNITES',
-                    loading_comp_title: 'Daka lit votre marche',
-                    loading_comp_sub: 'Concurrents, signaux clients et actions prioritaires sont consolides.',
-                    phase_comp_1: 'Top concurrents geo',
+                    btn_analyze: 'RÉVÉLER LES OPPORTUNITÉS',
+                    loading_comp_title: 'Daka lit votre marché',
+                    loading_comp_sub: 'Pendant votre café, les forces et failles des concurrents se transforment en actions.',
+                    phase_comp_1: 'Top concurrents géo',
                     phase_comp_2: 'Failles et objections',
-                    phase_comp_3: 'Plan de conquete',
+                    phase_comp_3: 'Plan de conquête',
                     context_comp_title: 'Rendez le rapport 3x plus concret',
-                    context_comp_sub: 'Ajoutez votre offre, votre cible et votre objectif pour recevoir des actions adaptees a votre vraie situation.',
-                    context_comp_badge: 'Optionnel - recommande',
+                    context_comp_sub: 'Ajoutez votre offre, votre cible et votre objectif pour recevoir des actions adaptées à votre vraie situation.',
+                    context_comp_badge: 'Optionnel - recommandé',
                     context_offer_label: 'Offre exacte',
-                    context_offer_ph: 'Ex: SaaS marketing + formation integree',
-                    context_audience_label: 'Client ideal',
-                    context_audience_ph: 'Ex: PME marocaines, coachs, e-commercants',
+                    context_offer_ph: 'Ex: SaaS marketing + formation intégrée',
+                    context_audience_label: 'Client idéal',
+                    context_audience_ph: 'Ex: PME marocaines, coachs, e-commerçants',
                     context_objective_label: 'Objectif prioritaire',
-                    context_objective_ph: 'Ex: vendre, generer des leads, prendre des RDV',
+                    context_objective_ph: 'Ex: vendre, générer des leads, prendre des RDV',
                     context_price_label: 'Prix, panier ou budget',
                     context_price_ph: 'Ex: 499 DH/mois, panier 900 DH, budget 200 DH/j',
-                    context_known_comp_label: 'Concurrents deja connus',
+                    context_known_comp_label: 'Concurrents déjà connus',
                     context_known_comp_ph: 'Ex: site1.com, marque2, page Instagram',
-                    context_geo_label: 'Zone a gagner',
+                    context_geo_label: 'Zone à gagner',
                     context_geo_ph: 'Ex: Maroc, Casablanca, MENA francophone',
                     tab2_title: 'Corriger une page qui vend',
-                    tab2_subtitle: 'Changements concrets, preuves observees et textes prets a tester.',
+                    tab2_subtitle: 'Changements concrets, preuves observées et textes prêts à tester.',
                     label_funnel_url: 'URL du site ou de la landing page',
                     placeholder_funnel_url: 'https://concurrent.com/landing-page',
                     label_funnel_style: 'Angle de recommandation',
                     funnel_power_engine: 'Analyse conversion active:',
                     btn_funnel: 'AUDITER LE FUNNEL',
                     loading_funnel_title: 'Daka reconstruit la page',
-                    loading_funnel_sub: 'Parcours, preuves, objections et corrections pretes a tester.',
+                    loading_funnel_sub: 'Pendant votre pause, Daka cherche où la page perd des clients.',
                     context_funnel_title: 'Donnez le contexte de la page',
-                    context_funnel_sub: 'Plus vous precisez l offre et l objectif, plus les corrections seront concretes: textes, preuves, prix, boutons et objections.',
-                    context_funnel_badge: 'Pour un plan realiste',
+                    context_funnel_sub: 'Plus vous précisez l’offre et l’objectif, plus les corrections seront concrètes: textes, preuves, prix, boutons et objections.',
+                    context_funnel_badge: 'Pour un plan réaliste',
                     context_funnel_offer_label: 'Offre ou promesse',
                     context_funnel_offer_ph: 'Ex: audit marketing, formation, produit e-commerce',
-                    context_funnel_audience_label: 'Audience visee',
-                    context_funnel_audience_ph: 'Ex: entrepreneurs debutants, PME, agences',
+                    context_funnel_audience_label: 'Audience visée',
+                    context_funnel_audience_ph: 'Ex: entrepreneurs débutants, PME, agences',
                     context_funnel_objective_label: 'Action attendue',
-                    context_funnel_objective_ph: 'Ex: achat, appel, formulaire, WhatsApp, demo',
+                    context_funnel_objective_ph: 'Ex: achat, appel, formulaire, WhatsApp, démo',
                     context_funnel_price_label: 'Prix ou valeur',
                     context_funnel_price_ph: 'Ex: 1500 DH, abonnement 49 EUR/mois, panier 700 DH',
-                    context_funnel_known_comp_label: 'Pages a comparer',
-                    context_funnel_known_comp_ph: 'Ex: concurrent.com, page de reference, marque',
-                    context_funnel_geo_label: 'Marche cible',
+                    context_funnel_known_comp_label: 'Pages à comparer',
+                    context_funnel_known_comp_ph: 'Ex: concurrent.com, page de référence, marque',
+                    context_funnel_geo_label: 'Marché cible',
                     context_funnel_geo_ph: 'Ex: Maroc, France, Casablanca, GCC',
-                    tab3_title: 'Verifier les bases du site',
-                    tab3_highlight: 'Priorites claires',
-                    tab3_subtitle: 'Detectez ce qui bloque confiance, lecture, vitesse et structure.',
-                    label_tech_url: 'URL a diagnostiquer',
+                    tab3_title: 'Vérifier les bases du site',
+                    tab3_highlight: 'Priorités claires',
+                    tab3_subtitle: 'Détectez ce qui bloque confiance, lecture, vitesse et structure.',
+                    label_tech_url: 'URL à diagnostiquer',
                     btn_technical: 'LANCER LE DIAGNOSTIC',
-                    tab4_title: 'Idees de recherche',
+                    tab4_title: 'Idées de recherche',
                     tab4_highlight: 'rentables',
-                    tab4_subtitle: 'Trouvez les demandes qui melangent intention, rentabilite et facilite d execution.',
-                    label_seed: 'Mot-cle de depart',
+                    tab4_subtitle: 'Trouvez les demandes qui mélangent intention, rentabilité et facilité d’exécution.',
+                    label_seed: 'Mot-clé de départ',
                     placeholder_seed: 'Ex: formation marketing SaaS',
-                    btn_keywords: 'TROUVER LES MOTS-CLES GAGNANTS'
+                    btn_keywords: 'TROUVER LES MOTS-CLÉS GAGNANTS'
                 },
                 en: {
                     tab1_title: 'Market Intelligence',
@@ -4446,7 +4185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     label_analysis_lang: 'Report language',
                     btn_analyze: 'REVEAL MARKET OPPORTUNITIES',
                     loading_comp_title: 'Daka is reading your market',
-                    loading_comp_sub: 'Competitors, customer signals, and priority actions are being consolidated.',
+                    loading_comp_sub: 'While you enjoy your coffee, competitor strengths and gaps turn into action.',
                     phase_comp_1: 'Geo top competitors',
                     phase_comp_2: 'Weaknesses and objections',
                     phase_comp_3: 'Conquest plan',
@@ -4458,7 +4197,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     funnel_power_engine: 'Conversion analysis active:',
                     btn_funnel: 'AUDIT THE FUNNEL',
                     loading_funnel_title: 'Daka is rebuilding the page',
-                    loading_funnel_sub: 'Journey, proof, objections, and test-ready fixes are being prepared.',
+                    loading_funnel_sub: 'During your pause, Daka finds where the page loses buyers.',
                     context_comp_title: 'Make the report 3x more concrete',
                     context_comp_sub: 'Add your offer, audience, and goal to get actions adapted to your real situation.',
                     context_comp_badge: 'Optional - recommended',
@@ -4573,28 +4312,28 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.assign(TRANSLATIONS.fr, {
             appname: 'Daka',
             appbadge: 'PRO',
-            navkeywords: 'Mots-cles',
+            navkeywords: 'Mots-clés',
             navtechnical: 'Audit site',
-            tab1_title: 'Lecture du marche',
+            tab1_title: 'Lecture du marché',
             tab1_title_highlight: 'Concurrents',
-            tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrete peut vous faire prendre sa place.',
+            tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrète peut vous faire prendre sa place.',
             tab2_title: 'Corriger une page qui vend',
-            tab3_title: 'Verifier les bases du site',
-            tab3_highlight: 'Priorites claires',
-            tab4_title: 'Opportunites de',
+            tab3_title: 'Vérifier les bases du site',
+            tab3_highlight: 'Priorités claires',
+            tab4_title: 'Opportunités de',
             tab4_highlight: 'recherche',
             label_analysis_lang: 'Langue du rapport',
             funnel_power_engine: 'Analyse active:',
-            loading_comp_title: 'Daka lit votre marche',
-            loading_comp_sub: 'Concurrents, signaux clients et actions prioritaires sont consolides.',
+            loading_comp_title: 'Daka lit votre marché',
+            loading_comp_sub: 'Pendant votre café, les forces et failles des concurrents se transforment en actions.',
             loading_funnel_title: 'Daka reconstruit la page',
-            loading_funnel_sub: 'Parcours, preuves, objections et corrections pretes a tester.',
-            loading_tech_title: 'Daka verifie les fondations',
-            loading_tech_sub: 'Lecture, vitesse, confiance et structure sont priorisees.',
-            loading_kw_title: 'Daka prepare les opportunites',
-            loading_kw_sub: 'Demandes rentables, angles de recherche et mots a tester.',
-            phase_tech_3: 'Compatibilite lecture',
-            btn_keywords: 'TROUVER LES MOTS-CLES GAGNANTS'
+            loading_funnel_sub: 'Pendant votre pause, Daka cherche où la page perd des clients.',
+            loading_tech_title: 'Daka vérifie les fondations',
+            loading_tech_sub: 'Pendant votre café, les blocages invisibles sont classés par priorité.',
+            loading_kw_title: 'Daka prépare les opportunités',
+            loading_kw_sub: 'Pendant que vous respirez, Daka trie les demandes qui peuvent rapporter.',
+            phase_tech_3: 'Compatibilité lecture',
+            btn_keywords: 'TROUVER LES MOTS-CLÉS GAGNANTS'
         });
         Object.assign(TRANSLATIONS.en, {
             appname: 'Daka',
@@ -4612,13 +4351,13 @@ document.addEventListener('DOMContentLoaded', () => {
             label_analysis_lang: 'Report language',
             funnel_power_engine: 'Analysis active:',
             loading_comp_title: 'Daka is reading your market',
-            loading_comp_sub: 'Competitors, customer signals, and priority actions are being consolidated.',
+            loading_comp_sub: 'While you enjoy your coffee, competitor strengths and gaps turn into action.',
             loading_funnel_title: 'Daka is rebuilding the page',
-            loading_funnel_sub: 'Journey, proof, objections, and test-ready fixes are being prepared.',
+            loading_funnel_sub: 'During your pause, Daka finds where the page loses buyers.',
             loading_tech_title: 'Daka checks the foundations',
-            loading_tech_sub: 'Reading, speed, trust, and structure are being prioritized.',
+            loading_tech_sub: 'While your coffee cools, hidden blockers are ranked by priority.',
             loading_kw_title: 'Daka prepares opportunities',
-            loading_kw_sub: 'Profitable demand, search angles, and words to test.',
+            loading_kw_sub: 'While you take a breath, Daka sorts the demand worth pursuing.',
             phase_tech_3: 'Readability compatibility',
             btn_keywords: 'FIND WINNING KEYWORDS'
         });
@@ -4638,13 +4377,13 @@ document.addEventListener('DOMContentLoaded', () => {
             label_analysis_lang: 'لغة التقرير',
             funnel_power_engine: 'التحليل مفعل:',
             loading_comp_title: 'داكا يقرأ السوق',
-            loading_comp_sub: 'يتم جمع المنافسين، إشارات العملاء، والخطوات الأهم.',
+            loading_comp_sub: 'بينما تستمتع بقهوتك، تتحول قوة المنافسين وثغراتهم إلى خطوات لك.',
             loading_funnel_title: 'داكا يعيد بناء الصفحة',
-            loading_funnel_sub: 'المسار، الأدلة، الاعتراضات، والتعديلات الجاهزة للاختبار.',
+            loading_funnel_sub: 'أثناء استراحتك، يبحث داكا عن المواضع التي تضيع فيها العملاء.',
             loading_tech_title: 'داكا يفحص الأساس',
-            loading_tech_sub: 'القراءة، السرعة، الثقة والبنية حسب الأولوية.',
+            loading_tech_sub: 'بينما قهوتك أمامك، تُرتّب العوائق الخفية حسب الأولوية.',
             loading_kw_title: 'داكا يجهز الفرص',
-            loading_kw_sub: 'طلبات مربحة، زوايا بحث، وكلمات قابلة للاختبار.',
+            loading_kw_sub: 'بينما تأخذ نفسا هادئا، يرتّب داكا الطلبات التي تستحق المتابعة.',
             phase_tech_3: 'توافق القراءة',
             btn_keywords: 'اكتشف الكلمات الرابحة'
         });
@@ -5057,28 +4796,79 @@ window.tabManager = tabManager;
 // ═══════════════════════════════════════════════════════════════════
 // 🛸 MOTEUR DE CHARGEMENT DEEP INTEL (STEPS & PHASES DYNAMIQUES)
 // ═══════════════════════════════════════════════════════════════════
-const _LOADER_TIPS = {
-  loadingState: [
-    STATE.currentLang === 'ar' ? '🕵️ جاري قراءة السوق...' : '🕵️ Lecture du marché en temps réel...',
-    STATE.currentLang === 'ar' ? '🧠 تحويل الإشارات إلى خطة عمل...' : '🧠 Transformation des signaux en plan d action...',
-    STATE.currentLang === 'ar' ? '📊 حساب الفجوات في السوق...' : '📊 Calcul des gaps market...',
-  ],
-  loadingFunnel: [
-    STATE.currentLang === 'ar' ? '🔍 قراءة الهوية البصرية...' : '🔍 Lecture de l\'ADN visuel...',
-    STATE.currentLang === 'ar' ? '💰 حساب العائد على الاستثمار...' : '💰 Calcul du ROI mensuel...',
-    STATE.currentLang === 'ar' ? '💡 توليد نصوص التحفيز النفسي...' : '💡 Génération des CTAs psychologiques...',
-  ],
-  loadingTechnical: [
-    STATE.currentLang === 'ar' ? '⚙️ تدقيق العلامات الوصفية...' : '⚙️ Audit balises meta & schema...',
-    STATE.currentLang === 'ar' ? '🚀 تحليل أداء حيوية الويب...' : '🚀 Analyse Core Web Vitals...',
-    STATE.currentLang === 'ar' ? '🔒 التحقق من إشارات الأمان...' : '🔒 Vérification signaux sécurité...',
-  ],
-  loadingKeywords: [
-    STATE.currentLang === 'ar' ? '🔎 ترتيب فرص البحث...' : '🔎 Classement des opportunites de recherche...',
-    STATE.currentLang === 'ar' ? '🔎 تحليل نوايا البحث...' : '🔎 Analyse des intentions de recherche...',
-    STATE.currentLang === 'ar' ? '🗂️ تصنيف الكلمات المفتاحية...' : '🗂️ Clustering des mots-clés...'
-  ]
-};
+function getLoaderTips(elementId) {
+  const lang = STATE.currentLang || 'fr';
+  const tips = {
+    fr: {
+      loadingState: [
+        '☕ Le temps de savourer votre café, Daka repère ce que vos concurrents font mieux.',
+        '✨ Pendant que la boule travaille, leurs failles deviennent des actions simples.',
+        '🎯 Daka prépare le chemin le plus court pour rendre votre offre plus difficile à ignorer.'
+      ],
+      loadingFunnel: [
+        '☕ Pendant votre pause, Daka cherche où la page perd des clients.',
+        '💎 Les preuves, les objections et les boutons sont remis dans le bon ordre.',
+        '🎯 Daka prépare des corrections que vous pouvez tester sans deviner.'
+      ],
+      loadingTechnical: [
+        '☕ Pendant votre café, Daka vérifie les fondations qui rassurent vos visiteurs.',
+        '🛡️ Les blocages invisibles sont classés du plus urgent au plus utile.',
+        '⚡ Daka prépare une liste courte pour rendre le site plus clair et plus fiable.'
+      ],
+      loadingKeywords: [
+        '☕ Pendant que vous respirez, Daka trie les demandes qui peuvent rapporter.',
+        '💡 Les mots utiles remontent, le bruit descend.',
+        '🎯 Daka prépare les sujets que votre audience comprend et recherche déjà.'
+      ]
+    },
+    en: {
+      loadingState: [
+        '☕ While you enjoy your coffee, Daka spots what competitors do better.',
+        '✨ As the orb moves, their weak points become simple actions.',
+        '🎯 Daka is preparing the shortest path to make your offer harder to ignore.'
+      ],
+      loadingFunnel: [
+        '☕ During your pause, Daka finds where the page loses buyers.',
+        '💎 Proof, objections, and buttons are being put back in the right order.',
+        '🎯 Daka prepares fixes you can test without guessing.'
+      ],
+      loadingTechnical: [
+        '☕ While your coffee cools, Daka checks the foundations that reassure visitors.',
+        '🛡️ Hidden blockers are ranked from most urgent to most useful.',
+        '⚡ Daka prepares a short list to make the site clearer and more reliable.'
+      ],
+      loadingKeywords: [
+        '☕ While you take a breath, Daka sorts the demand worth pursuing.',
+        '💡 Useful words rise, noise falls away.',
+        '🎯 Daka prepares topics your audience already understands and searches for.'
+      ]
+    },
+    ar: {
+      loadingState: [
+        '☕ بينما تستمتع بقهوتك، يقرأ داكا أين يتفوّق منافسوك.',
+        '✨ ومع حركة الكرة، تتحول نقاط ضعفهم إلى خطوات واضحة لك.',
+        '🎯 داكا يجهّز أقصر طريق لجعل عرضك أصعب على التجاهل.'
+      ],
+      loadingFunnel: [
+        '☕ أثناء استراحتك، يبحث داكا عن المواضع التي تضيع فيها العملاء.',
+        '💎 يتم ترتيب الأدلة والاعتراضات والأزرار بالطريقة التي تقرّب القرار.',
+        '🎯 داكا يجهّز تعديلات يمكنك اختبارها بدون تخمين.'
+      ],
+      loadingTechnical: [
+        '☕ بينما قهوتك أمامك، يفحص داكا الأساس الذي يطمئن الزائر.',
+        '🛡️ العوائق الخفية تُرتّب من الأكثر استعجالا إلى الأكثر فائدة.',
+        '⚡ داكا يجهّز قائمة قصيرة تجعل الموقع أوضح وأكثر ثقة.'
+      ],
+      loadingKeywords: [
+        '☕ بينما تأخذ نفسا هادئا، يرتّب داكا الطلبات التي تستحق المتابعة.',
+        '💡 الكلمات المفيدة تصعد، والضجيج يختفي.',
+        '🎯 داكا يجهّز مواضيع يفهمها جمهورك ويبحث عنها بالفعل.'
+      ]
+    }
+  };
+  const byLang = tips[lang] || tips.fr;
+  return byLang[elementId] || byLang.loadingState;
+}
 
 window._loaderTimers = {};
 
@@ -5115,7 +4905,7 @@ function showLoading(elementId) {
   // 5. Tips Textes Rotatifs
   const tipEl = wrap.querySelector('.loading-tip');
   if (tipEl) {
-    const pool = _LOADER_TIPS[elementId] || _LOADER_TIPS.loadingState;
+    const pool = getLoaderTips(elementId);
     let idx = 0;
     tipEl.textContent = pool[0];
     tipEl.style.opacity = '1';
@@ -5491,19 +5281,19 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         battlePlan: isAr ? 'الخلاصة العملية' : (isEn ? 'What matters now' : 'Ce qui compte maintenant'),
         roadmap: isAr ? 'خطوات التنفيذ' : (isEn ? 'Execution steps' : 'Actions a executer'),
         competitorsTitle: isAr ? 'المنافسون الذين يجب مراقبتهم' : (isEn ? 'Competitors to watch' : 'Concurrents a surveiller'),
-        marketDyn: isAr ? 'ضغط السوق' : (isEn ? 'Market pressure' : 'Pression du marche'),
-        gslTitle: isAr ? 'العرض الذي ينتظره السوق' : (isEn ? 'The offer people expect' : 'L offre que le marche attend'),
+        marketDyn: isAr ? 'ضغط السوق' : (isEn ? 'Market pressure' : 'Pression du marché'),
+        gslTitle: isAr ? 'العرض الذي ينتظره السوق' : (isEn ? 'The offer people expect' : 'L’offre que le marché attend'),
         revEngTitle: isAr ? 'ما ينجح عند الافضل' : (isEn ? 'What works for the best' : 'Ce qui marche chez les meilleurs'),
-        masterTitle: isAr ? 'كيف تربح السوق' : (isEn ? 'How to win the market' : 'Comment gagner le marche'),
+        masterTitle: isAr ? 'كيف تربح السوق' : (isEn ? 'How to win the market' : 'Comment gagner le marché'),
         moatTitle: isAr ? 'لماذا القائد يربح' : (isEn ? 'Why the leader wins' : 'Pourquoi le leader gagne'),
         productKill: isAr ? 'اجعل عرضك اقوى' : (isEn ? 'Make your offer stronger' : 'Rendre votre offre plus forte'),
         powerBalance: isAr ? 'ميزان القوة' : (isEn ? 'Power balance' : 'Rapport de force'),
         swotTitle: isAr ? 'فرص وفجوات' : (isEn ? 'Opportunities and gaps' : 'Opportunites et failles'),
-        kwTitle: isAr ? 'كلمات يستخدمها السوق' : (isEn ? 'Words your market uses' : 'Mots utilises par le marche'),
+        kwTitle: isAr ? 'كلمات يستخدمها السوق' : (isEn ? 'Words your market uses' : 'Mots utilisés par le marché'),
         duelTitle: isAr ? 'مقارنة مباشرة' : (isEn ? 'Direct comparison' : 'Comparaison directe'),
         serpIntent: isAr ? 'نية العميل' : (isEn ? 'Buyer intent' : 'Intention client'),
-        volume: isAr ? 'طلب السوق' : (isEn ? 'Market demand' : 'Demande marche'),
-        coreKw: isAr ? 'لغة السوق' : (isEn ? 'Market language' : 'Langage marche'),
+        volume: isAr ? 'طلب السوق' : (isEn ? 'Market demand' : 'Demande marché'),
+        coreKw: isAr ? 'لغة السوق' : (isEn ? 'Market language' : 'Langage marché'),
         spyFunnel: isAr ? 'افحص صفحة البيع' : (isEn ? 'Audit sales page' : 'Auditer la page'),
         spyTech: isAr ? 'افحص الموقع' : (isEn ? 'Check site foundations' : 'Verifier le site'),
         spyKeywords: isAr ? 'استخرج الكلمات' : (isEn ? 'Generate keywords' : 'Generer les mots-cles')
@@ -5563,7 +5353,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             <div style="margin-top:14px;padding:12px 16px;background:rgba(255,255,255,0.03);border-radius:10px;border-${bSide}:3px solid rgba(255,255,255,0.12);">
                 <small style="color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">
                     <i class="fas fa-robot" style="margin-${bSide === 'left' ? 'right' : 'left'}:5px;"></i>
-                    ${isAr ? 'قراءة السوق' : (isEn ? 'Market reading' : 'Lecture du marche')}
+                    ${isAr ? 'قراءة السوق' : (isEn ? 'Market reading' : 'Lecture du marché')}
                 </small>
                 <p style="font-size:0.88rem;color:#94a3b8;margin:0;line-height:1.7;" dir="auto">${safe(mi.notes)}</p>
             </div>` : ''}
@@ -7508,7 +7298,7 @@ function displayTechnicalResults(data) {
     <div class="result-card" style="border-top:4px solid #10b981; margin-bottom:25px;">
         <h3 style="color:#10b981; margin-bottom:18px; font-family:'Cairo'; font-size:1.1rem;">
             <i class="fas fa-brain"></i>
-            ${isAr ? 'ذكاء الكلمات المفتاحية' : isEn ? 'SEO Intelligence' : 'Intelligence Mots-clés'}
+            ${isAr ? 'ذكاء الكلمات المفتاحية' : isEn ? 'Site Intelligence' : 'Intelligence Mots-clés'}
             ${seo.contentScore ? `<span style="color:#fcd34d; font-size:0.8rem; margin-${isAr?'right':'left'}:10px;">Score contenu: ${seo.contentScore}/100</span>` : ''}
         </h3>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
@@ -7815,6 +7605,39 @@ const SEOGEN_BRAND_HEX = {
   BORDER:  '#1e293b',
 };
 
+function getExportableReportText(el) {
+    if (!el) return '';
+    return String(el.innerText || el.textContent || '')
+        .replace(/\b(null|undefined|NaN)\b/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+function cloneReportHtmlForExport(el) {
+    if (!el) return '';
+    const clone = el.cloneNode(true);
+    clone.querySelectorAll('details').forEach(function (details) {
+        details.setAttribute('open', 'open');
+    });
+    clone.querySelectorAll(
+        'button, .btn-gen, .no-print, .kw-filter-btn, #kwFilterBar, ' +
+        '.loading-state, .toast-container, .export-bubble-wrapper, ' +
+        '.btn-export-pdf, .btn-copy-mini, [data-gen-type], iframe'
+    ).forEach(function (node) {
+        node.remove();
+    });
+    return clone.innerHTML;
+}
+
+function restorePdfExportDom(hiddenEls, openedDetails) {
+    (hiddenEls || []).forEach(function (item) {
+        if (item && item.el) item.el.style.display = item.orig;
+    });
+    (openedDetails || []).forEach(function (details) {
+        if (details) details.open = false;
+    });
+}
+
 
 window.exportFullAnalysisToPDF = async function () {
 
@@ -7824,7 +7647,10 @@ window.exportFullAnalysisToPDF = async function () {
     const hasSeo    = !!STATE.lastTechnicalResults;
     const hasComp   = !!STATE.lastAnalysisResults;
     const hasFunnel = !!STATE.lastFunnelResults;
-    const hasKw     = !!(STATE.lastKeywords && STATE.lastKeywords.keywords && STATE.lastKeywords.keywords.length);
+    const exportKeywords = Array.isArray(STATE.lastKeywords)
+        ? STATE.lastKeywords
+        : (STATE.lastKeywords?.keywords || []);
+    const hasKw     = Array.isArray(exportKeywords) && exportKeywords.length > 0;
 
     if (!hasSeo && !hasComp && !hasFunnel && !hasKw) {
         return toast.warning(
@@ -7853,10 +7679,17 @@ window.exportFullAnalysisToPDF = async function () {
     if (STATE.currentLang === 'ar') {
         try {
             var ids = ['resultsCompetitors', 'resultsFunnel', 'resultsTechnical', 'resultsKeywords'];
-            var arContent = ids
+            var arSections = ids
                 .map(function (id) { return document.getElementById(id); })
-                .filter(function (el) { return el && el.innerHTML.trim() !== ''; })
-                .map(function (el) { return el.innerHTML; })
+                .filter(function (el) { return el && getExportableReportText(el).length > 40; });
+
+            if (!arSections.length) {
+                toast.warning('التقرير غير جاهز للتصدير بعد.');
+                return;
+            }
+
+            var arContent = arSections
+                .map(function (el) { return cloneReportHtmlForExport(el); })
                 .join('<hr style="margin:30px 0;border:none;border-top:2px dashed rgba(255,255,255,0.1);">');
 
             var pw = window.open('', '_blank');
@@ -7992,22 +7825,25 @@ window.exportFullAnalysisToPDF = async function () {
     toast.info(isEn ? 'Building PDF — please wait...' : 'Construction du PDF — patientez...');
     await new Promise(function (r) { setTimeout(r, 120); });
 
+    let hiddenEls = [];
+    let openedDetails = [];
+
     try {
         const { jsPDF } = window.jspdf;
 
         // ── Sections à exporter ───────────────────────────────────
         const sectionDefs = [
-            { id: 'resultsCompetitors', label: isEn ? 'Competitors Analysis'  : 'Analyse Concurrents',  has: hasComp   },
-            { id: 'resultsFunnel',      label: isEn ? 'Funnel AIDA'           : 'Funnel AIDA',          has: hasFunnel },
-            { id: 'resultsTechnical',   label: isEn ? 'Technical SEO'         : 'SEO Technique',        has: hasSeo    },
-            { id: 'resultsKeywords',    label: isEn ? 'Keywords'              : 'Mots-cles',            has: hasKw     },
+            { id: 'resultsCompetitors', label: isEn ? 'Competitor Report'     : 'Concurrence',          has: hasComp   },
+            { id: 'resultsFunnel',      label: isEn ? 'Conversion Path'       : 'Parcours de conversion', has: hasFunnel },
+            { id: 'resultsTechnical',   label: isEn ? 'Site Audit'            : 'Audit site',           has: hasSeo    },
+            { id: 'resultsKeywords',    label: isEn ? 'Keywords'              : 'Mots-clés',            has: hasKw     },
         ];
 
         const validSections = sectionDefs
             .filter(function (s) { return s.has; })
             .map(function (s) {
                 const el = document.getElementById(s.id);
-                return (el && el.innerHTML.trim()) ? { el: el, label: s.label } : null;
+                return (el && getExportableReportText(el).length > 40) ? { el: el, label: s.label } : null;
             })
             .filter(Boolean);
 
@@ -8015,7 +7851,17 @@ window.exportFullAnalysisToPDF = async function () {
             throw new Error(isEn ? 'No visible results to export.' : 'Aucun résultat visible à exporter.');
         }
 
-        // ── Masquer éléments non imprimables ─────────────────────
+        // ── Ouvrir les détails et masquer les éléments non imprimables ──
+        openedDetails = [];
+        validSections.forEach(function (section) {
+            section.el.querySelectorAll('details').forEach(function (details) {
+                if (!details.open) {
+                    openedDetails.push(details);
+                    details.open = true;
+                }
+            });
+        });
+
         const hideSelectors = [
             '.no-print', '.btn-export-pdf', '#btn-export-global',
             '.btn-copy-mini', '.kw-filter-btn', '#kwFilterBar',
@@ -8025,13 +7871,14 @@ window.exportFullAnalysisToPDF = async function () {
             '#loadingCompetitors', '#loadingFunnel', '#loadingTechnical', '#loadingKeywords'
         ].join(',');
 
-        const hiddenEls = [];
+        hiddenEls = [];
         document.querySelectorAll(hideSelectors).forEach(function (el) {
             if (el.style.display !== 'none') {
                 hiddenEls.push({ el: el, orig: el.style.display });
                 el.style.display = 'none';
             }
         });
+        await new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); });
 
         // ── Init PDF A4 ───────────────────────────────────────────
         const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -8130,8 +7977,8 @@ window.exportFullAnalysisToPDF = async function () {
             },
             {
                 label: isEn ? 'Keywords' : 'Mots-Clés',
-                value: STATE.lastKeywords && STATE.lastKeywords.keywords
-                    ? String(STATE.lastKeywords.keywords.length)
+                value: hasKw
+                    ? String(exportKeywords.length)
                     : '—',
                 color: [6, 182, 212]
             },
@@ -8177,13 +8024,14 @@ window.exportFullAnalysisToPDF = async function () {
         pdf.setFontSize(7);
         pdf.setTextColor(100, 116, 139);
         pdf.text(
-            'Daka \u2014 ' + (isEn ? 'Powered by Daka Engine' : 'Propulse par Moteur Daka'),
+            'Daka \u2014 ' + (isEn ? 'Powered by Daka Engine' : 'Propulsé par Moteur Daka'),
             pageW / 2, pageH - 7, { align: 'center' }
         );
 
         // ════════════════════════════════════════════════════════
         // CAPTURE html2canvas — une page par section
         // ════════════════════════════════════════════════════════
+        var capturedSections = 0;
         for (var si = 0; si < validSections.length; si++) {
             var section = validSections[si];
 
@@ -8245,6 +8093,9 @@ window.exportFullAnalysisToPDF = async function () {
                     windowWidth:     section.el.scrollWidth  || 1200,
                     windowHeight:    section.el.scrollHeight || 800,
                     onclone: function (clonedDoc) {
+                        clonedDoc.querySelectorAll('details').forEach(function (details) {
+                            details.setAttribute('open', 'open');
+                        });
                         // Dans le clone — masquer boutons/loaders
                         var toHide = clonedDoc.querySelectorAll(
                             'button, .btn-gen, .no-print, .kw-filter-btn, #kwFilterBar, ' +
@@ -8258,6 +8109,12 @@ window.exportFullAnalysisToPDF = async function () {
                 console.warn('[PDF] Capture échouée pour ' + section.label, captureErr);
                 continue;
             }
+
+            if (!canvas || canvas.width < 20 || canvas.height < 20) {
+                console.warn('[PDF] Capture vide pour ' + section.label);
+                continue;
+            }
+            capturedSections++;
 
             var imgData    = canvas.toDataURL('image/jpeg', 0.92);
             var imgW       = canvas.width;
@@ -8336,6 +8193,10 @@ window.exportFullAnalysisToPDF = async function () {
             sliceCanvas = null;
         }
 
+        if (!capturedSections) {
+            throw new Error(isEn ? 'Report content is not ready for export.' : 'Le rapport n’est pas encore prêt pour l’export.');
+        }
+
         // ════════════════════════════════════════════════════════
         // PAGE FINALE — Récapitulatif + Keywords top 20
         // ════════════════════════════════════════════════════════
@@ -8375,7 +8236,7 @@ window.exportFullAnalysisToPDF = async function () {
         });
 
         // Top 20 Keywords si disponibles
-        if (hasKw && STATE.lastKeywords.keywords.length) {
+        if (hasKw && exportKeywords.length) {
             var kwStartY = summaryY + validSections.length * 12 + 15;
 
             pdf.setFont('helvetica', 'bold');
@@ -8406,7 +8267,7 @@ window.exportFullAnalysisToPDF = async function () {
             pdf.text('INTENT',                         colInt + 2, kwTableY + 5.5);
 
             // Lignes keywords
-            var top20 = STATE.lastKeywords.keywords.slice(0, 20);
+            var top20 = exportKeywords.slice(0, 20);
             top20.forEach(function (kw, ki) {
                 var rowY  = kwTableY + 8 + ki * 8;
                 var isEven = ki % 2 === 0;
@@ -8495,13 +8356,13 @@ window.exportFullAnalysisToPDF = async function () {
             pdf.setTextColor(6, 182, 212);
             pdf.text(
                 (isEn ? 'Total: ' : 'Total : ')
-                + STATE.lastKeywords.keywords.length
+                + exportKeywords.length
                 + (isEn ? ' keywords extracted' : ' mots-clés extraits'),
                 margin, totalY
             );
 
             // Quick Wins count
-            var qwCount = STATE.lastKeywords.keywords.filter(function (k) { return k.quickWin; }).length;
+            var qwCount = exportKeywords.filter(function (k) { return k.quickWin; }).length;
             if (qwCount > 0) {
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(7);
@@ -8520,16 +8381,16 @@ window.exportFullAnalysisToPDF = async function () {
         pdf.setFontSize(7);
         pdf.setTextColor(100, 116, 139);
         pdf.text(
-            'Daka \u2014 ' + (isEn ? 'Powered by Daka Engine' : 'Propulse par Moteur Daka'),
+            'Daka \u2014 ' + (isEn ? 'Powered by Daka Engine' : 'Propulsé par Moteur Daka'),
             pageW / 2, pageH - 7, { align: 'center' }
         );
 
         // ════════════════════════════════════════════════════════
         // RESTAURER éléments masqués
         // ════════════════════════════════════════════════════════
-        hiddenEls.forEach(function (item) {
-            item.el.style.display = item.orig;
-        });
+        restorePdfExportDom(hiddenEls, openedDetails);
+        hiddenEls = [];
+        openedDetails = [];
 
         // ════════════════════════════════════════════════════════
         // TÉLÉCHARGEMENT
@@ -8550,12 +8411,9 @@ window.exportFullAnalysisToPDF = async function () {
     } catch (err) {
         console.error('[PDF FR/EN]', err);
 
-        // Restaurer éléments masqués même en cas d'erreur
-        if (typeof hiddenEls !== 'undefined') {
-            hiddenEls.forEach(function (item) {
-                item.el.style.display = item.orig;
-            });
-        }
+        restorePdfExportDom(hiddenEls, openedDetails);
+        hiddenEls = [];
+        openedDetails = [];
 
         toast.error(
             (isEn ? 'PDF export failed: ' : 'Export PDF échoué : ')
@@ -9794,19 +9652,19 @@ function getReportLabels(opts = {}) {
         competitors: 'Les concurrents qui révèlent votre opportunité',
         competitorsSub: 'Qui gagne maintenant, où ils sont forts, et où vous pouvez attaquer.',
         proof: 'Preuves et sources',
-        proofSub: 'Liens et etudes pour verifier et approfondir.',
+        proofSub: 'Liens et études pour vérifier et approfondir.',
         audit: 'Diagnostic de la page',
-        auditSub: 'Forces, faiblesses et problemes qui influencent la decision.',
+        auditSub: 'Forces, faiblesses et problèmes qui influencent la décision.',
         money: 'Offre, prix et confiance',
-        moneySub: 'Ce qui convainc ou fait hesiter avant de passer a l action.',
+        moneySub: 'Ce qui convainc ou fait hésiter avant de passer à l’action.',
         page: 'Sections et textes',
-        pageSub: 'Ce qu il faut changer dans la structure, les mots et les boutons.',
-        technical: 'Priorites techniques',
-        technicalSub: 'Problemes qui touchent confiance, lecture, vitesse et structure.',
-        keywords: 'Opportunites de recherche et contenu',
-        keywordsSub: 'Demandes, questions et sujets du public a transformer en contenu.',
-        expertsSub: 'Choisissez un expert pour resumer, trouver l angle, corriger la page ou creer du contenu.',
-        openExpert: 'Ouvrir l expert'
+        pageSub: 'Ce qu’il faut changer dans la structure, les mots et les boutons.',
+        technical: 'Priorités techniques',
+        technicalSub: 'Problèmes qui touchent confiance, lecture, vitesse et structure.',
+        keywords: 'Opportunités de recherche et contenu',
+        keywordsSub: 'Demandes, questions et sujets du public à transformer en contenu.',
+        expertsSub: 'Choisissez un expert pour résumer, trouver l’angle, corriger la page ou créer du contenu.',
+        openExpert: 'Ouvrir l’expert'
     };
 }
 
@@ -9886,11 +9744,11 @@ function renderExpertDock(section, opts = {}) {
     const bySection = {
         competitors: {
             icon: 'fa-chess-knight',
-            title: isAr ? 'افهم السوق ثم قرر الخطوة التالية' : isEn ? 'Understand the market, then decide the next move' : 'Comprendre le marche, puis decider quoi faire',
+            title: isAr ? 'افهم السوق ثم قرر الخطوة التالية' : isEn ? 'Understand the market, then decide the next move' : 'Comprendre le marché, puis décider quoi faire',
             sub: labels.expertsSub,
             experts: [
                 { name: isAr ? 'خبير المنافسين' : isEn ? 'Competitor Expert' : 'Expert Concurrents', desc: isAr ? 'يلخص التقرير ويحول المنافسين إلى خطوات واضحة.' : isEn ? 'Summarizes the report and turns competitors into clear actions.' : 'Resume le rapport et transforme les concurrents en actions claires.', url: 'https://chatgpt.com/g/g-673ba23144bc819199fa36907952822b-competitor-research-assistant' },
-                { name: isAr ? 'Sophie - السوق' : isEn ? 'Sophie - Market' : 'Sophie - Marche', desc: isAr ? 'تحدد زاوية السوق والفرص التي تستحق الهجوم.' : isEn ? 'Finds the market angle and opportunities worth attacking.' : 'Trouve l angle de marche et les opportunites a attaquer.', url: 'https://chatgpt.com/g/g-8nEbqfyfE-sophie-strategic-market-bot' },
+                { name: isAr ? 'Sophie - السوق' : isEn ? 'Sophie - Market' : 'Sophie - Marché', desc: isAr ? 'تحدد زاوية السوق والفرص التي تستحق الهجوم.' : isEn ? 'Finds the market angle and opportunities worth attacking.' : 'Trouve l’angle de marché et les opportunités à attaquer.', url: 'https://chatgpt.com/g/g-8nEbqfyfE-sophie-strategic-market-bot' },
                 { name: isAr ? 'Sharon - الجمهور' : isEn ? 'Sharon - Audience' : 'Sharon - Audience', desc: isAr ? 'توضح من تستهدف، ماذا تعده، وما الكلمات التي تستخدمها.' : isEn ? 'Clarifies who to target, what to promise, and which words to use.' : 'Clarifie qui viser, quoi promettre et quels mots utiliser.', url: 'https://chatgpt.com/g/g-stmJ7C0EP-sharon-target-audience-analyzer' }
             ]
         },
@@ -9916,7 +9774,7 @@ function renderExpertDock(section, opts = {}) {
         },
         social: {
             icon: 'fa-hashtag',
-            title: isAr ? 'حوّل الفرص إلى محتوى اجتماعي' : isEn ? 'Turn opportunities into social content' : 'Transformer les opportunites en contenus sociaux',
+            title: isAr ? 'حوّل الفرص إلى محتوى اجتماعي' : isEn ? 'Turn opportunities into social content' : 'Transformer les opportunités en contenus sociaux',
             sub: isAr ? 'خبراء للمنشورات، الخطافات، وفيسبوك/إنستغرام.' : isEn ? 'Experts for posts, hooks, Facebook, and Instagram.' : 'Experts pour posts, hooks, Facebook et Instagram.',
             experts: [
                 { name: isAr ? 'Ava - النمو' : isEn ? 'Ava - Growth' : 'Ava - Croissance', desc: isAr ? 'يبني خطة نمو ومحتوى منتظم.' : isEn ? 'Builds a growth and recurring content plan.' : 'Construit un plan de croissance et contenu regulier.', url: 'https://chatgpt.com/g/g-4QKGXg36k-ava-growth-gpt' },
@@ -13867,6 +13725,11 @@ const PDF_EXPORT = {
 
     // ── Utilitaire HTTP commun ────────────────────────────────
     async _send(endpoint, payload, filename) {
+        if (typeof window.exportFullAnalysisToPDF === 'function') {
+            await window.exportFullAnalysisToPDF();
+            return;
+        }
+
         const response = await fetch(
             `${CONFIG.API_BASE_URL}${endpoint}`,
             {
@@ -14186,13 +14049,17 @@ const PDF_EXPORT = {
 }
 
 .loading-state {
+    --loader-size: clamp(190px, 30vmin, 360px);
     background:
         radial-gradient(circle at 18% 18%, rgba(34, 211, 238, 0.16), transparent 34%),
         radial-gradient(circle at 82% 12%, rgba(236, 72, 153, 0.18), transparent 32%),
         radial-gradient(circle at 50% 52%, rgba(139, 92, 246, 0.2), transparent 44%),
         linear-gradient(145deg, #050816 0%, #0b1022 46%, #130b2a 100%) !important;
     color: #ffffff !important;
-    overflow: hidden !important;
+    min-height: 100dvh !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
 }
 
 .loading-state::before,
@@ -14226,26 +14093,43 @@ const PDF_EXPORT = {
     z-index: 1;
 }
 
-.loading-state .loading-content {
-    background: transparent !important;
-    border: 0 !important;
-    box-shadow: none !important;
-}
-
-.loading-state .loading-content::before,
-.loading-state .loading-content::after {
-    display: none !important;
-}
-
 .loading-state .loading-orb {
-    width: clamp(190px, 30vmin, 360px) !important;
-    height: clamp(190px, 30vmin, 360px) !important;
+    width: var(--loader-size) !important;
+    height: var(--loader-size) !important;
+    aspect-ratio: 1 / 1 !important;
     margin: 0 auto clamp(16px, 2.4vh, 26px) !important;
     position: relative !important;
     display: grid !important;
     place-items: center !important;
     filter: drop-shadow(0 34px 82px rgba(139, 92, 246, 0.36));
     z-index: 2;
+    flex: 0 0 auto !important;
+}
+
+.loading-state .loading-orb::before,
+.loading-state .loading-orb::after {
+    content: "";
+    position: absolute;
+    inset: -8%;
+    border-radius: 999px;
+    pointer-events: none;
+}
+
+.loading-state .loading-orb::before {
+    background:
+        conic-gradient(from 0deg, transparent 0 18%, rgba(34, 211, 238, 0.58), transparent 38% 58%, rgba(236, 72, 153, 0.52), transparent 78% 100%);
+    filter: blur(18px);
+    opacity: 0.72;
+    animation: dakaOrbHalo 7s linear infinite;
+}
+
+.loading-state .loading-orb::after {
+    inset: 8%;
+    border: 1px solid rgba(255, 255, 255, 0.26);
+    box-shadow:
+        0 0 32px rgba(34, 211, 238, 0.16),
+        inset 0 0 34px rgba(255, 255, 255, 0.16);
+    animation: dakaOrbRing 4.2s ease-in-out infinite;
 }
 
 .loading-state.active .loading-orb,
@@ -14270,12 +14154,17 @@ const PDF_EXPORT = {
         radial-gradient(circle at 72% 24%, rgba(236, 72, 153, 0.48), transparent 36%),
         radial-gradient(circle at 64% 72%, rgba(139, 92, 246, 0.64), transparent 38%),
         conic-gradient(from 210deg, #4f46e5, #8b5cf6, #ec4899, #22d3ee, #a855f7, #4f46e5);
+    background-size: 150% 150%, 145% 145%, 150% 150%, 160% 160%, 100% 100%;
     box-shadow:
         inset 0 0 32px rgba(255, 255, 255, 0.72),
         inset -34px -28px 70px rgba(76, 29, 149, 0.28),
         inset 26px 24px 60px rgba(255, 255, 255, 0.42),
         0 0 0 1px rgba(255, 255, 255, 0.72);
-    animation: dakaOrbFloat 4.6s ease-in-out infinite, dakaOrbHue 8s linear infinite, dakaOrbBreathe 2.8s ease-in-out infinite;
+    animation:
+        dakaOrbFloat 4.6s ease-in-out infinite,
+        dakaOrbHue 8s linear infinite,
+        dakaOrbBreathe 2.8s ease-in-out infinite,
+        dakaOrbLiquid 7.5s ease-in-out infinite alternate;
 }
 
 .brand-loader-orb::before,
@@ -14305,6 +14194,7 @@ const PDF_EXPORT = {
 .brand-loader-orb span {
     position: relative;
     z-index: 2;
+    overflow: hidden;
     padding: 12px 22px 11px;
     border-radius: 999px;
     color: #f7e9ff;
@@ -14324,6 +14214,16 @@ const PDF_EXPORT = {
     -webkit-text-fill-color: #f7e9ff;
     text-transform: uppercase;
     animation: dakaTextGlow 2.8s ease-in-out infinite;
+}
+
+.brand-loader-orb span::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(110deg, transparent 0 26%, rgba(255, 255, 255, 0.42) 46%, transparent 68% 100%);
+    transform: translateX(-120%);
+    animation: dakaTextSweep 3.4s ease-in-out infinite;
+    pointer-events: none;
 }
 
 .loading-state .loading-title {
@@ -14792,6 +14692,22 @@ const PDF_EXPORT = {
     50% { transform: rotate(14deg) translate3d(5%, 4%, 0) scale(1.08); opacity: 0.96; }
 }
 
+@keyframes dakaOrbLiquid {
+    0% { background-position: 18% 12%, 8% 78%, 90% 18%, 74% 92%, center; }
+    35% { background-position: 38% 24%, 22% 54%, 70% 34%, 48% 78%, center; }
+    70% { background-position: 60% 12%, 34% 82%, 88% 62%, 30% 58%, center; }
+    100% { background-position: 24% 34%, 14% 62%, 76% 22%, 68% 84%, center; }
+}
+
+@keyframes dakaOrbHalo {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes dakaOrbRing {
+    0%, 100% { transform: scale(0.98); opacity: 0.58; }
+    50% { transform: scale(1.035); opacity: 0.9; }
+}
+
 @keyframes dakaGalaxySpin {
     to { transform: rotate(360deg); }
 }
@@ -14829,12 +14745,22 @@ const PDF_EXPORT = {
     50% { filter: drop-shadow(0 0 18px rgba(34,211,238,.42)); }
 }
 
+@keyframes dakaTextSweep {
+    0%, 58% { transform: translateX(-120%); opacity: 0; }
+    72% { opacity: 1; }
+    100% { transform: translateX(120%); opacity: 0; }
+}
+
 .competitor-action-stack .btn-gen {
     width: 100%;
     justify-content: center;
 }
 
 @media (max-width: 768px) {
+    .loading-state {
+        --loader-size: clamp(150px, 52vmin, 230px);
+    }
+
     .logo-mark {
         width: 42px;
         height: 42px;
@@ -14842,8 +14768,6 @@ const PDF_EXPORT = {
     }
 
     .loading-state .loading-orb {
-        width: clamp(160px, 54vmin, 240px) !important;
-        height: clamp(160px, 54vmin, 240px) !important;
         margin-bottom: 14px !important;
     }
 
@@ -14929,6 +14853,12 @@ const PDF_EXPORT = {
 
     .expert-card {
         min-height: auto;
+    }
+}
+
+@media (min-width: 1600px) {
+    .loading-state {
+        --loader-size: clamp(280px, 24vmin, 360px);
     }
 }
 </style>
