@@ -143,15 +143,22 @@
 ═══════════════════════════════════════════════════════════════ */
 *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
 
-html { scroll-behavior:smooth; font-size:16px; }
+html {
+  scroll-behavior:smooth;
+  font-size:16px;
+  background:#070b16;
+  min-height:100%;
+}
 
 body {
   font-family : var(--font-primary);
   background  : var(--bg-primary);
+  background-color:#070b16;
   color       : var(--text-primary);
   line-height : 1.6;
   overflow-x  : hidden;
   min-height  : 100vh;
+  isolation   : isolate;
   -webkit-font-smoothing : antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -188,7 +195,7 @@ body::before {
    LAYOUT
 ═══════════════════════════════════════════════════════════════ */
 .container    { max-width:1400px; margin:0 auto; padding:0 var(--spacing-lg); position:relative; z-index:var(--z-base); }
-.main-wrapper { min-height:100vh; display:flex; flex-direction:column; }
+.main-wrapper { min-height:100vh; display:flex; flex-direction:column; position:relative; z-index:1; background:transparent; }
 main          { flex:1; padding:var(--spacing-2xl) 0; }
 
 /* ══════════════════════════════════════════════════════════════
@@ -446,8 +453,19 @@ body.loading-active { overflow: hidden !important; }
 .nav-btn i { font-size:1rem; }
 
 /* Tab content */
-.tab-content             { display:none; animation: fadeIn 0.4s ease-in-out; }
-.tab-content.active      { display:block; }
+.tab-content {
+  display:none;
+  min-height:calc(100vh - 170px);
+  opacity:1;
+  transform:none;
+  animation:none !important;
+}
+.tab-content.active {
+  display:block;
+  opacity:1;
+  transform:none;
+  animation:none !important;
+}
 
 /* ═══════════════════════════════════════════════════════════════
    CARDS
@@ -1535,7 +1553,18 @@ table tbody tr td:last-child  { border-radius:12px 0 0 12px; }
   from { opacity:0; transform:translateY(16px); }
   to   { opacity:1; transform:translateY(0);    }
 }
-.tab-content.active { animation: slideUp 0.35s ease; }
+.tab-content.active,
+body.tab-switching .tab-content {
+  opacity:1;
+  transform:none;
+  animation:none !important;
+}
+
+.results-container .fade-in-up {
+  opacity:1 !important;
+  transform:none !important;
+  animation:none !important;
+}
 
 /* Scroll smooth */
 ::-webkit-scrollbar       { width:6px; height:6px; }
@@ -4730,37 +4759,58 @@ class TabManager {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
                 const tabName = btn.getAttribute('data-tab');
-                this.switchTab(tabName);
+                this.switchTab(tabName, { scroll: true });
             });
         });
     }
 
-    switchTab(tabName) {
-        const targetTab = document.getElementById(tabName + 'Tab');
+    switchTab(tabName, options = {}) {
+        const safeTabName = String(tabName || '').trim();
+        const targetTab = document.getElementById(safeTabName + 'Tab');
 
         if (!targetTab) {
-            console.error(`❌ Onglet introuvable: ${tabName}Tab`);
+            console.error(`❌ Onglet introuvable: ${safeTabName}Tab`);
             if (typeof toast !== 'undefined') toast.error(STATE.currentLang === 'ar' ? 'القسم غير موجود' : 'Onglet introuvable.');
-            return;
+            return null;
         }
 
-        // Masquer TOUS les contenus
+        document.body.classList.add('tab-switching');
+
+        // Masquer TOUS les contenus sans animation fragile
         document.querySelectorAll('.tab-content').forEach(tab => {
             tab.classList.remove('active');
+            tab.setAttribute('aria-hidden', 'true');
         });
 
         // Retirer 'active' de TOUS les boutons
+        this.navButtons = document.querySelectorAll('.nav-btn');
         this.navButtons.forEach(btn => {
             btn.classList.remove('active');
+            btn.setAttribute('aria-selected', 'false');
         });
 
         // Activer l'onglet ciblé
         targetTab.classList.add('active');
+        targetTab.setAttribute('aria-hidden', 'false');
 
-        const activeBtn = document.querySelector(`.nav-btn[data-tab="${tabName}"]`);
-        if (activeBtn) activeBtn.classList.add('active');
+        const activeBtn = document.querySelector(`.nav-btn[data-tab="${safeTabName}"]`);
+        if (activeBtn) {
+            activeBtn.classList.add('active');
+            activeBtn.setAttribute('aria-selected', 'true');
+        }
 
-        if (typeof STATE !== 'undefined') STATE.currentTab = tabName;
+        if (typeof STATE !== 'undefined') STATE.currentTab = safeTabName;
+
+        requestAnimationFrame(() => {
+            document.body.classList.remove('tab-switching');
+            if (options.scroll !== false) {
+                const mainEl = document.querySelector('main') || targetTab;
+                const top = Math.max(0, mainEl.getBoundingClientRect().top + window.scrollY - 88);
+                window.scrollTo({ top, behavior: 'smooth' });
+            }
+        });
+
+        return targetTab;
     }
 }
 const tabManager = new TabManager();
@@ -9694,7 +9744,8 @@ function summarizeReportHtml(html, fallback = '') {
 function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
     if (!String(html || '').trim()) return '';
     const labels = getReportLabels(opts);
-    const isOpen = opts.open === true ? 'open' : '';
+    const expanded = opts.open === true;
+    const isOpen = expanded ? 'open' : '';
     const dir = opts.isAr ? 'rtl' : 'ltr';
     const noCollapse = opts.noCollapse === true;
     const preview = summarizeReportHtml(opts.summary || '', subtitle || labels.openHint);
@@ -9718,7 +9769,8 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
     }
 
     return `
-    <section class="report-section report-section-${safe(key)} fade-in-up" dir="${dir}">
+    <section class="report-section report-section-${safe(key)} ${expanded ? 'report-section-open' : ''} fade-in-up"
+        dir="${dir}" data-report-toggle="1" tabindex="0" role="button" aria-expanded="${expanded ? 'true' : 'false'}">
         <div class="report-section-head">
             <span class="report-section-icon"><i class="fas ${safe(icon || 'fa-layer-group')}"></i></span>
             <span class="report-section-copy">
@@ -9727,13 +9779,56 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
             </span>
         </div>
         ${preview ? `<p class="report-section-preview" dir="auto">${safe(preview)}</p>` : ''}
-        <details class="report-section-details" ${isOpen}>
+        <details class="report-section-details" data-report-details="1" ${isOpen}>
             <summary>
                 <span class="report-section-toggle"><small>${safe(labels.openHint || '')}</small><i class="fas fa-chevron-down"></i></span>
             </summary>
             <div class="report-section-body">${html}</div>
         </details>
     </section>`;
+}
+
+function setReportSectionOpen(section, open) {
+    const details = section?.querySelector(':scope > .report-section-details');
+    if (!details) return;
+    details.open = Boolean(open);
+    section.classList.toggle('report-section-open', details.open);
+    section.setAttribute('aria-expanded', details.open ? 'true' : 'false');
+}
+
+function isReportSectionInteractiveTarget(target) {
+    if (!target) return false;
+    if (target.closest('.report-section-body a, .report-section-body button, .report-section-body input, .report-section-body select, .report-section-body textarea, .report-section-body label, .report-section-body summary')) {
+        return true;
+    }
+    return Boolean(target.closest('a, button, input, select, textarea, label, canvas, iframe, video, audio, [contenteditable="true"], [data-competitor-action], .expert-card, .copy-badge, .btn-copy-mini'));
+}
+
+if (!window.__dakaReportToggleBound) {
+    window.__dakaReportToggleBound = true;
+
+    document.addEventListener('click', (event) => {
+        const section = event.target.closest('.report-section[data-report-toggle="1"]');
+        if (!section || isReportSectionInteractiveTarget(event.target)) return;
+
+        const details = section.querySelector(':scope > .report-section-details');
+        if (!details) return;
+
+        event.preventDefault();
+        setReportSectionOpen(section, !details.open);
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        const section = event.target.closest?.('.report-section[data-report-toggle="1"]');
+        if (!section || event.target !== section) return;
+
+        const details = section.querySelector(':scope > .report-section-details');
+        if (!details) return;
+
+        event.preventDefault();
+        setReportSectionOpen(section, !details.open);
+    });
 }
 
 function renderExpertDock(section, opts = {}) {
@@ -13549,16 +13644,33 @@ function getActiveTabField(tabKey, inputId) {
     return visible || document.getElementById(inputId);
 }
 
-function switchToTab(tabKey) {
+function switchToTab(tabKey, options = {}) {
     if (window.tabManager && typeof window.tabManager.switchTab === 'function') {
-        window.tabManager.switchTab(tabKey);
-        return;
+        return window.tabManager.switchTab(tabKey, options);
     }
     if (typeof tabManager !== 'undefined' && typeof tabManager.switchTab === 'function') {
-        tabManager.switchTab(tabKey);
-        return;
+        return tabManager.switchTab(tabKey, options);
     }
     document.querySelector(`.nav-btn[data-tab="${tabKey}"]`)?.click();
+    return document.getElementById(tabKey + 'Tab') || null;
+}
+
+function afterTabVisible(tabKey, callback) {
+    let attempts = 0;
+    const run = () => {
+        const tab = document.getElementById(tabKey + 'Tab');
+        attempts += 1;
+        if (!tab || attempts > 20) {
+            callback(tab || null);
+            return;
+        }
+        if (!tab || !tab.classList.contains('active')) {
+            requestAnimationFrame(run);
+            return;
+        }
+        requestAnimationFrame(() => callback(tab));
+    };
+    requestAnimationFrame(run);
 }
 
 function openCompetitorAudit(tabKey, inputId, rawUrl) {
@@ -13568,9 +13680,8 @@ function openCompetitorAudit(tabKey, inputId, rawUrl) {
         return;
     }
 
-    switchToTab(tabKey);
-
-    setTimeout(() => {
+    switchToTab(tabKey, { scroll: false });
+    afterTabVisible(tabKey, () => {
         const urlInput = getActiveTabField(tabKey, inputId);
         if (urlInput) {
             urlInput.value = targetUrl;
@@ -13581,7 +13692,7 @@ function openCompetitorAudit(tabKey, inputId, rawUrl) {
         } else {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-    }, 120);
+    });
 }
 
 window.spyOnCompetitorFunnel = function(url) {
@@ -13606,9 +13717,8 @@ window.generateCompetitorKeywords = function(url, domain = '', title = '') {
         .filter(Boolean);
     const seed = [...new Set(seedParts)].join(' ').replace(/\s+/g, ' ').slice(0, 100);
 
-    switchToTab('keywords');
-
-    setTimeout(() => {
+    switchToTab('keywords', { scroll: false });
+    afterTabVisible('keywords', () => {
         const seedValue = seed || rawUrl || cleanDomain;
         const activeTab = document.getElementById('keywordsTab');
         const seedInputs = [
@@ -13638,7 +13748,7 @@ window.generateCompetitorKeywords = function(url, domain = '', title = '') {
             firstSeed.focus();
             firstSeed.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
-    }, 140);
+    });
 
     if (typeof toast !== 'undefined') {
         toast.info(
@@ -14424,6 +14534,25 @@ const PDF_EXPORT = {
         linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.74));
     border: 1px solid rgba(148, 163, 184, 0.16);
     box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16);
+    scroll-margin-top: 104px;
+    transform: translateZ(0);
+    transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+}
+
+.report-section[data-report-toggle="1"] {
+    cursor: pointer;
+}
+
+.report-section[data-report-toggle="1"]:hover,
+.report-section[data-report-toggle="1"]:focus-visible,
+.report-section.report-section-open {
+    border-color: rgba(139, 92, 246, 0.34);
+    box-shadow: 0 22px 52px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(139, 92, 246, 0.1) inset;
+}
+
+.report-section[data-report-toggle="1"]:focus-visible {
+    outline: 2px solid rgba(34, 211, 238, 0.62);
+    outline-offset: 3px;
 }
 
 .report-section-head {
@@ -14441,6 +14570,7 @@ const PDF_EXPORT = {
     padding: 0 16px 16px;
     display: inline-flex;
     align-items: center;
+    pointer-events: none;
 }
 
 .report-section-details summary::-webkit-details-marker {
@@ -14502,6 +14632,7 @@ const PDF_EXPORT = {
     background: rgba(139, 92, 246, 0.1);
     border: 1px solid rgba(139, 92, 246, 0.18);
     transition: transform 0.2s ease;
+    pointer-events: none;
 }
 
 .report-section-toggle small {
@@ -14521,6 +14652,22 @@ const PDF_EXPORT = {
 
 .report-section-body {
     padding: 0 16px 16px;
+    cursor: auto;
+}
+
+.report-section[data-report-toggle="1"] .report-section-body {
+    cursor: pointer;
+}
+
+.report-section-body a,
+.report-section-body button,
+.report-section-body input,
+.report-section-body select,
+.report-section-body textarea,
+.report-section-body summary,
+.report-section-body [data-competitor-action],
+.report-section-body .expert-card {
+    cursor: pointer;
 }
 
 .report-section-body > .result-card:first-child,
