@@ -2176,24 +2176,25 @@ function apifyBuildQueryVariants({ query = '', url = '', lang = 'fr', geoLocatio
   ].slice(0, 10));
 
   if (lang === 'ar') {
-    if (q) terms.add(`مراجعات ${q}`);
-    if (q) terms.add(`تجربة ${q}`);
-    if (q) terms.add(`سعر ${q}`);
+    if (q) terms.add(`تعليقات ${q}`);
+    if (q) terms.add(`آراء العملاء ${q}`);
+    if (q) terms.add(`اعتراضات ${q}`);
   } else if (lang === 'en') {
-    if (q) terms.add(`${q} reviews`);
-    if (q) terms.add(`${q} pricing`);
+    if (q) terms.add(`${q} comments`);
     if (q) terms.add(`${q} complaints`);
+    if (q) terms.add(`${q} customer questions`);
   } else {
+    if (q) terms.add(`commentaires ${q}`);
     if (q) terms.add(`avis ${q}`);
-    if (q) terms.add(`prix ${q}`);
     if (q) terms.add(`retours ${q}`);
   }
 
   for (const seed of Array.from(terms).slice(0, 5)) {
     if (geoLocation) terms.add(`${seed} ${geoLocation}`);
+    terms.add(`commentaires ${seed}`);
     terms.add(`avis ${seed}`);
     terms.add(`${seed} reviews`);
-    terms.add(`prix ${seed}`);
+    terms.add(`${seed} comments`);
     terms.add(`${seed} complaints`);
     terms.add(`${seed} objections`);
   }
@@ -2374,16 +2375,13 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
     url: u || url
   });
 
+  // Keep Apify deliberately narrow: only social comments for competitor intelligence.
+  // Ads, posts, and reviews stay available as empty buckets for frontend compatibility,
+  // but no actor is executed for them.
   const allSources = [
-    { key: 'meta_ads',          actor: CONFIG.APIFY_META_ADS_ACTOR,          bucket: 'ads'      },
-    { key: 'google_ads',        actor: CONFIG.APIFY_GOOGLE_ADS_ACTOR,        bucket: 'ads'      },
-    { key: 'tiktok_ads',        actor: CONFIG.APIFY_TIKTOK_ADS_ACTOR,        bucket: 'ads'      },
-    { key: 'linkedin_posts',    actor: CONFIG.APIFY_LINKEDIN_POSTS_ACTOR,    bucket: 'posts'    },
     { key: 'facebook_comments', actor: CONFIG.APIFY_FACEBOOK_COMMENTS_ACTOR, bucket: 'comments' },
     { key: 'instagram_comments',actor: CONFIG.APIFY_INSTAGRAM_COMMENTS_ACTOR,bucket: 'comments' },
-    { key: 'tiktok_comments',   actor: CONFIG.APIFY_TIKTOK_COMMENTS_ACTOR,   bucket: 'comments' },
-    { key: 'google_reviews',    actor: CONFIG.APIFY_GOOGLE_REVIEWS_ACTOR,    bucket: 'reviews'  },
-    { key: 'trustpilot_reviews',actor: CONFIG.APIFY_TRUSTPILOT_REVIEWS_ACTOR,bucket: 'reviews'  }
+    { key: 'tiktok_comments',   actor: CONFIG.APIFY_TIKTOK_COMMENTS_ACTOR,   bucket: 'comments' }
   ].filter(s => s.actor);
 
   let sources = allSources;
@@ -2391,10 +2389,10 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
     const isB2B = /(saas|crm|erp|b2b|software|logiciel|plateforme|agency|agence)/i.test(q);
     const isCommerce = /(prix|tarif|acheter|achat|shop|store|ecommerce|e-commerce|promo)/i.test(q);
     const preferredOrder = isB2B
-      ? ['linkedin_posts', 'google_reviews', 'meta_ads', 'trustpilot_reviews']
+      ? ['facebook_comments', 'instagram_comments', 'tiktok_comments']
       : isCommerce
-      ? ['meta_ads', 'google_ads', 'tiktok_ads', 'google_reviews']
-      : ['meta_ads', 'google_reviews', 'linkedin_posts', 'trustpilot_reviews'];
+      ? ['instagram_comments', 'tiktok_comments', 'facebook_comments']
+      : ['facebook_comments', 'instagram_comments', 'tiktok_comments'];
 
     const sourceByKey = new Map(allSources.map(s => [s.key, s]));
     sources = preferredOrder.map(k => sourceByKey.get(k)).filter(Boolean);
@@ -2422,6 +2420,17 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
     geoLocation: geoData.location || 'Morocco',
     researchContext: normalizedResearchContext
   });
+  const contextRepair = {
+    mode: 'social_comments_only',
+    inputQuery: q,
+    correctedTerms: queryVariants.slice(0, 10),
+    competitorUrls: (normalizedResearchContext.urls || []).slice(0, 6),
+    competitorDomains: (normalizedResearchContext.domains || []).slice(0, 6),
+    marketTerms: [
+      ...(normalizedResearchContext.keywords || []),
+      ...(normalizedResearchContext.competitorTerms || [])
+    ].slice(0, 10)
+  };
   const contextTermCount = new Set([
     ...(normalizedResearchContext.keywords || []),
     ...(normalizedResearchContext.funnelTerms || []),
@@ -2434,6 +2443,7 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
       searchPlan: {
         variants: queryVariants.slice(0, 10),
         context: normalizedResearchContext,
+        contextRepair,
         geo: geoData.location || 'Morocco',
         lang,
         contextTermCount,
@@ -2538,6 +2548,7 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
       searchPlan: {
         variants: queryVariants.slice(0, 10),
         context: normalizedResearchContext,
+        contextRepair,
         geo: geoData.location || 'Morocco',
         lang
       },
@@ -2581,6 +2592,7 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
     searchPlan: {
       variants: queryVariants.slice(0, 10),
       context: normalizedResearchContext,
+      contextRepair,
       geo: geoData.location || 'Morocco',
       lang
     },
@@ -6934,7 +6946,19 @@ app.post('/api/competitors', warRoomLimiter, async (req, res) => {
 });
 app.post('/api/apify-intel', async (req, res) => {
   try {
-    const { query = '', url = '', geo = '', lang = 'fr', preflight = {}, inputsBySource = {}, researchContext = {} } = req.body || {};
+    const { query = '', url = '', geo = '', lang = 'fr', preflight = {}, inputsBySource = {}, researchContext = {}, scope = 'competitors' } = req.body || {};
+    if (scope !== 'competitors') {
+      return res.json({
+        success: true,
+        apify: apifyEmptyDisplayResponse(
+          'APIFY_COMPETITORS_ONLY',
+          { ok: false, hasFatalError: false, bugCount: 0, criticalCount: 0 },
+          { ads: [], posts: [], comments: [], reviews: [], all: [] },
+          { ads: [], posts: [], comments: [], reviews: [] },
+          { scope }
+        )
+      });
+    }
     const apify = await callApify({ query, url, geo, lang, preflight, inputsBySource, researchContext });
     res.json({ success: true, apify });
   } catch (e) {
@@ -10003,19 +10027,20 @@ try {
         ]
     };
 
-    const funnelQuery = String(req.body?.query || req.body?.keyword || '').trim()
-        || finalResponse?.rawIntel?.h1
-        || finalResponse?.projectIdentity?.niche
-        || validUrl;
-    finalResponse.apify = await callApify({
-        query: funnelQuery,
-        url: validUrl || req.body?.url || '',
-        geo: req.body?.geo || req.body?.country || '',
-        lang: validLang || 'fr',
-        preflight: funnelPreflight,
-        inputsBySource: req.body?.apifyInput || {},
-        researchContext: funnelResearchContext
-    });
+    finalResponse.apify = apifyEmptyDisplayResponse(
+        'APIFY_COMPETITORS_ONLY',
+        { ok: false, hasFatalError: false, bugCount: 0, criticalCount: 0 },
+        { ads: [], posts: [], comments: [], reviews: [], all: [] },
+        { ads: [], posts: [], comments: [], reviews: [] },
+        {
+            searchPlan: {
+                variants: [],
+                context: funnelResearchContext,
+                geo: req.body?.geo || req.body?.country || '',
+                lang: validLang || 'fr'
+            }
+        }
+    );
     finalResponse.proofModel = buildFunnelProofModel({
         lang: validLang,
         validUrl,

@@ -3106,42 +3106,42 @@ table tbody td {
                 <div class="context-brief-head">
                     <span class="context-brief-icon"><i class="fas fa-bullseye"></i></span>
                     <div>
-                        <h3>Rendez le rapport 3x plus concret</h3>
-                        <p>Ajoutez votre offre, votre cible et votre objectif pour recevoir des actions adaptées à votre vraie situation.</p>
+                        <h3 data-i18n="context_comp_title">Rendez le rapport 3x plus concret</h3>
+                        <p data-i18n="context_comp_sub">Ajoutez votre offre, votre cible et votre objectif pour recevoir des actions adaptées à votre vraie situation.</p>
                     </div>
-                    <span class="context-brief-badge">Optionnel · recommandé</span>
+                    <span class="context-brief-badge" data-i18n="context_comp_badge">Optionnel · recommandé</span>
                 </div>
                 <div class="context-brief-grid">
                     <label class="context-field">
-                        <span>Offre exacte</span>
-                        <input id="compOffer" class="input-field" type="text" placeholder="Ex: SaaS marketing + formation intégrée">
+                        <span data-i18n="context_offer_label">Offre exacte</span>
+                        <input id="compOffer" class="input-field" type="text" data-i18n-placeholder="context_offer_ph" placeholder="Ex: SaaS marketing + formation intégrée">
                     </label>
                     <label class="context-field">
-                        <span>Client idéal</span>
-                        <input id="compAudience" class="input-field" type="text" placeholder="Ex: PME marocaines, coachs, e-commerçants">
+                        <span data-i18n="context_audience_label">Client idéal</span>
+                        <input id="compAudience" class="input-field" type="text" data-i18n-placeholder="context_audience_ph" placeholder="Ex: PME marocaines, coachs, e-commerçants">
                     </label>
                     <label class="context-field">
-                        <span>Objectif prioritaire</span>
-                        <input id="compObjective" class="input-field" type="text" placeholder="Ex: vendre, générer des leads, prendre des RDV">
+                        <span data-i18n="context_objective_label">Objectif prioritaire</span>
+                        <input id="compObjective" class="input-field" type="text" data-i18n-placeholder="context_objective_ph" placeholder="Ex: vendre, générer des leads, prendre des RDV">
                     </label>
                     <label class="context-field">
-                        <span>Prix, panier ou budget</span>
-                        <input id="compPriceRange" class="input-field" type="text" placeholder="Ex: 499 DH/mois, panier 900 DH, budget 200 DH/j">
+                        <span data-i18n="context_price_label">Prix, panier ou budget</span>
+                        <input id="compPriceRange" class="input-field" type="text" data-i18n-placeholder="context_price_ph" placeholder="Ex: 499 DH/mois, panier 900 DH, budget 200 DH/j">
                     </label>
                     <label class="context-field">
-                        <span>Concurrents déjà connus</span>
-                        <input id="compKnownCompetitors" class="input-field" type="text" placeholder="Ex: site1.com, marque2, page Instagram">
+                        <span data-i18n="context_known_comp_label">Concurrents déjà connus</span>
+                        <input id="compKnownCompetitors" class="input-field" type="text" data-i18n-placeholder="context_known_comp_ph" placeholder="Ex: site1.com, marque2, page Instagram">
                     </label>
                     <label class="context-field">
-                        <span>Zone à gagner</span>
-                        <input id="compCityRegion" class="input-field" type="text" placeholder="Ex: Maroc, Casablanca, MENA francophone">
+                        <span data-i18n="context_geo_label">Zone à gagner</span>
+                        <input id="compCityRegion" class="input-field" type="text" data-i18n-placeholder="context_geo_ph" placeholder="Ex: Maroc, Casablanca, MENA francophone">
                     </label>
                 </div>
             </section>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                 <div class="form-group">
-                    <label class="form-label" data-i18n="label_country">🌍 Localisation SERP</label>
+                    <label class="form-label" data-i18n="label_country">🌍 Pays et marché cible</label>
                     <div class="input-wrapper">
                         <i class="fas fa-globe input-icon"></i>
                         <select id="country" class="select-field">
@@ -3171,33 +3171,6 @@ table tbody td {
                 <span data-i18n="btn_analyze">LANCER L'EXTRACTION STRATÉGIQUE</span>
             </button>
         </form>
-
-        <section class="expert-dock expert-dock-competitors" aria-label="Experts pour comprendre les concurrents">
-            <div class="expert-dock-head">
-                <span class="expert-dock-orb"><i class="fas fa-comments"></i></span>
-                <div>
-                    <h3>Vous voulez comprendre ou résumer le rapport ?</h3>
-                    <p>Choisissez un expert selon votre besoin: résumé clair, angle de marché ou audience à viser.</p>
-                </div>
-            </div>
-            <div class="expert-dock-grid">
-                <a class="expert-card" href="https://chatgpt.com/g/g-673ba23144bc819199fa36907952822b-competitor-research-assistant" target="_blank" rel="noopener noreferrer">
-                    <strong>Expert Concurrents</strong>
-                    <span>Résumer le rapport et expliquer quoi faire maintenant.</span>
-                    <small>Ouvrir l'expert <i class="fas fa-arrow-right"></i></small>
-                </a>
-                <a class="expert-card" href="https://chatgpt.com/g/g-8nEbqfyfE-sophie-strategic-market-bot" target="_blank" rel="noopener noreferrer">
-                    <strong>Sophie · Marché</strong>
-                    <span>Trouver l'angle stratégique et les opportunités à attaquer.</span>
-                    <small>Analyser le marché <i class="fas fa-arrow-right"></i></small>
-                </a>
-                <a class="expert-card" href="https://chatgpt.com/g/g-stmJ7C0EP-sharon-target-audience-analyzer" target="_blank" rel="noopener noreferrer">
-                    <strong>Sharon · Audience</strong>
-                    <span>Clarifier qui viser, quoi promettre et quels mots utiliser.</span>
-                    <small>Comprendre l'audience <i class="fas fa-arrow-right"></i></small>
-                </a>
-            </div>
-        </section>
 
         <div id="resultsCompetitors" class="results-container"></div>
         <button id="btn-export-competitors-pdf"
@@ -3235,35 +3208,35 @@ table tbody td {
                         <div class="context-brief-head">
                             <span class="context-brief-icon"><i class="fas fa-route"></i></span>
                             <div>
-                                <h3>Donnez le contexte de la page</h3>
-                                <p>Plus vous précisez l'offre et l'objectif, plus les corrections seront concrètes: textes, preuves, prix, CTA et objections.</p>
+                                <h3 data-i18n="context_funnel_title">Donnez le contexte de la page</h3>
+                                <p data-i18n="context_funnel_sub">Plus vous précisez l'offre et l'objectif, plus les corrections seront concrètes: textes, preuves, prix, boutons et objections.</p>
                             </div>
-                            <span class="context-brief-badge">Pour un plan réaliste</span>
+                            <span class="context-brief-badge" data-i18n="context_funnel_badge">Pour un plan réaliste</span>
                         </div>
                         <div class="context-brief-grid">
                             <label class="context-field">
-                                <span>Offre ou promesse</span>
-                                <input id="funnelOffer" class="input-field" type="text" placeholder="Ex: audit marketing, formation, produit e-commerce">
+                                <span data-i18n="context_funnel_offer_label">Offre ou promesse</span>
+                                <input id="funnelOffer" class="input-field" type="text" data-i18n-placeholder="context_funnel_offer_ph" placeholder="Ex: audit marketing, formation, produit e-commerce">
                             </label>
                             <label class="context-field">
-                                <span>Audience visée</span>
-                                <input id="funnelAudience" class="input-field" type="text" placeholder="Ex: entrepreneurs débutants, PME, mamans, agences">
+                                <span data-i18n="context_funnel_audience_label">Audience visée</span>
+                                <input id="funnelAudience" class="input-field" type="text" data-i18n-placeholder="context_funnel_audience_ph" placeholder="Ex: entrepreneurs débutants, PME, mamans, agences">
                             </label>
                             <label class="context-field">
-                                <span>Action attendue</span>
-                                <input id="funnelObjective" class="input-field" type="text" placeholder="Ex: achat, appel, formulaire, WhatsApp, démo">
+                                <span data-i18n="context_funnel_objective_label">Action attendue</span>
+                                <input id="funnelObjective" class="input-field" type="text" data-i18n-placeholder="context_funnel_objective_ph" placeholder="Ex: achat, appel, formulaire, WhatsApp, démo">
                             </label>
                             <label class="context-field">
-                                <span>Prix ou valeur</span>
-                                <input id="funnelPriceRange" class="input-field" type="text" placeholder="Ex: 1 500 DH, abonnement 49€/mois, panier 700 DH">
+                                <span data-i18n="context_funnel_price_label">Prix ou valeur</span>
+                                <input id="funnelPriceRange" class="input-field" type="text" data-i18n-placeholder="context_funnel_price_ph" placeholder="Ex: 1 500 DH, abonnement 49€/mois, panier 700 DH">
                             </label>
                             <label class="context-field">
-                                <span>Pages à comparer</span>
-                                <input id="funnelKnownCompetitors" class="input-field" type="text" placeholder="Ex: concurrent.com, page de référence, marque">
+                                <span data-i18n="context_funnel_known_comp_label">Pages à comparer</span>
+                                <input id="funnelKnownCompetitors" class="input-field" type="text" data-i18n-placeholder="context_funnel_known_comp_ph" placeholder="Ex: concurrent.com, page de référence, marque">
                             </label>
                             <label class="context-field">
-                                <span>Marché ciblé</span>
-                                <input id="funnelCityRegion" class="input-field" type="text" placeholder="Ex: Maroc, France, Casablanca, GCC">
+                                <span data-i18n="context_funnel_geo_label">Marché ciblé</span>
+                                <input id="funnelCityRegion" class="input-field" type="text" data-i18n-placeholder="context_funnel_geo_ph" placeholder="Ex: Maroc, France, Casablanca, GCC">
                             </label>
                         </div>
                     </section>
@@ -3297,33 +3270,6 @@ table tbody td {
                         <i class="fas fa-radar fa-spin-hover"></i> <span data-i18n="btn_funnel">LANCER L'INFILTRATION</span>
                     </button>
                 </form>
-
-                <section class="expert-dock expert-dock-funnel" aria-label="Experts pour améliorer la page de vente">
-                    <div class="expert-dock-head">
-                        <span class="expert-dock-orb"><i class="fas fa-route"></i></span>
-                        <div>
-                            <h3>Besoin d'un plan plus simple pour la page ?</h3>
-                            <p>Ces experts transforment le diagnostic en parcours, texte de vente et prochaines actions.</p>
-                        </div>
-                    </div>
-                    <div class="expert-dock-grid">
-                        <a class="expert-card" href="https://chatgpt.com/g/g-9UB7GVwba-blaze-sales-funnel-bot" target="_blank" rel="noopener noreferrer">
-                            <strong>Blaze · Parcours</strong>
-                            <span>Structurer la page pour faire avancer le visiteur jusqu'à l'action.</span>
-                            <small>Optimiser le parcours <i class="fas fa-arrow-right"></i></small>
-                        </a>
-                        <a class="expert-card" href="https://chatgpt.com/g/g-M8kw9PpCt-phoebe-logo-generator-gpt" target="_blank" rel="noopener noreferrer">
-                            <strong>Theo · Page</strong>
-                            <span>Réécrire titres, sections, preuves, garanties et boutons.</span>
-                            <small>Réécrire la page <i class="fas fa-arrow-right"></i></small>
-                        </a>
-                        <a class="expert-card" href="https://chatgpt.com/g/g-C65BQ6yc0-sienna-strategic-sales-advisor-bot" target="_blank" rel="noopener noreferrer">
-                            <strong>Sienna · Vente</strong>
-                            <span>Transformer les objections en arguments et offres plus fortes.</span>
-                            <small>Renforcer l'offre <i class="fas fa-arrow-right"></i></small>
-                        </a>
-                    </div>
-                </section>
 
                 <div id="resultsFunnel" class="results-container">
                     <div id="magicPromptPlaceholder"></div>
@@ -3409,33 +3355,6 @@ table tbody td {
                     </button>
                 </form>
 
-                <section class="expert-dock expert-dock-audit" aria-label="Experts pour auditer et prioriser le site">
-                    <div class="expert-dock-head">
-                        <span class="expert-dock-orb"><i class="fas fa-shield-halved"></i></span>
-                        <div>
-                            <h3>Vous voulez savoir quoi corriger en premier ?</h3>
-                            <p>Utilisez ces experts pour prioriser les problèmes, vérifier la logique et améliorer la visibilité.</p>
-                        </div>
-                    </div>
-                    <div class="expert-dock-grid">
-                        <a class="expert-card" href="https://chatgpt.com/g/g-S0N82XvQh-sebo-seo-optimisation-bot" target="_blank" rel="noopener noreferrer">
-                            <strong>Sebo · Visibilité</strong>
-                            <span>Transformer l'audit en corrections de contenu, structure et opportunités.</span>
-                            <small>Améliorer la visibilité <i class="fas fa-arrow-right"></i></small>
-                        </a>
-                        <a class="expert-card" href="https://chatgpt.com/g/g-ZoxY4cAlC-ethan-problems-solutions-gpt" target="_blank" rel="noopener noreferrer">
-                            <strong>Ethan · Problèmes</strong>
-                            <span>Clarifier les blocages et obtenir une solution simple par problème.</span>
-                            <small>Résoudre les blocages <i class="fas fa-arrow-right"></i></small>
-                        </a>
-                        <a class="expert-card" href="https://chatgpt.com/g/g-v669Na1Im-remy-risk-management-gpt" target="_blank" rel="noopener noreferrer">
-                            <strong>Remy · Risques</strong>
-                            <span>Repérer ce qui peut coûter du trafic, de la confiance ou des ventes.</span>
-                            <small>Évaluer les risques <i class="fas fa-arrow-right"></i></small>
-                        </a>
-                    </div>
-                </section>
-
                 <div id="resultsTechnical" class="results-container"></div>
                 <button id="btn-export-technical-pdf"
         class="btn-pdf no-print"
@@ -3506,33 +3425,6 @@ table tbody td {
                         <span data-i18n="btn_keywords">MINAGE SÉMANTIQUE IA</span>
                     </button>
                 </form>
-
-                <section class="expert-dock expert-dock-social" aria-label="Experts pour contenu et réseaux sociaux">
-                    <div class="expert-dock-head">
-                        <span class="expert-dock-orb"><i class="fas fa-hashtag"></i></span>
-                        <div>
-                            <h3>Transformer les mots-clés en contenus et posts</h3>
-                            <p>Ces experts aident à créer des hooks, posts Facebook/Instagram et idées de croissance sociale.</p>
-                        </div>
-                    </div>
-                    <div class="expert-dock-grid">
-                        <a class="expert-card" href="https://chatgpt.com/g/g-4QKGXg36k-ava-growth-gpt" target="_blank" rel="noopener noreferrer">
-                            <strong>Ava · Croissance</strong>
-                            <span>Transformer les sujets en plan de croissance et contenus réguliers.</span>
-                            <small>Planifier la croissance <i class="fas fa-arrow-right"></i></small>
-                        </a>
-                        <a class="expert-card" href="https://chatgpt.com/g/g-ZeBkBh8Jz-febo-engagement-bot" target="_blank" rel="noopener noreferrer">
-                            <strong>Febo · Facebook</strong>
-                            <span>Créer des posts Facebook engageants à partir des angles trouvés.</span>
-                            <small>Créer des posts Facebook <i class="fas fa-arrow-right"></i></small>
-                        </a>
-                        <a class="expert-card" href="https://chatgpt.com/g/g-luzqTArlr-instar-growth-bot" target="_blank" rel="noopener noreferrer">
-                            <strong>Instar · Instagram</strong>
-                            <span>Adapter les idées en contenus Instagram, hooks, formats et tendances.</span>
-                            <small>Créer pour Instagram <i class="fas fa-arrow-right"></i></small>
-                        </a>
-                    </div>
-                </section>
 
                 <div id="resultsKeywords" class="results-container"></div>
                 <button id="btn-export-keywords-pdf"
@@ -4378,8 +4270,61 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelectorAll('input[name="techLang"]').forEach(el => {
                     el.checked = el.value === lang;
                 });
+
+                this.translateRuntimeChrome();
                 
                 if (CONFIG.DEBUG_MODE) console.log(`✅ Language changed to: ${lang}`);
+            }
+
+            translateRuntimeChrome() {
+                const lang = this.currentLang;
+                const footer = document.querySelector('.footer');
+                if (footer) {
+                    const copy = lang === 'ar'
+                        ? {
+                            powered: 'مشغل بواسطة',
+                            engine: 'محرك Daka للذكاء التسويقي',
+                            made: 'من طرف',
+                            author: 'فريق Daka',
+                            rights: 'كل الحقوق محفوظة',
+                            privacy: 'الخصوصية',
+                            terms: 'الشروط'
+                        }
+                        : lang === 'en'
+                        ? {
+                            powered: 'Powered by',
+                            engine: 'Daka market intelligence engine',
+                            made: 'Built by',
+                            author: 'Daka Team',
+                            rights: 'All rights reserved',
+                            privacy: 'Privacy',
+                            terms: 'Terms'
+                        }
+                        : {
+                            powered: 'Propulse par',
+                            engine: 'moteur Daka d intelligence marche',
+                            made: 'Cree par',
+                            author: 'Daka Team',
+                            rights: 'Tous droits reserves',
+                            privacy: 'Confidentialite',
+                            terms: 'Conditions'
+                        };
+
+                    footer.innerHTML = `
+                        <div class="container">
+                            <p>
+                                <strong>Daka All-in-One v5.0.0</strong> |
+                                ${copy.powered}
+                                <span style="background: var(--gradient-cosmic); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;">${copy.engine}</span> |
+                                ${copy.made} <strong>${copy.author}</strong>
+                            </p>
+                            <p style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
+                                &copy; 2026 ${copy.rights} |
+                                <a href="#" style="color: var(--accent-primary);">${copy.privacy}</a> |
+                                <a href="#" style="color: var(--accent-primary);">${copy.terms}</a>
+                            </p>
+                        </div>`;
+                }
             }
             
             translatePage() {
@@ -4421,21 +4366,37 @@ document.addEventListener('DOMContentLoaded', () => {
         function applyPremiumMicrocopy() {
             const premiumCopy = {
                 fr: {
-                    tab1_title: 'Market Intelligence',
+                    appbadge: 'PRO',
+                    tab1_title: 'Lecture du marche',
                     tab1_title_highlight: 'Concurrents',
                     tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrete peut vous faire prendre sa place.',
                     label_keyword: 'Marche, niche ou requete a analyser',
                     placeholder_keyword: 'Ex: SaaS marketing all-in-one Maroc',
                     label_url: 'Votre site pour benchmark direct',
                     placeholder_url: 'https://votre-site.com',
-                    label_country: 'Pays et SERP cible',
+                    label_country: 'Pays et marche cible',
                     label_analysis_lang: 'Langue du rapport',
                     btn_analyze: 'REVELER LES OPPORTUNITES',
                     loading_comp_title: 'Lecture du marche en cours...',
-                    loading_comp_sub: 'SERP, concurrents, signaux sociaux et angles de conversion sont consolides.',
+                    loading_comp_sub: 'Concurrents, signaux sociaux et angles de vente sont consolides.',
                     phase_comp_1: 'Top concurrents geo',
                     phase_comp_2: 'Failles et objections',
                     phase_comp_3: 'Plan de conquete',
+                    context_comp_title: 'Rendez le rapport 3x plus concret',
+                    context_comp_sub: 'Ajoutez votre offre, votre cible et votre objectif pour recevoir des actions adaptees a votre vraie situation.',
+                    context_comp_badge: 'Optionnel - recommande',
+                    context_offer_label: 'Offre exacte',
+                    context_offer_ph: 'Ex: SaaS marketing + formation integree',
+                    context_audience_label: 'Client ideal',
+                    context_audience_ph: 'Ex: PME marocaines, coachs, e-commercants',
+                    context_objective_label: 'Objectif prioritaire',
+                    context_objective_ph: 'Ex: vendre, generer des leads, prendre des RDV',
+                    context_price_label: 'Prix, panier ou budget',
+                    context_price_ph: 'Ex: 499 DH/mois, panier 900 DH, budget 200 DH/j',
+                    context_known_comp_label: 'Concurrents deja connus',
+                    context_known_comp_ph: 'Ex: site1.com, marque2, page Instagram',
+                    context_geo_label: 'Zone a gagner',
+                    context_geo_ph: 'Ex: Maroc, Casablanca, MENA francophone',
                     tab2_title: 'Corriger une page qui vend',
                     tab2_subtitle: 'Changements concrets, preuves observees et textes prets a tester.',
                     label_funnel_url: 'URL du site ou de la landing page',
@@ -4444,15 +4405,30 @@ document.addEventListener('DOMContentLoaded', () => {
                     funnel_power_engine: 'Analyse conversion active:',
                     btn_funnel: 'AUDITER LE FUNNEL',
                     loading_funnel_title: 'Audit de conversion en cours...',
-                    loading_funnel_sub: 'L IA reconstruit le parcours, les frictions, la preuve sociale et les opportunites.',
+                    loading_funnel_sub: 'Le parcours, les frictions, la preuve sociale et les opportunites sont reconstruits.',
+                    context_funnel_title: 'Donnez le contexte de la page',
+                    context_funnel_sub: 'Plus vous precisez l offre et l objectif, plus les corrections seront concretes: textes, preuves, prix, boutons et objections.',
+                    context_funnel_badge: 'Pour un plan realiste',
+                    context_funnel_offer_label: 'Offre ou promesse',
+                    context_funnel_offer_ph: 'Ex: audit marketing, formation, produit e-commerce',
+                    context_funnel_audience_label: 'Audience visee',
+                    context_funnel_audience_ph: 'Ex: entrepreneurs debutants, PME, agences',
+                    context_funnel_objective_label: 'Action attendue',
+                    context_funnel_objective_ph: 'Ex: achat, appel, formulaire, WhatsApp, demo',
+                    context_funnel_price_label: 'Prix ou valeur',
+                    context_funnel_price_ph: 'Ex: 1500 DH, abonnement 49 EUR/mois, panier 700 DH',
+                    context_funnel_known_comp_label: 'Pages a comparer',
+                    context_funnel_known_comp_ph: 'Ex: concurrent.com, page de reference, marque',
+                    context_funnel_geo_label: 'Marche cible',
+                    context_funnel_geo_ph: 'Ex: Maroc, France, Casablanca, GCC',
                     tab3_title: 'Verifier les bases du site',
                     tab3_highlight: 'Priorites claires',
                     tab3_subtitle: 'Detectez ce qui bloque confiance, lecture, vitesse et structure.',
                     label_tech_url: 'URL a diagnostiquer',
                     btn_technical: 'LANCER LE DIAGNOSTIC',
-                    tab4_title: 'Keyword Opportunity',
-                    tab4_highlight: 'Engine',
-                    tab4_subtitle: 'Trouvez les requetes qui melangent intention, rentabilite et facilite d execution.',
+                    tab4_title: 'Idees de recherche',
+                    tab4_highlight: 'rentables',
+                    tab4_subtitle: 'Trouvez les demandes qui melangent intention, rentabilite et facilite d execution.',
                     label_seed: 'Mot-cle de depart',
                     placeholder_seed: 'Ex: formation marketing SaaS',
                     btn_keywords: 'TROUVER LES MOTS-CLES GAGNANTS'
@@ -4465,11 +4441,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     placeholder_keyword: 'Ex: all-in-one marketing SaaS Morocco',
                     label_url: 'Your website for direct benchmark',
                     placeholder_url: 'https://your-site.com',
-                    label_country: 'Target country and SERP',
+                    appbadge: 'PRO',
+                    label_country: 'Target country and market',
                     label_analysis_lang: 'Report language',
                     btn_analyze: 'REVEAL MARKET OPPORTUNITIES',
                     loading_comp_title: 'Reading the market...',
-                    loading_comp_sub: 'SERP, competitors, social signals, and conversion angles are being consolidated.',
+                    loading_comp_sub: 'Competitors, social signals, and sales angles are being consolidated.',
                     phase_comp_1: 'Geo top competitors',
                     phase_comp_2: 'Weaknesses and objections',
                     phase_comp_3: 'Conquest plan',
@@ -4481,7 +4458,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     funnel_power_engine: 'Conversion analysis active:',
                     btn_funnel: 'AUDIT THE FUNNEL',
                     loading_funnel_title: 'Conversion audit running...',
-                    loading_funnel_sub: 'AI rebuilds the journey, friction, social proof, and opportunities.',
+                    loading_funnel_sub: 'The journey, friction, social proof, and opportunities are being rebuilt.',
+                    context_comp_title: 'Make the report 3x more concrete',
+                    context_comp_sub: 'Add your offer, audience, and goal to get actions adapted to your real situation.',
+                    context_comp_badge: 'Optional - recommended',
+                    context_offer_label: 'Exact offer',
+                    context_offer_ph: 'Ex: marketing SaaS + integrated training',
+                    context_audience_label: 'Ideal customer',
+                    context_audience_ph: 'Ex: Moroccan SMEs, coaches, e-commerce owners',
+                    context_objective_label: 'Priority goal',
+                    context_objective_ph: 'Ex: sell, generate leads, book calls',
+                    context_price_label: 'Price, basket, or budget',
+                    context_price_ph: 'Ex: 499 DH/month, 900 DH basket, 200 DH/day budget',
+                    context_known_comp_label: 'Known competitors',
+                    context_known_comp_ph: 'Ex: site1.com, brand2, Instagram page',
+                    context_geo_label: 'Area to win',
+                    context_geo_ph: 'Ex: Morocco, Casablanca, English-speaking MENA',
+                    context_funnel_title: 'Give page context',
+                    context_funnel_sub: 'The clearer your offer and goal, the more practical the fixes become: copy, proof, price, buttons, and objections.',
+                    context_funnel_badge: 'For a realistic plan',
+                    context_funnel_offer_label: 'Offer or promise',
+                    context_funnel_offer_ph: 'Ex: marketing audit, training, e-commerce product',
+                    context_funnel_audience_label: 'Target audience',
+                    context_funnel_audience_ph: 'Ex: new founders, SMEs, agencies',
+                    context_funnel_objective_label: 'Expected action',
+                    context_funnel_objective_ph: 'Ex: purchase, call, form, WhatsApp, demo',
+                    context_funnel_price_label: 'Price or value',
+                    context_funnel_price_ph: 'Ex: 1500 DH, 49 EUR/month, 700 DH basket',
+                    context_funnel_known_comp_label: 'Pages to compare',
+                    context_funnel_known_comp_ph: 'Ex: competitor.com, reference page, brand',
+                    context_funnel_geo_label: 'Target market',
+                    context_funnel_geo_ph: 'Ex: Morocco, France, Casablanca, GCC',
                     tab3_title: 'Check site foundations',
                     tab3_highlight: 'Clear priorities',
                     tab3_subtitle: 'Find what blocks trust, reading, speed, and structure.',
@@ -4495,8 +4502,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn_keywords: 'FIND WINNING KEYWORDS'
                 },
                 ar: {
-                    tab1_title: 'Market Intelligence',
-                    tab1_title_highlight: 'Competitors',
+                    appbadge: 'برو',
+                    tab1_title: 'ذكاء السوق',
+                    tab1_title_highlight: 'المنافسون',
                     tab1_subtitle: 'افهم من يربح في السوق، لماذا يربح، وما الحركة العملية التي تقربك منه.',
                     label_keyword: 'السوق أو المجال أو كلمة البحث',
                     placeholder_keyword: 'مثال: SaaS marketing Maroc',
@@ -4513,9 +4521,43 @@ document.addEventListener('DOMContentLoaded', () => {
                     tab3_title: 'افحص أساس الموقع',
                     tab3_highlight: 'أولويات واضحة',
                     tab3_subtitle: 'اعرف ما يضعف الثقة والقراءة والسرعة والبنية.',
-                    tab4_title: 'Keyword Opportunity',
-                    tab4_highlight: 'Engine',
+                    tab4_title: 'فرص البحث',
+                    tab4_highlight: 'الرابحة',
                     tab4_subtitle: 'اكتشف الكلمات التي تجمع بين النية، الربحية، وسهولة التنفيذ.',
+                    loading_comp_title: 'جاري قراءة السوق...',
+                    loading_comp_sub: 'يتم تجميع المنافسين، إشارات الجمهور، وزوايا البيع.',
+                    loading_funnel_title: 'جاري تدقيق صفحة البيع...',
+                    loading_funnel_sub: 'يتم تحليل المسار، العوائق، الثقة، وفرص التحسين.',
+                    context_comp_title: 'اجعل التقرير أكثر واقعية بثلاث مرات',
+                    context_comp_sub: 'أضف عرضك، جمهورك، وهدفك حتى تحصل على خطوات مناسبة لوضعك الحقيقي.',
+                    context_comp_badge: 'اختياري - موصى به',
+                    context_offer_label: 'العرض الدقيق',
+                    context_offer_ph: 'مثال: برنامج تسويق مع تكوين مدمج',
+                    context_audience_label: 'العميل المثالي',
+                    context_audience_ph: 'مثال: شركات مغربية صغيرة، مدربون، متاجر إلكترونية',
+                    context_objective_label: 'الهدف الأول',
+                    context_objective_ph: 'مثال: بيع، جلب عملاء، حجز مواعيد',
+                    context_price_label: 'السعر أو الميزانية',
+                    context_price_ph: 'مثال: 499 درهم/شهر، سلة 900 درهم، ميزانية 200 درهم/يوم',
+                    context_known_comp_label: 'منافسون معروفون',
+                    context_known_comp_ph: 'مثال: site1.com، علامة تجارية، صفحة إنستغرام',
+                    context_geo_label: 'المنطقة المستهدفة',
+                    context_geo_ph: 'مثال: المغرب، الدار البيضاء، الشرق الأوسط',
+                    context_funnel_title: 'أضف سياق الصفحة',
+                    context_funnel_sub: 'كلما كان العرض والهدف أوضح، أصبحت التوصيات عملية أكثر: نصوص، ثقة، سعر، أزرار، واعتراضات.',
+                    context_funnel_badge: 'لخطة واقعية',
+                    context_funnel_offer_label: 'العرض أو الوعد',
+                    context_funnel_offer_ph: 'مثال: تدقيق تسويقي، تكوين، منتج متجر إلكتروني',
+                    context_funnel_audience_label: 'الجمهور المستهدف',
+                    context_funnel_audience_ph: 'مثال: رواد أعمال، شركات صغيرة، وكالات',
+                    context_funnel_objective_label: 'الفعل المطلوب',
+                    context_funnel_objective_ph: 'مثال: شراء، مكالمة، نموذج، واتساب، عرض تجريبي',
+                    context_funnel_price_label: 'السعر أو القيمة',
+                    context_funnel_price_ph: 'مثال: 1500 درهم، اشتراك 49 يورو/شهر، سلة 700 درهم',
+                    context_funnel_known_comp_label: 'صفحات للمقارنة',
+                    context_funnel_known_comp_ph: 'مثال: competitor.com، صفحة مرجعية، علامة تجارية',
+                    context_funnel_geo_label: 'السوق المستهدف',
+                    context_funnel_geo_ph: 'مثال: المغرب، فرنسا، الدار البيضاء، الخليج',
                     btn_keywords: 'اكتشف الكلمات الرابحة'
                 }
             };
@@ -4817,7 +4859,7 @@ const DakaSound = (() => {
             if (enabled) click('primary');
         });
         document.addEventListener('click', (e) => {
-            const target = e.target.closest('button, .btn, .nav-btn, .expert-card, .pill-checkbox, a.expert-card');
+            const target = e.target.closest('button, .btn, .nav-btn, .expert-card, .pill-checkbox, a.expert-card, summary, .report-section');
             if (!target || target.id === 'soundToggle') return;
             click(target.matches('.btn-lg, .btn-cosmic, .btn-success, .btn-cyber') ? 'primary' : 'soft');
         }, true);
@@ -4825,6 +4867,7 @@ const DakaSound = (() => {
 
     return { click, loaderStart, loaderStop, setEnabled };
 })();
+window.DakaSound = DakaSound;
  // ═══════════════════════════════════════════════════════════════════
 // 🎯 TAB MANAGEMENT - VERSION BLINDÉE (DYNAMIQUE)
 // ═══════════════════════════════════════════════════════════════════
@@ -6338,41 +6381,40 @@ if (elite) {
 
 console.log('DECISION LAYER HTML LENGTH:', decisionLayerHtml?.length || 0);
 console.log('DECISION LAYER PREVIEW:', decisionLayerHtml?.slice(0, 300));
+const reportLabels = getReportLabels({ isAr, isEn });
     container.innerHTML = `
-        ${kgHtml}
-        ${decisionProofHtml}
-        ${decisionLayerHtml}
-        ${fieldGuideTopHtml}
-        ${insightsHtml}
-        ${marketDynHtml}
-        ${gscHtml}
-        ${winningMoveHtml}
-        ${gslHtml}
-        ${productAuditHtml}
-        ${revEngHtml}
-        ${masteringHtml}
-        ${duelHtml}
-        ${warRoomHtml}
-        ${moatHtml}
-        ${keywordsHtml}
+        ${renderReportSection('market', reportLabels.market, reportLabels.marketSub, 'fa-compass', `
+            ${kgHtml}
+            ${decisionProofHtml}
+            ${decisionLayerHtml}
+            ${fieldGuideTopHtml}
+            ${insightsHtml}
+            ${marketDynHtml}
+            ${gscHtml}
+        `, { isAr, isEn, open: true })}
 
-        <div style="margin:22px 0 14px 0;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-            <h3 style="margin:0;font-family:'Cairo',sans-serif;color:white;font-size:1.15rem;display:flex;align-items:center;gap:10px;">
-                <i class="fas fa-crosshairs" style="color:var(--accent-danger);font-size:1rem;"></i>
-                ${t.competitorsTitle}
-            </h3>
-            <div style="font-size:0.78rem;color:#94a3b8;">
-                ${competitors.length} ${t.targets}
-            </div>
-        </div>
+        ${renderReportSection('plan', reportLabels.plan, reportLabels.planSub, 'fa-list-check', `
+            ${winningMoveHtml}
+            ${gslHtml}
+            ${productAuditHtml}
+            ${revEngHtml}
+            ${masteringHtml}
+            ${duelHtml}
+            ${warRoomHtml}
+            ${moatHtml}
+            ${keywordsHtml}
+        `, { isAr, isEn })}
 
-        ${competitors.length ? competitorsList : `
+        ${renderReportSection('competitors', reportLabels.competitors, `${competitors.length} ${t.targets} - ${reportLabels.competitorsSub}`, 'fa-crosshairs', `
+            ${competitors.length ? competitorsList : `
     <div class="result-card fade-in-up" style="text-align:center;padding:26px;">
         <div style="font-size:0.95rem;color:#94a3b8;">${t.noComp}</div>
     </div>
 `}
+        `, { isAr, isEn })}
 
-${fieldStudiesBottomHtml}
+        ${renderExpertDock('competitors', { isAr, isEn })}
+        ${renderReportSection('proof', reportLabels.proof, reportLabels.proofSub, 'fa-link', fieldStudiesBottomHtml, { isAr, isEn })}
     `;
     cleanRenderedOutput(container);
     container.classList.add('active');
@@ -7548,6 +7590,7 @@ function displayTechnicalResults(data) {
         dir: isAr ? 'rtl' : 'ltr',
         esc: escapeHtml
     });
+    const techReportLabels = getReportLabels({ isAr, isEn });
 
     // ── Assemblage HTML complet ───────────────────────────────────
     container.innerHTML = `
@@ -7560,20 +7603,30 @@ function displayTechnicalResults(data) {
             ${data.analyzedUrl || data.url || ''} · v${data.version || 'V7'} · ${data.meta?.processingMs ? data.meta.processingMs+'ms' : ''}
         </span>
     </div>
-    ${decisionProofHtml}
-    ${sectionKPI}
-    ${sectionVerdict}
-    ${sectionIssues}
-    ${sectionMeta}
-    ${sectionVitals}
-    ${sectionHeadings}
-    ${sectionKeywords}
-    ${sectionAEO}
-    ${sectionGrid}
-    ${sectionRoadmap}
-    ${sectionTech}
-    ${sectionFiles}
-    ${sectionGenerators}
+    ${renderReportSection('technical', techReportLabels.technical, techReportLabels.technicalSub, 'fa-gauge-high', `
+        ${decisionProofHtml}
+        ${sectionKPI}
+        ${sectionVerdict}
+        ${sectionIssues}
+    `, { isAr, isEn, open: true })}
+
+    ${renderReportSection('page', techReportLabels.page, techReportLabels.pageSub, 'fa-file-lines', `
+        ${sectionMeta}
+        ${sectionVitals}
+        ${sectionHeadings}
+        ${sectionKeywords}
+        ${sectionAEO}
+    `, { isAr, isEn })}
+
+    ${renderReportSection('plan', techReportLabels.plan, techReportLabels.planSub, 'fa-list-check', `
+        ${sectionGrid}
+        ${sectionRoadmap}
+        ${sectionTech}
+        ${sectionFiles}
+        ${sectionGenerators}
+    `, { isAr, isEn })}
+
+    ${renderExpertDock('audit', { isAr, isEn })}
     `;
 
     showResults('resultsTechnical');
@@ -9105,7 +9158,8 @@ function displayKeywordsResults(data) {
         </div>` : '';
 
     /* ── Container HTML final ─────────────────────────────────── */
-    container.innerHTML = `
+    const keywordReportLabels = getReportLabels({ isAr, isEn });
+    const keywordsCoreHtml = `
         <div class="result-card fade-in-up" style="border-top:3px solid var(--accent-info);padding:0;overflow:hidden;" dir="${dir}">
 
             <!-- HEADER -->
@@ -9151,6 +9205,11 @@ function displayKeywordsResults(data) {
             ${clustersHtml}
             ${paaHtml}
         </div>`;
+
+    container.innerHTML = `
+        ${renderReportSection('keywords', keywordReportLabels.keywords, keywordReportLabels.keywordsSub, 'fa-key', keywordsCoreHtml, { isAr, isEn, open: true })}
+        ${renderExpertDock('social', { isAr, isEn })}
+    `;
 
     /* ══════════════════════════════════════════════════════
        MAJ 5 — kwFilter : ajout du filtre quickwin + reset visuel
@@ -9537,6 +9596,175 @@ function hideResults(id) {
 
 
  
+function getReportLabels(opts = {}) {
+    const isAr = opts.isAr ?? STATE.currentLang === 'ar';
+    const isEn = opts.isEn ?? STATE.currentLang === 'en';
+    return isAr ? {
+        openHint: 'اضغط لعرض التفاصيل',
+        market: 'ما يجب فهمه أولا',
+        marketSub: 'الخلاصة، الأدلة، والفرصة العملية قبل الدخول في التفاصيل.',
+        plan: 'الخطة العملية',
+        planSub: 'الخطوات، العرض، الكلمات، ونقاط التميز التي يمكن تنفيذها.',
+        competitors: 'المنافسون الذين يجب مراقبتهم',
+        competitorsSub: 'روابط ومؤشرات المنافسين الأقرب لما يبحث عنه المستخدم.',
+        proof: 'الأدلة والمصادر',
+        proofSub: 'روابط ودراسات تساعد على التحقق والتعمق.',
+        audit: 'تشخيص الصفحة',
+        auditSub: 'النقاط القوية، الضعف، والمشاكل التي تؤثر على القرار.',
+        money: 'العرض والسعر والثقة',
+        moneySub: 'ما يجعل الزائر يقتنع أو يتردد قبل اتخاذ القرار.',
+        page: 'الأقسام والنصوص',
+        pageSub: 'ما يجب تغييره في بنية الصفحة والكلمات والأزرار.',
+        technical: 'الأولويات التقنية',
+        technicalSub: 'المشاكل التي تؤثر على الثقة، القراءة، السرعة، والبنية.',
+        keywords: 'فرص البحث والمحتوى',
+        keywordsSub: 'طلبات الجمهور والأسئلة والمواضيع التي يمكن تحويلها إلى محتوى.',
+        expertsSub: 'اختر خبيرا حسب حاجتك: تلخيص، زاوية سوق، صفحة بيع أو محتوى.',
+        openExpert: 'فتح الخبير'
+    } : isEn ? {
+        openHint: 'Click to view details',
+        market: 'What to understand first',
+        marketSub: 'The summary, proof, and practical opportunity before the details.',
+        plan: 'Action plan',
+        planSub: 'Steps, offer, keywords, and differentiation moves to execute.',
+        competitors: 'Competitors to watch',
+        competitorsSub: 'Links and signals from the closest competitors for this search.',
+        proof: 'Proof and sources',
+        proofSub: 'Links and studies to verify and go deeper.',
+        audit: 'Page diagnosis',
+        auditSub: 'Strengths, weaknesses, and problems that influence the decision.',
+        money: 'Offer, price, and trust',
+        moneySub: 'What convinces visitors or makes them hesitate before acting.',
+        page: 'Sections and copy',
+        pageSub: 'What to change in page structure, words, and buttons.',
+        technical: 'Technical priorities',
+        technicalSub: 'Issues affecting trust, reading, speed, and structure.',
+        keywords: 'Search and content opportunities',
+        keywordsSub: 'Audience requests, questions, and topics that can become content.',
+        expertsSub: 'Choose an expert for summary, market angle, sales page, or content.',
+        openExpert: 'Open expert'
+    } : {
+        openHint: 'Cliquez pour voir les details',
+        market: 'Ce qu il faut comprendre d abord',
+        marketSub: 'La synthese, les preuves et l opportunite concrete avant les details.',
+        plan: 'Plan d action',
+        planSub: 'Actions, offre, mots utiles et angles de difference a executer.',
+        competitors: 'Concurrents a surveiller',
+        competitorsSub: 'Liens et signaux des concurrents les plus proches de la recherche.',
+        proof: 'Preuves et sources',
+        proofSub: 'Liens et etudes pour verifier et approfondir.',
+        audit: 'Diagnostic de la page',
+        auditSub: 'Forces, faiblesses et problemes qui influencent la decision.',
+        money: 'Offre, prix et confiance',
+        moneySub: 'Ce qui convainc ou fait hesiter avant de passer a l action.',
+        page: 'Sections et textes',
+        pageSub: 'Ce qu il faut changer dans la structure, les mots et les boutons.',
+        technical: 'Priorites techniques',
+        technicalSub: 'Problemes qui touchent confiance, lecture, vitesse et structure.',
+        keywords: 'Opportunites de recherche et contenu',
+        keywordsSub: 'Demandes, questions et sujets du public a transformer en contenu.',
+        expertsSub: 'Choisissez un expert pour resumer, trouver l angle, corriger la page ou creer du contenu.',
+        openExpert: 'Ouvrir l expert'
+    };
+}
+
+function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
+    if (!String(html || '').trim()) return '';
+    const labels = getReportLabels(opts);
+    const isOpen = opts.open === true ? 'open' : '';
+    const dir = opts.isAr ? 'rtl' : 'ltr';
+    const safe = typeof escapeHtml === 'function'
+        ? escapeHtml
+        : (s) => String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+
+    return `
+    <details class="report-section report-section-${safe(key)} fade-in-up" ${isOpen} dir="${dir}">
+        <summary>
+            <span class="report-section-icon"><i class="fas ${safe(icon || 'fa-layer-group')}"></i></span>
+            <span class="report-section-copy">
+                <strong>${safe(title)}</strong>
+                <small>${safe(subtitle || labels.openHint)}</small>
+            </span>
+            <span class="report-section-toggle"><i class="fas fa-chevron-down"></i></span>
+        </summary>
+        <div class="report-section-body">${html}</div>
+    </details>`;
+}
+
+function renderExpertDock(section, opts = {}) {
+    const isAr = opts.isAr ?? STATE.currentLang === 'ar';
+    const isEn = opts.isEn ?? STATE.currentLang === 'en';
+    const labels = getReportLabels({ isAr, isEn });
+    const dir = isAr ? 'rtl' : 'ltr';
+    const safe = typeof escapeHtml === 'function'
+        ? escapeHtml
+        : (s) => String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+
+    const bySection = {
+        competitors: {
+            icon: 'fa-chess-knight',
+            title: isAr ? 'افهم السوق ثم قرر الخطوة التالية' : isEn ? 'Understand the market, then decide the next move' : 'Comprendre le marche, puis decider quoi faire',
+            sub: labels.expertsSub,
+            experts: [
+                { name: isAr ? 'خبير المنافسين' : isEn ? 'Competitor Expert' : 'Expert Concurrents', desc: isAr ? 'يلخص التقرير ويحول المنافسين إلى خطوات واضحة.' : isEn ? 'Summarizes the report and turns competitors into clear actions.' : 'Resume le rapport et transforme les concurrents en actions claires.', url: 'https://chatgpt.com/g/g-673ba23144bc819199fa36907952822b-competitor-research-assistant' },
+                { name: isAr ? 'Sophie - السوق' : isEn ? 'Sophie - Market' : 'Sophie - Marche', desc: isAr ? 'تحدد زاوية السوق والفرص التي تستحق الهجوم.' : isEn ? 'Finds the market angle and opportunities worth attacking.' : 'Trouve l angle de marche et les opportunites a attaquer.', url: 'https://chatgpt.com/g/g-8nEbqfyfE-sophie-strategic-market-bot' },
+                { name: isAr ? 'Sharon - الجمهور' : isEn ? 'Sharon - Audience' : 'Sharon - Audience', desc: isAr ? 'توضح من تستهدف، ماذا تعده، وما الكلمات التي تستخدمها.' : isEn ? 'Clarifies who to target, what to promise, and which words to use.' : 'Clarifie qui viser, quoi promettre et quels mots utiliser.', url: 'https://chatgpt.com/g/g-stmJ7C0EP-sharon-target-audience-analyzer' }
+            ]
+        },
+        funnel: {
+            icon: 'fa-route',
+            title: isAr ? 'حوّل التشخيص إلى صفحة تبيع' : isEn ? 'Turn the diagnosis into a page that sells' : 'Transformer le diagnostic en page qui vend',
+            sub: isAr ? 'خبراء للمسار، النصوص، والاعتراضات.' : isEn ? 'Experts for journey, copy, and objections.' : 'Experts pour le parcours, les textes et les objections.',
+            experts: [
+                { name: isAr ? 'Blaze - المسار' : isEn ? 'Blaze - Funnel' : 'Blaze - Parcours', desc: isAr ? 'يبني ترتيب الصفحة من الانتباه إلى القرار.' : isEn ? 'Structures the page from attention to decision.' : 'Structure la page de l attention a la decision.', url: 'https://chatgpt.com/g/g-9UB7GVwba-blaze-sales-funnel-bot' },
+                { name: isAr ? 'Theo - الصفحة' : isEn ? 'Theo - Landing Page' : 'Theo - Page', desc: isAr ? 'يعيد صياغة العناوين، الأدلة، الضمانات والأزرار.' : isEn ? 'Rewrites headlines, proof, guarantees, and buttons.' : 'Reecrit titres, preuves, garanties et boutons.', url: 'https://chatgpt.com/g/g-M8kw9PpCt-phoebe-logo-generator-gpt' },
+                { name: isAr ? 'Sienna - البيع' : isEn ? 'Sienna - Sales' : 'Sienna - Vente', desc: isAr ? 'يحول الاعتراضات إلى عرض أقوى ورسالة أوضح.' : isEn ? 'Turns objections into a stronger offer and clearer message.' : 'Transforme les objections en offre plus forte.', url: 'https://chatgpt.com/g/g-C65BQ6yc0-sienna-strategic-sales-advisor-bot' }
+            ]
+        },
+        audit: {
+            icon: 'fa-shield-halved',
+            title: isAr ? 'اعرف ما يجب إصلاحه أولا' : isEn ? 'Know what to fix first' : 'Savoir quoi corriger en premier',
+            sub: isAr ? 'خبراء لترتيب الأولويات وتقليل المخاطر.' : isEn ? 'Experts to prioritize fixes and reduce risk.' : 'Experts pour prioriser les corrections et reduire les risques.',
+            experts: [
+                { name: isAr ? 'Sebo - الظهور' : isEn ? 'Sebo - Visibility' : 'Sebo - Visibilite', desc: isAr ? 'يحول التشخيص إلى تحسينات بنية ومحتوى.' : isEn ? 'Turns diagnosis into structure and content improvements.' : 'Transforme le diagnostic en corrections de structure et contenu.', url: 'https://chatgpt.com/g/g-S0N82XvQh-sebo-seo-optimisation-bot' },
+                { name: isAr ? 'Ethan - الحلول' : isEn ? 'Ethan - Solutions' : 'Ethan - Solutions', desc: isAr ? 'يختصر كل مشكلة إلى حل عملي واضح.' : isEn ? 'Turns each problem into one clear practical fix.' : 'Ramene chaque probleme a une solution pratique.', url: 'https://chatgpt.com/g/g-ZoxY4cAlC-ethan-problems-solutions-gpt' },
+                { name: isAr ? 'Remy - المخاطر' : isEn ? 'Remy - Risk' : 'Remy - Risques', desc: isAr ? 'يكشف ما قد يضر بالثقة أو المبيعات أو الظهور.' : isEn ? 'Finds what can hurt trust, sales, or visibility.' : 'Repere ce qui peut nuire a la confiance ou aux ventes.', url: 'https://chatgpt.com/g/g-v669Na1Im-remy-risk-management-gpt' }
+            ]
+        },
+        social: {
+            icon: 'fa-hashtag',
+            title: isAr ? 'حوّل الفرص إلى محتوى اجتماعي' : isEn ? 'Turn opportunities into social content' : 'Transformer les opportunites en contenus sociaux',
+            sub: isAr ? 'خبراء للمنشورات، الخطافات، وفيسبوك/إنستغرام.' : isEn ? 'Experts for posts, hooks, Facebook, and Instagram.' : 'Experts pour posts, hooks, Facebook et Instagram.',
+            experts: [
+                { name: isAr ? 'Ava - النمو' : isEn ? 'Ava - Growth' : 'Ava - Croissance', desc: isAr ? 'يبني خطة نمو ومحتوى منتظم.' : isEn ? 'Builds a growth and recurring content plan.' : 'Construit un plan de croissance et contenu regulier.', url: 'https://chatgpt.com/g/g-4QKGXg36k-ava-growth-gpt' },
+                { name: isAr ? 'Febo - فيسبوك' : isEn ? 'Febo - Facebook' : 'Febo - Facebook', desc: isAr ? 'يحوّل الزوايا إلى منشورات فيسبوك قابلة للتفاعل.' : isEn ? 'Turns angles into engaging Facebook posts.' : 'Transforme les angles en posts Facebook engageants.', url: 'https://chatgpt.com/g/g-ZeBkBh8Jz-febo-engagement-bot' },
+                { name: isAr ? 'Instar - إنستغرام' : isEn ? 'Instar - Instagram' : 'Instar - Instagram', desc: isAr ? 'يحوّل الأفكار إلى محتوى إنستغرام وخطافات.' : isEn ? 'Turns ideas into Instagram content and hooks.' : 'Transforme les idees en contenus Instagram et hooks.', url: 'https://chatgpt.com/g/g-luzqTArlr-instar-growth-bot' }
+            ]
+        }
+    };
+
+    const dock = bySection[section] || bySection.competitors;
+    return `
+    <section class="expert-dock expert-dock-${safe(section)} fade-in-up" dir="${dir}">
+        <div class="expert-dock-head">
+            <span class="expert-dock-orb"><i class="fas ${safe(dock.icon)}"></i></span>
+            <div>
+                <h3>${safe(dock.title)}</h3>
+                <p>${safe(dock.sub)}</p>
+            </div>
+        </div>
+        <div class="expert-dock-grid">
+            ${dock.experts.map(expert => `
+                <a class="expert-card" href="${safe(expert.url)}" target="_blank" rel="noopener noreferrer">
+                    <strong>${safe(expert.name)}</strong>
+                    <span>${safe(expert.desc)}</span>
+                    <small>${safe(labels.openExpert)} <i class="fas fa-arrow-right"></i></small>
+                </a>
+            `).join('')}
+        </div>
+    </section>`;
+}
+
 function renderGptBotCard(bot) {
     if (!bot) return '';
     
@@ -9924,8 +10152,13 @@ function buildFieldIntelModel(raw) {
         }))
     ).filter(item => item.text || item.link);
 
+    const hasFieldData = ['ads', 'posts', 'comments', 'reviews'].some(bucket =>
+        mergeLinks(bucket).length || asArray(intel[bucket]).length
+    ) || asArray(r.studiesBottom).length;
+    const intentionallyDisabled = ['APIFY_DISABLED', 'APIFY_COMPETITORS_ONLY', 'MISSING_APIFY_API_TOKEN', 'PREFLIGHT_BLOCKED'].includes(r.reason || '');
+
     return {
-        triggered: !!r.triggered || !!r.guideTop || !!r.searchPlan || Object.keys(intel).length > 0,
+        triggered: (!!r.triggered || hasFieldData) && !intentionallyDisabled,
         actorTriggered: r.actorTriggered !== false && !!r.triggered,
         collectionSkipped: !!r.collectionSkipped,
         reason: r.reason || '',
@@ -9972,11 +10205,8 @@ function renderFieldGuideTop(model, { isAr = false, isEn = false, dir = 'ltr', e
 
     const t = {
         title: isAr ? 'خطة التنفيذ العملية' : isEn ? 'Action Plan' : 'Plan d’Action Concret',
-        links: isAr ? 'روابط الأدلة' : isEn ? 'Evidence Links' : 'Liens de Preuve',
-        ads: isAr ? 'إعلانات' : isEn ? 'Ads' : 'Ads',
-        posts: isAr ? 'منشورات' : isEn ? 'Posts' : 'Posts',
-        comments: isAr ? 'تعليقات' : isEn ? 'Comments' : 'Commentaires',
-        reviews: isAr ? 'مراجعات' : isEn ? 'Reviews' : 'Avis'
+        links: isAr ? 'تعليقات وروابط ميدانية' : isEn ? 'Social comment proof' : 'Preuves commentaires sociaux',
+        comments: isAr ? 'تعليقات العملاء' : isEn ? 'Customer comments' : 'Commentaires clients'
     };
 
     const steps = Array.isArray(model.guideTop?.steps) ? model.guideTop.steps : [];
@@ -10046,11 +10276,8 @@ function renderFieldGuideTop(model, { isAr = false, isEn = false, dir = 'ltr', e
             <div style="font-size:.68rem;color:#94a3b8;font-weight:800;text-transform:uppercase;margin-bottom:8px;">
                 ${t.links}
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div><small style="color:#f59e0b;font-weight:700;">${t.ads} (${model.links.ads.length})</small>${renderFieldLinksBlock(model.links.ads, '#f59e0b', esc)}</div>
-                <div><small style="color:#3b82f6;font-weight:700;">${t.posts} (${model.links.posts.length})</small>${renderFieldLinksBlock(model.links.posts, '#3b82f6', esc)}</div>
+            <div style="display:grid;grid-template-columns:1fr;gap:10px;">
                 <div><small style="color:#ec4899;font-weight:700;">${t.comments} (${model.links.comments.length})</small>${renderFieldLinksBlock(model.links.comments, '#ec4899', esc)}</div>
-                <div><small style="color:#10b981;font-weight:700;">${t.reviews} (${model.links.reviews.length})</small>${renderFieldLinksBlock(model.links.reviews, '#10b981', esc)}</div>
             </div>
         </div>
     </div>`;
@@ -12776,28 +13003,37 @@ const auditIssuesHtml = `
         `).join('') || `<div style="color:#64748b;">No quick wins available.</div>`}
     </div>
 </div>`;
+const funnelReportLabels = getReportLabels({ isAr, isEn });
    container.innerHTML = `
   <div id="funnelReport" dir="${dir}">
-    ${cotHtml}
-    ${headerHtml}
-    ${decisionProofHtml}
-    ${fieldGuideTopHtml}
+    ${renderReportSection('audit', funnelReportLabels.audit, funnelReportLabels.auditSub, 'fa-shield-halved', `
+        ${cotHtml}
+        ${headerHtml}
+        ${decisionProofHtml}
+        ${fieldGuideTopHtml}
+        ${auditSummaryHtml}
+        ${auditScorecardHtml}
+        ${auditIssuesHtml}
+    `, { isAr, isEn, open: true })}
 
-    ${auditSummaryHtml}
-    ${auditScorecardHtml}
-    ${auditIssuesHtml}
+    ${renderReportSection('money', funnelReportLabels.money, funnelReportLabels.moneySub, 'fa-hand-holding-dollar', `
+        ${financialHtml}
+        ${aarrHtml}
+        ${pricingHtml}
+        ${blueprintHtml}
+    `, { isAr, isEn })}
 
-    ${financialHtml}
-    ${aarrHtml}
-    ${pricingHtml}
-    ${blueprintHtml}
-    ${designHtml}
-    ${perfTrustHtml}
-    ${copyHtml}
-    ${chartHtml}
-    ${sectionsHtml}
-    ${counterHtml}
-    ${fieldStudiesBottomHtml}
+    ${renderReportSection('page', funnelReportLabels.page, funnelReportLabels.pageSub, 'fa-pen-nib', `
+        ${designHtml}
+        ${perfTrustHtml}
+        ${copyHtml}
+        ${chartHtml}
+        ${sectionsHtml}
+        ${counterHtml}
+    `, { isAr, isEn })}
+
+    ${renderExpertDock('funnel', { isAr, isEn })}
+    ${renderReportSection('proof', funnelReportLabels.proof, funnelReportLabels.proofSub, 'fa-link', fieldStudiesBottomHtml, { isAr, isEn })}
     <div id="magicPromptPlaceholder"></div>
   </div>`;
     cleanRenderedOutput(container);
@@ -13918,6 +14154,88 @@ const PDF_EXPORT = {
 .context-field .input-field:focus {
     border-color: rgba(139, 92, 246, 0.7);
     box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.14);
+}
+
+.report-section {
+    margin: 18px 0;
+    border-radius: 18px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 6% 0%, rgba(34, 211, 238, 0.09), transparent 30%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(2, 6, 23, 0.74));
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.16);
+}
+
+.report-section summary {
+    list-style: none;
+    cursor: pointer;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 13px;
+    align-items: center;
+    padding: 16px;
+    min-height: 72px;
+}
+
+.report-section summary::-webkit-details-marker {
+    display: none;
+}
+
+.report-section-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    color: #ffffff;
+    background: linear-gradient(135deg, #22d3ee, #8b5cf6 55%, #ec4899);
+    box-shadow: 0 14px 30px rgba(139, 92, 246, 0.22);
+}
+
+.report-section-copy {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+}
+
+.report-section-copy strong {
+    color: #ffffff;
+    font-size: clamp(0.98rem, 2vw, 1.12rem);
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.report-section-copy small {
+    color: #94a3b8;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.report-section-toggle {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    color: #c4b5fd;
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.18);
+    transition: transform 0.2s ease;
+}
+
+.report-section[open] .report-section-toggle {
+    transform: rotate(180deg);
+}
+
+.report-section-body {
+    padding: 0 16px 16px;
+}
+
+.report-section-body > .result-card:first-child,
+.report-section-body > .decision-proof-panel:first-child {
+    margin-top: 0 !important;
 }
 
 .expert-dock {
