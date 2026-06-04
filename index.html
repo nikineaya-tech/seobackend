@@ -3441,8 +3441,8 @@ table tbody td {
         <div class="loading-orb">
             <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
-        <div class="loading-title" data-i18n="loading_comp_title">Analyse StratÃ©gique des Leaders...</div>
-        <div class="loading-subtitle" data-i18n="loading_comp_sub">DÃ©cryptage des secrets de rÃ©ussite de vos concurrents.</div>
+        <div class="loading-title" data-i18n="loading_comp_title">Daka lit votre marche...</div>
+        <div class="loading-subtitle" data-i18n="loading_comp_sub">Nous reperons les preuves, les failles et les actions utiles.</div>
         <div class="loading-progress-wrap"><div class="loading-progress-bar" id="loadingBarCompetitors"></div></div>
         <div class="loading-phases">
             <div class="loading-phase"><i class="fas fa-globe"></i> <span data-i18n="phase_comp_1">Cartographie du marchÃ©</span></div>
@@ -3456,8 +3456,8 @@ table tbody td {
         <div class="loading-orb">
             <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
-        <div class="loading-title" data-i18n="loading_funnel_title">Audit de Conversion en cours...</div>
-        <div class="loading-subtitle" data-i18n="loading_funnel_sub">Ã‰valuation du potentiel de revenus et des leviers psychologiques.</div>
+        <div class="loading-title" data-i18n="loading_funnel_title">Daka reconstruit la page...</div>
+        <div class="loading-subtitle" data-i18n="loading_funnel_sub">Nous lisons le parcours, les objections et les corrections prioritaires.</div>
         <div class="loading-progress-wrap"><div class="loading-progress-bar" id="loadingBarFunnel" style="background: linear-gradient(90deg, #10b981, #059669)"></div></div>
         <div class="loading-phases">
             <div class="loading-phase"><i class="fas fa-route"></i> <span data-i18n="phase_funnel_1">Parcours client</span></div>
@@ -3472,8 +3472,8 @@ table tbody td {
         <div class="loading-orb">
             <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
-        <div class="loading-title" data-i18n="loading_tech_title">Diagnostic de Performance...</div>
-        <div class="loading-subtitle" data-i18n="loading_tech_sub">Inspection de l'infrastructure pour maximiser votre visibilitÃ©.</div>
+        <div class="loading-title" data-i18n="loading_tech_title">Daka verifie les fondations...</div>
+        <div class="loading-subtitle" data-i18n="loading_tech_sub">Nous controlons ce qui bloque la confiance, la lecture et la vitesse.</div>
         <div class="loading-progress-wrap"><div class="loading-progress-bar" id="loadingBarTechnical" style="background: linear-gradient(90deg, #3b82f6, #60a5fa)"></div></div>
         <div class="loading-phases">
             <div class="loading-phase"><i class="fas fa-sitemap"></i> <span data-i18n="phase_tech_1">Architecture du site</span></div>
@@ -3488,7 +3488,7 @@ table tbody td {
         <div class="loading-orb">
             <div class="brand-loader-orb"><span>DAKA</span></div>
         </div>
-        <div class="loading-title" data-i18n="loading_kw_title">Recherche de PÃ©pites SÃ©mantiques...</div>
+        <div class="loading-title" data-i18n="loading_kw_title">Daka prepare les opportunites...</div>
         <div class="loading-subtitle" data-i18n="loading_kw_sub">Le moteur identifie les demandes les plus rentables pour votre marche.</div>
         <div class="loading-progress-wrap">
             <div class="loading-progress-bar" id="loadingBarKeywords" style="background: linear-gradient(90deg, #0ea5e9, #06b6d4);"></div>
@@ -4850,7 +4850,7 @@ const DakaSound = (() => {
         const c = ensure();
         if (!c) return;
         const master = c.createGain();
-        master.gain.value = kind === 'primary' ? 0.078 : 0.052;
+        master.gain.value = kind === 'primary' ? 0.14 : 0.09;
         master.connect(c.destination);
         tone(kind === 'primary' ? 660 : 520, 0, 0.09, 0.8, 'sine', master);
         tone(kind === 'primary' ? 990 : 780, 0.035, 0.11, 0.45, 'triangle', master);
@@ -4863,7 +4863,7 @@ const DakaSound = (() => {
 
         const master = c.createGain();
         master.gain.setValueAtTime(0.0001, c.currentTime);
-        master.gain.exponentialRampToValueAtTime(0.078, c.currentTime + 0.9);
+        master.gain.exponentialRampToValueAtTime(0.16, c.currentTime + 0.9);
 
         const lfo = c.createOscillator();
         const lfoGain = c.createGain();
@@ -4885,7 +4885,7 @@ const DakaSound = (() => {
             const gain = c.createGain();
             osc.type = i % 2 ? 'triangle' : 'sine';
             osc.frequency.value = freq;
-            gain.gain.value = 0.18 / freqs.length;
+            gain.gain.value = 0.3 / freqs.length;
             osc.connect(gain);
             gain.connect(filter);
             osc.start();
@@ -4894,13 +4894,13 @@ const DakaSound = (() => {
 
         lfo.start();
         const arpGain = c.createGain();
-        arpGain.gain.value = 0.32;
+        arpGain.gain.value = 0.5;
         arpGain.connect(filter);
         const arpNotes = [261.63, 329.63, 392, 523.25, 392, 329.63];
         let arpStep = 0;
         const arpTimer = setInterval(() => {
             if (!ambient || !enabled) return;
-            tone(arpNotes[arpStep % arpNotes.length], 0, 0.42, 0.2, 'triangle', arpGain);
+            tone(arpNotes[arpStep % arpNotes.length], 0, 0.42, 0.32, 'triangle', arpGain);
             arpStep += 1;
         }, 720);
 
@@ -4925,6 +4925,7 @@ const DakaSound = (() => {
 
     const loaderStart = () => {
         activeLoaders += 1;
+        click('primary');
         startAmbient();
     };
 
@@ -4945,6 +4946,19 @@ const DakaSound = (() => {
 
     document.addEventListener('DOMContentLoaded', () => {
         updateButton();
+        const primeAudio = () => {
+            const c = ensure();
+            if (!c) return;
+            const gain = c.createGain();
+            const osc = c.createOscillator();
+            gain.gain.value = 0.0001;
+            osc.frequency.value = 220;
+            osc.connect(gain);
+            gain.connect(c.destination);
+            osc.start();
+            osc.stop(c.currentTime + 0.02);
+        };
+        document.addEventListener('pointerdown', primeAudio, { once: true, capture: true });
         document.getElementById('soundToggle')?.addEventListener('click', () => {
             setEnabled(!enabled);
             if (enabled) click('primary');
@@ -5007,6 +5021,7 @@ class TabManager {
     }
 }
 const tabManager = new TabManager();
+window.tabManager = tabManager;
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
         // ðŸ” SERVER STATUS CHECKER
@@ -6215,21 +6230,21 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                     </div>
                 </div>
                 <div style="display:flex;flex-direction:column;gap:7px;" class="no-print competitor-action-stack">
-                    <button type="button" data-url="${safeUrl}" onclick="window.spyOnCompetitorFunnel(this.dataset.url)"
+                    <button type="button" data-competitor-action="funnel" data-url="${safeUrl}"
                             class="btn-gen btn-cosmic"
                             style="padding:6px 13px;font-size:0.7rem;border-radius:8px;white-space:nowrap;">
                         <i class="fas fa-filter"></i> ${t.spyFunnel}
                     </button>
-                    <button type="button" data-url="${safeUrl}" onclick="window.spyOnCompetitorTech(this.dataset.url)"
+                    <button type="button" data-competitor-action="tech" data-url="${safeUrl}"
                             class="btn-gen btn-cyber"
                             style="padding:6px 13px;font-size:0.7rem;border-radius:8px;white-space:nowrap;">
                         <i class="fas fa-microchip"></i> ${t.spyTech}
                     </button>
                     <button type="button"
+                            data-competitor-action="keywords"
                             data-url="${safeUrl}"
                             data-domain="${escapeHtml(comp.domain || '')}"
                             data-title="${escapeHtml(comp.title || '')}"
-                            onclick="window.generateCompetitorKeywords(this.dataset.url, this.dataset.domain, this.dataset.title)"
                             class="btn-gen"
                             style="padding:6px 13px;font-size:0.7rem;border-radius:8px;white-space:nowrap;background:linear-gradient(135deg, rgba(6,182,212,0.22), rgba(139,92,246,0.24));border:1px solid rgba(34,211,238,0.28);color:#dffbff;">
                         <i class="fas fa-key"></i> ${t.spyKeywords}
@@ -6492,7 +6507,7 @@ const reportLabels = getReportLabels({ isAr, isEn });
             ${insightsHtml}
             ${marketDynHtml}
             ${gscHtml}
-        `, { isAr, isEn, open: true })}
+        `, { isAr, isEn })}
 
         ${renderReportSection('plan', reportLabels.plan, reportLabels.planSub, 'fa-list-check', `
             ${winningMoveHtml}
@@ -7709,7 +7724,7 @@ function displayTechnicalResults(data) {
         ${sectionKPI}
         ${sectionVerdict}
         ${sectionIssues}
-    `, { isAr, isEn, open: true })}
+    `, { isAr, isEn })}
 
     ${renderReportSection('page', techReportLabels.page, techReportLabels.pageSub, 'fa-file-lines', `
         ${sectionMeta}
@@ -9308,7 +9323,7 @@ function displayKeywordsResults(data) {
         </div>`;
 
     container.innerHTML = `
-        ${renderReportSection('keywords', keywordReportLabels.keywords, keywordReportLabels.keywordsSub, 'fa-key', keywordsCoreHtml, { isAr, isEn, open: true })}
+        ${renderReportSection('keywords', keywordReportLabels.keywords, keywordReportLabels.keywordsSub, 'fa-key', keywordsCoreHtml, { isAr, isEn })}
         ${renderExpertDock('social', { isAr, isEn })}
     `;
 
@@ -9786,7 +9801,7 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
                 <strong>${safe(title)}</strong>
                 <small>${safe(subtitle || labels.openHint)}</small>
             </span>
-            <span class="report-section-toggle"><i class="fas fa-chevron-down"></i></span>
+            <span class="report-section-toggle"><small>${safe(labels.openHint || '')}</small><i class="fas fa-chevron-down"></i></span>
         </summary>
         <div class="report-section-body">${html}</div>
     </details>`;
@@ -11242,12 +11257,12 @@ const decisionProofHtml = renderDecisionProofPanel(data, { isAr, isEn, dir, esc:
         topKwLabel       : isAr ? 'Ø£Ù‡Ù… Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ù…ÙØªØ§Ø­ÙŠØ©'
                          : isEn ? 'Top Keywords â€” real frequency'
                          :        'Top Keywords â€” frÃ©quence rÃ©elle',
-        // Chain of Thought
-        cotLabel         : isAr ? 'Ø³Ù„Ø³Ù„Ø© Ø§Ù„ØªÙÙƒÙŠØ±'     : isEn ? 'Chain of Thought'  : 'Chain of Thought',
-        agent1Label      : isAr ? 'Ø§Ù„ÙˆÙƒÙŠÙ„ 1 â€” Ù‡ÙˆÙŠØ© + AIDA' : isEn ? 'Agent 1 â€” Identity + AIDA' : 'Agent 1 â€” IdentitÃ© + AIDA',
-        agent2Label      : isAr ? 'Ø§Ù„ÙˆÙƒÙŠÙ„ 2 â€” Ø§Ù„Ù‚Ù…Ø¹'  : isEn ? 'Agent 2 â€” Funnel'  : 'Agent 2 â€” Funnel',
-        agent3Label      : isAr ? 'Ø§Ù„ÙˆÙƒÙŠÙ„ 3 â€” Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ©': isEn ? 'Agent 3 â€” Strategy' : 'Agent 3 â€” StratÃ©gie',
-        agent4Label      : isAr ? 'Ø§Ù„ÙˆÙƒÙŠÙ„ 4 â€” Ø§Ù„ØªØ³ÙˆÙŠÙ‚ Ø§Ù„Ø¹ØµØ¨ÙŠ': isEn ? 'Agent 4 â€” Neuromarketing' : 'Agent 4 â€” Neuromarketing',
+        // Public report labels
+        cotLabel         : isAr ? 'Ù…Ù†Ø·Ù‚ Ø§Ù„ØªÙ‚Ø±ÙŠØ±'       : isEn ? 'Report reasoning'       : 'Raisonnement du rapport',
+        agent1Label      : isAr ? 'Ù‡ÙˆÙŠØ© Ø§Ù„ØµÙØ­Ø©'         : isEn ? 'Page identity'           : 'Identite de la page',
+        agent2Label      : isAr ? 'Ù…Ø³Ø§Ø± Ø§Ù„Ø¨ÙŠØ¹'          : isEn ? 'Sales journey'           : 'Parcours de vente',
+        agent3Label      : isAr ? 'Ø®Ø·Ø© Ø§Ù„ØªØ­Ø³ÙŠÙ†'          : isEn ? 'Improvement plan'        : 'Plan d amelioration',
+        agent4Label      : isAr ? 'Ù…Ø­ÙØ²Ø§Øª Ø§Ù„Ù‚Ø±Ø§Ø±'      : isEn ? 'Decision triggers'       : 'Declencheurs de decision',
     };
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -11318,7 +11333,7 @@ const visualHierarchyHtml =
         ])
         : (design.visualHierarchy ? `<div dir="auto">${esc(String(design.visualHierarchy))}</div>` : '');
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸ§  BLOC COT â€” Chain of Thought
+    // Bloc raisonnement du rapport
     // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
     const cot     = data.chainOfThought || {};
     const cotHtml = (cot.agent1 || cot.agent2 || cot.agent3 || cot.agent4) ? `
@@ -13115,7 +13130,7 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
         ${auditSummaryHtml}
         ${auditScorecardHtml}
         ${auditIssuesHtml}
-    `, { isAr, isEn, open: true })}
+    `, { isAr, isEn })}
 
     ${renderReportSection('money', funnelReportLabels.money, funnelReportLabels.moneySub, 'fa-hand-holding-dollar', `
         ${financialHtml}
@@ -13594,6 +13609,29 @@ function displayMagicPrompt(prompt) {
 
 
 
+function getActiveTabField(tabKey, inputId) {
+    const activeTab = document.getElementById(tabKey + 'Tab');
+    const scoped = activeTab?.querySelector(`#${inputId}`);
+    if (scoped) return scoped;
+
+    const visible = [...document.querySelectorAll(`#${inputId}`)]
+        .find(el => el.offsetParent !== null || el.closest('.tab-content.active'));
+
+    return visible || document.getElementById(inputId);
+}
+
+function switchToTab(tabKey) {
+    if (window.tabManager && typeof window.tabManager.switchTab === 'function') {
+        window.tabManager.switchTab(tabKey);
+        return;
+    }
+    if (typeof tabManager !== 'undefined' && typeof tabManager.switchTab === 'function') {
+        tabManager.switchTab(tabKey);
+        return;
+    }
+    document.querySelector(`.nav-btn[data-tab="${tabKey}"]`)?.click();
+}
+
 function openCompetitorAudit(tabKey, inputId, rawUrl) {
     const targetUrl = String(rawUrl || '').trim();
     if (!targetUrl) {
@@ -13601,17 +13639,10 @@ function openCompetitorAudit(tabKey, inputId, rawUrl) {
         return;
     }
 
-    if (window.tabManager && typeof window.tabManager.switchTab === 'function') {
-        window.tabManager.switchTab(tabKey);
-    } else if (typeof tabManager !== 'undefined' && typeof tabManager.switchTab === 'function') {
-        tabManager.switchTab(tabKey);
-    } else {
-        const tabButton = document.querySelector(`.nav-btn[data-tab="${tabKey}"]`);
-        if (tabButton) tabButton.click();
-    }
+    switchToTab(tabKey);
 
     setTimeout(() => {
-        const urlInput = document.getElementById(inputId);
+        const urlInput = getActiveTabField(tabKey, inputId);
         if (urlInput) {
             urlInput.value = targetUrl;
             urlInput.dispatchEvent(new Event('input', { bubbles: true }));
@@ -13646,17 +13677,17 @@ window.generateCompetitorKeywords = function(url, domain = '', title = '') {
         .filter(Boolean);
     const seed = [...new Set(seedParts)].join(' ').replace(/\s+/g, ' ').slice(0, 100);
 
-    if (window.tabManager && typeof window.tabManager.switchTab === 'function') {
-        window.tabManager.switchTab('keywords');
-    } else if (typeof tabManager !== 'undefined' && typeof tabManager.switchTab === 'function') {
-        tabManager.switchTab('keywords');
-    } else {
-        document.querySelector('.nav-btn[data-tab="keywords"]')?.click();
-    }
+    switchToTab('keywords');
 
     setTimeout(() => {
-        document.querySelectorAll('#seedKeyword').forEach(input => {
-            input.value = seed || rawUrl || cleanDomain;
+        const seedValue = seed || rawUrl || cleanDomain;
+        const activeTab = document.getElementById('keywordsTab');
+        const seedInputs = [
+            ...(activeTab ? activeTab.querySelectorAll('#seedKeyword') : []),
+            ...document.querySelectorAll('#seedKeyword')
+        ];
+        [...new Set(seedInputs)].forEach(input => {
+            input.value = seedValue;
             input.dispatchEvent(new Event('input', { bubbles: true }));
             input.dispatchEvent(new Event('change', { bubbles: true }));
         });
@@ -13664,12 +13695,16 @@ window.generateCompetitorKeywords = function(url, domain = '', title = '') {
         const country = STATE.lastInputs?.country || document.getElementById('country')?.value || '';
         const geoMap = { Morocco: 'ma', France: 'fr', 'United States': 'us', Global: 'us' };
         const kwGeo = geoMap[country] || (String(country).toLowerCase().includes('morocco') ? 'ma' : 'auto');
-        document.querySelectorAll('#kwGeo').forEach(select => {
+        const geoSelects = [
+            ...(activeTab ? activeTab.querySelectorAll('#kwGeo') : []),
+            ...document.querySelectorAll('#kwGeo')
+        ];
+        [...new Set(geoSelects)].forEach(select => {
             if ([...select.options].some(o => o.value === kwGeo)) select.value = kwGeo;
             select.dispatchEvent(new Event('change', { bubbles: true }));
         });
 
-        const firstSeed = document.querySelector('#seedKeyword');
+        const firstSeed = getActiveTabField('keywords', 'seedKeyword');
         if (firstSeed) {
             firstSeed.focus();
             firstSeed.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -13684,6 +13719,25 @@ window.generateCompetitorKeywords = function(url, domain = '', title = '') {
         );
     }
 };
+
+document.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-competitor-action]');
+    if (!btn) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const action = btn.dataset.competitorAction;
+    const url = btn.dataset.url || '';
+
+    if (action === 'funnel') {
+        window.spyOnCompetitorFunnel(url);
+    } else if (action === 'tech') {
+        window.spyOnCompetitorTech(url);
+    } else if (action === 'keywords') {
+        window.generateCompetitorKeywords(url, btn.dataset.domain || '', btn.dataset.title || '');
+    }
+}, true);
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // ðŸ“± MEGA PATCH MOBILE (JS UX)
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -14127,6 +14181,13 @@ const PDF_EXPORT = {
     z-index: 2;
 }
 
+.loading-state.active .loading-orb,
+.loading-state.active .brand-loader-orb {
+    display: grid !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
 .brand-loader-orb {
     width: 100%;
     height: 100%;
@@ -14179,7 +14240,7 @@ const PDF_EXPORT = {
     z-index: 2;
     padding: 12px 22px 11px;
     border-radius: 999px;
-    color: transparent;
+    color: #f7e9ff;
     background:
         linear-gradient(135deg, rgba(8, 13, 33, 0.76), rgba(30, 27, 75, 0.58)) padding-box,
         linear-gradient(135deg, rgba(34,211,238,.9), rgba(168,85,247,.96), rgba(236,72,153,.86)) border-box;
@@ -14193,9 +14254,8 @@ const PDF_EXPORT = {
     font-weight: 1000;
     letter-spacing: 0.2em;
     text-shadow: 0 3px 14px rgba(168, 85, 247, 0.44);
-    -webkit-background-clip: text, padding-box;
-    background-clip: text, padding-box;
-    -webkit-text-fill-color: transparent;
+    -webkit-text-fill-color: #f7e9ff;
+    text-transform: uppercase;
     animation: dakaTextGlow 2.8s ease-in-out infinite;
 }
 
@@ -14442,18 +14502,32 @@ const PDF_EXPORT = {
 }
 
 .report-section-toggle {
-    width: 32px;
+    min-width: 92px;
+    padding: 0 10px;
     height: 32px;
     border-radius: 999px;
-    display: grid;
-    place-items: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
     color: #c4b5fd;
     background: rgba(139, 92, 246, 0.1);
     border: 1px solid rgba(139, 92, 246, 0.18);
     transition: transform 0.2s ease;
 }
 
+.report-section-toggle small {
+    font-size: 0.66rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
 .report-section[open] .report-section-toggle {
+    transform: none;
+}
+
+.report-section[open] .report-section-toggle i {
     transform: rotate(180deg);
 }
 
@@ -14681,6 +14755,19 @@ const PDF_EXPORT = {
     .loading-state .loading-phase {
         font-size: 0.72rem !important;
         padding: 5px 10px !important;
+    }
+
+    .report-section summary {
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
+    }
+
+    .report-section-toggle {
+        grid-column: 2;
+        justify-self: start;
+        min-width: 88px;
+        margin-top: 2px;
     }
 
     .competitor-action-stack {
