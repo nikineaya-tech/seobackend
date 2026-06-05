@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "prod": "NODE_ENV=production node server.js",
+    "patch:loader": "node scripts/patch-loader-fast.js",
     "pm2:start": "pm2 start server.js --name daka-all-in-one -i max",
     "pm2:stop": "pm2 stop daka-all-in-one",
     "pm2:restart": "pm2 restart daka-all-in-one",
@@ -15,17 +16,8 @@
     "check": "node -e \"console.log('🚀 Daka All-in-One Engine Online'); console.log('✅ Node version:', process.version); console.log('✅ Environment:', process.env.NODE_ENV || 'development');\"",
     "env:check": "node -e \"require('dotenv').config(); console.log('SERPAPI_KEY:', process.env.SERPAPI_API_KEY ? '✅ Configured' : '❌ Missing'); console.log('OPENROUTER_KEY:', process.env.OPENROUTER_API_KEY ? '✅ Configured' : '❌ Missing');\""
   },
-  "keywords": [
-    "seo",
-    "ai-fusion",
-    "daka-all-in-one",
-    "scraping",
-    "stealth"
-  ],
-  "author": {
-    "name": "Daka Team",
-    "url": "https://seo.mktnstrategix.com"
-  },
+  "keywords": ["seo", "ai-fusion", "daka-all-in-one", "scraping", "stealth"],
+  "author": {"name": "Daka Team", "url": "https://seo.mktnstrategix.com"},
   "license": "MIT",
   "dependencies": {
     "axios": "^1.16.1",
@@ -43,11 +35,6 @@
     "playwright-extra": "^4.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2"
   },
-  "devDependencies": {
-    "cross-env": "^7.0.3",
-    "nodemon": "^3.1.0"
-  },
-  "engines": {
-    "node": ">=18.0.0"
-  }
+  "devDependencies": {"cross-env": "^7.0.3", "nodemon": "^3.1.0"},
+  "engines": {"node": ">=18.0.0"}
 }
