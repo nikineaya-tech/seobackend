@@ -7,10 +7,14 @@
 
    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://etjwmqnbfsevlwaeixwb.supabase.co; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' https://etjwmqnbfsevlwaeixwb.supabase.co; connect-src 'self' https://auth.da-ka.live wss://auth.da-ka.live https://*.supabase.co wss://*.supabase.co https://seobackend-f81n.onrender.com http://localhost:10000;">
 
-    <!-- PATCH VIDEO LOGO / LOADER DAKA — vidéo responsive, muted, sans texte loader -->
+    <!-- PATCH UI DAKA — logo vidéo, loader responsive, boutons concurrents stables, anti-scroll accordéon -->
     <script>
     (function() {
+      'use strict';
+
       var VIDEO_URL = 'https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4';
+      var PATCH_FLAG = 'data-daka-ui-patched';
+      var VIDEO_ATTR = 'data-daka-video-logo';
 
       function createMutedVideo(className) {
         var video = document.createElement('video');
@@ -26,21 +30,31 @@
         video.setAttribute('playsinline', '');
         video.setAttribute('webkit-playsinline', '');
         video.setAttribute('aria-hidden', 'true');
+        video.setAttribute(VIDEO_ATTR, 'true');
         return video;
       }
 
-      function injectLoaderCss() {
-        if (document.getElementById('daka-video-loader-css')) return;
+      function safePlay(video) {
+        if (!video) return;
+        video.muted = true;
+        video.defaultMuted = true;
+        var playPromise = video.play && video.play();
+        if (playPromise && playPromise.catch) playPromise.catch(function(){});
+      }
+
+      function injectDakaUiCss() {
+        if (document.getElementById('daka-ui-stability-css')) return;
 
         var style = document.createElement('style');
-        style.id = 'daka-video-loader-css';
+        style.id = 'daka-ui-stability-css';
         style.textContent = `
-          .brand-loader-orb {
-            width: clamp(118px, 34vw, 190px) !important;
-            height: clamp(118px, 34vw, 190px) !important;
+          .brand-loader-orb,
+          .daka-video-loader-wrap {
+            width: clamp(124px, 32vw, 192px) !important;
+            height: clamp(124px, 32vw, 192px) !important;
             max-width: 72vh !important;
             max-height: 72vh !important;
-            border-radius: 32px !important;
+            border-radius: 30px !important;
             background: transparent !important;
             border: 0 !important;
             box-shadow: none !important;
@@ -56,18 +70,39 @@
           .brand-loader-orb::after,
           .brand-loader-orb span,
           .brand-loader-orb .loader-text,
-          .brand-loader-orb .brand-loader-text {
+          .brand-loader-orb .brand-loader-text,
+          .brand-loader-orb [class*="text"],
+          .brand-loader-orb [class*="label"] {
             display: none !important;
             content: none !important;
           }
 
-          .daka-loader-video {
+          .daka-loader-video,
+          video[data-daka-video-logo="true"] {
             width: 100% !important;
             height: 100% !important;
             display: block !important;
             object-fit: contain !important;
             border-radius: inherit !important;
             background: transparent !important;
+          }
+
+          .daka-header-logo-video {
+            width: 52px !important;
+            height: 52px !important;
+            border-radius: 50% !important;
+            object-fit: cover !important;
+            flex-shrink: 0 !important;
+            display: block !important;
+            box-shadow: 0 0 20px rgba(139,92,246,0.55) !important;
+          }
+
+          .logo .logo-mark {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            border-radius: 50% !important;
+            overflow: hidden !important;
           }
 
           .loading-overlay,
@@ -79,58 +114,191 @@
             text-align: center;
           }
 
+          .competitor-actions,
+          .competitor-card-actions,
+          .action-buttons,
+          .result-actions,
+          [data-competitor-actions="true"] {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+          }
+
+          .competitor-actions button,
+          .competitor-card-actions button,
+          .action-buttons button,
+          .result-actions button,
+          button[data-no-collapse="true"],
+          a[data-no-collapse="true"] {
+            position: relative;
+            z-index: 5;
+          }
+
           @media (max-width: 480px) {
-            .brand-loader-orb {
-              width: min(68vw, 150px) !important;
-              height: min(68vw, 150px) !important;
+            .brand-loader-orb,
+            .daka-video-loader-wrap {
+              width: min(68vw, 154px) !important;
+              height: min(68vw, 154px) !important;
               border-radius: 26px !important;
+            }
+
+            .daka-header-logo-video {
+              width: 44px !important;
+              height: 44px !important;
             }
           }
         `;
         document.head.appendChild(style);
       }
 
-      function patchLogo() {
-        injectLoaderCss();
+      function patchHeaderLogo() {
+        var logoMark = document.querySelector('.logo .logo-mark, .logo-mark, [data-logo-mark], .brand-logo, .navbar-logo');
+        if (!logoMark) return;
 
-        // 1. Logo header : garde la vidéo en petit format propre.
-        var logoMark = document.querySelector('.logo .logo-mark');
-        if (logoMark && !logoMark.querySelector('video')) {
-          var headerVideo = createMutedVideo('daka-header-logo-video');
-          headerVideo.style.cssText = 'width:52px;height:52px;border-radius:50%;object-fit:cover;flex-shrink:0;box-shadow:0 0 20px rgba(139,92,246,0.55);display:block;';
-          logoMark.style.cssText = 'display:flex;align-items:center;justify-content:center;border-radius:50%;overflow:hidden;';
-          logoMark.innerHTML = '';
-          logoMark.appendChild(headerVideo);
-          headerVideo.play().catch(function(){});
+        var existingVideo = logoMark.querySelector('video[' + VIDEO_ATTR + ']');
+        if (existingVideo) {
+          safePlay(existingVideo);
+          return;
         }
 
-        // 2. Loader : remplace boule + texte par vidéo seule, centrée et responsive.
-        document.querySelectorAll('.brand-loader-orb').forEach(function(orb) {
-          var existingVideo = orb.querySelector('video.daka-loader-video');
-          if (!existingVideo) {
-            var loaderVideo = createMutedVideo('daka-loader-video');
-            orb.innerHTML = '';
-            orb.appendChild(loaderVideo);
-            loaderVideo.play().catch(function(){});
-          } else {
-            Array.prototype.slice.call(orb.children).forEach(function(child) {
-              if (child !== existingVideo) child.remove();
-            });
-            existingVideo.muted = true;
-            existingVideo.play().catch(function(){});
-          }
+        var headerVideo = createMutedVideo('daka-header-logo-video');
+        logoMark.innerHTML = '';
+        logoMark.appendChild(headerVideo);
+        safePlay(headerVideo);
+      }
+
+      function patchLoaderOrb(orb) {
+        if (!orb) return;
+
+        var existingVideo = orb.querySelector('video.daka-loader-video, video[' + VIDEO_ATTR + ']');
+        if (!existingVideo) {
+          var loaderVideo = createMutedVideo('daka-loader-video');
+          orb.classList.add('daka-video-loader-wrap');
+          orb.innerHTML = '';
+          orb.appendChild(loaderVideo);
+          safePlay(loaderVideo);
+          return;
+        }
+
+        Array.prototype.slice.call(orb.children).forEach(function(child) {
+          if (child !== existingVideo) child.remove();
+        });
+        existingVideo.classList.add('daka-loader-video');
+        safePlay(existingVideo);
+      }
+
+      function patchLoaders() {
+        var selectors = [
+          '.brand-loader-orb',
+          '.loader-logo',
+          '.loading-logo',
+          '.brand-loader .logo-mark',
+          '.loading-screen .logo-mark',
+          '[data-loader-logo]',
+          '[data-brand-loader]'
+        ].join(',');
+
+        document.querySelectorAll(selectors).forEach(function(el) {
+          patchLoaderOrb(el);
         });
       }
 
+      function shouldProtectInteractive(el) {
+        if (!el || !el.closest) return false;
+
+        var interactive = el.closest('button, a, [role="button"], input, select, textarea, .copy-btn, .copy-button, .btn-copy, [data-copy], [data-action], [onclick]');
+        if (!interactive) return false;
+
+        var text = (interactive.textContent || interactive.getAttribute('aria-label') || interactive.getAttribute('title') || '').toLowerCase();
+        var cls = (interactive.className || '').toString().toLowerCase();
+        var action = (interactive.getAttribute('data-action') || '').toLowerCase();
+        var href = (interactive.getAttribute('href') || '').toLowerCase();
+
+        var isActionButton = /copy|copier|clipboard|funnel|analyse|analysis|audit|seo|rapport|report|use|utiliser|ouvrir|open|export|download|pdf/.test(text + ' ' + cls + ' ' + action + ' ' + href);
+        var isInsideReport = !!interactive.closest('.competitor-card, .competitor-item, .competitor-row, .competitor, .result-card, .report-card, .accordion, .accordion-item, details, [data-competitor], [data-result]');
+
+        return isActionButton || isInsideReport;
+      }
+
+      function protectInteractiveButtons(root) {
+        var scope = root && root.querySelectorAll ? root : document;
+        var selector = [
+          'button',
+          'a',
+          '[role="button"]',
+          '.copy-btn',
+          '.copy-button',
+          '.btn-copy',
+          '[data-copy]',
+          '[data-action]',
+          '[onclick]'
+        ].join(',');
+
+        scope.querySelectorAll(selector).forEach(function(el) {
+          if (el.getAttribute(PATCH_FLAG) === 'true') return;
+          if (!shouldProtectInteractive(el)) return;
+
+          el.setAttribute(PATCH_FLAG, 'true');
+          el.setAttribute('data-no-collapse', 'true');
+
+          ['click', 'mousedown', 'mouseup', 'pointerdown', 'pointerup', 'touchstart', 'touchend'].forEach(function(evtName) {
+            el.addEventListener(evtName, function(evt) {
+              evt.stopPropagation();
+            }, false);
+          });
+        });
+      }
+
+      function preserveScrollAroundAccordionClicks() {
+        if (window.__dakaAccordionScrollPatch) return;
+        window.__dakaAccordionScrollPatch = true;
+
+        document.addEventListener('click', function(evt) {
+          var target = evt.target;
+          if (!target || !target.closest) return;
+          if (shouldProtectInteractive(target)) return;
+
+          var toggle = target.closest('summary, .accordion-header, .accordion-toggle, .collapse-header, .section-header, [data-accordion-toggle], [data-collapse-toggle]');
+          if (!toggle) return;
+
+          var beforeX = window.scrollX;
+          var beforeY = window.scrollY;
+
+          requestAnimationFrame(function() {
+            setTimeout(function() {
+              var delta = Math.abs(window.scrollY - beforeY);
+              if (delta > 120) {
+                window.scrollTo(beforeX, beforeY);
+              }
+            }, 60);
+          });
+        }, true);
+      }
+
+      function patchDakaUi() {
+        injectDakaUiCss();
+        patchHeaderLogo();
+        patchLoaders();
+        protectInteractiveButtons(document);
+        preserveScrollAroundAccordionClicks();
+      }
+
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', patchLogo);
+        document.addEventListener('DOMContentLoaded', patchDakaUi);
       } else {
-        patchLogo();
+        patchDakaUi();
       }
 
       document.addEventListener('DOMContentLoaded', function() {
-        var mo = new MutationObserver(function(){ patchLogo(); });
-        mo.observe(document.body, { childList: true, subtree: true });
+        var mo = new MutationObserver(function(mutations) {
+          var shouldPatchAll = false;
+          mutations.forEach(function(m) {
+            if (m.addedNodes && m.addedNodes.length) shouldPatchAll = true;
+          });
+          if (shouldPatchAll) patchDakaUi();
+        });
+        if (document.body) mo.observe(document.body, { childList: true, subtree: true });
       });
     })();
     </script>
