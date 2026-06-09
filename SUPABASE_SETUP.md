@@ -7,6 +7,47 @@ SUPABASE_URL         = https://etjwmqnbfsevlwaeixwb.supabase.co
 SUPABASE_ANON_KEY    = [ton anon key — Supabase → Settings → API → anon public]
 SUPABASE_SERVICE_KEY = [ton service_role key — Supabase → Settings → API → service_role]
 FRONTEND_URL         = https://app.da-ka.live
+AUTH_REDIRECT_URL    = https://seo.mktnstrategix.com/seodaka4444
+# Après activation du domaine personnalisé Supabase :
+SUPABASE_PUBLIC_URL  = https://auth.da-ka.live
+```
+
+## Configuration URL Auth obligatoire
+
+Dans Supabase Dashboard > Authentication > URL Configuration :
+
+```text
+Site URL:
+https://seo.mktnstrategix.com/seodaka4444
+
+Redirect URLs:
+https://seo.mktnstrategix.com/seodaka4444
+https://seo.mktnstrategix.com/seodaka4444/**
+```
+
+Supprimer `http://localhost:3000` des URLs de production. Sinon Supabase peut y
+rediriger l'utilisateur lorsque l'URL demandée n'est pas autorisée.
+
+## Ne jamais afficher le domaine technique Supabase
+
+Pour que Google n'affiche plus `etjwmqnbfsevlwaeixwb.supabase.co`, activer un
+domaine personnalisé Supabase, par exemple :
+
+```text
+auth.da-ka.live
+```
+
+Puis ajouter dans Google Cloud OAuth les deux callbacks pendant la migration :
+
+```text
+https://etjwmqnbfsevlwaeixwb.supabase.co/auth/v1/callback
+https://auth.da-ka.live/auth/v1/callback
+```
+
+Après activation et validation, configurer sur Render :
+
+```text
+SUPABASE_PUBLIC_URL=https://auth.da-ka.live
 ```
 
 ## Routes disponibles
@@ -27,16 +68,4 @@ curl https://[TON_BACKEND].onrender.com/auth/health
 curl https://[TON_BACKEND].onrender.com/auth/google/url
 ```
 
-## Integration frontend (index.html)
-
-Ajoute dans ton `<head>` :
-```html
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-```
-
-Voir `supabase-frontend-snippet.js` pour le code complet.
-
-## Callback URL Google (Supabase)
-```
-https://etjwmqnbfsevlwaeixwb.supabase.co/auth/v1/callback
-```
+Le frontend actif est déjà intégré dans `index.html`.

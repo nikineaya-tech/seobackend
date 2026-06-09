@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://seobackend-f81n.onrender.com http://localhost:10000;">
+   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://auth.da-ka.live wss://auth.da-ka.live https://*.supabase.co wss://*.supabase.co https://seobackend-f81n.onrender.com http://localhost:10000;">
 
     <title>Daka - Intelligence marketing et croissance</title>
     <meta name="description" content="Daka transforme les signaux du marché, les pages et les concurrents en actions concrètes pour mieux vendre.">
@@ -4832,6 +4832,7 @@ document.addEventListener('DOMContentLoaded', () => {
 let dakaAuthClient = null;
 let currentAuthUser = null;
 let authConfigured = false;
+let authRedirectUrl = 'https://seo.mktnstrategix.com/seodaka4444';
 let resolveAuthReady;
 const authReady = new Promise(resolve => { resolveAuthReady = resolve; });
 
@@ -4932,6 +4933,7 @@ async function initSupabaseAuth() {
         });
         const config = await response.json();
         authConfigured = Boolean(config?.enabled && config?.supabaseUrl && config?.anonKey && window.supabase?.createClient);
+        authRedirectUrl = config?.redirectUrl || authRedirectUrl;
 
         if (!authConfigured) {
             await updateAuthUI(null, true);
@@ -4975,10 +4977,9 @@ function closeAuthModal() {
 
 async function loginWithGoogle() {
     if (!dakaAuthClient) return openAuthModal();
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
     const { error } = await dakaAuthClient.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo }
+        options: { redirectTo: authRedirectUrl }
     });
     if (error) toast.error(error.message);
 }
@@ -4986,10 +4987,9 @@ async function loginWithGoogle() {
 async function loginWithEmail() {
     const email = document.getElementById('auth-email')?.value?.trim();
     if (!email || !dakaAuthClient) return toast.warning('Email requis.');
-    const redirectTo = `${window.location.origin}${window.location.pathname}`;
     const { error } = await dakaAuthClient.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: redirectTo }
+        options: { emailRedirectTo: authRedirectUrl }
     });
     if (error) return toast.error(error.message);
     toast.success(authCopy().emailSent);

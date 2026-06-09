@@ -13,10 +13,16 @@ function normalizeRedirect(rawUrl, allowedOrigins) {
 
 function registerAuthRoutes(app) {
     const supabaseUrl = process.env.SUPABASE_URL || '';
+    const publicSupabaseUrl = String(process.env.SUPABASE_PUBLIC_URL || supabaseUrl).replace(/\/+$/, '');
     const anonKey = process.env.SUPABASE_ANON_KEY || '';
     const serviceKey = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || '';
-    const authClient = supabaseUrl && anonKey
-        ? createClient(supabaseUrl, anonKey, {
+    const publicAuthRedirectUrl = String(
+        process.env.AUTH_REDIRECT_URL ||
+        process.env.FRONTEND_URL ||
+        'https://seo.mktnstrategix.com/seodaka4444'
+    ).trim();
+    const authClient = publicSupabaseUrl && anonKey
+        ? createClient(publicSupabaseUrl, anonKey, {
             auth: { persistSession: false, autoRefreshToken: false }
         })
         : null;
@@ -87,11 +93,14 @@ function registerAuthRoutes(app) {
 
     app.get('/auth/config', (req, res) => {
         res.setHeader('Cache-Control', 'no-store');
+        const requestOrigin = req.get('origin') || '';
+        const isLocalRequest = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(requestOrigin);
         res.json({
             enabled: Boolean(authClient),
-            supabaseUrl: authClient ? supabaseUrl : null,
+            supabaseUrl: authClient ? publicSupabaseUrl : null,
             anonKey: authClient ? anonKey : null,
-            provider: 'google'
+            provider: 'google',
+            redirectUrl: isLocalRequest ? requestOrigin : publicAuthRedirectUrl
         });
     });
 
@@ -106,7 +115,7 @@ function registerAuthRoutes(app) {
 
         const fallbackOrigin = allowedOrigins.has(req.get('origin'))
             ? req.get('origin')
-            : 'https://seo.mktnstrategix.com';
+            : publicAuthRedirectUrl;
         const redirectTo = normalizeRedirect(
             req.query.redirectTo || fallbackOrigin,
             allowedOrigins
