@@ -1,5 +1,7 @@
 name: Patch index UI directly
 
+# Rerun marker: 2026-06-09 direct index patch
+
 on:
   push:
     branches:
