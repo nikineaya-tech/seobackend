@@ -5,7 +5,6 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "start:worker": "node scraper-worker.js",
     "dev": "nodemon server.js",
     "prod": "NODE_ENV=production node server.js",
     "pm2:start": "pm2 start server.js --name daka-all-in-one -i max",
@@ -16,20 +15,14 @@
     "check": "node -v",
     "env:check": "node -v"
   },
-  "keywords": [
-    "seo",
-    "ai-fusion",
-    "daka-all-in-one",
-    "scraping",
-    "stealth"
-  ],
+  "keywords": ["seo", "ai-fusion", "daka-all-in-one", "scraping", "stealth"],
   "author": {
     "name": "Daka Team",
     "url": "https://seo.mktnstrategix.com"
   },
   "license": "MIT",
   "dependencies": {
-    "@supabase/supabase-js": "^2.45.0",
+    "@supabase/supabase-js": "^2.45.4",
     "axios": "^1.16.1",
     "cheerio": "^1.2.0",
     "compression": "^1.7.4",
