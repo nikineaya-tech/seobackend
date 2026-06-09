@@ -1,0 +1,45 @@
+name: Patch index UI directly
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/apply-index-ui-hotfix.cjs'
+      - 'index.html'
+      - '.github/workflows/patch-index-ui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-index:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Apply index UI hotfix directly
+        run: node scripts/apply-index-ui-hotfix.cjs
+
+      - name: Verify hotfix markers
+        run: |
+          grep -q "DAKA_UI_VIDEO_HOTFIX_START" index.html
+          grep -q "media-src 'self' https://etjwmqnbfsevlwaeixwb.supabase.co" index.html
+          grep -q "daka-ui-video-hotfix-js" index.html
+
+      - name: Commit patched index.html
+        run: |
+          if git diff --quiet -- index.html; then
+            echo "index.html already patched"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html
+          git commit -m "fix: patch index html video loader directly"
+          git push
