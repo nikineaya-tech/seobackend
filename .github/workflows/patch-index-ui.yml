@@ -1,52 +1,14 @@
-name: Patch index UI directly
+name: Patch index UI disabled
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'index.html'
-      - 'scripts/force-index-video-hotfix.cjs'
-      - '.github/workflows/patch-index-ui.yml'
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch-index:
-    if: github.actor != 'github-actions[bot]'
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Apply index UI hotfix directly
-        run: node scripts/force-index-video-hotfix.cjs
-
-      - name: Show marker debug
-        run: |
-          grep -n "DAKA_UI_VIDEO_HOTFIX_START" index.html || true
-          grep -n "daka-ui-video-hotfix-js" index.html || true
-          grep -n "daka-loader-video" index.html | head || true
-
-      - name: Verify hotfix markers
-        run: |
-          grep -q "DAKA_UI_VIDEO_HOTFIX_START" index.html
-          grep -q "media-src 'self' https://etjwmqnbfsevlwaeixwb.supabase.co" index.html
-          grep -q "daka-ui-video-hotfix-js" index.html
-          grep -q "daka-loader-video" index.html
-
-      - name: Commit patched index.html
-        run: |
-          if git diff --quiet -- index.html; then
-            echo "index.html already patched"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add index.html
-          git commit -m "fix: patch index html video loader directly"
-          git push
+      - name: Disabled
+        run: echo "Index UI patch workflow disabled. Use Codex/manual patch instead."
