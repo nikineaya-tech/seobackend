@@ -1,0 +1,26 @@
+{
+  "name": "daka-railway-scraper",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Isolated Railway service for scraping jobs only. No AI routes, no pricing pipeline, no frontend.",
+  "main": "scraper-worker.js",
+  "scripts": {
+    "start": "node scraper-worker.js",
+    "start:orchestrator": "node scraper-orchestrator.js",
+    "postinstall": "npx playwright install chromium --with-deps || echo 'Playwright install skipped'",
+    "check": "node -v"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "cheerio": "^1.2.0",
+    "dotenv": "^16.4.5",
+    "ghost-cursor": "^1.4.2",
+    "playwright": "^1.59.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
