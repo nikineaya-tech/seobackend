@@ -2995,8 +2995,8 @@ table tbody td {
                                 <input id="funnelObjective" class="input-field" type="text" data-i18n-placeholder="context_funnel_objective_ph" placeholder="Ex: achat, appel, formulaire, WhatsApp, démo">
                             </label>
                             <label class="context-field">
-                                <span data-i18n="context_funnel_price_label">Prix ou valeur</span>
-                                <input id="funnelPriceRange" class="input-field" type="text" data-i18n-placeholder="context_funnel_price_ph" placeholder="Ex: 1 500 DH, abonnement 49€/mois, panier 700 DH">
+                                <span data-i18n="context_funnel_price_label">Prix ou fourchette actuelle</span>
+                                <input id="funnelPriceRange" class="input-field" type="text" data-i18n-placeholder="context_funnel_price_ph" placeholder="Ex: 149 MAD ou 179-199 MAD">
                             </label>
                             <label class="context-field">
                                 <span data-i18n="context_funnel_known_comp_label">Pages à comparer</span>
@@ -4183,8 +4183,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     context_funnel_audience_ph: 'Ex: entrepreneurs débutants, PME, agences',
                     context_funnel_objective_label: 'Action attendue',
                     context_funnel_objective_ph: 'Ex: achat, appel, formulaire, WhatsApp, démo',
-                    context_funnel_price_label: 'Prix ou valeur',
-                    context_funnel_price_ph: 'Ex: 1500 DH, abonnement 49 EUR/mois, panier 700 DH',
+                    context_funnel_price_label: 'Prix ou fourchette actuelle',
+                    context_funnel_price_ph: 'Ex: 149 MAD ou 179-199 MAD',
                     context_funnel_known_comp_label: 'Pages à comparer',
                     context_funnel_known_comp_ph: 'Ex: concurrent.com, page de référence, marque',
                     context_funnel_geo_label: 'Marché cible',
@@ -4251,8 +4251,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     context_funnel_audience_ph: 'Ex: new founders, SMEs, agencies',
                     context_funnel_objective_label: 'Expected action',
                     context_funnel_objective_ph: 'Ex: purchase, call, form, WhatsApp, demo',
-                    context_funnel_price_label: 'Price or value',
-                    context_funnel_price_ph: 'Ex: 1500 DH, 49 EUR/month, 700 DH basket',
+                    context_funnel_price_label: 'Current price or price range',
+                    context_funnel_price_ph: 'Example: 149 MAD or 179-199 MAD',
                     context_funnel_known_comp_label: 'Pages to compare',
                     context_funnel_known_comp_ph: 'Ex: competitor.com, reference page, brand',
                     context_funnel_geo_label: 'Target market',
@@ -4320,8 +4320,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     context_funnel_audience_ph: 'مثال: رواد أعمال، شركات صغيرة، وكالات',
                     context_funnel_objective_label: 'الفعل المطلوب',
                     context_funnel_objective_ph: 'مثال: شراء، مكالمة، نموذج، واتساب، عرض تجريبي',
-                    context_funnel_price_label: 'السعر أو القيمة',
-                    context_funnel_price_ph: 'مثال: 1500 درهم، اشتراك 49 يورو/شهر، سلة 700 درهم',
+                    context_funnel_price_label: 'السعر أو نطاق السعر الحالي',
+                    context_funnel_price_ph: 'مثال: 149 درهم أو 179-199 درهم',
                     context_funnel_known_comp_label: 'صفحات للمقارنة',
                     context_funnel_known_comp_ph: 'مثال: competitor.com، صفحة مرجعية، علامة تجارية',
                     context_funnel_geo_label: 'السوق المستهدف',
@@ -4573,6 +4573,54 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const api = new APIClient(CONFIG.API_BASE_URL);
+
+async function analyzeWithPolling(endpoint, payload, resultsHandler) {
+    const initial = await api.post(
+        endpoint,
+        { ...(payload || {}), async: true },
+        CONFIG.TIMEOUTLONG || CONFIG.TIMEOUT_LONG || 120000
+    );
+
+    const deliver = (data) => {
+        if (typeof resultsHandler === 'function') resultsHandler(data);
+        return data;
+    };
+
+    // When Supabase is unavailable, the API executes the existing direct path.
+    if (!initial?.jobId) return deliver(initial);
+
+    const stepsByLang = {
+        fr: ['Collecte des données...', 'Analyse du marché...', 'Construction du rapport...', 'Finalisation...'],
+        en: ['Collecting data...', 'Analyzing the market...', 'Building the report...', 'Finalizing...'],
+        ar: ['جمع البيانات...', 'تحليل السوق...', 'إعداد التقرير...', 'اللمسات الأخيرة...']
+    };
+    const steps = stepsByLang[STATE.currentLang] || stepsByLang.fr;
+    const startedAt = Date.now();
+    let stepIndex = 0;
+
+    while (Date.now() - startedAt < 120000) {
+        document.querySelectorAll('.loading-step-text').forEach(node => {
+            node.textContent = steps[stepIndex % steps.length];
+        });
+        stepIndex++;
+
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        const job = await api.get(`/api/job/${encodeURIComponent(initial.jobId)}`, 15000);
+
+        if (job?.status === 'done') return deliver(job.result);
+        if (job?.status === 'error') {
+            throw new Error(job.error || 'Analyse interrompue par le serveur.');
+        }
+    }
+
+    throw new Error(
+        STATE.currentLang === 'ar'
+            ? 'انتهت المهلة — أعد المحاولة بعد بضع ثوان.'
+            : STATE.currentLang === 'en'
+                ? 'Timeout — try again in a few seconds.'
+                : 'Timeout — réessaie dans quelques secondes.'
+    );
+}
 
 const DakaSound = (() => {
     let ctx = null;
@@ -6624,14 +6672,14 @@ async function analyzeCompetitors(e) {
     if (exportBtn) exportBtn.style.display = 'none';
 
     try {
-        const response = await api.post('/api/competitors', {
+        const response = await analyzeWithPolling('/api/competitors', {
             query: keyword || url,
             url: url || null,
             geo: country,
             lang,
             context: collectBusinessContext('comp'),
             forceRefresh: true
-        }, CONFIG.TIMEOUT_LONG || CONFIG.TIMEOUTLONG || 60000);
+        });
 
         if (!response || !response.success) {
             throw new Error(response?.error || 'Analyse échouée — réponse invalide.');
@@ -6751,7 +6799,7 @@ async function analyzeTechnical(e) {
   hideResults('resultsTechnical');
 
   try {
-    const response = await api.post('/api/technical-seo', {
+    const response = await analyzeWithPolling('/api/technical-seo', {
       url,
       lang,
       context: collectBusinessContext('tech'),
@@ -6761,7 +6809,7 @@ async function analyzeTechnical(e) {
         checkLlms:        document.getElementById('checkLlms')?.checked        ?? false,
         checkRobots:      document.getElementById('checkRobots')?.checked      ?? false,
       }
-    }, CONFIG.TIMEOUTLONG);
+    });
 
     if (response.success) {
       /* ── Persistance STATE ──────────────────────────────── */
@@ -8850,7 +8898,7 @@ document.getElementById('keywordsForm')?.addEventListener('submit', async (e) =>
     hideResults('resultsKeywords');
 
     try {
-        const response = await api.post('/api/generate-keywords', data);
+        const response = await analyzeWithPolling('/api/generate-keywords', data);
         displayKeywordsResults(response);
         toast.success(`${response.keywords?.length || 0} mots-clés générés !`);
     } catch (error) {
@@ -8896,12 +8944,12 @@ async function analyzeKeywords(e) {
   hideResults('resultsKeywords');
 
   try {
-    const response = await api.post('/api/generate-keywords', {
+    const response = await analyzeWithPolling('/api/generate-keywords', {
       seedKeyword:      seed,
       languages:        langs,
       countPerLanguage: count,
       geo
-    }, CONFIG.TIMEOUTLONG);
+    });
 
     if (response.success) {
       /* ── Persistance STATE COMPLÈTE ─────────────────────── */
@@ -10007,12 +10055,12 @@ async function analyzeFunnel(e) {
   hideResults('resultsFunnel');
 
   try {
-    const response = await api.post('/api/analyze-funnel', {
+    const response = await analyzeWithPolling('/api/analyze-funnel', {
       url,
       userLang:   lang,
       salesAngle: angle,
       context: collectBusinessContext('funnel')
-    }, CONFIG.TIMEOUTLONG);
+    });
 
     if (!response || typeof response !== 'object')
       throw new Error('Réponse serveur invalide');
@@ -10021,6 +10069,7 @@ async function analyzeFunnel(e) {
       /* ── Persistance STATE ──────────────────────────────── */
       STATE.lastFunnelResults   = response;
       STATE.lastInputs.funnelUrl = url;
+      STATE.lastInputs.funnelPriceRange = collectBusinessContext('funnel').priceRange || '';
       STATE.currentLang          = lang;
 
       displayFunnelResults(response);
@@ -11020,6 +11069,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, { isAr, isEn, dir, esc:
     // ── NOUVELLES DONNÉES V12 perdues ─────────────────
     const aarrr      = data.aarrMetrics          || data.aarrr          || {};
     const pricing    = data.pricingPsychology    || {};
+    const commerce   = data.commerceExploration || data.rawIntel?.commerceExploration || {};
     const techAudit  = data.technicalAudit       || {};
     const neuro      = data.neuromarketing        || {};
     const aidaData   = data.aidaAnalysis          || {};
@@ -11706,126 +11756,147 @@ const visualHierarchyHtml =
         </div>
     </div>`;
     })() : '';
-const hasBundleSuggestion = (() => {
-    const bs = pricing?.bundleSuggestion;
-    if (!bs) return false;
-
-    if (typeof bs === 'string') {
-        const clean = bs.trim();
-        return clean !== '' && clean !== '-' && clean !== '—';
-    }
-
-    if (Array.isArray(bs)) {
-        return bs.length > 0;
-    }
-
-    if (typeof bs === 'object') {
-        return Object.values(bs).some(v => {
-            if (Array.isArray(v)) return v.length > 0;
-            if (typeof v === 'string') {
-                const clean = v.trim();
-                return clean !== '' && clean !== '-' && clean !== '—';
-            }
-            return v !== null && v !== undefined && v !== false;
-        });
-    }
-
-    return false;
+const commerceObserved = commerce.observed || {};
+const commerceRecommended = commerce.recommended || {};
+const commerceDeduced = commerce.deduced || {};
+const commerceProducts = Array.isArray(commerceObserved.products) ? commerceObserved.products : [];
+const commercePricingPages = Array.isArray(commerceObserved.pricingPages) ? commerceObserved.pricingPages : [];
+const commerceEvidenceLinks = Array.isArray(commerceObserved.evidenceLinks) ? commerceObserved.evidenceLinks : [];
+const commerceTrust = commerceObserved.trustSignals || {};
+const commerceStats = commerceObserved.priceStats || {};
+const userPriceRange = commerce.userContext?.userPriceRange || STATE.lastInputs?.funnelPriceRange || '';
+const commerceCurrency = commerceRecommended.currency || commerceStats.currency || pri.currency || fin.currency || '';
+const moneyValue = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n) || n <= 0) return '—';
+    return `${n.toLocaleString(isAr ? 'ar-MA' : isEn ? 'en-US' : 'fr-FR')} ${commerceCurrency || ''}`.trim();
+};
+const rangeValue = (range) => {
+    if (!range || (!range.min && !range.max)) return '—';
+    return `${moneyValue(range.min)} - ${moneyValue(range.max)}`;
+};
+const trustSignalsList = [
+    [isAr ? 'اتصال آمن' : isEn ? 'Secure access' : 'Accès sécurisé', commerceTrust.hasSSL || tru.hasSSL],
+    ['WhatsApp', commerceTrust.hasWhatsApp || tru.hasWhatsApp],
+    [isAr ? 'آراء العملاء' : isEn ? 'Customer reviews' : 'Avis clients', commerceTrust.hasReviews || tru.hasReviews],
+    [isAr ? 'ضمان' : isEn ? 'Guarantee' : 'Garantie', commerceTrust.hasGuarantee || commerceTrust.hasMoneyBackGuarantee || tru.hasMoneyBackGuarantee],
+    [isAr ? 'توصيل' : isEn ? 'Delivery' : 'Livraison', commerceTrust.hasDelivery || tru.hasCOD],
+    [isAr ? 'أسئلة شائعة' : isEn ? 'FAQ' : 'FAQ', commerceTrust.hasFAQ],
+    [isAr ? 'الدفع' : isEn ? 'Payment proof' : 'Preuves paiement', commerceTrust.hasPaymentLogos || tru.hasPaymentLogos]
+];
+const visibleTrustCount = trustSignalsList.filter(([, ok]) => ok).length;
+const offerSummary = (() => {
+    const productName = commerceProducts[0]?.name || product || niche || siteType;
+    const priceText = commerceStats.count ? `${moneyValue(commerceStats.min)} - ${moneyValue(commerceStats.max)}` : (userPriceRange || '—');
+    if (isAr) return `تم رصد ${commerceProducts.length || 0} منتج أو عرض، مع نطاق سعر ${priceText}. مستوى الثقة مبني على ${visibleTrustCount} إشارات ظاهرة.`;
+    if (isEn) return `${commerceProducts.length || 0} product or offer signals were found, with a price range of ${priceText}. Confidence is based on ${visibleTrustCount} visible trust signals.`;
+    return `${commerceProducts.length || 0} produit ou offre détecté, avec une fourchette de prix ${priceText}. La confiance est basée sur ${visibleTrustCount} signaux visibles.`;
 })();
-    // ══════════════════════════════════════════════════
-    // 💲 BLOC 1C — PRICING PSYCHOLOGY (NOUVEAU V12)
-    // ══════════════════════════════════════════════════
- const hasPricing = pricing && (hasBundleSuggestion || pricing.priceAnchoring
-                                || pricing.priceVerdict || pricing.strategy
-                                || pricing.anchors?.length || pricing.decoy);
+const hasCommerceMoney = commerce.success || commerceProducts.length || commercePricingPages.length || commerceStats.count || userPriceRange || commerceRecommended.recommendedRange || pricing.priceVerdict;
 
-    const pricingHtml = hasPricing ? `
-    <div class="result-card fade-in-up" style="margin-bottom:22px;border-left:4px solid #f59e0b;" dir="${dir}">
-        <h3 style="margin-bottom:14px;font-family:Cairo;display:flex;align-items:center;
-             gap:10px;color:white;font-size:1rem;">
-            <i class="fas fa-tags" style="color:#f59e0b"></i>
-            ${i18n.pricingTitle}
-        </h3>
-       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
+const pricingHtml = hasCommerceMoney ? `
+<div class="result-card fade-in-up" style="margin-bottom:22px;border-left:4px solid #f59e0b;" dir="${dir}">
+    <h3 style="margin-bottom:8px;font-family:Cairo;display:flex;align-items:center;gap:10px;color:white;font-size:1rem;">
+        <i class="fas fa-hand-holding-dollar" style="color:#f59e0b"></i>
+        ${isAr ? 'العرض والسعر والثقة' : isEn ? 'Offer, price, and trust' : 'Offre, prix et confiance'}
+    </h3>
+    <p style="margin:0 0 14px;color:#cbd5e1;font-size:0.88rem;line-height:1.7;" dir="auto">${esc(offerSummary)}</p>
 
-    ${pricing.priceVerdict ? `
-    <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.2);
-         border-radius:12px;padding:13px;">
-        <small style="color:#f59e0b;font-weight:800;font-size:0.6rem;
-               text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:7px;">
-            <i class="fas fa-gavel"></i> ${i18n.verdictLabel}
-        </small>
-        <p style="margin:0;font-size:0.85rem;color:#fde68a;font-weight:600;
-           line-height:1.6;" dir="auto">${esc(pricing.priceVerdict)}</p>
-
-        ${pricing.currentPrice ? `
-        <div style="margin-top:8px;font-size:0.75rem;color:#94a3b8;">
-            Prix actuel: <strong style="color:#fbbf24;">${esc(String(pricing.currentPrice))}</strong>
-        </div>` : ''}
-
-        ${pricing.recommendedPrice ? `
-        <div style="font-size:0.75rem;color:#94a3b8;">
-            Prix recommandé: <strong style="color:#10b981;">${esc(String(pricing.recommendedPrice))}</strong>
-        </div>` : ''}
-    </div>` : ''}
-
-    ${pricing.priceAnchoring ? `
-    <div style="background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.2);
-         border-radius:12px;padding:13px;">
-        <small style="color:#818cf8;font-weight:800;font-size:0.6rem;
-               text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:7px;">
-            <i class="fas fa-anchor"></i> ${i18n.anchoringLabel}
-        </small>
-        <p style="margin:0;font-size:0.82rem;color:#c4b5fd;line-height:1.6;"
-           dir="auto">${esc(pricing.priceAnchoring)}</p>
-
-        ${Array.isArray(pricing.anchors) && pricing.anchors.length ? `
-        <div style="margin-top:8px;display:flex;gap:5px;flex-wrap:wrap;">
-            ${pricing.anchors.map(a => `
-            <span style="background:rgba(99,102,241,0.12);color:#a5b4fc;
-                  padding:2px 9px;border-radius:20px;font-size:0.7rem;
-                  border:1px solid rgba(99,102,241,0.25);">${esc(String(a))}</span>
-            `).join('')}
-        </div>` : ''}
-    </div>` : ''}
-
-    ${hasBundleSuggestion ? `
-    <div style="background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.2);
-         border-radius:12px;padding:13px;">
-        <small style="color:#10b981;font-weight:800;font-size:0.6rem;
-               text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:7px;">
-            <i class="fas fa-box-open"></i> ${i18n.bundleLabel}
-        </small>
-        <div style="margin:0;font-size:0.82rem;color:#6ee7b7;line-height:1.6;"
-             dir="auto">
-            ${renderBundleSuggested(pricing.bundleSuggestion)}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px;">
+        <div style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.18);border-radius:12px;padding:13px;">
+            <small style="display:block;color:#fbbf24;font-weight:900;font-size:.62rem;text-transform:uppercase;margin-bottom:6px;">
+                ${isAr ? 'السعر الذي أدخلته' : isEn ? 'User price' : 'Prix utilisateur'}
+            </small>
+            <strong style="color:white;font-size:.96rem;overflow-wrap:anywhere;">${esc(userPriceRange || '—')}</strong>
         </div>
-    </div>` : ''}
+        <div style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.18);border-radius:12px;padding:13px;">
+            <small style="display:block;color:#67e8f9;font-weight:900;font-size:.62rem;text-transform:uppercase;margin-bottom:6px;">
+                ${isAr ? 'الأسعار المرصودة' : isEn ? 'Observed range' : 'Fourchette observée'}
+            </small>
+            <strong style="color:white;font-size:.96rem;">${commerceStats.count ? `${moneyValue(commerceStats.min)} - ${moneyValue(commerceStats.max)}` : '—'}</strong>
+        </div>
+        <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.18);border-radius:12px;padding:13px;">
+            <small style="display:block;color:#6ee7b7;font-weight:900;font-size:.62rem;text-transform:uppercase;margin-bottom:6px;">
+                ${isAr ? 'السعر الموصى به' : isEn ? 'Recommended range' : 'Prix recommandé'}
+            </small>
+            <strong style="color:white;font-size:.96rem;">${rangeValue(commerceRecommended.recommendedRange)}</strong>
+        </div>
+        <div style="background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.18);border-radius:12px;padding:13px;">
+            <small style="display:block;color:#c4b5fd;font-weight:900;font-size:.62rem;text-transform:uppercase;margin-bottom:6px;">
+                ${isAr ? 'مستوى الثقة' : isEn ? 'Confidence' : 'Confiance'}
+            </small>
+            <strong style="color:white;font-size:.96rem;">${esc(commerceRecommended.confidence || commerceDeduced.pricingConfidence || 'LOW')}</strong>
+        </div>
+    </div>
 
-    ${pricing.decoy ? `
-    <div style="background:rgba(236,72,153,0.06);border:1px solid rgba(236,72,153,0.2);
-         border-radius:12px;padding:13px;">
-        <small style="color:#ec4899;font-weight:800;font-size:0.6rem;
-               text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:7px;">
-            <i class="fas fa-magic"></i> Decoy Effect
-        </small>
-        <p style="margin:0;font-size:0.82rem;color:#f9a8d4;line-height:1.6;"
-           dir="auto">${esc(pricing.decoy)}</p>
-    </div>` : ''}
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px;">
+        <div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:13px;">
+            <small style="color:#fbbf24;font-weight:900;font-size:.62rem;text-transform:uppercase;display:block;margin-bottom:7px;">
+                ${isAr ? 'قرار السعر' : isEn ? 'Pricing decision' : 'Décision prix'}
+            </small>
+            <p style="margin:0;color:#fde68a;font-size:.84rem;line-height:1.65;" dir="auto">${esc(commerceRecommended.pricingRationale || pricing.priceVerdict || (isAr ? 'لا توجد بيانات سعرية كافية.' : isEn ? 'Not enough reliable price data.' : 'Données prix fiables insuffisantes.'))}</p>
+            <div style="margin-top:8px;color:#94a3b8;font-size:.72rem;line-height:1.5;" dir="auto">
+                ${esc(commerceRecommended.formula || (isAr ? 'السعر الموصى = الأسعار المرصودة + سعر المستخدم + الثقة + الضمان/التوصيل' : isEn ? 'recommended price = observed median + optional user price + trust + guarantee/delivery' : 'prix recommandé = médiane observée + prix utilisateur optionnel + confiance + garantie/livraison'))}
+            </div>
+        </div>
+        <div style="background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.12);border-radius:12px;padding:13px;">
+            <small style="color:#6ee7b7;font-weight:900;font-size:.62rem;text-transform:uppercase;display:block;margin-bottom:8px;">
+                ${isAr ? 'إشارات الثقة' : isEn ? 'Trust signals' : 'Signaux de confiance'}
+            </small>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                ${trustSignalsList.map(([label, ok]) => `
+                    <span style="border:1px solid rgba(${ok ? '16,185,129' : '148,163,184'},.22);background:rgba(${ok ? '16,185,129' : '148,163,184'},.07);color:${ok ? '#6ee7b7' : '#94a3b8'};padding:4px 8px;border-radius:999px;font-size:.68rem;font-weight:800;">
+                        ${ok ? '✓' : '•'} ${esc(label)}
+                    </span>
+                `).join('')}
+            </div>
+        </div>
+    </div>
 
-    ${pricing.strategy ? `
-    <div style="background:rgba(6,182,212,0.06);border:1px solid rgba(6,182,212,0.2);
-         border-radius:12px;padding:13px;">
-        <small style="color:#06b6d4;font-weight:800;font-size:0.6rem;
-               text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:7px;">
-            <i class="fas fa-chess-queen"></i> Strategy
-        </small>
-        <p style="margin:0;font-size:0.82rem;color:#67e8f9;line-height:1.6;"
-           dir="auto">${esc(pricing.strategy)}</p>
-    </div>` : ''}
+    <details class="report-details" style="border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,0.02);">
+        <summary style="cursor:pointer;color:#c4b5fd;font-weight:900;font-size:.78rem;">
+            ${isAr ? 'عرض التفاصيل والأدلة' : isEn ? 'View details and proof' : 'Voir les détails et preuves'}
+        </summary>
+        <div style="margin-top:12px;display:grid;gap:12px;">
+            ${commerceProducts.length ? `
+            <div>
+                <strong style="color:white;font-size:.82rem;">${isAr ? 'منتجات أو عروض مرصودة' : isEn ? 'Observed products or offers' : 'Produits ou offres observés'}</strong>
+                <div style="display:grid;gap:8px;margin-top:8px;">
+                    ${commerceProducts.slice(0,6).map(p => `
+                    <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">
+                        <div style="min-width:0;">
+                            <div style="color:#e2e8f0;font-size:.78rem;font-weight:800;overflow-wrap:anywhere;">${esc(p.name || '—')}</div>
+                            ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" style="color:#38bdf8;font-size:.68rem;overflow-wrap:anywhere;">${esc(p.url)}</a>` : ''}
+                        </div>
+                        <strong style="color:#10b981;font-size:.76rem;">${p.price ? moneyValue(p.price) : '—'}</strong>
+                    </div>`).join('')}
+                </div>
+            </div>` : ''}
 
-</div>
-    </div>` : '';
+            ${commercePricingPages.length ? `
+            <div>
+                <strong style="color:white;font-size:.82rem;">${isAr ? 'صفحات السعر التي تم فحصها' : isEn ? 'Pricing pages checked' : 'Pages prix vérifiées'}</strong>
+                ${commercePricingPages.map(p => `
+                    <div style="margin-top:7px;color:#94a3b8;font-size:.72rem;">
+                        <a href="${esc(p.url)}" target="_blank" rel="noopener" style="color:#38bdf8;">${esc(p.url)}</a>
+                        <span style="color:#fbbf24;"> · ${p.priceCount || 0} ${isAr ? 'أسعار' : isEn ? 'prices' : 'prix'}</span>
+                    </div>
+                `).join('')}
+            </div>` : ''}
+
+            ${commerceEvidenceLinks.length ? `
+            <div>
+                <strong style="color:white;font-size:.82rem;">${isAr ? 'روابط الأدلة' : isEn ? 'Proof links' : 'Liens de preuve'}</strong>
+                <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;">
+                    ${commerceEvidenceLinks.slice(0,10).map(l => `
+                    <a href="${esc(l.url)}" target="_blank" rel="noopener" style="color:#93c5fd;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.16);padding:5px 9px;border-radius:999px;font-size:.68rem;text-decoration:none;">
+                        ${esc(l.label || l.type || 'link')}
+                    </a>`).join('')}
+                </div>
+            </div>` : ''}
+        </div>
+    </details>
+</div>` : '';
 
     // ══════════════════════════════════════════════════
     // ♟️ BLOC 2 — STRATEGIC BLUEPRINT

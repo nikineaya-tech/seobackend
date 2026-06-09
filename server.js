@@ -28,6 +28,7 @@ const axios = require('axios');
 const cors = require('cors');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -132,6 +133,102 @@ const app = express();
 let server = null;
 const PORT = process.env.PORT || 10000;
 const NODE_ENV = process.env.NODE_ENV || 'production';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || '';
+const supabase = SUPABASE_URL && SUPABASE_SERVICE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+        auth: { persistSession: false, autoRefreshToken: false }
+    })
+    : null;
+
+console.log(supabase
+    ? '[Queue] Supabase connected'
+    : '[Queue] Supabase unavailable - direct processing enabled');
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+async function enqueueJob(type, payload) {
+    if (!supabase) return null;
+
+    const { data, error } = await supabase
+        .from('scrape_jobs')
+        .insert({
+            type,
+            payload: payload || {},
+            status: 'pending'
+        })
+        .select('id')
+        .single();
+
+    if (error) {
+        const queueError = new Error(`QUEUE_ENQUEUE_FAILED: ${error.message}`);
+        queueError.code = 'QUEUE_ENQUEUE_FAILED';
+        throw queueError;
+    }
+
+    return data?.id || null;
+}
+
+async function waitForJobResult(jobId, timeout = 90000) {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeout) {
+        const { data, error } = await supabase
+            .from('scrape_jobs')
+            .select('status,result,error')
+            .eq('id', jobId)
+            .single();
+
+        if (error) throw new Error(`QUEUE_READ_FAILED: ${error.message}`);
+        if (data?.status === 'done') return data.result;
+        if (data?.status === 'error') {
+            throw new Error(data.error || 'Worker processing failed');
+        }
+
+        await sleep(2500);
+    }
+
+    const timeoutError = new Error('QUEUE_TIMEOUT');
+    timeoutError.code = 'QUEUE_TIMEOUT';
+    throw timeoutError;
+}
+
+function queuedJobMiddleware(type) {
+    return async (req, res, next) => {
+        if (!supabase || req.queueBypass === true || req.get('x-daka-worker-bypass') === '1') {
+            return next();
+        }
+
+        let jobId;
+        try {
+            jobId = await enqueueJob(type, req.body || {});
+        } catch (error) {
+            console.warn(`[Queue] ${type} enqueue failed, using direct processing:`, error.message);
+            return next();
+        }
+
+        if (!jobId) return next();
+
+        if (req.body?.async === true) {
+            return res.json({ success: true, jobId, status: 'queued' });
+        }
+
+        try {
+            const result = await waitForJobResult(jobId, 90000);
+            return res.json(result);
+        } catch (error) {
+            const status = error.code === 'QUEUE_TIMEOUT' ? 504 : 500;
+            return res.status(status).json({
+                success: false,
+                jobId,
+                error: error.code || 'QUEUE_PROCESSING_FAILED',
+                message: error.code === 'QUEUE_TIMEOUT'
+                    ? 'Analyse trop longue - réessayez dans quelques secondes.'
+                    : error.message
+            });
+        }
+    };
+}
 
 // Trust proxy for Render.com
 app.set('trust proxy', 1);
@@ -226,7 +323,7 @@ if (!CONFIG.SERPAPI_KEY) {
 if (!CONFIG.OPENROUTER_KEY) {
     console.error('❌ OPENROUTER_KEY manquante - CRITIQUE!');
     console.error('💡 Ajoute OPENROUTER_API_KEY dans ton fichier .env');
-    process.exit(1);
+    if (process.env.WORKER_MODE !== 'true') process.exit(1);
 }
 
 console.log('✅ Configuration validée:', {
@@ -2834,6 +2931,416 @@ function safeUserContextFromBody(body = {}) {
     knownCompetitors: cleanProofArray(ctx.knownCompetitors || body.knownCompetitors, 4, 120),
     cityOrRegion: cleanProofText(ctx.cityOrRegion || body.cityOrRegion, 90)
   };
+}
+
+function uniqueByKey(items = [], getKey = x => x) {
+  const seen = new Set();
+  return (items || []).filter(item => {
+    const key = String(getKey(item) || '').trim().toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function medianNumber(values = []) {
+  const nums = values.map(Number).filter(n => Number.isFinite(n) && n > 0).sort((a, b) => a - b);
+  if (!nums.length) return null;
+  const mid = Math.floor(nums.length / 2);
+  return nums.length % 2 ? nums[mid] : (nums[mid - 1] + nums[mid]) / 2;
+}
+
+function compactEvidenceText(v, max = 180) {
+  return cleanProofText(String(v || '').replace(/\s+/g, ' '), max);
+}
+
+function getInternalUrl(rawUrl, baseUrl) {
+  try {
+    const base = new URL(baseUrl);
+    const u = new URL(rawUrl, baseUrl);
+    if (!['http:', 'https:'].includes(u.protocol)) return null;
+    if (u.hostname.replace(/^www\./, '') !== base.hostname.replace(/^www\./, '')) return null;
+    return u.href.split('#')[0];
+  } catch {
+    return null;
+  }
+}
+
+function extractUserPriceSignal(userPriceRange = '') {
+  const text = compactEvidenceText(userPriceRange, 120);
+  if (!text) return { raw: '', prices: [], median: null, currency: null };
+  const candidates = extractTextPrices(text, text);
+  const prices = uniqueByKey(candidates, p => `${p.value}:${p.currency || ''}`)
+    .map(p => ({
+      value: p.value,
+      currency: p.currency || detectCurrency(text) || null,
+      raw: p.raw || text,
+      source: 'user',
+      kind: 'user-current',
+      confidence: 0.72,
+      context: 'optional_user_price_range'
+    }));
+  return {
+    raw: text,
+    prices,
+    median: medianNumber(prices.map(p => p.value)),
+    currency: prices.find(p => p.currency)?.currency || detectCurrency(text) || null
+  };
+}
+
+function buildStrategicPricingFromCommerce(observed = {}, userSignal = {}, trustSignals = {}) {
+  const observedPrices = (observed.priceCandidates || []).map(p => Number(p.value)).filter(n => Number.isFinite(n) && n > 0);
+  const observedMedian = medianNumber(observedPrices);
+  const userMedian = userSignal?.median || null;
+  const base = observedMedian
+    ? (userMedian ? (observedMedian * 0.75 + userMedian * 0.25) : observedMedian)
+    : userMedian;
+
+  const currency =
+    (observed.priceCandidates || []).find(p => p.currency)?.currency ||
+    userSignal?.currency ||
+    observed.priceStats?.currency ||
+    null;
+
+  const hasGuarantee = !!(trustSignals.hasGuarantee || trustSignals.hasMoneyBackGuarantee || trustSignals.hasReturnPolicy);
+  const hasDelivery = !!trustSignals.hasDelivery;
+  const hasReviews = !!trustSignals.hasReviews;
+  const hasWhatsApp = !!trustSignals.hasWhatsApp;
+  const trustScore = [
+    trustSignals.hasSSL,
+    hasWhatsApp,
+    hasReviews,
+    hasGuarantee,
+    hasDelivery,
+    trustSignals.hasFAQ,
+    trustSignals.hasPaymentLogos,
+    trustSignals.hasLegalPages
+  ].filter(Boolean).length;
+
+  const confidence = observedPrices.length >= 3 && observed.pricingPages?.length
+    ? 'HIGH'
+    : (observedPrices.length || userMedian ? 'MEDIUM' : 'LOW');
+
+  if (!base) {
+    return {
+      defensivePrice: null,
+      recommendedRange: null,
+      premiumPrice: null,
+      currency,
+      confidence: 'LOW',
+      pricingRationale: 'No reliable observed price or optional user price was available.',
+      formula: 'recommended price = observed median + optional user price + trust adjustment + guarantee/delivery adjustment',
+      nextActions: ['Expose a clear price or pricing path before asking visitors to act.']
+    };
+  }
+
+  const trustAdjustment = trustScore >= 6 ? 0.08 : trustScore >= 4 ? 0.03 : -0.05;
+  const guaranteeDeliveryAdjustment = (hasGuarantee ? 0.04 : 0) + (hasDelivery ? 0.03 : 0) + (hasReviews ? 0.02 : 0);
+  const adjusted = base * (1 + trustAdjustment + guaranteeDeliveryAdjustment);
+  const round = (n) => {
+    const rounded = typeof roundPsychologicalPrice === 'function'
+      ? roundPsychologicalPrice(n, currency || 'MAD')
+      : Math.round(n);
+    return Number.isFinite(rounded) && rounded > 0 ? rounded : Math.round(n);
+  };
+
+  return {
+    defensivePrice: round(adjusted * 0.9),
+    recommendedRange: {
+      min: round(adjusted * 0.96),
+      max: round(adjusted * 1.08)
+    },
+    premiumPrice: round(adjusted * 1.2),
+    currency,
+    confidence,
+    pricingRationale: observedMedian
+      ? 'Based on observed prices, then adjusted by visible trust, guarantee and delivery signals.'
+      : 'Based on the optional user price because no reliable observed price was found.',
+    formula: 'recommended price = median(observed prices) + optional user price adjustment + trust adjustment + guarantee/delivery adjustment',
+    inputs: {
+      observedMedian,
+      userMedian,
+      trustAdjustment,
+      guaranteeDeliveryAdjustment,
+      observedPricesCount: observedPrices.length
+    },
+    nextActions: confidence === 'LOW'
+      ? ['Add a visible price, guarantee, delivery promise and proof close to the main action.']
+      : ['Keep the recommended range near the main action and justify it with guarantee, delivery and proof.']
+  };
+}
+
+function extractCommerceSnapshotFromHtml(html = '', pageUrl = '') {
+  const $ = cheerio.load(html || '');
+  const bodyText = compactEvidenceText($('body').text(), 25000);
+  const baseUrl = pageUrl;
+  const priceCandidates = [
+    ...extractTextPrices(bodyText, html),
+    ...extractDomPrices($, html)
+  ].map(p => ({ ...p, pageUrl: baseUrl }));
+
+  const pricingLinkRegex = /(pricing|price|tarif|prix|offre|offers|plans|abonnement|subscription|الأسعار|السعر|العروض|التسعير)/i;
+  const productLinkRegex = /(product|produit|shop|store|boutique|collection|item|article|catalog|منتج|متجر)/i;
+
+  const links = $('a[href]').map((_, el) => {
+    const href = getInternalUrl($(el).attr('href'), baseUrl);
+    const text = compactEvidenceText($(el).text() || $(el).attr('aria-label'), 90);
+    return href ? { href, text } : null;
+  }).get().filter(Boolean);
+
+  const pricingLinks = uniqueByKey(
+    links.filter(l => pricingLinkRegex.test(`${l.text} ${l.href}`)),
+    l => l.href
+  ).slice(0, 2);
+
+  const productCards = [];
+  const cardSelectors = [
+    '[class*="product"]',
+    '[class*="card"]',
+    'li[class*="item"]',
+    '.woocommerce ul.products li',
+    '[data-product-id]',
+    '[itemtype*="Product"]'
+  ];
+
+  $(cardSelectors.join(',')).each((_, el) => {
+    if (productCards.length >= 12) return;
+    const node = $(el);
+    const text = compactEvidenceText(node.text(), 360);
+    if (!text || text.length < 12) return;
+    const url = getInternalUrl(node.find('a[href]').first().attr('href'), baseUrl);
+    const image = node.find('img').first().attr('src') || node.find('img').first().attr('data-src') || null;
+    const name =
+      compactEvidenceText(node.find('h1,h2,h3,[class*="title"],[class*="name"]').first().text(), 120) ||
+      compactEvidenceText(node.find('a[href]').first().text(), 120) ||
+      text.substring(0, 90);
+    const cardPrices = extractTextPrices(text, text).map(p => ({ ...p, pageUrl: baseUrl, productName: name }));
+    if (!url && !image && !cardPrices.length && !productLinkRegex.test(text)) return;
+    productCards.push({
+      name,
+      url,
+      image,
+      cta: compactEvidenceText(node.find('button,a.btn,.button,[class*="cta"]').first().text(), 80),
+      price: cardPrices[0]?.value || null,
+      currency: cardPrices[0]?.currency || null,
+      textSample: text.substring(0, 220),
+      priceCandidates: cardPrices
+    });
+  });
+
+  const trustSignals = {
+    hasSSL: /^https:/i.test(baseUrl),
+    hasWhatsApp: /whatsapp|wa\.me/i.test(html),
+    hasReviews: /(avis|review|reviews|testimonial|rating|étoile|etoile|تقييم|آراء|مراجعة)/i.test(bodyText),
+    hasGuarantee: /(garantie|guarantee|money back|satisfait|refund|ضمان|استرجاع)/i.test(bodyText),
+    hasReturnPolicy: /(retour|return policy|politique de retour|استبدال|إرجاع)/i.test(bodyText),
+    hasDelivery: /(livraison|delivery|shipping|expédition|توصيل|شحن)/i.test(bodyText),
+    hasFAQ: /(faq|questions fréquentes|frequently asked|الأسئلة الشائعة)/i.test(bodyText),
+    hasPaymentLogos: /(visa|mastercard|paypal|stripe|cmi|cash on delivery|paiement à la livraison)/i.test(html),
+    hasLegalPages: /(privacy|terms|conditions|mentions légales|politique de confidentialité)/i.test(bodyText),
+    socialLinks: uniqueByKey(links.filter(l => /(facebook|instagram|linkedin|tiktok|youtube|x\.com|twitter)/i.test(l.href)), l => l.href).slice(0, 6)
+  };
+
+  const seoSignals = {
+    title: compactEvidenceText($('title').text(), 120),
+    metaDescription: compactEvidenceText($('meta[name="description"]').attr('content'), 180),
+    h1: $('h1').map((_, el) => compactEvidenceText($(el).text(), 120)).get().filter(Boolean).slice(0, 5),
+    h2: $('h2').map((_, el) => compactEvidenceText($(el).text(), 120)).get().filter(Boolean).slice(0, 8),
+    schemaCount: $('script[type="application/ld+json"]').length,
+    imageCount: $('img').length,
+    missingAltCount: $('img').filter((_, el) => !$(el).attr('alt')).length
+  };
+
+  return {
+    productCards: uniqueByKey(productCards, p => p.url || p.name).slice(0, 6),
+    pricingLinks,
+    priceCandidates,
+    trustSignals,
+    seoSignals,
+    evidenceLinks: [
+      ...pricingLinks.map(l => ({ type: 'pricing', url: l.href, label: l.text || 'Pricing' })),
+      ...links.filter(l => productLinkRegex.test(`${l.text} ${l.href}`)).slice(0, 6).map(l => ({ type: 'product-link', url: l.href, label: l.text || 'Product' }))
+    ]
+  };
+}
+
+async function exploreFunnelCommerce(url, options = {}) {
+  const startedAt = Date.now();
+  const lang = options.lang || 'fr';
+  const userContext = options.userContext || {};
+  const userSignal = extractUserPriceSignal(userContext.priceRange || '');
+  const cacheKey = `funnel-commerce-v1:${url}:${userSignal.raw || 'no-user-price'}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return { ...cached, fromCache: true };
+
+  const empty = (reason = 'NO_COMMERCE_SIGNAL') => ({
+    success: false,
+    mode: 'balanced',
+    reason,
+    elapsed: Date.now() - startedAt,
+    observed: {
+      products: [],
+      pricingPages: [],
+      priceStats: { count: 0, min: null, max: null, median: null, currency: userSignal.currency || null },
+      trustSignals: {},
+      seoSignals: {},
+      evidenceLinks: [],
+      priceCandidates: []
+    },
+    userContext: { userPriceRange: userSignal.raw, userPrices: userSignal.prices.map(p => p.value) },
+    deduced: { productIntent: 'unknown', offerType: 'unknown', pricingConfidence: 'LOW', trustConfidence: 'LOW' },
+    recommended: buildStrategicPricingFromCommerce({}, userSignal, {})
+  });
+
+  const softTimeoutMs = Number(process.env.FUNNEL_COMMERCE_TIMEOUT_MS || 14000);
+
+  const run = async () => {
+    let browserSession = null;
+    try {
+      browserSession = await launchPlaywright(url);
+      let html = browserSession?.html || '';
+      let snapshot = null;
+
+      if (browserSession?.page) {
+        const page = browserSession.page;
+        await page.evaluate(async () => {
+          window.scrollTo(0, Math.floor(document.body.scrollHeight * 0.45));
+          await new Promise(resolve => setTimeout(resolve, 450));
+          window.scrollTo(0, document.body.scrollHeight);
+        }).catch(() => {});
+
+        await page.locator('button, a').filter({ hasText: /voir plus|load more|more|plus|عرض المزيد|المزيد/i }).first().click({ timeout: 1200 }).catch(() => {});
+        await page.waitForTimeout(500).catch(() => {});
+        html = await page.content().catch(() => html);
+      }
+
+      snapshot = extractCommerceSnapshotFromHtml(html, url);
+
+      const productUrls = uniqueByKey(
+        snapshot.productCards.map(p => p.url).filter(Boolean),
+        x => x
+      ).slice(0, 3);
+
+      const pricingUrls = uniqueByKey(snapshot.pricingLinks.map(l => l.href).filter(Boolean), x => x).slice(0, 1);
+      const detailUrls = uniqueByKey([...pricingUrls, ...productUrls], x => x).slice(0, 4);
+
+      const detailPages = [];
+      for (const detailUrl of detailUrls) {
+        if (Date.now() - startedAt > softTimeoutMs - 2500) break;
+        let detailSession = null;
+        try {
+          detailSession = await launchPlaywright(detailUrl);
+          const detailHtml = detailSession?.page
+            ? await detailSession.page.content().catch(() => detailSession?.html || '')
+            : (detailSession?.html || '');
+          const detail = extractCommerceSnapshotFromHtml(detailHtml, detailUrl);
+          detailPages.push({
+            url: detailUrl,
+            kind: pricingUrls.includes(detailUrl) ? 'pricing' : 'product',
+            products: detail.productCards,
+            prices: detail.priceCandidates,
+            trustSignals: detail.trustSignals,
+            seoSignals: detail.seoSignals,
+            evidenceLinks: detail.evidenceLinks
+          });
+        } catch (e) {
+          detailPages.push({ url: detailUrl, kind: pricingUrls.includes(detailUrl) ? 'pricing' : 'product', error: e.message, prices: [] });
+        } finally {
+          await closeBrowser(detailSession).catch(() => {});
+        }
+      }
+
+      const detailPriceCandidates = detailPages.flatMap(p => p.prices || []);
+      const productDetailMap = new Map(detailPages.filter(p => p.kind === 'product').map(p => [p.url, p]));
+      const products = snapshot.productCards.map(p => {
+        const detail = p.url ? productDetailMap.get(p.url) : null;
+        const detailPrice = detail?.prices?.[0];
+        return {
+          ...p,
+          detailScraped: !!detail && !detail.error,
+          detailUrl: p.url || null,
+          price: p.price || detailPrice?.value || null,
+          currency: p.currency || detailPrice?.currency || null,
+          trustSignals: detail?.trustSignals || null
+        };
+      }).slice(0, 6);
+
+      const pricingPages = detailPages.filter(p => p.kind === 'pricing').map(p => ({
+        url: p.url,
+        priceCount: (p.prices || []).length,
+        prices: (p.prices || []).slice(0, 8).map(x => ({ value: x.value, currency: x.currency, raw: x.raw, source: x.source })),
+        error: p.error || null
+      }));
+
+      const priceCandidates = uniqueByKey([
+        ...(snapshot.priceCandidates || []),
+        ...products.flatMap(p => p.priceCandidates || []),
+        ...detailPriceCandidates,
+        ...userSignal.prices
+      ], p => `${p.value}:${p.currency || ''}:${p.source || ''}:${p.raw || ''}`);
+
+      const numericPrices = priceCandidates.map(p => Number(p.value)).filter(n => Number.isFinite(n) && n > 0);
+      const mergedTrust = [snapshot, ...detailPages].reduce((acc, item) => {
+        const sig = item.trustSignals || {};
+        Object.keys(sig).forEach(k => {
+          if (Array.isArray(sig[k])) acc[k] = uniqueByKey([...(acc[k] || []), ...sig[k]], x => x.url || x);
+          else acc[k] = Boolean(acc[k] || sig[k]);
+        });
+        return acc;
+      }, {});
+
+      const observed = {
+        products,
+        pricingPages,
+        priceStats: {
+          count: numericPrices.length,
+          min: numericPrices.length ? Math.min(...numericPrices) : null,
+          max: numericPrices.length ? Math.max(...numericPrices) : null,
+          median: medianNumber(numericPrices),
+          currency: priceCandidates.find(p => p.currency)?.currency || userSignal.currency || null
+        },
+        trustSignals: mergedTrust,
+        seoSignals: snapshot.seoSignals,
+        evidenceLinks: uniqueByKey([
+          ...(snapshot.evidenceLinks || []),
+          ...detailPages.flatMap(p => p.evidenceLinks || []),
+          ...products.filter(p => p.url).map(p => ({ type: 'product', url: p.url, label: p.name }))
+        ], e => e.url).slice(0, 16),
+        priceCandidates
+      };
+
+      const productIntent = products.length ? 'product_or_catalog' : (pricingPages.length ? 'pricing_or_plans' : 'unknown');
+      const trustCount = Object.entries(mergedTrust).filter(([, v]) => Array.isArray(v) ? v.length : !!v).length;
+      const recommended = buildStrategicPricingFromCommerce(observed, userSignal, mergedTrust);
+
+      const result = {
+        success: products.length > 0 || pricingPages.length > 0 || numericPrices.length > 0,
+        mode: 'balanced',
+        elapsed: Date.now() - startedAt,
+        observed,
+        userContext: { userPriceRange: userSignal.raw, userPrices: userSignal.prices.map(p => p.value) },
+        deduced: {
+          productIntent,
+          offerType: products.length ? 'product' : pricingPages.length ? 'pricing_page' : 'unknown',
+          pricingConfidence: recommended.confidence,
+          trustConfidence: trustCount >= 6 ? 'HIGH' : trustCount >= 3 ? 'MEDIUM' : 'LOW'
+        },
+        recommended
+      };
+
+      cache.set(cacheKey, result, 60 * 10);
+      return result;
+    } catch (e) {
+      return empty(e.message || 'COMMERCE_EXPLORATION_ERROR');
+    } finally {
+      await closeBrowser(browserSession).catch(() => {});
+    }
+  };
+
+  return Promise.race([
+    run(),
+    new Promise(resolve => setTimeout(() => resolve(empty('COMMERCE_EXPLORATION_TIMEOUT')), softTimeoutMs))
+  ]);
 }
 
 function isPublicHttpUrl(rawUrl = '') {
@@ -6727,6 +7234,9 @@ app.get('/api/behavior-report', (req, res) => {
 // 📤 EXPORTS
 // ════════════════════════════════════════════════════════════════════════════════
 module.exports = {
+    app,
+    enqueueJob,
+    waitForJobResult,
     trackSessionStart,
     trackScrapeResult,
     trackLocalScore,
@@ -6775,7 +7285,7 @@ function buildCompetitorsRequestKey({ query = '', geo = '', lang = 'fr', url = '
     ].join('|');
 }
 
-app.post('/api/competitors', warRoomLimiter, async (req, res) => {
+app.post('/api/competitors', warRoomLimiter, queuedJobMiddleware('competitors'), async (req, res) => {
     const startTime = Date.now();
     const isProd    = process.env.NODE_ENV === 'production';
 
@@ -8388,7 +8898,7 @@ function getFeatureI18n(lang = 'fr') {
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
 // ============================================================================
-app.post('/api/analyze-funnel', analysisLimiter, async (req, res) => {
+app.post('/api/analyze-funnel', analysisLimiter, queuedJobMiddleware('funnel'), async (req, res) => {
     const startTime = Date.now();
     const requestId = `SPY12-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
     
@@ -8479,6 +8989,46 @@ const langInstr = isAr
                 redirectIntel:    { totalRedirects: 0, isFunnelRedirect: false },
             };
         }
+
+        const commerceExploration = await exploreFunnelCommerce(validUrl, {
+            lang: validLang,
+            userContext: safeContext,
+            baseScrape: scrape,
+            requestId
+        });
+
+        const commercePriceCandidates = Array.isArray(commerceExploration?.observed?.priceCandidates)
+            ? commerceExploration.observed.priceCandidates
+            : [];
+
+        if (commercePriceCandidates.length) {
+            scrape.priceIntel = finalizePriceIntel([
+                ...((Array.isArray(scrape.priceIntel?.prices) && scrape.priceIntel.prices) || []),
+                ...commercePriceCandidates
+            ], scrape.html || '');
+        }
+
+        const commerceTrust = commerceExploration?.observed?.trustSignals || {};
+        if (commerceTrust && Object.keys(commerceTrust).length) {
+            const trustBoolKeys = [
+                'hasSSL', 'hasWhatsApp', 'hasReviews', 'hasGuarantee',
+                'hasMoneyBackGuarantee', 'hasReturnPolicy', 'hasDelivery',
+                'hasFAQ', 'hasPaymentLogos', 'hasLegalPages'
+            ];
+            const trustScoreFromCommerce = trustBoolKeys.filter(k => Boolean(commerceTrust[k])).length;
+            scrape.trustSignals = {
+                ...(scrape.trustSignals || {}),
+                hasSSL: Boolean((scrape.trustSignals?.hasSSL ?? validUrl.startsWith('https')) || commerceTrust.hasSSL),
+                hasWhatsApp: Boolean(scrape.trustSignals?.hasWhatsApp || commerceTrust.hasWhatsApp),
+                hasReviews: Boolean(scrape.trustSignals?.hasReviews || commerceTrust.hasReviews),
+                hasMoneyBackGuarantee: Boolean(scrape.trustSignals?.hasMoneyBackGuarantee || commerceTrust.hasGuarantee || commerceTrust.hasReturnPolicy),
+                hasPaymentLogos: Boolean(scrape.trustSignals?.hasPaymentLogos || commerceTrust.hasPaymentLogos),
+                hasLegalPages: Boolean(scrape.trustSignals?.hasLegalPages || commerceTrust.hasLegalPages),
+                hasCOD: Boolean(scrape.trustSignals?.hasCOD || commerceTrust.hasDelivery),
+                trustScore: scrape.trustSignals?.trustScore ?? Math.min(10, Math.max(1, trustScoreFromCommerce + 2))
+            };
+        }
+        scrape.commerceExploration = commerceExploration;
 
         // ══════════════════════════════════════════════════════════════
         // 4. EXTRACTION RÉELLE COMPLÈTE
@@ -9858,6 +10408,7 @@ const finalResponse = {
     webCharte:        r1Safe.webCharte        || null,
     pageArchitecture: r1Safe.pageArchitecture || null,
     aidaAnalysis:     r1Safe.aidaAnalysis     || null,
+    commerceExploration,
 
     funnelMapping:     r2Safe.funnelMapping     || null,
     pricingPsychology: r2Safe.pricingPsychology || null,
@@ -9915,6 +10466,7 @@ const finalResponse = {
     quickLocalScore,
     imagesCount,
     ctaCoverage,
+    commerceExploration,
 
     evidence: {
         h1: h1Main,
@@ -9930,7 +10482,8 @@ const finalResponse = {
         sectionsDetected: sectionsDetailed.map(s => s.type),
         sectionsDetailed,
         missingCriticalSections,
-        localScore
+        localScore,
+        commerceExploration
     },
 },
 
@@ -11383,6 +11936,61 @@ console.log('✅ generateAIDAFunnel V10 GOD TIER loaded');
 
 
 
+app.get('/api/job/:id', async (req, res) => {
+    if (!supabase) {
+        return res.json({
+            jobId: req.params.id,
+            status: 'no_queue',
+            result: null,
+            error: null,
+            timing: { created: null, started: null, finished: null, durationMs: null }
+        });
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('scrape_jobs')
+            .select('id,status,result,error,created_at,started_at,finished_at')
+            .eq('id', req.params.id)
+            .single();
+
+        if (error || !data) {
+            return res.status(404).json({
+                jobId: req.params.id,
+                status: 'not_found',
+                result: null,
+                error: error?.message || 'Job not found',
+                timing: { created: null, started: null, finished: null, durationMs: null }
+            });
+        }
+
+        const started = data.started_at ? new Date(data.started_at).getTime() : null;
+        const finished = data.finished_at ? new Date(data.finished_at).getTime() : null;
+
+        return res.json({
+            jobId: data.id,
+            status: data.status,
+            result: data.status === 'done' ? data.result : null,
+            error: data.status === 'error' ? data.error : null,
+            timing: {
+                created: data.created_at || null,
+                started: data.started_at || null,
+                finished: data.finished_at || null,
+                durationMs: started && finished ? Math.max(0, finished - started) : null
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({
+            jobId: req.params.id,
+            status: 'error',
+            result: null,
+            error: error.message,
+            timing: { created: null, started: null, finished: null, durationMs: null }
+        });
+    }
+});
+
+
 // ========== ROOT ENDPOINT ==========
 app.get('/', (req, res) => {
     res.json({
@@ -11526,7 +12134,7 @@ app.post('/api/generate', async (req, res) => {
 });
 
 // ========== KEYWORDS GENERATOR ==========
-app.post('/api/generate-keywords', async (req, res) => {
+app.post('/api/generate-keywords', queuedJobMiddleware('keywords'), async (req, res) => {
     const start = Date.now();
     try {
         const {
@@ -11717,7 +12325,7 @@ async function getDeepStructure(html, url) {
 // =================================================================
 // ☢️ MODULE SEO TECHNIQUE : GOD MODE V2 (ANTI-CRASH & MULTI-LANG)
 
-app.post('/api/technical-seo', async (req, res) => {
+app.post('/api/technical-seo', queuedJobMiddleware('technical'), async (req, res) => {
     const startTime = Date.now();
     const requestId = `TECH-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
 
@@ -15463,9 +16071,11 @@ function gracefulShutdown(signal) {
     }
 }
 
-// Register shutdown handlers
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+// Register HTTP shutdown handlers only when this file is the API entry point.
+if (require.main === module && process.env.WORKER_MODE !== 'true') {
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+}
 
 // Uncaught exception handler
 process.on('uncaughtException', (error) => {
@@ -15908,6 +16518,35 @@ function buildPDFFromReport(R) {
       y+=27;
     }
 
+    if (F.commerce) {
+      var CM = F.commerce;
+      var OBS = CM.observed || {};
+      var REC = CM.recommended || {};
+      var stats = OBS.priceStats || {};
+      var cur = REC.currency || stats.currency || '';
+      var fmtMoney = function(v) {
+        var n = Number(v);
+        return Number.isFinite(n) && n > 0 ? (String(Math.round(n)) + (cur ? ' ' + cur : '')) : '---';
+      };
+      divider();
+      secTitle(isEn?'OFFER, PRICE & TRUST':'OFFRE, PRIX ET CONFIANCE', C.orange);
+      twoCol([
+        {label:'Products / offers', value:String((OBS.products || []).length || 0), color:C.cyan},
+        {label:'Pricing pages', value:String((OBS.pricingPages || []).length || 0), color:C.purple},
+        {label:'Observed range', value:(stats.min || stats.max) ? (fmtMoney(stats.min)+' - '+fmtMoney(stats.max)) : '---', color:C.orange},
+        {label:'Recommended', value:REC.recommendedRange ? (fmtMoney(REC.recommendedRange.min)+' - '+fmtMoney(REC.recommendedRange.max)) : '---', color:C.green},
+        {label:'Defensive', value:fmtMoney(REC.defensivePrice), color:C.blue},
+        {label:'Premium', value:fmtMoney(REC.premiumPrice), color:C.pink},
+      ]);
+      if (REC.pricingRationale) row('Pricing logic', san(REC.pricingRationale, 160));
+      if ((OBS.products || []).length) {
+        row('Observed offers', (OBS.products || []).slice(0, 5).map(function(p){ return san((p.name || 'offer') + (p.price ? ' - ' + fmtMoney(p.price) : ''), 70); }).join(' / '));
+      }
+      if ((OBS.evidenceLinks || []).length) {
+        row('Proof links', (OBS.evidenceLinks || []).slice(0, 4).map(function(l){ return san(l.url || l.label || '', 80); }).join(' / '));
+      }
+    }
+
     if (F.strategy) {
       divider();
       secTitle(isEn?'STRATEGIC BLUEPRINT':'BLUEPRINT STRATEGIQUE', C.purple);
@@ -16103,7 +16742,8 @@ const ALLOWED_ORIGINS = [
 
 
 
-// Start server
+// Start server only for the Render API entry point, never when imported by the worker.
+if (require.main === module && process.env.WORKER_MODE !== 'true') {
 server = app.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '═'.repeat(70));
     console.log('🚀 SEO GEN PRO API v3.0.0 - ULTRA COMPETITIVE MODE');
@@ -16143,6 +16783,7 @@ server = app.listen(PORT, '0.0.0.0', () => {
     console.log('═'.repeat(70));
     console.log('');
 });
+}
 
 // ═══════════════════════════════════════════════════════════════
 // ROUTE PDF — Structure les données pour jsPDF frontend
@@ -16307,6 +16948,7 @@ app.post('/api/prepare-global-report', async (req, res) => {
                     hasMoneyBack:    funnel.deepScrapeData?.trustSignals?.hasMoneyBackGuarantee  || false,
                     hasPaymentLogos: funnel.deepScrapeData?.trustSignals?.hasPaymentLogos        || false,
                 },
+                commerce: funnel.commerceExploration || funnel.rawIntel?.commerceExploration || null,
                 aida: {
                     headline:    funnel.funnel?.attention?.headline                  || '',
                     mainBenefit: funnel.funnel?.interest?.mainBenefit                || '',
@@ -16394,7 +17036,7 @@ app.use((error, req, res, next) => {
 
 console.log('✅ Error handlers configured');
 // Handle server errors
-server.on('error', (error) => {
+if (server) server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
         console.error(`❌ Port ${PORT} is already in use`);
         process.exit(1);
