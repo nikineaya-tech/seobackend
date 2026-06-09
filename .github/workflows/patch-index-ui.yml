@@ -6,7 +6,7 @@ on:
       - main
     paths:
       - 'index.html'
-      - 'scripts/apply-index-ui-hotfix.cjs'
+      - 'scripts/force-index-video-hotfix.cjs'
       - '.github/workflows/patch-index-ui.yml'
   workflow_dispatch:
 
@@ -24,7 +24,13 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Apply index UI hotfix directly
-        run: node scripts/apply-index-ui-hotfix.cjs
+        run: node scripts/force-index-video-hotfix.cjs
+
+      - name: Show marker debug
+        run: |
+          grep -n "DAKA_UI_VIDEO_HOTFIX_START" index.html || true
+          grep -n "daka-ui-video-hotfix-js" index.html || true
+          grep -n "daka-loader-video" index.html | head || true
 
       - name: Verify hotfix markers
         run: |
