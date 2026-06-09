@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: seobackend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node scripts/apply-index-ui-hotfix.cjs && node scripts/apply-render-routing-patch.cjs && node server.js
