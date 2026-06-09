@@ -66,8 +66,10 @@ function findBusinessHandler(path) {
 
 function runBusinessHandler(path, payload = {}, timeoutMs) {
     const handler = findBusinessHandler(path);
-    const body    = { ...(payload || {}) };
+    const body = { ...(payload || {}) };
+    const authUserId = body._authUserId || null;
     delete body.async;
+    delete body._authUserId;
 
     const timeout = timeoutMs || JOB_TIMEOUTS.default;
 
@@ -86,7 +88,7 @@ function runBusinessHandler(path, payload = {}, timeoutMs) {
             headers:     { 'x-daka-worker-bypass': '1' },
             queueBypass: true,
             ip:          'railway-worker',
-            user:        null,
+            user:        authUserId ? { id: authUserId } : null,
             get(name)   { return this.headers[String(name || '').toLowerCase()]; },
         };
 

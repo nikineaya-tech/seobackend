@@ -29,6 +29,8 @@ const cors = require('cors');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const { registerAuthRoutes } = require('./supabase-auth-routes');
+const { registerReportRoutes } = require('./supabase-report-routes');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -44,15 +46,11 @@ const {
   detectCurrency,
   normalizePriceValue,
   EMPTY_PRICE_INTEL_OBSERVED,
-  EXTRACTIONSTATUS,
 } = require('./pricing-pipeline-refactored-1');
 
 // ── PRICING FIXES (alias + helpers manquants) ──────────────
 const {
   EXTRACTIONSTATUS,
-  normalizeConfidence,
-  roundPsychologicalPrice,
-  buildPriceIntelLocalSafe,
 } = require('./pricing-fixes');
 function extractJSON(raw) {
   if (!raw || typeof raw !== 'string') return null;
@@ -211,7 +209,10 @@ function queuedJobMiddleware(type) {
 
         let jobId;
         try {
-            jobId = await enqueueJob(type, req.body || {});
+            jobId = await enqueueJob(type, {
+                ...(req.body || {}),
+                _authUserId: req.user?.id || null
+            });
         } catch (error) {
             console.warn(`[Queue] ${type} enqueue failed, using direct processing:`, error.message);
             return next();
@@ -380,7 +381,7 @@ app.use(cors({
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
         'Content-Type', 
         'Authorization', 
@@ -398,6 +399,8 @@ app.use(cors({
 app.use(compression({ level: CONFIG.COMPRESSION_LEVEL }));
 app.use(express.json({ limit: CONFIG.JSON_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: CONFIG.JSON_LIMIT }));
+const authRuntime = registerAuthRoutes(app);
+const requireAuth = authRuntime.requireAuth;
 
 // ═══════════════════════════════════════════════════════════════════
 // STATIC FILES
@@ -447,6 +450,9 @@ const limiter = rateLimit({
 });
 
 app.use('/api/', limiter);
+const reportRuntime = registerReportRoutes(app, { supabase, requireAuth });
+const requireReportQuota = reportRuntime.requireReportQuota;
+const persistGeneratedReport = reportRuntime.persistGeneratedReport;
 
 console.log('✅ PARTIE 1/5: Configuration & Middleware loaded');
 // ═══════════════════════════════════════════════════════════════════
@@ -7295,7 +7301,7 @@ function buildCompetitorsRequestKey({ query = '', geo = '', lang = 'fr', url = '
     ].join('|');
 }
 
-app.post('/api/competitors', warRoomLimiter, queuedJobMiddleware('competitors'), async (req, res) => {
+app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedReport('competitors'), warRoomLimiter, queuedJobMiddleware('competitors'), async (req, res) => {
     const startTime = Date.now();
     const isProd    = process.env.NODE_ENV === 'production';
 
@@ -8908,7 +8914,7 @@ function getFeatureI18n(lang = 'fr') {
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
 // ============================================================================
-app.post('/api/analyze-funnel', analysisLimiter, queuedJobMiddleware('funnel'), async (req, res) => {
+app.post('/api/analyze-funnel', requireAuth, requireReportQuota, persistGeneratedReport('funnel'), analysisLimiter, queuedJobMiddleware('funnel'), async (req, res) => {
     const startTime = Date.now();
     const requestId = `SPY12-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
     
@@ -11946,7 +11952,7 @@ console.log('✅ generateAIDAFunnel V10 GOD TIER loaded');
 
 
 
-app.get('/api/job/:id', async (req, res) => {
+app.get('/api/job/:id', requireAuth, async (req, res) => {
     if (!supabase) {
         return res.json({
             jobId: req.params.id,
@@ -11960,7 +11966,7 @@ app.get('/api/job/:id', async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('scrape_jobs')
-            .select('id,status,result,error,created_at,started_at,finished_at')
+            .select('id,status,result,error,payload,created_at,started_at,finished_at')
             .eq('id', req.params.id)
             .single();
 
@@ -11970,6 +11976,16 @@ app.get('/api/job/:id', async (req, res) => {
                 status: 'not_found',
                 result: null,
                 error: error?.message || 'Job not found',
+                timing: { created: null, started: null, finished: null, durationMs: null }
+            });
+        }
+
+        if (data.payload?._authUserId !== req.user.id) {
+            return res.status(404).json({
+                jobId: req.params.id,
+                status: 'not_found',
+                result: null,
+                error: 'Job not found',
                 timing: { created: null, started: null, finished: null, durationMs: null }
             });
         }
@@ -12144,7 +12160,7 @@ app.post('/api/generate', async (req, res) => {
 });
 
 // ========== KEYWORDS GENERATOR ==========
-app.post('/api/generate-keywords', queuedJobMiddleware('keywords'), async (req, res) => {
+app.post('/api/generate-keywords', requireAuth, requireReportQuota, persistGeneratedReport('keywords'), queuedJobMiddleware('keywords'), async (req, res) => {
     const start = Date.now();
     try {
         const {
@@ -12335,7 +12351,7 @@ async function getDeepStructure(html, url) {
 // =================================================================
 // ☢️ MODULE SEO TECHNIQUE : GOD MODE V2 (ANTI-CRASH & MULTI-LANG)
 
-app.post('/api/technical-seo', queuedJobMiddleware('technical'), async (req, res) => {
+app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGeneratedReport('technical'), queuedJobMiddleware('technical'), async (req, res) => {
     const startTime = Date.now();
     const requestId = `TECH-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
 

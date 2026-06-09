@@ -23,6 +23,7 @@ if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
 
 // ── IMPORTS ──────────────────────────────────────────────────────
 const { processJob } = require('./job-processors');
+const { saveGeneratedReportForUser } = require('./supabase-report-routes');
 
 // ── SUPABASE CLIENT — Node.js 20 WebSocket fix ───────────────────
 const ws = require('ws');
@@ -36,6 +37,7 @@ const WORKER_ID   = process.env.WORKER_ID   || `worker-${Date.now()}`;
 const POLL_MS     = Math.max(500, Number(process.env.POLL_MS     || 2000));
 const MAX_RETRIES = Math.max(1,   Number(process.env.MAX_RETRIES || 3));
 const HEALTH_PORT = Number(process.env.HEALTH_PORT || 8080);
+const REPORT_JOB_TYPES = new Set(['funnel', 'technical', 'competitors', 'keywords']);
 
 // ── METRICS ───────────────────────────────────────────────────────
 const METRICS = {
@@ -136,10 +138,22 @@ async function claimAndProcess() {
         const startMs = Date.now();
 
         try {
-            const result = await processJob(job.type, job.payload || {});
+            let result = await processJob(job.type, job.payload || {});
+            const authUserId = job.payload?._authUserId || null;
+
+            if (result?.success === true && authUserId && REPORT_JOB_TYPES.has(job.type)) {
+                const savedReport = await saveGeneratedReportForUser(supabase, {
+                    userId: authUserId,
+                    type: job.type,
+                    input: job.payload || {},
+                    result,
+                    sourceJobId: job.id
+                });
+                result = { ...result, savedReport };
+            }
+
             const elapsed = Date.now() - startMs;
 
-            
             await updateJob(job.id, {
                 status:      'done',
                 result,

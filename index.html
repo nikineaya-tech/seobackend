@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://seobackend-f81n.onrender.com http://localhost:10000;">
+   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://seobackend-f81n.onrender.com http://localhost:10000;">
 
     <title>Daka - Intelligence marketing et croissance</title>
     <meta name="description" content="Daka transforme les signaux du marché, les pages et les concurrents en actions concrètes pour mieux vendre.">
@@ -13,6 +13,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <!-- Remplace les anciens scripts html2pdf/html2canvas par UNIQUEMENT ceci -->
 
 <!-- Arabe: Amiri font (léger ~45kb base64) -->
@@ -53,6 +54,176 @@
         font-family: Cairo, Inter, sans-serif;
         letter-spacing: 0;
     }
+    .auth-shell {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        min-width: 44px;
+    }
+    .auth-login-btn,
+    .auth-logout-btn {
+        min-height: 40px;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 8px;
+        background: rgba(255,255,255,.06);
+        color: #fff;
+        padding: 8px 11px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font: inherit;
+        font-size: .76rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: border-color .2s ease, background .2s ease, transform .2s ease;
+    }
+    .auth-login-btn:hover,
+    .auth-logout-btn:hover {
+        border-color: rgba(139,92,246,.7);
+        background: rgba(139,92,246,.15);
+        transform: translateY(-1px);
+    }
+    .auth-login-btn:disabled {
+        cursor: not-allowed;
+        opacity: .55;
+        transform: none;
+    }
+    .auth-google-mark {
+        width: 18px;
+        height: 18px;
+        display: block;
+    }
+    .auth-user-info {
+        display: none;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+    }
+    .auth-avatar {
+        width: 34px;
+        height: 34px;
+        flex: 0 0 34px;
+        border-radius: 50%;
+        border: 1px solid rgba(196,181,253,.65);
+        object-fit: cover;
+        background: #161b35;
+    }
+    .auth-user-copy {
+        display: grid;
+        min-width: 0;
+        line-height: 1.1;
+    }
+    .auth-user-copy small {
+        color: #94a3b8;
+        font-size: .58rem;
+        font-weight: 800;
+        text-transform: uppercase;
+    }
+    .auth-user-copy strong {
+        max-width: 120px;
+        overflow: hidden;
+        color: #fff;
+        font-size: .72rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .auth-quota {
+        color: #a7f3d0;
+        font-size: .58rem;
+        font-weight: 800;
+        white-space: nowrap;
+    }
+    .auth-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 20000;
+        display: none;
+        place-items: center;
+        padding: 18px;
+        background: rgba(3,6,18,.82);
+        backdrop-filter: blur(12px);
+    }
+    .auth-modal.active { display: grid; }
+    .auth-modal-panel {
+        width: min(620px, 100%);
+        max-height: min(760px, calc(100vh - 36px));
+        overflow: auto;
+        border: 1px solid rgba(139,92,246,.35);
+        border-radius: 8px;
+        background: #11172b;
+        box-shadow: 0 30px 80px rgba(0,0,0,.55);
+        padding: 20px;
+    }
+    .auth-modal-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+    .auth-modal-head h3 { margin: 0 0 5px; color: #fff; font-size: 1.1rem; }
+    .auth-modal-head p { margin: 0; color: #94a3b8; font-size: .78rem; line-height: 1.5; }
+    .auth-close-btn {
+        width: 36px;
+        height: 36px;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 8px;
+        background: rgba(255,255,255,.05);
+        color: #fff;
+        cursor: pointer;
+    }
+    .auth-provider-grid { display: grid; gap: 10px; }
+    .auth-provider-btn {
+        width: 100%;
+        min-height: 46px;
+        border: 1px solid rgba(255,255,255,.12);
+        border-radius: 8px;
+        background: rgba(255,255,255,.05);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+    .auth-email-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .report-history-list { display: grid; gap: 9px; }
+    .report-history-item {
+        border: 1px solid rgba(255,255,255,.08);
+        border-radius: 8px;
+        background: rgba(255,255,255,.025);
+        padding: 12px;
+        display: grid;
+        grid-template-columns: minmax(0,1fr) auto;
+        gap: 12px;
+        align-items: center;
+    }
+    .report-history-item strong {
+        display: block;
+        overflow: hidden;
+        color: #fff;
+        font-size: .82rem;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .report-history-item small { color: #94a3b8; font-size: .66rem; }
+    .report-history-actions { display: flex; gap: 6px; }
+    .report-history-actions button {
+        width: 34px;
+        height: 34px;
+        border: 1px solid rgba(255,255,255,.1);
+        border-radius: 8px;
+        background: rgba(139,92,246,.12);
+        color: #c4b5fd;
+        cursor: pointer;
+    }
     @media (max-width: 820px) {
         .decision-proof-panel > div:first-child,
         .decision-proof-panel > div:last-child {
@@ -62,6 +233,18 @@
         .context-grid { grid-template-columns: 1fr !important; }
         .card-title { font-size: clamp(1.25rem, 7vw, 2rem) !important; line-height: 1.15 !important; }
         .card-subtitle { font-size: .9rem !important; line-height: 1.55 !important; }
+        .auth-shell { justify-self: end; }
+        .auth-login-label,
+        .auth-user-copy { display: none; }
+        .auth-login-btn,
+        .auth-logout-btn {
+            width: 40px;
+            min-width: 40px;
+            padding: 8px;
+        }
+        .auth-email-row,
+        .report-history-item { grid-template-columns: 1fr; }
+        .report-history-actions { justify-content: flex-start; }
     }
 </style>
     <style>
@@ -2732,9 +2915,65 @@ table tbody td {
                     <i class="fas fa-volume-high"></i>
                 </button>
 
+                <div class="auth-shell" id="auth-shell">
+                    <button id="btn-google-login" class="auth-login-btn" type="button" onclick="openAuthModal()">
+                        <i class="fab fa-google"></i>
+                        <span class="auth-login-label">Connexion</span>
+                    </button>
+                    <div id="user-info" class="auth-user-info">
+                        <img id="user-avatar" class="auth-avatar" alt="">
+                        <span class="auth-user-copy">
+                            <small id="auth-quota" class="auth-quota">0/5</small>
+                            <strong id="user-name"></strong>
+                        </span>
+                        <button class="auth-logout-btn" type="button" onclick="openReportDashboard()" title="Rapports">
+                            <i class="fas fa-clock-rotate-left"></i>
+                        </button>
+                        <button id="btn-logout" class="auth-logout-btn" type="button" onclick="logout()" title="Déconnexion">
+                            <i class="fas fa-right-from-bracket"></i>
+                        </button>
+                    </div>
+                </div>
+
             </div><!-- /header-content -->
         </div><!-- /container -->
     </header>
+
+    <div id="auth-modal" class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+        <div class="auth-modal-panel">
+            <div class="auth-modal-head">
+                <div>
+                    <h3 id="auth-modal-title">Retrouvez vos rapports partout</h3>
+                    <p id="auth-modal-subtitle">Connectez-vous pour lancer une analyse et conserver votre historique.</p>
+                </div>
+                <button class="auth-close-btn" type="button" onclick="closeAuthModal()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="auth-provider-grid">
+                <button class="auth-provider-btn" type="button" onclick="loginWithGoogle()">
+                    <i class="fab fa-google"></i><span id="auth-google-label">Continuer avec Google</span>
+                </button>
+                <div class="auth-email-row">
+                    <input id="auth-email" class="input-field" type="email" autocomplete="email" placeholder="vous@entreprise.com">
+                    <button class="auth-provider-btn" type="button" onclick="loginWithEmail()">
+                        <i class="fas fa-envelope"></i><span id="auth-email-label">Recevoir un lien</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="reports-modal" class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="reports-modal-title">
+        <div class="auth-modal-panel">
+            <div class="auth-modal-head">
+                <div>
+                    <h3 id="reports-modal-title">Vos rapports</h3>
+                    <p id="reports-modal-subtitle">Historique, suivi des prix et liens partageables.</p>
+                </div>
+                <button class="auth-close-btn" type="button" onclick="closeReportDashboard()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div id="report-history-list" class="report-history-list"></div>
+        </div>
+    </div>
 
     <!-- 💜 BULLE EXPORT PDF — Fixed haut droite -->
     <div style="position:fixed;
@@ -4495,6 +4734,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 const mergedOptions = { ...defaultOptions, ...options };
+                const authToken = typeof getAuthAccessToken === 'function'
+                    ? await getAuthAccessToken()
+                    : null;
+                mergedOptions.headers = {
+                    ...defaultOptions.headers,
+                    ...(options.headers || {}),
+                    ...(authToken ? { Authorization: `Bearer ${authToken}` } : {})
+                };
 
                 STATE.requestsCount++;
 
@@ -4514,7 +4761,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     clearTimeout(timeoutId);
 
                     if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                        let errorData = null;
+                        try { errorData = await response.json(); } catch {}
+                        const requestError = new Error(
+                            errorData?.message || errorData?.error || `HTTP ${response.status}: ${response.statusText}`
+                        );
+                        requestError.status = response.status;
+                        requestError.data = errorData;
+                        if (response.status === 401 && typeof openAuthModal === 'function') openAuthModal();
+                        throw requestError;
                     }
 
                     const data = await response.json();
@@ -4574,6 +4829,247 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const api = new APIClient(CONFIG.API_BASE_URL);
 
+let dakaAuthClient = null;
+let currentAuthUser = null;
+let authConfigured = false;
+let resolveAuthReady;
+const authReady = new Promise(resolve => { resolveAuthReady = resolve; });
+
+function authCopy() {
+    const lang = STATE.currentLang || 'fr';
+    if (lang === 'ar') return {
+        login: 'تسجيل الدخول',
+        title: 'احتفظ بتقاريرك أينما كنت',
+        subtitle: 'سجّل الدخول لبدء التحليل وحفظ السجل ومشاركة التقارير.',
+        google: 'المتابعة باستخدام Google',
+        email: 'إرسال رابط الدخول',
+        reports: 'تقاريرك',
+        reportsSub: 'السجل وتتبع الأسعار وروابط المشاركة.',
+        empty: 'لا توجد تقارير محفوظة بعد.',
+        configuredError: 'تسجيل الدخول غير مفعّل بعد.',
+        emailSent: 'تم إرسال رابط الدخول إلى بريدك.',
+        saved: 'تم حفظ التقرير في حسابك.',
+        saveError: 'تعذر حفظ التقرير.'
+    };
+    if (lang === 'en') return {
+        login: 'Sign in',
+        title: 'Keep every report within reach',
+        subtitle: 'Sign in to run analyses, preserve history and share reports.',
+        google: 'Continue with Google',
+        email: 'Send sign-in link',
+        reports: 'Your reports',
+        reportsSub: 'History, price tracking and shareable links.',
+        empty: 'No saved reports yet.',
+        configuredError: 'Sign-in is not configured yet.',
+        emailSent: 'A sign-in link was sent to your email.',
+        saved: 'Report saved to your account.',
+        saveError: 'The report could not be saved.'
+    };
+    return {
+        login: 'Connexion',
+        title: 'Retrouvez vos rapports partout',
+        subtitle: 'Connectez-vous pour lancer une analyse, conserver l’historique et partager vos rapports.',
+        google: 'Continuer avec Google',
+        email: 'Recevoir un lien',
+        reports: 'Vos rapports',
+        reportsSub: 'Historique, suivi des prix et liens partageables.',
+        empty: 'Aucun rapport enregistré pour le moment.',
+        configuredError: 'La connexion n’est pas encore configurée.',
+        emailSent: 'Un lien de connexion a été envoyé par email.',
+        saved: 'Rapport enregistré dans votre compte.',
+        saveError: 'Le rapport n’a pas pu être enregistré.'
+    };
+}
+
+async function getAuthAccessToken() {
+    await Promise.race([authReady, new Promise(resolve => setTimeout(resolve, 2500))]);
+    if (!dakaAuthClient) return null;
+    const { data } = await dakaAuthClient.auth.getSession();
+    return data?.session?.access_token || null;
+}
+
+function refreshAuthCopy() {
+    const copy = authCopy();
+    const loginLabel = document.querySelector('.auth-login-label');
+    if (loginLabel) loginLabel.textContent = copy.login;
+    document.getElementById('auth-modal-title') && (document.getElementById('auth-modal-title').textContent = copy.title);
+    document.getElementById('auth-modal-subtitle') && (document.getElementById('auth-modal-subtitle').textContent = copy.subtitle);
+    document.getElementById('auth-google-label') && (document.getElementById('auth-google-label').textContent = copy.google);
+    document.getElementById('auth-email-label') && (document.getElementById('auth-email-label').textContent = copy.email);
+    document.getElementById('reports-modal-title') && (document.getElementById('reports-modal-title').textContent = copy.reports);
+    document.getElementById('reports-modal-subtitle') && (document.getElementById('reports-modal-subtitle').textContent = copy.reportsSub);
+}
+
+async function updateAuthUI(user, disabled = false) {
+    currentAuthUser = user || null;
+    refreshAuthCopy();
+
+    const loginBtn = document.getElementById('btn-google-login');
+    const userInfo = document.getElementById('user-info');
+    const userName = document.getElementById('user-name');
+    const avatar = document.getElementById('user-avatar');
+
+    if (loginBtn) {
+        loginBtn.style.display = user ? 'none' : 'inline-flex';
+        loginBtn.disabled = disabled;
+        loginBtn.title = disabled ? authCopy().configuredError : authCopy().login;
+    }
+    if (userInfo) userInfo.style.display = user ? 'flex' : 'none';
+    if (userName) userName.textContent = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || '';
+    if (avatar) {
+        avatar.src = user?.user_metadata?.avatar_url || user?.user_metadata?.picture ||
+            'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64"%3E%3Crect width="64" height="64" rx="32" fill="%238b5cf6"/%3E%3Ctext x="32" y="40" text-anchor="middle" font-size="28" fill="white"%3ED%3C/text%3E%3C/svg%3E';
+    }
+
+    if (user) await refreshQuotaBadge();
+}
+
+async function initSupabaseAuth() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/auth/config`, {
+            headers: { Accept: 'application/json' },
+            cache: 'no-store'
+        });
+        const config = await response.json();
+        authConfigured = Boolean(config?.enabled && config?.supabaseUrl && config?.anonKey && window.supabase?.createClient);
+
+        if (!authConfigured) {
+            await updateAuthUI(null, true);
+            return;
+        }
+
+        dakaAuthClient = window.supabase.createClient(config.supabaseUrl, config.anonKey, {
+            auth: {
+                persistSession: true,
+                autoRefreshToken: true,
+                detectSessionInUrl: true,
+                flowType: 'pkce'
+            }
+        });
+
+        const { data } = await dakaAuthClient.auth.getSession();
+        await updateAuthUI(data?.session?.user || null);
+        dakaAuthClient.auth.onAuthStateChange((_event, session) => {
+            updateAuthUI(session?.user || null);
+        });
+    } catch (error) {
+        console.warn('[Auth] initialization failed:', error.message);
+        await updateAuthUI(null, true);
+    } finally {
+        resolveAuthReady();
+    }
+}
+
+function openAuthModal() {
+    if (!authConfigured) {
+        toast.warning(authCopy().configuredError);
+        return;
+    }
+    refreshAuthCopy();
+    document.getElementById('auth-modal')?.classList.add('active');
+}
+
+function closeAuthModal() {
+    document.getElementById('auth-modal')?.classList.remove('active');
+}
+
+async function loginWithGoogle() {
+    if (!dakaAuthClient) return openAuthModal();
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const { error } = await dakaAuthClient.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo }
+    });
+    if (error) toast.error(error.message);
+}
+
+async function loginWithEmail() {
+    const email = document.getElementById('auth-email')?.value?.trim();
+    if (!email || !dakaAuthClient) return toast.warning('Email requis.');
+    const redirectTo = `${window.location.origin}${window.location.pathname}`;
+    const { error } = await dakaAuthClient.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectTo }
+    });
+    if (error) return toast.error(error.message);
+    toast.success(authCopy().emailSent);
+    closeAuthModal();
+}
+
+async function logout() {
+    if (dakaAuthClient) await dakaAuthClient.auth.signOut();
+    await updateAuthUI(null);
+}
+
+async function refreshQuotaBadge(quotaOverride = null) {
+    if (!currentAuthUser) return;
+    try {
+        const quota = quotaOverride || (await api.get('/api/reports/quota', 15000))?.quota;
+        const badge = document.getElementById('auth-quota');
+        if (badge && quota) badge.textContent = `${quota.used}/${quota.limit}`;
+    } catch (error) {
+        console.warn('[Reports] quota unavailable:', error.message);
+    }
+}
+
+function closeReportDashboard() {
+    document.getElementById('reports-modal')?.classList.remove('active');
+}
+
+async function openReportDashboard() {
+    const modal = document.getElementById('reports-modal');
+    const list = document.getElementById('report-history-list');
+    if (!modal || !list) return;
+    refreshAuthCopy();
+    modal.classList.add('active');
+    list.innerHTML = '<div style="color:#94a3b8;padding:16px"><i class="fas fa-circle-notch fa-spin"></i></div>';
+
+    try {
+        const response = await api.get('/api/reports?limit=50', 20000);
+        await refreshQuotaBadge(response.quota);
+        const reports = Array.isArray(response.reports) ? response.reports : [];
+        list.innerHTML = reports.length ? reports.map(report => `
+            <article class="report-history-item">
+                <div>
+                    <strong>${escapeHtml(report.title || report.type)}</strong>
+                    <small>${escapeHtml(report.type)} · ${new Date(report.created_at).toLocaleDateString()}</small>
+                </div>
+                <div class="report-history-actions">
+                    <button type="button" onclick="downloadSavedReport('${report.id}')" title="JSON"><i class="fas fa-download"></i></button>
+                    <button type="button" onclick="shareSavedReport('${report.id}')" title="Partager"><i class="fas fa-share-nodes"></i></button>
+                </div>
+            </article>`).join('') : `<div style="color:#94a3b8;padding:16px">${authCopy().empty}</div>`;
+    } catch (error) {
+        list.innerHTML = `<div style="color:#fca5a5;padding:16px">${escapeHtml(error.message)}</div>`;
+    }
+}
+
+async function downloadSavedReport(id) {
+    const response = await api.get(`/api/reports/${encodeURIComponent(id)}`, 20000);
+    const blob = new Blob([JSON.stringify(response.report, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `daka-report-${id}.json`;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+async function shareSavedReport(id) {
+    const response = await api.request(`/api/reports/${encodeURIComponent(id)}/share`, {
+        method: 'PATCH',
+        body: JSON.stringify({ isPublic: true }),
+        timeout: 20000
+    });
+    if (response.shareUrl) {
+        await navigator.clipboard.writeText(response.shareUrl);
+        toast.success('Lien public copié.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', initSupabaseAuth);
+document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
+
 async function analyzeWithPolling(endpoint, payload, resultsHandler) {
     const initial = await api.post(
         endpoint,
@@ -4582,6 +5078,11 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
     );
 
     const deliver = (data) => {
+        if (data?.savedReport || data?.reportQuota) {
+            refreshQuotaBadge(data.reportQuota || null).catch(() => {});
+        }
+        if (data?.savedReport) toast.success(authCopy().saved);
+        if (data?.reportPersistence?.saved === false) toast.warning(authCopy().saveError);
         if (typeof resultsHandler === 'function') resultsHandler(data);
         return data;
     };
@@ -8876,39 +9377,6 @@ function renderTechDoughnut(ctx, score, color) {
         }
     });
 }
-
-// TAB 4: KEYWORDS GENERATOR
-document.getElementById('keywordsForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const langs = [];
-    if (document.getElementById('langFR').checked) langs.push('fr');
-    if (document.getElementById('langAR').checked) langs.push('ar');
-    if (document.getElementById('langEN').checked) langs.push('en');
-
-    const data = {
-        seedKeyword: document.getElementById('seedKeyword').value,
-        languages: langs,
-        countPerLanguage: parseInt(document.getElementById('kwCount').value),
-        geo: document.getElementById('kwGeo')?.value || 'auto'
-    };
-
-    setButtonLoading('kwBtn', true);
-    showLoading('loadingKeywords');
-    hideResults('resultsKeywords');
-
-    try {
-        const response = await analyzeWithPolling('/api/generate-keywords', data);
-        displayKeywordsResults(response);
-        toast.success(`${response.keywords?.length || 0} mots-clés générés !`);
-    } catch (error) {
-        toast.error('Erreur génération');
-    } finally {
-        setButtonLoading('kwBtn', false);
-        hideLoading('loadingKeywords');
-    }
-});
-
 
 // Count display
 document.getElementById('kwCount')?.addEventListener('input', (e) => {
