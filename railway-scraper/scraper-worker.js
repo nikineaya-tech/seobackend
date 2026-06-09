@@ -27,6 +27,15 @@ const ALLOWED_JOB_TYPES = new Set([
   'page_scrape'
 ]);
 
+class NonScrapingJobError extends Error {
+  constructor(jobType) {
+    super(`NON_SCRAPING_JOB: Railway scraper refuses job type "${jobType}". Business/AI jobs must run on Render, not Railway.`);
+    this.name = 'NonScrapingJobError';
+    this.code = 'NON_SCRAPING_JOB';
+    this.jobType = jobType;
+  }
+}
+
 if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
   console.error('[RailwayScraper] Missing SUPABASE_URL or SUPABASE_SERVICE_KEY');
   process.exit(1);
@@ -42,7 +51,7 @@ const METRICS = {
   claimed: 0,
   done: 0,
   failed: 0,
-  skipped: 0,
+  rejected: 0,
   retried: 0,
   pollErrors: 0,
   currentJobId: null,
@@ -63,6 +72,7 @@ const healthServer = http.createServer((req, res) => {
     workerId: WORKER_ID,
     uptimeSeconds: Math.round((Date.now() - METRICS.startedAt) / 1000),
     allowedJobTypes: [...ALLOWED_JOB_TYPES],
+    forbiddenJobTypes: ['competitors', 'funnel', 'technical', 'technical-seo', 'keywords', 'seo-assets', 'generate-seo-assets'],
     metrics: METRICS,
     timestamp: new Date().toISOString()
   };
@@ -93,17 +103,12 @@ function extractUrls(payload = {}) {
 }
 
 async function processScrapingJob(job) {
+  if (!ALLOWED_JOB_TYPES.has(job.type)) {
+    throw new NonScrapingJobError(job.type);
+  }
+
   const payload = job.payload || {};
   const urls = extractUrls(payload);
-
-  if (!ALLOWED_JOB_TYPES.has(job.type)) {
-    return {
-      success: false,
-      skipped: true,
-      reason: `Job type ${job.type} is not allowed on Railway scraping service`,
-      allowedJobTypes: [...ALLOWED_JOB_TYPES]
-    };
-  }
 
   if (!urls.length) {
     throw new Error('No URL found in job payload. Expected payload.url, payload.targetUrl, payload.website or payload.urls');
@@ -149,28 +154,38 @@ async function claimAndProcess() {
       const result = await processScrapingJob(job);
 
       await updateJob(job.id, {
-        status: result.skipped ? 'skipped' : 'done',
+        status: 'done',
         result,
         error: null,
         finished_at: new Date().toISOString()
       });
 
-      if (result.skipped) METRICS.skipped++;
-      else METRICS.done++;
-
+      METRICS.done++;
       console.log(`[RailwayScraper:${WORKER_ID}] Done job=${job.id} type=${job.type} in ${Date.now() - startedAt}ms`);
     } catch (jobError) {
-      const retryCount = Number(job.retry_count || 0) + 1;
-      const shouldRetry = retryCount < MAX_RETRIES;
+      const isNonScrapingJob = jobError?.code === 'NON_SCRAPING_JOB';
+      const retryCount = isNonScrapingJob ? Number(job.retry_count || 0) : Number(job.retry_count || 0) + 1;
+      const shouldRetry = !isNonScrapingJob && retryCount < MAX_RETRIES;
+      const errorMessage = String(jobError?.message || jobError).slice(0, 2000);
 
       await updateJob(job.id, {
         status: shouldRetry ? 'pending' : 'error',
         retry_count: retryCount,
-        error: String(jobError?.message || jobError).slice(0, 2000),
+        result: isNonScrapingJob ? {
+          success: false,
+          code: 'NON_SCRAPING_JOB',
+          message: errorMessage,
+          allowedJobTypes: [...ALLOWED_JOB_TYPES],
+          routeTo: 'Render API backend'
+        } : null,
+        error: errorMessage,
         finished_at: shouldRetry ? null : new Date().toISOString()
       });
 
-      if (shouldRetry) {
+      if (isNonScrapingJob) {
+        METRICS.rejected++;
+        console.warn(`[RailwayScraper:${WORKER_ID}] Rejected non-scraping job=${job.id} type=${job.type}. Must run on Render.`);
+      } else if (shouldRetry) {
         METRICS.retried++;
         console.warn(`[RailwayScraper:${WORKER_ID}] Retry ${retryCount}/${MAX_RETRIES} job=${job.id}: ${jobError.message}`);
       } else {
