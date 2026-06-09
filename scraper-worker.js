@@ -139,6 +139,7 @@ async function claimAndProcess() {
             const result = await processJob(job.type, job.payload || {});
             const elapsed = Date.now() - startMs;
 
+            
             await updateJob(job.id, {
                 status:      'done',
                 result,

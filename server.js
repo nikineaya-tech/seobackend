@@ -46,6 +46,14 @@ const {
   EMPTY_PRICE_INTEL_OBSERVED,
   EXTRACTIONSTATUS,
 } = require('./pricing-pipeline-refactored-1');
+
+// ── PRICING FIXES (alias + helpers manquants) ──────────────
+const {
+  EXTRACTIONSTATUS,
+  normalizeConfidence,
+  roundPsychologicalPrice,
+  buildPriceIntelLocalSafe,
+} = require('./pricing-fixes');
 function extractJSON(raw) {
   if (!raw || typeof raw !== 'string') return null;
 
