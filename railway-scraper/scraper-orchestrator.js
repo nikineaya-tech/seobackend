@@ -156,6 +156,388 @@ function extractPrices(text = '') {
 }
 
 // ─────────────────────────────────────────────────────────────
+// CHAPITRE 5 — Enriched ecommerce extraction
+// ─────────────────────────────────────────────────────────────
+
+function safeAttr($, el, name) {
+  return ($(el).attr(name) || '').trim();
+}
+
+function absoluteUrl(rawUrl, baseUrl) {
+  const value = String(rawUrl || '').trim();
+  if (!value) return '';
+
+  try {
+    return new URL(value, baseUrl).href;
+  } catch (_) {
+    return '';
+  }
+}
+
+function extractHeadings($) {
+  return {
+    h1: $('h1').map((_, el) => compactText($(el).text(), 140)).get().filter(Boolean).slice(0, 5),
+    h2: $('h2').map((_, el) => compactText($(el).text(), 160)).get().filter(Boolean).slice(0, 20),
+    h3: $('h3').map((_, el) => compactText($(el).text(), 160)).get().filter(Boolean).slice(0, 25)
+  };
+}
+
+function extractOpenGraph($, baseUrl) {
+  const og = {};
+
+  $('meta[property^="og:"], meta[name^="twitter:"]').each((_, el) => {
+    const key = safeAttr($, el, 'property') || safeAttr($, el, 'name');
+    const content = safeAttr($, el, 'content');
+
+    if (!key || !content) return;
+
+    og[key] = /image/i.test(key) ? absoluteUrl(content, baseUrl) || content : content;
+  });
+
+  return og;
+}
+
+function extractJsonLd($) {
+  const schemas = [];
+
+  $('script[type="application/ld+json"]').each((_, el) => {
+    const raw = ($(el).contents().text() || '').trim();
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+
+      for (const item of items) {
+        if (!item || typeof item !== 'object') continue;
+
+        schemas.push({
+          type: item['@type'] || item.type || 'Unknown',
+          name: item.name || item.headline || '',
+          url: item.url || '',
+          price: item.offers?.price || item.offers?.lowPrice || '',
+          currency: item.offers?.priceCurrency || '',
+          availability: item.offers?.availability || '',
+          ratingValue: item.aggregateRating?.ratingValue || '',
+          reviewCount: item.aggregateRating?.reviewCount || ''
+        });
+      }
+    } catch (_) {
+      schemas.push({
+        type: 'InvalidJSONLD',
+        rawPreview: raw.slice(0, 240)
+      });
+    }
+  });
+
+  return schemas.slice(0, 25);
+}
+
+function extractImages($, baseUrl) {
+  const images = [];
+  const seen = new Set();
+
+  $('img').each((_, el) => {
+    const src =
+      safeAttr($, el, 'src') ||
+      safeAttr($, el, 'data-src') ||
+      safeAttr($, el, 'data-lazy-src') ||
+      safeAttr($, el, 'data-original');
+
+    const url = absoluteUrl(src, baseUrl);
+    if (!url || seen.has(url)) return;
+
+    seen.add(url);
+
+    images.push({
+      url,
+      alt: compactText(safeAttr($, el, 'alt'), 140),
+      title: compactText(safeAttr($, el, 'title'), 140),
+      width: safeAttr($, el, 'width'),
+      height: safeAttr($, el, 'height')
+    });
+  });
+
+  return images.slice(0, 40);
+}
+
+function extractCtas($) {
+  const ctas = [];
+  const seen = new Set();
+
+  const selector = [
+    'button',
+    'a',
+    '[role="button"]',
+    'input[type="submit"]',
+    '.btn',
+    '.button',
+    '.cta',
+    '[class*="button"]',
+    '[class*="btn"]'
+  ].join(',');
+
+  $(selector).each((_, el) => {
+    const text = compactText(
+      $(el).text() ||
+      safeAttr($, el, 'value') ||
+      safeAttr($, el, 'aria-label') ||
+      safeAttr($, el, 'title'),
+      120
+    );
+
+    if (!text) return;
+
+    const signal = `${text} ${safeAttr($, el, 'class')} ${safeAttr($, el, 'href')}`.toLowerCase();
+
+    const isCta = /acheter|commander|ajouter|panier|devis|contact|whatsapp|réserver|reserver|download|essai|demo|start|get started|buy|add to cart|checkout|subscribe|pricing|tarif|voir|découvrir|decouvrir/i.test(signal);
+    if (!isCta) return;
+
+    const key = `${text}:${safeAttr($, el, 'href')}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    ctas.push({
+      text,
+      href: safeAttr($, el, 'href'),
+      type: el.tagName ? el.tagName.toLowerCase() : 'unknown',
+      className: compactText(safeAttr($, el, 'class'), 140)
+    });
+  });
+
+  return ctas.slice(0, 30);
+}
+
+function extractForms($) {
+  const forms = [];
+
+  $('form').each((_, form) => {
+    const inputs = [];
+
+    $(form).find('input, textarea, select').each((__, input) => {
+      inputs.push({
+        type: safeAttr($, input, 'type') || input.tagName?.toLowerCase() || 'input',
+        name: safeAttr($, input, 'name'),
+        placeholder: compactText(safeAttr($, input, 'placeholder'), 100),
+        required: typeof $(input).attr('required') !== 'undefined'
+      });
+    });
+
+    forms.push({
+      action: safeAttr($, form, 'action'),
+      method: safeAttr($, form, 'method') || 'get',
+      inputCount: inputs.length,
+      inputs: inputs.slice(0, 12)
+    });
+  });
+
+  return forms.slice(0, 10);
+}
+
+function extractFaq($) {
+  const faqs = [];
+  const seen = new Set();
+
+  $('[class*="faq"], [id*="faq"], details, .accordion, [class*="question"]').each((_, el) => {
+    const blockText = compactText($(el).text(), 500);
+    if (!blockText || blockText.length < 20) return;
+
+    const key = blockText.slice(0, 120);
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    faqs.push({
+      text: blockText
+    });
+  });
+
+  const jsonLdFaqs = [];
+
+  $('script[type="application/ld+json"]').each((_, el) => {
+    const raw = ($(el).contents().text() || '').trim();
+    if (!raw) return;
+
+    try {
+      const parsed = JSON.parse(raw);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+
+      for (const item of items) {
+        if (String(item['@type'] || '').toLowerCase() !== 'faqpage') continue;
+
+        for (const q of item.mainEntity || []) {
+          jsonLdFaqs.push({
+            question: compactText(q.name, 180),
+            answer: compactText(q.acceptedAnswer?.text, 300)
+          });
+        }
+      }
+    } catch (_) {}
+  });
+
+  return {
+    detectedBlocks: faqs.slice(0, 10),
+    jsonLdFaqs: jsonLdFaqs.slice(0, 20)
+  };
+}
+
+function detectCmsSignals(html = '', text = '') {
+  const value = `${html.slice(0, 50000)} ${text.slice(0, 10000)}`.toLowerCase();
+
+  return {
+    wordpress: /wp-content|wp-json|wordpress/.test(value),
+    woocommerce: /woocommerce|wc-block|add_to_cart|wc-ajax/.test(value),
+    shopify: /cdn\.shopify|shopify|myshopify|shopify-section/.test(value),
+    prestashop: /prestashop|blockcart|product-prices/.test(value),
+    magento: /magento|mage\/|customer\/section\/load/.test(value),
+    wix: /wixstatic|wix\.com/.test(value),
+    webflow: /webflow|w-webflow-badge/.test(value),
+    googleTagManager: /googletagmanager|gtm\.js/.test(value),
+    facebookPixel: /fbq\(|facebook-pixel|connect\.facebook\.net/.test(value),
+    tiktokPixel: /ttq\.|analytics\.tiktok/.test(value)
+  };
+}
+
+function detectEcommerceSignals(html = '', text = '') {
+  const value = `${html.slice(0, 60000)} ${text.slice(0, 15000)}`.toLowerCase();
+
+  return {
+    hasCart: /cart|panier|basket/.test(value),
+    hasCheckout: /checkout|paiement|payment/.test(value),
+    hasAddToCart: /add to cart|ajouter au panier|commander|acheter|add_to_cart/.test(value),
+    hasPrice: /(\d+[\s,.]?\d*)\s*(mad|dh|dhs|درهم|€|eur|\$|usd|lyd)/i.test(value),
+    hasVariants: /variant|taille|size|couleur|color|option|select options/.test(value),
+    hasStock: /stock|disponible|available|out of stock|rupture/.test(value),
+    hasCoupon: /coupon|promo|discount|réduction|remise/.test(value)
+  };
+}
+
+function extractSocialAndContactLinks(externalLinks = [], html = '', text = '') {
+  const socials = [];
+  const whatsappLinks = [];
+  const contactLinks = [];
+
+  for (const link of externalLinks || []) {
+    const value = String(link.url || '').toLowerCase();
+
+    if (/facebook|instagram|tiktok|linkedin|youtube|twitter|x\.com/.test(value)) {
+      socials.push(link);
+    }
+
+    if (/wa\.me|whatsapp/.test(value)) {
+      whatsappLinks.push(link);
+    }
+
+    if (/maps\.google|google\.com\/maps/.test(value)) {
+      contactLinks.push({ ...link, type: 'google-maps' });
+    }
+  }
+
+  const emails = [...new Set(String(text || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) || [])].slice(0, 10);
+  const phones = [...new Set(String(text || '').match(/(?:\+?\d[\s().-]*){8,}/g) || [])]
+    .map(v => v.replace(/\s+/g, ' ').trim())
+    .filter(v => v.length >= 8)
+    .slice(0, 10);
+
+  const htmlWhatsapp = [...new Set(String(html || '').match(/https?:\/\/(?:wa\.me|api\.whatsapp\.com)[^"'\s<>]+/gi) || [])]
+    .slice(0, 10)
+    .map(url => ({ url, label: 'WhatsApp', type: 'whatsapp', source: 'html' }));
+
+  return {
+    socialLinks: socials.slice(0, 15),
+    whatsappLinks: [...whatsappLinks, ...htmlWhatsapp].slice(0, 15),
+    contactLinks: contactLinks.slice(0, 10),
+    emails,
+    phones
+  };
+}
+
+function extractPaginationSignals($, baseUrl) {
+  const pagination = [];
+  const seen = new Set();
+
+  $('.pagination a[href], nav a[href], [rel="next"], [class*="pagination"] a[href], [class*="page-numbers"] a[href]').each((_, el) => {
+    const href = safeAttr($, el, 'href');
+    const url = normalizeCrawlUrl(href, baseUrl);
+    if (!url || seen.has(url)) return;
+
+    seen.add(url);
+
+    pagination.push({
+      url,
+      label: compactText($(el).text() || safeAttr($, el, 'aria-label') || safeAttr($, el, 'title'), 100),
+      rel: safeAttr($, el, 'rel')
+    });
+  });
+
+  return pagination.slice(0, 20);
+}
+
+function extractProductCards($, baseUrl) {
+  const cards = [];
+  const seen = new Set();
+
+  const selectors = [
+    '.product',
+    '.product-card',
+    '.woocommerce-loop-product__link',
+    'li.product',
+    '[class*="product"]',
+    '[class*="produit"]',
+    '[class*="item"]',
+    '[class*="card"]'
+  ].join(',');
+
+  $(selectors).each((_, el) => {
+    const $el = $(el);
+    const text = compactText($el.text(), 500);
+
+    if (!text || text.length < 10) return;
+
+    const href = $el.is('a[href]')
+      ? safeAttr($, el, 'href')
+      : ($el.find('a[href]').first().attr('href') || '');
+
+    const url = absoluteUrl(href, baseUrl);
+
+    const imgEl = $el.find('img').first();
+    const image =
+      absoluteUrl(imgEl.attr('src') || imgEl.attr('data-src') || imgEl.attr('data-lazy-src'), baseUrl);
+
+    const title =
+      compactText($el.find('h1,h2,h3,.title,.product-title,[class*="title"],.woocommerce-loop-product__title').first().text(), 180) ||
+      compactText(imgEl.attr('alt'), 180) ||
+      text.slice(0, 120);
+
+    const priceText =
+      compactText($el.find('.price,[class*="price"],.amount,bdi').first().text(), 120) ||
+      compactText((text.match(/(\d{1,3}(?:[\s,.]?\d{3})*(?:[,.]\d{1,2})?)\s*(MAD|DH|DHS|درهم|€|EUR|\$|USD|LYD)/i) || [])[0], 120);
+
+    const cta =
+      compactText($el.find('button,a.button,.btn,[class*="button"],[class*="btn"]').first().text(), 120);
+
+    const badge =
+      compactText($el.find('.badge,.onsale,[class*="sale"],[class*="promo"],[class*="discount"]').first().text(), 120);
+
+    const key = url || `${title}:${priceText}:${image}`;
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+
+    cards.push({
+      title,
+      priceText,
+      url,
+      image,
+      cta,
+      badge,
+      textPreview: text.slice(0, 240)
+    });
+  });
+
+  return cards
+    .filter(card => card.title || card.priceText || card.image || card.url)
+    .slice(0, 40);
+}
+// ─────────────────────────────────────────────────────────────
 // CHAPITRE 2 — Advanced discovery: links + clickable targets
 // ─────────────────────────────────────────────────────────────
 
@@ -1009,23 +1391,55 @@ async function scrapeSinglePage(page, url, options = {}){
   const title = await page.title().catch(() => '');
   const $ = cheerio.load(html);
 
-  const h1 = $('h1').first().text().replace(/\s+/g, ' ').trim();
-  const metaDescription = $('meta[name="description"]').attr('content') || '';
- const prices = extractPrices(text);
+ const headings = extractHeadings($);
+const h1 = headings.h1[0] || '';
+const metaDescription = $('meta[name="description"]').attr('content') || '';
+const canonical = $('link[rel="canonical"]').attr('href') || '';
+const language = $('html').attr('lang') || '';
+const openGraph = extractOpenGraph($, url);
+const jsonLd = extractJsonLd($);
+const images = extractImages($, url);
+const productCards = extractProductCards($, url);
+const ctas = extractCtas($);
+const forms = extractForms($);
+const faq = extractFaq($);
+const cmsSignals = detectCmsSignals(html, text);
+const ecommerceSignals = detectEcommerceSignals(html, text);
+const prices = extractPrices(text);
 const links = extractLinks($, url);
 const { internalLinks, externalLinks } = extractAllLinks($, url);
+const socialContact = extractSocialAndContactLinks(externalLinks, html, text);
+const paginationSignals = extractPaginationSignals($, url);
 const discoveredTargets = await discoverClickableTargets(page, url, options);
 const clickExploration = options.clickExplore === false
   ? { clickedButtons: [], discoveredAfterClicks: [], totalClicked: 0, totalChanged: 0 }
   : await clickUsefulButtons(page, url, options);
 
   return {
-    url,
-    title,
-    h1,
-    metaDescription,
-    wordCount: text.split(/\s+/).filter(Boolean).length,
-    prices,
+  url,
+  title,
+  h1,
+  headings,
+  metaDescription,
+  canonical: absoluteUrl(canonical, url) || canonical,
+  language,
+  openGraph,
+  jsonLd,
+  images,
+  productCards,
+  ctas,
+  forms,
+  faq,
+  cmsSignals,
+  ecommerceSignals,
+  socialLinks: socialContact.socialLinks,
+  whatsappLinks: socialContact.whatsappLinks,
+  contactLinks: socialContact.contactLinks,
+  emails: socialContact.emails,
+  phones: socialContact.phones,
+  paginationSignals,
+  wordCount: text.split(/\s+/).filter(Boolean).length,
+  prices,
    links,
 internalLinks,
 externalLinks,
@@ -1108,6 +1522,15 @@ const allPages = pages.length ? pages : [mainPage].filter(Boolean);
     pagesScraped: allPages.filter(Boolean).length,
     visitedCount: crawlResult.visitedCount || allPages.filter(Boolean).length,
     queuedRemaining: crawlResult.queuedRemaining || 0,
+
+    productCardsFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.productCards) ? page.productCards.length : 0), 0),
+imagesFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.images) ? page.images.length : 0), 0),
+ctasFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.ctas) ? page.ctas.length : 0), 0),
+formsFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.forms) ? page.forms.length : 0), 0),
+faqBlocksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.faq?.detectedBlocks) ? page.faq.detectedBlocks.length : 0), 0),
+jsonLdSchemasFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.jsonLd) ? page.jsonLd.length : 0), 0),
+whatsappLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.whatsappLinks) ? page.whatsappLinks.length : 0), 0),
+socialLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.socialLinks) ? page.socialLinks.length : 0), 0),
     pricesFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.prices) ? page.prices.length : 0), 0),
     linksDiscovered: allPages.reduce((sum, page) => sum + (Array.isArray(page?.links) ? page.links.length : 0), 0),
     internalLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.internalLinks) ? page.internalLinks.length : 0), 0),
