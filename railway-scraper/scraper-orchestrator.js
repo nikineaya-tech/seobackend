@@ -820,6 +820,164 @@ async function clickUsefulButtons(page, baseUrl, options = {}) {
     totalChanged: clickedButtons.filter(btn => btn.changed).length
   };
 }
+
+// ─────────────────────────────────────────────────────────────
+// CHAPITRE 4 — BFS crawl helpers
+// ─────────────────────────────────────────────────────────────
+
+function collectNextUrlsFromPage(pageResult = {}, rootUrl, currentDepth = 0) {
+  const candidates = [
+    ...(pageResult.links || []),
+    ...(pageResult.urlTargets || []),
+    ...(pageResult.internalLinks || [])
+  ];
+
+  for (const afterClick of pageResult.discoveredAfterClicks || []) {
+    candidates.push(...(afterClick.links || []));
+    candidates.push(...(afterClick.urlTargets || []));
+    candidates.push(...(afterClick.internalLinks || []));
+  }
+
+  const seen = new Set();
+  const urls = [];
+
+  for (const candidate of candidates) {
+    const rawUrl = candidate?.url;
+    const normalized = normalizeCrawlUrl(rawUrl, rootUrl);
+
+    if (!normalized) continue;
+    if (isBlockedCrawlUrl(normalized)) continue;
+    if (!isSameOriginUrl(normalized, rootUrl)) continue;
+    if (seen.has(normalized)) continue;
+
+    seen.add(normalized);
+
+    urls.push({
+      url: normalized,
+      depth: currentDepth + 1,
+      source: candidate.source || 'discovered',
+      label: candidate.label || '',
+      score: Number(candidate.score || 0)
+    });
+  }
+
+  return urls.sort((a, b) => b.score - a.score);
+}
+async function crawlSite(context, startUrl, options = {}) {
+  const crawlOptions = buildCrawlOptions(options);
+  const startedAt = Date.now();
+
+  const rootUrl = normalizeUrl(startUrl);
+  const queue = [{ url: rootUrl, depth: 0, source: 'start', label: 'start', score: 999 }];
+  const visited = new Set();
+  const pages = [];
+  const crawlMap = [];
+  const errors = [];
+
+  let mainPage = null;
+
+  while (queue.length > 0 && pages.length < crawlOptions.maxPages) {
+    if (Date.now() - startedAt > crawlOptions.crawlBudgetMs) {
+      crawlMap.push({
+        event: 'budget-exceeded',
+        elapsedMs: Date.now() - startedAt,
+        remainingQueue: queue.length,
+        scrapedPages: pages.length,
+        at: new Date().toISOString()
+      });
+      break;
+    }
+
+    const next = queue.shift();
+    const normalizedUrl = normalizeCrawlUrl(next.url, rootUrl);
+
+    if (!normalizedUrl) continue;
+    if (visited.has(normalizedUrl)) continue;
+    if (isBlockedCrawlUrl(normalizedUrl)) continue;
+    if (crawlOptions.sameOriginOnly && !isSameOriginUrl(normalizedUrl, rootUrl)) continue;
+    if (next.depth > crawlOptions.maxDepth) continue;
+
+    visited.add(normalizedUrl);
+
+    const tab = await context.newPage();
+
+    try {
+      const pageResult = await scrapeSinglePage(tab, normalizedUrl, {
+        ...crawlOptions,
+        clickExplore: next.depth === 0 && options.clickExplore !== false
+      });
+
+      pageResult.depth = next.depth;
+      pageResult.discoverySource = next.source;
+      pageResult.discoveryLabel = next.label;
+      pageResult.discoveryScore = next.score;
+
+      if (next.depth === 0) {
+        mainPage = pageResult;
+      }
+
+      pages.push(pageResult);
+
+      crawlMap.push({
+        event: 'scraped',
+        url: normalizedUrl,
+        depth: next.depth,
+        source: next.source,
+        label: next.label,
+        score: next.score,
+        wordCount: pageResult.wordCount,
+        pricesFound: Array.isArray(pageResult.prices) ? pageResult.prices.length : 0,
+        internalLinksFound: Array.isArray(pageResult.internalLinks) ? pageResult.internalLinks.length : 0,
+        externalLinksFound: Array.isArray(pageResult.externalLinks) ? pageResult.externalLinks.length : 0,
+        clickTargetsFound: Array.isArray(pageResult.clickTargets) ? pageResult.clickTargets.length : 0,
+        buttonsClicked: pageResult.clickExploration?.totalClicked || 0,
+        at: new Date().toISOString()
+      });
+
+      if (next.depth < crawlOptions.maxDepth) {
+        const discovered = collectNextUrlsFromPage(pageResult, rootUrl, next.depth);
+
+        for (const item of discovered) {
+          if (pages.length + queue.length >= crawlOptions.maxPages * 3) break;
+          if (visited.has(item.url)) continue;
+          queue.push(item);
+        }
+
+        queue.sort((a, b) => b.score - a.score);
+      }
+    } catch (error) {
+      errors.push({
+        url: normalizedUrl,
+        depth: next.depth,
+        source: next.source,
+        error: String(error?.message || error).slice(0, 800),
+        at: new Date().toISOString()
+      });
+
+      crawlMap.push({
+        event: 'error',
+        url: normalizedUrl,
+        depth: next.depth,
+        source: next.source,
+        error: String(error?.message || error).slice(0, 500),
+        at: new Date().toISOString()
+      });
+    } finally {
+      await tab.close().catch(() => {});
+    }
+  }
+
+  return {
+    rootUrl,
+    mainPage: mainPage || pages[0] || null,
+    pages,
+    crawlMap,
+    errors,
+    visitedCount: visited.size,
+    queuedRemaining: queue.length,
+    durationMs: Date.now() - startedAt
+  };
+}
 async function createBrowser() {
   return chromium.launch({
     headless: true,
@@ -909,101 +1067,61 @@ async function scrapeUrl(rawUrl, options = {}) {
       Object.defineProperty(navigator, 'languages', { get: () => ['fr-FR', 'fr', 'en-US', 'en'] });
     });
 
-    const page = await context.newPage();
-   const mainPage = await scrapeSinglePage(page, url, {
-  ...crawlOptions,
-  clickExplore: options.clickExplore !== false
-});
-
     const shouldExplore = options.explore !== false;
-    const extraPages = [];
-const mergedCandidates = [
-  ...(mergedCandidates || []),
-  ...(mainPage.urlTargets || [])
-]
-  .sort((a, b) => (b.score || 0) - (a.score || 0));
-    if (shouldExplore && mergedCandidates.length) {
-  const remainingBudget = Math.max(0, crawlOptions.maxPages - 1);
-  const extraCandidates = mergedCandidates.slice(0, remainingBudget);
 
-  for (const candidate of extraCandidates) {
-    if (Date.now() - startedAt > crawlOptions.crawlBudgetMs) {
-      extraPages.push({
-        url: candidate.url,
-        skipped: true,
-        reason: 'Crawl budget exceeded',
-        scrapedAt: new Date().toISOString()
-      });
-      break;
-    }
+const crawlResult = shouldExplore
+  ? await crawlSite(context, url, {
+      ...crawlOptions,
+      clickExplore: options.clickExplore !== false
+    })
+  : {
+      rootUrl: url,
+      mainPage: await scrapeSinglePage(await context.newPage(), url, {
+        ...crawlOptions,
+        clickExplore: options.clickExplore !== false
+      }),
+      pages: [],
+      crawlMap: [],
+      errors: [],
+      visitedCount: 1,
+      queuedRemaining: 0,
+      durationMs: 0
+    };
 
-    const normalizedCandidateUrl = normalizeCrawlUrl(candidate.url, url);
-
-    if (!normalizedCandidateUrl || isBlockedCrawlUrl(normalizedCandidateUrl)) {
-      extraPages.push({
-        url: candidate.url,
-        skipped: true,
-        reason: 'Blocked or invalid crawl URL',
-        scrapedAt: new Date().toISOString()
-      });
-      continue;
-    }
-
-    if (crawlOptions.sameOriginOnly && !isSameOriginUrl(normalizedCandidateUrl, url)) {
-      extraPages.push({
-        url: candidate.url,
-        skipped: true,
-        reason: 'External origin skipped',
-        scrapedAt: new Date().toISOString()
-      });
-      continue;
-    }
-
-    const tab = await context.newPage();
-
-    try {
-      extraPages.push(await scrapeSinglePage(tab, normalizedCandidateUrl, {
-  ...crawlOptions,
-  clickExplore: false
-}));
-    } catch (err) {
-      extraPages.push({
-        url: normalizedCandidateUrl,
-        error: err.message,
-        scrapedAt: new Date().toISOString()
-      });
-    } finally {
-      await tab.close().catch(() => {});
-    }
-  }
-}
-
-    await context.close().catch(() => {});
-
-    return {
+const mainPage = crawlResult.mainPage;
+const pages = crawlResult.pages || [];
+const extraPages = pages.filter(page => page.url !== mainPage?.url);
+const allPages = pages.length ? pages : [mainPage].filter(Boolean);
+   return {
   success: true,
-  provider: 'railway-playwright',
+  provider: 'railway-playwright-multi-agent',
   inputUrl: rawUrl,
   normalizedUrl: url,
   crawlOptions,
   durationMs: Date.now() - startedAt,
   mainPage,
+  pages: allPages,
   extraPages,
-      summary: {
-  pagesScraped: 1 + extraPages.filter(p => !p.error && !p.skipped).length,
-  pricesFound: mainPage.prices.length + extraPages.reduce((sum, p) => sum + (Array.isArray(p.prices) ? p.prices.length : 0), 0),
-  linksDiscovered: (mainPage.links || []).length,
-  urlTargetsDiscovered: (mainPage.urlTargets || []).length,
-  clickTargetsDiscovered: (mainPage.clickTargets || []).length,
-  internalLinksFound: (mainPage.internalLinks || []).length,
-externalLinksFound: (mainPage.externalLinks || []).length,
-buttonsClicked: mainPage.clickExploration?.totalClicked || 0,
-buttonsChangedDom: mainPage.clickExploration?.totalChanged || 0,
-afterClickDiscoveries: (mainPage.discoveredAfterClicks || []).length,
-  rawClickableTargets: mainPage.discoveredTargets?.totalRawTargets || 0,
-  trustSignals: mainPage.trustSignals
-}
-    };
+  crawlMap: crawlResult.crawlMap || [],
+  crawlErrors: crawlResult.errors || [],
+  summary: {
+    pagesScraped: allPages.filter(Boolean).length,
+    visitedCount: crawlResult.visitedCount || allPages.filter(Boolean).length,
+    queuedRemaining: crawlResult.queuedRemaining || 0,
+    pricesFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.prices) ? page.prices.length : 0), 0),
+    linksDiscovered: allPages.reduce((sum, page) => sum + (Array.isArray(page?.links) ? page.links.length : 0), 0),
+    internalLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.internalLinks) ? page.internalLinks.length : 0), 0),
+    externalLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.externalLinks) ? page.externalLinks.length : 0), 0),
+    urlTargetsDiscovered: allPages.reduce((sum, page) => sum + (Array.isArray(page?.urlTargets) ? page.urlTargets.length : 0), 0),
+    clickTargetsDiscovered: allPages.reduce((sum, page) => sum + (Array.isArray(page?.clickTargets) ? page.clickTargets.length : 0), 0),
+    rawClickableTargets: allPages.reduce((sum, page) => sum + Number(page?.discoveredTargets?.totalRawTargets || 0), 0),
+    buttonsClicked: allPages.reduce((sum, page) => sum + Number(page?.clickExploration?.totalClicked || 0), 0),
+    buttonsChangedDom: allPages.reduce((sum, page) => sum + Number(page?.clickExploration?.totalChanged || 0), 0),
+    afterClickDiscoveries: allPages.reduce((sum, page) => sum + (Array.isArray(page?.discoveredAfterClicks) ? page.discoveredAfterClicks.length : 0), 0),
+    errors: (crawlResult.errors || []).length,
+    trustSignals: mainPage?.trustSignals || {}
+  }
+};
   } finally {
     await browser.close().catch(() => {});
   }
