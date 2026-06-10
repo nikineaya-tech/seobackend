@@ -30,6 +30,121 @@
 .loading-state {
   overflow-x: hidden !important;
 }
+/* ===== DAKA FULLSCREEN VIDEO LOADER - CLEAN FIX ===== */
+
+html,
+body {
+  overflow-x: hidden !important;
+}
+
+.loading-state.daka-fullscreen-loader {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  background: #000 !important;
+  background-image: none !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+  display: none;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.loading-state.daka-fullscreen-loader.active,
+.loading-state.daka-fullscreen-loader.show,
+.loading-state.daka-fullscreen-loader.is-active,
+.loading-state.daka-fullscreen-loader[style*="display: block"],
+.loading-state.daka-fullscreen-loader[style*="display:block"],
+.loading-state.daka-fullscreen-loader[style*="display: flex"],
+.loading-state.daka-fullscreen-loader[style*="display:flex"] {
+  display: flex !important;
+}
+
+.loading-state.daka-fullscreen-loader::before,
+.loading-state.daka-fullscreen-loader::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.daka-fullscreen-loader-shell {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  overflow: hidden;
+}
+
+.daka-fullscreen-loader-video {
+  width: 100vw !important;
+  height: 100dvh !important;
+  min-height: 100vh !important;
+  display: block !important;
+  object-fit: contain !important;   /* IMPORTANT: plus cover */
+  object-position: center center !important;
+  background: #000 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
+.daka-fullscreen-loader-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: clamp(16px, 2vw, 24px);
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: rgba(10, 12, 22, 0.45);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.daka-loader-hidden-compat {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+}
+
+/* IMPORTANT :
+   cacher les anciens éléments UNIQUEMENT dans le loader fullscreen,
+   pas globalement sur tout le site */
+.loading-state.daka-fullscreen-loader .loading-orb,
+.loading-state.daka-fullscreen-loader .brand-loader-orb,
+.loading-state.daka-fullscreen-loader .loading-title,
+.loading-state.daka-fullscreen-loader .loading-subtitle,
+.loading-state.daka-fullscreen-loader .loading-progress-wrap,
+.loading-state.daka-fullscreen-loader .loading-phases,
+.loading-state.daka-fullscreen-loader .loading-phase,
+.loading-state.daka-fullscreen-loader .loading-tip {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
 .loading-state .loading-orb {
   display: grid !important;
   place-items: center !important;
@@ -3745,72 +3860,94 @@ table tbody td {
             </div>
         </div>
 
-    </div> <div id="loadingState" class="loading-state">
-        <div class="loading-orb">
-            <div class="brand-loader-orb"><video class="daka-loader-video" src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4" autoplay loop muted playsinline preload="auto" data-daka-video-logo="true" aria-hidden="true"></video></div>
-        </div>
-        <div class="loading-title" data-i18n="loading_comp_title">Daka prépare votre avantage...</div>
-        <div class="loading-subtitle" data-i18n="loading_comp_sub">Le temps de votre café, les signaux du marché deviennent des décisions claires.</div>
-        <div class="loading-progress-wrap"><div class="loading-progress-bar" id="loadingBarCompetitors"></div></div>
-        <div class="loading-phases">
-            <div class="loading-phase"><i class="fas fa-globe"></i> <span data-i18n="phase_comp_1">Cartographie du marché</span></div>
-            <div class="loading-phase"><i class="fas fa-search-dollar"></i> <span data-i18n="phase_comp_2">Détection des faiblesses</span></div>
-            <div class="loading-phase"><i class="fas fa-flag-checkered"></i> <span data-i18n="phase_comp_3">Parts de marché à voler</span></div>
-        </div>
-        <div class="loading-tip"></div>
-    </div>
+    <div id="loadingState" class="loading-state daka-fullscreen-loader">
+  <div class="daka-fullscreen-loader-shell">
+    <video
+      class="daka-fullscreen-loader-video"
+      src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4"
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="auto"
+      aria-label="Chargement"
+    ></video>
 
-    <div id="loadingFunnel" class="loading-state">
-        <div class="loading-orb">
-            <div class="brand-loader-orb"><video class="daka-loader-video" src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4" autoplay loop muted playsinline preload="auto" data-daka-video-logo="true" aria-hidden="true"></video></div>
-        </div>
-        <div class="loading-title" data-i18n="loading_funnel_title">Daka révèle les points de friction...</div>
-        <div class="loading-subtitle" data-i18n="loading_funnel_sub">Pendant votre pause, les pertes invisibles deviennent des corrections concrètes.</div>
-        <div class="loading-progress-wrap"><div class="loading-progress-bar" id="loadingBarFunnel" style="background: linear-gradient(90deg, #10b981, #059669)"></div></div>
-        <div class="loading-phases">
-            <div class="loading-phase"><i class="fas fa-route"></i> <span data-i18n="phase_funnel_1">Parcours client</span></div>
-            <div class="loading-phase"><i class="fas fa-palette"></i> <span data-i18n="phase_funnel_2">Impact visuel</span></div>
-            <div class="loading-phase"><i class="fas fa-comment-dollar"></i> <span data-i18n="phase_funnel_3">Argumentaire de vente</span></div>
-            <div class="loading-phase"><i class="fas fa-chart-line"></i> <span data-i18n="phase_funnel_4">Potentiel de rentabilité</span></div>
-        </div>
-        <div class="loading-tip"></div>
-    </div>
+    <div class="daka-fullscreen-loader-caption">Analyse en cours...</div>
+  </div>
 
-    <div id="loadingTechnical" class="loading-state">
-        <div class="loading-orb">
-            <div class="brand-loader-orb"><video class="daka-loader-video" src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4" autoplay loop muted playsinline preload="auto" data-daka-video-logo="true" aria-hidden="true"></video></div>
-        </div>
-        <div class="loading-title" data-i18n="loading_tech_title">Daka sécurise les fondations...</div>
-        <div class="loading-subtitle" data-i18n="loading_tech_sub">Pendant que la sphère analyse, les blocages se rangent par urgence.</div>
-        <div class="loading-progress-wrap"><div class="loading-progress-bar" id="loadingBarTechnical" style="background: linear-gradient(90deg, #3b82f6, #60a5fa)"></div></div>
-        <div class="loading-phases">
-            <div class="loading-phase"><i class="fas fa-sitemap"></i> <span data-i18n="phase_tech_1">Architecture du site</span></div>
-            <div class="loading-phase"><i class="fas fa-brain"></i> <span data-i18n="phase_tech_2">Autorité sémantique</span></div>
-            <div class="loading-phase"><i class="fas fa-layer-group"></i> <span data-i18n="phase_tech_3">Compatibilité lecture</span></div>
-            <div class="loading-phase"><i class="fas fa-shield-alt"></i> <span data-i18n="phase_tech_4">Fondations techniques</span></div>
-        </div>
-        <div class="loading-tip"></div>
-    </div>
+  <!-- Compat JS -->
+  <div class="daka-loader-hidden-compat" aria-hidden="true">
+    <div class="loading-progress-bar" id="loadingBarCompetitors"></div>
+    <div class="loading-tip"></div>
+  </div>
+</div>
 
-    <div id="loadingKeywords" class="loading-state">
-        <div class="loading-orb">
-            <div class="brand-loader-orb"><video class="daka-loader-video" src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4" autoplay loop muted playsinline preload="auto" data-daka-video-logo="true" aria-hidden="true"></video></div>
-        </div>
-        <div class="loading-title" data-i18n="loading_kw_title">Daka fait remonter les meilleures demandes...</div>
-        <div class="loading-subtitle" data-i18n="loading_kw_sub">Pendant que vous respirez, les demandes utiles remontent à la surface.</div>
-        <div class="loading-progress-wrap">
-            <div class="loading-progress-bar" id="loadingBarKeywords" style="background: linear-gradient(90deg, #0ea5e9, #06b6d4);"></div>
-        </div>
+<div id="loadingFunnel" class="loading-state daka-fullscreen-loader">
+  <div class="daka-fullscreen-loader-shell">
+    <video
+      class="daka-fullscreen-loader-video"
+      src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4"
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="auto"
+      aria-label="Chargement"
+    ></video>
 
-        <div class="loading-phases">
-            <div class="loading-phase"><i class="fas fa-globe"></i> <span data-i18n="step_kw_1">Tendances</span></div>
-            <div class="loading-phase"><i class="fas fa-gem"></i> <span data-i18n="step_kw_2">Opportunités</span></div>
-            <div class="loading-phase"><i class="fas fa-bullseye"></i> <span data-i18n="step_kw_3">Intentions</span></div>
-            <div class="loading-phase"><i class="fas fa-chart-line"></i> <span data-i18n="step_kw_4">Métriques</span></div>
-        </div>
+    <div class="daka-fullscreen-loader-caption">Analyse du funnel...</div>
+  </div>
 
-        <div class="loading-tip"></div>
-    </div>
+  <div class="daka-loader-hidden-compat" aria-hidden="true">
+    <div class="loading-progress-bar" id="loadingBarFunnel"></div>
+    <div class="loading-tip"></div>
+  </div>
+</div>
+
+<div id="loadingTechnical" class="loading-state daka-fullscreen-loader">
+  <div class="daka-fullscreen-loader-shell">
+    <video
+      class="daka-fullscreen-loader-video"
+      src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4"
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="auto"
+      aria-label="Chargement"
+    ></video>
+
+    <div class="daka-fullscreen-loader-caption">Audit technique en cours...</div>
+  </div>
+
+  <div class="daka-loader-hidden-compat" aria-hidden="true">
+    <div class="loading-progress-bar" id="loadingBarTechnical"></div>
+    <div class="loading-tip"></div>
+  </div>
+</div>
+
+<div id="loadingKeywords" class="loading-state daka-fullscreen-loader">
+  <div class="daka-fullscreen-loader-shell">
+    <video
+      class="daka-fullscreen-loader-video"
+      src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4"
+      autoplay
+      muted
+      loop
+      playsinline
+      preload="auto"
+      aria-label="Chargement"
+    ></video>
+
+    <div class="daka-fullscreen-loader-caption">Recherche de mots-clés...</div>
+  </div>
+
+  <div class="daka-loader-hidden-compat" aria-hidden="true">
+    <div class="loading-progress-bar" id="loadingBarKeywords"></div>
+    <div class="loading-tip"></div>
+  </div>
+</div>
 
 </main>
         <div id="keywordsTab" class="tab-content">

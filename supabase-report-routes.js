@@ -73,7 +73,7 @@ async function saveGeneratedReportForUser(supabase, options) {
 }
 
 function registerReportRoutes(app, { supabase, requireAuth }) {
-    const freeMonthlyQuota = Math.max(1, Number(process.env.FREE_REPORTS_PER_MONTH || 5));
+    const freeMonthlyQuota = Math.max(1, Number(process.env.FREE_REPORTS_PER_MONTH || 15));
 
     function ensureReportsConfigured(res) {
         if (supabase) return true;
@@ -119,7 +119,7 @@ function registerReportRoutes(app, { supabase, requireAuth }) {
                 return res.status(429).json({
                     success: false,
                     error: 'FREE_QUOTA_EXHAUSTED',
-                    message: 'Quota gratuit atteint: 5 rapports par mois.',
+                    message: 'Quota gratuit atteint: 15 rapports par mois.',
                     quota
                 });
             }
