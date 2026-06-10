@@ -5991,9 +5991,23 @@ JSON uniquement :
     "barrierToEntry": "1 phrase en ${L}"
   }
 }`;
+ // GUARD : s'assurer que userIntentContext est un objet avant usage
+const safeUserCtx = (userIntentContext && typeof userIntentContext === 'object') ? userIntentContext : {};
+const hasUserContext = Object.values(safeUserCtx).some(v => v && (typeof v === 'string' ? v.length > 0 : Array.isArray(v) ? v.length > 0 : false));
+const userBusinessContextBlock = hasUserContext ? `
+CONTEXTE BUSINESS FOURNI PAR L'UTILISATEUR :
+Offre : ${safeUserCtx.offer || ND}
+Audience : ${safeUserCtx.audience || ND}
+Objectif : ${safeUserCtx.objective || ND}
+Prix : ${safeUserCtx.priceRange || ND}
+Concurrents connus : ${Array.isArray(safeUserCtx.knownCompetitors) ? safeUserCtx.knownCompetitors.join(', ') : (safeUserCtx.knownCompetitors || ND)}
+Ville/région : ${safeUserCtx.cityOrRegion || ND}
 
-    // FIX BUG #3 : enrichedCompetitors[0]?.domain au lieu de enrichedCompetitors?.domain
-    const agent2Prompt = `${langInstr}
+RÈGLES D'UTILISATION DU CONTEXTE :
+- Utilise ce contexte pour adapter les recommandations à la situation réelle.
+- Ne l'utilise JAMAIS comme preuve observée sur les concurrents.
+- N'invente pas les champs manquants.` : '';
+const agent2Prompt = `${langInstr}
 Stratégie SEO offensive & Topic Clusters :
 - Niche : "${cleanQuery}" | Leader : ${enrichedCompetitors[0]?.domain || ND} | Pays : ${geoData.location}
 MOAT — Blog:${leaderMoat?.contentStrategy?.hasBlog ?? '?'} FAQ:${leaderMoat?.technicalMoat?.hasFaqSection ?? '?'} Schema:${leaderMoat?.technicalMoat?.schemaTagsCount ?? 0}
@@ -6016,21 +6030,7 @@ JSON uniquement :
   }
 }`;
 
-    // Construire le bloc contexte business utilisateur pour les prompts
-    const hasUserContext = userIntentContext && Object.values(userIntentContext).some(v => v && (typeof v === 'string' ? v.length > 0 : Array.isArray(v) ? v.length > 0 : false));
-    const userBusinessContextBlock = hasUserContext ? `
-CONTEXTE BUSINESS FOURNI PAR L'UTILISATEUR :
-Offre : ${userIntentContext.offer || ND}
-Audience : ${userIntentContext.audience || ND}
-Objectif : ${userIntentContext.objective || ND}
-Prix : ${userIntentContext.priceRange || ND}
-Concurrents connus : ${Array.isArray(userIntentContext.knownCompetitors) ? userIntentContext.knownCompetitors.join(', ') : (userIntentContext.knownCompetitors || ND)}
-Ville/région : ${userIntentContext.cityOrRegion || ND}
-
-RÈGLES D'UTILISATION DU CONTEXTE :
-- Utilise ce contexte pour adapter les recommandations à la situation réelle.
-- Ne l'utilise JAMAIS comme preuve observée sur les concurrents.
-- N'invente pas les champs manquants.` : '';
+   
 
     const agent3Prompt = `${langInstr}
 MASTERING & DUEL CMO (Reverse Engineering & Grand Slam Offer) :
