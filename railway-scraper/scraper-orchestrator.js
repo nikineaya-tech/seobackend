@@ -9,17 +9,130 @@ const { createCursor } = require('ghost-cursor');
 
 chromium.use(StealthPlugin());
 
-const DEFAULT_TIMEOUT_MS = Number(process.env.SCRAPER_TIMEOUT_MS || 25000);
-const MAX_EXTRA_PAGES = Math.max(0, Number(process.env.SCRAPER_MAX_EXTRA_PAGES || 3));
+const DEFAULT_TIMEOUT_MS = Number(process.env.SCRAPER_TIMEOUT_MS || 45000);
+const MAX_EXTRA_PAGES = Math.max(0, Number(process.env.SCRAPER_MAX_EXTRA_PAGES || 12));
 const USER_AGENT = process.env.SCRAPER_USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
-function normalizeUrl(rawUrl) {
+const DEFAULT_CRAWL_OPTIONS = {
+  maxPages: Math.max(1, Number(process.env.SCRAPER_MAX_PAGES || 12)),
+  maxDepth: Math.max(0, Number(process.env.SCRAPER_MAX_DEPTH || 2)),
+  maxClicks: Math.max(0, Number(process.env.SCRAPER_MAX_CLICKS || 20)),
+  maxButtonsPerPage: Math.max(0, Number(process.env.SCRAPER_MAX_BUTTONS_PER_PAGE || 8)),
+  crawlBudgetMs: Math.max(15000, Number(process.env.SCRAPER_CRAWL_BUDGET_MS || 120000)),
+  sameOriginOnly: String(process.env.SCRAPER_SAME_ORIGIN_ONLY || 'true') !== 'false'
+};
+
+const TRACKING_PARAMS = new Set([
+  'srsltid',
+  'fbclid',
+  'gclid',
+  'gbraid',
+  'wbraid',
+  'mc_cid',
+  'mc_eid',
+  'utm_source',
+  'utm_medium',
+  'utm_campaign',
+  'utm_content',
+  'utm_term',
+  'utm_id',
+  'utm_name'
+]);
+
+const BLOCKED_CRAWL_PATTERNS = [
+  /\/cart\b/i,
+  /\/checkout\b/i,
+  /\/panier\b/i,
+  /\/basket\b/i,
+  /\/payment\b/i,
+  /\/paiement\b/i,
+  /\/login\b/i,
+  /\/logout\b/i,
+  /\/account\b/i,
+  /\/admin\b/i,
+  /\/wp-admin\b/i,
+  /\/my-account\b/i,
+  /\/privacy\b/i,
+  /\/terms\b/i,
+  /\/conditions\b/i,
+  /\/mentions/i,
+  /delete/i,
+  /remove/i
+];
+
+function normalizeCrawlUrl(rawUrl, baseUrl = '') {
   const value = String(rawUrl || '').trim();
-  if (!value) throw new Error('Missing URL');
-  const withProtocol = /^https?:\/\//i.test(value) ? value : `https://${value}`;
-  const parsed = new URL(withProtocol);
-  if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('Only http/https URLs are allowed');
-  return parsed.href;
+  if (!value) return null;
+
+  try {
+    const withProtocol = /^https?:\/\//i.test(value)
+      ? value
+      : baseUrl
+        ? new URL(value, baseUrl).href
+        : `https://${value}`;
+
+    const parsed = new URL(withProtocol);
+
+    if (!['http:', 'https:'].includes(parsed.protocol)) return null;
+
+    parsed.hash = '';
+
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (TRACKING_PARAMS.has(key.toLowerCase())) {
+        parsed.searchParams.delete(key);
+      }
+    }
+
+    if (parsed.pathname.length > 1) {
+      parsed.pathname = parsed.pathname.replace(/\/+$/, '');
+    }
+
+    const sortedParams = [...parsed.searchParams.entries()]
+      .sort(([a], [b]) => a.localeCompare(b));
+
+    parsed.search = '';
+
+    for (const [key, value] of sortedParams) {
+      parsed.searchParams.append(key, value);
+    }
+
+    return parsed.href;
+  } catch (_) {
+    return null;
+  }
+}
+
+function isBlockedCrawlUrl(rawUrl) {
+  const value = String(rawUrl || '').trim();
+  if (!value) return true;
+
+  return BLOCKED_CRAWL_PATTERNS.some(rx => rx.test(value));
+}
+
+function isSameOriginUrl(rawUrl, rootUrl) {
+  try {
+    return new URL(rawUrl).origin === new URL(rootUrl).origin;
+  } catch (_) {
+    return false;
+  }
+}
+
+function buildCrawlOptions(options = {}) {
+  return {
+    maxPages: Math.max(1, Number(options.maxPages || DEFAULT_CRAWL_OPTIONS.maxPages)),
+    maxDepth: Math.max(0, Number(options.maxDepth ?? DEFAULT_CRAWL_OPTIONS.maxDepth)),
+    maxClicks: Math.max(0, Number(options.maxClicks ?? DEFAULT_CRAWL_OPTIONS.maxClicks)),
+    maxButtonsPerPage: Math.max(0, Number(options.maxButtonsPerPage ?? DEFAULT_CRAWL_OPTIONS.maxButtonsPerPage)),
+    crawlBudgetMs: Math.max(15000, Number(options.crawlBudgetMs || DEFAULT_CRAWL_OPTIONS.crawlBudgetMs)),
+    sameOriginOnly: options.sameOriginOnly !== false && DEFAULT_CRAWL_OPTIONS.sameOriginOnly
+  };
+}
+
+function normalizeUrl(rawUrl) {
+  const normalized = normalizeCrawlUrl(rawUrl);
+  if (!normalized) throw new Error('Missing or invalid URL');
+  if (isBlockedCrawlUrl(normalized)) throw new Error('Blocked crawl URL');
+  return normalized;
 }
 
 function extractPrices(text = '') {
@@ -128,6 +241,7 @@ async function scrapeSinglePage(page, url) {
 }
 
 async function scrapeUrl(rawUrl, options = {}) {
+  const crawlOptions = buildCrawlOptions(options);
   const url = normalizeUrl(rawUrl);
   const browser = await createBrowser();
   const startedAt = Date.now();
@@ -153,28 +267,69 @@ async function scrapeUrl(rawUrl, options = {}) {
     const extraPages = [];
 
     if (shouldExplore && mainPage.links.length) {
-      for (const candidate of mainPage.links.slice(0, MAX_EXTRA_PAGES)) {
-        const tab = await context.newPage();
-        try {
-          extraPages.push(await scrapeSinglePage(tab, candidate.url));
-        } catch (err) {
-          extraPages.push({ url: candidate.url, error: err.message, scrapedAt: new Date().toISOString() });
-        } finally {
-          await tab.close().catch(() => {});
-        }
-      }
+  const remainingBudget = Math.max(0, crawlOptions.maxPages - 1);
+  const extraCandidates = mainPage.links.slice(0, remainingBudget);
+
+  for (const candidate of extraCandidates) {
+    if (Date.now() - startedAt > crawlOptions.crawlBudgetMs) {
+      extraPages.push({
+        url: candidate.url,
+        skipped: true,
+        reason: 'Crawl budget exceeded',
+        scrapedAt: new Date().toISOString()
+      });
+      break;
     }
+
+    const normalizedCandidateUrl = normalizeCrawlUrl(candidate.url, url);
+
+    if (!normalizedCandidateUrl || isBlockedCrawlUrl(normalizedCandidateUrl)) {
+      extraPages.push({
+        url: candidate.url,
+        skipped: true,
+        reason: 'Blocked or invalid crawl URL',
+        scrapedAt: new Date().toISOString()
+      });
+      continue;
+    }
+
+    if (crawlOptions.sameOriginOnly && !isSameOriginUrl(normalizedCandidateUrl, url)) {
+      extraPages.push({
+        url: candidate.url,
+        skipped: true,
+        reason: 'External origin skipped',
+        scrapedAt: new Date().toISOString()
+      });
+      continue;
+    }
+
+    const tab = await context.newPage();
+
+    try {
+      extraPages.push(await scrapeSinglePage(tab, normalizedCandidateUrl));
+    } catch (err) {
+      extraPages.push({
+        url: normalizedCandidateUrl,
+        error: err.message,
+        scrapedAt: new Date().toISOString()
+      });
+    } finally {
+      await tab.close().catch(() => {});
+    }
+  }
+}
 
     await context.close().catch(() => {});
 
     return {
-      success: true,
-      provider: 'railway-playwright',
-      inputUrl: rawUrl,
-      normalizedUrl: url,
-      durationMs: Date.now() - startedAt,
-      mainPage,
-      extraPages,
+  success: true,
+  provider: 'railway-playwright',
+  inputUrl: rawUrl,
+  normalizedUrl: url,
+  crawlOptions,
+  durationMs: Date.now() - startedAt,
+  mainPage,
+  extraPages,
       summary: {
         pagesScraped: 1 + extraPages.filter(p => !p.error).length,
         pricesFound: mainPage.prices.length + extraPages.reduce((sum, p) => sum + (Array.isArray(p.prices) ? p.prices.length : 0), 0),
@@ -189,19 +344,75 @@ async function scrapeUrl(rawUrl, options = {}) {
 async function scrapeMany(urls = [], options = {}) {
   const list = Array.isArray(urls) ? urls : [urls];
   const results = [];
+  const seen = new Set();
 
-  for (const url of list.filter(Boolean)) {
+  for (const rawUrl of list.filter(Boolean)) {
+    const normalized = normalizeCrawlUrl(rawUrl);
+
+    if (!normalized) {
+      results.push({
+        success: false,
+        inputUrl: rawUrl,
+        error: 'Invalid URL',
+        scrapedAt: new Date().toISOString()
+      });
+      continue;
+    }
+
+    if (isBlockedCrawlUrl(normalized)) {
+      results.push({
+        success: false,
+        inputUrl: rawUrl,
+        normalizedUrl: normalized,
+        error: 'Blocked crawl URL',
+        scrapedAt: new Date().toISOString()
+      });
+      continue;
+    }
+
+    if (seen.has(normalized)) {
+      results.push({
+        success: true,
+        skipped: true,
+        inputUrl: rawUrl,
+        normalizedUrl: normalized,
+        reason: 'Duplicate URL after normalization',
+        scrapedAt: new Date().toISOString()
+      });
+      continue;
+    }
+
+    seen.add(normalized);
+
     try {
-      results.push(await scrapeUrl(url, options));
+      results.push(await scrapeUrl(normalized, options));
     } catch (err) {
-      results.push({ success: false, inputUrl: url, error: err.message, scrapedAt: new Date().toISOString() });
+      results.push({
+        success: false,
+        inputUrl: rawUrl,
+        normalizedUrl: normalized,
+        error: err.message,
+        scrapedAt: new Date().toISOString()
+      });
     }
   }
 
-  return { success: true, results, count: results.length };
+  return {
+    success: true,
+    results,
+    count: results.length,
+    uniqueCount: seen.size
+  };
 }
 
-module.exports = { scrapeUrl, scrapeMany };
+module.exports = {
+  scrapeUrl,
+  scrapeMany,
+  normalizeCrawlUrl,
+  buildCrawlOptions,
+  isBlockedCrawlUrl,
+  isSameOriginUrl
+};
 
 if (require.main === module) {
   const url = process.argv[2];
