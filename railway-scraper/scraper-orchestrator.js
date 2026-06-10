@@ -637,6 +637,189 @@ async function discoverClickableTargets(page, baseUrl, options = {}) {
     totalRawTargets: rawTargets.length
   };
 }
+
+// ─────────────────────────────────────────────────────────────
+// CHAPITRE 3 — Controlled click explorer
+// Clique les boutons utiles sans toucher checkout/login/payment.
+// ─────────────────────────────────────────────────────────────
+
+function isDangerousClickLabel(label = '') {
+  const value = String(label || '').toLowerCase();
+
+  return NEGATIVE_NAVIGATION_PATTERNS.some(rx => rx.test(value)) ||
+    /checkout|cart|panier|basket|payment|paiement|login|logout|account|admin|delete|remove|unsubscribe|commander|acheter|buy now|pay/i.test(value);
+}
+
+function hashText(value = '') {
+  let hash = 0;
+  const str = String(value || '').slice(0, 5000);
+
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+
+  return String(hash);
+}
+
+async function getPageFingerprint(page) {
+  return page.evaluate(() => {
+    const text = document.body?.innerText || '';
+    const links = document.querySelectorAll('a[href]').length;
+    const buttons = document.querySelectorAll('button, [role="button"], .load-more, .show-more, .view-more').length;
+    const products = document.querySelectorAll('[class*="product"], [class*="produit"], li.product, .woocommerce').length;
+
+    return {
+      textLength: text.length,
+      links,
+      buttons,
+      products,
+      title: document.title || '',
+      url: location.href
+    };
+  }).catch(() => ({
+    textLength: 0,
+    links: 0,
+    buttons: 0,
+    products: 0,
+    title: '',
+    url: ''
+  }));
+}
+
+function didPageChange(before, after) {
+  if (!before || !after) return false;
+
+  if (before.url !== after.url) return true;
+  if (Math.abs((after.textLength || 0) - (before.textLength || 0)) > 250) return true;
+  if ((after.links || 0) !== (before.links || 0)) return true;
+  if ((after.products || 0) !== (before.products || 0)) return true;
+
+  return false;
+}
+
+async function clickUsefulButtons(page, baseUrl, options = {}) {
+  const crawlOptions = buildCrawlOptions(options);
+  const clickedButtons = [];
+  const discoveredAfterClicks = [];
+  const clickedSelectors = new Set();
+
+  const initialTargets = await discoverClickableTargets(page, baseUrl, crawlOptions);
+  const targets = (initialTargets.clickTargets || [])
+    .filter(target => target?.selector && !isDangerousClickLabel(target.label))
+    .slice(0, crawlOptions.maxButtonsPerPage);
+
+  for (const target of targets) {
+    if (clickedButtons.length >= crawlOptions.maxClicks) break;
+    if (clickedSelectors.has(target.selector)) continue;
+
+    clickedSelectors.add(target.selector);
+
+    const before = await getPageFingerprint(page);
+    const beforeTextHash = await page.evaluate(() => {
+      const text = document.body?.innerText || '';
+      let hash = 0;
+      for (let i = 0; i < Math.min(text.length, 5000); i++) {
+        hash = ((hash << 5) - hash) + text.charCodeAt(i);
+        hash |= 0;
+      }
+      return String(hash);
+    }).catch(() => '');
+
+    try {
+      const locator = page.locator(target.selector).first();
+
+      const isVisible = await locator.isVisible({ timeout: 1200 }).catch(() => false);
+      if (!isVisible) {
+        clickedButtons.push({
+          ...target,
+          clicked: false,
+          reason: 'not-visible'
+        });
+        continue;
+      }
+
+      await locator.scrollIntoViewIfNeeded({ timeout: 1500 }).catch(() => {});
+      await page.waitForTimeout(250).catch(() => {});
+
+      await Promise.race([
+        locator.click({ timeout: 3500, trial: false }),
+        page.waitForTimeout(3500)
+      ]);
+
+      await Promise.race([
+        page.waitForLoadState('networkidle', { timeout: 4500 }).catch(() => {}),
+        page.waitForTimeout(1800)
+      ]);
+
+      const after = await getPageFingerprint(page);
+      const afterTextHash = await page.evaluate(() => {
+        const text = document.body?.innerText || '';
+        let hash = 0;
+        for (let i = 0; i < Math.min(text.length, 5000); i++) {
+          hash = ((hash << 5) - hash) + text.charCodeAt(i);
+          hash |= 0;
+        }
+        return String(hash);
+      }).catch(() => '');
+
+      const changed = didPageChange(before, after) || beforeTextHash !== afterTextHash;
+
+      clickedButtons.push({
+        ...target,
+        clicked: true,
+        changed,
+        before,
+        after,
+        clickedAt: new Date().toISOString()
+      });
+
+      if (changed) {
+        const html = await page.content().catch(() => '');
+        const text = await page.evaluate(() => document.body?.innerText || '').catch(() => '');
+        const $ = cheerio.load(html);
+
+        const links = extractLinks($, after.url || baseUrl);
+        const { internalLinks, externalLinks } = extractAllLinks($, after.url || baseUrl);
+        const prices = extractPrices(text);
+        const newTargets = await discoverClickableTargets(page, after.url || baseUrl, crawlOptions);
+
+        discoveredAfterClicks.push({
+          sourceButton: {
+            selector: target.selector,
+            label: target.label,
+            score: target.score
+          },
+          url: after.url || baseUrl,
+          title: await page.title().catch(() => ''),
+          textLength: text.length,
+          htmlLength: html.length,
+          prices,
+          links,
+          internalLinks,
+          externalLinks,
+          urlTargets: newTargets.urlTargets,
+          clickTargets: newTargets.clickTargets,
+          scrapedAt: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      clickedButtons.push({
+        ...target,
+        clicked: false,
+        error: String(error?.message || error).slice(0, 500),
+        clickedAt: new Date().toISOString()
+      });
+    }
+  }
+
+  return {
+    clickedButtons,
+    discoveredAfterClicks,
+    totalClicked: clickedButtons.filter(btn => btn.clicked).length,
+    totalChanged: clickedButtons.filter(btn => btn.changed).length
+  };
+}
 async function createBrowser() {
   return chromium.launch({
     headless: true,
@@ -654,7 +837,7 @@ async function createBrowser() {
   });
 }
 
-async function scrapeSinglePage(page, url) {
+async function scrapeSinglePage(page, url, options = {}){
   await page.goto(url, { waitUntil: 'domcontentloaded', timeout: DEFAULT_TIMEOUT_MS });
   await page.waitForLoadState('networkidle', { timeout: 7000 }).catch(() => {});
 
@@ -670,10 +853,13 @@ async function scrapeSinglePage(page, url) {
 
   const h1 = $('h1').first().text().replace(/\s+/g, ' ').trim();
   const metaDescription = $('meta[name="description"]').attr('content') || '';
-  const prices = extractPrices(text);
+ const prices = extractPrices(text);
 const links = extractLinks($, url);
 const { internalLinks, externalLinks } = extractAllLinks($, url);
-const discoveredTargets = await discoverClickableTargets(page, url);
+const discoveredTargets = await discoverClickableTargets(page, url, options);
+const clickExploration = options.clickExplore === false
+  ? { clickedButtons: [], discoveredAfterClicks: [], totalClicked: 0, totalChanged: 0 }
+  : await clickUsefulButtons(page, url, options);
 
   return {
     url,
@@ -688,6 +874,9 @@ externalLinks,
 discoveredTargets,
 clickTargets: discoveredTargets.clickTargets,
 urlTargets: discoveredTargets.urlTargets,
+clickExploration,
+clickedButtons: clickExploration.clickedButtons,
+discoveredAfterClicks: clickExploration.discoveredAfterClicks,
 trustSignals: {
       hasWhatsapp: /wa\.me|whatsapp/i.test(html),
       hasReviews: /avis|reviews?|rating|étoile|stars?|testimonial|témoignage/i.test(text),
@@ -721,7 +910,10 @@ async function scrapeUrl(rawUrl, options = {}) {
     });
 
     const page = await context.newPage();
-    const mainPage = await scrapeSinglePage(page, url);
+   const mainPage = await scrapeSinglePage(page, url, {
+  ...crawlOptions,
+  clickExplore: options.clickExplore !== false
+});
 
     const shouldExplore = options.explore !== false;
     const extraPages = [];
@@ -770,7 +962,10 @@ const mergedCandidates = [
     const tab = await context.newPage();
 
     try {
-      extraPages.push(await scrapeSinglePage(tab, normalizedCandidateUrl));
+      extraPages.push(await scrapeSinglePage(tab, normalizedCandidateUrl, {
+  ...crawlOptions,
+  clickExplore: false
+}));
     } catch (err) {
       extraPages.push({
         url: normalizedCandidateUrl,
@@ -802,6 +997,9 @@ const mergedCandidates = [
   clickTargetsDiscovered: (mainPage.clickTargets || []).length,
   internalLinksFound: (mainPage.internalLinks || []).length,
 externalLinksFound: (mainPage.externalLinks || []).length,
+buttonsClicked: mainPage.clickExploration?.totalClicked || 0,
+buttonsChangedDom: mainPage.clickExploration?.totalChanged || 0,
+afterClickDiscoveries: (mainPage.discoveredAfterClicks || []).length,
   rawClickableTargets: mainPage.discoveredTargets?.totalRawTargets || 0,
   trustSignals: mainPage.trustSignals
 }
