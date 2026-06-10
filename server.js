@@ -4729,11 +4729,31 @@ const BLOCKED_COMPETITOR_DOMAINS = [
     'medium.com',
     'blogspot.com',
     'wordpress.com',
-    'presse',
+    'wordpress.org',
+    'tumblr.com',
+    'blogger.com',
     'news.google',
     'google.com',
     'youtube.com',
-    'youtu.be'
+    'youtu.be',
+    'reddit.com',
+    'quora.com',
+    'answers.com',
+    'stackexchange.com',
+    'stackoverflow.com',
+    'researchgate.net',
+    'scholar.google',
+    'jstor.org',
+    'academia.edu',
+    'semanticscholar.org',
+    'encyclopedia',
+    'wikihow.com',
+    'wikimedia.org',
+    'wikia.com',
+    'fandom.com',
+    'britannica.com',
+    'thoughtco.com',
+    'about.com'
 ];
 
 const SOCIAL_COMPETITOR_DOMAINS = [
@@ -4767,6 +4787,39 @@ function safePath(rawUrl) {
     }
 }
 
+/* ── Score d'intention commerciale ─────────────────────────── */
+function commercialIntentScore(rawUrl = '', title = '', snippet = '') {
+    const host = safeHostname(rawUrl);
+    const path = safePath(rawUrl);
+    const blob = `${host} ${title} ${snippet} ${path}`.toLowerCase();
+    let score = 0;
+    if (/shop|store|boutique|acheter|buy|order|commande|panier|cart|checkout|paiement|payment|pricing|prix|tarif|abonnement|subscription|devis|quote/.test(blob)) score += 35;
+    if (/service|services|solution|solutions|product|produit|logiciel|software|plateforme|platform|saas|app|application/.test(blob)) score += 25;
+    if (/contact|formulaire|form|demo|essai|trial|inscription|register|signup|sign.up|consultation/.test(blob)) score += 20;
+    if (/whatsapp|téléphone|telephone|appel|call|réserver|book|rdv|appointment/.test(blob)) score += 15;
+    if (/professionnels|entreprise|business|agence|agency|corporate/.test(blob)) score += 15;
+    if (/\.(ma|dz|tn|sa|ae|eg|fr|gb|us|ca|com)/.test(host)) score += 5;
+    // Pénalités informationnelles
+    if (/wikipedia|wiki|blog|forum|news|article|guide|tutorial|actualite|magazine|encyclopedia|encyclopedie/.test(blob)) score -= 60;
+    if (/free.*article|read.*more|learn.*about|tout.*savoir/.test(blob)) score -= 20;
+    return Math.max(0, score);
+}
+
+/* ── Classifier le type réel de concurrent ─────────────────── */
+function classifyCompetitorType(rawUrl = '', title = '', snippet = '', lang = 'fr') {
+    const host = safeHostname(rawUrl);
+    const path = safePath(rawUrl);
+    const blob = `${host} ${title} ${snippet} ${path}`.toLowerCase();
+    const isAr = lang === 'ar', isEn = lang === 'en';
+    if (/shop|store|boutique|ecommerce|e-commerce|woocommerce|shopify|product|category|collections/.test(blob))
+        return { type: isAr ? 'متجر إلكتروني' : isEn ? 'E-commerce' : 'E-commerce', competitorType: 'ecommerce' };
+    if (/saas|logiciel|software|platform|dashboard|pricing|subscription|plan/.test(blob))
+        return { type: isAr ? 'منصة SaaS' : isEn ? 'SaaS Platform' : 'SaaS/Plateforme', competitorType: 'saas' };
+    if (/agence|agency|service|conseil|consulting|freelance/.test(blob))
+        return { type: isAr ? 'خدمات احترافية' : isEn ? 'Agency/Service' : 'Agence/Service', competitorType: 'service' };
+    return { type: isAr ? 'موقع رسمي' : isEn ? 'Official Website' : 'Site officiel', competitorType: 'website' };
+}
+
 function isBlockedCompetitorUrl(rawUrl = '', title = '', snippet = '') {
     const host = safeHostname(rawUrl);
     const path = safePath(rawUrl);
@@ -4775,13 +4828,15 @@ function isBlockedCompetitorUrl(rawUrl = '', title = '', snippet = '') {
     if (!host) return true;
     if (BLOCKED_COMPETITOR_DOMAINS.some(d => host.includes(d))) return true;
 
-    if (/\\b(wikipedia|wikidata|blog|article|guide|news|actualite|magazine|forum|wiki)\\b/i.test(blob)) {
+    // Patterns informationnels forts
+    if (/\b(wikipedia|wikidata|blog|article|guide|news|actualite|magazine|forum|wiki|encyclopedia|encyclopedie|encyclopédie|definition|définition|qu.est.ce|what.is|comment|how.to|tutorial|tutoriel)\b/i.test(blob)) {
         return true;
     }
-
-   if (/\/(blog|news|article|articles|guide|wiki)\//i.test(path)) {
+    if (/\/(blog|news|article|articles|guide|wiki|dictionary|glossary|definition|actualite|actualites|tutoriel|tutorial)\//i.test(path)) {
         return true;
     }
+    // Score commercial trop faible
+    if (commercialIntentScore(rawUrl, title, snippet) < 10) return true;
 
     return false;
 }
@@ -5324,11 +5379,14 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
 
     if (SOCIAL_COMPETITOR_DOMAINS.some(d => domain.includes(d))) {
         type = isAr ? 'شبكات اجتماعية' : isEn ? 'Social Profile' : 'Réseau social';
-    } else if (/shop|store|boutique|product|products|category|collections/i.test(url)) {
-        type = isAr ? 'متجر إلكتروني' : isEn ? 'E-commerce' : 'E-commerce';
     } else {
-        type = isAr ? 'موقع رسمي' : isEn ? 'Official Website' : 'Site officiel';
+        const classified = classifyCompetitorType(url, r.title || '', r.snippet || '', langObj?.code || lang);
+        type = classified.type;
     }
+
+    const commercialScore = commercialIntentScore(url, r.title || '', r.snippet || '');
+    const isRealCompetitor = commercialScore >= 25;
+    const competitorType = isRealCompetitor ? 'business' : 'informational';
 
     const posScore = 100 - i * 10;
     const hasRichSnippet = Boolean(r.rich_snippet || r.richSnippet || r.richsnippet);
@@ -5353,7 +5411,10 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
                 : i < 5
                     ? (isAr ? 'مرتفعة' : isEn ? 'High' : 'Haute')
                     : (isAr ? 'متوسطة' : isEn ? 'Medium' : 'Moyenne'),
-        sitelinks: Array.isArray(r.sitelinks) ? r.sitelinks.length : (r.sitelinks ? 1 : 0)
+        sitelinks: Array.isArray(r.sitelinks) ? r.sitelinks.length : (r.sitelinks ? 1 : 0),
+        commercialIntentScore: commercialScore,
+        isRealCompetitor,
+        competitorType
     };
 });
 
@@ -5936,6 +5997,7 @@ JSON uniquement :
 Stratégie SEO offensive & Topic Clusters :
 - Niche : "${cleanQuery}" | Leader : ${enrichedCompetitors[0]?.domain || ND} | Pays : ${geoData.location}
 MOAT — Blog:${leaderMoat?.contentStrategy?.hasBlog ?? '?'} FAQ:${leaderMoat?.technicalMoat?.hasFaqSection ?? '?'} Schema:${leaderMoat?.technicalMoat?.schemaTagsCount ?? 0}
+${userBusinessContextBlock}
 ${keContext}
 ${relatedContext ? `Related Searches: ${relatedContext}` : ''}
 
@@ -5954,11 +6016,28 @@ JSON uniquement :
   }
 }`;
 
+    // Construire le bloc contexte business utilisateur pour les prompts
+    const hasUserContext = userIntentContext && Object.values(userIntentContext).some(v => v && (typeof v === 'string' ? v.length > 0 : Array.isArray(v) ? v.length > 0 : false));
+    const userBusinessContextBlock = hasUserContext ? `
+CONTEXTE BUSINESS FOURNI PAR L'UTILISATEUR :
+Offre : ${userIntentContext.offer || ND}
+Audience : ${userIntentContext.audience || ND}
+Objectif : ${userIntentContext.objective || ND}
+Prix : ${userIntentContext.priceRange || ND}
+Concurrents connus : ${Array.isArray(userIntentContext.knownCompetitors) ? userIntentContext.knownCompetitors.join(', ') : (userIntentContext.knownCompetitors || ND)}
+Ville/région : ${userIntentContext.cityOrRegion || ND}
+
+RÈGLES D'UTILISATION DU CONTEXTE :
+- Utilise ce contexte pour adapter les recommandations à la situation réelle.
+- Ne l'utilise JAMAIS comme preuve observée sur les concurrents.
+- N'invente pas les champs manquants.` : '';
+
     const agent3Prompt = `${langInstr}
 MASTERING & DUEL CMO (Reverse Engineering & Grand Slam Offer) :
 - Niche : "${cleanQuery}"
 - Top 3 Challengers : ${top3Context}
 - User Context : ${userContextStr}
+${userBusinessContextBlock}
 ${gscPromptContext}
 ${keContext}
 

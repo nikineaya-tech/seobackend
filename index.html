@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-   <meta http-equiv="Content-Security-Policy" content="default-src  media-src 'self' https://etjwmqnbfsevlwaeixwb.supabase.co blob: data:;'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://seobackend-f81n.onrender.com http://localhost:10000;">
+   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' https://etjwmqnbfsevlwaeixwb.supabase.co blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://seobackend-f81n.onrender.com http://localhost:10000;">
 
     <title>Daka - Intelligence marketing et croissance</title>
     <meta name="description" content="Daka transforme les signaux du marché, les pages et les concurrents en actions concrètes pour mieux vendre.">
@@ -24,29 +24,305 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 
-<!-- DAKA_UI_VIDEO_HOTFIX_START -->
+<!-- DAKA_VIDEO_PATCH_START -->
+<style id="daka-video-patch-css">
+/* ── 1. Loader video : taille fixe, centré, pas d'overflow ── */
+.loading-state {
+  overflow-x: hidden !important;
+}
+.loading-state .loading-orb {
+  display: grid !important;
+  place-items: center !important;
+  margin: 0 auto clamp(14px, 2vh, 24px) !important;
+  flex: 0 0 auto !important;
+  overflow: hidden !important;
+}
+/* brand-loader-orb devient un simple conteneur vidéo */
+.brand-loader-orb {
+  width: clamp(160px, 30vmin, 320px) !important;
+  height: clamp(160px, 30vmin, 320px) !important;
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  display: grid !important;
+  place-items: center !important;
+  position: relative !important;
+  isolation: isolate !important;
+  animation: none !important;
+}
+/* Supprimer tous les pseudo-éléments, textes et images de l'orb */
+.brand-loader-orb::before,
+.brand-loader-orb::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  animation: none !important;
+}
+.brand-loader-orb > *:not(video) {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+}
+/* Vidéo Supabase dans le loader */
+.daka-loader-video {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: inherit !important;
+  background: transparent !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: absolute !important;
+  inset: 0 !important;
+}
+/* Logo header vidéo */
+.daka-header-logo-video {
+  display: block !important;
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  box-shadow: 0 0 20px rgba(139,92,246,.55) !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+.logo .logo-mark,
+.logo-mark,
+[data-logo-mark],
+.navbar-logo {
+  background: transparent !important;
+  background-image: none !important;
+  overflow: hidden !important;
+}
+.logo-mark::before,
+.logo-mark::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  animation: none !important;
+}
+/* ── 2. Auth modal : centré, max-height sécurisé ── */
+.auth-modal-panel {
+  max-height: calc(100vh - 32px) !important;
+  overflow-y: auto !important;
+}
+/* ── 3. Mobile overflow global ── */
+html { overflow-x: hidden !important; }
+@media (max-width: 768px) {
+  html, body { max-width: 100vw !important; overflow-x: hidden !important; }
+  .card, .result-card, .report-card, .competitor-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .context-brief-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .context-brief-badge {
+    display: none !important;
+  }
+  .btn, .btn-cosmic, .btn-primary, [class*="btn-"] {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  /* Désactiver scroll-behavior + effets lourds sur mobile */
+  * { scroll-behavior: auto !important; }
+  .context-brief::before,
+  .loading-state::before {
+    animation: none !important;
+  }
+  .loading-state::after {
+    filter: none !important;
+    animation: none !important;
+  }
+  .brand-loader-orb {
+    width: clamp(120px, 50vw, 200px) !important;
+    height: clamp(120px, 50vw, 200px) !important;
+  }
+}
+@media (max-width: 480px) {
+  .header-content {
+    padding: 8px 12px !important;
+    gap: 8px !important;
+  }
+  .card { padding: 14px !important; }
+  .context-brief { padding: 12px !important; }
+}
+/* ── 4. Compétiteurs actions ── */
+.competitor-actions,
+.competitor-card-actions,
+.action-buttons,
+.result-actions,
+[data-competitor-actions="true"] {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+button[data-no-collapse="true"],
+a[data-no-collapse="true"] {
+  position: relative;
+  z-index: 10;
+}
 
-<style id="daka-ui-video-hotfix-css">
-.brand-loader-orb,.loader-logo,.loading-logo,.brand-loader .logo-mark,.loading-screen .logo-mark,[data-loader-logo],[data-brand-loader],.daka-video-loader-wrap{width:clamp(128px,32vw,196px)!important;height:clamp(128px,32vw,196px)!important;max-width:72vh!important;max-height:72vh!important;border-radius:30px!important;background:transparent!important;background-image:none!important;border:0!important;box-shadow:none!important;overflow:hidden!important;position:relative!important;display:flex!important;align-items:center!important;justify-content:center!important;margin-inline:auto!important}.logo .logo-mark,.logo-mark,[data-logo-mark],.brand-logo,.navbar-logo{background:transparent!important;background-image:none!important;overflow:hidden!important}.brand-loader-orb:before,.brand-loader-orb:after,.loader-logo:before,.loader-logo:after,.loading-logo:before,.loading-logo:after,.logo-mark:before,.logo-mark:after{display:none!important;content:none!important;background:none!important;background-image:none!important;box-shadow:none!important}.brand-loader-orb>*:not(video),.loader-logo>*:not(video),.loading-logo>*:not(video),.brand-loader .logo-mark>*:not(video),.loading-screen .logo-mark>*:not(video){display:none!important;visibility:hidden!important;opacity:0!important}.brand-loader-orb span,.brand-loader-orb img,.brand-loader-orb svg,.brand-loader-orb i,.brand-loader-orb .loader-text,.brand-loader-orb .brand-loader-text,.brand-loader-orb [class*="text"],.brand-loader-orb [class*="label"]{display:none!important;visibility:hidden!important;opacity:0!important}.daka-loader-video,.daka-header-logo-video,video[data-daka-video-logo="true"]{display:block!important;width:100%!important;height:100%!important;object-fit:contain!important;border-radius:inherit!important;background:transparent!important;visibility:visible!important;opacity:1!important}.daka-header-logo-video{width:52px!important;height:52px!important;border-radius:50%!important;object-fit:cover!important;box-shadow:0 0 20px rgba(139,92,246,.55)!important}.competitor-actions,.competitor-card-actions,.action-buttons,.result-actions,[data-competitor-actions="true"]{display:flex;align-items:center;gap:8px;flex-wrap:wrap}button[data-no-collapse="true"],a[data-no-collapse="true"]{position:relative;z-index:10}@media(max-width:480px){.brand-loader-orb,.loader-logo,.loading-logo,.daka-video-loader-wrap{width:min(68vw,156px)!important;height:min(68vw,156px)!important;border-radius:26px!important}.daka-header-logo-video{width:44px!important;height:44px!important}}
+/* ── Performance mobile : désactiver les animations lourdes ── */
+@media (max-width: 768px) {
+  .loading-state::before,
+  .loading-state::after {
+    animation: none !important;
+    filter: none !important;
+  }
+  .loading-state .loading-orb::before,
+  .loading-state .loading-orb::after {
+    animation: none !important;
+    filter: none !important;
+  }
+  .brand-loader-orb {
+    animation: none !important;
+  }
+  .context-brief::before {
+    animation: none !important;
+  }
+  /* Réduire backdrop-filter coûteux */
+  .header, .card, .input-wrapper, .select-field, .auth-modal {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+/* ── Pas de scroll horizontal global ── */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* ── Context brief accordion ── */
+.context-brief-accordion {
+  cursor: default;
+}
+.context-brief-summary {
+  list-style: none;
+  cursor: pointer;
+  margin-bottom: 0 !important;
+}
+.context-brief-summary::-webkit-details-marker { display: none; }
+.context-brief-summary::marker { display: none; }
+.context-brief-accordion:not([open]) .context-brief-grid {
+  display: none;
+}
+.context-brief-accordion[open] .context-brief-summary .context-brief-icon i::before {
+  content: "\f14d"; /* fa-object-group */
+}
 </style>
+<script id="daka-video-patch-js">
+(function() {
+  'use strict';
+  var VIDEO_URL = "https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4";
+  var ATTR = 'data-daka-video-logo';
 
-<script id="daka-ui-video-hotfix-js">
-(function(){
-'use strict';
-var VIDEO_URL="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4";
-var VIDEO_ATTR='data-daka-video-logo';
-function createVideo(cls){var v=document.createElement('video');v.src=VIDEO_URL;v.autoplay=true;v.loop=true;v.muted=true;v.defaultMuted=true;v.playsInline=true;v.preload='auto';v.className=cls||'';v.setAttribute('muted','');v.setAttribute('playsinline','');v.setAttribute('webkit-playsinline','');v.setAttribute('aria-hidden','true');v.setAttribute(VIDEO_ATTR,'true');return v;}
-function play(v){if(!v)return;v.muted=true;v.defaultMuted=true;var p=v.play&&v.play();if(p&&p.catch)p.catch(function(){});}
-function replaceWithVideo(node,cls){if(!node)return;var existing=node.querySelector('video['+VIDEO_ATTR+']');if(!existing){existing=createVideo(cls);node.innerHTML='';node.appendChild(existing);}else{Array.prototype.slice.call(node.children).forEach(function(child){if(child!==existing)child.remove();});existing.classList.add(cls);}node.classList.add('daka-video-loader-wrap');node.style.background='transparent';node.style.backgroundImage='none';node.style.boxShadow='none';play(existing);}
-function patchLogoAndLoader(){var loaders='.brand-loader-orb,.loader-logo,.loading-logo,.brand-loader .logo-mark,.loading-screen .logo-mark,[data-loader-logo],[data-brand-loader]';document.querySelectorAll(loaders).forEach(function(el){replaceWithVideo(el,'daka-loader-video');});document.querySelectorAll('.logo .logo-mark,[data-logo-mark],.navbar-logo').forEach(function(el){replaceWithVideo(el,'daka-header-logo-video');});}
-function isActionButton(target){return target&&target.closest&&target.closest('button,a,input,select,textarea,.copy-btn,.copy-button,.btn-copy,.competitor-actions,.competitor-card-actions,.action-buttons,.result-actions,[data-no-collapse],[data-action],[data-copy],[onclick]');}
-function protectButtons(root){var scope=root&&root.querySelectorAll?root:document;var selector='button,a,[role="button"],.copy-btn,.copy-button,.btn-copy,[data-copy],[data-action],[onclick]';scope.querySelectorAll(selector).forEach(function(el){if(el.getAttribute('data-daka-no-collapse-bound')==='true')return;var txt=(el.textContent||el.getAttribute('aria-label')||el.getAttribute('title')||'').toLowerCase();var cls=(el.className||'').toString().toLowerCase();var action=(el.getAttribute('data-action')||'').toLowerCase();var signal=txt+' '+cls+' '+action;var isCompetitorAction=/copy|copier|clipboard|funnel|analyse|analysis|audit|seo|rapport|report|export|pdf|utiliser|use|open|ouvrir/.test(signal);var isInside=!!el.closest('.competitor-card,.competitor-item,.competitor-row,.competitor,[data-competitor],.result-card,.report-card,details,.accordion,.accordion-item');if(!isCompetitorAction&&!isInside)return;el.setAttribute('data-daka-no-collapse-bound','true');el.setAttribute('data-no-collapse','true');if(el.tagName==='BUTTON'&&!el.getAttribute('type'))el.setAttribute('type','button');['click','mousedown','mouseup','pointerdown','pointerup','touchstart','touchend'].forEach(function(name){el.addEventListener(name,function(event){event.stopPropagation();},false);});});}
-function protectScroll(){if(window.__dakaNoScrollJumpPatch)return;window.__dakaNoScrollJumpPatch=true;document.addEventListener('click',function(event){if(isActionButton(event.target))return;var toggle=event.target&&event.target.closest&&event.target.closest('summary,.accordion-header,.accordion-toggle,.collapse-header,.section-header,[data-accordion-toggle],[data-collapse-toggle]');if(!toggle)return;var x=window.scrollX;var y=window.scrollY;requestAnimationFrame(function(){setTimeout(function(){if(Math.abs(window.scrollY-y)>120)window.scrollTo(x,y);},80);});},true);}
-function run(){patchLogoAndLoader();protectButtons(document);protectScroll();}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run);else run();document.addEventListener('DOMContentLoaded',function(){var mo=new MutationObserver(function(){run();});if(document.body)mo.observe(document.body,{childList:true,subtree:true});});
+  function mkVideo(cls) {
+    var v = document.createElement('video');
+    v.src = VIDEO_URL;
+    v.autoplay = true; v.loop = true; v.muted = true;
+    v.defaultMuted = true; v.playsInline = true; v.preload = 'auto';
+    v.className = cls || '';
+    v.setAttribute('muted', '');
+    v.setAttribute('playsinline', '');
+    v.setAttribute('webkit-playsinline', '');
+    v.setAttribute('aria-hidden', 'true');
+    v.setAttribute(ATTR, 'true');
+    return v;
+  }
+
+  function injectVideo(node, cls) {
+    if (!node) return;
+    var ex = node.querySelector('video[' + ATTR + ']');
+    if (!ex) {
+      ex = mkVideo(cls);
+      node.innerHTML = '';
+      node.appendChild(ex);
+    } else {
+      [].slice.call(node.children).forEach(function(c) { if (c !== ex) c.remove(); });
+      ex.className = cls || ex.className;
+    }
+    node.style.cssText += ';background:transparent!important;background-image:none!important;box-shadow:none!important;';
+    var p = ex.play && ex.play();
+    if (p && p.catch) p.catch(function() {});
+  }
+
+  var _patchTimer = null;
+  function patchAll() {
+    document.querySelectorAll('.brand-loader-orb').forEach(function(el) {
+      injectVideo(el, 'daka-loader-video');
+    });
+    document.querySelectorAll('.logo .logo-mark, [data-logo-mark], .navbar-logo').forEach(function(el) {
+      injectVideo(el, 'daka-header-logo-video');
+    });
+  }
+
+  /* ── MutationObserver avec debounce 200ms pour éviter les loops ── */
+  var _mo = null;
+  function startObserver() {
+    if (_mo) return;
+    _mo = new MutationObserver(function() {
+      if (_patchTimer) clearTimeout(_patchTimer);
+      _patchTimer = setTimeout(patchAll, 200);
+    });
+    var target = document.getElementById('resultsCompetitors') || document.body;
+    _mo.observe(target, {childList: true, subtree: true});
+  }
+
+  /* ── Protéger les boutons actions contre le collapse parent ── */
+  function protectButtons(root) {
+    var scope = (root && root.querySelectorAll) ? root : document;
+    scope.querySelectorAll('button, a, [role="button"]').forEach(function(el) {
+      if (el.getAttribute('data-daka-nb') === '1') return;
+      var sig = ((el.textContent || '') + ' ' + (el.className || '') + ' ' + (el.getAttribute('data-action') || '')).toLowerCase();
+      var isAction = /copy|copier|clipboard|funnel|analyse|analysis|audit|seo|rapport|report|export|pdf|utiliser|use|open|ouvrir/.test(sig);
+      var isInside = !!el.closest('.competitor-card,.result-card,.report-card,details,.accordion,.accordion-item');
+      if (!isAction && !isInside) return;
+      el.setAttribute('data-daka-nb', '1');
+      el.setAttribute('data-no-collapse', 'true');
+      if (el.tagName === 'BUTTON' && !el.getAttribute('type')) el.setAttribute('type', 'button');
+      ['click', 'mousedown', 'touchstart'].forEach(function(n) {
+        el.addEventListener(n, function(e) { e.stopPropagation(); }, false);
+      });
+    });
+  }
+
+  /* ── Anti scroll-jump lors de l'ouverture de sections ── */
+  function protectScroll() {
+    if (window.__dkScrollPatch) return;
+    window.__dkScrollPatch = true;
+    document.addEventListener('click', function(e) {
+      var toggle = e.target && e.target.closest && e.target.closest(
+        'summary,.accordion-header,.accordion-toggle,.collapse-header,.section-header,[data-accordion-toggle]'
+      );
+      if (!toggle) return;
+      var x = window.scrollX, y = window.scrollY;
+      requestAnimationFrame(function() {
+        setTimeout(function() {
+          if (Math.abs(window.scrollY - y) > 100) window.scrollTo(x, y);
+        }, 60);
+      });
+    }, true);
+  }
+
+  function run() {
+    patchAll();
+    protectButtons(document);
+    protectScroll();
+    startObserver();
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
 })();
 </script>
-<!-- DAKA_UI_VIDEO_HOTFIX_END -->
+<!-- DAKA_VIDEO_PATCH_END -->
 </head>
 <style>
     .decision-proof-panel { border-radius: 18px; }
@@ -3133,16 +3409,16 @@ table tbody td {
                 </div>
             </div>
 
-            <section class="context-brief context-brief-competitors" aria-label="Brief business optionnel">
-                <div class="context-brief-head">
+            <details class="context-brief context-brief-competitors context-brief-accordion" aria-label="Brief business optionnel" id="compContextDetails">
+                <summary class="context-brief-head context-brief-summary" data-no-collapse="true" onclick="event.stopPropagation()">
                     <span class="context-brief-icon"><i class="fas fa-bullseye"></i></span>
                     <div>
-                        <h3 data-i18n="context_comp_title">Rendez le rapport 3x plus concret</h3>
-                        <p data-i18n="context_comp_sub">Ajoutez votre offre, votre cible et votre objectif pour recevoir des actions adaptées à votre vraie situation.</p>
+                        <h3 data-i18n="context_comp_title" style="margin:0 0 2px;color:#fff;">Ajouter un contexte business</h3>
+                        <p data-i18n="context_comp_sub" style="margin:0;color:#94a3b8;font-size:.82rem;">Offre, cible, objectif — rend le rapport 3x plus concret</p>
                     </div>
-                    <span class="context-brief-badge" data-i18n="context_comp_badge">Optionnel · recommandé</span>
-                </div>
-                <div class="context-brief-grid">
+                    <span class="context-brief-badge" style="margin-left:auto;" data-i18n="context_comp_badge">Optionnel</span>
+                </summary>
+                <div class="context-brief-grid" style="margin-top:14px;" onclick="event.stopPropagation()">
                     <label class="context-field">
                         <span data-i18n="context_offer_label">Offre exacte</span>
                         <input id="compOffer" class="input-field" type="text" data-i18n-placeholder="context_offer_ph" placeholder="Ex: SaaS marketing + formation intégrée">
@@ -3168,7 +3444,7 @@ table tbody td {
                         <input id="compCityRegion" class="input-field" type="text" data-i18n-placeholder="context_geo_ph" placeholder="Ex: Maroc, Casablanca, MENA francophone">
                     </label>
                 </div>
-            </section>
+            </details>
 
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                 <div class="form-group">
@@ -3470,7 +3746,7 @@ table tbody td {
 
     </div> <div id="loadingState" class="loading-state">
         <div class="loading-orb">
-            <div class="brand-loader-orb"><span>DAKA</span></div>
+            <div class="brand-loader-orb"><video class="daka-loader-video" src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4" autoplay loop muted playsinline preload="auto" data-daka-video-logo="true" aria-hidden="true"></video></div>
         </div>
         <div class="loading-title" data-i18n="loading_comp_title">Daka prépare votre avantage...</div>
         <div class="loading-subtitle" data-i18n="loading_comp_sub">Le temps de votre café, les signaux du marché deviennent des décisions claires.</div>
@@ -3485,7 +3761,7 @@ table tbody td {
 
     <div id="loadingFunnel" class="loading-state">
         <div class="loading-orb">
-            <div class="brand-loader-orb"><span>DAKA</span></div>
+            <div class="brand-loader-orb"><video class="daka-loader-video" src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4" autoplay loop muted playsinline preload="auto" data-daka-video-logo="true" aria-hidden="true"></video></div>
         </div>
         <div class="loading-title" data-i18n="loading_funnel_title">Daka révèle les points de friction...</div>
         <div class="loading-subtitle" data-i18n="loading_funnel_sub">Pendant votre pause, les pertes invisibles deviennent des corrections concrètes.</div>
@@ -3501,7 +3777,7 @@ table tbody td {
 
     <div id="loadingTechnical" class="loading-state">
         <div class="loading-orb">
-            <div class="brand-loader-orb"><span>DAKA</span></div>
+            <div class="brand-loader-orb"><video class="daka-loader-video" src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4" autoplay loop muted playsinline preload="auto" data-daka-video-logo="true" aria-hidden="true"></video></div>
         </div>
         <div class="loading-title" data-i18n="loading_tech_title">Daka sécurise les fondations...</div>
         <div class="loading-subtitle" data-i18n="loading_tech_sub">Pendant que la sphère analyse, les blocages se rangent par urgence.</div>
@@ -3517,7 +3793,7 @@ table tbody td {
 
     <div id="loadingKeywords" class="loading-state">
         <div class="loading-orb">
-            <div class="brand-loader-orb"><span>DAKA</span></div>
+            <div class="brand-loader-orb"><video class="daka-loader-video" src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4" autoplay loop muted playsinline preload="auto" data-daka-video-logo="true" aria-hidden="true"></video></div>
         </div>
         <div class="loading-title" data-i18n="loading_kw_title">Daka fait remonter les meilleures demandes...</div>
         <div class="loading-subtitle" data-i18n="loading_kw_sub">Pendant que vous respirez, les demandes utiles remontent à la surface.</div>
@@ -3656,7 +3932,7 @@ table tbody td {
 
    <div id="loadingKeywords" class="loading-state">
         <div class="loading-orb">
-            <div class="brand-loader-orb"><span>DAKA</span></div>
+            <div class="brand-loader-orb"><video class="daka-loader-video" src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4" autoplay loop muted playsinline preload="auto" data-daka-video-logo="true" aria-hidden="true"></video></div>
         </div>
         <div class="loading-title" data-i18n="loading_kw_title">Daka fait remonter les meilleures demandes...</div>
         <div class="loading-subtitle" data-i18n="loading_kw_sub">Pendant que vous respirez, les demandes utiles remontent à la surface.</div>
@@ -9809,17 +10085,25 @@ function displayKeywordsResults(data) {
        MAJ 5 — kwFilter : ajout du filtre quickwin + reset visuel
     ══════════════════════════════════════════════════════ */
     window.kwFilter = function(type, val, btn) {
-        // Reset boutons du même groupe
+        // ── Mettre à jour le bouton actif AVANT de filtrer (fix double-clic) ──
         document.querySelectorAll(`.kw-filter-btn[data-filter="${type}"]`).forEach(b => {
+            b.classList.remove('kw-filter-active');
             b.style.background = 'transparent';
             b.style.color      = '#64748b';
             b.style.fontWeight = '600';
         });
         if (btn) {
+            btn.classList.add('kw-filter-active');
             btn.style.background  = 'rgba(255,255,255,0.1)';
             btn.style.color       = 'white';
             btn.style.fontWeight  = '800';
         }
+
+        // Lire l'état actif maintenant que les classes sont à jour
+        const activKd     = document.querySelector('.kw-filter-btn[data-filter="kd"].kw-filter-active')?.dataset.val     || 'all';
+        const activLang   = document.querySelector('.kw-filter-btn[data-filter="lang"].kw-filter-active')?.dataset.val   || 'all';
+        const activIntent = document.querySelector('.kw-filter-btn[data-filter="intent"].kw-filter-active')?.dataset.val || 'all';
+        const activQw     = document.querySelector('.kw-filter-btn[data-filter="quickwin"].kw-filter-active')?.dataset.val;
 
         const rows = document.querySelectorAll('#kwTableBody tr');
         let visible = 0;
@@ -9828,12 +10112,6 @@ function displayKeywordsResults(data) {
             const lang     = row.dataset.lang              || '';
             const intent   = (row.dataset.intent          || '').toLowerCase();
             const quickwin = row.dataset.quickwin          === 'true';
-
-            // Lire l'état actif de chaque filtre groupe
-            const activKd     = document.querySelector('.kw-filter-btn[data-filter="kd"].kw-filter-active')?.dataset.val     || 'all';
-            const activLang   = document.querySelector('.kw-filter-btn[data-filter="lang"].kw-filter-active')?.dataset.val   || 'all';
-            const activIntent = document.querySelector('.kw-filter-btn[data-filter="intent"].kw-filter-active')?.dataset.val || 'all';
-            const activQw     = document.querySelector('.kw-filter-btn[data-filter="quickwin"].kw-filter-active')?.dataset.val;
 
             const matchKd     = activKd     === 'all' || (activKd === 'easy' && kd <= 29) || (activKd === 'medium' && kd >= 30 && kd <= 69) || (activKd === 'hard' && kd >= 70);
             const matchLang   = activLang   === 'all' || lang    === activLang;
@@ -9844,10 +10122,6 @@ function displayKeywordsResults(data) {
             row.style.display = show ? '' : 'none';
             if (show) visible++;
         });
-
-        // Marquer bouton actif pour ce groupe
-        document.querySelectorAll(`.kw-filter-btn[data-filter="${type}"]`).forEach(b => b.classList.remove('kw-filter-active'));
-        if (btn) btn.classList.add('kw-filter-active');
 
         const countEl = document.getElementById('kwFilterCount');
         if (countEl) countEl.textContent = visible;
@@ -14838,30 +15112,13 @@ const PDF_EXPORT = {
     width: 100%;
     height: 100%;
     position: relative;
-    isolation: isolate;
     display: grid;
     place-items: center;
     border-radius: 999px;
     overflow: hidden;
-    background:
-        radial-gradient(circle at 37% 36%, rgba(3, 7, 28, 0.98) 0 23%, transparent 42%),
-        radial-gradient(circle at 27% 22%, rgba(255, 255, 255, 0.92) 0 4%, rgba(125, 211, 252, 0.42) 9% 24%, transparent 42%),
-        radial-gradient(circle at 78% 34%, rgba(236, 72, 153, 0.7), transparent 34%),
-        radial-gradient(circle at 31% 74%, rgba(6, 182, 212, 0.62), transparent 36%),
-        radial-gradient(circle at 66% 78%, rgba(124, 58, 237, 0.78), transparent 42%),
-        conic-gradient(from 228deg, #050816, #2563eb, #8b5cf6, #ec4899, #22d3ee, #4f46e5, #050816);
-    background-size: 160% 160%, 145% 145%, 165% 165%, 150% 150%, 150% 150%, 100% 100%;
-    box-shadow:
-        inset 0 0 30px rgba(255, 255, 255, 0.64),
-        inset -42px -38px 74px rgba(8, 7, 28, 0.72),
-        inset 32px 26px 68px rgba(255, 255, 255, 0.2),
-        inset 0 -24px 70px rgba(88, 28, 135, 0.44),
-        0 0 0 1px rgba(255, 255, 255, 0.62);
-    animation:
-        dakaOrbFloat 5.4s ease-in-out infinite,
-        dakaOrbHue 11s linear infinite,
-        dakaOrbBreathe 3.4s ease-in-out infinite,
-        dakaOrbLiquid 8.4s ease-in-out infinite alternate;
+    background: transparent;
+    box-shadow: none;
+    animation: none;
 }
 
 .brand-loader-orb::before,
