@@ -4,6 +4,7 @@ require('dotenv').config();
 
 const cheerio = require('cheerio');
 const { chromium } = require('playwright-extra');
+const axios = require('axios');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 const { createCursor } = require('ghost-cursor');
 
@@ -13,6 +14,13 @@ const DEFAULT_TIMEOUT_MS = Number(process.env.SCRAPER_TIMEOUT_MS || 45000);
 const MAX_EXTRA_PAGES = Math.max(0, Number(process.env.SCRAPER_MAX_EXTRA_PAGES || 12));
 const USER_AGENT = process.env.SCRAPER_USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
+const BROWSERLESS_API_TOKEN = process.env.BROWSERLESS_API_TOKEN || '';
+const BROWSERLESS_URL = process.env.BROWSERLESS_URL || 'https://production-sfo.browserless.io';
+const SCRAPE_DO_TOKEN = process.env.SCRAPE_DO_TOKEN || '';
+
+const ENABLE_BROWSERLESS = String(process.env.SCRAPER_ENABLE_BROWSERLESS || 'true') !== 'false';
+const ENABLE_SCRAPEDO = String(process.env.SCRAPER_ENABLE_SCRAPEDO || 'true') !== 'false';
+const SCRAPEDO_TIMEOUT_MS = Math.max(10000, Number(process.env.SCRAPEDO_TIMEOUT_MS || 45000));
 const DEFAULT_CRAWL_OPTIONS = {
   maxPages: Math.max(1, Number(process.env.SCRAPER_MAX_PAGES || 12)),
   maxDepth: Math.max(0, Number(process.env.SCRAPER_MAX_DEPTH || 2)),
@@ -1360,7 +1368,37 @@ async function crawlSite(context, startUrl, options = {}) {
     durationMs: Date.now() - startedAt
   };
 }
-async function createBrowser() {
+function buildBrowserlessWsEndpoint() {
+  if (!BROWSERLESS_API_TOKEN || !BROWSERLESS_URL) return '';
+
+  const base = BROWSERLESS_URL.replace(/\/+$/, '');
+
+  // Supporte https://production-sfo.browserless.io ou wss://...
+  if (/^wss?:\/\//i.test(base)) {
+    const sep = base.includes('?') ? '&' : '?';
+    return `${base}${sep}token=${encodeURIComponent(BROWSERLESS_API_TOKEN)}`;
+  }
+
+  const httpUrl = new URL(base);
+  const wsProtocol = httpUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${wsProtocol}//${httpUrl.host}?token=${encodeURIComponent(BROWSERLESS_API_TOKEN)}`;
+}
+
+async function createBrowser(provider = 'local') {
+  if (provider === 'browserless') {
+    const endpoint = buildBrowserlessWsEndpoint();
+
+    if (!endpoint) {
+      throw new Error('Browserless not configured: missing BROWSERLESS_API_TOKEN or BROWSERLESS_URL');
+    }
+
+    console.log('[RailwayScraper] Connecting to Browserless remote browser...');
+
+    return chromium.connectOverCDP(endpoint, {
+      timeout: Math.min(DEFAULT_TIMEOUT_MS, 30000)
+    });
+  }
+
   return chromium.launch({
     headless: true,
     args: [
@@ -1375,6 +1413,145 @@ async function createBrowser() {
       '--js-flags=--max-old-space-size=512'
     ]
   });
+}
+
+function isWeakScrapeResult(result = {}) {
+  if (!result || typeof result !== 'object') return true;
+
+  const wordCount = Number(result.wordCount || 0);
+  const htmlLength = Number(result.htmlLength || 0);
+  const pricesCount = Array.isArray(result.prices) ? result.prices.length : 0;
+  const productsCount = Array.isArray(result.productCards) ? result.productCards.length : 0;
+  const linksCount = Array.isArray(result.internalLinks) ? result.internalLinks.length : 0;
+
+  const hasMeaningfulCommerce =
+    pricesCount > 0 ||
+    productsCount > 0 ||
+    result.ecommerceSignals?.hasPrice ||
+    result.ecommerceSignals?.hasAddToCart ||
+    result.cmsSignals?.woocommerce ||
+    result.cmsSignals?.shopify ||
+    result.cmsSignals?.prestashop;
+
+  if (hasMeaningfulCommerce) return false;
+  if (wordCount >= 120 && htmlLength >= 3000 && linksCount >= 2) return false;
+
+  return true;
+}
+
+function isBlockedHtml(html = '', text = '') {
+  const value = `${html.slice(0, 30000)} ${text.slice(0, 10000)}`.toLowerCase();
+
+  return /captcha|cloudflare|access denied|forbidden|verify you are human|are you human|robot check|blocked|checking your browser/i.test(value);
+}
+async function fetchViaScrapeDo(rawUrl) {
+  if (!ENABLE_SCRAPEDO || !SCRAPE_DO_TOKEN) {
+    throw new Error('Scrape.do not configured');
+  }
+
+  const targetUrl = normalizeUrl(rawUrl);
+
+  const endpoint = 'https://api.scrape.do/';
+  const response = await axios.get(endpoint, {
+    timeout: SCRAPEDO_TIMEOUT_MS,
+    params: {
+      token: SCRAPE_DO_TOKEN,
+      url: targetUrl,
+      render: 'true',
+      super: 'true'
+    },
+    headers: {
+      'User-Agent': USER_AGENT,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+    },
+    validateStatus: status => status >= 200 && status < 500
+  });
+
+  if (response.status === 429) {
+    const err = new Error('Scrape.do rate limited 429');
+    err.code = 'SCRAPEDO_429';
+    err.status = 429;
+    throw err;
+  }
+
+  if (response.status >= 400) {
+    const err = new Error(`Scrape.do HTTP ${response.status}`);
+    err.status = response.status;
+    throw err;
+  }
+
+  return String(response.data || '');
+}
+
+function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
+  const $ = cheerio.load(html);
+  const text = $('body').text().replace(/\s+/g, ' ').trim();
+  const title = $('title').first().text().replace(/\s+/g, ' ').trim();
+  const headings = extractHeadings($);
+  const h1 = headings.h1[0] || '';
+  const metaDescription = $('meta[name="description"]').attr('content') || '';
+  const canonical = $('link[rel="canonical"]').attr('href') || '';
+  const language = $('html').attr('lang') || '';
+  const openGraph = extractOpenGraph($, url);
+  const jsonLd = extractJsonLd($);
+  const images = extractImages($, url);
+  const productCards = extractProductCards($, url);
+  const ctas = extractCtas($);
+  const forms = extractForms($);
+  const faq = extractFaq($);
+  const cmsSignals = detectCmsSignals(html, text);
+  const ecommerceSignals = detectEcommerceSignals(html, text);
+  const prices = extractPrices(text);
+  const links = extractLinks($, url);
+  const { internalLinks, externalLinks } = extractAllLinks($, url);
+  const socialContact = extractSocialAndContactLinks(externalLinks, html, text);
+  const paginationSignals = extractPaginationSignals($, url);
+
+  return {
+    url,
+    title,
+    h1,
+    headings,
+    metaDescription,
+    canonical: absoluteUrl(canonical, url) || canonical,
+    language,
+    openGraph,
+    jsonLd,
+    images,
+    productCards,
+    ctas,
+    forms,
+    faq,
+    cmsSignals,
+    ecommerceSignals,
+    socialLinks: socialContact.socialLinks,
+    whatsappLinks: socialContact.whatsappLinks,
+    contactLinks: socialContact.contactLinks,
+    emails: socialContact.emails,
+    phones: socialContact.phones,
+    paginationSignals,
+    wordCount: text.split(/\s+/).filter(Boolean).length,
+    prices,
+    links,
+    internalLinks,
+    externalLinks,
+    discoveredTargets: { urlTargets: [], clickTargets: [], totalRawTargets: 0 },
+    clickTargets: [],
+    urlTargets: [],
+    clickExploration: { clickedButtons: [], discoveredAfterClicks: [], totalClicked: 0, totalChanged: 0 },
+    clickedButtons: [],
+    discoveredAfterClicks: [],
+    trustSignals: {
+      hasWhatsapp: /wa\.me|whatsapp/i.test(html),
+      hasReviews: /avis|reviews?|rating|étoile|stars?|testimonial|témoignage/i.test(text),
+      hasGuarantee: /garantie|rembours|refund|money back|ضمان/i.test(text),
+      hasDelivery: /livraison|delivery|shipping|توصيل/i.test(text),
+      hasContact: /contact|support|email|téléphone|phone|whatsapp/i.test(text)
+    },
+    provider,
+    htmlLength: html.length,
+    scrapedAt: new Date().toISOString()
+  };
 }
 
 async function scrapeSinglePage(page, url, options = {}){
@@ -1461,10 +1638,11 @@ trustSignals: {
   };
 }
 
-async function scrapeUrl(rawUrl, options = {}) {
+
+async function scrapeUrlWithProvider(rawUrl, options = {}, provider = 'local') {
   const crawlOptions = buildCrawlOptions(options);
   const url = normalizeUrl(rawUrl);
-  const browser = await createBrowser();
+  const browser = await createBrowser(provider);
   const startedAt = Date.now();
 
   try {
@@ -1483,71 +1661,261 @@ async function scrapeUrl(rawUrl, options = {}) {
 
     const shouldExplore = options.explore !== false;
 
-const crawlResult = shouldExplore
-  ? await crawlSite(context, url, {
-      ...crawlOptions,
-      clickExplore: options.clickExplore !== false
-    })
-  : {
-      rootUrl: url,
-      mainPage: await scrapeSinglePage(await context.newPage(), url, {
+    let crawlResult;
+
+    if (shouldExplore) {
+      crawlResult = await crawlSite(context, url, {
         ...crawlOptions,
         clickExplore: options.clickExplore !== false
-      }),
-      pages: [],
-      crawlMap: [],
-      errors: [],
-      visitedCount: 1,
-      queuedRemaining: 0,
-      durationMs: 0
+      });
+    } else {
+      const singlePage = await context.newPage();
+
+      try {
+        const mainOnly = await scrapeSinglePage(singlePage, url, {
+          ...crawlOptions,
+          clickExplore: options.clickExplore !== false
+        });
+
+        crawlResult = {
+          rootUrl: url,
+          mainPage: mainOnly,
+          pages: [mainOnly],
+          crawlMap: [{
+            event: 'scraped',
+            url,
+            depth: 0,
+            source: 'start',
+            label: 'start',
+            score: 999,
+            at: new Date().toISOString()
+          }],
+          errors: [],
+          visitedCount: 1,
+          queuedRemaining: 0,
+          durationMs: Date.now() - startedAt
+        };
+      } finally {
+        await singlePage.close().catch(() => {});
+      }
+    }
+
+    await context.close().catch(() => {});
+
+    const mainPage = crawlResult.mainPage;
+    const pages = crawlResult.pages || [];
+    const extraPages = pages.filter(page => page.url !== mainPage?.url);
+    const allPages = pages.length ? pages : [mainPage].filter(Boolean);
+
+    return {
+      success: true,
+      provider: provider === 'browserless' ? 'railway-browserless-multi-agent' : 'railway-playwright-multi-agent',
+      inputUrl: rawUrl,
+      normalizedUrl: url,
+      crawlOptions,
+      durationMs: Date.now() - startedAt,
+      mainPage,
+      pages: allPages,
+      extraPages,
+      crawlMap: crawlResult.crawlMap || [],
+      crawlErrors: crawlResult.errors || [],
+      summary: {
+        pagesScraped: allPages.filter(Boolean).length,
+        visitedCount: crawlResult.visitedCount || allPages.filter(Boolean).length,
+        queuedRemaining: crawlResult.queuedRemaining || 0,
+        pricesFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.prices) ? page.prices.length : 0), 0),
+        productCardsFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.productCards) ? page.productCards.length : 0), 0),
+        imagesFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.images) ? page.images.length : 0), 0),
+        ctasFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.ctas) ? page.ctas.length : 0), 0),
+        formsFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.forms) ? page.forms.length : 0), 0),
+        faqBlocksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.faq?.detectedBlocks) ? page.faq.detectedBlocks.length : 0), 0),
+        jsonLdSchemasFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.jsonLd) ? page.jsonLd.length : 0), 0),
+        whatsappLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.whatsappLinks) ? page.whatsappLinks.length : 0), 0),
+        socialLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.socialLinks) ? page.socialLinks.length : 0), 0),
+        linksDiscovered: allPages.reduce((sum, page) => sum + (Array.isArray(page?.links) ? page.links.length : 0), 0),
+        internalLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.internalLinks) ? page.internalLinks.length : 0), 0),
+        externalLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.externalLinks) ? page.externalLinks.length : 0), 0),
+        urlTargetsDiscovered: allPages.reduce((sum, page) => sum + (Array.isArray(page?.urlTargets) ? page.urlTargets.length : 0), 0),
+        clickTargetsDiscovered: allPages.reduce((sum, page) => sum + (Array.isArray(page?.clickTargets) ? page.clickTargets.length : 0), 0),
+        rawClickableTargets: allPages.reduce((sum, page) => sum + Number(page?.discoveredTargets?.totalRawTargets || 0), 0),
+        buttonsClicked: allPages.reduce((sum, page) => sum + Number(page?.clickExploration?.totalClicked || 0), 0),
+        buttonsChangedDom: allPages.reduce((sum, page) => sum + Number(page?.clickExploration?.totalChanged || 0), 0),
+        afterClickDiscoveries: allPages.reduce((sum, page) => sum + (Array.isArray(page?.discoveredAfterClicks) ? page.discoveredAfterClicks.length : 0), 0),
+        errors: (crawlResult.errors || []).length,
+        trustSignals: mainPage?.trustSignals || {}
+      }
     };
-
-const mainPage = crawlResult.mainPage;
-const pages = crawlResult.pages || [];
-const extraPages = pages.filter(page => page.url !== mainPage?.url);
-const allPages = pages.length ? pages : [mainPage].filter(Boolean);
-   return {
-  success: true,
-  provider: 'railway-playwright-multi-agent',
-  inputUrl: rawUrl,
-  normalizedUrl: url,
-  crawlOptions,
-  durationMs: Date.now() - startedAt,
-  mainPage,
-  pages: allPages,
-  extraPages,
-  crawlMap: crawlResult.crawlMap || [],
-  crawlErrors: crawlResult.errors || [],
-  summary: {
-    pagesScraped: allPages.filter(Boolean).length,
-    visitedCount: crawlResult.visitedCount || allPages.filter(Boolean).length,
-    queuedRemaining: crawlResult.queuedRemaining || 0,
-
-    productCardsFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.productCards) ? page.productCards.length : 0), 0),
-imagesFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.images) ? page.images.length : 0), 0),
-ctasFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.ctas) ? page.ctas.length : 0), 0),
-formsFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.forms) ? page.forms.length : 0), 0),
-faqBlocksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.faq?.detectedBlocks) ? page.faq.detectedBlocks.length : 0), 0),
-jsonLdSchemasFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.jsonLd) ? page.jsonLd.length : 0), 0),
-whatsappLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.whatsappLinks) ? page.whatsappLinks.length : 0), 0),
-socialLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.socialLinks) ? page.socialLinks.length : 0), 0),
-    pricesFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.prices) ? page.prices.length : 0), 0),
-    linksDiscovered: allPages.reduce((sum, page) => sum + (Array.isArray(page?.links) ? page.links.length : 0), 0),
-    internalLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.internalLinks) ? page.internalLinks.length : 0), 0),
-    externalLinksFound: allPages.reduce((sum, page) => sum + (Array.isArray(page?.externalLinks) ? page.externalLinks.length : 0), 0),
-    urlTargetsDiscovered: allPages.reduce((sum, page) => sum + (Array.isArray(page?.urlTargets) ? page.urlTargets.length : 0), 0),
-    clickTargetsDiscovered: allPages.reduce((sum, page) => sum + (Array.isArray(page?.clickTargets) ? page.clickTargets.length : 0), 0),
-    rawClickableTargets: allPages.reduce((sum, page) => sum + Number(page?.discoveredTargets?.totalRawTargets || 0), 0),
-    buttonsClicked: allPages.reduce((sum, page) => sum + Number(page?.clickExploration?.totalClicked || 0), 0),
-    buttonsChangedDom: allPages.reduce((sum, page) => sum + Number(page?.clickExploration?.totalChanged || 0), 0),
-    afterClickDiscoveries: allPages.reduce((sum, page) => sum + (Array.isArray(page?.discoveredAfterClicks) ? page.discoveredAfterClicks.length : 0), 0),
-    errors: (crawlResult.errors || []).length,
-    trustSignals: mainPage?.trustSignals || {}
-  }
-};
   } finally {
     await browser.close().catch(() => {});
   }
+}
+async function scrapeUrl(rawUrl, options = {}) {
+  const url = normalizeUrl(rawUrl);
+  const attempts = [];
+
+  // 1. Local Playwright
+  try {
+    const localResult = await scrapeUrlWithProvider(url, options, 'local');
+
+    attempts.push({
+      provider: 'local',
+      success: true,
+      weak: isWeakScrapeResult(localResult.mainPage)
+    });
+
+    if (!isWeakScrapeResult(localResult.mainPage)) {
+      return {
+        ...localResult,
+        attempts
+      };
+    }
+
+    console.warn('[RailwayScraper] Local scrape weak. Trying Browserless...');
+  } catch (error) {
+    attempts.push({
+      provider: 'local',
+      success: false,
+      error: String(error?.message || error).slice(0, 500)
+    });
+
+    console.warn('[RailwayScraper] Local scrape failed:', error.message);
+  }
+
+  // 2. Browserless
+  if (ENABLE_BROWSERLESS && BROWSERLESS_API_TOKEN) {
+    try {
+      const browserlessResult = await scrapeUrlWithProvider(url, options, 'browserless');
+
+      attempts.push({
+        provider: 'browserless',
+        success: true,
+        weak: isWeakScrapeResult(browserlessResult.mainPage)
+      });
+
+      if (!isWeakScrapeResult(browserlessResult.mainPage)) {
+        return {
+          ...browserlessResult,
+          attempts
+        };
+      }
+
+      console.warn('[RailwayScraper] Browserless scrape weak. Trying Scrape.do...');
+    } catch (error) {
+      attempts.push({
+        provider: 'browserless',
+        success: false,
+        error: String(error?.message || error).slice(0, 500)
+      });
+
+      console.warn('[RailwayScraper] Browserless failed:', error.message);
+    }
+  } else {
+    attempts.push({
+      provider: 'browserless',
+      success: false,
+      skipped: true,
+      reason: 'BROWSERLESS_API_TOKEN missing or disabled'
+    });
+  }
+
+  // 3. Scrape.do fallback
+  if (ENABLE_SCRAPEDO && SCRAPE_DO_TOKEN) {
+    try {
+      const html = await fetchViaScrapeDo(url);
+
+      if (isBlockedHtml(html)) {
+        attempts.push({
+          provider: 'scrape.do',
+          success: false,
+          weak: true,
+          error: 'Blocked HTML detected'
+        });
+      } else {
+        const pageResult = buildPageResultFromHtml(html, url, 'scrape.do');
+
+        attempts.push({
+          provider: 'scrape.do',
+          success: true,
+          weak: isWeakScrapeResult(pageResult)
+        });
+
+        return {
+          success: true,
+          provider: 'railway-scrapedo-fallback',
+          inputUrl: rawUrl,
+          normalizedUrl: url,
+          crawlOptions: buildCrawlOptions(options),
+          durationMs: 0,
+          mainPage: pageResult,
+          pages: [pageResult],
+          extraPages: [],
+          crawlMap: [{
+            event: 'scraped',
+            url,
+            depth: 0,
+            source: 'scrape.do',
+            label: 'scrape.do fallback',
+            score: 500,
+            at: new Date().toISOString()
+          }],
+          crawlErrors: [],
+          attempts,
+          summary: {
+            pagesScraped: 1,
+            visitedCount: 1,
+            queuedRemaining: 0,
+            pricesFound: Array.isArray(pageResult.prices) ? pageResult.prices.length : 0,
+            productCardsFound: Array.isArray(pageResult.productCards) ? pageResult.productCards.length : 0,
+            imagesFound: Array.isArray(pageResult.images) ? pageResult.images.length : 0,
+            ctasFound: Array.isArray(pageResult.ctas) ? pageResult.ctas.length : 0,
+            formsFound: Array.isArray(pageResult.forms) ? pageResult.forms.length : 0,
+            faqBlocksFound: Array.isArray(pageResult.faq?.detectedBlocks) ? pageResult.faq.detectedBlocks.length : 0,
+            jsonLdSchemasFound: Array.isArray(pageResult.jsonLd) ? pageResult.jsonLd.length : 0,
+            whatsappLinksFound: Array.isArray(pageResult.whatsappLinks) ? pageResult.whatsappLinks.length : 0,
+            socialLinksFound: Array.isArray(pageResult.socialLinks) ? pageResult.socialLinks.length : 0,
+            linksDiscovered: Array.isArray(pageResult.links) ? pageResult.links.length : 0,
+            internalLinksFound: Array.isArray(pageResult.internalLinks) ? pageResult.internalLinks.length : 0,
+            externalLinksFound: Array.isArray(pageResult.externalLinks) ? pageResult.externalLinks.length : 0,
+            urlTargetsDiscovered: 0,
+            clickTargetsDiscovered: 0,
+            rawClickableTargets: 0,
+            buttonsClicked: 0,
+            buttonsChangedDom: 0,
+            afterClickDiscoveries: 0,
+            errors: 0,
+            trustSignals: pageResult.trustSignals || {}
+          }
+        };
+      }
+    } catch (error) {
+      attempts.push({
+        provider: 'scrape.do',
+        success: false,
+        error: String(error?.message || error).slice(0, 500),
+        code: error?.code || undefined,
+        status: error?.status || undefined
+      });
+
+      console.warn('[RailwayScraper] Scrape.do failed:', error.message);
+    }
+  } else {
+    attempts.push({
+      provider: 'scrape.do',
+      success: false,
+      skipped: true,
+      reason: 'SCRAPE_DO_TOKEN missing or disabled'
+    });
+  }
+
+  return {
+    success: false,
+    provider: 'railway-scraper-failed',
+    inputUrl: rawUrl,
+    normalizedUrl: url,
+    attempts,
+    error: 'All scraping providers failed or returned weak data',
+    scrapedAt: new Date().toISOString()
+  };
 }
 
 async function scrapeMany(urls = [], options = {}) {
