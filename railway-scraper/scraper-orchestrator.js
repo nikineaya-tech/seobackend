@@ -324,7 +324,80 @@ function addUrlCandidate({ candidates, seen, rawUrl, baseUrl, label = '', source
     source
   });
 }
+function classifyExternalLink(url = '') {
+  const value = String(url || '').toLowerCase();
 
+  if (/facebook\.com|fb\.com/.test(value)) return 'social-facebook';
+  if (/instagram\.com/.test(value)) return 'social-instagram';
+  if (/tiktok\.com/.test(value)) return 'social-tiktok';
+  if (/linkedin\.com/.test(value)) return 'social-linkedin';
+  if (/youtube\.com|youtu\.be/.test(value)) return 'social-youtube';
+  if (/wa\.me|whatsapp\.com/.test(value)) return 'whatsapp';
+  if (/maps\.google|google\.com\/maps/.test(value)) return 'google-maps';
+  if (/trustpilot|avis-verifies|reviews/.test(value)) return 'reviews';
+  if (/paypal|stripe|payzone|cmi|checkout/.test(value)) return 'payment';
+  if (/amazon|etsy|ebay|jumia|aliexpress/.test(value)) return 'marketplace';
+
+  return 'external';
+}
+
+function extractAllLinks($, baseUrl) {
+  const internalLinks = [];
+  const externalLinks = [];
+  const seenInternal = new Set();
+  const seenExternal = new Set();
+
+  let base;
+
+  try {
+    base = new URL(baseUrl);
+  } catch (_) {
+    return { internalLinks, externalLinks };
+  }
+
+  $('a[href]').each((_, el) => {
+    const href = ($(el).attr('href') || '').trim();
+    const label = compactText($(el).text() || $(el).attr('aria-label') || $(el).attr('title') || '');
+
+    if (!href || href.startsWith('#') || /^javascript:/i.test(href) || /^mailto:/i.test(href) || /^tel:/i.test(href)) {
+      return;
+    }
+
+    const normalized = normalizeCrawlUrl(href, baseUrl);
+    if (!normalized) return;
+
+    try {
+      const parsed = new URL(normalized);
+
+      if (parsed.origin === base.origin) {
+        if (seenInternal.has(normalized)) return;
+        seenInternal.add(normalized);
+
+        internalLinks.push({
+          url: normalized,
+          label,
+          source: 'a[href]',
+          score: scoreNavigationText(`${label} ${parsed.pathname}`)
+        });
+      } else {
+        if (seenExternal.has(normalized)) return;
+        seenExternal.add(normalized);
+
+        externalLinks.push({
+          url: normalized,
+          label,
+          source: 'a[href]',
+          type: classifyExternalLink(normalized)
+        });
+      }
+    } catch (_) {}
+  });
+
+  return {
+    internalLinks: internalLinks.sort((a, b) => (b.score || 0) - (a.score || 0)),
+    externalLinks
+  };
+}
 function extractLinks($, baseUrl) {
   const candidates = [];
   const seen = new Set();
@@ -599,6 +672,7 @@ async function scrapeSinglePage(page, url) {
   const metaDescription = $('meta[name="description"]').attr('content') || '';
   const prices = extractPrices(text);
 const links = extractLinks($, url);
+const { internalLinks, externalLinks } = extractAllLinks($, url);
 const discoveredTargets = await discoverClickableTargets(page, url);
 
   return {
@@ -608,7 +682,9 @@ const discoveredTargets = await discoverClickableTargets(page, url);
     metaDescription,
     wordCount: text.split(/\s+/).filter(Boolean).length,
     prices,
-    links,
+   links,
+internalLinks,
+externalLinks,
 discoveredTargets,
 clickTargets: discoveredTargets.clickTargets,
 urlTargets: discoveredTargets.urlTargets,
@@ -724,6 +800,8 @@ const mergedCandidates = [
   linksDiscovered: (mainPage.links || []).length,
   urlTargetsDiscovered: (mainPage.urlTargets || []).length,
   clickTargetsDiscovered: (mainPage.clickTargets || []).length,
+  internalLinksFound: (mainPage.internalLinks || []).length,
+externalLinksFound: (mainPage.externalLinks || []).length,
   rawClickableTargets: mainPage.discoveredTargets?.totalRawTargets || 0,
   trustSignals: mainPage.trustSignals
 }
