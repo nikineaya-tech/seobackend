@@ -336,61 +336,6 @@ html, body {
 <script id="daka-video-patch-js">
 (function() {
   'use strict';
-  var VIDEO_URL = "https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4";
-  var ATTR = 'data-daka-video-logo';
-
-  function mkVideo(cls) {
-    var v = document.createElement('video');
-    v.src = VIDEO_URL;
-    v.autoplay = true; v.loop = true; v.muted = true;
-    v.defaultMuted = true; v.playsInline = true; v.preload = 'auto';
-    v.className = cls || '';
-    v.setAttribute('muted', '');
-    v.setAttribute('playsinline', '');
-    v.setAttribute('webkit-playsinline', '');
-    v.setAttribute('aria-hidden', 'true');
-    v.setAttribute(ATTR, 'true');
-    return v;
-  }
-
-  function injectVideo(node, cls) {
-    if (!node) return;
-    var ex = node.querySelector('video[' + ATTR + ']');
-    if (!ex) {
-      ex = mkVideo(cls);
-      node.innerHTML = '';
-      node.appendChild(ex);
-    } else {
-      [].slice.call(node.children).forEach(function(c) { if (c !== ex) c.remove(); });
-      ex.className = cls || ex.className;
-    }
-    node.style.cssText += ';background:transparent!important;background-image:none!important;box-shadow:none!important;';
-    var p = ex.play && ex.play();
-    if (p && p.catch) p.catch(function() {});
-  }
-
-  var _patchTimer = null;
-  function patchAll() {
-    document.querySelectorAll('.brand-loader-orb').forEach(function(el) {
-      injectVideo(el, 'daka-loader-video');
-    });
-    document.querySelectorAll('.logo .logo-mark, [data-logo-mark], .navbar-logo').forEach(function(el) {
-      injectVideo(el, 'daka-header-logo-video');
-    });
-  }
-
-  /* ── MutationObserver avec debounce 200ms pour éviter les loops ── */
-  var _mo = null;
-  function startObserver() {
-    if (_mo) return;
-    _mo = new MutationObserver(function() {
-      if (_patchTimer) clearTimeout(_patchTimer);
-      _patchTimer = setTimeout(patchAll, 200);
-    });
-    var target = document.getElementById('resultsCompetitors') || document.body;
-    _mo.observe(target, {childList: true, subtree: true});
-  }
-
   /* ── Protéger les boutons actions contre le collapse parent ── */
   function protectButtons(root) {
     var scope = (root && root.querySelectorAll) ? root : document;
@@ -428,10 +373,8 @@ html, body {
   }
 
   function run() {
-    patchAll();
     protectButtons(document);
     protectScroll();
-    startObserver();
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
@@ -3627,16 +3570,16 @@ table tbody td {
                         </div>
                     </div>
 
-                    <section class="context-brief context-brief-funnel" aria-label="Brief conversion optionnel">
-                        <div class="context-brief-head">
+                    <details class="context-brief context-brief-funnel context-brief-accordion" aria-label="Brief conversion optionnel" id="funnelContextDetails">
+                        <summary class="context-brief-head context-brief-summary" data-no-collapse="true" onclick="event.stopPropagation()">
                             <span class="context-brief-icon"><i class="fas fa-route"></i></span>
                             <div>
-                                <h3 data-i18n="context_funnel_title">Donnez le contexte de la page</h3>
+                                <h3 data-i18n="context_funnel_title">Ajouter un contexte business</h3>
                                 <p data-i18n="context_funnel_sub">Plus vous précisez l'offre et l'objectif, plus les corrections seront concrètes: textes, preuves, prix, boutons et objections.</p>
                             </div>
                             <span class="context-brief-badge" data-i18n="context_funnel_badge">Pour un plan réaliste</span>
-                        </div>
-                        <div class="context-brief-grid">
+                        </summary>
+                        <div class="context-brief-grid" style="margin-top:14px;" onclick="event.stopPropagation()">
                             <label class="context-field">
                                 <span data-i18n="context_funnel_offer_label">Offre ou promesse</span>
                                 <input id="funnelOffer" class="input-field" type="text" data-i18n-placeholder="context_funnel_offer_ph" placeholder="Ex: audit marketing, formation, produit e-commerce">
@@ -3662,7 +3605,7 @@ table tbody td {
                                 <input id="funnelCityRegion" class="input-field" type="text" data-i18n-placeholder="context_funnel_geo_ph" placeholder="Ex: Maroc, France, Casablanca, GCC">
                             </label>
                         </div>
-                    </section>
+                    </details>
 
                     <div style="background: rgba(16, 185, 129, 0.05); border: 1px dashed #10b981; padding: 15px; border-radius: 12px; margin-bottom: 25px; display: flex; align-items: center; gap: 15px;">
                         <i class="fas fa-microchip" style="font-size: 1.5rem; color: #10b981;"></i>
@@ -4066,26 +4009,6 @@ table tbody td {
     </button>
 
 </form>
-
-
-   <div id="loadingKeywords" class="loading-state">
-        <div class="loading-orb">
-            <div class="brand-loader-orb"><video class="daka-loader-video" src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4" autoplay loop muted playsinline preload="auto" data-daka-video-logo="true" aria-hidden="true"></video></div>
-        </div>
-        <div class="loading-title" data-i18n="loading_kw_title">Daka fait remonter les meilleures demandes...</div>
-        <div class="loading-subtitle" data-i18n="loading_kw_sub">Pendant que vous respirez, les demandes utiles remontent à la surface.</div>
-        <div class="loading-progress-wrap">
-            <div class="loading-progress-bar" id="loadingBarKeywords" style="background: linear-gradient(90deg, #0ea5e9, #06b6d4);"></div>
-        </div>
-        <div class="loading-phases">
-            <div class="loading-phase"><i class="fas fa-globe"></i> <span data-i18n="step_kw_1">Tendances</span></div>
-            <div class="loading-phase"><i class="fas fa-gem"></i> <span data-i18n="step_kw_2">Opportunités</span></div>
-            <div class="loading-phase"><i class="fas fa-bullseye"></i> <span data-i18n="step_kw_3">Intentions</span></div>
-            <div class="loading-phase"><i class="fas fa-chart-line"></i> <span data-i18n="step_kw_4">Métriques</span></div>
-        </div>
-        <div class="loading-tip"></div>
-    </div>
-
 
         <!-- RÉSULTATS -->
         <div id="resultsKeywords" class="results-container"></div>
@@ -10287,111 +10210,6 @@ function displayKeywordsResults(data) {
 
     if (typeof showResults === 'function') showResults('resultsKeywords');
 }
-
-
-// ═══════════════════════════════════════════════════════════════════
-// 🔽 FILTRE KEYWORDS — KD · Langue · Intent · Source
-// ═══════════════════════════════════════════════════════════════════
-window._kwActiveFilters = { kd: 'all', lang: 'all', intent: 'all', source: 'all' };
-
-window.kwFilter = function(type, val, btnEl) {
-    window._kwActiveFilters[type] = val;
-
-    // reset style du groupe
-    document.querySelectorAll(`.kw-filter-btn[data-filter="${type}"]`).forEach(b => {
-        b.style.background = 'transparent';
-        b.style.color      = '#94a3b8';
-        b.style.border     = '1px solid rgba(148,163,184,0.35)';
-    });
-
-    if (btnEl) {
-        btnEl.style.background = 'rgba(255,255,255,0.1)';
-        btnEl.style.color      = '#e5e7eb';
-        btnEl.style.border     = '1px solid rgba(255,255,255,0.5)';
-    }
-
-    const f = window._kwActiveFilters;
-    const rows = document.querySelectorAll('#kwTableBody tr');
-    let visible = 0;
-
-    rows.forEach(row => {
-        const kd     = parseInt(row.dataset.kd) || 0;
-        const lang   = row.dataset.lang   || '';
-        const intent = row.dataset.intent || '';
-        const source = row.dataset.source || 'synthese';
-
-        const kdOk = f.kd === 'all'
-            || (f.kd === 'easy'   && kd <= 29)
-            || (f.kd === 'medium' && kd >= 30 && kd <= 69)
-            || (f.kd === 'hard'   && kd >= 70);
-
-        const langOk   = f.lang   === 'all' || lang   === f.lang;
-        const intentOk = f.intent === 'all' || intent === f.intent;
-        const sourceOk = f.source === 'all' || source === f.source;
-
-        const show = kdOk && langOk && intentOk && sourceOk;
-        row.style.display = show ? '' : 'none';
-        if (show) visible++;
-    });
-
-    const counter = document.getElementById('kwFilterCount');
-    if (counter) counter.textContent = visible;
-};
-
-
-
-
-
-// ═══════════════════════════════════════════════════════════════════
-// 🔽 FILTRE KEYWORDS — KD · Langue · Intent · Source
-// ═══════════════════════════════════════════════════════════════════
-window._kwActiveFilters = { kd: 'all', lang: 'all', intent: 'all', source: 'all' };
-
-window.kwFilter = function(type, val, btnEl) {
-    window._kwActiveFilters[type] = val;
-
-    // reset style groupe
-    document.querySelectorAll(`.kw-filter-btn[data-filter="${type}"]`).forEach(b => {
-        b.style.background = 'transparent';
-        b.style.color      = '#94a3b8';
-        b.style.border     = '1px solid rgba(148,163,184,0.35)';
-    });
-
-    // styles actifs simples
-    if (btnEl) {
-        btnEl.style.background = 'rgba(255,255,255,0.1)';
-        btnEl.style.color      = '#e5e7eb';
-        btnEl.style.border     = '1px solid rgba(255,255,255,0.5)';
-    }
-
-    const f = window._kwActiveFilters;
-    const rows = document.querySelectorAll('#kwTableBody tr');
-    let visible = 0;
-
-    rows.forEach(row => {
-        const kd     = parseInt(row.dataset.kd) || 0;
-        const lang   = row.dataset.lang   || '';
-        const intent = row.dataset.intent || '';
-        const source = row.dataset.source || 'synthese';
-
-        const kdOk = f.kd === 'all'
-            || (f.kd === 'easy'   && kd <= 29)
-            || (f.kd === 'medium' && kd >= 30 && kd <= 69)
-            || (f.kd === 'hard'   && kd >= 70);
-
-        const langOk   = f.lang   === 'all' || lang   === f.lang;
-        const intentOk = f.intent === 'all' || intent === f.intent;
-        const sourceOk = f.source === 'all' || source === f.source;
-
-        const show = kdOk && langOk && intentOk && sourceOk;
-        row.style.display = show ? '' : 'none';
-        if (show) visible++;
-    });
-
-    const counter = document.getElementById('kwFilterCount');
-    if (counter) counter.textContent = visible;
-};
-
 
 // ═══════════════════════════════════════════════════════════════════
 // 📋 COPIE ENRICHIE — keyword | intent | volume

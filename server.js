@@ -2949,6 +2949,26 @@ function safeUserContextFromBody(body = {}) {
   };
 }
 
+function formatUserContextForPrompt(context = {}, noDataLabel = 'Not provided') {
+  const ctx = context && typeof context === 'object' ? context : {};
+  const known = Array.isArray(ctx.knownCompetitors) ? ctx.knownCompetitors.join(', ') : ctx.knownCompetitors;
+  const hasContext = [ctx.offer, ctx.audience, ctx.objective, ctx.priceRange, known, ctx.cityOrRegion].some(Boolean);
+  if (!hasContext) return '';
+  return `
+USER-PROVIDED BUSINESS CONTEXT:
+- Offer: ${ctx.offer || noDataLabel}
+- Audience: ${ctx.audience || noDataLabel}
+- Objective: ${ctx.objective || noDataLabel}
+- Price: ${ctx.priceRange || noDataLabel}
+- Known competitors: ${known || noDataLabel}
+- City/region: ${ctx.cityOrRegion || noDataLabel}
+
+RULES:
+- Use this context to adapt recommendations.
+- Never present it as observed evidence.
+- Never invent missing fields.`;
+}
+
 function uniqueByKey(items = [], getKey = x => x) {
   const seen = new Set();
   return (items || []).filter(item => {
@@ -4854,6 +4874,18 @@ function isOfficialLikeCompetitor(rawUrl = '', title = '', snippet = '') {
     return true;
 }
 
+function competitorRejectionReason(rawUrl = '', title = '', snippet = '', commercialScore = 0) {
+    const host = safeHostname(rawUrl);
+    const path = safePath(rawUrl);
+    const blob = `${host} ${title} ${snippet} ${path}`.toLowerCase();
+    if (!host) return 'invalid_url';
+    if (BLOCKED_COMPETITOR_DOMAINS.some(d => host.includes(d))) return 'blocked_domain';
+    if (/wikipedia|wikidata|encyclopedia|encyclopedie|encyclopédie/.test(blob)) return 'encyclopedic_source';
+    if (/blog|article|guide|news|actualite|magazine|forum|tutorial|tutoriel/.test(blob)) return 'informational_source';
+    if (commercialScore < 25) return 'insufficient_commercial_signals';
+    return null;
+}
+
 function geoBoostScore(rawUrl = '', geoData = {}, title = '', snippet = '') {
     const host = safeHostname(rawUrl);
     const blob = `${host} ${title} ${snippet}`.toLowerCase();
@@ -5337,7 +5369,7 @@ const gscData =
         ? gscResult.value
         : null;
     // ── 5. ENRICHISSEMENT CONCURRENTS ─────────────────────────
-    const filteredCompetitors = rawResults
+    const assessedCompetitors = rawResults
     .map((r, i) => {
         const url = r.link || r.url || '';
         const title = r.title || '';
@@ -5346,8 +5378,10 @@ const gscData =
 
         const blocked = isBlockedCompetitorUrl(url, title, snippet);
         const officialLike = isOfficialLikeCompetitor(url, title, snippet);
+        const commercialScore = commercialIntentScore(url, title, snippet);
         const geoMatch = geoMatchDetailsV2(url, geoData, title, snippet);
         const geoScore = Math.max(geoBoostScore(url, geoData, title, snippet), geoMatch.score || 0);
+        const classification = classifyCompetitorType(url, title, snippet, langObj.code);
 
         return {
             raw: r,
@@ -5358,14 +5392,32 @@ const gscData =
             originalPosition: i + 1,
             blocked,
             officialLike,
+            commercialScore,
+            isRealCompetitor: !blocked && officialLike && commercialScore >= 25,
+            competitorType: classification.competitorType,
+            rejectionReason: competitorRejectionReason(url, title, snippet, commercialScore),
             geoScore,
             geoMatch
         };
-    })
-    .filter(x => !x.blocked && x.officialLike)
+    });
+
+    const marketSources = assessedCompetitors
+    .filter(x => !x.isRealCompetitor)
+    .map(x => ({
+        title: x.title,
+        url: x.url,
+        domain: x.domain,
+        snippet: x.snippet,
+        commercialIntentScore: x.commercialScore,
+        rejectionReason: x.rejectionReason || 'not_a_business_competitor'
+    }))
+    .slice(0, 10);
+
+    const filteredCompetitors = assessedCompetitors
+    .filter(x => x.isRealCompetitor)
     .sort((a, b) => {
-        const scoreA = (100 - a.originalPosition * 5) + (a.geoScore * 1.35);
-        const scoreB = (100 - b.originalPosition * 5) + (b.geoScore * 1.35);
+        const scoreA = (100 - a.originalPosition * 5) + (a.geoScore * 1.35) + a.commercialScore;
+        const scoreB = (100 - b.originalPosition * 5) + (b.geoScore * 1.35) + b.commercialScore;
         return scoreB - scoreA;
     })
     .slice(0, 10);
@@ -5384,9 +5436,9 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
         type = classified.type;
     }
 
-    const commercialScore = commercialIntentScore(url, r.title || '', r.snippet || '');
-    const isRealCompetitor = commercialScore >= 25;
-    const competitorType = isRealCompetitor ? 'business' : 'informational';
+    const commercialScore = x.commercialScore;
+    const isRealCompetitor = x.isRealCompetitor;
+    const competitorType = x.competitorType;
 
     const posScore = 100 - i * 10;
     const hasRichSnippet = Boolean(r.rich_snippet || r.richSnippet || r.richsnippet);
@@ -6312,6 +6364,7 @@ const finalResult = {
     },
     lang: langObj.code,
     competitors: enrichedCompetitors,
+    marketSources,
     leaderMoat,
     knowledgeGraph,
     googleRealData: {
@@ -7434,14 +7487,7 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
 
         // ── PATCH 4 : forceRefresh réservé admin ─────────────
         const safeForceRefresh = Boolean(forceRefresh) && !!req.user?.isAdmin;
-        const safeContext = {
-            offer: cleanProofText(context?.offer, 180),
-            audience: cleanProofText(context?.audience, 180),
-            objective: cleanProofText(context?.objective, 160),
-            priceRange: cleanProofText(context?.priceRange, 80),
-            knownCompetitors: cleanProofArray(context?.knownCompetitors, 4, 120),
-            cityOrRegion: cleanProofText(context?.cityOrRegion, 90)
-        };
+        const safeContext = safeUserContextFromBody(req.body);
 
         console.log(
     `[api/competitors] DÉMARRAGE WAR ROOM | query="${query.trim()}" | rawGeo="${rawGeo}" | resolvedGeo="${safeGeo}" | gl="${geoData.gl}" | lang="${lang}"`
@@ -9613,6 +9659,7 @@ RÈGLES ANTI-HALLUCINATION :
 5. COULEURS : utilise UNIQUEMENT ${primaryColor} / ${secondColor} / ${accentColor} — zéro invention.
 6. TÉLÉPHONES : si "AUCUN_NUMERO_DETECTE" → ne pas en inventer. Écrire "${ND}".
 7. PRICING : si aucun prix n'est détecté, écrire "${ND}". Ne jamais inventer de prix psychologique, bundle, remise ou ancrage chiffré.
+${formatUserContextForPrompt(safeContext, ND)}
 ═══════════════════════════════════════`.trim();
 
         const sharedContextShort = `
@@ -12634,6 +12681,7 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
         // Données communes réutilisées dans les 4 prompts
         const commonData = `
 URL: ${validUrl}
+${formatUserContextForPrompt(safeContext, 'Not provided')}
 Title: "${metaTitle}" (${titleLen} chars) → ${titleStatus}
 Description: "${metaDescription.substring(0, 120)}" (${descLen} chars) → ${descStatus}
 H1 (${h1List.length}): ${JSON.stringify(h1List.slice(0, 3))}
