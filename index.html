@@ -563,6 +563,14 @@ html, body {
         grid-template-columns: minmax(0,1fr) auto;
         gap: 12px;
         align-items: center;
+        cursor: pointer;
+        transition: border-color .18s ease, background .18s ease;
+    }
+    .report-history-item:hover,
+    .report-history-item:focus-visible {
+        border-color: rgba(139,92,246,.42);
+        background: rgba(139,92,246,.08);
+        outline: none;
     }
     .report-history-item strong {
         display: block;
@@ -583,6 +591,7 @@ html, body {
         color: #c4b5fd;
         cursor: pointer;
     }
+    .report-history-actions button:hover { background: rgba(139,92,246,.24); color: #fff; }
     @media (max-width: 820px) {
         .decision-proof-panel > div:first-child,
         .decision-proof-panel > div:last-child {
@@ -5210,7 +5219,11 @@ function authCopy() {
         configuredError: 'تسجيل الدخول غير مفعّل بعد.',
         emailSent: 'تم إرسال رابط الدخول إلى بريدك.',
         saved: 'تم حفظ التقرير في حسابك.',
-        saveError: 'تعذر حفظ التقرير.'
+        saveError: 'تعذر حفظ التقرير.',
+        view: 'عرض التقرير',
+        pdf: 'تنزيل PDF',
+        share: 'مشاركة',
+        loadingReport: 'جارٍ فتح التقرير...'
     };
     if (lang === 'en') return {
         login: 'Sign in',
@@ -5224,7 +5237,11 @@ function authCopy() {
         configuredError: 'Sign-in is not configured yet.',
         emailSent: 'A sign-in link was sent to your email.',
         saved: 'Report saved to your account.',
-        saveError: 'The report could not be saved.'
+        saveError: 'The report could not be saved.',
+        view: 'View report',
+        pdf: 'Download PDF',
+        share: 'Share',
+        loadingReport: 'Opening report...'
     };
     return {
         login: 'Connexion',
@@ -5238,7 +5255,11 @@ function authCopy() {
         configuredError: 'La connexion n’est pas encore configurée.',
         emailSent: 'Un lien de connexion a été envoyé par email.',
         saved: 'Rapport enregistré dans votre compte.',
-        saveError: 'Le rapport n’a pas pu être enregistré.'
+        saveError: 'Le rapport n’a pas pu être enregistré.',
+        view: 'Voir le rapport',
+        pdf: 'Télécharger le PDF',
+        share: 'Partager',
+        loadingReport: 'Ouverture du rapport...'
     };
 }
 
@@ -5389,15 +5410,19 @@ async function openReportDashboard() {
         const response = await api.get('/api/reports?limit=50', 20000);
         await refreshQuotaBadge(response.quota);
         const reports = Array.isArray(response.reports) ? response.reports : [];
+        const copy = authCopy();
         list.innerHTML = reports.length ? reports.map(report => `
-            <article class="report-history-item">
+            <article class="report-history-item" role="button" tabindex="0"
+                onclick="displaySavedReport('${report.id}')"
+                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();displaySavedReport('${report.id}')}">
                 <div>
                     <strong>${escapeHtml(report.title || report.type)}</strong>
                     <small>${escapeHtml(report.type)} · ${new Date(report.created_at).toLocaleDateString()}</small>
                 </div>
                 <div class="report-history-actions">
-                    <button type="button" onclick="downloadSavedReport('${report.id}')" title="JSON"><i class="fas fa-download"></i></button>
-                    <button type="button" onclick="shareSavedReport('${report.id}')" title="Partager"><i class="fas fa-share-nodes"></i></button>
+                    <button type="button" onclick="event.stopPropagation();displaySavedReport('${report.id}')" title="${escapeHtml(copy.view)}" aria-label="${escapeHtml(copy.view)}"><i class="fas fa-eye"></i></button>
+                    <button type="button" onclick="event.stopPropagation();downloadSavedReport('${report.id}')" title="${escapeHtml(copy.pdf)}" aria-label="${escapeHtml(copy.pdf)}"><i class="fas fa-file-pdf"></i></button>
+                    <button type="button" onclick="event.stopPropagation();shareSavedReport('${report.id}')" title="${escapeHtml(copy.share)}" aria-label="${escapeHtml(copy.share)}"><i class="fas fa-share-nodes"></i></button>
                 </div>
             </article>`).join('') : `<div style="color:#94a3b8;padding:16px">${authCopy().empty}</div>`;
     } catch (error) {
@@ -5405,15 +5430,74 @@ async function openReportDashboard() {
     }
 }
 
-async function downloadSavedReport(id) {
+function normalizeSavedReportType(type) {
+    const value = String(type || '').toLowerCase();
+    if (value === 'competitor' || value === 'competition') return 'competitors';
+    if (value === 'seo' || value === 'audit') return 'technical';
+    if (value === 'keyword') return 'keywords';
+    return value;
+}
+
+async function getSavedReport(id) {
     const response = await api.get(`/api/reports/${encodeURIComponent(id)}`, 20000);
-    const blob = new Blob([JSON.stringify(response.report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `daka-report-${id}.json`;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    if (!response?.report?.result) throw new Error('REPORT_DATA_UNAVAILABLE');
+    return response.report;
+}
+
+async function displaySavedReport(id, options = {}) {
+    try {
+        toast.info(authCopy().loadingReport);
+        const report = await getSavedReport(id);
+        const type = normalizeSavedReportType(report.type);
+        const data = report.result;
+        const tab = type === 'technical' ? 'technical' : type;
+
+        if (options.exportPdf) {
+            STATE.lastAnalysisResults = null;
+            STATE.lastFunnelResults = null;
+            STATE.lastTechnicalResults = null;
+            STATE.lastKeywords = null;
+            ['resultsCompetitors', 'resultsFunnel', 'resultsTechnical', 'resultsKeywords'].forEach(resultId => {
+                const resultNode = document.getElementById(resultId);
+                if (resultNode) resultNode.innerHTML = '';
+            });
+        }
+
+        closeReportDashboard();
+        tabManager.switchTab(tab, { scroll: false });
+        STATE.currentLang = data.lang || data.userLang || STATE.currentLang;
+
+        if (type === 'competitors') {
+            STATE.lastAnalysisResults = data;
+            displayCompetitorsResults(data);
+        } else if (type === 'funnel') {
+            STATE.lastFunnelResults = data;
+            displayFunnelResults(data);
+        } else if (type === 'technical') {
+            STATE.lastTechnicalResults = data;
+            displayTechnicalResults(data);
+        } else if (type === 'keywords') {
+            displayKeywordsResults(data);
+        } else {
+            throw new Error('REPORT_TYPE_UNSUPPORTED');
+        }
+
+        const target = document.getElementById(`results${type === 'competitors' ? 'Competitors' : type === 'funnel' ? 'Funnel' : type === 'technical' ? 'Technical' : 'Keywords'}`);
+        requestAnimationFrame(() => target?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+
+        if (options.exportPdf) {
+            setTimeout(() => window.exportFullAnalysisToPDF?.(), 650);
+        }
+        return report;
+    } catch (error) {
+        console.error('[Reports] unable to open saved report:', error);
+        toast.error(error.message || 'REPORT_UNAVAILABLE');
+        return null;
+    }
+}
+
+async function downloadSavedReport(id) {
+    await displaySavedReport(id, { exportPdf: true });
 }
 
 async function shareSavedReport(id) {
@@ -7279,6 +7363,7 @@ console.log('DECISION LAYER HTML LENGTH:', decisionLayerHtml?.length || 0);
 console.log('DECISION LAYER PREVIEW:', decisionLayerHtml?.slice(0, 300));
 const reportLabels = getReportLabels({ isAr, isEn });
     container.innerHTML = `
+        ${renderExecutiveSummary(data, 'competitors', { isAr, isEn })}
         ${renderReportSection('market', reportLabels.market, reportLabels.marketSub, 'fa-compass', `
             ${kgHtml}
             ${decisionProofHtml}
@@ -8499,6 +8584,7 @@ function displayTechnicalResults(data) {
             ${data.analyzedUrl || data.url || ''} · v${data.version || 'V7'} · ${data.meta?.processingMs ? data.meta.processingMs+'ms' : ''}
         </span>
     </div>
+    ${renderExecutiveSummary(data, 'technical', { isAr, isEn })}
     ${renderReportSection('technical', techReportLabels.technical, techReportLabels.technicalSub, 'fa-gauge-high', `
         ${decisionProofHtml}
         ${sectionKPI}
@@ -10138,6 +10224,7 @@ function displayKeywordsResults(data) {
         </div>`;
 
     container.innerHTML = `
+        ${renderExecutiveSummary(data, 'keywords', { isAr, isEn })}
         ${renderReportSection('keywords', keywordReportLabels.keywords, keywordReportLabels.keywordsSub, 'fa-key', keywordsCoreHtml, { isAr, isEn, noCollapse: true })}
         ${renderExpertDock('social', { isAr, isEn })}
     `;
@@ -10509,6 +10596,187 @@ function summarizeReportHtml(html, fallback = '') {
 
     const source = raw || String(fallback || '').trim();
     return source.length > 280 ? source.slice(0, 277).trim() + '...' : source;
+}
+
+function executiveText(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string' || typeof value === 'number') return String(value).trim();
+    if (Array.isArray(value)) return executiveText(value[0]);
+    if (typeof value === 'object') {
+        return executiveText(
+            value.action || value.changeNow || value.recommendation || value.howTo ||
+            value.title || value.name || value.opportunity || value.issue ||
+            value.problem || value.weakness || value.keyword || value.value || value.description
+        );
+    }
+    return '';
+}
+
+function executiveList(sources, limit = 5) {
+    const items = [];
+    const visit = (value) => {
+        if (items.length >= limit || value === null || value === undefined) return;
+        if (Array.isArray(value)) return value.forEach(visit);
+        const text = executiveText(value);
+        if (text && !items.includes(text)) items.push(text);
+    };
+    visit(sources);
+    return items.slice(0, limit);
+}
+
+function executiveActions(data) {
+    const raw = [
+        data.concreteActionPlan,
+        data.actionRoadmap,
+        data.auditQuickWins,
+        data.quickWins,
+        data.executiveBrief?.actions,
+        data.roadmap,
+        data.recommendations,
+        data.criticalIssues,
+        data.auditIssues,
+        data.semanticDifferences,
+        data.keywordStrategy?.missingGaps,
+        data.clusters
+    ].flatMap(value => Array.isArray(value) ? value : value ? [value] : []);
+
+    return raw.map((item, index) => ({
+        title: executiveText(item),
+        impact: executiveText(item?.impact || item?.expectedGain) || '—',
+        effort: executiveText(item?.effort || item?.timeline || item?.delay) || '—',
+        priority: executiveText(item?.priority || item?.rank) || String(index + 1)
+    })).filter(item => item.title).slice(0, 7);
+}
+
+function executiveScore(data, type) {
+    const candidates = [
+        data.auditSummary?.overallScore,
+        data.globalScoring?.overall,
+        data.globalReport?.score,
+        data.seoScore,
+        data.score,
+        data.overallScore,
+        data.stats?.opportunityScore
+    ];
+    const direct = candidates.find(value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)));
+    if (direct !== undefined) return Math.max(0, Math.min(100, Math.round(Number(direct))));
+    if (type === 'competitors' && Array.isArray(data.comparisonScores?.competitor)) {
+        const values = data.comparisonScores.competitor.map(Number).filter(Number.isFinite);
+        if (values.length) return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
+    }
+    return null;
+}
+
+function buildExecutiveSummaryModel(data, type) {
+    const actions = executiveActions(data);
+    const opportunities = executiveList([
+        data.swot?.opportunities,
+        data.keywordStrategy?.missingGaps,
+        data.semanticDifferences,
+        data.top3ReverseEngineering?.glaringWeaknesses,
+        data.auditSummary?.topStrengths,
+        data.quickWins,
+        data.clusters
+    ], 3);
+    const weaknesses = executiveList([
+        data.swot?.weaknesses,
+        data.auditSummary?.topWeaknesses,
+        data.criticalIssues,
+        data.auditIssues,
+        data.top3ReverseEngineering?.glaringWeaknesses,
+        data.techAudit?.criticalIssues
+    ], 3);
+    return {
+        score: executiveScore(data, type),
+        verdict: executiveText(
+            data.executiveBrief?.priority || data.executiveBrief?.why ||
+            data.auditSummary?.verdict || data.globalScoring?.verdict ||
+            data.globalReport?.verdict || data.winningMove ||
+            opportunities[0] || weaknesses[0]
+        ),
+        opportunities,
+        weaknesses,
+        actions: actions.slice(0, 5),
+        quickWins: executiveList([data.auditQuickWins, data.quickWins, actions.slice(0, 3)], 3),
+        plan30: executiveList([data.actionRoadmap, data.concreteActionPlan, actions.slice(3)], 5)
+    };
+}
+
+function navigateReportView(button, mode) {
+    const root = button?.closest('.executive-summary')?.parentElement || document;
+    const sections = [...root.querySelectorAll('.report-section')];
+    if (mode === 'summary') {
+        button.closest('.executive-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+    }
+    if (mode === 'analysis') sections.slice(0, 2).forEach(section => setReportSectionOpen(section, true));
+    if (mode === 'full') sections.forEach(section => setReportSectionOpen(section, true));
+    sections[0]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderExecutiveSummary(data, type, opts = {}) {
+    const isAr = opts.isAr ?? STATE.currentLang === 'ar';
+    const isEn = opts.isEn ?? STATE.currentLang === 'en';
+    const model = buildExecutiveSummaryModel(data || {}, type);
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : String;
+    const fallback = isAr ? 'لا توجد بيانات موثوقة كافية بعد.' : isEn ? 'Not enough reliable data yet.' : 'Données fiables encore insuffisantes.';
+    const t = isAr ? {
+        kicker: 'الملخص التنفيذي · قراءة 3 دقائق', title: 'ما يجب معرفته واتخاذه الآن',
+        score: 'النتيجة العامة', opportunities: 'أفضل 3 فرص', weaknesses: 'أهم 3 نقاط ضعف',
+        actions: '5 إجراءات ذات أولوية', quick: 'مكاسب سريعة خلال 7 أيام', plan: 'خطة 30 يوما',
+        summary: 'ملخص 3 دقائق', analysis: 'تحليل 30 دقيقة', full: 'عرض الملف الكامل',
+        impact: 'الأثر', effort: 'الجهد', priority: 'الأولوية'
+    } : isEn ? {
+        kicker: 'Executive summary · 3-minute read', title: 'What to know and do now',
+        score: 'Global score', opportunities: 'Top 3 opportunities', weaknesses: 'Top 3 critical weaknesses',
+        actions: '5 priority actions', quick: 'Quick wins · 7 days', plan: '30-day plan',
+        summary: '3-minute summary', analysis: '30-minute analysis', full: 'View full dossier',
+        impact: 'Impact', effort: 'Effort', priority: 'Priority'
+    } : {
+        kicker: 'Résumé exécutif · lecture 3 minutes', title: 'Ce qu’il faut comprendre et décider maintenant',
+        score: 'Score global', opportunities: 'Top 3 opportunités', weaknesses: 'Top 3 faiblesses critiques',
+        actions: '5 actions prioritaires', quick: 'Quick wins · 7 jours', plan: 'Plan 30 jours',
+        summary: 'Résumé 3 min', analysis: 'Analyse 30 min', full: 'Voir le dossier complet',
+        impact: 'Impact', effort: 'Effort', priority: 'Priorité'
+    };
+    const list = (items) => `<ul>${(items.length ? items : [fallback]).map(item => `<li>${safe(executiveText(item))}</li>`).join('')}</ul>`;
+    const actions = model.actions.length ? model.actions : [{ title: fallback, impact: '—', effort: '—', priority: '—' }];
+
+    return `
+    <section class="executive-summary fade-in-up" dir="${isAr ? 'rtl' : 'ltr'}">
+        <div class="executive-summary-head">
+            <div>
+                <span class="executive-summary-kicker">${safe(t.kicker)}</span>
+                <h2>${safe(t.title)}</h2>
+                <p class="executive-verdict">${safe(model.verdict || fallback)}</p>
+            </div>
+            <div class="executive-score"><strong>${model.score === null ? '—' : `${model.score}/100`}</strong><small>${safe(t.score)}</small></div>
+        </div>
+        <nav class="executive-nav no-print" aria-label="${safe(t.kicker)}">
+            <button type="button" onclick="navigateReportView(this,'summary')">${safe(t.summary)}</button>
+            <button type="button" onclick="navigateReportView(this,'analysis')">${safe(t.analysis)}</button>
+            <button type="button" onclick="navigateReportView(this,'full')">${safe(t.full)}</button>
+        </nav>
+        <div class="executive-grid">
+            <div class="executive-block" style="--executive-color:#10b981"><h3>${safe(t.opportunities)}</h3>${list(model.opportunities)}</div>
+            <div class="executive-block" style="--executive-color:#ef4444"><h3>${safe(t.weaknesses)}</h3>${list(model.weaknesses)}</div>
+            <div class="executive-block executive-block-wide" style="--executive-color:#8b5cf6">
+                <h3>${safe(t.actions)}</h3>
+                <div class="executive-actions">${actions.map(action => `
+                    <div class="executive-action">
+                        <strong>${safe(action.title)}</strong>
+                        <div class="executive-action-meta">
+                            <span>${safe(t.impact)}: ${safe(action.impact)}</span>
+                            <span>${safe(t.effort)}: ${safe(action.effort)}</span>
+                            <span>${safe(t.priority)}: ${safe(action.priority)}</span>
+                        </div>
+                    </div>`).join('')}
+                </div>
+            </div>
+            <div class="executive-block" style="--executive-color:#22d3ee"><h3>${safe(t.quick)}</h3>${list(model.quickWins)}</div>
+            <div class="executive-block" style="--executive-color:#f59e0b"><h3>${safe(t.plan)}</h3>${list(model.plan30)}</div>
+        </div>
+    </section>`;
 }
 
 function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
@@ -13939,6 +14207,7 @@ const auditIssuesHtml = `
 const funnelReportLabels = getReportLabels({ isAr, isEn });
    container.innerHTML = `
   <div id="funnelReport" dir="${dir}">
+    ${renderExecutiveSummary(data, 'funnel', { isAr, isEn })}
     ${renderReportSection('audit', funnelReportLabels.audit, funnelReportLabels.auditSub, 'fa-shield-halved', `
         ${cotHtml}
         ${headerHtml}
@@ -15381,6 +15650,144 @@ const PDF_EXPORT = {
 .context-field .input-field:focus {
     border-color: rgba(139, 92, 246, 0.7);
     box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.14);
+}
+
+.executive-summary {
+    margin: 0 0 24px;
+    padding: 20px;
+    border: 1px solid rgba(34, 211, 238, 0.2);
+    border-radius: 8px;
+    background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(8, 15, 30, 0.96));
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    scroll-margin-top: 104px;
+}
+
+.executive-summary-head {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    align-items: start;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.executive-summary-kicker {
+    display: block;
+    margin-bottom: 7px;
+    color: #67e8f9;
+    font-size: .68rem;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.executive-summary h2 {
+    margin: 0 0 8px;
+    color: #fff;
+    font-size: clamp(1.15rem, 3vw, 1.55rem);
+    line-height: 1.25;
+}
+
+.executive-verdict {
+    margin: 0;
+    max-width: 820px;
+    color: #cbd5e1;
+    font-size: .92rem;
+    line-height: 1.65;
+}
+
+.executive-score {
+    min-width: 104px;
+    padding: 12px;
+    border: 1px solid rgba(139, 92, 246, .3);
+    border-radius: 8px;
+    text-align: center;
+    background: rgba(139, 92, 246, .1);
+}
+
+.executive-score strong { display: block; color: #fff; font-size: 1.65rem; line-height: 1; }
+.executive-score small { display: block; margin-top: 6px; color: #c4b5fd; font-size: .65rem; font-weight: 800; }
+
+.executive-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.executive-nav button {
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 1px solid rgba(148, 163, 184, .18);
+    border-radius: 7px;
+    color: #dbeafe;
+    background: rgba(255, 255, 255, .035);
+    font-size: .72rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.executive-nav button:first-child { border-color: rgba(34, 211, 238, .35); color: #67e8f9; }
+.executive-nav button:hover { background: rgba(139, 92, 246, .14); border-color: rgba(139, 92, 246, .38); }
+
+.executive-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.executive-block {
+    padding: 14px;
+    border-left: 3px solid var(--executive-color, #22d3ee);
+    background: rgba(255, 255, 255, .025);
+}
+
+[dir="rtl"] .executive-block { border-left: 0; border-right: 3px solid var(--executive-color, #22d3ee); }
+.executive-block-wide { grid-column: 1 / -1; }
+.executive-block h3 { margin: 0 0 10px; color: #fff; font-size: .82rem; }
+.executive-block ul { margin: 0; padding-inline-start: 18px; color: #cbd5e1; font-size: .78rem; line-height: 1.6; }
+.executive-block li + li { margin-top: 5px; }
+
+.executive-actions {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.executive-action {
+    min-width: 0;
+    padding: 11px;
+    border: 1px solid rgba(148, 163, 184, .12);
+    border-radius: 6px;
+    background: rgba(2, 6, 23, .35);
+}
+
+.executive-action strong {
+    display: block;
+    min-height: 38px;
+    color: #e2e8f0;
+    font-size: .73rem;
+    line-height: 1.4;
+    overflow-wrap: anywhere;
+}
+
+.executive-action-meta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 9px; }
+.executive-action-meta span {
+    padding: 3px 5px;
+    border-radius: 4px;
+    color: #a5b4fc;
+    background: rgba(139, 92, 246, .1);
+    font-size: .56rem;
+    font-weight: 800;
+}
+
+@media (max-width: 820px) {
+    .executive-summary { padding: 14px; }
+    .executive-summary-head, .executive-grid { grid-template-columns: 1fr; }
+    .executive-score { min-width: 0; width: 100%; }
+    .executive-block-wide { grid-column: auto; }
+    .executive-actions { grid-template-columns: 1fr; }
+    .executive-action strong { min-height: 0; }
+    .executive-nav button { flex: 1 1 130px; }
 }
 
 .report-section {
