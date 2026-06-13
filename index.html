@@ -3529,6 +3529,44 @@ table tbody td {
         </div>
     </div>
 
+    <div id="export-studio-modal" class="auth-modal export-studio-modal" role="dialog" aria-modal="true" aria-labelledby="export-studio-title">
+        <div class="auth-modal-panel export-studio-panel">
+            <div class="auth-modal-head">
+                <div>
+                    <span class="export-studio-kicker"><i class="fas fa-file-shield"></i> Daka Report Studio</span>
+                    <h3 id="export-studio-title">Composez votre dossier décisionnel</h3>
+                    <p id="export-studio-subtitle">Choisissez les expertises à livrer avant de générer le rapport.</p>
+                </div>
+                <button class="auth-close-btn" type="button" data-no-collapse="true" onclick="closeDakaExportStudio()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="export-studio-toolbar">
+                <button type="button" data-no-collapse="true" onclick="setAllDakaExportSections(true)"><i class="fas fa-check-double"></i><span id="export-select-all">Tout sélectionner</span></button>
+                <button type="button" data-no-collapse="true" onclick="setAllDakaExportSections(false)"><i class="fas fa-eraser"></i><span id="export-clear-all">Effacer</span></button>
+            </div>
+            <div id="export-studio-sections" class="export-studio-sections"></div>
+            <fieldset class="export-depth-fieldset">
+                <legend id="export-depth-title">Profondeur du rapport</legend>
+                <label class="export-depth-option">
+                    <input type="radio" name="dakaExportDepth" value="executive">
+                    <span><i class="fas fa-bolt"></i><strong id="export-depth-fast">Résumé exécutif</strong><small id="export-depth-fast-sub">Décisions et priorités essentielles</small></span>
+                </label>
+                <label class="export-depth-option">
+                    <input type="radio" name="dakaExportDepth" value="full" checked>
+                    <span><i class="fas fa-folder-open"></i><strong id="export-depth-full">Dossier complet</strong><small id="export-depth-full-sub">Toutes les preuves, analyses et actions</small></span>
+                </label>
+            </fieldset>
+            <div class="export-studio-footer">
+                <div class="export-studio-proof">
+                    <i class="fas fa-user-shield"></i>
+                    <span id="export-studio-proof-text">Rapport préparé et signé par les équipes expertes Daka.</span>
+                </div>
+                <button id="export-studio-confirm" class="btn btn-primary" type="button" data-no-collapse="true" onclick="confirmDakaExportStudio()">
+                    <i class="fas fa-file-arrow-down"></i><span id="export-confirm-label">Valider et exporter</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <div id="daka-global-loader" class="daka-global-loader" role="dialog" aria-modal="true" aria-live="polite" aria-labelledby="daka-loader-title">
         <div class="daka-global-loader-card">
             <div class="daka-global-loader-video-wrap">
@@ -6432,7 +6470,8 @@ async function displayCompetitorsResults(data) {
 
     container.dir = isAr ? 'rtl' : 'ltr';
     container.setAttribute('lang', resultLang);
-    const fieldIntelModel = buildFieldIntelModel(data?.apify || null);
+    const verifiedSocialChannels = synchronizeLeaderSocialProof(data);
+    const fieldIntelModel = buildFieldIntelModel(data?.apify || null, data?.leaderMoat || {});
 const fieldGuideTopHtml = renderFieldGuideTop(fieldIntelModel, {
     isAr, isEn, dir: (isAr ? 'rtl' : 'ltr'), esc: escapeHtml
 });
@@ -7145,9 +7184,17 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         const hasAnything = ba.socialLinksCount !== undefined || tm.schemaTagsCount !== undefined || cs.hasBlog !== undefined;
 
         if (hasAnything) {
+            const verifiedSocialHtml = verifiedSocialChannels.length
+                ? verifiedSocialChannels.map(item => `
+                    <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer"
+                       data-no-collapse="true"
+                       style="color:#93c5fd;text-decoration:none;font-weight:800;display:inline-flex;align-items:center;gap:4px;margin-inline-end:7px;">
+                        <i class="fas fa-arrow-up-right-from-square" style="font-size:.58rem;"></i>${escapeHtml(item.platform)}
+                    </a>`).join('')
+                : `${ba.socialLinksCount || 0} ${isAr ? 'روابط' : (isEn ? 'links' : 'liens')}`;
             const moatItems = [
                 { label: isAr ? 'روابط Wikipedia' : (isEn ? 'Wikipedia links' : 'Liens Wikipedia'), val: ba.hasWikipediaLinks,     icon: 'fa-wikipedia-w', color: '#94a3b8' },
-                { label: isAr ? 'شبكات اجتماعية'  : (isEn ? 'Social networks'  : 'Réseaux sociaux'), val: (ba.socialLinksCount||0) + ' liens', icon: 'fa-share-alt',   color: '#60a5fa' },
+                { label: isAr ? 'شبكات اجتماعية موثقة' : (isEn ? 'Verified social networks' : 'Réseaux sociaux vérifiés'), val: verifiedSocialHtml, icon: 'fa-share-alt', color: '#60a5fa' },
                 { label: isAr ? 'Trustpilot/Avis'  : (isEn ? 'Reviews/Trustpilot' : 'Trustpilot/Avis'), val: ba.hasTrustpilotOrReviews, icon: 'fa-star',      color: '#fcd34d' },
                 { label: isAr ? 'Schema Markup'    : (isEn ? 'Schema tags'      : 'Balises Schema'),   val: (tm.schemaTagsCount||0) + ' tags',  icon: 'fa-code',      color: '#a78bfa' },
                 { label: isAr ? 'Section FAQ'      : (isEn ? 'FAQ section'      : 'Section FAQ'),      val: tm.hasFaqSection,      icon: 'fa-question-circle', color: '#34d399' },
@@ -8897,12 +8944,17 @@ function getExportableReportText(el) {
         .trim();
 }
 
-function cloneReportHtmlForExport(el) {
+function cloneReportHtmlForExport(el, exportOptions = {}) {
     if (!el) return '';
     const clone = el.cloneNode(true);
     clone.querySelectorAll('details').forEach(function (details) {
         details.setAttribute('open', 'open');
     });
+    if (exportOptions.includeDetails === false) {
+        clone.querySelectorAll('.report-section:not(.report-section-direct) .report-section-body').forEach(function (node) {
+            node.remove();
+        });
+    }
     clone.querySelectorAll(
         'button, .btn-gen, .no-print, .kw-filter-btn, #kwFilterBar, ' +
         '.loading-state, .toast-container, .export-bubble-wrapper, ' +
@@ -8914,7 +8966,7 @@ function cloneReportHtmlForExport(el) {
     return clone.innerHTML;
 }
 
-function createFixedPdfClone(el) {
+function createFixedPdfClone(el, exportOptions = {}) {
     const shell = document.createElement('section');
     shell.className = 'daka-pdf-fixed-clone';
     shell.setAttribute('aria-hidden', 'true');
@@ -8925,7 +8977,7 @@ function createFixedPdfClone(el) {
         'font-family:Inter,Cairo,Arial,sans-serif', 'line-height:1.55',
         'z-index:-1'
     ].join(';');
-    shell.innerHTML = cloneReportHtmlForExport(el);
+    shell.innerHTML = cloneReportHtmlForExport(el, exportOptions);
 
     shell.querySelectorAll('*').forEach(function (node) {
         node.style.animation = 'none';
@@ -8969,8 +9021,96 @@ function restorePdfExportDom(hiddenEls, openedDetails) {
     });
 }
 
+function getDakaExportModules() {
+    const lang = STATE.currentLang || 'fr';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const keywords = Array.isArray(STATE.lastKeywords) ? STATE.lastKeywords : (STATE.lastKeywords?.keywords || []);
+    return [
+        {
+            key: 'competitors', id: 'resultsCompetitors', icon: 'fa-chess-queen',
+            available: !!STATE.lastAnalysisResults,
+            title: isAr ? 'المنافسون والسوق' : isEn ? 'Competitors & Market' : 'Concurrents & marché',
+            subtitle: isAr ? 'الفرص والتهديدات وخطة التقدم' : isEn ? 'Opportunities, threats and attack plan' : 'Opportunités, menaces et plan d’attaque',
+            team: isAr ? 'فريق Daka لاستخبارات السوق' : isEn ? 'Daka Market Intelligence Team' : 'Équipe Daka Intelligence Marché'
+        },
+        {
+            key: 'funnel', id: 'resultsFunnel', icon: 'fa-filter-circle-dollar',
+            available: !!STATE.lastFunnelResults,
+            title: isAr ? 'العرض ومسار التحويل' : isEn ? 'Offer & Conversion Path' : 'Offre & parcours de conversion',
+            subtitle: isAr ? 'الثقة والسعر ونقاط فقدان العملاء' : isEn ? 'Trust, pricing and conversion leaks' : 'Confiance, prix et pertes de conversion',
+            team: isAr ? 'فريق Daka للتحويل والعرض' : isEn ? 'Daka Conversion & Offer Team' : 'Équipe Daka Conversion & Offre'
+        },
+        {
+            key: 'technical', id: 'resultsTechnical', icon: 'fa-gauge-high',
+            available: !!STATE.lastTechnicalResults,
+            title: isAr ? 'أداء الموقع' : isEn ? 'Site Performance' : 'Performance du site',
+            subtitle: isAr ? 'الأساس التقني والأولويات العملية' : isEn ? 'Technical foundations and practical priorities' : 'Fondations techniques et priorités pratiques',
+            team: isAr ? 'فريق Daka لأداء المواقع' : isEn ? 'Daka Site Performance Team' : 'Équipe Daka Performance Site'
+        },
+        {
+            key: 'keywords', id: 'resultsKeywords', icon: 'fa-key',
+            available: Array.isArray(keywords) && keywords.length > 0,
+            title: isAr ? 'فرص الطلب' : isEn ? 'Demand Opportunities' : 'Opportunités de demande',
+            subtitle: isAr ? 'الطلبات والمواضيع ذات القيمة' : isEn ? 'Valuable searches and topics' : 'Recherches et sujets à forte valeur',
+            team: isAr ? 'فريق Daka لأبحاث النمو' : isEn ? 'Daka Growth Research Team' : 'Équipe Daka Recherche Croissance'
+        }
+    ];
+}
 
-window.exportFullAnalysisToPDF = async function () {
+function closeDakaExportStudio() {
+    document.getElementById('export-studio-modal')?.classList.remove('active');
+    document.body.classList.remove('modal-open');
+}
+
+function setAllDakaExportSections(value) {
+    document.querySelectorAll('#export-studio-sections input[data-export-section]:not(:disabled)').forEach(input => {
+        input.checked = !!value;
+        input.closest('.export-pack-card')?.classList.toggle('selected', input.checked);
+    });
+}
+
+function openDakaExportStudio(preselect = null) {
+    const modal = document.getElementById('export-studio-modal');
+    const list = document.getElementById('export-studio-sections');
+    if (!modal || !list) return;
+    const isAr = STATE.currentLang === 'ar';
+    const isEn = STATE.currentLang === 'en';
+    const modules = getDakaExportModules();
+    list.innerHTML = modules.map(module => `
+        <label class="export-pack-card ${module.available && (!preselect || preselect === module.key) ? 'selected' : ''} ${module.available ? '' : 'unavailable'}">
+            <input type="checkbox" data-export-section value="${module.key}"
+                ${module.available && (!preselect || preselect === module.key) ? 'checked' : ''}
+                ${module.available ? '' : 'disabled'}>
+            <span class="export-pack-icon"><i class="fas ${module.icon}"></i></span>
+            <span class="export-pack-copy">
+                <strong>${module.title}</strong>
+                <small>${module.available ? module.subtitle : (isAr ? 'أطلق هذا التحليل أولاً' : isEn ? 'Run this analysis first' : 'Lancez d’abord cette analyse')}</small>
+            </span>
+            <i class="fas fa-circle-check export-pack-check"></i>
+        </label>`).join('');
+    list.querySelectorAll('input[data-export-section]').forEach(input => {
+        input.addEventListener('change', () => input.closest('.export-pack-card')?.classList.toggle('selected', input.checked));
+    });
+    document.getElementById('export-studio-title').textContent = isAr ? 'كوّن تقريرك التنفيذي' : isEn ? 'Build your decision report' : 'Composez votre dossier décisionnel';
+    document.getElementById('export-studio-subtitle').textContent = isAr ? 'اختر الوحدات والعمق قبل التصدير.' : isEn ? 'Choose the modules and depth before export.' : 'Choisissez les expertises et la profondeur avant l’export.';
+    document.getElementById('export-confirm-label').textContent = isAr ? 'تأكيد وتصدير' : isEn ? 'Confirm and export' : 'Valider et exporter';
+    modal.classList.add('active');
+    document.body.classList.add('modal-open');
+}
+
+function confirmDakaExportStudio() {
+    const sections = [...document.querySelectorAll('#export-studio-sections input[data-export-section]:checked')].map(input => input.value);
+    if (!sections.length) {
+        return toast.warning(STATE.currentLang === 'ar' ? 'اختر قسماً واحداً على الأقل.' : STATE.currentLang === 'en' ? 'Select at least one section.' : 'Sélectionnez au moins une section.');
+    }
+    const depth = document.querySelector('input[name="dakaExportDepth"]:checked')?.value || 'full';
+    closeDakaExportStudio();
+    window.exportFullAnalysisToPDF({ prepared: true, sections, includeDetails: depth === 'full' });
+}
+
+
+window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
     // ══════════════════════════════════════════════════════════════
     // GARDE-FOUS
@@ -8993,6 +9133,14 @@ window.exportFullAnalysisToPDF = async function () {
         );
     }
 
+    if (!exportOptions?.prepared) {
+        openDakaExportStudio();
+        return;
+    }
+    const selectedSectionKeys = new Set(exportOptions.sections || []);
+    const includeDetails = exportOptions.includeDetails !== false;
+    const selectedModules = getDakaExportModules().filter(module => module.available && selectedSectionKeys.has(module.key));
+
     if (STATE.isExporting) return;
     STATE.isExporting = true;
 
@@ -9009,9 +9157,8 @@ window.exportFullAnalysisToPDF = async function () {
     // ══════════════════════════════════════════════════════════════
     if (STATE.currentLang === 'ar') {
         try {
-            var ids = ['resultsCompetitors', 'resultsFunnel', 'resultsTechnical', 'resultsKeywords'];
-            var arSections = ids
-                .map(function (id) { return document.getElementById(id); })
+            var arSections = selectedModules
+                .map(function (module) { return document.getElementById(module.id); })
                 .filter(function (el) { return el && getExportableReportText(el).length > 40; });
 
             if (!arSections.length) {
@@ -9020,7 +9167,7 @@ window.exportFullAnalysisToPDF = async function () {
             }
 
             var arContent = arSections
-                .map(function (el) { return cloneReportHtmlForExport(el); })
+                .map(function (el) { return cloneReportHtmlForExport(el, { includeDetails: includeDetails }); })
                 .join('<hr style="margin:30px 0;border:none;border-top:2px dashed rgba(255,255,255,0.1);">');
 
             var pw = window.open('', '_blank');
@@ -9060,6 +9207,7 @@ window.exportFullAnalysisToPDF = async function () {
                 'a { color:#3b82f6 !important; text-decoration:none; }',
                 'div[style*="display:flex"] { flex-wrap: wrap !important; }', /* Empêche les éléments flex de dépasser l'écran */
                 'canvas { max-width: 100% !important; height: auto !important; margin: 0 auto !important; display: block !important; }',
+                'body::before { content:"Made by Daka"; position:fixed; inset:45% auto auto 18%; transform:rotate(-28deg); font-size:52px; font-weight:900; color:rgba(196,181,253,.07); pointer-events:none; z-index:9999; }',
                 '@page { margin:10mm; size:A4; }',
                 '@media print {',
                 '  body { background-color:#0a0e27 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }',
@@ -9079,9 +9227,10 @@ window.exportFullAnalysisToPDF = async function () {
                 '<\/head>',
                 '<body>',
                 '<div class="print-header">',
-                '  <h1 style="font-size:1.6rem;margin:0;color:#c4b5fd;">SEO Gen Pro<\/h1>',
-                '  <p style="color:#94a3b8;margin:5px 0;font-size:0.9rem;">\u062a\u0642\u0631\u064a\u0631 \u062a\u062d\u0644\u064a\u0644 \u0634\u0627\u0645\u0644<\/p>',
+                '  <h1 style="font-size:1.6rem;margin:0;color:#c4b5fd;">DAKA — تقرير استخبارات الأعمال<\/h1>',
+                '  <p style="color:#94a3b8;margin:5px 0;font-size:0.9rem;">قرارات عملية أعدتها فرق Daka المتخصصة<\/p>',
                 '  <p style="color:#64748b;font-size:0.75rem;margin:0;">' + arDate + '<\/p>',
+                '  <p style="color:#c4b5fd;font-size:0.72rem;margin:8px 0 0;">' + selectedModules.map(function (m) { return m.team; }).join(' · ') + '<\/p>',
                 '<\/div>',
                 arContent.length
                     ? arContent
@@ -9164,17 +9313,17 @@ window.exportFullAnalysisToPDF = async function () {
 
         // ── Sections à exporter ───────────────────────────────────
         const sectionDefs = [
-            { id: 'resultsCompetitors', label: isEn ? 'Competitor Report'     : 'Concurrence',          has: hasComp   },
-            { id: 'resultsFunnel',      label: isEn ? 'Conversion Path'       : 'Parcours de conversion', has: hasFunnel },
-            { id: 'resultsTechnical',   label: isEn ? 'Site Audit'            : 'Audit site',           has: hasSeo    },
-            { id: 'resultsKeywords',    label: isEn ? 'Keywords'              : 'Mots-clés',            has: hasKw     },
+            { key: 'competitors', id: 'resultsCompetitors', label: isEn ? 'Competitor Report' : 'Concurrence', has: hasComp },
+            { key: 'funnel', id: 'resultsFunnel', label: isEn ? 'Conversion Path' : 'Parcours de conversion', has: hasFunnel },
+            { key: 'technical', id: 'resultsTechnical', label: isEn ? 'Site Audit' : 'Audit site', has: hasSeo },
+            { key: 'keywords', id: 'resultsKeywords', label: isEn ? 'Keywords' : 'Mots-clés', has: hasKw },
         ];
 
         const validSections = sectionDefs
-            .filter(function (s) { return s.has; })
+            .filter(function (s) { return s.has && selectedSectionKeys.has(s.key); })
             .map(function (s) {
                 const el = document.getElementById(s.id);
-                return (el && getExportableReportText(el).length > 40) ? { el: el, label: s.label } : null;
+                return (el && getExportableReportText(el).length > 40) ? { el: el, label: s.label, key: s.key } : null;
             })
             .filter(Boolean);
 
@@ -9240,14 +9389,14 @@ window.exportFullAnalysisToPDF = async function () {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(32);
         pdf.setTextColor(255, 255, 255);
-        pdf.text('SEO Gen Pro', pageW / 2, 55, { align: 'center' });
+        pdf.text('DAKA', pageW / 2, 55, { align: 'center' });
 
         // Sous-titre
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(12);
         pdf.setTextColor(148, 163, 184);
         pdf.text(
-            isEn ? 'Comprehensive SEO Analysis Report' : 'Rapport d\'Analyse SEO Complet',
+            isEn ? 'Business Intelligence Decision Report' : 'Dossier décisionnel d’intelligence business',
             pageW / 2, 67, { align: 'center' }
         );
 
@@ -9275,8 +9424,17 @@ window.exportFullAnalysisToPDF = async function () {
             pdf.text(reportUrl.substring(0, 70), pageW / 2, 91, { align: 'center' });
         }
 
+        var selectedTeams = selectedModules.map(function (module) { return module.team; }).join('  •  ');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(7);
+        pdf.setTextColor(180, 175, 255);
+        pdf.text(
+            pdf.splitTextToSize(selectedTeams, contentW - 12),
+            pageW / 2, 99, { align: 'center' }
+        );
+
         // Badges sections disponibles
-        var badgeStartY = 108;
+        var badgeStartY = 116;
         var col = 0;
         var row = 0;
         var coverSectionLinks = [];
@@ -9365,7 +9523,7 @@ window.exportFullAnalysisToPDF = async function () {
         pdf.setFontSize(7);
         pdf.setTextColor(100, 116, 139);
         pdf.text(
-            'Daka \u2014 ' + (isEn ? 'Powered by Daka Engine' : 'Propulsé par Moteur Daka'),
+            'Made by Daka  |  ' + (isEn ? 'Built for clearer decisions' : 'Conçu pour décider avec clarté'),
             pageW / 2, pageH - 7, { align: 'center' }
         );
 
@@ -9424,7 +9582,7 @@ window.exportFullAnalysisToPDF = async function () {
 
             // ── Capture html2canvas ───────────────────────────
             var canvas;
-            var fixedClone = createFixedPdfClone(section.el);
+            var fixedClone = createFixedPdfClone(section.el, { includeDetails: includeDetails });
             try {
                 canvas = await html2canvas(fixedClone, {
                     scale:           2,
@@ -9512,7 +9670,7 @@ window.exportFullAnalysisToPDF = async function () {
                     pdf.setFontSize(6.5);
                     pdf.setTextColor(sc[0], sc[1], sc[2]);
                     pdf.text(
-                        'SEO Gen Pro  |  ' + section.label + '  (' + (p + 1) + '/' + pagesNeeded + ')',
+                        'DAKA  |  ' + section.label + '  (' + (p + 1) + '/' + pagesNeeded + ')',
                         margin, margin - 3
                     );
                 }
@@ -9524,7 +9682,7 @@ window.exportFullAnalysisToPDF = async function () {
                 pdf.setFontSize(6.5);
                 pdf.setTextColor(100, 116, 139);
                 pdf.text(
-                    'SEO Gen Pro  \u2014  ' + section.label,
+                    'Made by Daka  \u2014  ' + section.label,
                     margin, pageH - 4
                 );
                 pdf.text(
@@ -9602,7 +9760,7 @@ window.exportFullAnalysisToPDF = async function () {
         });
 
         // Top 20 Keywords si disponibles
-        if (hasKw && exportKeywords.length) {
+        if (hasKw && selectedSectionKeys.has('keywords') && exportKeywords.length) {
             var kwStartY = summaryY + validSections.length * 12 + 15;
 
             pdf.setFont('helvetica', 'bold');
@@ -9747,9 +9905,25 @@ window.exportFullAnalysisToPDF = async function () {
         pdf.setFontSize(7);
         pdf.setTextColor(100, 116, 139);
         pdf.text(
-            'Daka \u2014 ' + (isEn ? 'Powered by Daka Engine' : 'Propulsé par Moteur Daka'),
+            'Made by Daka  |  ' + (isEn ? 'Built for clearer decisions' : 'Conçu pour décider avec clarté'),
             pageW / 2, pageH - 7, { align: 'center' }
         );
+
+        // Filigrane discret sur chaque page.
+        var totalPdfPages = pdf.internal.getNumberOfPages();
+        for (var watermarkPage = 1; watermarkPage <= totalPdfPages; watermarkPage++) {
+            pdf.setPage(watermarkPage);
+            try {
+                pdf.setGState(new pdf.GState({ opacity: 0.055 }));
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(28);
+                pdf.setTextColor(148, 163, 184);
+                pdf.text('Made by Daka', pageW / 2, pageH / 2, { align: 'center', angle: 35 });
+                pdf.setGState(new pdf.GState({ opacity: 1 }));
+            } catch (watermarkError) {
+                console.warn('[PDF] Watermark unavailable', watermarkError);
+            }
+        }
 
         // ════════════════════════════════════════════════════════
         // RESTAURER éléments masqués
@@ -9764,7 +9938,7 @@ window.exportFullAnalysisToPDF = async function () {
         var slug = reportUrl
             ? reportUrl.replace(/https?:\/\//i, '').replace(/[^a-zA-Z0-9]/g, '-').substring(0, 30)
             : 'report';
-        var filename = 'SEOGenPro-' + slug + '-' + Date.now() + '.pdf';
+        var filename = 'Daka-Decision-Report-' + slug + '-' + Date.now() + '.pdf';
 
         pdf.save(filename);
 
@@ -9866,6 +10040,8 @@ function fallbackCopy(text, callback) {
  */
 
 window.exportTechToPDF = async function() {
+    openDakaExportStudio('technical');
+    return;
     const auditContainer = document.getElementById('resultsTechnical');
     if (!auditContainer || auditContainer.innerHTML.trim() === "") {
         return toast.error("Rapport vide.");
@@ -10000,6 +10176,8 @@ function generateLocalReportHtml(data) {
 }
 
 window.exportCompetitorsPDF = async function () {
+    openDakaExportStudio('competitors');
+    return;
     const results = STATE.lastAnalysisResults;
     if (!results) return toast.error("Lancez d'abord une analyse Concurrents.");
 
@@ -11724,7 +11902,83 @@ function renderBundleSuggested(bundleSuggested) {
 // À mettre en haut de displayFunnelResults(data)
 // ─────────────────────────────────────────────
 // ===================== DATA TERRAIN UI (sans nom provider) =====================
-function buildFieldIntelModel(raw) {
+function getVerifiedSocialChannels(leaderMoat = {}) {
+    const authority = leaderMoat?.brandAuthority || {};
+    const evidence = [
+        ...(Array.isArray(authority.channelEvidence) ? authority.channelEvidence : []),
+        ...(Array.isArray(authority.socialLinks) ? authority.socialLinks : []),
+        ...(Array.isArray(authority.socialProfiles) ? authority.socialProfiles : []),
+        ...(Array.isArray(leaderMoat.socialLinks) ? leaderMoat.socialLinks : []),
+        ...(Array.isArray(leaderMoat.socialProfiles) ? leaderMoat.socialProfiles : [])
+    ];
+    const seen = new Set();
+    const platformFromUrl = url => {
+        try {
+            const host = new URL(url).hostname.replace(/^www\./, '').toLowerCase();
+            const known = [
+                ['facebook.com', 'Facebook'], ['fb.com', 'Facebook'],
+                ['instagram.com', 'Instagram'], ['linkedin.com', 'LinkedIn'],
+                ['x.com', 'X'], ['twitter.com', 'X'],
+                ['youtube.com', 'YouTube'], ['youtu.be', 'YouTube'],
+                ['tiktok.com', 'TikTok'], ['pinterest.com', 'Pinterest'],
+                ['snapchat.com', 'Snapchat'], ['wa.me', 'WhatsApp'],
+                ['whatsapp.com', 'WhatsApp'], ['t.me', 'Telegram'],
+                ['telegram.me', 'Telegram'], ['threads.net', 'Threads'],
+                ['reddit.com', 'Reddit'], ['discord.gg', 'Discord'],
+                ['discord.com', 'Discord'], ['medium.com', 'Medium'],
+                ['twitch.tv', 'Twitch'], ['vimeo.com', 'Vimeo']
+            ];
+            return known.find(([domain]) => host === domain || host.endsWith(`.${domain}`))?.[1]
+                || host.split('.')[0].replace(/(^\w|[-_]\w)/g, value => value.replace(/[-_]/, '').toUpperCase());
+        } catch {
+            return '';
+        }
+    };
+    return evidence.map(item => {
+        const url = typeof item === 'string'
+            ? item.trim()
+            : String(item?.url || item?.href || item?.link || item?.profileUrl || item?.sourceUrl || '').trim();
+        if (!/^https?:\/\//i.test(url)) return null;
+        const platform = String(item?.channel || item?.platform || item?.network || item?.name || item?.text || platformFromUrl(url)).trim();
+        const key = `${platform.toLowerCase()}|${url.toLowerCase()}`;
+        if (seen.has(key)) return null;
+        seen.add(key);
+        return { platform, url };
+    }).filter(Boolean);
+}
+
+function synchronizeLeaderSocialProof(data = {}) {
+    const channels = getVerifiedSocialChannels(data.leaderMoat);
+    if (!channels.length) return channels;
+    const lang = data.analysisLang || data.lang || STATE.currentLang || 'fr';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    data.proofModel = data.proofModel && typeof data.proofModel === 'object' ? data.proofModel : {};
+    data.proofModel.observed = Array.isArray(data.proofModel.observed) ? data.proofModel.observed : [];
+    data.proofModel.unavailable = Array.isArray(data.proofModel.unavailable) ? data.proofModel.unavailable : [];
+    const socialPattern = /(social proof links|verified social|social networks|réseaux sociaux|liens sociaux|روابط اجتماعية|شبكات اجتماعية)/i;
+    data.proofModel.unavailable = data.proofModel.unavailable.filter(item =>
+        !socialPattern.test(String(typeof item === 'string' ? item : item?.title || item?.value || ''))
+    );
+    const existingSocialFact = data.proofModel.observed.find(item => socialPattern.test(String(item?.title || '')));
+    if (existingSocialFact) {
+        existingSocialFact.value = channels.map(item => item.platform).join(', ');
+        existingSocialFact.confidence = 'HIGH';
+        existingSocialFact.evidence = channels.map(item => ({ url: item.url, label: item.platform }));
+    } else {
+        data.proofModel.observed.push({
+            type: 'observed',
+            title: isAr ? 'روابط اجتماعية موثقة' : isEn ? 'Verified social channels' : 'Réseaux sociaux vérifiés',
+            value: channels.map(item => item.platform).join(', '),
+            source: isAr ? 'الموقع الرسمي للمتصدر' : isEn ? 'Leader official website' : 'Site officiel du leader',
+            confidence: 'HIGH',
+            evidence: channels.map(item => ({ url: item.url, label: item.platform }))
+        });
+    }
+    return channels;
+}
+
+function buildFieldIntelModel(raw, leaderMoat = {}) {
     const r = raw && typeof raw === 'object' ? raw : {};
     const links = r.links || {};
     const intel = r.apifyIntel && typeof r.apifyIntel === 'object' ? r.apifyIntel : {};
@@ -11744,6 +11998,7 @@ function buildFieldIntelModel(raw) {
         const fromIntel = asArray(intel[bucket]).map(pickLink).filter(Boolean);
         return [...new Set([...direct, ...fromIntel])].filter(Boolean);
     };
+    const verifiedChannels = getVerifiedSocialChannels(leaderMoat);
     const studiesFromIntel = ['ads', 'posts', 'comments', 'reviews'].flatMap(bucket =>
         asArray(intel[bucket]).map(item => ({
             source: item.platform || item.source || bucket,
@@ -11765,7 +12020,8 @@ function buildFieldIntelModel(raw) {
         guideTop: r.guideTop || { title: 'Guide concret', steps: [] },
         studiesBottom: [
             ...(Array.isArray(r.studiesBottom) ? r.studiesBottom : []),
-            ...studiesFromIntel
+            ...studiesFromIntel,
+            ...verifiedChannels.map(item => ({ source: item.platform, text: item.platform, link: item.url }))
         ],
         runs: Array.isArray(r.runs) ? r.runs : [],
         searchPlan: r.searchPlan || null,
@@ -11781,9 +12037,11 @@ function buildFieldIntelModel(raw) {
                 ...mergeLinks('ads'),
                 ...mergeLinks('posts'),
                 ...mergeLinks('comments'),
-                ...mergeLinks('reviews')
+                ...mergeLinks('reviews'),
+                ...verifiedChannels.map(item => item.url)
             ])]
-        }
+        },
+        verifiedChannels
     };
 }
 
@@ -11947,12 +12205,13 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
             ${fact.source ? `<div style="color:#64748b;font-size:.7rem;margin-top:6px;">${esc(fact.source)}</div>` : ''}
             ${Array.isArray(fact.evidence) && fact.evidence.length ? `
                 <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
-                    ${fact.evidence.slice(0,3).map(ev => {
-                        const txt = clean(ev, '');
-                        const isUrl = /^https?:\/\//i.test(txt);
+                    ${fact.evidence.slice(0,12).map(ev => {
+                        const evidenceUrl = typeof ev === 'object' ? clean(ev.url || ev.href, '') : clean(ev, '');
+                        const evidenceLabel = typeof ev === 'object' ? clean(ev.label || ev.platform, evidenceUrl) : evidenceUrl;
+                        const isUrl = /^https?:\/\//i.test(evidenceUrl);
                         return isUrl
-                            ? `<a href="${esc(txt)}" target="_blank" rel="noopener" style="font-size:.68rem;color:#93c5fd;text-decoration:none;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(txt)}</a>`
-                            : `<span style="font-size:.68rem;color:#93c5fd;">${esc(txt)}</span>`;
+                            ? `<a href="${esc(evidenceUrl)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true" style="font-size:.68rem;color:#93c5fd;text-decoration:none;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${esc(evidenceLabel)}</a>`
+                            : `<span style="font-size:.68rem;color:#93c5fd;">${esc(evidenceLabel)}</span>`;
                     }).join('')}
                 </div>` : ''}
         </div>`;
@@ -17261,6 +17520,159 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     box-shadow: 0 24px 70px rgba(0,0,0,.5) !important;
 }
 
+.export-studio-panel {
+    width: min(880px, 94vw) !important;
+}
+
+.export-studio-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 8px;
+    color: #67e8f9;
+    font-size: .65rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.export-studio-toolbar {
+    display: flex;
+    gap: 7px;
+    margin: 16px 0 10px;
+}
+
+.export-studio-toolbar button {
+    min-height: 36px;
+    padding: 7px 10px;
+    border: 1px solid rgba(148,163,184,.14);
+    border-radius: 7px;
+    background: #0b1425;
+    color: #cbd5e1;
+    font: inherit;
+    font-size: .68rem;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.export-studio-sections {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.export-pack-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0,1fr) auto;
+    gap: 11px;
+    align-items: center;
+    min-height: 76px;
+    padding: 12px;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 10px;
+    background: linear-gradient(145deg, #111b30, #090f1c);
+    cursor: pointer;
+    box-shadow: 0 5px 0 #030712, 0 12px 22px rgba(0,0,0,.18);
+}
+
+.export-pack-card:has(input:checked) {
+    border-color: rgba(34,211,238,.48);
+    background: linear-gradient(145deg, #10243a, #0a1424);
+    box-shadow: 0 5px 0 #083344, 0 14px 26px rgba(8,145,178,.12);
+}
+
+.export-pack-card.unavailable {
+    opacity: .42;
+    cursor: not-allowed;
+}
+
+.export-pack-card > i {
+    width: 38px;
+    height: 38px;
+    border-radius: 9px;
+    display: grid;
+    place-items: center;
+    color: #67e8f9;
+    background: rgba(34,211,238,.08);
+    border: 1px solid rgba(34,211,238,.16);
+}
+
+.export-pack-card strong,
+.export-pack-card small { display: block; }
+.export-pack-card strong { color: #f8fafc; font-size: .78rem; }
+.export-pack-card small { margin-top: 3px; color: #94a3b8; font-size: .62rem; line-height: 1.35; }
+.export-pack-card input { width: 18px; height: 18px; accent-color: #22d3ee; }
+
+.export-depth-fieldset {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 9px;
+    margin: 18px 0 0;
+    padding: 12px;
+    border: 1px solid rgba(148,163,184,.12);
+    border-radius: 10px;
+}
+
+.export-depth-fieldset legend {
+    padding: 0 7px;
+    color: #cbd5e1;
+    font-size: .68rem;
+    font-weight: 900;
+}
+
+.export-depth-option {
+    cursor: pointer;
+}
+
+.export-depth-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.export-depth-option span {
+    min-height: 62px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: auto minmax(0,1fr);
+    gap: 4px 9px;
+    align-items: center;
+    border: 1px solid rgba(148,163,184,.12);
+    border-radius: 8px;
+    background: #070d19;
+}
+
+.export-depth-option input:checked + span {
+    border-color: rgba(202,138,4,.52);
+    background: rgba(202,138,4,.07);
+}
+
+.export-depth-option i { grid-row: 1 / 3; color: #fbbf24; }
+.export-depth-option strong { color: #f8fafc; font-size: .72rem; }
+.export-depth-option small { color: #94a3b8; font-size: .58rem; }
+
+.export-studio-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(148,163,184,.1);
+}
+
+.export-studio-proof {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 430px;
+    color: #94a3b8;
+    font-size: .65rem;
+    line-height: 1.5;
+}
+.export-studio-proof i { color: #fbbf24; }
+
 @media (max-width: 980px) {
     .header { top: 4px !important; margin: 0 4px; }
     .header-content { flex-wrap: wrap !important; }
@@ -17305,6 +17717,11 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     .input-field, .select-field, .textarea-field { font-size: 16px !important; }
     .btn, .btn-gen, .btn-cosmic, .btn-primary { width: 100%; }
     #btn-export-global { width: 44px !important; height: 44px !important; }
+    .export-studio-sections,
+    .export-depth-fieldset { grid-template-columns: 1fr; }
+    .export-studio-footer { align-items: stretch; flex-direction: column; }
+    .export-studio-footer .btn { width: 100%; }
+    .export-pack-card { min-height: 68px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
