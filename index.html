@@ -3544,17 +3544,7 @@ table tbody td {
                 <button type="button" data-no-collapse="true" onclick="setAllDakaExportSections(false)"><i class="fas fa-eraser"></i><span id="export-clear-all">Effacer</span></button>
             </div>
             <div id="export-studio-sections" class="export-studio-sections"></div>
-            <fieldset class="export-depth-fieldset">
-                <legend id="export-depth-title">Profondeur du rapport</legend>
-                <label class="export-depth-option">
-                    <input type="radio" name="dakaExportDepth" value="executive">
-                    <span><i class="fas fa-bolt"></i><strong id="export-depth-fast">Résumé exécutif</strong><small id="export-depth-fast-sub">Décisions et priorités essentielles</small></span>
-                </label>
-                <label class="export-depth-option">
-                    <input type="radio" name="dakaExportDepth" value="full" checked>
-                    <span><i class="fas fa-folder-open"></i><strong id="export-depth-full">Dossier complet</strong><small id="export-depth-full-sub">Toutes les preuves, analyses et actions</small></span>
-                </label>
-            </fieldset>
+            <p id="export-feature-help" class="export-feature-help">Cochez uniquement les chapitres utiles. Le PDF sera construit autour de votre sélection.</p>
             <div class="export-studio-footer">
                 <div class="export-studio-proof">
                     <i class="fas fa-user-shield"></i>
@@ -8280,6 +8270,99 @@ window.triggerGenerator = async function(type, btnElement) {
 // ════════════════════════════════════════════════════════════════
 // PARTIE 1/5 — DATA MAPPING V7 (lecture des bons champs)
 // ════════════════════════════════════════════════════════════════
+function renderBacklinkPortfolio(data = {}, opts = {}) {
+    const isAr = !!opts.isAr;
+    const isEn = !!opts.isEn;
+    const esc = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+    const asArray = value => Array.isArray(value) ? value : [];
+    const inboundSources = [
+        ...asArray(data.backlinks),
+        ...asArray(data.backlinkIntel?.links),
+        ...asArray(data.backlinkIntel?.backlinks),
+        ...asArray(data.offPage?.backlinks),
+        ...asArray(data.offPageIntel?.backlinks)
+    ];
+    const observedSources = [
+        ...asArray(data.contentIntel?.externalOutboundLinkObjects),
+        ...asArray(data.contentIntel?.externalOutboundLinks),
+        ...asArray(data.contentIntel?.externalLinks),
+        ...asArray(data.copyIntel?.externalOutboundLinkObjects),
+        ...asArray(data.copyIntel?.externalOutboundLinks),
+        ...asArray(data.extraction?.externalOutboundLinkObjects)
+    ];
+    const normalize = (item, kind) => {
+        const url = typeof item === 'string'
+            ? item.trim()
+            : String(item?.url || item?.href || item?.link || item?.sourceUrl || item?.targetUrl || '').trim();
+        if (!/^https?:\/\//i.test(url)) return null;
+        let domain = '';
+        try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch {}
+        return {
+            url,
+            domain,
+            anchor: String(item?.anchor || item?.text || item?.title || item?.label || domain || url).trim(),
+            kind,
+            authority: item?.authority || item?.domainAuthority || item?.dr || item?.da || null
+        };
+    };
+    const seen = new Set();
+    const links = [
+        ...inboundSources.map(item => normalize(item, 'backlink')),
+        ...observedSources.map(item => normalize(item, 'observed'))
+    ].filter(item => {
+        if (!item || seen.has(item.url.toLowerCase())) return false;
+        seen.add(item.url.toLowerCase());
+        return true;
+    });
+    const inboundCount = links.filter(item => item.kind === 'backlink').length;
+    const observedCount = links.filter(item => item.kind === 'observed').length;
+    const labels = {
+        title: isAr ? 'محفظة الروابط الجاهزة للفحص' : isEn ? 'Link portfolio ready to review' : 'Portefeuille de liens prêt à consulter',
+        intro: isAr
+            ? 'نميز بين الروابط الخلفية الواردة المرصودة والروابط الخارجية الموجودة على الموقع حتى لا نعرض استنتاجاً كحقيقة.'
+            : isEn
+                ? 'Inbound backlinks and observed outbound links are separated so an inference is never presented as a fact.'
+                : 'Les backlinks entrants et les liens externes observés sont séparés pour ne jamais présenter une déduction comme un fait.',
+        inbound: isAr ? 'روابط خلفية واردة' : isEn ? 'Inbound backlinks' : 'Backlinks entrants',
+        observed: isAr ? 'روابط خارجية مرصودة' : isEn ? 'Observed external links' : 'Liens externes observés',
+        open: isAr ? 'فتح الرابط' : isEn ? 'Open link' : 'Consulter',
+        empty: isAr
+            ? 'لم يتم رصد رابط قابل للتحقق. اربط مصدراً للروابط الخلفية للحصول على ملف وارد كامل.'
+            : isEn
+                ? 'No verifiable link was observed. Connect a backlink source for a complete inbound profile.'
+                : 'Aucun lien vérifiable observé. Connectez une source backlinks pour obtenir un profil entrant complet.'
+    };
+    return `
+    <div class="backlink-portfolio result-card" dir="${isAr ? 'rtl' : 'ltr'}">
+        <div class="backlink-portfolio-head">
+            <div>
+                <span class="backlink-kicker"><i class="fas fa-link"></i>${labels.title}</span>
+                <p>${labels.intro}</p>
+            </div>
+            <div class="backlink-metrics">
+                <span><strong>${inboundCount}</strong><small>${labels.inbound}</small></span>
+                <span><strong>${observedCount}</strong><small>${labels.observed}</small></span>
+            </div>
+        </div>
+        <div class="backlink-list">
+            ${links.length ? links.slice(0, 60).map(item => `
+                <article class="backlink-item">
+                    <span class="backlink-type backlink-type-${item.kind}">
+                        <i class="fas ${item.kind === 'backlink' ? 'fa-arrow-right-to-bracket' : 'fa-arrow-up-right-from-square'}"></i>
+                        ${item.kind === 'backlink' ? labels.inbound : labels.observed}
+                    </span>
+                    <div class="backlink-copy">
+                        <strong dir="auto">${esc(item.anchor || item.domain)}</strong>
+                        <small>${esc(item.domain)}${item.authority !== null ? ` · Authority ${esc(item.authority)}` : ''}</small>
+                    </div>
+                    <a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true" class="backlink-open">
+                        <span>${labels.open}</span><i class="fas fa-arrow-up-right-from-square"></i>
+                    </a>
+                </article>`).join('') : `<div class="backlink-empty"><i class="fas fa-circle-info"></i><span>${labels.empty}</span></div>`}
+        </div>
+    </div>`;
+}
+
 function displayTechnicalResults(data) {
     const container = document.getElementById('resultsTechnical');
     if (!container) return;
@@ -8852,6 +8935,7 @@ function displayTechnicalResults(data) {
         dir: isAr ? 'rtl' : 'ltr',
         esc: escapeHtml
     });
+    const backlinkPortfolioHtml = renderBacklinkPortfolio(data, { isAr, isEn });
     const techReportLabels = getReportLabels({ isAr, isEn });
 
     // ── Assemblage HTML complet ───────────────────────────────────
@@ -8880,6 +8964,15 @@ function displayTechnicalResults(data) {
         ${sectionKeywords}
         ${sectionAEO}
     `, { isAr, isEn })}
+
+    ${renderReportSection(
+        'backlinks',
+        isAr ? 'الروابط الخلفية والروابط الجاهزة للفحص' : isEn ? 'Backlinks and links ready to review' : 'Backlinks et liens prêts à consulter',
+        isAr ? 'افتح كل رابط وتحقق من مصدره وفرصته.' : isEn ? 'Open every link and verify its source and opportunity.' : 'Ouvrez chaque lien et vérifiez sa source et son potentiel.',
+        'fa-link',
+        backlinkPortfolioHtml,
+        { isAr, isEn }
+    )}
 
     ${renderReportSection('plan', techReportLabels.plan, techReportLabels.planSub, 'fa-list-check', `
         ${sectionGrid}
@@ -8947,6 +9040,12 @@ function getExportableReportText(el) {
 function cloneReportHtmlForExport(el, exportOptions = {}) {
     if (!el) return '';
     const clone = el.cloneNode(true);
+    const featureKeys = Array.isArray(exportOptions.featureKeys) ? exportOptions.featureKeys : [];
+    if (featureKeys.length) {
+        clone.querySelectorAll('[data-export-feature]').forEach(function (node) {
+            if (!featureKeys.includes(node.getAttribute('data-export-feature'))) node.remove();
+        });
+    }
     clone.querySelectorAll('details').forEach(function (details) {
         details.setAttribute('open', 'open');
     });
@@ -8959,7 +9058,8 @@ function cloneReportHtmlForExport(el, exportOptions = {}) {
         'button, .btn-gen, .no-print, .kw-filter-btn, #kwFilterBar, ' +
         '.loading-state, .toast-container, .export-bubble-wrapper, ' +
         '.btn-export-pdf, .btn-copy-mini, [data-gen-type], iframe, ' +
-        '.daka-global-loader, .auth-modal, .report-feature-nav'
+        '.daka-global-loader, .auth-modal, .report-feature-nav, ' +
+        '.expert-dock, #magicPromptPlaceholder, .generator-grid'
     ).forEach(function (node) {
         node.remove();
     });
@@ -8970,6 +9070,7 @@ function createFixedPdfClone(el, exportOptions = {}) {
     const shell = document.createElement('section');
     shell.className = 'daka-pdf-fixed-clone';
     shell.setAttribute('aria-hidden', 'true');
+    shell.setAttribute('dir', STATE.currentLang === 'ar' ? 'rtl' : 'ltr');
     shell.style.cssText = [
         'position:fixed', 'left:-12000px', 'top:0', 'width:794px',
         'min-height:1123px', 'padding:32px', 'box-sizing:border-box',
@@ -8977,24 +9078,121 @@ function createFixedPdfClone(el, exportOptions = {}) {
         'font-family:Inter,Cairo,Arial,sans-serif', 'line-height:1.55',
         'z-index:-1'
     ].join(';');
-    shell.innerHTML = cloneReportHtmlForExport(el, exportOptions);
+    const reportTitle = String(exportOptions.title || 'Daka Decision Report');
+    const chapterTitles = Array.isArray(exportOptions.featureTitles) ? exportOptions.featureTitles : [];
+    shell.innerHTML = `
+        <style>
+            .daka-pdf-fixed-clone, .daka-pdf-fixed-clone * {
+                box-sizing: border-box !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                font-family: Arial, "Helvetica Neue", sans-serif !important;
+                letter-spacing: normal !important;
+                word-spacing: normal !important;
+                writing-mode: horizontal-tb !important;
+                text-orientation: mixed !important;
+                text-rendering: geometricPrecision;
+            }
+            .daka-pdf-fixed-clone *::before,
+            .daka-pdf-fixed-clone *::after { animation: none !important; }
+            .daka-pdf-fixed-clone {
+                font-size: 12px !important;
+                line-height: 1.62 !important;
+            }
+            .daka-pdf-fixed-clone h1 { font-size: 25px !important; line-height: 1.18 !important; }
+            .daka-pdf-fixed-clone h2 { font-size: 19px !important; line-height: 1.28 !important; }
+            .daka-pdf-fixed-clone h3 { font-size: 15px !important; line-height: 1.35 !important; }
+            .daka-pdf-fixed-clone h4,
+            .daka-pdf-fixed-clone h5,
+            .daka-pdf-fixed-clone h6 { font-size: 12px !important; line-height: 1.4 !important; }
+            .daka-pdf-fixed-clone p,
+            .daka-pdf-fixed-clone li,
+            .daka-pdf-fixed-clone td,
+            .daka-pdf-fixed-clone th { font-size: 10px !important; line-height: 1.62 !important; }
+            .daka-pdf-fixed-clone small { font-size: 8px !important; line-height: 1.5 !important; }
+            .daka-pdf-fixed-clone .report-section,
+            .daka-pdf-fixed-clone .executive-summary,
+            .daka-pdf-fixed-clone .result-card,
+            .daka-pdf-fixed-clone .card,
+            .daka-pdf-fixed-clone article {
+                margin: 0 0 18px !important;
+                padding: 18px !important;
+                border-radius: 10px !important;
+                border: 1px solid #dbe4ef !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+            .daka-pdf-fixed-clone .executive-summary-head,
+            .daka-pdf-fixed-clone .decision-proof-panel > div,
+            .daka-pdf-fixed-clone .report-section-head {
+                display: grid !important;
+                grid-template-columns: 1fr !important;
+                gap: 10px !important;
+            }
+            .daka-pdf-fixed-clone .executive-grid,
+            .daka-pdf-fixed-clone .executive-actions {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 10px !important;
+            }
+            .daka-pdf-fixed-clone .executive-block-wide { grid-column: 1 / -1 !important; }
+            .daka-pdf-fixed-clone .report-section-icon,
+            .daka-pdf-fixed-clone .executive-score {
+                width: auto !important;
+                min-width: 0 !important;
+                justify-self: start !important;
+            }
+            .daka-pdf-fixed-clone .report-section-body { display: block !important; }
+            .daka-pdf-fixed-clone table { border-collapse: collapse !important; }
+            .daka-pdf-fixed-clone th,
+            .daka-pdf-fixed-clone td { padding: 7px !important; border: 1px solid #dbe4ef !important; }
+            .daka-pdf-fixed-clone a { color: #0369a1 !important; text-decoration: underline !important; }
+        </style>
+        <header style="margin-bottom:26px;padding:22px 24px;border-radius:12px;background:#071426;color:#fff;border-top:5px solid #06b6d4;">
+            <div style="font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#67e8f9;font-weight:800;">DAKA · DECISION REPORT</div>
+            <h1 style="margin:7px 0 5px;font-size:25px;color:#fff;">${escapeHtml(reportTitle)}</h1>
+            <p style="margin:0;color:#cbd5e1;font-size:11px;">${STATE.currentLang === 'en' ? 'Evidence, decisions and actions selected for this delivery.' : 'Preuves, décisions et actions sélectionnées pour cette livraison.'}</p>
+            ${chapterTitles.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:13px;">${chapterTitles.map(title => `<span style="padding:5px 8px;border:1px solid rgba(103,232,249,.25);border-radius:5px;color:#cffafe;font-size:8px;font-weight:700;">${escapeHtml(title)}</span>`).join('')}</div>` : ''}
+        </header>
+        ${cloneReportHtmlForExport(el, exportOptions)}`;
 
     shell.querySelectorAll('*').forEach(function (node) {
-        node.style.animation = 'none';
-        node.style.transition = 'none';
-        node.style.transform = 'none';
-        node.style.maxWidth = '100%';
-        node.style.boxSizing = 'border-box';
+        node.style.setProperty('animation', 'none', 'important');
+        node.style.setProperty('transition', 'none', 'important');
+        node.style.setProperty('transform', 'none', 'important');
+        node.style.setProperty('position', 'static', 'important');
+        node.style.setProperty('inset', 'auto', 'important');
+        node.style.setProperty('float', 'none', 'important');
+        node.style.setProperty('max-width', '100%', 'important');
+        node.style.setProperty('min-width', '0', 'important');
+        node.style.setProperty('box-sizing', 'border-box', 'important');
+        node.style.setProperty('writing-mode', 'horizontal-tb', 'important');
+        node.style.setProperty('text-orientation', 'mixed', 'important');
     });
     shell.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li,td,th,small,strong,span').forEach(function (node) {
-        node.style.color = '#0f172a';
-        node.style.textShadow = 'none';
-        node.style.overflowWrap = 'anywhere';
+        node.style.setProperty('color', '#0f172a', 'important');
+        node.style.setProperty('text-shadow', 'none', 'important');
+        node.style.setProperty('overflow-wrap', 'break-word', 'important');
+        node.style.setProperty('word-break', 'normal', 'important');
+        node.style.setProperty('white-space', 'normal', 'important');
     });
-    shell.querySelectorAll('.result-card,.report-section,.competitor-card,.card').forEach(function (card) {
-        card.style.background = '#ffffff';
-        card.style.border = '1px solid #cbd5e1';
-        card.style.boxShadow = 'none';
+    shell.querySelectorAll('div,section,article,aside,main').forEach(function (node) {
+        node.style.setProperty('background-color', 'transparent', 'important');
+        node.style.setProperty('background-image', 'none', 'important');
+    });
+    shell.querySelectorAll('.result-card,.report-section,.competitor-card,.card,.executive-summary,.executive-block,.executive-action,.decision-proof-panel,article').forEach(function (card) {
+        card.style.setProperty('background', '#ffffff', 'important');
+        card.style.setProperty('background-image', 'none', 'important');
+        card.style.setProperty('color', '#0f172a', 'important');
+        card.style.setProperty('border', '1px solid #dbe4ef', 'important');
+        card.style.setProperty('box-shadow', 'none', 'important');
+        card.style.setProperty('overflow', 'visible', 'important');
+    });
+    shell.querySelector(':scope > header')?.style.setProperty('background', '#071426', 'important');
+    shell.querySelectorAll(':scope > header, :scope > header *').forEach(function (node) {
+        node.style.setProperty('color', '#ffffff', 'important');
     });
     shell.querySelectorAll('details').forEach(function (details) {
         details.open = true;
@@ -9008,8 +9206,32 @@ function createFixedPdfClone(el, exportOptions = {}) {
         table.style.tableLayout = 'fixed';
         table.style.overflowWrap = 'anywhere';
     });
+    shell.querySelectorAll('[style*="grid-template-columns"], .grid-2, .grid-3, .grid-4, .metrics-grid, .section-grid').forEach(function (grid) {
+        grid.style.setProperty('display', 'grid', 'important');
+        grid.style.setProperty('grid-template-columns', grid.children.length > 1 ? 'repeat(2, minmax(0, 1fr))' : '1fr', 'important');
+        grid.style.setProperty('gap', '10px', 'important');
+    });
     document.body.appendChild(shell);
     return shell;
+}
+
+function saveDakaPdfFile(pdf, filename) {
+    const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 640;
+    if (!isMobile) {
+        pdf.save(filename);
+        return;
+    }
+    const blob = pdf.output('blob');
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    link.rel = 'noopener';
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 12000);
 }
 
 function restorePdfExportDom(hiddenEls, openedDetails) {
@@ -9026,34 +9248,60 @@ function getDakaExportModules() {
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
     const keywords = Array.isArray(STATE.lastKeywords) ? STATE.lastKeywords : (STATE.lastKeywords?.keywords || []);
+    const feature = (key, icon, fr, en, ar) => ({ key, icon, title: isAr ? ar : isEn ? en : fr });
     return [
         {
             key: 'competitors', id: 'resultsCompetitors', icon: 'fa-chess-queen',
             available: !!STATE.lastAnalysisResults,
             title: isAr ? 'المنافسون والسوق' : isEn ? 'Competitors & Market' : 'Concurrents & marché',
             subtitle: isAr ? 'الفرص والتهديدات وخطة التقدم' : isEn ? 'Opportunities, threats and attack plan' : 'Opportunités, menaces et plan d’attaque',
-            team: isAr ? 'فريق Daka لاستخبارات السوق' : isEn ? 'Daka Market Intelligence Team' : 'Équipe Daka Intelligence Marché'
+            team: isAr ? 'فريق Daka لاستخبارات السوق' : isEn ? 'Daka Market Intelligence Team' : 'Équipe Daka Intelligence Marché',
+            features: [
+                feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
+                feature('market', 'fa-compass', 'Lecture du marché et preuves', 'Market reading and evidence', 'قراءة السوق والأدلة'),
+                feature('plan', 'fa-list-check', 'Plan d’attaque prioritaire', 'Priority attack plan', 'خطة الهجوم ذات الأولوية'),
+                feature('competitors', 'fa-crosshairs', 'Fiches des concurrents', 'Competitor profiles', 'ملفات المنافسين'),
+                feature('proof', 'fa-link', 'Sources et liens à consulter', 'Sources and links to review', 'المصادر والروابط للفحص')
+            ]
         },
         {
             key: 'funnel', id: 'resultsFunnel', icon: 'fa-filter-circle-dollar',
             available: !!STATE.lastFunnelResults,
             title: isAr ? 'العرض ومسار التحويل' : isEn ? 'Offer & Conversion Path' : 'Offre & parcours de conversion',
             subtitle: isAr ? 'الثقة والسعر ونقاط فقدان العملاء' : isEn ? 'Trust, pricing and conversion leaks' : 'Confiance, prix et pertes de conversion',
-            team: isAr ? 'فريق Daka للتحويل والعرض' : isEn ? 'Daka Conversion & Offer Team' : 'Équipe Daka Conversion & Offre'
+            team: isAr ? 'فريق Daka للتحويل والعرض' : isEn ? 'Daka Conversion & Offer Team' : 'Équipe Daka Conversion & Offre',
+            features: [
+                feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
+                feature('audit', 'fa-shield-halved', 'Diagnostic de la page', 'Page diagnosis', 'تشخيص الصفحة'),
+                feature('money', 'fa-hand-holding-dollar', 'Offre, prix et confiance', 'Offer, price and trust', 'العرض والسعر والثقة'),
+                feature('page', 'fa-pen-nib', 'Sections et textes', 'Sections and copy', 'الأقسام والنصوص'),
+                feature('proof', 'fa-link', 'Preuves et liens à consulter', 'Evidence and links to review', 'الأدلة والروابط للفحص')
+            ]
         },
         {
             key: 'technical', id: 'resultsTechnical', icon: 'fa-gauge-high',
             available: !!STATE.lastTechnicalResults,
             title: isAr ? 'أداء الموقع' : isEn ? 'Site Performance' : 'Performance du site',
             subtitle: isAr ? 'الأساس التقني والأولويات العملية' : isEn ? 'Technical foundations and practical priorities' : 'Fondations techniques et priorités pratiques',
-            team: isAr ? 'فريق Daka لأداء المواقع' : isEn ? 'Daka Site Performance Team' : 'Équipe Daka Performance Site'
+            team: isAr ? 'فريق Daka لأداء المواقع' : isEn ? 'Daka Site Performance Team' : 'Équipe Daka Performance Site',
+            features: [
+                feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
+                feature('technical', 'fa-gauge-high', 'Diagnostic technique', 'Technical diagnosis', 'التشخيص التقني'),
+                feature('page', 'fa-file-lines', 'Contenu et structure de page', 'Page content and structure', 'محتوى وبنية الصفحة'),
+                feature('backlinks', 'fa-link', 'Backlinks et liens à consulter', 'Backlinks and links to review', 'الروابط الخلفية والروابط للفحص'),
+                feature('plan', 'fa-list-check', 'Plan d’amélioration', 'Improvement plan', 'خطة التحسين')
+            ]
         },
         {
             key: 'keywords', id: 'resultsKeywords', icon: 'fa-key',
             available: Array.isArray(keywords) && keywords.length > 0,
             title: isAr ? 'فرص الطلب' : isEn ? 'Demand Opportunities' : 'Opportunités de demande',
             subtitle: isAr ? 'الطلبات والمواضيع ذات القيمة' : isEn ? 'Valuable searches and topics' : 'Recherches et sujets à forte valeur',
-            team: isAr ? 'فريق Daka لأبحاث النمو' : isEn ? 'Daka Growth Research Team' : 'Équipe Daka Recherche Croissance'
+            team: isAr ? 'فريق Daka لأبحاث النمو' : isEn ? 'Daka Growth Research Team' : 'Équipe Daka Recherche Croissance',
+            features: [
+                feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
+                feature('keywords', 'fa-key', 'Mots-clés, intentions et potentiel', 'Keywords, intent and potential', 'الكلمات والنية والإمكانات')
+            ]
         }
     ];
 }
@@ -9064,9 +9312,9 @@ function closeDakaExportStudio() {
 }
 
 function setAllDakaExportSections(value) {
-    document.querySelectorAll('#export-studio-sections input[data-export-section]:not(:disabled)').forEach(input => {
+    document.querySelectorAll('#export-studio-sections input:not(:disabled)').forEach(input => {
         input.checked = !!value;
-        input.closest('.export-pack-card')?.classList.toggle('selected', input.checked);
+        input.closest('.export-pack-card')?.classList.toggle('selected', !!value);
     });
 }
 
@@ -9077,23 +9325,56 @@ function openDakaExportStudio(preselect = null) {
     const isAr = STATE.currentLang === 'ar';
     const isEn = STATE.currentLang === 'en';
     const modules = getDakaExportModules();
-    list.innerHTML = modules.map(module => `
-        <label class="export-pack-card ${module.available && (!preselect || preselect === module.key) ? 'selected' : ''} ${module.available ? '' : 'unavailable'}">
-            <input type="checkbox" data-export-section value="${module.key}"
-                ${module.available && (!preselect || preselect === module.key) ? 'checked' : ''}
-                ${module.available ? '' : 'disabled'}>
-            <span class="export-pack-icon"><i class="fas ${module.icon}"></i></span>
-            <span class="export-pack-copy">
-                <strong>${module.title}</strong>
-                <small>${module.available ? module.subtitle : (isAr ? 'أطلق هذا التحليل أولاً' : isEn ? 'Run this analysis first' : 'Lancez d’abord cette analyse')}</small>
-            </span>
-            <i class="fas fa-circle-check export-pack-check"></i>
-        </label>`).join('');
+    list.innerHTML = modules.map(module => {
+        const selected = module.available && (!preselect || preselect === module.key);
+        const root = document.getElementById(module.id);
+        const features = module.features.map(item => ({
+            ...item,
+            available: !!root?.querySelector(`[data-export-feature="${item.key}"]`)
+        }));
+        return `
+        <article class="export-pack-card ${selected ? 'selected' : ''} ${module.available ? '' : 'unavailable'}" data-export-module="${module.key}">
+            <label class="export-pack-main">
+                <input type="checkbox" data-export-section value="${module.key}" ${selected ? 'checked' : ''} ${module.available ? '' : 'disabled'}>
+                <span class="export-pack-icon"><i class="fas ${module.icon}"></i></span>
+                <span class="export-pack-copy">
+                    <strong>${module.title}</strong>
+                    <small>${module.available ? module.subtitle : (isAr ? 'أطلق هذا التحليل أولاً' : isEn ? 'Run this analysis first' : 'Lancez d’abord cette analyse')}</small>
+                </span>
+                <i class="fas fa-circle-check export-pack-check"></i>
+            </label>
+            <div class="export-feature-list">
+                ${features.map(item => `
+                    <label class="export-feature-option ${item.available ? '' : 'unavailable'}">
+                        <input type="checkbox" data-export-feature-choice="${item.key}" data-export-parent="${module.key}"
+                            ${selected && item.available ? 'checked' : ''} ${item.available ? '' : 'disabled'}>
+                        <i class="fas ${item.icon}"></i><span>${item.title}</span>
+                    </label>`).join('')}
+            </div>
+        </article>`;
+    }).join('');
     list.querySelectorAll('input[data-export-section]').forEach(input => {
-        input.addEventListener('change', () => input.closest('.export-pack-card')?.classList.toggle('selected', input.checked));
+        input.addEventListener('change', () => {
+            const card = input.closest('.export-pack-card');
+            card?.querySelectorAll('input[data-export-feature-choice]:not(:disabled)').forEach(child => { child.checked = input.checked; });
+            card?.classList.toggle('selected', input.checked);
+        });
+    });
+    list.querySelectorAll('input[data-export-feature-choice]').forEach(input => {
+        input.addEventListener('change', () => {
+            const card = input.closest('.export-pack-card');
+            const parent = card?.querySelector('input[data-export-section]');
+            const anySelected = !!card?.querySelector('input[data-export-feature-choice]:checked');
+            if (parent) parent.checked = anySelected;
+            card?.classList.toggle('selected', anySelected);
+        });
     });
     document.getElementById('export-studio-title').textContent = isAr ? 'كوّن تقريرك التنفيذي' : isEn ? 'Build your decision report' : 'Composez votre dossier décisionnel';
     document.getElementById('export-studio-subtitle').textContent = isAr ? 'اختر الوحدات والعمق قبل التصدير.' : isEn ? 'Choose the modules and depth before export.' : 'Choisissez les expertises et la profondeur avant l’export.';
+    document.getElementById('export-feature-help').textContent = isAr
+        ? 'اختر الفصول المفيدة فقط. سيتم إنشاء ملف PDF حسب اختيارك.'
+        : isEn ? 'Select only useful chapters. The PDF will be built around your selection.'
+            : 'Cochez uniquement les chapitres utiles. Le PDF sera construit autour de votre sélection.';
     document.getElementById('export-confirm-label').textContent = isAr ? 'تأكيد وتصدير' : isEn ? 'Confirm and export' : 'Valider et exporter';
     modal.classList.add('active');
     document.body.classList.add('modal-open');
@@ -9104,9 +9385,16 @@ function confirmDakaExportStudio() {
     if (!sections.length) {
         return toast.warning(STATE.currentLang === 'ar' ? 'اختر قسماً واحداً على الأقل.' : STATE.currentLang === 'en' ? 'Select at least one section.' : 'Sélectionnez au moins une section.');
     }
-    const depth = document.querySelector('input[name="dakaExportDepth"]:checked')?.value || 'full';
+    const features = {};
+    sections.forEach(section => {
+        features[section] = [...document.querySelectorAll(`#export-studio-sections input[data-export-parent="${section}"]:checked`)]
+            .map(input => input.dataset.exportFeatureChoice);
+    });
+    if (!Object.values(features).some(items => items.length)) {
+        return toast.warning(STATE.currentLang === 'ar' ? 'اختر فصلاً واحداً على الأقل.' : STATE.currentLang === 'en' ? 'Select at least one chapter.' : 'Sélectionnez au moins un chapitre.');
+    }
     closeDakaExportStudio();
-    window.exportFullAnalysisToPDF({ prepared: true, sections, includeDetails: depth === 'full' });
+    window.exportFullAnalysisToPDF({ prepared: true, sections, features, includeDetails: true });
 }
 
 
@@ -9139,6 +9427,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
     }
     const selectedSectionKeys = new Set(exportOptions.sections || []);
     const includeDetails = exportOptions.includeDetails !== false;
+    const selectedFeatures = exportOptions.features || {};
     const selectedModules = getDakaExportModules().filter(module => module.available && selectedSectionKeys.has(module.key));
 
     if (STATE.isExporting) return;
@@ -9158,8 +9447,13 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
     if (STATE.currentLang === 'ar') {
         try {
             var arSections = selectedModules
-                .map(function (module) { return document.getElementById(module.id); })
-                .filter(function (el) { return el && getExportableReportText(el).length > 40; });
+                .map(function (module) {
+                    var el = document.getElementById(module.id);
+                    return el && getExportableReportText(el).length > 40
+                        ? { el: el, module: module }
+                        : null;
+                })
+                .filter(Boolean);
 
             if (!arSections.length) {
                 toast.warning('التقرير غير جاهز للتصدير بعد.');
@@ -9167,7 +9461,12 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             }
 
             var arContent = arSections
-                .map(function (el) { return cloneReportHtmlForExport(el, { includeDetails: includeDetails }); })
+                .map(function (entry) {
+                    return cloneReportHtmlForExport(entry.el, {
+                        includeDetails: includeDetails,
+                        featureKeys: selectedFeatures[entry.module.key] || []
+                    });
+                })
                 .join('<hr style="margin:30px 0;border:none;border-top:2px dashed rgba(255,255,255,0.1);">');
 
             var pw = window.open('', '_blank');
@@ -9182,35 +9481,36 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 year: 'numeric', month: 'long', day: 'numeric'
             });
 
-           // 🔥 CHANGEMENT 1 : Règles CSS pour forcer le Dark Mode, la largeur et les Graphiques
+            // Mise en page d'impression stable et lisible.
             var cssRules = [
                 '* { font-family: Cairo, Arial, sans-serif !important; direction: rtl; box-sizing: border-box; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }',
-                'body { background-color:#0a0e27 !important; color:#e2e8f0 !important; padding:15px !important; font-size:12px; line-height:1.7; margin:0; zoom: 0.82; }', /* Zoom pour ne pas couper les bords */
-                'h1,h2,h3,h4,h5 { color:#ffffff !important; font-weight:800; }',
+                'body { background-color:#ffffff !important; color:#0f172a !important; padding:15px !important; font-size:12px; line-height:1.75; margin:0; }',
+                'h1,h2,h3,h4,h5 { color:#0f172a !important; font-weight:800; line-height:1.35 !important; }',
                 'button, .btn, .btn-gen, .no-print, .nav-tabs, .header, .footer,',
                 '.export-bubble-wrapper, #btn-export-global, .loading-state,',
                 '.loading-orb, .toast-container, iframe,', /* ⚠️ Le mot "canvas" a été retiré d'ici pour afficher le Radar */
                 '.copy-badge, .btn-copy-mini, .btn-cosmic, .btn-cyber, .btn-system,',
                 '.generator-grid, #tech-gen-output, .kw-filter-btn, #kwFilterBar,',
-                '[data-gen-type], .btn-export-pdf { display:none !important; }',
+                '[data-gen-type], .btn-export-pdf, .expert-dock, #magicPromptPlaceholder, .report-feature-nav { display:none !important; }',
                 '.result-card, .card, .magic-box, .diff-box {',
-                '  border:1px solid rgba(255,255,255,0.08) !important; border-radius:12px !important;',
+                '  border:1px solid #dbe4ef !important; border-radius:10px !important;',
                 '  padding:16px !important; margin-bottom:16px !important;',
-                '  background-color:#0f172a !important; color:#ffffff !important;',
+                '  background-color:#ffffff !important; color:#0f172a !important;',
                 '  page-break-inside:avoid; box-shadow:none !important; width: 100% !important; max-width: 100% !important; overflow: hidden !important; }', /* Force la limite de largeur */
                 'span, div, p, small { color:inherit !important; background-color:transparent !important; }',
                 'table { width:100%; border-collapse:collapse; font-size:11px; }',
-                'th { background-color:rgba(255,255,255,0.05) !important; color:#94a3b8 !important;',
-                '     padding:8px; border:1px solid rgba(255,255,255,0.1) !important; text-align:right; }',
-                'td { padding:8px; border:1px solid rgba(255,255,255,0.1) !important; color:#e2e8f0 !important; background-color:transparent !important; }',
-                '.print-header { text-align:center; padding:20px; border-bottom:3px solid #6366f1; margin-bottom:30px; background-color:rgba(255,255,255,0.02) !important; border-radius:12px; }',
-                'a { color:#3b82f6 !important; text-decoration:none; }',
+                'th { background-color:#f1f5f9 !important; color:#334155 !important;',
+                '     padding:8px; border:1px solid #dbe4ef !important; text-align:right; }',
+                'td { padding:8px; border:1px solid #dbe4ef !important; color:#0f172a !important; background-color:#ffffff !important; }',
+                '.print-header { text-align:center; padding:20px; border-top:5px solid #06b6d4; margin-bottom:30px; background-color:#071426 !important; color:#ffffff !important; border-radius:10px; }',
+                '.print-header * { color:#ffffff !important; }',
+                'a { color:#0369a1 !important; text-decoration:underline; }',
                 'div[style*="display:flex"] { flex-wrap: wrap !important; }', /* Empêche les éléments flex de dépasser l'écran */
                 'canvas { max-width: 100% !important; height: auto !important; margin: 0 auto !important; display: block !important; }',
-                'body::before { content:"Made by Daka"; position:fixed; inset:45% auto auto 18%; transform:rotate(-28deg); font-size:52px; font-weight:900; color:rgba(196,181,253,.07); pointer-events:none; z-index:9999; }',
+                'body::before { content:"Made by Daka"; position:fixed; inset:45% auto auto 18%; transform:rotate(-28deg); font-size:52px; font-weight:900; color:rgba(15,23,42,.045); pointer-events:none; z-index:9999; }',
                 '@page { margin:10mm; size:A4; }',
                 '@media print {',
-                '  body { background-color:#0a0e27 !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }',
+                '  body { background-color:#ffffff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }',
                 '}'
             ].join('\n');
 
@@ -9239,9 +9539,6 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 '<\/html>'
             ];
 
-            pw.document.open();
-            pw.document.write(htmlParts.join('\n'));
-            pw.document.close();
             pw.document.open();
             pw.document.write(htmlParts.join('\n'));
             pw.document.close();
@@ -9323,7 +9620,19 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             .filter(function (s) { return s.has && selectedSectionKeys.has(s.key); })
             .map(function (s) {
                 const el = document.getElementById(s.id);
-                return (el && getExportableReportText(el).length > 40) ? { el: el, label: s.label, key: s.key } : null;
+                const module = selectedModules.find(function (item) { return item.key === s.key; });
+                const selectedKeys = selectedFeatures[s.key] || [];
+                return (el && getExportableReportText(el).length > 40)
+                    ? {
+                        el: el,
+                        label: s.label,
+                        key: s.key,
+                        featureKeys: selectedKeys,
+                        featureTitles: (module?.features || [])
+                            .filter(function (feature) { return selectedKeys.includes(feature.key); })
+                            .map(function (feature) { return feature.title; })
+                    }
+                    : null;
             })
             .filter(Boolean);
 
@@ -9538,7 +9847,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             // Page de séparation section
             sectionStartPages[si] = pdf.internal.getNumberOfPages() + 1;
             pdf.addPage();
-            pdf.setFillColor(10, 15, 30);
+            pdf.setFillColor(248, 250, 252);
             pdf.rect(0, 0, pageW, pageH, 'F');
 
             // Bande couleur selon section
@@ -9563,7 +9872,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
             // Titre section
             pdf.setFontSize(22);
-            pdf.setTextColor(255, 255, 255);
+            pdf.setTextColor(15, 23, 42);
             pdf.text(section.label, pageW / 2, 40, { align: 'center' });
 
             // Ligne
@@ -9574,18 +9883,41 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             // Message capture
             pdf.setFont('helvetica', 'normal');
             pdf.setFontSize(8);
-            pdf.setTextColor(100, 116, 139);
+            pdf.setTextColor(71, 85, 105);
             pdf.text(
-                isEn ? 'Full results on next page(s)' : 'Résultats complets sur la/les page(s) suivante(s)',
+                isEn ? 'Selected chapters and evidence on the next page(s)' : 'Chapitres et preuves sélectionnés sur les pages suivantes',
                 pageW / 2, 56, { align: 'center' }
             );
+            if (section.featureTitles?.length) {
+                var chapterY = 69;
+                section.featureTitles.forEach(function (chapter, chapterIndex) {
+                    pdf.setFillColor(255, 255, 255);
+                    pdf.setDrawColor(226, 232, 240);
+                    pdf.roundedRect(margin + 14, chapterY + chapterIndex * 13, contentW - 28, 9, 2, 2, 'FD');
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(7.5);
+                    pdf.setTextColor(51, 65, 85);
+                    pdf.text('\u2022  ' + chapter, margin + 19, chapterY + chapterIndex * 13 + 5.8);
+                });
+            }
 
             // ── Capture html2canvas ───────────────────────────
             var canvas;
-            var fixedClone = createFixedPdfClone(section.el, { includeDetails: includeDetails });
+            var mobilePdf = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 640;
+            var captureScale = mobilePdf ? 1.15 : 1.6;
+            var fixedClone = createFixedPdfClone(section.el, {
+                includeDetails: includeDetails,
+                featureKeys: section.featureKeys,
+                featureTitles: section.featureTitles,
+                title: section.label
+            });
+            var maxCanvasHeight = mobilePdf ? 14000 : 24000;
+            if ((fixedClone.scrollHeight || 0) * captureScale > maxCanvasHeight) {
+                captureScale = Math.max(.62, maxCanvasHeight / fixedClone.scrollHeight);
+            }
             try {
                 canvas = await html2canvas(fixedClone, {
-                    scale:           2,
+                    scale:           captureScale,
                     useCORS:         true,
                     allowTaint:      true,
                     backgroundColor: '#ffffff',
@@ -9625,8 +9957,8 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             var imgH       = canvas.height;
 
             // Ratio mm/px
-            var mmPerPx    = contentW / (imgW / 2);   // scale=2 donc /2
-            var imgHeightMm = (imgH / 2) * mmPerPx;
+            var mmPerPx    = contentW / (imgW / captureScale);
+            var imgHeightMm = (imgH / captureScale) * mmPerPx;
 
             // Pagination automatique si contenu > 1 page
             var printableH  = pageH - margin * 2;
@@ -9636,7 +9968,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 if (p > 0) pdf.addPage();
 
                 // Fond page
-                pdf.setFillColor(10, 15, 30);
+                pdf.setFillColor(255, 255, 255);
                 pdf.rect(0, 0, pageW, pageH, 'F');
 
                 // Bande couleur top
@@ -9644,9 +9976,9 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 pdf.rect(0, 0, pageW, 2, 'F');
 
                 // Portion de l'image à afficher sur cette page
-                var srcY      = p * (printableH / mmPerPx) * 2;  // en pixels canvas
+                var srcY      = p * (printableH / mmPerPx) * captureScale;
                 var srcH      = Math.min(
-                    (printableH / mmPerPx) * 2,
+                    (printableH / mmPerPx) * captureScale,
                     imgH - srcY
                 );
 
@@ -9660,7 +9992,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 ctx.drawImage(canvas, 0, srcY, imgW, srcH, 0, 0, imgW, srcH);
 
                 var sliceData   = sliceCanvas.toDataURL('image/jpeg', 0.92);
-                var sliceHeightMm = (srcH / 2) * mmPerPx;
+                var sliceHeightMm = (srcH / captureScale) * mmPerPx;
 
                 pdf.addImage(sliceData, 'JPEG', margin, margin, contentW, sliceHeightMm);
 
@@ -9668,7 +10000,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 if (p > 0) {
                     pdf.setFont('helvetica', 'normal');
                     pdf.setFontSize(6.5);
-                    pdf.setTextColor(sc[0], sc[1], sc[2]);
+                    pdf.setTextColor(71, 85, 105);
                     pdf.text(
                         'DAKA  |  ' + section.label + '  (' + (p + 1) + '/' + pagesNeeded + ')',
                         margin, margin - 3
@@ -9680,7 +10012,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 pdf.rect(0, pageH - 2, pageW, 2, 'F');
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(6.5);
-                pdf.setTextColor(100, 116, 139);
+                pdf.setTextColor(71, 85, 105);
                 pdf.text(
                     'Made by Daka  \u2014  ' + section.label,
                     margin, pageH - 4
@@ -9940,7 +10272,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             : 'report';
         var filename = 'Daka-Decision-Report-' + slug + '-' + Date.now() + '.pdf';
 
-        pdf.save(filename);
+        saveDakaPdfFile(pdf, filename);
 
         toast.success(
             isEn
@@ -11245,7 +11577,7 @@ function renderExecutiveSummary(data, type, opts = {}) {
     const actions = model.actions.length ? model.actions : [{ title: fallback, impact: '—', effort: '—', priority: '—' }];
 
     return `
-    <section class="executive-summary fade-in-up" dir="${isAr ? 'rtl' : 'ltr'}">
+    <section class="executive-summary fade-in-up" data-export-feature="summary" dir="${isAr ? 'rtl' : 'ltr'}">
         <div class="executive-summary-head">
             <div>
                 <span class="executive-summary-kicker">${safe(t.kicker)}</span>
@@ -11295,7 +11627,7 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
 
     if (noCollapse) {
         return `
-    <section class="report-section report-section-direct report-section-${safe(key)} fade-in-up" dir="${dir}">
+    <section class="report-section report-section-direct report-section-${safe(key)} fade-in-up" data-export-feature="${safe(key)}" dir="${dir}">
         <div class="report-section-head">
             <span class="report-section-icon"><i class="fas ${safe(icon || 'fa-layer-group')}"></i></span>
             <span class="report-section-copy">
@@ -11310,7 +11642,7 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
 
     return `
     <section class="report-section report-section-${safe(key)} ${expanded ? 'report-section-open' : ''} fade-in-up"
-        dir="${dir}" data-report-toggle="1" tabindex="0" role="button" aria-expanded="${expanded ? 'true' : 'false'}">
+        dir="${dir}" data-export-feature="${safe(key)}" data-report-toggle="1" tabindex="0" role="button" aria-expanded="${expanded ? 'true' : 'false'}">
         <div class="report-section-head">
             <span class="report-section-icon"><i class="fas ${safe(icon || 'fa-layer-group')}"></i></span>
             <span class="report-section-copy">
@@ -11340,6 +11672,7 @@ function getReportFeatureCopy() {
         keywords: ['Keywords', 'Les demandes utiles à cibler', 'fa-key'],
         pricing: ['Pricing', 'Prix, perception et marge', 'fa-tags'],
         trust: ['Trust', 'Preuves, garanties et objections', 'fa-shield-halved'],
+        backlinks: ['Backlinks', 'Liens et opportunités prêts à consulter', 'fa-link'],
         details: ['Détails', 'Le dossier complet d’intelligence', 'fa-folder-open']
     };
     if (isAr) return {
@@ -11351,6 +11684,7 @@ function getReportFeatureCopy() {
         keywords: ['الكلمات', 'الطلبات المفيدة للاستهداف', 'fa-key'],
         pricing: ['السعر', 'السعر والإدراك والهامش', 'fa-tags'],
         trust: ['الثقة', 'الأدلة والضمانات والاعتراضات', 'fa-shield-halved'],
+        backlinks: ['الروابط الخلفية', 'روابط وفرص جاهزة للفحص', 'fa-link'],
         details: ['التفاصيل', 'ملف التحليل الكامل', 'fa-folder-open']
     };
     if (isEn) return {
@@ -11362,6 +11696,7 @@ function getReportFeatureCopy() {
         keywords: ['Keywords', 'Useful demand to target', 'fa-key'],
         pricing: ['Pricing', 'Price, perception, and margin', 'fa-tags'],
         trust: ['Trust', 'Proof, guarantees, and objections', 'fa-shield-halved'],
+        backlinks: ['Backlinks', 'Links and opportunities ready to review', 'fa-link'],
         details: ['Details', 'The complete intelligence dossier', 'fa-folder-open']
     };
     return fr;
@@ -11385,6 +11720,7 @@ function enhanceReportNavigation(container) {
             : sectionKey === 'technical' || sectionKey === 'page' ? 'seo'
             : sectionKey === 'money' ? 'pricing'
             : sectionKey === 'proof' ? 'trust'
+            : sectionKey === 'backlinks' ? 'backlinks'
             : sectionKey === 'audit' ? 'funnel'
             : sectionKey === 'keywords' ? 'keywords'
             : 'details';
@@ -17520,6 +17856,110 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     box-shadow: 0 24px 70px rgba(0,0,0,.5) !important;
 }
 
+.backlink-portfolio {
+    overflow: hidden;
+    border-color: rgba(34,211,238,.18) !important;
+    background: linear-gradient(145deg, #0b1729, #07101e) !important;
+}
+.backlink-portfolio-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+    margin-bottom: 16px;
+}
+.backlink-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #67e8f9;
+    font-size: .76rem;
+    font-weight: 900;
+}
+.backlink-portfolio-head p {
+    max-width: 720px;
+    margin: 7px 0 0;
+    color: #a8b5c9;
+    font-size: .74rem;
+    line-height: 1.6;
+}
+.backlink-metrics {
+    display: flex;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+.backlink-metrics span {
+    min-width: 102px;
+    padding: 9px;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 8px;
+    background: #081321;
+    text-align: center;
+}
+.backlink-metrics strong,
+.backlink-metrics small { display: block; }
+.backlink-metrics strong { color: #f8fafc; font-size: 1rem; }
+.backlink-metrics small { margin-top: 2px; color: #94a3b8; font-size: .56rem; line-height: 1.3; }
+.backlink-list {
+    display: grid;
+    gap: 7px;
+}
+.backlink-item {
+    display: grid;
+    grid-template-columns: minmax(132px,auto) minmax(0,1fr) auto;
+    align-items: center;
+    gap: 11px;
+    padding: 10px;
+    border: 1px solid rgba(148,163,184,.11);
+    border-radius: 8px;
+    background: rgba(2,6,23,.38);
+}
+.backlink-type {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #93c5fd;
+    font-size: .59rem;
+    font-weight: 900;
+}
+.backlink-type-backlink { color: #6ee7b7; }
+.backlink-copy { min-width: 0; }
+.backlink-copy strong,
+.backlink-copy small {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.backlink-copy strong { color: #e2e8f0; font-size: .72rem; }
+.backlink-copy small { margin-top: 3px; color: #718096; font-size: .58rem; }
+.backlink-open {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 34px;
+    padding: 7px 9px;
+    border: 1px solid rgba(34,211,238,.22);
+    border-radius: 7px;
+    color: #67e8f9;
+    background: rgba(8,145,178,.08);
+    font-size: .61rem;
+    font-weight: 900;
+    text-decoration: none;
+}
+.backlink-open:hover,
+.backlink-open:focus-visible { border-color: #22d3ee; background: rgba(8,145,178,.16); }
+.backlink-empty {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 16px;
+    border: 1px dashed rgba(148,163,184,.2);
+    border-radius: 8px;
+    color: #94a3b8;
+    font-size: .72rem;
+}
+
 .export-studio-panel {
     width: min(880px, 94vw) !important;
 }
@@ -17557,26 +17997,24 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
 
 .export-studio-sections {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 9px;
+    grid-template-columns: 1fr;
+    gap: 11px;
+    max-height: min(56vh, 620px);
+    overflow-y: auto;
+    padding: 2px 5px 8px 2px;
 }
 
 .export-pack-card {
     position: relative;
-    display: grid;
-    grid-template-columns: auto minmax(0,1fr) auto;
-    gap: 11px;
-    align-items: center;
-    min-height: 76px;
-    padding: 12px;
+    display: block;
+    padding: 11px;
     border: 1px solid rgba(148,163,184,.13);
     border-radius: 10px;
     background: linear-gradient(145deg, #111b30, #090f1c);
-    cursor: pointer;
     box-shadow: 0 5px 0 #030712, 0 12px 22px rgba(0,0,0,.18);
 }
 
-.export-pack-card:has(input:checked) {
+.export-pack-card.selected {
     border-color: rgba(34,211,238,.48);
     background: linear-gradient(145deg, #10243a, #0a1424);
     box-shadow: 0 5px 0 #083344, 0 14px 26px rgba(8,145,178,.12);
@@ -17584,10 +18022,17 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
 
 .export-pack-card.unavailable {
     opacity: .42;
-    cursor: not-allowed;
 }
 
-.export-pack-card > i {
+.export-pack-main {
+    display: grid;
+    grid-template-columns: auto auto minmax(0,1fr) auto;
+    gap: 11px;
+    align-items: center;
+    cursor: pointer;
+}
+
+.export-pack-icon {
     width: 38px;
     height: 38px;
     border-radius: 9px;
@@ -17598,11 +18043,54 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     border: 1px solid rgba(34,211,238,.16);
 }
 
-.export-pack-card strong,
-.export-pack-card small { display: block; }
-.export-pack-card strong { color: #f8fafc; font-size: .78rem; }
-.export-pack-card small { margin-top: 3px; color: #94a3b8; font-size: .62rem; line-height: 1.35; }
-.export-pack-card input { width: 18px; height: 18px; accent-color: #22d3ee; }
+.export-pack-copy strong,
+.export-pack-copy small { display: block; }
+.export-pack-copy strong { color: #f8fafc; font-size: .78rem; }
+.export-pack-copy small { margin-top: 3px; color: #94a3b8; font-size: .62rem; line-height: 1.35; }
+.export-pack-card input { width: 17px; height: 17px; accent-color: #22d3ee; }
+.export-pack-check { color: #22d3ee; opacity: 0; }
+.export-pack-card.selected .export-pack-check { opacity: 1; }
+.export-feature-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 6px;
+    margin-top: 11px;
+    padding-top: 10px;
+    border-top: 1px solid rgba(148,163,184,.1);
+}
+.export-feature-option {
+    display: grid;
+    grid-template-columns: auto auto minmax(0,1fr);
+    align-items: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 7px 8px;
+    border: 1px solid rgba(148,163,184,.11);
+    border-radius: 7px;
+    background: #07101e;
+    color: #b8c5d8;
+    font-size: .62rem;
+    font-weight: 750;
+    line-height: 1.35;
+    cursor: pointer;
+}
+.export-feature-option:has(input:checked) {
+    border-color: rgba(34,211,238,.32);
+    color: #e6fbff;
+    background: rgba(8,145,178,.08);
+}
+.export-feature-option i { color: #67e8f9; }
+.export-feature-option.unavailable { opacity: .35; cursor: not-allowed; }
+.export-feature-help {
+    margin: 13px 0 0;
+    padding: 9px 11px;
+    border: 1px solid rgba(245,158,11,.17);
+    border-radius: 8px;
+    color: #cbd5e1;
+    background: rgba(245,158,11,.045);
+    font-size: .65rem;
+    line-height: 1.5;
+}
 
 .export-depth-fieldset {
     display: grid;
@@ -17722,6 +18210,101 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     .export-studio-footer { align-items: stretch; flex-direction: column; }
     .export-studio-footer .btn { width: 100%; }
     .export-pack-card { min-height: 68px; }
+    .backlink-portfolio-head { flex-direction: column; }
+    .backlink-metrics { width: 100%; }
+    .backlink-metrics span { flex: 1 1 0; min-width: 0; }
+}
+
+@media (max-width: 640px) {
+    .export-feature-list { grid-template-columns: 1fr; }
+    .export-pack-main { grid-template-columns: auto auto minmax(0,1fr); }
+    .export-pack-check { display: none; }
+    .backlink-item { grid-template-columns: 1fr auto; }
+    .backlink-type { grid-column: 1 / -1; }
+    .backlink-open span { display: none; }
+}
+
+/* Viewport-safe dialogs: remain centered even when a long report is rendered. */
+body.modal-open {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+}
+.auth-modal {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: 100vh !important;
+    height: 100dvh !important;
+    min-height: 100vh !important;
+    min-height: 100dvh !important;
+    margin: 0 !important;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+        max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)) !important;
+    overflow: hidden !important;
+    align-items: center !important;
+    justify-items: center !important;
+    overscroll-behavior: contain;
+    touch-action: pan-y;
+    transform: none !important;
+    isolation: isolate;
+}
+.auth-modal.active {
+    display: grid !important;
+}
+.auth-modal-panel {
+    position: relative !important;
+    inset: auto !important;
+    width: min(880px, 100%) !important;
+    max-width: 100% !important;
+    max-height: calc(100dvh - 24px) !important;
+    margin: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    transform: none !important;
+}
+#auth-modal .auth-modal-panel { width: min(620px, 100%) !important; }
+#reports-modal .auth-modal-panel { width: min(860px, 100%) !important; }
+#export-studio-modal .auth-modal-panel { width: min(900px, 100%) !important; }
+.export-studio-footer {
+    position: sticky;
+    bottom: -1px;
+    z-index: 4;
+    margin-inline: -4px;
+    padding: 14px 4px 2px;
+    background: linear-gradient(180deg, rgba(8,16,31,0), #08101f 22%);
+}
+
+@media (max-width: 640px) {
+    .auth-modal {
+        align-items: end !important;
+        padding: max(8px, env(safe-area-inset-top)) 8px max(8px, env(safe-area-inset-bottom)) !important;
+    }
+    .auth-modal-panel {
+        width: 100% !important;
+        max-height: calc(100dvh - 16px) !important;
+        border-radius: 16px 16px 12px 12px !important;
+        padding: 14px !important;
+    }
+    .auth-modal-head {
+        position: sticky;
+        top: -14px;
+        z-index: 6;
+        margin: -14px -14px 12px;
+        padding: 14px;
+        background: #08101f;
+        border-bottom: 1px solid rgba(148,163,184,.12);
+    }
+    .export-studio-sections {
+        max-height: none;
+        overflow: visible;
+    }
+    .export-feature-option {
+        min-height: 44px;
+        font-size: .68rem;
+    }
+    .export-studio-proof { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {
