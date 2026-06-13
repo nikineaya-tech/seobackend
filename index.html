@@ -5638,7 +5638,7 @@ async function refreshQuotaBadge(quotaOverride = null) {
     try {
         const quota = quotaOverride || (await api.get('/api/reports/quota', 15000))?.quota;
         const badge = document.getElementById('auth-quota');
-        if (badge && quota) badge.textContent = `${quota.used}/${quota.limit}`;
+        if (badge && quota) badge.textContent = `${quota.used}/${quota.unlimited ? '∞' : quota.limit}`;
     } catch (error) {
         console.warn('[Reports] quota unavailable:', error.message);
     }
