@@ -3454,6 +3454,12 @@ table tbody td {
                     <option value="en">🇬🇧 English</option>
                 </select>
 
+                <div id="dakaClock" class="daka-clock" role="timer" aria-live="off" title="Heure et date">
+                    <span class="daka-clock-dot" aria-hidden="true"></span>
+                    <strong id="dakaClockTime">--:--</strong>
+                    <small id="dakaClockDate">-- ---</small>
+                </div>
+
                 <button id="soundToggle" class="sound-toggle" type="button" aria-label="Activer ou couper les sons">
                     <i class="fas fa-volume-high"></i>
                 </button>
@@ -17024,6 +17030,7 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
 
 .server-status,
 .lang-selector,
+.daka-clock,
 .sound-toggle,
 .reports-history-trigger,
 .auth-login-btn,
@@ -17033,6 +17040,65 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     background: #0b1222 !important;
     border: 1px solid rgba(148,163,184,.14) !important;
     box-shadow: none !important;
+}
+
+.daka-clock {
+    width: 58px;
+    height: 58px;
+    flex: 0 0 58px;
+    position: relative;
+    display: grid;
+    place-content: center;
+    gap: 1px;
+    padding: 5px;
+    border-radius: 50% !important;
+    text-align: center;
+    isolation: isolate;
+    color: #f8fafc;
+    background:
+        radial-gradient(circle at 36% 28%, rgba(34,211,238,.16), transparent 38%),
+        linear-gradient(145deg, #14213a, #070d19) !important;
+    border: 1px solid rgba(103,232,249,.28) !important;
+    box-shadow:
+        0 1px 0 rgba(255,255,255,.14) inset,
+        0 -4px 8px rgba(0,0,0,.3) inset,
+        0 5px 0 #030712,
+        0 10px 22px rgba(0,0,0,.22) !important;
+}
+
+.daka-clock::before {
+    content: "";
+    position: absolute;
+    inset: 4px;
+    z-index: -1;
+    border-radius: 50%;
+    border: 1px solid rgba(148,163,184,.12);
+}
+
+.daka-clock strong {
+    font-size: .72rem;
+    line-height: 1;
+    letter-spacing: 0;
+}
+
+.daka-clock small {
+    color: #a5f3fc;
+    font-size: .48rem;
+    line-height: 1.15;
+    font-weight: 800;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.daka-clock-dot {
+    position: absolute;
+    top: 9px;
+    right: 10px;
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 7px rgba(34,197,94,.72);
 }
 
 .tab-content { min-height: auto !important; }
@@ -17199,7 +17265,7 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     .header { top: 4px !important; margin: 0 4px; }
     .header-content { flex-wrap: wrap !important; }
     .logo { order: 1; }
-    .server-status, .lang-selector, .sound-toggle, .reports-history-trigger, .auth-shell { order: 2; }
+    .server-status, .lang-selector, .daka-clock, .sound-toggle, .reports-history-trigger, .auth-shell { order: 2; }
     .nav-tabs {
         order: 3;
         width: 100% !important;
@@ -17216,10 +17282,20 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     .header-content { padding: 6px !important; }
     .logo > div:last-child, .server-status span { display: none !important; }
     .logo-mark, .daka-header-logo-video { width: 38px !important; height: 38px !important; }
-    .server-status, .lang-selector, .sound-toggle, .reports-history-trigger, .auth-login-btn, .auth-logout-btn {
+    .server-status, .lang-selector, .daka-clock, .sound-toggle, .reports-history-trigger, .auth-login-btn, .auth-logout-btn {
         min-height: 38px;
         max-width: 44vw;
     }
+    .daka-clock {
+        width: 42px !important;
+        height: 42px !important;
+        min-height: 42px !important;
+        flex-basis: 42px;
+        box-shadow: 0 3px 0 #030712, 0 7px 14px rgba(0,0,0,.18) !important;
+    }
+    .daka-clock strong { font-size: .61rem; }
+    .daka-clock small { font-size: .4rem; }
+    .daka-clock-dot { top: 6px; right: 7px; width: 3px; height: 3px; }
     .nav-tabs { padding: 3px !important; }
     .nav-btn { min-height: 39px; padding: 7px 10px !important; }
     .tab-content > .card { padding: 12px !important; border-radius: 11px !important; }
@@ -17240,6 +17316,50 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     }
 }
 </style>
+
+<script>
+(() => {
+    const locales = { fr: 'fr-FR', en: 'en-GB', ar: 'ar-MA' };
+
+    function updateDakaClock() {
+        const clock = document.getElementById('dakaClock');
+        const timeNode = document.getElementById('dakaClockTime');
+        const dateNode = document.getElementById('dakaClockDate');
+        if (!clock || !timeNode || !dateNode) return;
+
+        const lang = window.STATE?.currentLang || document.getElementById('langSelector')?.value || 'fr';
+        const locale = locales[lang] || locales.fr;
+        const now = new Date();
+        const time = new Intl.DateTimeFormat(locale, {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        }).format(now);
+        const date = new Intl.DateTimeFormat(locale, {
+            day: '2-digit',
+            month: 'short'
+        }).format(now);
+        const fullDate = new Intl.DateTimeFormat(locale, {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        }).format(now);
+
+        timeNode.textContent = time;
+        dateNode.textContent = date;
+        clock.title = `${fullDate} - ${time}`;
+        clock.setAttribute('aria-label', `${fullDate}, ${time}`);
+        clock.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateDakaClock();
+        window.setInterval(updateDakaClock, 30000);
+        document.getElementById('langSelector')?.addEventListener('change', updateDakaClock);
+    });
+})();
+</script>
 
 </body>
 </html>
