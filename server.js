@@ -8555,6 +8555,13 @@ function extractSEOIntel(html, pageUrl = '') {
         const href = safeText($(el).attr('href'));
         const text = safeText($(el).text()).replace(/\s+/g, ' ');
         const normalized = normalizeUrl(href, origin, pageUrl);
+        const rel = safeText($(el).attr('rel'))
+            .toLowerCase()
+            .split(/\s+/)
+            .filter(Boolean);
+        const context = safeText(
+            $(el).closest('p, li, article, section, nav, footer, header').first().text()
+        ).replace(/\s+/g, ' ').substring(0, 240);
 
         const isInternal =
             !!normalized &&
@@ -8568,21 +8575,34 @@ function extractSEOIntel(html, pageUrl = '') {
         return {
             href,
             text: text || null,
+            anchor: text || null,
+            anchorText: text || null,
             normalized,
+            url: normalized,
+            sourceUrl: pageUrl || canonical || origin || null,
+            targetUrl: normalized,
             isInternal,
-            isExternal
+            isExternal,
+            linkType: isInternal ? 'INTERNAL' : isExternal ? 'OUTBOUND' : 'IGNORED',
+            rel,
+            nofollow: rel.includes('nofollow'),
+            sponsored: rel.includes('sponsored'),
+            ugc: rel.includes('ugc'),
+            targetBlank: safeText($(el).attr('target')).toLowerCase() === '_blank',
+            context: context || null,
+            status: normalized ? 'NOT_CHECKED' : 'IGNORED'
         };
     }).get();
 
     const internalLinkObjects = uniqueBy(
         allAnchors.filter(x => x.normalized && x.isInternal),
         'normalized'
-    ).slice(0, 10);
+    ).slice(0, 30);
 
     const externalOutboundLinkObjects = uniqueBy(
         allAnchors.filter(x => x.normalized && x.isExternal),
         'normalized'
-    ).slice(0, 10);
+    ).slice(0, 30);
 
     const brokenLinkObjects = allAnchors
         .filter(x => !x.href || x.href === '#' || /^javascript:\s*(?:void\(0\))?;?$/i.test(x.href))
@@ -8766,6 +8786,197 @@ function extractSEOIntel(html, pageUrl = '') {
 
 
 // ✅ VERSION DEEP — extractPerfSignals
+async function verifyObservedLink(link = {}, timeoutMs = 3200) {
+    const targetUrl = link.targetUrl || link.normalized || link.url || link.href;
+    if (!isPublicHttpUrl(targetUrl)) {
+        return { ...link, targetUrl: targetUrl || null, status: 'UNVERIFIED', statusCode: null };
+    }
+
+    const requestConfig = {
+        timeout: timeoutMs,
+        maxRedirects: 5,
+        validateStatus: () => true,
+        headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; DakaLinkAudit/1.0)',
+            'Accept': 'text/html,application/xhtml+xml'
+        }
+    };
+
+    try {
+        let response = await axios.head(targetUrl, requestConfig);
+        if ([403, 405, 406].includes(response.status)) {
+            response = await axios.get(targetUrl, {
+                ...requestConfig,
+                headers: { ...requestConfig.headers, Range: 'bytes=0-1024' },
+                maxContentLength: 64 * 1024
+            });
+        }
+        const statusCode = Number(response.status) || null;
+        const status =
+            statusCode >= 200 && statusCode < 300 ? 'OK' :
+            statusCode >= 300 && statusCode < 400 ? 'REDIRECT' :
+            statusCode >= 400 ? 'BROKEN' : 'UNVERIFIED';
+        return {
+            ...link,
+            targetUrl,
+            url: link.url || targetUrl,
+            status,
+            statusCode,
+            finalUrl: response.request?.res?.responseUrl || targetUrl
+        };
+    } catch (error) {
+        return {
+            ...link,
+            targetUrl,
+            url: link.url || targetUrl,
+            status: 'UNVERIFIED',
+            statusCode: null,
+            error: String(error.message || 'LINK_CHECK_FAILED').substring(0, 180)
+        };
+    }
+}
+
+async function discoverVerifiedInboundLinks(targetUrl, options = {}) {
+    const maxCandidates = Math.max(1, Math.min(Number(options.maxCandidates) || 5, 8));
+    const cacheHost = (() => {
+        try { return new URL(targetUrl).hostname.replace(/^www\./i, '').toLowerCase(); }
+        catch { return ''; }
+    })();
+    if (!cacheHost || !process.env.SERPER_API_KEY) {
+        return { links: [], source: 'unavailable', candidatesChecked: 0 };
+    }
+
+    const cacheKey = `verified-inbound-v1:${cacheHost}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return cached;
+
+    try {
+        const searchResponse = await axios.post(
+            'https://google.serper.dev/search',
+            { q: `"${cacheHost}" -site:${cacheHost}`, num: maxCandidates + 3 },
+            {
+                headers: {
+                    'X-API-KEY': process.env.SERPER_API_KEY,
+                    'Content-Type': 'application/json'
+                },
+                timeout: 4500
+            }
+        );
+
+        const candidates = (searchResponse.data?.organic || [])
+            .map(item => ({
+                sourceUrl: item.link,
+                sourceTitle: item.title || null,
+                sourceSnippet: item.snippet || null
+            }))
+            .filter(item => {
+                if (!isPublicHttpUrl(item.sourceUrl)) return false;
+                try {
+                    return new URL(item.sourceUrl).hostname.replace(/^www\./i, '').toLowerCase() !== cacheHost;
+                } catch {
+                    return false;
+                }
+            })
+            .slice(0, maxCandidates);
+
+        const checked = await Promise.allSettled(candidates.map(async candidate => {
+            const response = await axios.get(candidate.sourceUrl, {
+                timeout: 4000,
+                maxRedirects: 4,
+                maxContentLength: 900 * 1024,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (compatible; DakaLinkAudit/1.0)',
+                    'Accept': 'text/html,application/xhtml+xml'
+                }
+            });
+            const $ = cheerio.load(typeof response.data === 'string' ? response.data : '');
+            const found = [];
+            $('a[href]').each((_, el) => {
+                const href = String($(el).attr('href') || '').trim();
+                let resolved;
+                try { resolved = new URL(href, candidate.sourceUrl); } catch { return; }
+                if (resolved.hostname.replace(/^www\./i, '').toLowerCase() !== cacheHost) return;
+                const rel = String($(el).attr('rel') || '').toLowerCase().split(/\s+/).filter(Boolean);
+                found.push({
+                    url: candidate.sourceUrl,
+                    sourceUrl: candidate.sourceUrl,
+                    targetUrl: resolved.href,
+                    anchor: String($(el).text() || '').replace(/\s+/g, ' ').trim() || cacheHost,
+                    sourceTitle: candidate.sourceTitle,
+                    sourceSnippet: candidate.sourceSnippet,
+                    linkType: 'INBOUND',
+                    rel,
+                    nofollow: rel.includes('nofollow'),
+                    sponsored: rel.includes('sponsored'),
+                    ugc: rel.includes('ugc'),
+                    status: 'VERIFIED_INBOUND',
+                    source: 'external-page-verified'
+                });
+            });
+            return found;
+        }));
+
+        const seen = new Set();
+        const links = checked
+            .flatMap(result => result.status === 'fulfilled' ? result.value : [])
+            .filter(link => {
+                const key = `${link.sourceUrl}|${link.targetUrl}`.toLowerCase();
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            })
+            .slice(0, 20);
+
+        const result = {
+            links,
+            source: 'external-pages-verified',
+            candidatesChecked: candidates.length,
+            discoveredAt: new Date().toISOString()
+        };
+        cache.set(cacheKey, result);
+        return result;
+    } catch (error) {
+        console.warn('[LinkIntel] Inbound discovery error:', error.message);
+        return { links: [], source: 'error', candidatesChecked: 0, error: error.message };
+    }
+}
+
+async function buildLinkIntelligence(seoIntel = {}, targetUrl = '') {
+    const internalObserved = Array.isArray(seoIntel.internalLinkObjects) ? seoIntel.internalLinkObjects : [];
+    const outboundObserved = Array.isArray(seoIntel.externalOutboundLinkObjects) ? seoIntel.externalOutboundLinkObjects : [];
+    const [internalLinks, outboundLinks, inboundDiscovery] = await Promise.all([
+        Promise.all(internalObserved.slice(0, 10).map(link => verifyObservedLink(link))),
+        Promise.all(outboundObserved.slice(0, 10).map(link => verifyObservedLink(link))),
+        discoverVerifiedInboundLinks(targetUrl, { maxCandidates: 5 })
+    ]);
+
+    const detectedBroken = [...internalLinks, ...outboundLinks]
+        .filter(link => link.status === 'BROKEN')
+        .map(link => ({ ...link, linkType: 'BROKEN' }));
+    const brokenAnchors = (Array.isArray(seoIntel.brokenLinkObjects) ? seoIntel.brokenLinkObjects : [])
+        .map(link => ({ ...link, sourceUrl: link.sourceUrl || targetUrl, linkType: 'BROKEN' }));
+
+    return {
+        inboundLinks: inboundDiscovery.links || [],
+        internalLinks,
+        outboundLinks,
+        brokenLinks: [...detectedBroken, ...brokenAnchors].slice(0, 30),
+        summary: {
+            inboundVerified: (inboundDiscovery.links || []).length,
+            internalObserved: internalObserved.length,
+            internalChecked: internalLinks.length,
+            outboundObserved: outboundObserved.length,
+            outboundChecked: outboundLinks.length,
+            brokenDetected: detectedBroken.length + brokenAnchors.length
+        },
+        methodology: {
+            inbound: 'External candidate pages are retained only when their HTML contains a link to the audited domain.',
+            internalAndOutbound: 'Links are extracted from the audited page and a limited sample is checked over HTTP.',
+            caveat: 'This is a live, limited audit and not a historical web-wide backlink index.'
+        }
+    };
+}
+
 function extractPerfSignals(html) {
     const $ = cheerio.load(html);
 
@@ -12674,6 +12885,11 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
 
         const speedData    = await getRealPageSpeed(html, validUrl);
         const seoIntelDeep = extractSEOIntel(html, validUrl);
+        const linkIntelligence = await buildLinkIntelligence(seoIntelDeep, validUrl);
+        extraction.linkIntelligence = linkIntelligence;
+        extraction.internalLinkObjects = linkIntelligence.internalLinks;
+        extraction.externalOutboundLinkObjects = linkIntelligence.outboundLinks;
+        extraction.brokenLinkObjects = linkIntelligence.brokenLinks;
 
         const topKeywords   = seoIntelDeep.topKeywords   || [];
         const issues        = seoIntelDeep.issues         || [];
@@ -12907,6 +13123,7 @@ Return this exact JSON (language: ${targetLangName}):
 
             // ── Trafic & ROI ──
             traffic : trafficData,
+            linkIntelligence,
 
             // ── SEO Audit structuré ──
             seoAudit : {
@@ -12919,7 +13136,10 @@ Return this exact JSON (language: ${targetLangName}):
                     internal: internalLinks,
                     external: externalLinks,
                     brokenAnchors,
-                    brokenLinks: (seoIntelDeep.brokenLinkObjects || []).slice(0, 20)
+                    inboundLinks: linkIntelligence.inboundLinks,
+                    internalLinks: linkIntelligence.internalLinks,
+                    outboundLinks: linkIntelligence.outboundLinks,
+                    brokenLinks: linkIntelligence.brokenLinks
                 },
                 security    : { hasSSL, hasCDN, hasServiceWorker },
                 analytics   : { hasGA4, hasGTM, hasPixelMeta },

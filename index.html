@@ -8276,6 +8276,8 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
     const esc = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
     const asArray = value => Array.isArray(value) ? value : [];
     const inboundSources = [
+        ...asArray(data.linkIntelligence?.inboundLinks),
+        ...asArray(data.seoAudit?.links?.inboundLinks),
         ...asArray(data.backlinks),
         ...asArray(data.backlinkIntel?.links),
         ...asArray(data.backlinkIntel?.backlinks),
@@ -8283,6 +8285,8 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
         ...asArray(data.offPageIntel?.backlinks)
     ];
     const outboundSources = [
+        ...asArray(data.linkIntelligence?.outboundLinks),
+        ...asArray(data.seoAudit?.links?.outboundLinks),
         ...asArray(data.contentIntel?.externalOutboundLinkObjects),
         ...asArray(data.contentIntel?.externalOutboundLinks),
         ...asArray(data.contentIntel?.externalLinks),
@@ -8291,6 +8295,7 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
         ...asArray(data.extraction?.externalOutboundLinkObjects)
     ];
     const brokenSources = [
+        ...asArray(data.linkIntelligence?.brokenLinks),
         ...asArray(data.brokenLinks),
         ...asArray(data.linkAudit?.brokenLinks),
         ...asArray(data.seoAudit?.links?.brokenLinks),
@@ -8316,7 +8321,11 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
             kind,
             authority: item?.authority || item?.domainAuthority || item?.dr || item?.da || null,
             status: item?.status || item?.statusCode || item?.httpStatus || null,
-            source: String(item?.source || item?.sourceUrl || item?.from || '').trim()
+            statusCode: item?.statusCode || item?.httpStatus || null,
+            source: String(item?.sourceUrl || item?.from || '').trim(),
+            target: String(item?.targetUrl || item?.normalized || item?.href || '').trim(),
+            rel: Array.isArray(item?.rel) ? item.rel.filter(Boolean) : String(item?.rel || '').split(/\s+/).filter(Boolean),
+            context: String(item?.context || item?.sourceSnippet || '').trim()
         };
     };
     const uniqueLinks = (sources, kind) => {
@@ -8351,6 +8360,8 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
         emptyOutbound: isAr ? 'لم يتم رصد رابط صادر قابل للفحص.' : isEn ? 'No reviewable outbound link observed.' : 'Aucun lien sortant consultable observé.',
         emptyBroken: isAr ? 'لم يتم توفير عنوان URL مكسور قابل للفحص.' : isEn ? 'No reviewable broken URL was provided.' : 'Aucune URL cassée consultable n’a été fournie.',
         source: isAr ? 'المصدر' : isEn ? 'Source' : 'Source',
+        destination: isAr ? 'الوجهة' : isEn ? 'Destination' : 'Destination',
+        attributes: isAr ? 'خصائص الرابط' : isEn ? 'Link attributes' : 'Attributs du lien',
         status: isAr ? 'الحالة' : isEn ? 'Status' : 'Statut',
         action: isAr ? 'الإجراء' : isEn ? 'Action' : 'Action'
     };
@@ -8375,7 +8386,9 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
                             <strong dir="auto">${esc(item.anchor || item.domain)}</strong>
                             <a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true">${esc(item.url)}</a>
                             ${/^https?:\/\//i.test(item.source) && item.source !== item.url ? `<a class="backlink-source" href="${esc(item.source)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true">${labels.source}: ${esc(item.source)}</a>` : ''}
-                            <small>${item.status ? `${labels.status}: ${esc(item.status)} · ` : ''}${labels.action}: ${meta.action}</small>
+                            ${/^https?:\/\//i.test(item.target) && item.target !== item.url ? `<a class="backlink-source" href="${esc(item.target)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true">${labels.destination}: ${esc(item.target)}</a>` : ''}
+                            ${item.context ? `<small dir="auto">${esc(item.context)}</small>` : ''}
+                            <small>${item.status ? `${labels.status}: ${esc(item.status)}${item.statusCode ? ` (${esc(item.statusCode)})` : ''} · ` : ''}${item.rel.length ? `${labels.attributes}: ${esc(item.rel.join(', '))} · ` : ''}${labels.action}: ${meta.action}</small>
                         </div>
                         <a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true" class="backlink-open" aria-label="${labels.open}">
                             <span>${labels.open}</span><i class="fas fa-arrow-up-right-from-square"></i>
