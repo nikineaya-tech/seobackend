@@ -592,7 +592,139 @@ html, body {
         cursor: pointer;
     }
     .report-history-actions button:hover { background: rgba(139,92,246,.24); color: #fff; }
+    .reports-history-trigger {
+        min-height: 40px;
+        padding: 8px 12px;
+        border: 1px solid rgba(139,92,246,.34);
+        border-radius: 8px;
+        background: rgba(139,92,246,.1);
+        color: #ede9fe;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font: inherit;
+        font-size: .74rem;
+        font-weight: 800;
+        cursor: pointer;
+        transition: background .2s ease, border-color .2s ease;
+    }
+    .reports-history-trigger:hover,
+    .reports-history-trigger:focus-visible {
+        border-color: rgba(139,92,246,.72);
+        background: rgba(139,92,246,.2);
+        outline: 2px solid rgba(34,211,238,.28);
+        outline-offset: 2px;
+    }
+    .auth-modal-panel {
+        width: min(620px, 94vw) !important;
+        max-height: calc(100vh - 32px) !important;
+        overflow-y: auto !important;
+        border-radius: 24px !important;
+        padding: clamp(18px, 4vw, 30px) !important;
+    }
+    #reports-modal .auth-modal-panel { width: min(860px, 94vw) !important; }
+    #report-history-list { max-height: min(68vh, 680px); overflow-y: auto; }
+
+    .daka-global-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 100000;
+        display: none;
+        place-items: center;
+        padding: 16px;
+        background: rgba(2,6,23,.94);
+        overflow: hidden;
+    }
+    .daka-global-loader.active { display: grid; }
+    .daka-global-loader-card {
+        width: min(720px, 100%);
+        max-height: calc(100dvh - 32px);
+        overflow-y: auto;
+        padding: clamp(18px, 4vw, 30px);
+        border: 1px solid rgba(139,92,246,.34);
+        border-radius: 16px;
+        background: #0f172a;
+        box-shadow: 0 24px 70px rgba(0,0,0,.45);
+        text-align: center;
+    }
+    .daka-global-loader-video-wrap {
+        width: min(360px, 72vw);
+        aspect-ratio: 16 / 10;
+        margin: 0 auto 18px;
+        overflow: hidden;
+        border: 1px solid rgba(148,163,184,.16);
+        border-radius: 12px;
+        background: #020617;
+    }
+    .daka-global-loader video {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: contain !important;
+        background: #020617;
+    }
+    .daka-loader-kicker { color: #67e8f9; font-size: .68rem; font-weight: 900; text-transform: uppercase; }
+    .daka-global-loader h2 { margin: 8px 0; color: #f8fafc; font-size: clamp(1.2rem, 4vw, 1.8rem); line-height: 1.25; }
+    .daka-global-loader p { max-width: 580px; margin: 0 auto; color: #cbd5e1; font-size: .86rem; line-height: 1.6; }
+    .daka-loader-hooks { display: flex; justify-content: center; flex-wrap: wrap; gap: 7px; margin: 18px 0; }
+    .daka-loader-hooks span { padding: 6px 9px; border: 1px solid rgba(34,211,238,.18); border-radius: 6px; color: #a5f3fc; background: rgba(34,211,238,.06); font-size: .66rem; font-weight: 800; }
+    .daka-loader-cancel { min-height: 42px; padding: 9px 15px; border: 1px solid rgba(248,113,113,.35); border-radius: 8px; color: #fecaca; background: rgba(127,29,29,.18); font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; }
+    .daka-loader-cancel:hover, .daka-loader-cancel:focus-visible { background: rgba(127,29,29,.34); outline: 2px solid rgba(248,113,113,.25); outline-offset: 2px; }
+
+    .report-feature-nav {
+        position: sticky;
+        top: 82px;
+        z-index: 25;
+        display: flex;
+        gap: 7px;
+        margin: 0 0 18px;
+        padding: 8px;
+        overflow-x: auto;
+        scrollbar-width: thin;
+        border: 1px solid rgba(148,163,184,.14);
+        border-radius: 10px;
+        background: rgba(2,6,23,.94);
+    }
+    .report-feature-tab {
+        flex: 0 0 auto;
+        min-width: 145px;
+        min-height: 54px;
+        padding: 8px 10px;
+        border: 1px solid rgba(148,163,184,.12);
+        border-radius: 7px;
+        background: rgba(255,255,255,.025);
+        color: #e2e8f0;
+        display: grid;
+        grid-template-columns: auto minmax(0,1fr);
+        gap: 8px;
+        align-items: center;
+        text-align: start;
+        cursor: pointer;
+        transition: border-color .2s ease, background .2s ease;
+    }
+    .report-feature-tab:hover, .report-feature-tab:focus-visible, .report-feature-tab.active {
+        border-color: rgba(34,211,238,.38);
+        background: rgba(34,211,238,.07);
+        outline: none;
+    }
+    .report-feature-tab i { color: #67e8f9; }
+    .report-feature-tab strong { display: block; font-size: .7rem; }
+    .report-feature-tab small { display: block; margin-top: 2px; color: #94a3b8; font-size: .56rem; line-height: 1.3; }
+    body.modal-open, body.loading-active { overflow: hidden; }
     @media (max-width: 820px) {
+        html, body { max-width: 100%; overflow-x: clip; }
+        .container, .main-container, .content-wrapper,
+        [id^="results"], #funnelReport {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+        }
+        .result-card, .report-section, .competitor-card {
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            overflow-wrap: anywhere;
+        }
         .decision-proof-panel > div:first-child,
         .decision-proof-panel > div:last-child {
             grid-template-columns: 1fr !important;
@@ -613,6 +745,46 @@ html, body {
         .auth-email-row,
         .report-history-item { grid-template-columns: 1fr; }
         .report-history-actions { justify-content: flex-start; }
+        .reports-history-trigger span { display: none; }
+        .reports-history-trigger { width: 40px; justify-content: center; padding: 8px; }
+        .report-feature-nav { top: 68px; margin-inline: -4px; }
+        .report-feature-tab { min-width: 132px; }
+        .daka-global-loader-card { padding: 16px; border-radius: 12px; }
+        .auth-modal-panel { border-radius: 16px !important; }
+    }
+    @media (max-width: 480px) {
+        .daka-global-loader { padding: 10px; }
+        .daka-global-loader-card {
+            max-height: calc(100dvh - 20px);
+            padding: 14px;
+        }
+        .daka-global-loader-video-wrap {
+            width: min(260px, 78vw);
+            margin-bottom: 12px;
+        }
+        .daka-global-loader p { font-size: .78rem; }
+        .daka-loader-hooks { margin: 12px 0; gap: 5px; }
+        .daka-loader-hooks span { font-size: .58rem; padding: 5px 7px; }
+        .report-feature-nav {
+            top: 58px;
+            scroll-snap-type: x proximity;
+            overscroll-behavior-inline: contain;
+        }
+        .report-feature-tab {
+            min-width: min(76vw, 210px);
+            min-height: 58px;
+            scroll-snap-align: start;
+        }
+        .auth-modal { padding: 8px !important; }
+        .auth-modal-panel {
+            width: calc(100vw - 16px) !important;
+            max-height: calc(100dvh - 16px) !important;
+            padding: 15px !important;
+        }
+        .reports-history-trigger,
+        .auth-login-btn,
+        .auth-logout-btn { min-height: 42px; }
+        button, .btn, .btn-gen { max-width: 100%; white-space: normal; }
     }
 </style>
     <style>
@@ -3283,6 +3455,11 @@ table tbody td {
                     <i class="fas fa-volume-high"></i>
                 </button>
 
+                <button class="reports-history-trigger" type="button" data-no-collapse="true" onclick="openReportsOrAuth()" title="Mes rapports">
+                    <i class="fas fa-folder-open"></i>
+                    <span>Mes rapports</span>
+                </button>
+
                 <div class="auth-shell" id="auth-shell">
                     <button id="btn-google-login" class="auth-login-btn" type="button" onclick="openAuthModal()">
                         <i class="fab fa-google"></i>
@@ -3340,6 +3517,23 @@ table tbody td {
                 <button class="auth-close-btn" type="button" onclick="closeReportDashboard()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
             </div>
             <div id="report-history-list" class="report-history-list"></div>
+        </div>
+    </div>
+
+    <div id="daka-global-loader" class="daka-global-loader" role="dialog" aria-modal="true" aria-live="polite" aria-labelledby="daka-loader-title">
+        <div class="daka-global-loader-card">
+            <div class="daka-global-loader-video-wrap">
+                <video id="daka-global-loader-video"
+                    src="https://etjwmqnbfsevlwaeixwb.supabase.co/storage/v1/object/public/Transform_this_static_logo_int-online-video-cutter.com.mp4/Transform_this_static_logo_int%20(online-video-cutter.com).mp4"
+                    autoplay muted loop playsinline preload="auto" aria-hidden="true"></video>
+            </div>
+            <span id="daka-loader-kicker" class="daka-loader-kicker">Analyse en cours</span>
+            <h2 id="daka-loader-title">Daka prépare votre rapport</h2>
+            <p id="daka-loader-subtitle">Les signaux utiles sont organisés pour vous aider à décider.</p>
+            <div id="daka-loader-hooks" class="daka-loader-hooks"></div>
+            <button type="button" class="daka-loader-cancel" data-no-collapse="true" onclick="cancelDakaAnalysis()">
+                <i class="fas fa-xmark"></i> Annuler l’analyse
+            </button>
         </div>
     </div>
 
@@ -5121,6 +5315,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 try {
                     const controller = new AbortController();
+                    const externalSignal = mergedOptions.signal || window.dakaCurrentAbortController?.signal;
+                    const abortFromExternal = () => controller.abort();
+                    if (externalSignal) {
+                        if (externalSignal.aborted) controller.abort();
+                        else externalSignal.addEventListener('abort', abortFromExternal, { once: true });
+                    }
                     const timeoutId = setTimeout(() => controller.abort(), mergedOptions.timeout);
 
                     const response = await fetch(url, {
@@ -5129,6 +5329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     clearTimeout(timeoutId);
+                    externalSignal?.removeEventListener?.('abort', abortFromExternal);
 
                     if (!response.ok) {
                         let errorData = null;
@@ -5157,7 +5358,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
 
                     // Retry logic for network errors
-                    if (this.retryCount < CONFIG.MAX_RETRIES &&
+                    if (!window.dakaAnalysisCancelled && this.retryCount < CONFIG.MAX_RETRIES &&
                         (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) {
 
                         this.retryCount++;
@@ -5349,10 +5550,12 @@ function openAuthModal() {
     }
     refreshAuthCopy();
     document.getElementById('auth-modal')?.classList.add('active');
+    document.body.classList.add('modal-open');
 }
 
 function closeAuthModal() {
     document.getElementById('auth-modal')?.classList.remove('active');
+    document.body.classList.remove('modal-open');
 }
 
 async function loginWithGoogle() {
@@ -5396,6 +5599,12 @@ async function refreshQuotaBadge(quotaOverride = null) {
 
 function closeReportDashboard() {
     document.getElementById('reports-modal')?.classList.remove('active');
+    document.body.classList.remove('modal-open');
+}
+
+function openReportsOrAuth() {
+    if (currentAuthUser) return openReportDashboard();
+    openAuthModal();
 }
 
 async function openReportDashboard() {
@@ -5404,6 +5613,7 @@ async function openReportDashboard() {
     if (!modal || !list) return;
     refreshAuthCopy();
     modal.classList.add('active');
+    document.body.classList.add('modal-open');
     list.innerHTML = '<div style="color:#94a3b8;padding:16px"><i class="fas fa-circle-notch fa-spin"></i></div>';
 
     try {
@@ -5516,11 +5726,26 @@ document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
 async function analyzeWithPolling(endpoint, payload, resultsHandler) {
+    const analysisId = window.dakaActiveAnalysisId;
+    const assertActive = () => {
+        if (window.dakaAnalysisCancelled || analysisId !== window.dakaActiveAnalysisId) {
+            throw new DOMException('Analysis cancelled', 'AbortError');
+        }
+    };
+    const wait = (ms) => new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, ms);
+        window.dakaCurrentAbortController?.signal.addEventListener('abort', () => {
+            clearTimeout(timer);
+            reject(new DOMException('Analysis cancelled', 'AbortError'));
+        }, { once: true });
+    });
+
     const initial = await api.post(
         endpoint,
         { ...(payload || {}), async: true },
         CONFIG.TIMEOUTLONG || CONFIG.TIMEOUT_LONG || 120000
     );
+    assertActive();
 
     const deliver = (data) => {
         if (data?.savedReport || data?.reportQuota) {
@@ -5550,8 +5775,10 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
         });
         stepIndex++;
 
-        await new Promise(resolve => setTimeout(resolve, 2500));
+        await wait(2500);
+        assertActive();
         const job = await api.get(`/api/job/${encodeURIComponent(initial.jobId)}`, 15000);
+        assertActive();
 
         if (job?.status === 'done') return deliver(job.result);
         if (job?.status === 'error') {
@@ -5844,6 +6071,91 @@ window.tabManager = tabManager;
 // ═══════════════════════════════════════════════════════════════════
 // 🛸 MOTEUR DE CHARGEMENT DEEP INTEL (STEPS & PHASES DYNAMIQUES)
 // ═══════════════════════════════════════════════════════════════════
+window.dakaCurrentAbortController = null;
+window.dakaAnalysisCancelled = false;
+window.dakaActiveAnalysisId = 0;
+
+const DAKA_LOADER_COPY = {
+  competitors: {
+    kicker: 'Analyse concurrentielle',
+    title: 'Daka cartographie vos vrais adversaires',
+    subtitle: 'Nous repérons les concurrents utiles, leurs angles faibles et les opportunités à exploiter.',
+    hooks: ['Concurrents réels', 'Angles d’attaque', 'Plan de conquête']
+  },
+  funnel: {
+    kicker: 'Analyse funnel',
+    title: 'Daka révèle les pertes invisibles',
+    subtitle: 'Nous suivons le parcours, les frictions et les signaux qui bloquent la conversion.',
+    hooks: ['Parcours client', 'Friction', 'Conversion']
+  },
+  technical: {
+    kicker: 'Audit SEO technique',
+    title: 'Daka inspecte les fondations',
+    subtitle: 'Structure, indexabilité, performance et signaux techniques sont passés au crible.',
+    hooks: ['Structure', 'Performance', 'Priorités SEO']
+  },
+  keywords: {
+    kicker: 'Recherche de mots-clés',
+    title: 'Daka fait remonter les demandes rentables',
+    subtitle: 'Nous filtrons les intentions utiles pour trouver les requêtes qui peuvent créer du trafic qualifié.',
+    hooks: ['Intentions', 'Volume utile', 'Opportunités']
+  }
+};
+
+function enforceMutedLoaderVideos() {
+  document.querySelectorAll('.daka-global-loader video, .daka-fullscreen-loader video, .daka-loader-video').forEach(video => {
+    video.muted = true;
+    video.defaultMuted = true;
+    video.volume = 0;
+    video.controls = false;
+    video.setAttribute('muted', '');
+    video.setAttribute('playsinline', '');
+  });
+}
+
+function showDakaLoader(type = 'competitors') {
+  const loader = document.getElementById('daka-global-loader');
+  const copy = DAKA_LOADER_COPY[type] || DAKA_LOADER_COPY.competitors;
+  if (!loader) return 0;
+
+  window.dakaCurrentAbortController?.abort();
+  window.dakaCurrentAbortController = new AbortController();
+  window.dakaAnalysisCancelled = false;
+  window.dakaActiveAnalysisId += 1;
+
+  document.getElementById('daka-loader-kicker').textContent = copy.kicker;
+  document.getElementById('daka-loader-title').textContent = copy.title;
+  document.getElementById('daka-loader-subtitle').textContent = copy.subtitle;
+  document.getElementById('daka-loader-hooks').innerHTML = copy.hooks.map(hook => `<span>${escapeHtml(hook)}</span>`).join('');
+  enforceMutedLoaderVideos();
+  loader.classList.add('active');
+  document.body.classList.add('loading-active');
+  document.getElementById('daka-global-loader-video')?.play().catch(() => {});
+  DakaSound.loaderStop();
+  return window.dakaActiveAnalysisId;
+}
+
+function hideDakaLoader() {
+  document.getElementById('daka-global-loader')?.classList.remove('active');
+  document.body.classList.remove('loading-active');
+  enforceMutedLoaderVideos();
+}
+
+function cancelDakaAnalysis() {
+  window.dakaAnalysisCancelled = true;
+  window.dakaActiveAnalysisId += 1;
+  window.dakaCurrentAbortController?.abort();
+  hideDakaLoader();
+  toast.info(STATE.currentLang === 'ar' ? 'تم إلغاء التحليل.' : STATE.currentLang === 'en' ? 'Analysis cancelled.' : 'Analyse annulée.');
+}
+
+function loaderTypeFromId(elementId) {
+  return elementId === 'loadingFunnel' ? 'funnel'
+    : elementId === 'loadingTechnical' ? 'technical'
+    : elementId === 'loadingKeywords' ? 'keywords'
+    : 'competitors';
+}
+
 function getLoaderTips(elementId) {
   const lang = STATE.currentLang || 'fr';
   const tips = {
@@ -5921,103 +6233,11 @@ function getLoaderTips(elementId) {
 window._loaderTimers = {};
 
 function showLoading(elementId) {
-  const wrap = document.getElementById(elementId);
-  if (!wrap) return;
-
-  // 1. Reset UI complet
-  wrap.querySelectorAll('.loading-phase').forEach(el => el.classList.remove('active', 'done'));
-  const bar = wrap.querySelector('.loading-progress-bar');
-  if (bar) { bar.style.transition = 'none'; bar.style.width = '0%'; }
-
-  // 2. Affichage
-  wrap.classList.add('active');
-  document.body.classList.add('loading-active');
-  DakaSound.loaderStart();
-
-  // 3. Nettoyage des timers existants
-  if(window._loaderTimers[elementId]) {
-      clearInterval(window._loaderTimers[elementId].tip);
-      clearTimeout(window._loaderTimers[elementId].safety);
-      (window._loaderTimers[elementId].phases || []).forEach(t => clearTimeout(t));
-  }
-  window._loaderTimers[elementId] = { phases: [] };
-
-  // 4. Barre de progression auto (jusqu'à 90%)
-  if (bar) {
-    setTimeout(() => {
-      bar.style.transition = 'width 15s cubic-bezier(0.4, 0, 0.2, 1)';
-      bar.style.width = '90%';
-    }, 50);
-  }
-
-  // 5. Tips Textes Rotatifs
-  const tipEl = wrap.querySelector('.loading-tip');
-  if (tipEl) {
-    const pool = getLoaderTips(elementId);
-    let idx = 0;
-    tipEl.textContent = pool[0];
-    tipEl.style.opacity = '1';
-    window._loaderTimers[elementId].tip = setInterval(() => {
-      tipEl.style.opacity = '0';
-      setTimeout(() => {
-        idx = (idx + 1) % pool.length;
-        tipEl.textContent = pool[idx];
-        tipEl.style.opacity = '1';
-      }, 300);
-    }, 3000);
-  }
-
-  // 6. Simulation automatique des Phases (Pilules qui s'allument)
-  const phases = wrap.querySelectorAll('.loading-phase');
-  if (phases.length > 0) {
-    phases[0].classList.add('active'); // Allume le 1er
-
-    const timePerPhase = 12000 / phases.length; // Répartit le temps sur 12 secondes
-
-    phases.forEach((ph, i) => {
-      if (i === 0) return;
-      const t = setTimeout(() => {
-        phases[i-1].classList.remove('active');
-        phases[i-1].classList.add('done');
-        phases[i].classList.add('active');
-      }, timePerPhase * i);
-      window._loaderTimers[elementId].phases.push(t);
-    });
-  }
-
-  // 7. Sécurité (cache le loader après 2 minutes)
-  window._loaderTimers[elementId].safety = setTimeout(() => hideLoading(elementId), 120000);
+  showDakaLoader(loaderTypeFromId(elementId));
 }
 
 function hideLoading(elementId) {
-  const wrap = document.getElementById(elementId);
-  if (!wrap) return;
-
-  // Stoppe les timers
-  if(window._loaderTimers[elementId]) {
-      clearInterval(window._loaderTimers[elementId].tip);
-      clearTimeout(window._loaderTimers[elementId].safety);
-      (window._loaderTimers[elementId].phases || []).forEach(t => clearTimeout(t));
-  }
-
-  // Tout valider visuellement (Vert = Succès)
-  wrap.querySelectorAll('.loading-phase').forEach(el => {
-    el.classList.remove('active');
-    el.classList.add('done');
-  });
-
-  const bar = wrap.querySelector('.loading-progress-bar');
-  if (bar) {
-      bar.style.transition = 'width 0.3s ease';
-      bar.style.width = '100%';
-  }
-
-  // Disparition avec fondu
-  setTimeout(() => {
-    wrap.classList.remove('active');
-    document.body.classList.remove('loading-active');
-    DakaSound.loaderStop();
-  }, 500);
+  hideDakaLoader();
 }
 
 // Fonction utilisée par Funnel/Competitors/Tech pour avancer la barre selon l'API
@@ -7681,6 +7901,7 @@ async function analyzeCompetitors(e) {
         );
 
     } catch (error) {
+        if (error?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
         console.error('[analyzeCompetitors]', error);
 
         toast.error(
@@ -7774,6 +7995,7 @@ async function analyzeTechnical(e) {
       throw new Error(response.error || 'Échec audit technique');
     }
   } catch (err) {
+    if (err?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
     console.error('Technical SEO Error:', err);
     toast.error(err.message || 'Erreur de connexion au serveur.');
   } finally {
@@ -8672,11 +8894,58 @@ function cloneReportHtmlForExport(el) {
     clone.querySelectorAll(
         'button, .btn-gen, .no-print, .kw-filter-btn, #kwFilterBar, ' +
         '.loading-state, .toast-container, .export-bubble-wrapper, ' +
-        '.btn-export-pdf, .btn-copy-mini, [data-gen-type], iframe'
+        '.btn-export-pdf, .btn-copy-mini, [data-gen-type], iframe, ' +
+        '.daka-global-loader, .auth-modal, .report-feature-nav'
     ).forEach(function (node) {
         node.remove();
     });
     return clone.innerHTML;
+}
+
+function createFixedPdfClone(el) {
+    const shell = document.createElement('section');
+    shell.className = 'daka-pdf-fixed-clone';
+    shell.setAttribute('aria-hidden', 'true');
+    shell.style.cssText = [
+        'position:fixed', 'left:-12000px', 'top:0', 'width:794px',
+        'min-height:1123px', 'padding:32px', 'box-sizing:border-box',
+        'overflow:visible', 'background:#ffffff', 'color:#0f172a',
+        'font-family:Inter,Cairo,Arial,sans-serif', 'line-height:1.55',
+        'z-index:-1'
+    ].join(';');
+    shell.innerHTML = cloneReportHtmlForExport(el);
+
+    shell.querySelectorAll('*').forEach(function (node) {
+        node.style.animation = 'none';
+        node.style.transition = 'none';
+        node.style.transform = 'none';
+        node.style.maxWidth = '100%';
+        node.style.boxSizing = 'border-box';
+    });
+    shell.querySelectorAll('h1,h2,h3,h4,h5,h6,p,li,td,th,small,strong,span').forEach(function (node) {
+        node.style.color = '#0f172a';
+        node.style.textShadow = 'none';
+        node.style.overflowWrap = 'anywhere';
+    });
+    shell.querySelectorAll('.result-card,.report-section,.competitor-card,.card').forEach(function (card) {
+        card.style.background = '#ffffff';
+        card.style.border = '1px solid #cbd5e1';
+        card.style.boxShadow = 'none';
+    });
+    shell.querySelectorAll('details').forEach(function (details) {
+        details.open = true;
+    });
+    shell.querySelectorAll('img,canvas,svg,video').forEach(function (media) {
+        media.style.maxWidth = '100%';
+        media.style.height = 'auto';
+    });
+    shell.querySelectorAll('table').forEach(function (table) {
+        table.style.width = '100%';
+        table.style.tableLayout = 'fixed';
+        table.style.overflowWrap = 'anywhere';
+    });
+    document.body.appendChild(shell);
+    return shell;
 }
 
 function restorePdfExportDom(hiddenEls, openedDetails) {
@@ -9131,17 +9400,18 @@ window.exportFullAnalysisToPDF = async function () {
 
             // ── Capture html2canvas ───────────────────────────
             var canvas;
+            var fixedClone = createFixedPdfClone(section.el);
             try {
-                canvas = await html2canvas(section.el, {
+                canvas = await html2canvas(fixedClone, {
                     scale:           2,
                     useCORS:         true,
                     allowTaint:      true,
-                    backgroundColor: '#0a0f1e',
+                    backgroundColor: '#ffffff',
                     logging:         false,
                     scrollX:         0,
                     scrollY:         0,
-                    windowWidth:     section.el.scrollWidth  || 1200,
-                    windowHeight:    section.el.scrollHeight || 800,
+                    windowWidth:     794,
+                    windowHeight:    fixedClone.scrollHeight || 1123,
                     onclone: function (clonedDoc) {
                         clonedDoc.querySelectorAll('details').forEach(function (details) {
                             details.setAttribute('open', 'open');
@@ -9158,6 +9428,8 @@ window.exportFullAnalysisToPDF = async function () {
             } catch (captureErr) {
                 console.warn('[PDF] Capture échouée pour ' + section.label, captureErr);
                 continue;
+            } finally {
+                fixedClone.remove();
             }
 
             if (!canvas || canvas.width < 20 || canvas.height < 20) {
@@ -9891,6 +10163,7 @@ async function analyzeKeywords(e) {
       throw new Error(response.error || 'Génération échouée');
     }
   } catch (err) {
+    if (err?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
     console.error('Keywords Engine Error:', err);
     toast.error(err.message || 'Erreur lors de la génération.');
   } finally {
@@ -10436,6 +10709,7 @@ function cleanRenderedOutput(root) {
             parent.style.display = 'none';
         }
     });
+    requestAnimationFrame(() => enhanceReportNavigation(root));
 }
 
 function setButtonLoading(btnId, loading) {
@@ -10471,7 +10745,10 @@ function animateLoadingSteps(loaderId, delays = [1200, 2800, 5000]) {
 // ── Helpers résultats ──────────────────────────────────────────
 function showResults(id) {
   const el = document.getElementById(id);
-  if (el) el.style.display = 'block';
+  if (el) {
+    el.style.display = 'block';
+    requestAnimationFrame(() => enhanceReportNavigation(el));
+  }
 }
 
 function hideResults(id) {
@@ -10497,7 +10774,10 @@ function setLoaderPhase(elementId, index) {
 // ── Helpers résultats ──────────────────────────────────────────
 function showResults(id) {
   const el = document.getElementById(id);
-  if (el) el.style.display = 'block';
+  if (el) {
+    el.style.display = 'block';
+    requestAnimationFrame(() => enhanceReportNavigation(el));
+  }
 }
 
 function hideResults(id) {
@@ -10826,6 +11106,95 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
     </section>`;
 }
 
+function getReportFeatureCopy() {
+    const isAr = STATE.currentLang === 'ar';
+    const isEn = STATE.currentLang === 'en';
+    const fr = {
+        summary: ['Résumé', 'Comprendre le verdict en 3 minutes', 'fa-gauge-high'],
+        actions: ['Actions prioritaires', 'Les priorités à exécuter maintenant', 'fa-list-check'],
+        competitors: ['Concurrents', 'Qui attaque votre marché et comment répondre', 'fa-crosshairs'],
+        funnel: ['Funnel', 'Où votre page perd des clients', 'fa-route'],
+        seo: ['SEO', 'Les freins techniques et sémantiques', 'fa-magnifying-glass-chart'],
+        keywords: ['Keywords', 'Les demandes utiles à cibler', 'fa-key'],
+        pricing: ['Pricing', 'Prix, perception et marge', 'fa-tags'],
+        trust: ['Trust', 'Preuves, garanties et objections', 'fa-shield-halved'],
+        details: ['Détails', 'Le dossier complet d’intelligence', 'fa-folder-open']
+    };
+    if (isAr) return {
+        summary: ['الملخص', 'افهم الخلاصة في 3 دقائق', 'fa-gauge-high'],
+        actions: ['الإجراءات', 'الأولويات التي يجب تنفيذها الآن', 'fa-list-check'],
+        competitors: ['المنافسون', 'من يهاجم سوقك وكيف ترد', 'fa-crosshairs'],
+        funnel: ['مسار التحويل', 'أين تفقد صفحتك العملاء', 'fa-route'],
+        seo: ['أساس الموقع', 'العوائق التقنية والدلالية', 'fa-magnifying-glass-chart'],
+        keywords: ['الكلمات', 'الطلبات المفيدة للاستهداف', 'fa-key'],
+        pricing: ['السعر', 'السعر والإدراك والهامش', 'fa-tags'],
+        trust: ['الثقة', 'الأدلة والضمانات والاعتراضات', 'fa-shield-halved'],
+        details: ['التفاصيل', 'ملف التحليل الكامل', 'fa-folder-open']
+    };
+    if (isEn) return {
+        summary: ['Summary', 'Understand the verdict in 3 minutes', 'fa-gauge-high'],
+        actions: ['Priority actions', 'What to execute now', 'fa-list-check'],
+        competitors: ['Competitors', 'Who attacks your market and how to respond', 'fa-crosshairs'],
+        funnel: ['Funnel', 'Where your page loses customers', 'fa-route'],
+        seo: ['SEO', 'Technical and semantic blockers', 'fa-magnifying-glass-chart'],
+        keywords: ['Keywords', 'Useful demand to target', 'fa-key'],
+        pricing: ['Pricing', 'Price, perception, and margin', 'fa-tags'],
+        trust: ['Trust', 'Proof, guarantees, and objections', 'fa-shield-halved'],
+        details: ['Details', 'The complete intelligence dossier', 'fa-folder-open']
+    };
+    return fr;
+}
+
+function enhanceReportNavigation(container) {
+    if (!container) return;
+    container.querySelector(':scope > .report-feature-nav')?.remove();
+    const sections = [...container.querySelectorAll(':scope > .report-section, :scope > #funnelReport > .report-section')];
+    const summary = container.querySelector(':scope > .executive-summary, :scope > #funnelReport > .executive-summary');
+    if (!summary && !sections.length) return;
+
+    const copy = getReportFeatureCopy();
+    const items = [];
+    if (summary) items.push({ key: 'summary', target: summary });
+    sections.forEach(section => {
+        const classes = [...section.classList];
+        const sectionKey = classes.find(name => name.startsWith('report-section-') && !['report-section-open', 'report-section-direct', 'report-section-details', 'report-section-body', 'report-section-head'].includes(name))?.replace('report-section-', '');
+        const key = sectionKey === 'plan' ? 'actions'
+            : sectionKey === 'market' ? 'competitors'
+            : sectionKey === 'technical' || sectionKey === 'page' ? 'seo'
+            : sectionKey === 'money' ? 'pricing'
+            : sectionKey === 'proof' ? 'trust'
+            : sectionKey === 'audit' ? 'funnel'
+            : sectionKey === 'keywords' ? 'keywords'
+            : 'details';
+        if (!items.some(item => item.key === key)) items.push({ key, target: section });
+    });
+    if (sections.length && !items.some(item => item.key === 'details')) items.push({ key: 'details', target: sections[sections.length - 1] });
+
+    const nav = document.createElement('nav');
+    nav.className = 'report-feature-nav no-print';
+    nav.setAttribute('aria-label', STATE.currentLang === 'ar' ? 'التنقل في التقرير' : STATE.currentLang === 'en' ? 'Report navigation' : 'Navigation du rapport');
+    nav.innerHTML = items.map((item, index) => {
+        const [title, description, icon] = copy[item.key] || copy.details;
+        return `<button type="button" class="report-feature-tab${index === 0 ? ' active' : ''}" data-no-collapse="true" data-feature-index="${index}">
+            <i class="fas ${icon}"></i><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(description)}</small></span>
+        </button>`;
+    }).join('');
+    nav.addEventListener('click', event => {
+        const button = event.target.closest('.report-feature-tab');
+        if (!button) return;
+        event.preventDefault();
+        event.stopPropagation();
+        nav.querySelectorAll('.report-feature-tab').forEach(tab => tab.classList.toggle('active', tab === button));
+        const item = items[Number(button.dataset.featureIndex)];
+        if (!item?.target) return;
+        if (item.target.classList.contains('report-section')) setReportSectionOpen(item.target, true);
+        item.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+
+    const host = container.querySelector(':scope > #funnelReport') || container;
+    host.insertBefore(nav, host.firstChild);
+}
+
 function setReportSectionOpen(section, open) {
     const details = section?.querySelector(':scope > .report-section-details');
     if (!details) return;
@@ -10836,6 +11205,7 @@ function setReportSectionOpen(section, open) {
 
 function isReportSectionInteractiveTarget(target) {
     if (!target) return false;
+    if (target.closest('[data-no-collapse="true"]')) return true;
     if (target.closest('.report-section-body a, .report-section-body button, .report-section-body input, .report-section-body select, .report-section-body textarea, .report-section-body label, .report-section-body summary')) {
         return true;
     }
@@ -10846,6 +11216,12 @@ if (!window.__dakaReportToggleBound) {
     window.__dakaReportToggleBound = true;
 
     document.addEventListener('click', (event) => {
+        const action = event.target.closest('button, a, [role="button"]');
+        if (action && action.closest('.report-section, .result-card, .competitor-card, details')) {
+            action.setAttribute('data-no-collapse', 'true');
+            if (action.tagName === 'BUTTON' && !action.type) action.type = 'button';
+            event.stopPropagation();
+        }
         const section = event.target.closest('.report-section[data-report-toggle="1"]');
         if (!section || isReportSectionInteractiveTarget(event.target)) return;
 
@@ -11070,6 +11446,7 @@ async function analyzeFunnel(e) {
       throw new Error(response.error || 'Échec analyse funnel');
     }
   } catch (error) {
+    if (error?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
     console.error('Funnel Error:', error);
     toast.error(error.message || 'Erreur de connexion.');
   } finally {
