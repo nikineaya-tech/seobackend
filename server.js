@@ -8584,6 +8584,20 @@ function extractSEOIntel(html, pageUrl = '') {
         'normalized'
     ).slice(0, 10);
 
+    const brokenLinkObjects = allAnchors
+        .filter(x => !x.href || x.href === '#' || /^javascript:\s*(?:void\(0\))?;?$/i.test(x.href))
+        .map(x => ({
+            url: pageUrl,
+            sourceUrl: pageUrl,
+            href: x.href || '',
+            text: x.text || 'Lien sans libellé',
+            status: 'BROKEN_ANCHOR'
+        }))
+        .filter((item, index, list) =>
+            list.findIndex(other => other.href === item.href && other.text === item.text) === index
+        )
+        .slice(0, 20);
+
     const internalLinks = internalLinkObjects.map(x => x.normalized);
     const externalOutboundLinks = externalOutboundLinkObjects.map(x => x.normalized);
     const externalLinks = externalOutboundLinks;
@@ -8743,6 +8757,7 @@ function extractSEOIntel(html, pageUrl = '') {
         externalOutboundLinks,
         internalLinkObjects,
         externalOutboundLinkObjects,
+        brokenLinkObjects,
         linkSummary,
 
         technicalSummary
@@ -12658,7 +12673,7 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
         };
 
         const speedData    = await getRealPageSpeed(html, validUrl);
-        const seoIntelDeep = extractSEOIntel(html);
+        const seoIntelDeep = extractSEOIntel(html, validUrl);
 
         const topKeywords   = seoIntelDeep.topKeywords   || [];
         const issues        = seoIntelDeep.issues         || [];
@@ -12900,7 +12915,12 @@ Return this exact JSON (language: ${targetLangName}):
                 h1          : { count: h1List.length,   list: h1List,    status: h1List.length === 1 ? 'OK' : h1List.length === 0 ? 'ABSENT' : 'MULTIPLE' },
                 schema      : { exists: schemaExists,   types: schemaTypes },
                 images      : { total: totalImages, missingAlt, lazyImages, webpImages },
-                links       : { internal: internalLinks, external: externalLinks, brokenAnchors },
+                links       : {
+                    internal: internalLinks,
+                    external: externalLinks,
+                    brokenAnchors,
+                    brokenLinks: (seoIntelDeep.brokenLinkObjects || []).slice(0, 20)
+                },
                 security    : { hasSSL, hasCDN, hasServiceWorker },
                 analytics   : { hasGA4, hasGTM, hasPixelMeta },
                 mobile      : { isMobileFriendly, viewport },
@@ -13481,6 +13501,7 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
             externalOutboundLinks: [],
             internalLinkObjects: [],
             externalOutboundLinkObjects: [],
+            brokenLinkObjects: [],
 
             linkSummary: {
                 totalAnchors: 0,
@@ -13568,6 +13589,7 @@ function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'brows
 
             internalLinkObjects: [],
             externalOutboundLinkObjects: [],
+            brokenLinks: [],
 
             wordCount: 0,
             bodyText: '',
@@ -14016,6 +14038,7 @@ function mergeSeoIntel(base = {}, extra = {}) {
         externalOutboundLinks: pickArray(extra.externalOutboundLinks, base.externalOutboundLinks),
         internalLinkObjects: pickArray(extra.internalLinkObjects, base.internalLinkObjects),
         externalOutboundLinkObjects: pickArray(extra.externalOutboundLinkObjects, base.externalOutboundLinkObjects),
+        brokenLinkObjects: pickArray(extra.brokenLinkObjects, base.brokenLinkObjects),
 
         linkSummary: {
             totalAnchors: extra.linkSummary?.totalAnchors ?? base.linkSummary?.totalAnchors ?? 0,
@@ -14264,6 +14287,12 @@ function mergeScrapeData(base = {}, extra = {}) {
             base.contentIntel?.externalOutboundLinkObjects || mergedSeoIntel.externalOutboundLinkObjects || [],
             extra.contentIntel?.externalOutboundLinkObjects || [],
             empty.contentIntel?.externalOutboundLinkObjects || []
+        ),
+        brokenLinks: pickArray(
+            extra.contentIntel?.brokenLinks,
+            base.contentIntel?.brokenLinks,
+            mergedSeoIntel.brokenLinkObjects,
+            empty.contentIntel?.brokenLinks
         ),
         wordCount: extra.contentIntel?.wordCount ?? base.contentIntel?.wordCount ?? mergedSeoIntel.wordCount ?? empty.contentIntel.wordCount ?? 0,
         contentStatus: extra.contentIntel?.contentStatus ?? base.contentIntel?.contentStatus ?? mergedSeoIntel.contentStatus ?? 'INSUFFISANT (< 200 mots)',
@@ -14827,6 +14856,7 @@ async function deepScrapeFunnel(url) {
             externalOutboundLinks:    Array.isArray(seoIntelDeep.externalOutboundLinks) ? seoIntelDeep.externalOutboundLinks.slice(0, 30) : [],
             internalLinkObjects:      Array.isArray(seoIntelDeep.internalLinkObjects) ? seoIntelDeep.internalLinkObjects.slice(0, 20) : [],
             externalOutboundLinkObjects: Array.isArray(seoIntelDeep.externalOutboundLinkObjects) ? seoIntelDeep.externalOutboundLinkObjects.slice(0, 20) : [],
+            brokenLinks:               Array.isArray(seoIntelDeep.brokenLinkObjects) ? seoIntelDeep.brokenLinkObjects.slice(0, 20) : [],
             wordCount:                seoIntelDeep.wordCount ?? bodyText.split(/\s+/).filter(Boolean).length,
             bodyText:                 bodyText.substring(0, 15000),
             contentStatus:            seoIntelDeep.contentStatus || wordStatus(seoIntelDeep.wordCount ?? bodyText.split(/\s+/).filter(Boolean).length),

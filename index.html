@@ -8282,7 +8282,7 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
         ...asArray(data.offPage?.backlinks),
         ...asArray(data.offPageIntel?.backlinks)
     ];
-    const observedSources = [
+    const outboundSources = [
         ...asArray(data.contentIntel?.externalOutboundLinkObjects),
         ...asArray(data.contentIntel?.externalOutboundLinks),
         ...asArray(data.contentIntel?.externalLinks),
@@ -8290,10 +8290,22 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
         ...asArray(data.copyIntel?.externalOutboundLinks),
         ...asArray(data.extraction?.externalOutboundLinkObjects)
     ];
+    const brokenSources = [
+        ...asArray(data.brokenLinks),
+        ...asArray(data.linkAudit?.brokenLinks),
+        ...asArray(data.seoAudit?.links?.brokenLinks),
+        ...asArray(data.contentIntel?.brokenLinks),
+        ...asArray(data.extraction?.brokenLinks),
+        ...asArray(data.extraction?.brokenLinkObjects)
+    ];
     const normalize = (item, kind) => {
         const url = typeof item === 'string'
             ? item.trim()
-            : String(item?.url || item?.href || item?.link || item?.sourceUrl || item?.targetUrl || '').trim();
+            : String(
+                kind === 'broken'
+                    ? (item?.targetUrl || item?.url || item?.normalized || item?.link || item?.sourceUrl || item?.href || '')
+                    : (item?.url || item?.normalized || item?.href || item?.link || item?.sourceUrl || item?.targetUrl || '')
+            ).trim();
         if (!/^https?:\/\//i.test(url)) return null;
         let domain = '';
         try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch {}
@@ -8302,35 +8314,75 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
             domain,
             anchor: String(item?.anchor || item?.text || item?.title || item?.label || domain || url).trim(),
             kind,
-            authority: item?.authority || item?.domainAuthority || item?.dr || item?.da || null
+            authority: item?.authority || item?.domainAuthority || item?.dr || item?.da || null,
+            status: item?.status || item?.statusCode || item?.httpStatus || null,
+            source: String(item?.source || item?.sourceUrl || item?.from || '').trim()
         };
     };
-    const seen = new Set();
-    const links = [
-        ...inboundSources.map(item => normalize(item, 'backlink')),
-        ...observedSources.map(item => normalize(item, 'observed'))
-    ].filter(item => {
-        if (!item || seen.has(item.url.toLowerCase())) return false;
-        seen.add(item.url.toLowerCase());
-        return true;
-    });
-    const inboundCount = links.filter(item => item.kind === 'backlink').length;
-    const observedCount = links.filter(item => item.kind === 'observed').length;
+    const uniqueLinks = (sources, kind) => {
+        const seen = new Set();
+        return sources.map(item => normalize(item, kind)).filter(item => {
+            const uniqueKey = item ? `${item.url}|${kind === 'broken' ? item.anchor : ''}`.toLowerCase() : '';
+            if (!item || seen.has(uniqueKey)) return false;
+            seen.add(uniqueKey);
+            return true;
+        }).slice(0, 60);
+    };
+    const groups = {
+        inbound: uniqueLinks(inboundSources, 'inbound'),
+        outbound: uniqueLinks(outboundSources, 'outbound'),
+        broken: uniqueLinks(brokenSources, 'broken')
+    };
     const labels = {
-        title: isAr ? 'محفظة الروابط الجاهزة للفحص' : isEn ? 'Link portfolio ready to review' : 'Portefeuille de liens prêt à consulter',
+        title: isAr ? 'الروابط القابلة للفحص والعمل' : isEn ? 'Links ready to inspect and act on' : 'Liens visibles et directement exploitables',
         intro: isAr
-            ? 'نميز بين الروابط الخلفية الواردة المرصودة والروابط الخارجية الموجودة على الموقع حتى لا نعرض استنتاجاً كحقيقة.'
+            ? 'افتح كل رابط، تحقق من مصدره، ثم نفّذ الإجراء المقترح. لا نعرض أي رابط وارد لم تتم ملاحظته.'
             : isEn
-                ? 'Inbound backlinks and observed outbound links are separated so an inference is never presented as a fact.'
-                : 'Les backlinks entrants et les liens externes observés sont séparés pour ne jamais présenter une déduction comme un fait.',
-        inbound: isAr ? 'روابط خلفية واردة' : isEn ? 'Inbound backlinks' : 'Backlinks entrants',
-        observed: isAr ? 'روابط خارجية مرصودة' : isEn ? 'Observed external links' : 'Liens externes observés',
+                ? 'Open each link, verify its source, then execute the recommended action. Unobserved inbound links are never invented.'
+                : 'Ouvrez chaque lien, vérifiez sa source, puis exécutez l’action recommandée. Aucun lien entrant non observé n’est inventé.',
+        inbound: isAr ? 'روابط واردة موثقة' : isEn ? 'Verified inbound links' : 'Liens entrants vérifiés',
+        outbound: isAr ? 'روابط صادرة من الموقع' : isEn ? 'Outbound links from the site' : 'Liens sortants du site',
+        broken: isAr ? 'روابط مكسورة يجب إصلاحها' : isEn ? 'Broken links to fix' : 'Liens cassés à corriger',
         open: isAr ? 'فتح الرابط' : isEn ? 'Open link' : 'Consulter',
-        empty: isAr
-            ? 'لم يتم رصد رابط قابل للتحقق. اربط مصدراً للروابط الخلفية للحصول على ملف وارد كامل.'
-            : isEn
-                ? 'No verifiable link was observed. Connect a backlink source for a complete inbound profile.'
-                : 'Aucun lien vérifiable observé. Connectez une source backlinks pour obtenir un profil entrant complet.'
+        inboundAction: isAr ? 'تحقق من جودة المصدر وحافظ على الرابط.' : isEn ? 'Verify source quality and preserve the link.' : 'Vérifier la qualité de la source et préserver le lien.',
+        outboundAction: isAr ? 'تحقق من الصلة والوجهة ووسم الرابط.' : isEn ? 'Verify relevance, destination and link attributes.' : 'Vérifier la pertinence, la destination et les attributs du lien.',
+        brokenAction: isAr ? 'استبدل الرابط أو أعد توجيهه أو احذفه.' : isEn ? 'Replace, redirect or remove this link.' : 'Remplacer, rediriger ou supprimer ce lien.',
+        emptyInbound: isAr ? 'لم يتم رصد رابط وارد موثّق.' : isEn ? 'No verified inbound link observed.' : 'Aucun lien entrant vérifié observé.',
+        emptyOutbound: isAr ? 'لم يتم رصد رابط صادر قابل للفحص.' : isEn ? 'No reviewable outbound link observed.' : 'Aucun lien sortant consultable observé.',
+        emptyBroken: isAr ? 'لم يتم توفير عنوان URL مكسور قابل للفحص.' : isEn ? 'No reviewable broken URL was provided.' : 'Aucune URL cassée consultable n’a été fournie.',
+        source: isAr ? 'المصدر' : isEn ? 'Source' : 'Source',
+        status: isAr ? 'الحالة' : isEn ? 'Status' : 'Statut',
+        action: isAr ? 'الإجراء' : isEn ? 'Action' : 'Action'
+    };
+    const groupMeta = {
+        inbound: { title: labels.inbound, icon: 'fa-arrow-right-to-bracket', action: labels.inboundAction, empty: labels.emptyInbound },
+        outbound: { title: labels.outbound, icon: 'fa-arrow-up-right-from-square', action: labels.outboundAction, empty: labels.emptyOutbound },
+        broken: { title: labels.broken, icon: 'fa-link-slash', action: labels.brokenAction, empty: labels.emptyBroken }
+    };
+    const renderGroup = (key) => {
+        const meta = groupMeta[key];
+        const items = groups[key];
+        return `
+        <section class="backlink-group backlink-group-${key}">
+            <header class="backlink-group-head">
+                <span class="backlink-group-icon"><i class="fas ${meta.icon}"></i></span>
+                <div><strong>${meta.title}</strong><small>${meta.action}</small></div>
+            </header>
+            <div class="backlink-list">
+                ${items.length ? items.map(item => `
+                    <article class="backlink-item">
+                        <div class="backlink-copy">
+                            <strong dir="auto">${esc(item.anchor || item.domain)}</strong>
+                            <a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true">${esc(item.url)}</a>
+                            ${/^https?:\/\//i.test(item.source) && item.source !== item.url ? `<a class="backlink-source" href="${esc(item.source)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true">${labels.source}: ${esc(item.source)}</a>` : ''}
+                            <small>${item.status ? `${labels.status}: ${esc(item.status)} · ` : ''}${labels.action}: ${meta.action}</small>
+                        </div>
+                        <a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true" class="backlink-open" aria-label="${labels.open}">
+                            <span>${labels.open}</span><i class="fas fa-arrow-up-right-from-square"></i>
+                        </a>
+                    </article>`).join('') : `<div class="backlink-empty"><i class="fas fa-circle-info"></i><span>${meta.empty}</span></div>`}
+            </div>
+        </section>`;
     };
     return `
     <div class="backlink-portfolio result-card" dir="${isAr ? 'rtl' : 'ltr'}">
@@ -8339,26 +8391,11 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
                 <span class="backlink-kicker"><i class="fas fa-link"></i>${labels.title}</span>
                 <p>${labels.intro}</p>
             </div>
-            <div class="backlink-metrics">
-                <span><strong>${inboundCount}</strong><small>${labels.inbound}</small></span>
-                <span><strong>${observedCount}</strong><small>${labels.observed}</small></span>
-            </div>
         </div>
-        <div class="backlink-list">
-            ${links.length ? links.slice(0, 60).map(item => `
-                <article class="backlink-item">
-                    <span class="backlink-type backlink-type-${item.kind}">
-                        <i class="fas ${item.kind === 'backlink' ? 'fa-arrow-right-to-bracket' : 'fa-arrow-up-right-from-square'}"></i>
-                        ${item.kind === 'backlink' ? labels.inbound : labels.observed}
-                    </span>
-                    <div class="backlink-copy">
-                        <strong dir="auto">${esc(item.anchor || item.domain)}</strong>
-                        <small>${esc(item.domain)}${item.authority !== null ? ` · Authority ${esc(item.authority)}` : ''}</small>
-                    </div>
-                    <a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true" class="backlink-open">
-                        <span>${labels.open}</span><i class="fas fa-arrow-up-right-from-square"></i>
-                    </a>
-                </article>`).join('') : `<div class="backlink-empty"><i class="fas fa-circle-info"></i><span>${labels.empty}</span></div>`}
+        <div class="backlink-groups">
+            ${renderGroup('inbound')}
+            ${renderGroup('outbound')}
+            ${renderGroup('broken')}
         </div>
     </div>`;
 }
@@ -8404,11 +8441,6 @@ function displayTechnicalResults(data) {
         oversized  : seoAudit.images?.oversized  ?? 0,
         lazy       : seoAudit.images?.lazyImages ?? extract.lazyImages   ?? 0,
         webp       : seoAudit.images?.webpImages ?? extract.webpImages   ?? 0,
-    };
-    const links = {
-        internal : seoAudit.links?.internal ?? extract.internalLinks ?? 0,
-        external : seoAudit.links?.external ?? extract.externalLinks ?? 0,
-        broken   : seoAudit.links?.brokenAnchors ?? extract.brokenAnchors ?? 0,
     };
     const security = {
         https : seoAudit.security?.hasSSL  ?? extract.hasSSL  ?? false,
@@ -8809,17 +8841,6 @@ function displayTechnicalResults(data) {
             </div>
         </div>
 
-        <div class="diff-box" style="border-bottom:3px solid ${links.broken > 0 ? '#ef4444' : '#06b6d4'};">
-            <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; margin-bottom:10px;">
-                <i class="fas fa-link" style="margin-${isAr?'left':'right'}:6px;"></i>Link Profile
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; text-align:center;">
-                <div><div style="font-size:1.2rem; font-weight:900; color:#06b6d4;">${links.internal}</div><div style="font-size:0.62rem; color:#64748b;">Internes</div></div>
-                <div><div style="font-size:1.2rem; font-weight:900; color:#8b5cf6;">${links.external}</div><div style="font-size:0.62rem; color:#64748b;">Externes</div></div>
-                <div><div style="font-size:1.2rem; font-weight:900; color:${links.broken > 0 ? '#ef4444' : '#10b981'};">${links.broken}</div><div style="font-size:0.62rem; color:#64748b;">Brisés</div></div>
-            </div>
-        </div>
-
         <div class="diff-box" style="border-bottom:3px solid ${security.https ? '#10b981' : '#ef4444'};">
             <div style="font-size:0.72rem; color:#94a3b8; text-transform:uppercase; margin-bottom:10px;">
                 <i class="fas fa-shield-alt" style="margin-${isAr?'left':'right'}:6px;"></i>Security + Tracking
@@ -8967,8 +8988,8 @@ function displayTechnicalResults(data) {
 
     ${renderReportSection(
         'backlinks',
-        isAr ? 'الروابط الخلفية والروابط الجاهزة للفحص' : isEn ? 'Backlinks and links ready to review' : 'Backlinks et liens prêts à consulter',
-        isAr ? 'افتح كل رابط وتحقق من مصدره وفرصته.' : isEn ? 'Open every link and verify its source and opportunity.' : 'Ouvrez chaque lien et vérifiez sa source et son potentiel.',
+        isAr ? 'الروابط الواردة والصادرة والمكسورة' : isEn ? 'Inbound, outbound and broken links' : 'Liens entrants, sortants et cassés',
+        isAr ? 'روابط مرئية قابلة للفحص مع الإجراء المطلوب لكل رابط.' : isEn ? 'Visible, reviewable links with the required action for each one.' : 'Des liens visibles et consultables, avec l’action requise pour chacun.',
         'fa-link',
         backlinkPortfolioHtml,
         { isAr, isEn }
@@ -9288,7 +9309,7 @@ function getDakaExportModules() {
                 feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
                 feature('technical', 'fa-gauge-high', 'Diagnostic technique', 'Technical diagnosis', 'التشخيص التقني'),
                 feature('page', 'fa-file-lines', 'Contenu et structure de page', 'Page content and structure', 'محتوى وبنية الصفحة'),
-                feature('backlinks', 'fa-link', 'Backlinks et liens à consulter', 'Backlinks and links to review', 'الروابط الخلفية والروابط للفحص'),
+                feature('backlinks', 'fa-link', 'Liens entrants, sortants et cassés', 'Inbound, outbound and broken links', 'الروابط الواردة والصادرة والمكسورة'),
                 feature('plan', 'fa-list-check', 'Plan d’amélioration', 'Improvement plan', 'خطة التحسين')
             ]
         },
@@ -17883,30 +17904,49 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     font-size: .74rem;
     line-height: 1.6;
 }
-.backlink-metrics {
-    display: flex;
-    gap: 8px;
-    flex: 0 0 auto;
+.backlink-groups {
+    display: grid;
+    gap: 12px;
 }
-.backlink-metrics span {
-    min-width: 102px;
-    padding: 9px;
+.backlink-group {
+    overflow: hidden;
     border: 1px solid rgba(148,163,184,.13);
-    border-radius: 8px;
-    background: #081321;
-    text-align: center;
+    border-radius: 9px;
+    background: rgba(2,6,23,.34);
 }
-.backlink-metrics strong,
-.backlink-metrics small { display: block; }
-.backlink-metrics strong { color: #f8fafc; font-size: 1rem; }
-.backlink-metrics small { margin-top: 2px; color: #94a3b8; font-size: .56rem; line-height: 1.3; }
+.backlink-group-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px;
+    border-bottom: 1px solid rgba(148,163,184,.1);
+    background: rgba(15,23,42,.72);
+}
+.backlink-group-icon {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    display: grid;
+    place-items: center;
+    border: 1px solid rgba(34,211,238,.18);
+    border-radius: 7px;
+    color: #67e8f9;
+    background: rgba(8,145,178,.08);
+}
+.backlink-group-broken .backlink-group-icon { border-color: rgba(248,113,113,.22); color: #fca5a5; background: rgba(127,29,29,.13); }
+.backlink-group-inbound .backlink-group-icon { border-color: rgba(52,211,153,.22); color: #6ee7b7; background: rgba(6,78,59,.13); }
+.backlink-group-head strong,
+.backlink-group-head small { display: block; }
+.backlink-group-head strong { color: #f8fafc; font-size: .74rem; }
+.backlink-group-head small { margin-top: 3px; color: #94a3b8; font-size: .59rem; line-height: 1.4; }
 .backlink-list {
     display: grid;
     gap: 7px;
+    padding: 9px;
 }
 .backlink-item {
     display: grid;
-    grid-template-columns: minmax(132px,auto) minmax(0,1fr) auto;
+    grid-template-columns: minmax(0,1fr) auto;
     align-items: center;
     gap: 11px;
     padding: 10px;
@@ -17914,25 +17954,21 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     border-radius: 8px;
     background: rgba(2,6,23,.38);
 }
-.backlink-type {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #93c5fd;
-    font-size: .59rem;
-    font-weight: 900;
-}
-.backlink-type-backlink { color: #6ee7b7; }
 .backlink-copy { min-width: 0; }
 .backlink-copy strong,
-.backlink-copy small {
+.backlink-copy small,
+.backlink-copy a {
     display: block;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 .backlink-copy strong { color: #e2e8f0; font-size: .72rem; }
-.backlink-copy small { margin-top: 3px; color: #718096; font-size: .58rem; }
+.backlink-copy a { margin-top: 3px; color: #67e8f9; font-size: .59rem; text-decoration: none; }
+.backlink-copy a.backlink-source { color: #93c5fd; }
+.backlink-copy a:hover,
+.backlink-copy a:focus-visible { color: #cffafe; text-decoration: underline; }
+.backlink-copy small { margin-top: 4px; color: #718096; font-size: .58rem; line-height: 1.45; }
 .backlink-open {
     display: inline-flex;
     align-items: center;
@@ -18211,16 +18247,13 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     .export-studio-footer .btn { width: 100%; }
     .export-pack-card { min-height: 68px; }
     .backlink-portfolio-head { flex-direction: column; }
-    .backlink-metrics { width: 100%; }
-    .backlink-metrics span { flex: 1 1 0; min-width: 0; }
 }
 
 @media (max-width: 640px) {
     .export-feature-list { grid-template-columns: 1fr; }
     .export-pack-main { grid-template-columns: auto auto minmax(0,1fr); }
     .export-pack-check { display: none; }
-    .backlink-item { grid-template-columns: 1fr auto; }
-    .backlink-type { grid-column: 1 / -1; }
+    .backlink-item { grid-template-columns: minmax(0,1fr) auto; }
     .backlink-open span { display: none; }
 }
 
