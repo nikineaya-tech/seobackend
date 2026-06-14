@@ -9866,6 +9866,592 @@ async function confirmDakaExportStudio() {
     }
 }
 
+var dakaPdfLogoDataUrlCache = '';
+
+function dakaPdfCleanList(values, limit = 5) {
+    const result = [];
+    const visit = function (value) {
+        if (result.length >= limit || value === null || value === undefined) return;
+        if (Array.isArray(value)) {
+            value.forEach(visit);
+            return;
+        }
+        const text = executiveText(value).replace(/\s+/g, ' ').trim();
+        const normalized = text.toLowerCase();
+        if (!text || isDakaInsufficientExportText(text)) return;
+        if (result.some(function (item) { return item.toLowerCase() === normalized; })) return;
+        result.push(text);
+    };
+    visit(values);
+    return result.slice(0, limit);
+}
+
+function getDakaPdfReportUrl() {
+    const candidates = [
+        STATE.lastInputs?.techUrl,
+        STATE.lastInputs?.funnelUrl,
+        STATE.lastInputs?.url,
+        STATE.lastTechnicalResults?.analyzedUrl,
+        STATE.lastFunnelResults?.analyzedUrl,
+        STATE.lastAnalysisResults?.analyzedUrl
+    ];
+    return String(candidates.find(Boolean) || '').trim();
+}
+
+function getDakaPdfModuleData(key) {
+    if (key === 'competitors') return STATE.lastAnalysisResults || {};
+    if (key === 'funnel') return STATE.lastFunnelResults || {};
+    if (key === 'technical') return STATE.lastTechnicalResults || {};
+    if (key === 'keywords') return STATE.lastKeywords || {};
+    return {};
+}
+
+function getDakaPdfDecisionModel(selectedModules) {
+    const lang = STATE.currentLang || 'fr';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const reportUrl = getDakaPdfReportUrl();
+    let domain = reportUrl;
+    try { domain = new URL(reportUrl).hostname.replace(/^www\./, ''); } catch (_) {}
+    domain = domain || (isAr ? 'الموقع محل الدراسة' : isEn ? 'Analyzed site' : 'Site analysé');
+
+    const moduleModels = selectedModules.map(function (module) {
+        const data = getDakaPdfModuleData(module.key);
+        return {
+            key: module.key,
+            title: module.title,
+            team: module.team,
+            data: data,
+            summary: buildExecutiveSummaryModel(data, module.key)
+        };
+    });
+    const scores = moduleModels
+        .map(function (entry) { return entry.summary.score; })
+        .filter(function (value) { return Number.isFinite(Number(value)); })
+        .map(Number);
+    const actions = [];
+    moduleModels.forEach(function (entry) {
+        (entry.summary.actions || []).forEach(function (action) {
+            const title = executiveText(action?.title || action);
+            if (!title || isDakaInsufficientExportText(title)) return;
+            if (actions.some(function (item) { return item.title.toLowerCase() === title.toLowerCase(); })) return;
+            actions.push({
+                title: title,
+                impact: executiveText(action?.impact) || (isAr ? 'مرتفع' : isEn ? 'High' : 'Élevé'),
+                effort: executiveText(action?.effort) || (isAr ? 'متوسط' : isEn ? 'Medium' : 'Moyen'),
+                priority: executiveText(action?.priority) || String(actions.length + 1)
+            });
+        });
+    });
+
+    const opportunities = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.opportunities; }), 3);
+    const weaknesses = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.weaknesses; }), 3);
+    const quickWins = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.quickWins; }), 4);
+    const plan30 = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.plan30; }), 5);
+    const verdict = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.verdict; }), 1)[0]
+        || actions[0]?.title
+        || opportunities[0]
+        || weaknesses[0]
+        || '';
+    actions.forEach(function (action, index) {
+        action.justification = weaknesses[index % Math.max(weaknesses.length, 1)]
+            || opportunities[index % Math.max(opportunities.length, 1)]
+            || verdict;
+    });
+    const priorityDecision = actions[0]?.title || quickWins[0] || verdict;
+    const after30 = dakaPdfCleanList(actions.slice(5).map(function (action) { return action.title; }), 3);
+
+    const titleCandidates = [
+        STATE.lastTechnicalResults?.extraction?.title,
+        STATE.lastTechnicalResults?.meta?.title,
+        STATE.lastFunnelResults?.extraction?.title,
+        STATE.lastFunnelResults?.meta?.title,
+        STATE.lastAnalysisResults?.knowledgeGraph?.title
+    ];
+    const siteTitle = dakaPdfCleanList(titleCandidates, 1)[0] || domain;
+    const geo = String(
+        STATE.lastInputs?.country ||
+        STATE.lastKeywords?.geoInput ||
+        STATE.lastAnalysisResults?.geo ||
+        ''
+    ).trim();
+    const objective = String(
+        STATE.lastInputs?.objective ||
+        document.getElementById('compObjective')?.value ||
+        document.getElementById('funnelObjective')?.value ||
+        STATE.lastInputs?.keyword ||
+        STATE.lastKeywords?.seed ||
+        ''
+    ).trim();
+
+    const competitors = getDakaPdfModuleData('competitors');
+    const funnel = getDakaPdfModuleData('funnel');
+    const keywords = getDakaPdfModuleData('keywords');
+    const branches = [
+        {
+            key: 'market',
+            title: isAr ? 'السوق' : isEn ? 'Market' : 'Marché',
+            items: dakaPdfCleanList([
+                competitors.competitorIntelligence?.marketVerdict?.whyTheyWin,
+                competitors.competitorIntelligence?.marketVerdict?.marketPattern,
+                moduleModels.find(function (m) { return m.key === 'competitors'; })?.summary.opportunities,
+                opportunities
+            ], 2)
+        },
+        {
+            key: 'offer',
+            title: isAr ? 'العرض' : isEn ? 'Offer' : 'Offre',
+            items: dakaPdfCleanList([
+                funnel.commerceExploration?.deduced?.offerType,
+                funnel.productServiceAudit?.uniqueValueProposition,
+                funnel.commerceExploration?.recommended?.pricingRationale,
+                actions.filter(function (a) { return /offre|offer|prix|price|produit|product|عرض|سعر/i.test(a.title); }).map(function (a) { return a.title; })
+            ], 2)
+        },
+        {
+            key: 'trust',
+            title: isAr ? 'الثقة' : isEn ? 'Trust' : 'Confiance',
+            items: dakaPdfCleanList([
+                funnel.commerceExploration?.observed?.trustSignals,
+                funnel.commerceExploration?.recommended?.nextActions,
+                weaknesses.filter(function (item) { return /preuve|confiance|garantie|avis|trust|proof|review|ضمان|ثقة/i.test(item); })
+            ], 2)
+        },
+        {
+            key: 'acquisition',
+            title: isAr ? 'الاكتساب' : isEn ? 'Acquisition' : 'Acquisition',
+            items: dakaPdfCleanList([
+                keywords.clusters,
+                keywords.paaQuestions,
+                actions.filter(function (a) { return /acquisition|visibil|demande|keyword|contenu|content|trafic|طلب|محتوى/i.test(a.title); }).map(function (a) { return a.title; })
+            ], 2)
+        },
+        {
+            key: 'conversion',
+            title: isAr ? 'التحويل' : isEn ? 'Conversion' : 'Conversion',
+            items: dakaPdfCleanList([
+                funnel.auditQuickWins,
+                funnel.quickWins,
+                actions.filter(function (a) { return /conversion|cta|parcours|funnel|friction|checkout|تحويل/i.test(a.title); }).map(function (a) { return a.title; })
+            ], 2)
+        }
+    ].filter(function (branch) { return branch.items.length; });
+
+    return {
+        lang: lang,
+        isAr: isAr,
+        isEn: isEn,
+        reportUrl: reportUrl,
+        domain: domain,
+        siteTitle: siteTitle,
+        geo: geo,
+        objective: objective,
+        date: new Date().toLocaleDateString(isAr ? 'ar-MA' : isEn ? 'en-GB' : 'fr-FR', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        }),
+        score: scores.length ? Math.round(scores.reduce(function (sum, value) { return sum + value; }, 0) / scores.length) : null,
+        verdict: verdict,
+        opportunities: opportunities,
+        weaknesses: weaknesses,
+        priorityDecision: priorityDecision,
+        actions: actions.slice(0, 7),
+        quickWins: quickWins,
+        plan30: plan30,
+        after30: after30,
+        branches: branches,
+        modules: moduleModels.map(function (entry) {
+            return { key: entry.key, title: entry.title, team: entry.team };
+        })
+    };
+}
+
+async function loadDakaPdfLogoDataUrl() {
+    if (dakaPdfLogoDataUrlCache) return dakaPdfLogoDataUrlCache;
+    try {
+        const response = await fetch('assets/daka-loader-logo.jpg', { cache: 'force-cache' });
+        if (!response.ok) return '';
+        const blob = await response.blob();
+        dakaPdfLogoDataUrlCache = await new Promise(function (resolve) {
+            const reader = new FileReader();
+            reader.onload = function () { resolve(String(reader.result || '')); };
+            reader.onerror = function () { resolve(''); };
+            reader.readAsDataURL(blob);
+        });
+    } catch (_) {
+        dakaPdfLogoDataUrlCache = '';
+    }
+    return dakaPdfLogoDataUrlCache;
+}
+
+function dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, pageLabel) {
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(0, 0, pageW, pageH, 'F');
+    pdf.setFillColor(15, 23, 42);
+    pdf.rect(0, 0, pageW, 4, 'F');
+    pdf.setFillColor(202, 138, 4);
+    pdf.rect(0, 4, pageW, 1, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(3, 105, 161);
+    pdf.text('DAKA · DECISION REPORT', margin, 11);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(String(model.domain || '').substring(0, 55), pageW - margin, 11, { align: 'right' });
+    pdf.setDrawColor(226, 232, 240);
+    pdf.line(margin, pageH - 11, pageW - margin, pageH - 11);
+    pdf.setFontSize(6.2);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(pageLabel || '', margin, pageH - 6);
+    pdf.text(
+        'Made by Daka · ' + String(pdf.internal.getCurrentPageInfo().pageNumber),
+        pageW - margin, pageH - 6, { align: 'right' }
+    );
+}
+
+function dakaPdfDrawWrappedText(pdf, text, x, y, width, options = {}) {
+    const safeText = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!safeText) return y;
+    const maxLines = options.maxLines || 4;
+    let lines = pdf.splitTextToSize(safeText, width);
+    if (lines.length > maxLines) {
+        lines = lines.slice(0, maxLines);
+        lines[maxLines - 1] = String(lines[maxLines - 1]).replace(/[.,;:\s]+$/, '') + '…';
+    }
+    pdf.setFont('helvetica', options.bold ? 'bold' : 'normal');
+    pdf.setFontSize(options.size || 8);
+    pdf.setTextColor.apply(pdf, options.color || [51, 65, 85]);
+    pdf.text(lines, x, y, options.align ? { align: options.align } : undefined);
+    return y + lines.length * (options.lineHeight || 4.3);
+}
+
+function dakaPdfDrawListCard(pdf, title, items, x, y, width, height, accent) {
+    pdf.setFillColor(255, 255, 255);
+    pdf.setDrawColor(226, 232, 240);
+    pdf.roundedRect(x, y, width, height, 3, 3, 'FD');
+    pdf.setFillColor(accent[0], accent[1], accent[2]);
+    pdf.roundedRect(x, y, 3, height, 2, 2, 'F');
+    dakaPdfDrawWrappedText(pdf, title, x + 7, y + 9, width - 12, {
+        size: 9, bold: true, color: [15, 23, 42], maxLines: 1
+    });
+    let cursor = y + 17;
+    (items || []).slice(0, 3).forEach(function (item) {
+        pdf.setFillColor(accent[0], accent[1], accent[2]);
+        pdf.circle(x + 8, cursor - 1.2, 0.8, 'F');
+        cursor = dakaPdfDrawWrappedText(pdf, item, x + 12, cursor, width - 18, {
+            size: 7.2, color: [51, 65, 85], maxLines: 2, lineHeight: 3.8
+        }) + 2;
+    });
+}
+
+function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW, pageH, margin) {
+    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isEn ? 'Executive brief' : 'Fiche sommaire exécutive');
+    if (logoDataUrl) {
+        try { pdf.addImage(logoDataUrl, 'JPEG', margin, 17, 25, 25, undefined, 'FAST'); } catch (_) {}
+    } else {
+        pdf.setFillColor(15, 23, 42);
+        pdf.roundedRect(margin, 17, 25, 25, 5, 5, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text('DAKA', margin + 12.5, 32, { align: 'center' });
+    }
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(model.isEn ? 'Executive Decision Brief' : 'Fiche sommaire décisionnelle', margin + 32, 25);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(7.2);
+    pdf.setTextColor(71, 85, 105);
+    pdf.text(
+        model.isEn ? 'Report prepared by Daka specialist teams' : 'Rapport préparé par les équipes Daka',
+        margin + 32, 31
+    );
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(model.date, margin + 32, 37);
+
+    pdf.setFillColor(255, 255, 255);
+    pdf.setDrawColor(203, 213, 225);
+    pdf.roundedRect(margin, 49, pageW - margin * 2, 30, 3, 3, 'FD');
+    pdf.setFillColor(3, 105, 161);
+    pdf.roundedRect(margin, 49, 4, 30, 2, 2, 'F');
+    dakaPdfDrawWrappedText(pdf, model.siteTitle, margin + 9, 59, 112, {
+        size: 11, bold: true, color: [15, 23, 42], maxLines: 2, lineHeight: 5
+    });
+    dakaPdfDrawWrappedText(pdf, model.reportUrl || model.domain, margin + 9, 71, 112, {
+        size: 6.5, color: [3, 105, 161], maxLines: 1
+    });
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6);
+    pdf.setTextColor(100, 116, 139);
+    pdf.text(model.isEn ? 'MARKET / LANGUAGE' : 'MARCHÉ / LANGUE', pageW - margin - 48, 58);
+    dakaPdfDrawWrappedText(pdf, [model.geo, model.lang.toUpperCase()].filter(Boolean).join(' · '), pageW - margin - 48, 66, 43, {
+        size: 8, bold: true, color: [15, 23, 42], maxLines: 2
+    });
+
+    pdf.setFillColor(15, 23, 42);
+    pdf.roundedRect(margin, 86, pageW - margin * 2, 37, 4, 4, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(125, 211, 252);
+    pdf.text(model.isEn ? 'GLOBAL VERDICT' : 'VERDICT GLOBAL', margin + 8, 96);
+    dakaPdfDrawWrappedText(pdf, model.verdict || model.priorityDecision, margin + 8, 105, pageW - margin * 2 - 48, {
+        size: 10, bold: true, color: [255, 255, 255], maxLines: 3, lineHeight: 5
+    });
+    if (model.score !== null) {
+        pdf.setDrawColor(202, 138, 4);
+        pdf.setLineWidth(1);
+        pdf.circle(pageW - margin - 22, 104, 13, 'S');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(13);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(String(model.score), pageW - margin - 22, 104, { align: 'center' });
+        pdf.setFontSize(5.5);
+        pdf.setTextColor(253, 230, 138);
+        pdf.text('/100', pageW - margin - 22, 110, { align: 'center' });
+    }
+
+    const gap = 5;
+    const cardW = (pageW - margin * 2 - gap) / 2;
+    if (model.opportunities.length && model.weaknesses.length) {
+        dakaPdfDrawListCard(
+            pdf,
+            model.isEn ? 'Top opportunities' : 'Top 3 opportunités',
+            model.opportunities,
+            margin, 130, cardW, 55, [5, 150, 105]
+        );
+        dakaPdfDrawListCard(
+            pdf,
+            model.isEn ? 'Critical weaknesses' : 'Faiblesses critiques',
+            model.weaknesses,
+            margin + cardW + gap, 130, cardW, 55, [220, 38, 38]
+        );
+    } else if (model.opportunities.length || model.weaknesses.length) {
+        const hasOpportunities = model.opportunities.length > 0;
+        dakaPdfDrawListCard(
+            pdf,
+            hasOpportunities ? (model.isEn ? 'Top opportunities' : 'Top opportunités') : (model.isEn ? 'Critical weaknesses' : 'Faiblesses critiques'),
+            hasOpportunities ? model.opportunities : model.weaknesses,
+            margin, 130, pageW - margin * 2, 55, hasOpportunities ? [5, 150, 105] : [220, 38, 38]
+        );
+    }
+
+    pdf.setFillColor(255, 251, 235);
+    pdf.setDrawColor(253, 230, 138);
+    pdf.roundedRect(margin, 192, pageW - margin * 2, 34, 3, 3, 'FD');
+    pdf.setFillColor(202, 138, 4);
+    pdf.rect(margin, 192, 4, 34, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7);
+    pdf.setTextColor(146, 64, 14);
+    pdf.text(model.isEn ? 'PRIORITY DECISION' : 'DÉCISION PRIORITAIRE', margin + 9, 202);
+    dakaPdfDrawWrappedText(pdf, model.priorityDecision, margin + 9, 211, pageW - margin * 2 - 18, {
+        size: 9.2, bold: true, color: [15, 23, 42], maxLines: 3, lineHeight: 4.8
+    });
+
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(7);
+    pdf.setTextColor(71, 85, 105);
+    pdf.text(model.isEn ? 'INCLUDED EXPERTISES · CLICK TO OPEN' : 'EXPERTISES INCLUSES · CLIQUEZ POUR OUVRIR', margin, 238);
+    const links = [];
+    validSections.slice(0, 4).forEach(function (section, index) {
+        const col = index % 2;
+        const row = Math.floor(index / 2);
+        const x = margin + col * (cardW + gap);
+        const y = 245 + row * 16;
+        pdf.setFillColor(255, 255, 255);
+        pdf.setDrawColor(203, 213, 225);
+        pdf.roundedRect(x, y, cardW, 12, 2, 2, 'FD');
+        pdf.setFillColor(3, 105, 161);
+        pdf.circle(x + 6, y + 6, 1.5, 'F');
+        dakaPdfDrawWrappedText(pdf, section.label, x + 11, y + 7.5, cardW - 15, {
+            size: 7, bold: true, color: [15, 23, 42], maxLines: 1
+        });
+        links.push({ x: x, y: y, w: cardW, h: 12 });
+    });
+    return links;
+}
+
+function drawDakaPdfRoadmapPage(pdf, model, pageW, pageH, margin) {
+    const phases = [
+        {
+            label: model.isEn ? 'Now' : 'Maintenant',
+            items: dakaPdfCleanList([model.priorityDecision], 1),
+            accent: [202, 138, 4]
+        },
+        {
+            label: model.isEn ? '7 days' : '7 jours',
+            items: model.quickWins.slice(0, 2),
+            accent: [5, 150, 105]
+        },
+        {
+            label: model.isEn ? '30 days' : '30 jours',
+            items: model.plan30.slice(0, 2),
+            accent: [3, 105, 161]
+        },
+        {
+            label: model.isEn ? 'After 30 days' : 'Après 30 jours',
+            items: model.after30.slice(0, 2),
+            accent: [71, 85, 105]
+        }
+    ].filter(function (phase) { return phase.items.length; });
+    if (!phases.length) return false;
+    pdf.addPage();
+    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isEn ? 'Action plan and roadmap' : 'Plan d’action et roadmap');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(model.isEn ? 'Action plan and roadmap' : 'Plan d’action et roadmap', margin, 25);
+    dakaPdfDrawWrappedText(
+        pdf,
+        model.isEn ? 'A sequenced plan built only from usable findings.' : 'Un plan séquencé construit uniquement à partir des constats exploitables.',
+        margin, 34, pageW - margin * 2, { size: 8, color: [71, 85, 105], maxLines: 2 }
+    );
+    const startY = 52;
+    const phaseH = Math.min(51, (pageH - startY - 22) / phases.length - 5);
+    const lineX = margin + 10;
+    pdf.setDrawColor(203, 213, 225);
+    pdf.setLineWidth(1);
+    pdf.line(lineX, startY + 4, lineX, startY + phases.length * (phaseH + 5) - 8);
+    phases.forEach(function (phase, index) {
+        const y = startY + index * (phaseH + 5);
+        pdf.setFillColor(phase.accent[0], phase.accent[1], phase.accent[2]);
+        pdf.circle(lineX, y + 9, 3, 'F');
+        pdf.setFillColor(255, 255, 255);
+        pdf.setDrawColor(226, 232, 240);
+        pdf.roundedRect(margin + 20, y, pageW - margin * 2 - 20, phaseH, 3, 3, 'FD');
+        pdf.setFillColor(phase.accent[0], phase.accent[1], phase.accent[2]);
+        pdf.roundedRect(margin + 20, y, 27, 10, 2, 2, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(6.8);
+        pdf.setTextColor(255, 255, 255);
+        pdf.text(phase.label.toUpperCase(), margin + 33.5, y + 6.8, { align: 'center' });
+        let cursor = y + 18;
+        phase.items.forEach(function (item, itemIndex) {
+            const matching = model.actions.find(function (action) { return action.title === item; }) || {
+                impact: model.isEn ? 'To confirm' : 'À confirmer',
+                effort: model.isEn ? 'To estimate' : 'À estimer',
+                priority: phase.label,
+                justification: model.weaknesses[itemIndex] || model.opportunities[itemIndex] || model.verdict
+            };
+            cursor = dakaPdfDrawWrappedText(pdf, (itemIndex + 1) + '. ' + item, margin + 27, cursor, pageW - margin * 2 - 35, {
+                size: 7.7, bold: true, color: [15, 23, 42], maxLines: 2, lineHeight: 4
+            });
+            const meta = (model.isEn ? 'Impact' : 'Impact') + ': ' + matching.impact + ' · ' +
+                (model.isEn ? 'Effort' : 'Effort') + ': ' + matching.effort + ' · ' +
+                (model.isEn ? 'Priority' : 'Priorité') + ': ' + matching.priority;
+            cursor = dakaPdfDrawWrappedText(pdf, meta, margin + 31, cursor, pageW - margin * 2 - 39, {
+                size: 6.1, color: [100, 116, 139], maxLines: 1, lineHeight: 3.4
+            }) + 2;
+            if (matching?.justification) {
+                cursor = dakaPdfDrawWrappedText(
+                    pdf,
+                    (model.isEn ? 'Why: ' : 'Pourquoi : ') + matching.justification,
+                    margin + 31,
+                    cursor,
+                    pageW - margin * 2 - 39,
+                    { size: 5.8, color: [71, 85, 105], maxLines: 1, lineHeight: 3.2 }
+                ) + 1;
+            }
+        });
+    });
+    return true;
+}
+
+function drawDakaPdfMindMapPage(pdf, model, pageW, pageH, margin) {
+    if (!model.branches.length) return false;
+    pdf.addPage();
+    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isEn ? 'Strategic mind map' : 'Carte mentale stratégique');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(18);
+    pdf.setTextColor(15, 23, 42);
+    pdf.text(model.isEn ? 'Strategic decision tree' : 'Carte mentale stratégique', margin, 25);
+    dakaPdfDrawWrappedText(
+        pdf,
+        model.isEn ? 'One objective, five decision branches.' : 'Un objectif central, cinq branches de décision.',
+        margin, 34, pageW - margin * 2, { size: 8, color: [71, 85, 105], maxLines: 1 }
+    );
+    const rootX = margin;
+    const rootY = 125;
+    const rootW = 43;
+    const rootH = 48;
+    pdf.setFillColor(15, 23, 42);
+    pdf.roundedRect(rootX, rootY, rootW, rootH, 4, 4, 'F');
+    pdf.setFont('helvetica', 'bold');
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(255, 255, 255);
+    pdf.text(pdf.splitTextToSize(model.domain, rootW - 8), rootX + rootW / 2, rootY + 15, { align: 'center' });
+    if (model.objective) {
+        dakaPdfDrawWrappedText(pdf, model.objective, rootX + rootW / 2, rootY + 31, rootW - 8, {
+            size: 5.8, color: [203, 213, 225], align: 'center', maxLines: 3, lineHeight: 3
+        });
+    }
+    const branchX = margin + 57;
+    const branchW = pageW - margin - branchX;
+    const branchH = 38;
+    const gap = 8;
+    const totalH = model.branches.length * branchH + (model.branches.length - 1) * gap;
+    const firstY = Math.max(45, (pageH - totalH) / 2);
+    const accents = [[3,105,161], [202,138,4], [5,150,105], [124,58,237], [220,38,38]];
+    model.branches.slice(0, 5).forEach(function (branch, index) {
+        const y = firstY + index * (branchH + gap);
+        const accent = accents[index] || [3,105,161];
+        pdf.setDrawColor(148, 163, 184);
+        pdf.setLineWidth(0.45);
+        pdf.line(rootX + rootW, rootY + rootH / 2, branchX - 7, y + branchH / 2);
+        pdf.line(branchX - 7, y + branchH / 2, branchX, y + branchH / 2);
+        pdf.setFillColor(255, 255, 255);
+        pdf.setDrawColor(226, 232, 240);
+        pdf.roundedRect(branchX, y, branchW, branchH, 3, 3, 'FD');
+        pdf.setFillColor(accent[0], accent[1], accent[2]);
+        pdf.rect(branchX, y, 4, branchH, 'F');
+        dakaPdfDrawWrappedText(pdf, branch.title, branchX + 9, y + 10, branchW - 14, {
+            size: 8.5, bold: true, color: [15, 23, 42], maxLines: 1
+        });
+        let cursor = y + 19;
+        branch.items.slice(0, 2).forEach(function (item) {
+            pdf.setFillColor(accent[0], accent[1], accent[2]);
+            pdf.circle(branchX + 10, cursor - 1, 0.7, 'F');
+            cursor = dakaPdfDrawWrappedText(pdf, item, branchX + 14, cursor, branchW - 19, {
+                size: 6.6, color: [51, 65, 85], maxLines: 2, lineHeight: 3.4
+            }) + 1;
+        });
+    });
+    return true;
+}
+
+function buildDakaArabicDecisionPages(model) {
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : String;
+    const list = function (items) {
+        return (items || []).map(function (item) { return '<li>' + safe(item) + '</li>'; }).join('');
+    };
+    const phases = [
+        { title: 'الآن', items: dakaPdfCleanList([model.priorityDecision], 1) },
+        { title: 'خلال 7 أيام', items: model.quickWins.slice(0, 3) },
+        { title: 'خلال 30 يوماً', items: model.plan30.slice(0, 4) },
+        { title: 'بعد 30 يوماً', items: model.after30.slice(0, 3) }
+    ].filter(function (phase) { return phase.items.length; });
+    const insightCards = [
+        model.opportunities.length ? `<article><h2>أهم الفرص</h2><ul>${list(model.opportunities)}</ul></article>` : '',
+        model.weaknesses.length ? `<article><h2>نقاط الضعف الحرجة</h2><ul>${list(model.weaknesses)}</ul></article>` : ''
+    ].filter(Boolean).join('');
+    return `
+        <section class="daka-ar-decision-page">
+            <header class="daka-ar-report-brand">
+                <img src="assets/daka-loader-logo.jpg" alt="Daka">
+                <div><strong>الملف التنفيذي لاتخاذ القرار</strong><span>تقرير أعدته فرق Daka المتخصصة</span></div>
+            </header>
+            <div class="daka-ar-site-card"><strong>${safe(model.siteTitle)}</strong><span>${safe(model.reportUrl || model.domain)}</span><small>${safe([model.geo, model.date].filter(Boolean).join(' · '))}</small></div>
+            <div class="daka-ar-verdict"><small>الخلاصة العامة</small><strong>${safe(model.verdict || model.priorityDecision)}</strong>${model.score !== null ? `<b>${model.score}/100</b>` : ''}</div>
+            ${insightCards ? `<div class="daka-ar-two-columns">${insightCards}</div>` : ''}
+            ${model.priorityDecision ? `<article class="daka-ar-priority"><h2>القرار ذو الأولوية</h2><p>${safe(model.priorityDecision)}</p></article>` : ''}
+            <div class="daka-ar-modules">${model.modules.map(function (module) { return '<span>' + safe(module.title) + '</span>'; }).join('')}</div>
+        </section>
+        ${phases.length ? `<section class="daka-ar-decision-page"><h1>خطة العمل والجدول الزمني</h1><div class="daka-ar-roadmap">${phases.map(function (phase) { return `<article><h2>${safe(phase.title)}</h2><ul>${list(phase.items)}</ul></article>`; }).join('')}</div></section>` : ''}
+        ${model.branches.length ? `<section class="daka-ar-decision-page"><h1>الخريطة الذهنية الاستراتيجية</h1><div class="daka-ar-tree"><div class="daka-ar-tree-root">${safe(model.domain)}<small>${safe(model.objective)}</small></div><div class="daka-ar-tree-branches">${model.branches.map(function (branch) { return `<article><h2>${safe(branch.title)}</h2><ul>${list(branch.items)}</ul></article>`; }).join('')}</div></div></section>` : ''}
+    `;
+}
+
 
 window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
@@ -9898,6 +10484,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
     const includeDetails = exportOptions.includeDetails !== false;
     const selectedFeatures = exportOptions.features || {};
     const selectedModules = getDakaExportModules().filter(module => module.available && selectedSectionKeys.has(module.key));
+    const pdfDecisionModel = getDakaPdfDecisionModel(selectedModules);
 
     if (STATE.isExporting) return;
     STATE.isExporting = true;
@@ -9937,6 +10524,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                     });
                 })
                 .join('<hr style="margin:30px 0;border:none;border-top:2px dashed rgba(255,255,255,0.1);">');
+            var arDecisionPages = buildDakaArabicDecisionPages(pdfDecisionModel);
 
             var pw = window.open('', '_blank');
             if (!pw) {
@@ -9982,6 +10570,28 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 'div[style*="display:grid"] { grid-template-columns:1fr !important; }',
                 'canvas { max-width: 100% !important; height: auto !important; margin: 0 auto !important; display: block !important; }',
                 'body::before { content:"Made by Daka"; position:fixed; inset:45% auto auto 18%; transform:rotate(-28deg); font-size:52px; font-weight:900; color:rgba(15,23,42,.045); pointer-events:none; z-index:9999; }',
+                '.daka-ar-decision-page { min-height:267mm; padding:14mm; page-break-after:always; background:#f8fafc !important; color:#0f172a !important; }',
+                '.daka-ar-decision-page h1 { font-size:24px; margin:0 0 22px; padding-bottom:12px; border-bottom:3px solid #0369a1; }',
+                '.daka-ar-report-brand { display:flex; align-items:center; gap:16px; padding-bottom:18px; border-bottom:1px solid #cbd5e1; }',
+                '.daka-ar-report-brand img { width:64px; height:64px; object-fit:contain; border-radius:14px; }',
+                '.daka-ar-report-brand strong,.daka-ar-report-brand span { display:block; }',
+                '.daka-ar-report-brand strong { font-size:24px; } .daka-ar-report-brand span { color:#475569 !important; margin-top:5px; }',
+                '.daka-ar-site-card,.daka-ar-priority { margin-top:20px; padding:18px; border:1px solid #cbd5e1; border-right:5px solid #0369a1; border-radius:10px; background:#fff !important; }',
+                '.daka-ar-site-card strong,.daka-ar-site-card span,.daka-ar-site-card small { display:block; margin-bottom:5px; }',
+                '.daka-ar-site-card strong { font-size:19px; } .daka-ar-site-card span { color:#0369a1 !important; }',
+                '.daka-ar-verdict { position:relative; margin-top:20px; padding:22px; border-radius:12px; background:#0f172a !important; color:#fff !important; }',
+                '.daka-ar-verdict * { color:#fff !important; display:block; } .daka-ar-verdict small { color:#7dd3fc !important; }',
+                '.daka-ar-verdict strong { font-size:19px; margin-top:10px; padding-left:65px; } .daka-ar-verdict b { position:absolute; left:20px; top:27px; color:#fde68a !important; font-size:18px; }',
+                '.daka-ar-two-columns { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:18px; }',
+                '.daka-ar-two-columns article,.daka-ar-roadmap article,.daka-ar-tree-branches article { padding:16px; border:1px solid #dbe4ef; border-radius:9px; background:#fff !important; page-break-inside:avoid; }',
+                '.daka-ar-two-columns article:first-child { border-right:5px solid #059669; } .daka-ar-two-columns article:last-child { border-right:5px solid #dc2626; }',
+                '.daka-ar-priority { border-color:#fde68a; border-right-color:#ca8a04; background:#fffbeb !important; }',
+                '.daka-ar-modules { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; } .daka-ar-modules span { padding:7px 10px; border:1px solid #cbd5e1; border-radius:7px; background:#fff !important; }',
+                '.daka-ar-roadmap { display:grid; gap:14px; } .daka-ar-roadmap article { border-right:5px solid #0369a1; }',
+                '.daka-ar-tree { display:grid; grid-template-columns:150px 1fr; align-items:center; gap:24px; }',
+                '.daka-ar-tree-root { padding:24px 14px; border-radius:12px; background:#0f172a !important; color:#fff !important; text-align:center; font-weight:800; }',
+                '.daka-ar-tree-root small { display:block; margin-top:8px; color:#cbd5e1 !important; font-weight:400; }',
+                '.daka-ar-tree-branches { display:grid; gap:10px; } .daka-ar-tree-branches article { border-right:5px solid #0369a1; }',
                 '@page { margin:10mm; size:A4; }',
                 '@media print {',
                 '  body { background-color:#ffffff !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }',
@@ -10000,6 +10610,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 '<style>', cssRules, '<\/style>',
                 '<\/head>',
                 '<body>',
+                arDecisionPages,
                 '<div class="print-header">',
                 '  <h1 style="font-size:1.6rem;margin:0;color:#c4b5fd;">DAKA — تقرير استخبارات الأعمال<\/h1>',
                 '  <p style="color:#94a3b8;margin:5px 0;font-size:0.9rem;">قرارات عملية أعدتها فرق Daka المتخصصة<\/p>',
@@ -10150,165 +10761,14 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         const margin  = 12;
         const contentW = pageW - margin * 2;                // 186
 
-        // ════════════════════════════════════════════════════════
-        // PAGE DE COUVERTURE
-        // ════════════════════════════════════════════════════════
-        // Fond sombre
-        pdf.setFillColor(10, 15, 30);
-        pdf.rect(0, 0, pageW, pageH, 'F');
-
-        // Bande supérieure violette
-        pdf.setFillColor(108, 99, 255);
-        pdf.rect(0, 0, pageW, 4, 'F');
-
-        // Cercle décoratif flou (simulé)
-        pdf.setFillColor(108, 99, 255);
-        pdf.setGState(new pdf.GState({ opacity: 0.07 }));
-        pdf.circle(pageW - 30, 60, 55, 'F');
-        pdf.circle(30, pageH - 60, 40, 'F');
-        pdf.setGState(new pdf.GState({ opacity: 1 }));
-
-        // Logo / Titre
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(32);
-        pdf.setTextColor(255, 255, 255);
-        pdf.text('DAKA', pageW / 2, 55, { align: 'center' });
-
-        // Sous-titre
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(12);
-        pdf.setTextColor(148, 163, 184);
-        pdf.text(
-            isEn ? 'Business Intelligence Decision Report' : 'Dossier décisionnel d’intelligence business',
-            pageW / 2, 67, { align: 'center' }
+        // Three decision-first pages precede the selected detailed chapters.
+        var reportUrl = pdfDecisionModel.reportUrl;
+        var dakaLogoDataUrl = await loadDakaPdfLogoDataUrl();
+        var coverSectionLinks = drawDakaPdfExecutivePage(
+            pdf, pdfDecisionModel, validSections, dakaLogoDataUrl, pageW, pageH, margin
         );
-
-                // Ligne séparateur
-        pdf.setDrawColor(108, 99, 255);
-        pdf.setLineWidth(0.5);
-        pdf.line(margin, 75, pageW - margin, 75);
-
-        // Date
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(9);
-        pdf.setTextColor(100, 116, 139);
-        var coverDate = new Date().toLocaleDateString(isEn ? 'en-GB' : 'fr-FR', {
-            year: 'numeric', month: 'long', day: 'numeric'
-        });
-        pdf.text(coverDate, pageW / 2, 83, { align: 'center' });
-
-        // URL analysée
-        var reportUrl = (STATE.lastInputs
-            ? (STATE.lastInputs.techUrl || STATE.lastInputs.funnelUrl || STATE.lastInputs.url || '')
-            : '').trim();
-        if (reportUrl) {
-            pdf.setFontSize(8);
-            pdf.setTextColor(108, 99, 255);
-            pdf.text(reportUrl.substring(0, 70), pageW / 2, 91, { align: 'center' });
-        }
-
-        var selectedTeams = selectedModules.map(function (module) { return module.team; }).join('  •  ');
-        pdf.setFont('helvetica', 'bold');
-        pdf.setFontSize(7);
-        pdf.setTextColor(180, 175, 255);
-        pdf.text(
-            pdf.splitTextToSize(selectedTeams, contentW - 12),
-            pageW / 2, 99, { align: 'center' }
-        );
-
-        // Badges sections disponibles
-        var badgeStartY = 116;
-        var col = 0;
-        var row = 0;
-        var coverSectionLinks = [];
-        validSections.forEach(function (s, i) {
-            col = i % 2;
-            row = Math.floor(i / 2);
-            var bx = margin + col * (contentW / 2 + 4);
-            var by = badgeStartY + row * 18;
-            var bw = contentW / 2 - 4;
-            var bh = 13;
-
-            pdf.setFillColor(30, 40, 70);
-            pdf.setDrawColor(108, 99, 255);
-            pdf.setLineWidth(0.4);
-            pdf.roundedRect(bx, by, bw, bh, 3, 3, 'FD');
-
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(8);
-            pdf.setTextColor(180, 175, 255);
-            pdf.text('\u2713  ' + s.label, bx + 5, by + 8.5);
-            coverSectionLinks.push({ x: bx, y: by, w: bw, h: bh });
-        });
-
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(7);
-        pdf.setTextColor(148, 163, 184);
-        pdf.text(
-            isEn ? 'Click a section to open it directly' : 'Cliquez sur une section pour l’ouvrir directement',
-            pageW / 2, badgeStartY - 7, { align: 'center' }
-        );
-
-        // Stats résumé
-        var statsY = badgeStartY + (Math.ceil(validSections.length / 2)) * 18 + 15;
-        var statsData = [
-            {
-                label: isEn ? 'Sections' : 'Sections',
-                value: String(validSections.length),
-                color: [108, 99, 255]
-            },
-            {
-                label: isEn ? 'Keywords' : 'Mots-Clés',
-                value: hasKw
-                    ? String(exportKeywords.length)
-                    : '—',
-                color: [6, 182, 212]
-            },
-            {
-                label: isEn ? 'Tech Score' : 'Score Tech',
-                value: STATE.lastTechnicalResults
-                    ? String(STATE.lastTechnicalResults.score || STATE.lastTechnicalResults.seoScore || '—')
-                    : '—',
-                color: [16, 185, 129]
-            },
-            {
-                label: isEn ? 'Competitors' : 'Concurrents',
-                value: STATE.lastAnalysisResults && STATE.lastAnalysisResults.competitors
-                    ? String(STATE.lastAnalysisResults.competitors.length)
-                    : '—',
-                color: [245, 158, 11]
-            }
-        ];
-
-        var statBoxW = contentW / 4 - 3;
-        statsData.forEach(function (st, i) {
-            var sx = margin + i * (statBoxW + 4);
-            pdf.setFillColor(20, 28, 50);
-            pdf.setDrawColor(st.color[0], st.color[1], st.color[2]);
-            pdf.setLineWidth(0.3);
-            pdf.roundedRect(sx, statsY, statBoxW, 22, 3, 3, 'FD');
-
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(14);
-            pdf.setTextColor(st.color[0], st.color[1], st.color[2]);
-            pdf.text(st.value, sx + statBoxW / 2, statsY + 13, { align: 'center' });
-
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(6.5);
-            pdf.setTextColor(100, 116, 139);
-            pdf.text(st.label, sx + statBoxW / 2, statsY + 19, { align: 'center' });
-        });
-
-        // Pied de page couverture
-        pdf.setFillColor(108, 99, 255);
-        pdf.rect(0, pageH - 4, pageW, 4, 'F');
-        pdf.setFont('helvetica', 'normal');
-        pdf.setFontSize(7);
-        pdf.setTextColor(100, 116, 139);
-        pdf.text(
-            'Made by Daka  |  ' + (isEn ? 'Built for clearer decisions' : 'Conçu pour décider avec clarté'),
-            pageW / 2, pageH - 7, { align: 'center' }
-        );
+        drawDakaPdfRoadmapPage(pdf, pdfDecisionModel, pageW, pageH, margin);
+        drawDakaPdfMindMapPage(pdf, pdfDecisionModel, pageW, pageH, margin);
 
         // ════════════════════════════════════════════════════════
         // CAPTURE html2canvas — une page par section
@@ -10448,8 +10908,13 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             pdf.setPage(lastContentPage);
         }
 
-        // Add a final appendix only when it contains useful keyword data.
-        if (hasKw && selectedSectionKeys.has('keywords') && exportKeywords.length) {
+        // Fallback appendix only when the selected keyword chapter could not be composed.
+        if (
+            hasKw &&
+            selectedSectionKeys.has('keywords') &&
+            exportKeywords.length &&
+            !validSections.some(function (section) { return section.key === 'keywords'; })
+        ) {
         pdf.addPage();
         pdf.setFillColor(10, 15, 30);
         pdf.rect(0, 0, pageW, pageH, 'F');
