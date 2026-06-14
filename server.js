@@ -2842,7 +2842,7 @@ function buildCompetitorProofModel(ctx = {}) {
     lang = 'fr', cleanQuery = '', geoData = {}, source = 'unknown',
     enrichedCompetitors = [], mainKwData = null, realVolume = null,
     mergedData = {}, apifyData = {}, peopleAlsoAsk = [], relatedSearches = [],
-    userIntentContext = {}
+    userIntentContext = {}, competitorIntelligence = {}
   } = ctx;
   const L = truthLang(lang);
   const competitorUrls = enrichedCompetitors.map(c => c.url).filter(Boolean).slice(0, 8);
@@ -2869,8 +2869,8 @@ function buildCompetitorProofModel(ctx = {}) {
   ];
 
   const recommended = [
-    proofFact({ type: 'recommended', title: lang === 'en' ? 'Priority move' : lang === 'ar' ? 'القرار الاول' : 'Priorite concrete', value: mergedData.winningMove || null, source: 'Observed + deduced synthesis', confidence: 'MEDIUM', evidence: competitorUrls.slice(0, 3) }),
-    ...cleanProofArray(mergedData.actionRoadmap || [], 4).map((action, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Action ${i + 1}` : lang === 'ar' ? `الخطوة ${i + 1}` : `Action ${i + 1}`, value: action, source: 'Action roadmap', confidence: 'MEDIUM' }))
+    proofFact({ type: 'recommended', title: lang === 'en' ? 'Priority move' : lang === 'ar' ? 'القرار الاول' : 'Priorite concrete', value: competitorIntelligence?.finalAnswers?.positionToTake || null, source: 'Business decision synthesis', confidence: competitorIntelligence?.recommendedAttackAngle?.confidence || 'MEDIUM', evidence: competitorIntelligence?.recommendedAttackAngle?.evidenceLinks || competitorUrls.slice(0, 3) }),
+    ...cleanProofArray(competitorIntelligence?.priorityActions?.map(x => x.action) || [], 6).map((action, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Action ${i + 1}` : lang === 'ar' ? `الخطوة ${i + 1}` : `Action ${i + 1}`, value: action, source: 'Business decision synthesis', confidence: 'MEDIUM' }))
   ];
 
   const unavailable = [];
@@ -5000,7 +5000,9 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
     const fallback = {
         whatTheySell: compactBusinessText(competitor.snippet, 180) || labels.fallbackSell,
         primaryPromise: compactBusinessText(competitor.title, 160) || competitor.domain || labels.fallbackSell,
-        observedStrengths: compactBusinessText(competitor.snippet, 180) ? [compactBusinessText(competitor.snippet, 180)] : [],
+        observedStrengths: [],
+        structuralStrengths: [],
+        productSignals: compactBusinessText(competitor.snippet, 180) ? [compactBusinessText(competitor.snippet, 180)] : [],
         deducedWeaknesses: [],
         missingProofs: [],
         attackAngle: labels.attack,
@@ -5012,23 +5014,46 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
     if (!competitor.url || !isPublicHttpUrl(competitor.url)) return fallback;
 
     try {
-        const response = await axios.get(competitor.url, {
+        const requestOptions = {
             timeout: 3500,
             maxRedirects: 3,
             maxContentLength: 900000,
             headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0 Safari/537.36' }
-        });
-        if (typeof response.data !== 'string') return fallback;
+        };
+        const originUrl = new URL(competitor.url).origin + '/';
+        const requests = [axios.get(competitor.url, requestOptions)];
+        if (originUrl !== competitor.url) requests.push(axios.get(originUrl, requestOptions));
+        const fetched = await Promise.allSettled(requests);
+        let pageHtml = fetched[0]?.status === 'fulfilled' && typeof fetched[0].value?.data === 'string'
+            ? fetched[0].value.data : '';
+        let homeHtml = fetched[1]?.status === 'fulfilled' && typeof fetched[1].value?.data === 'string'
+            ? fetched[1].value.data : pageHtml;
+        if (!homeHtml && competitor.position === 1 && process.env.SCRAPEDOTOKEN) {
+            try {
+                const proxy = await axios.get('https://api.scrape.do/', {
+                    params: { token: process.env.SCRAPEDOTOKEN, url: originUrl },
+                    timeout: 5000,
+                    maxContentLength: 900000
+                });
+                homeHtml = typeof proxy.data === 'string' ? proxy.data : '';
+            } catch (proxyError) {
+                console.warn(`[CompetitorBusiness] leader fallback blocked: ${proxyError.message}`);
+            }
+        }
+        if (!pageHtml && !homeHtml) return fallback;
 
-        const $ = cheerio.load(response.data);
+        const $ = cheerio.load(pageHtml || homeHtml);
+        const $home = cheerio.load(homeHtml || pageHtml);
         $('script,style,noscript,svg').remove();
+        $home('script,style,noscript,svg').remove();
         const body = compactBusinessText($('body').text(), 9000).toLowerCase();
+        const brandBody = compactBusinessText($home('body').text(), 12000).toLowerCase();
         const headings = $('h1,h2').map((_, el) => compactBusinessText($(el).text(), 180)).get().filter(Boolean);
         const ctas = $('a,button').map((_, el) => compactBusinessText($(el).text(), 90)).get()
             .filter(text => /buy|shop|order|book|demo|trial|contact|quote|pricing|price|acheter|commander|reserver|devis|tarif|prix|contact|essai|اطلب|اشتر|تواصل|السعر/.test(text.toLowerCase()))
             .slice(0, 8);
         const pageHost = safeHostname(competitor.url);
-        const importantLinks = $('a[href]').map((_, el) => {
+        const importantLinks = $home('a[href]').map((_, el) => {
             try {
                 const href = new URL($(el).attr('href'), competitor.url).href;
                 const label = compactBusinessText($(el).text(), 100);
@@ -5037,7 +5062,7 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
             } catch { return null; }
         }).get().filter(Boolean);
         const evidenceLinks = [...new Map(
-            [{ url: competitor.url, label: competitor.domain }, ...importantLinks].map(x => [x.url, x])
+            [{ url: originUrl, label: competitor.domain }, { url: competitor.url, label: competitor.title }, ...importantLinks].map(x => [x.url, x])
         ).values()].slice(0, 8);
 
         const signals = {
@@ -5049,14 +5074,33 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
             hasContact: /contact|whatsapp|tel:|mailto:|demo|devis|تواصل|واتساب/.test(body),
             hasCoverage: /countries|country|pays|europe|worldwide|international|maroc|morocco|دول|بلدان/.test(body),
             hasFaq: /faq|frequently asked|questions frequentes|الأسئلة الشائعة/.test(body),
-            ctaCount: ctas.length
+            ctaCount: ctas.length,
+            hasMarketplaceModel: /marketplace|vendeur|seller|sell on|devenir vendeur|boutiques|stores|categories|catégories/.test(brandBody),
+            hasBroadCatalog: $home('a[href]').length >= 80 || /categories|catégories|toutes les boutiques|all products|nos produits/.test(brandBody),
+            hasOnSiteSearch: $home('input[type="search"],form[action*="search"],input[name*="search"],input[placeholder*="recher"]').length > 0,
+            hasAccountJourney: /mon compte|my account|login|connexion|sign in|create account/.test(brandBody),
+            hasPaymentOptions: /paiement|payment|cash on delivery|cod|carte bancaire|visa|mastercard|paypal/.test(brandBody),
+            brandHasDelivery: /delivery|shipping|livraison|expedition/.test(brandBody),
+            brandHasReturns: /return|refund|retour|remboursement/.test(brandBody),
+            hasMobileApp: /app store|google play|application mobile|mobile app/.test(brandBody),
+            hasLocalPresence: /maroc|morocco|casablanca|rabat|livraison au maroc/.test(brandBody) || safeHostname(originUrl).endsWith('.ma'),
+            internalLinkCount: $home('a[href]').length
         };
-        const observedStrengths = [];
-        if (signals.hasPrice) observedStrengths.push(lang === 'ar' ? 'يعرض إشارات سعر أو شروط دفع' : lang === 'en' ? 'Displays pricing or payment signals' : 'Affiche des signaux de prix ou de paiement');
-        if (signals.hasReviews) observedStrengths.push(lang === 'ar' ? 'يعرض أدلة أو آراء عملاء' : lang === 'en' ? 'Displays customer proof or reviews' : 'Affiche des preuves ou avis client');
-        if (signals.hasGuarantee) observedStrengths.push(lang === 'ar' ? 'يذكر ضمانا' : lang === 'en' ? 'Mentions a guarantee' : 'Mentionne une garantie');
-        if (signals.hasDelivery || signals.hasReturns) observedStrengths.push(lang === 'ar' ? 'يوضح التسليم أو الإرجاع' : lang === 'en' ? 'Explains delivery or returns' : 'Explique la livraison ou les retours');
-        if (signals.hasContact || signals.ctaCount) observedStrengths.push(lang === 'ar' ? 'يوفر مسارا واضحا للتواصل أو الشراء' : lang === 'en' ? 'Provides a clear contact or purchase path' : "Propose un parcours clair de contact ou d'achat");
+        const productSignals = [];
+        if (signals.hasPrice) productSignals.push(lang === 'ar' ? 'يعرض السعر أو شروط الدفع على العرض' : lang === 'en' ? 'Displays pricing or payment terms on the offer' : "Affiche le prix ou les conditions de paiement de l'offre");
+        if (signals.hasReviews) productSignals.push(lang === 'ar' ? 'يعرض آراء عملاء على العرض' : lang === 'en' ? 'Displays customer reviews on the offer' : "Affiche des avis client sur l'offre");
+        if (signals.hasGuarantee) productSignals.push(lang === 'ar' ? 'يذكر ضمانا على العرض' : lang === 'en' ? 'Mentions a guarantee on the offer' : "Mentionne une garantie sur l'offre");
+
+        const structuralStrengths = [];
+        if (signals.hasMarketplaceModel) structuralStrengths.push(lang === 'ar' ? 'نموذج سوق يجمع عدة بائعين وعروضا في مكان واحد' : lang === 'en' ? 'Marketplace model aggregating multiple sellers and offers' : 'Modele marketplace reunissant plusieurs vendeurs et offres');
+        if (signals.hasBroadCatalog) structuralStrengths.push(lang === 'ar' ? 'كتالوج واسع يسهل المقارنة ويغطي طلبات متعددة' : lang === 'en' ? 'Broad catalogue enabling comparison across many needs' : 'Catalogue large facilitant la comparaison et couvrant plusieurs besoins');
+        if (signals.hasOnSiteSearch) structuralStrengths.push(lang === 'ar' ? 'محرك بحث داخلي يسهل اكتشاف المنتجات' : lang === 'en' ? 'On-site search makes product discovery easier' : 'Recherche interne facilitant la decouverte des produits');
+        if (signals.hasPaymentOptions) structuralStrengths.push(lang === 'ar' ? 'خيارات دفع واضحة تقلل الاحتكاك عند الشراء' : lang === 'en' ? 'Clear payment options reduce purchase friction' : "Options de paiement claires reduisant la friction d'achat");
+        if (signals.brandHasDelivery) structuralStrengths.push(lang === 'ar' ? 'منظومة تسليم ظاهرة تدعم قرار الشراء' : lang === 'en' ? 'Visible delivery system supports purchase decisions' : "Dispositif de livraison visible soutenant la decision d'achat");
+        if (signals.brandHasReturns) structuralStrengths.push(lang === 'ar' ? 'سياسة إرجاع أو استرداد تقلل المخاطرة' : lang === 'en' ? 'Returns or refund policy reduces perceived risk' : 'Politique de retour ou remboursement reduisant le risque percu');
+        if (signals.hasAccountJourney) structuralStrengths.push(lang === 'ar' ? 'مسار حساب عميل يدعم الشراء المتكرر' : lang === 'en' ? 'Customer account journey supports repeat purchases' : 'Parcours compte client favorisant les achats repetes');
+        if (signals.hasLocalPresence) structuralStrengths.push(lang === 'ar' ? 'حضور محلي واضح في السوق المستهدف' : lang === 'en' ? 'Clear local presence in the target market' : 'Presence locale claire sur le marche cible');
+        if (signals.hasMobileApp) structuralStrengths.push(lang === 'ar' ? 'تطبيق جوال يوسع الوصول والاحتفاظ' : lang === 'en' ? 'Mobile app extends reach and retention' : 'Application mobile elargissant la portee et la retention');
 
         const missingProofs = [];
         if (!signals.hasReviews) missingProofs.push(labels.proof);
@@ -5070,12 +5114,33 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
         const value = {
             whatTheySell: headings[0] || compactBusinessText(competitor.snippet, 180) || labels.fallbackSell,
             primaryPromise: headings[1] || headings[0] || compactBusinessText(competitor.title, 160),
-            observedStrengths: observedStrengths.slice(0, 5),
+            observedStrengths: structuralStrengths.slice(0, 6),
+            structuralStrengths: structuralStrengths.slice(0, 6),
+            productSignals: productSignals.slice(0, 5),
+            siteLevelEvidence: {
+                url: originUrl,
+                strengths: structuralStrengths.slice(0, 6),
+                signals: {
+                    marketplace: signals.hasMarketplaceModel,
+                    broadCatalog: signals.hasBroadCatalog,
+                    onSiteSearch: signals.hasOnSiteSearch,
+                    accountJourney: signals.hasAccountJourney,
+                    paymentOptions: signals.hasPaymentOptions,
+                    delivery: signals.brandHasDelivery,
+                    returns: signals.brandHasReturns,
+                    mobileApp: signals.hasMobileApp,
+                    localPresence: signals.hasLocalPresence
+                }
+            },
+            productLevelEvidence: {
+                url: competitor.url,
+                signals: productSignals.slice(0, 5)
+            },
             deducedWeaknesses,
             missingProofs: missingProofs.slice(0, 4),
             attackAngle: missingProofs[0] || labels.attack,
             evidenceLinks,
-            confidence: observedStrengths.length >= 3 ? 'HIGH' : 'MEDIUM',
+            confidence: structuralStrengths.length >= 3 ? 'HIGH' : structuralStrengths.length ? 'MEDIUM' : 'LOW',
             observed: true,
             signals
         };
@@ -5119,13 +5184,80 @@ function dedupeBusinessActions(actions = []) {
     }).slice(0, 10);
 }
 
-function buildCompetitorDecisionIntelligence({ competitors = [], marketSources = [], mergedData = {}, lang = 'fr' } = {}) {
+function buildStrategicPosition({ leader = {}, query = '', geo = '', lang = 'fr' } = {}) {
+    const isMarketplace = Boolean(leader.signals?.hasMarketplaceModel);
+    if (lang === 'ar') {
+        return isMarketplace
+            ? `تموضع كبديل متخصص في "${query}" داخل ${geo}: نصيحة أوضح وضمانات أقوى وخدمة ما بعد البيع أكثر قربا من السوق العام.`
+            : `تموضع كعرض أكثر وضوحا وقابلية للإثبات في "${query}" داخل ${geo} مع شروط وضمانات ونتائج يسهل مقارنتها.`;
+    }
+    if (lang === 'en') {
+        return isMarketplace
+            ? `Position as the specialist alternative for "${query}" in ${geo}: clearer guidance, stronger guarantees, and closer support than a general marketplace.`
+            : `Position as the clearest and easiest-to-prove offer for "${query}" in ${geo}, with comparable terms, guarantees, and outcomes.`;
+    }
+    return isMarketplace
+        ? `Se positionner comme l'alternative specialisee sur "${query}" au ${geo} : conseil plus clair, garanties plus fortes et accompagnement plus proche qu'une marketplace generaliste.`
+        : `Se positionner comme l'offre la plus claire et la plus facile a prouver sur "${query}" au ${geo}, avec conditions, garanties et resultats comparables.`;
+}
+
+function buildDeterministicBusinessActions({ leader = {}, query = '', geo = '', proofs = [], weaknesses = [], lang = 'fr' } = {}) {
+    const leaderName = leader.domain || (lang === 'en' ? 'the leader' : lang === 'ar' ? 'المتصدر' : 'le leader');
+    const fr = [
+        { category: 'positionnement', action: `Publier une page comparative "${query}" expliquant clairement pourquoi choisir votre offre plutot que ${leaderName}.`, why: 'Transformer la comparaison naturelle des acheteurs en avantage lisible.', impact: 'HIGH', effort: 'MEDIUM', horizon: '7_DAYS' },
+        { category: 'preuve', action: `Ajouter des preuves verifiables adaptees au ${geo} : avis, photos reelles, garantie et conditions de retour.`, why: proofs[0] || 'Reduire le risque percu avant achat.', impact: 'HIGH', effort: 'LOW', horizon: '7_DAYS' },
+        { category: 'offre', action: `Clarifier prix total, livraison, retours et garantie pour "${query}" dans un seul bloc facile a comparer.`, why: weaknesses[0] || 'Rendre la decision plus simple que chez les concurrents generalistes.', impact: 'HIGH', effort: 'LOW', horizon: '7_DAYS' },
+        { category: 'conversion', action: `Construire un parcours court : choisir, verifier la livraison au ${geo}, payer ou contacter en moins de trois etapes.`, why: 'Reduire la friction commerciale.', impact: 'HIGH', effort: 'MEDIUM', horizon: '7_DAYS' },
+        { category: 'acquisition', action: `Creer des pages d'acquisition par besoin, usage et ville autour de "${query}" au ${geo}.`, why: 'Couvrir des demandes precises que les grandes plateformes traitent de facon generale.', impact: 'MEDIUM', effort: 'HIGH', horizon: '30_DAYS' },
+        { category: 'confiance', action: `Mettre en place un systeme continu de collecte d'avis et de preuves apres chaque vente.`, why: 'Construire un avantage de confiance cumulatif.', impact: 'HIGH', effort: 'MEDIUM', horizon: '30_DAYS' },
+        { category: 'offre', action: `Lancer une offre specialisee avec conseil, garantie et support apres-vente clairement superieurs a ${leaderName}.`, why: 'Eviter une guerre de catalogue ou de prix face au leader.', impact: 'HIGH', effort: 'HIGH', horizon: '30_DAYS' }
+    ];
+    if (lang === 'en') return fr.map(x => ({ ...x, action: ({
+        positionnement: `Publish a "${query}" comparison page explaining why buyers should choose your offer over ${leaderName}.`,
+        preuve: `Add verifiable proof for ${geo}: reviews, real photos, guarantee, and return terms.`,
+        offre: x.horizon === '7_DAYS' ? `Clarify total price, delivery, returns, and guarantee for "${query}" in one comparable block.` : `Launch a specialist offer with advice, guarantees, and after-sales support clearly stronger than ${leaderName}.`,
+        conversion: `Build a short journey: choose, verify delivery in ${geo}, and pay or contact in under three steps.`,
+        acquisition: `Create acquisition pages by need, use case, and city around "${query}" in ${geo}.`,
+        confiance: `Create a continuous post-purchase review and proof collection system.`
+    })[x.category], why: ({
+        positionnement: 'Turn natural buyer comparison into a clear advantage.',
+        preuve: 'Reduce perceived risk before purchase.',
+        offre: 'Make the decision simpler than on generalist competitors.',
+        conversion: 'Reduce commercial friction.',
+        acquisition: 'Cover precise demand that large platforms address broadly.',
+        confiance: 'Build a cumulative trust advantage.'
+    })[x.category] }));
+    if (lang === 'ar') return fr.map(x => ({ ...x, action: ({
+        positionnement: `أنشئ صفحة مقارنة حول "${query}" تشرح لماذا يختار العميل عرضك بدلا من ${leaderName}.`,
+        preuve: `أضف أدلة قابلة للتحقق في ${geo}: آراء وصور حقيقية وضمان وشروط إرجاع.`,
+        offre: x.horizon === '7_DAYS' ? `وضح السعر الإجمالي والتسليم والإرجاع والضمان لعرض "${query}" في كتلة واحدة قابلة للمقارنة.` : `أطلق عرضا متخصصا مع نصيحة وضمان ودعم بعد البيع أقوى بوضوح من ${leaderName}.`,
+        conversion: `ابن مسارا قصيرا: الاختيار والتحقق من التسليم في ${geo} والدفع أو التواصل في أقل من ثلاث خطوات.`,
+        acquisition: `أنشئ صفحات اكتساب حسب الحاجة والاستخدام والمدينة حول "${query}" في ${geo}.`,
+        confiance: `أنشئ نظاما مستمرا لجمع الآراء والأدلة بعد كل عملية بيع.`
+    })[x.category], why: ({
+        positionnement: 'حوّل مقارنة المشتري الطبيعية إلى ميزة واضحة.',
+        preuve: 'قلل المخاطر المتصورة قبل الشراء.',
+        offre: 'اجعل القرار أبسط من المنافسين العامين.',
+        conversion: 'قلل الاحتكاك التجاري.',
+        acquisition: 'غط طلبات دقيقة تعالجها المنصات الكبرى بشكل عام.',
+        confiance: 'ابن ميزة ثقة تراكمية.'
+    })[x.category] }));
+    return fr;
+}
+
+function buildCompetitorDecisionIntelligence({ competitors = [], marketSources = [], mergedData = {}, lang = 'fr', query = '', geo = '' } = {}) {
     const isAr = lang === 'ar', isEn = lang === 'en';
     const profiles = competitors.slice(0, 5).map(c => ({
-        domain: c.domain, title: c.title, url: c.url, position: c.position, competitorType: c.competitorType,
+        domain: c.domain, title: c.title, url: c.url, position: c.position, competitorType: c.competitorType, sitelinks: c.sitelinks,
+        dominance: c.dominance, commercialIntentScore: c.commercialIntentScore, geoMatched: c.geoMatched,
         whatTheySell: c.businessProfile?.whatTheySell || c.snippet,
         primaryPromise: c.businessProfile?.primaryPromise || c.title,
         observedStrengths: c.businessProfile?.observedStrengths || [],
+        structuralStrengths: c.businessProfile?.structuralStrengths || [],
+        productSignals: c.businessProfile?.productSignals || [],
+        siteLevelEvidence: c.businessProfile?.siteLevelEvidence || null,
+        productLevelEvidence: c.businessProfile?.productLevelEvidence || null,
+        signals: c.businessProfile?.signals || {},
         deducedWeaknesses: c.businessProfile?.deducedWeaknesses || [],
         missingProofs: c.businessProfile?.missingProofs || [],
         attackAngle: c.businessProfile?.attackAngle || mergedData.winningMove,
@@ -5136,33 +5268,70 @@ function buildCompetitorDecisionIntelligence({ competitors = [], marketSources =
     const evidenceLinks = [...new Set(profiles.flatMap(p => (p.evidenceLinks || []).map(x => x?.url || x)).filter(Boolean))].slice(0, 12);
     const allWeaknesses = [...new Set(profiles.flatMap(p => p.deducedWeaknesses || []))].slice(0, 8);
     const allProofs = [...new Set(profiles.flatMap(p => p.missingProofs || []))].slice(0, 8);
-    const leaderReasons = leader.observedStrengths?.length ? leader.observedStrengths : [leader.primaryPromise].filter(Boolean);
-    const rawActions = [
-        ...(mergedData.actionRoadmap || []).map(action => ({ category: 'acquisition', action })),
-        ...allProofs.slice(0, 2).map(action => ({ category: 'preuve', action })),
-        ...allWeaknesses.slice(0, 2).map(action => ({ category: 'confiance', action })),
-        { category: 'positionnement', action: mergedData.winningMove },
-        { category: 'offre', action: mergedData.productServiceAudit?.killShotFeature },
-        { category: 'message', action: mergedData.grandSlamOfferBlueprint?.theIrresistibleOffer },
-        { category: 'conversion', action: mergedData.duelComparison?.activationAARRR?.killShot }
-    ].filter(x => x.action).map((item, index) => ({
+    const leaderReasons = [...(leader.structuralStrengths || [])];
+    const leaderReasonDetails = leaderReasons.map(reason => ({
+        reason,
+        scope: 'brand_site',
+        type: 'observed',
+        confidence: leader.confidence || 'LOW',
+        evidenceLinks: [leader.siteLevelEvidence?.url || leader.url].filter(Boolean)
+    }));
+    if (leader.geoMatched) {
+        const reason = isAr ? 'حضور قوي وملائم جغرافيا للسوق المستهدف' : isEn ? 'Strong geographic relevance in the target market' : 'Forte pertinence geographique sur le marche cible';
+        leaderReasons.push(reason);
+        leaderReasonDetails.push({ reason, scope: 'market_visibility', type: 'deduced', confidence: 'MEDIUM', evidenceLinks: [leader.url].filter(Boolean) });
+    }
+    if (Number(leader.commercialIntentScore || 0) >= 50) {
+        const reason = isAr ? 'مسار تجاري واضح يساعد الزائر على الشراء' : isEn ? 'Clear commercial journey that helps visitors buy' : "Parcours commercial clair aidant le visiteur a acheter";
+        leaderReasons.push(reason);
+        leaderReasonDetails.push({ reason, scope: 'commercial_journey', type: 'deduced', confidence: 'MEDIUM', evidenceLinks: [leader.url].filter(Boolean) });
+    }
+    if (Number(leader.sitelinks || 0) > 0) {
+        const reason = isAr ? 'تظهر له عدة صفحات مهمة مباشرة، ما يعكس حضورا منظما وواسعا' : isEn ? 'Multiple important pages are surfaced directly, indicating broad and structured visibility' : 'Plusieurs pages importantes remontent directement, signe d’une visibilite large et structuree';
+        leaderReasons.push(reason);
+        leaderReasonDetails.push({ reason, scope: 'market_visibility', type: 'observed', confidence: 'MEDIUM', evidenceLinks: [leader.url].filter(Boolean) });
+    }
+    if (!leaderReasons.length && leader.domain) {
+        const reason = isAr ? 'يتصدر النتائج التجارية المرصودة، لكن أسباب تفوق العلامة تحتاج أدلة إضافية' : isEn ? 'Leads the observed commercial results, but its brand advantage needs more evidence' : 'Occupe la premiere place commerciale observee, mais son avantage de marque demande davantage de preuves';
+        leaderReasons.push(reason);
+        leaderReasonDetails.push({ reason, scope: 'market_visibility', type: 'deduced', confidence: 'LOW', evidenceLinks: [leader.url].filter(Boolean) });
+    }
+    const rawActions = buildDeterministicBusinessActions({ leader, query, geo, proofs: allProofs, weaknesses: allWeaknesses, lang }).map((item, index) => ({
         ...item,
-        why: allWeaknesses[index % Math.max(allWeaknesses.length, 1)] || leader.attackAngle || mergedData.winningMove,
-        impact: index < 3 ? 'HIGH' : 'MEDIUM',
-        effort: item.category === 'preuve' || item.category === 'message' ? 'LOW' : 'MEDIUM',
-        horizon: index < 5 ? '7_DAYS' : '30_DAYS',
         type: 'recommended',
         confidence: profiles.length ? 'MEDIUM' : 'LOW',
         evidenceLinks: evidenceLinks.slice(0, 4)
     }));
     const priorityActions = dedupeBusinessActions(rawActions);
     const marketPattern = mergedData.marketDynamics?.porterVerdict || mergedData.marketInsights?.notes || mergedData.marketInsights?.serpIntent;
-    const positionToTake = mergedData.winningMove || leader.attackAngle;
+    const positionToTake = buildStrategicPosition({ leader, query, geo, lang });
+    const demandSignals = [
+        ...(mergedData.marketInsights?.vocabulary || []),
+        ...(mergedData.marketInsights?.relatedSearches || []).map(x => x?.query || x)
+    ].filter(Boolean).slice(0, 8);
+    const buyerDecisionFactors = [
+        profiles.some(p => p.signals?.hasPrice) ? (lang === 'ar' ? 'السعر ووضوح التكلفة' : lang === 'en' ? 'Price and total-cost clarity' : 'Prix et clarte du cout total') : null,
+        profiles.some(p => p.signals?.brandHasDelivery) ? (lang === 'ar' ? 'التسليم والتغطية' : lang === 'en' ? 'Delivery and coverage' : 'Livraison et couverture') : null,
+        profiles.some(p => p.signals?.brandHasReturns) ? (lang === 'ar' ? 'الإرجاع وتقليل المخاطر' : lang === 'en' ? 'Returns and risk reduction' : 'Retours et reduction du risque') : null,
+        profiles.some(p => p.signals?.hasReviews) ? (lang === 'ar' ? 'الآراء والأدلة الاجتماعية' : lang === 'en' ? 'Reviews and social proof' : 'Avis et preuves sociales') : null
+    ].filter(Boolean);
     return {
+        productMarketStudy: {
+            subject: query,
+            geo,
+            observedDemandSignals: demandSignals,
+            observedOfferPatterns: [...new Set(profiles.map(p => p.whatTheySell).filter(Boolean))].slice(0, 5),
+            buyerDecisionFactors,
+            exploitableOpenings: allWeaknesses.slice(0, 5),
+            type: 'deduced',
+            confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW',
+            evidenceLinks
+        },
         marketVerdict: {
             currentLeader: leader.domain || null,
             whoWins: leader.domain || null,
             whyTheyWin: leaderReasons,
+            whyTheyWinDetails: leaderReasonDetails,
             marketPattern,
             type: 'deduced',
             confidence: leader.confidence || 'LOW',
@@ -5172,7 +5341,7 @@ function buildCompetitorDecisionIntelligence({ competitors = [], marketSources =
         recommendedAttackAngle: {
             whatCompetitorsSell: [...new Set(profiles.map(p => p.whatTheySell).filter(Boolean))].slice(0, 4),
             whatTheyDoNotProve: allProofs,
-            promiseToMake: mergedData.grandSlamOfferBlueprint?.theIrresistibleOffer || positionToTake,
+            promiseToMake: positionToTake,
             positioningStatement: positionToTake,
             proofsToAdd: allProofs,
             type: 'recommended',
@@ -5181,12 +5350,21 @@ function buildCompetitorDecisionIntelligence({ competitors = [], marketSources =
         },
         priorityActions,
         surveillance: {
-            competitors: competitors.slice(5, 10),
-            marketSources: marketSources.slice(0, 10)
+            competitors: competitors.slice(5, 10).map(x => ({
+                ...x,
+                role: lang === 'ar' ? 'منافس تجاري للمراقبة' : lang === 'en' ? 'Commercial competitor to monitor' : 'Concurrent commercial a surveiller',
+                recommendedUse: lang === 'ar' ? 'قارن عرضه وأسعاره وأدلته ومسار الشراء.' : lang === 'en' ? 'Compare its offer, pricing, proof, and purchase journey.' : "Comparer son offre, ses prix, ses preuves et son parcours d'achat."
+            })),
+            marketSources: marketSources.slice(0, 10).map(x => ({
+                ...x,
+                role: lang === 'ar' ? 'مصدر لفهم السوق وليس منافسا مباشرا' : lang === 'en' ? 'Market-learning source, not a direct competitor' : 'Source pour comprendre le marche, pas un concurrent direct',
+                recommendedUse: lang === 'ar' ? 'استخدمه لفهم لغة السوق والأسئلة والطلب، وليس كنموذج منافس.' : lang === 'en' ? 'Use it to understand market language, questions, and demand, not as a competitor model.' : 'Utiliser pour comprendre le langage, les questions et la demande du marche, pas comme modele concurrent.'
+            }))
         },
         finalAnswers: {
             whoWins: leader.domain || null,
             whyTheyWin: leaderReasons,
+            whyTheyWinDetails: leaderReasonDetails,
             weaknesses: allWeaknesses,
             positionToTake,
             thisWeek: priorityActions.filter(x => x.horizon === '7_DAYS'),
@@ -5236,7 +5414,7 @@ async function analyzeCompetitors(
     const contextKey = cleanProofText(JSON.stringify(userIntentContext || {}), 220) || 'no-context';
 
     // ── 3. CACHE ──────────────────────────────────────────────
-    const cacheKey = `warroom-v10.0:${cleanQuery}:${geoData.gl}:${langObj.code}:${contextKey}`;
+    const cacheKey = `warroom-v10.2:${cleanQuery}:${geoData.gl}:${langObj.code}:${contextKey}`;
 
     if (forceRefresh) {
         cache.cache.delete(cacheKey);
@@ -6476,7 +6654,9 @@ JSON uniquement :
         competitors: enrichedCompetitors,
         marketSources,
         mergedData,
-        lang: langObj.code
+        lang: langObj.code,
+        query: cleanQuery,
+        geo: geoData.location
     });
 
     // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
@@ -6614,11 +6794,15 @@ const proofModel = buildCompetitorProofModel({
 });
 const executiveBrief = buildExecutiveBrief({
     lang: langObj.code,
-    priority: mergedData.winningMove,
+    priority: competitorIntelligence.finalAnswers?.positionToTake,
     why: enrichedCompetitors[0]?.domain
-        ? `${enrichedCompetitors[0].domain} is the current observed leader for this request.`
+        ? (isAr
+            ? `${enrichedCompetitors[0].domain} هو المتصدر التجاري المرصود، وتم تفسير تفوقه من إشارات الموقع والعلامة وليس من وصف المنتج فقط.`
+            : isEn
+                ? `${enrichedCompetitors[0].domain} is the observed commercial leader; its advantage is explained from site and brand signals, not only the product description.`
+                : `${enrichedCompetitors[0].domain} est le leader commercial observe ; son avantage est explique par les signaux du site et de la marque, pas seulement par la fiche produit.`)
         : null,
-    actions: mergedData.actionRoadmap || [],
+    actions: competitorIntelligence.priorityActions?.slice(0, 5).map(x => x.action) || [],
     confidence: enrichedCompetitors.length ? 'MEDIUM' : 'LOW',
     evidenceCount: (apifyData?.links?.all || []).length + enrichedCompetitors.length
 });
