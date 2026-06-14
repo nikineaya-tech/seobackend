@@ -5201,6 +5201,23 @@ function buildStrategicPosition({ leader = {}, query = '', geo = '', lang = 'fr'
         : `Se positionner comme l'offre la plus claire et la plus facile a prouver sur "${query}" au ${geo}, avec conditions, garanties et resultats comparables.`;
 }
 
+function buildStrategicPromise({ leader = {}, query = '', geo = '', lang = 'fr' } = {}) {
+    const isMarketplace = Boolean(leader.signals?.hasMarketplaceModel);
+    if (lang === 'ar') {
+        return isMarketplace
+            ? `احصل على "${query}" في ${geo} مع نصيحة واضحة، وضمان قابل للتحقق، ودعم حقيقي بعد الشراء.`
+            : `اختر "${query}" بثقة بفضل سعر إجمالي واضح، وضمان موثق، وشروط تسليم وإرجاع سهلة الفهم.`;
+    }
+    if (lang === 'en') {
+        return isMarketplace
+            ? `Get "${query}" in ${geo} with clear guidance, a verifiable guarantee, and real after-sales support.`
+            : `Choose "${query}" with confidence through clear total pricing, verified guarantees, and understandable delivery and return terms.`;
+    }
+    return isMarketplace
+        ? `Obtenez "${query}" au ${geo} avec un conseil clair, une garantie verifiable et un vrai accompagnement apres l'achat.`
+        : `Choisissez "${query}" en confiance grace a un prix total clair, des garanties verifiables et des conditions de livraison et retour faciles a comprendre.`;
+}
+
 function buildDeterministicBusinessActions({ leader = {}, query = '', geo = '', proofs = [], weaknesses = [], lang = 'fr' } = {}) {
     const leaderName = leader.domain || (lang === 'en' ? 'the leader' : lang === 'ar' ? 'المتصدر' : 'le leader');
     const fr = [
@@ -5305,6 +5322,7 @@ function buildCompetitorDecisionIntelligence({ competitors = [], marketSources =
     const priorityActions = dedupeBusinessActions(rawActions);
     const marketPattern = mergedData.marketDynamics?.porterVerdict || mergedData.marketInsights?.notes || mergedData.marketInsights?.serpIntent;
     const positionToTake = buildStrategicPosition({ leader, query, geo, lang });
+    const promiseToMake = buildStrategicPromise({ leader, query, geo, lang });
     const demandSignals = [
         ...(mergedData.marketInsights?.vocabulary || []),
         ...(mergedData.marketInsights?.relatedSearches || []).map(x => x?.query || x)
@@ -5341,7 +5359,7 @@ function buildCompetitorDecisionIntelligence({ competitors = [], marketSources =
         recommendedAttackAngle: {
             whatCompetitorsSell: [...new Set(profiles.map(p => p.whatTheySell).filter(Boolean))].slice(0, 4),
             whatTheyDoNotProve: allProofs,
-            promiseToMake: positionToTake,
+            promiseToMake,
             positioningStatement: positionToTake,
             proofsToAdd: allProofs,
             type: 'recommended',
@@ -5414,7 +5432,7 @@ async function analyzeCompetitors(
     const contextKey = cleanProofText(JSON.stringify(userIntentContext || {}), 220) || 'no-context';
 
     // ── 3. CACHE ──────────────────────────────────────────────
-    const cacheKey = `warroom-v10.2:${cleanQuery}:${geoData.gl}:${langObj.code}:${contextKey}`;
+    const cacheKey = `warroom-v10.3:${cleanQuery}:${geoData.gl}:${langObj.code}:${contextKey}`;
 
     if (forceRefresh) {
         cache.cache.delete(cacheKey);

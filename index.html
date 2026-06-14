@@ -6522,6 +6522,11 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
             ? { brand_site:'Site and brand', market_visibility:'Market visibility', commercial_journey:'Commercial journey' }
             : { brand_site:'Site et marque', market_visibility:'Visibilite marche', commercial_journey:'Parcours commercial' };
     const attack = intel.recommendedAttackAngle || {};
+    const normalizeDecisionText = value => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const attackPromise = normalizeDecisionText(attack.promiseToMake) !== normalizeDecisionText(attack.positioningStatement)
+        ? attack.promiseToMake
+        : '';
+    const attackProofs = Array.isArray(attack.proofsToAdd) ? attack.proofsToAdd.filter(Boolean) : [];
     const actions = Array.isArray(intel.priorityActions) ? intel.priorityActions : [];
     const actionCards = (horizon) => actions.filter(x => x.horizon === horizon).map(action => `
         <article class="business-action-card">
@@ -6581,9 +6586,8 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
                 <span class="business-type business-type-recommended">${esc(labels.recommended)}</span>
                 <h2>${esc(labels.attack)}</h2>
                 <strong>${esc(attack.positioningStatement || labels.noData)}</strong>
-                <p>${esc(attack.promiseToMake || '')}</p>
-                <h5>${esc(labels.missing)}</h5>
-                ${list(attack.proofsToAdd, 'recommended')}
+                ${attackPromise ? `<p>${esc(attackPromise)}</p>` : ''}
+                ${attackProofs.length ? `<h5>${esc(labels.missing)}</h5>${list(attackProofs, 'recommended')}` : ''}
             </article>
         </div>
         <article class="business-study-card">
@@ -9235,6 +9239,25 @@ function getExportableReportText(el) {
         .trim();
 }
 
+function isDakaInsufficientExportText(value) {
+    const text = String(value || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+    if (!text) return true;
+    const exact = [
+        'donnees insuffisantes', 'donnée insuffisante', 'donnee insuffisante',
+        'non disponible', 'aucune donnee', 'aucun resultat', 'n/a',
+        'insufficient data', 'not available', 'no data', 'no results',
+        'لا توجد بيانات كافية', 'غير متوفر', 'لا توجد نتائج'
+    ];
+    return exact.some(function (label) {
+        const normalized = label.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+        return text === normalized || (text.length < 90 && text.includes(normalized));
+    });
+}
+
 function cloneReportHtmlForExport(el, exportOptions = {}) {
     if (!el) return '';
     const clone = el.cloneNode(true);
@@ -9266,6 +9289,14 @@ function cloneReportHtmlForExport(el, exportOptions = {}) {
     });
     clone.querySelectorAll('script, style, template, noscript, video, audio').forEach(function (node) {
         node.remove();
+    });
+    clone.querySelectorAll('.business-intel-empty').forEach(function (node) {
+        node.remove();
+    });
+    clone.querySelectorAll('article, section, .result-card, .card, .executive-block, .executive-action, .decision-proof-panel').forEach(function (node) {
+        if (!node.querySelector('a[href], img, canvas, svg, table') && isDakaInsufficientExportText(getExportableReportText(node))) {
+            node.remove();
+        }
     });
     return clone.innerHTML;
 }
@@ -9587,7 +9618,51 @@ function getDakaPdfCaptureBlocks(root) {
     return blocks;
 }
 
-function saveDakaPdfFile(pdf, filename) {
+function getDakaPdfSemanticBlocks(root) {
+    const seenBlocks = new Set();
+    return getDakaPdfCaptureBlocks(root)
+        .filter(function (node) { return !(node.tagName === 'HEADER' && node.parentElement === root); })
+        .map(function (node) {
+            const heading = node.querySelector('.daka-pdf-chapter-label strong, h1, h2, h3, h4, h5');
+            const title = String(heading?.innerText || heading?.textContent || '').replace(/\s+/g, ' ').trim();
+            const seenText = new Set();
+            const paragraphs = [];
+            node.querySelectorAll('p, li, .daka-pdf-table-field, .business-profile-summary > div, .business-answer-grid article, a[href]').forEach(function (item) {
+                if (
+                    item.matches('p, li, a[href]')
+                    && item.closest('.daka-pdf-table-field, .business-profile-summary > div, .business-answer-grid article')
+                ) return;
+                const text = getExportableReportText(item);
+                const normalized = text.toLowerCase();
+                if (!text || isDakaInsufficientExportText(text) || normalized === title.toLowerCase() || seenText.has(normalized)) return;
+                seenText.add(normalized);
+                paragraphs.push({
+                    text,
+                    bullet: item.tagName === 'LI',
+                    url: item.matches('a[href]') ? item.href : ''
+                });
+            });
+            if (!paragraphs.length) {
+                const fallback = getExportableReportText(node);
+                if (fallback && !isDakaInsufficientExportText(fallback) && fallback.toLowerCase() !== title.toLowerCase()) {
+                    paragraphs.push({ text: fallback, bullet: false, url: '' });
+                }
+            }
+            const identity = (title + '|' + paragraphs.map(function (item) { return item.text; }).join('|')).toLowerCase();
+            if (!identity || seenBlocks.has(identity)) return null;
+            seenBlocks.add(identity);
+            return {
+                title,
+                paragraphs,
+                chapter: node.classList.contains('daka-pdf-chapter-label') || node.classList.contains('daka-pdf-chapter')
+            };
+        })
+        .filter(function (block) {
+            return block && block.paragraphs.length > 0;
+        });
+}
+
+function saveDakaPdfFile(pdf, filename, downloadWindow = null) {
     const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 640;
     if (!isMobile) {
         pdf.save(filename);
@@ -9603,7 +9678,10 @@ function saveDakaPdfFile(pdf, filename) {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    setTimeout(function () { URL.revokeObjectURL(url); }, 12000);
+    if (downloadWindow && !downloadWindow.closed) {
+        try { downloadWindow.location.href = url; } catch (_) {}
+    }
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
 }
 
 function restorePdfExportDom(hiddenEls, openedDetails) {
@@ -9752,7 +9830,7 @@ function openDakaExportStudio(preselect = null) {
     document.body.classList.add('modal-open');
 }
 
-function confirmDakaExportStudio() {
+async function confirmDakaExportStudio() {
     const sections = [...document.querySelectorAll('#export-studio-sections input[data-export-section]:checked')].map(input => input.value);
     if (!sections.length) {
         return toast.warning(STATE.currentLang === 'ar' ? 'اختر قسماً واحداً على الأقل.' : STATE.currentLang === 'en' ? 'Select at least one section.' : 'Sélectionnez au moins une section.');
@@ -9765,8 +9843,27 @@ function confirmDakaExportStudio() {
     if (!Object.values(features).some(items => items.length)) {
         return toast.warning(STATE.currentLang === 'ar' ? 'اختر فصلاً واحداً على الأقل.' : STATE.currentLang === 'en' ? 'Select at least one chapter.' : 'Sélectionnez au moins un chapitre.');
     }
+    const confirmButton = document.getElementById('export-studio-confirm');
+    const confirmLabel = document.getElementById('export-confirm-label');
+    const originalLabel = confirmLabel?.textContent || '';
+    const isMobileExport = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 640;
+    let downloadWindow = null;
+    if (isMobileExport && STATE.currentLang !== 'ar') {
+        try { downloadWindow = window.open('', '_blank'); } catch (_) {}
+    }
+    if (confirmButton) confirmButton.disabled = true;
+    if (confirmLabel) {
+        confirmLabel.textContent = STATE.currentLang === 'ar'
+            ? 'جارٍ إعداد الملف...'
+            : STATE.currentLang === 'en' ? 'Preparing download...' : 'Préparation du téléchargement...';
+    }
     closeDakaExportStudio();
-    window.exportFullAnalysisToPDF({ prepared: true, sections, features, includeDetails: true });
+    try {
+        await window.exportFullAnalysisToPDF({ prepared: true, sections, features, includeDetails: true, downloadWindow });
+    } finally {
+        if (confirmButton) confirmButton.disabled = false;
+        if (confirmLabel) confirmLabel.textContent = originalLabel;
+    }
 }
 
 
@@ -9960,16 +10057,16 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
     }
 
     // ══════════════════════════════════════════════════════════════
-    // CAS FR / EN — html2canvas + jsPDF  (100% client, zéro serveur)
+    // CAS FR / EN — document PDF natif jsPDF (100% client, zéro serveur)
     // ══════════════════════════════════════════════════════════════
     const isEn = STATE.currentLang === 'en';
 
     // Vérifier libs
-    if (typeof window.jspdf === 'undefined' || typeof window.html2canvas === 'undefined') {
+    if (typeof window.jspdf === 'undefined') {
         toast.error(
             isEn
-                ? 'PDF libraries not loaded. Add jsPDF + html2canvas in your <head>.'
-                : 'Librairies PDF non chargées. Ajoutez jsPDF + html2canvas dans votre <head>.'
+                ? 'PDF library is not loaded. Please reload the page.'
+                : 'La librairie PDF n’est pas chargée. Rechargez la page.'
         );
         STATE.isExporting = false;
         if (btn) { btn.innerHTML = origHTML; btn.disabled = false; }
@@ -10221,13 +10318,8 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         for (var si = 0; si < validSections.length; si++) {
             var section = validSections[si];
 
-            // Page de séparation section
+            // Each selected expertise starts directly with useful content.
             sectionStartPages[si] = pdf.internal.getNumberOfPages() + 1;
-            pdf.addPage();
-            pdf.setFillColor(248, 250, 252);
-            pdf.rect(0, 0, pageW, pageH, 'F');
-
-            // Bande couleur selon section
             var sectionColors = [
                 [108, 99, 255],   // Competitors — violet
                 [16,  185, 129],  // Funnel      — vert
@@ -10235,52 +10327,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 [6,   182, 212],  // Keywords    — cyan
             ];
             var sc = sectionColors[si] || [108, 99, 255];
-            pdf.setFillColor(sc[0], sc[1], sc[2]);
-            pdf.rect(0, 0, pageW, 4, 'F');
-
-            // Numéro de section
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(9);
-            pdf.setTextColor(sc[0], sc[1], sc[2]);
-            pdf.text(
-                (isEn ? 'Section ' : 'Section ') + (si + 1) + ' / ' + validSections.length,
-                pageW / 2, 25, { align: 'center' }
-            );
-
-            // Titre section
-            pdf.setFontSize(22);
-            pdf.setTextColor(15, 23, 42);
-            pdf.text(section.label, pageW / 2, 40, { align: 'center' });
-
-            // Ligne
-            pdf.setDrawColor(sc[0], sc[1], sc[2]);
-            pdf.setLineWidth(0.4);
-            pdf.line(margin, 47, pageW - margin, 47);
-
-            // Message capture
-            pdf.setFont('helvetica', 'normal');
-            pdf.setFontSize(8);
-            pdf.setTextColor(71, 85, 105);
-            pdf.text(
-                isEn ? 'Selected chapters and evidence on the next page(s)' : 'Chapitres et preuves sélectionnés sur les pages suivantes',
-                pageW / 2, 56, { align: 'center' }
-            );
-            if (section.featureTitles?.length) {
-                var chapterY = 69;
-                section.featureTitles.forEach(function (chapter, chapterIndex) {
-                    pdf.setFillColor(255, 255, 255);
-                    pdf.setDrawColor(226, 232, 240);
-                    pdf.roundedRect(margin + 14, chapterY + chapterIndex * 13, contentW - 28, 9, 2, 2, 'FD');
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(7.5);
-                    pdf.setTextColor(51, 65, 85);
-                    pdf.text('\u2022  ' + chapter, margin + 19, chapterY + chapterIndex * 13 + 5.8);
-                });
-            }
-
-            // ── Capture haute définition, composant par composant ──
-            var mobilePdf = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 640;
-            var captureScale = mobilePdf ? 2 : 2.6;
+            // Build a stable document clone, then compose native PDF text.
             var fixedClone = createFixedPdfClone(section.el, {
                 includeDetails: includeDetails,
                 featureKeys: section.featureKeys,
@@ -10300,13 +10347,23 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             function preparePdfContentPage(addPage) {
                 if (addPage) pdf.addPage();
                 contentPage++;
-                currentY = margin;
+                currentY = margin + 11;
                 pdf.setFillColor(255, 255, 255);
                 pdf.rect(0, 0, pageW, pageH, 'F');
                 pdf.setFillColor(sc[0], sc[1], sc[2]);
                 pdf.rect(0, 0, pageW, 2, 'F');
                 pdf.setFillColor(sc[0], sc[1], sc[2]);
                 pdf.rect(0, pageH - 2, pageW, 2, 'F');
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(6.5);
+                pdf.setTextColor(71, 85, 105);
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(10);
+                pdf.setTextColor(15, 23, 42);
+                pdf.text(section.label, margin, margin + 2);
+                pdf.setDrawColor(226, 232, 240);
+                pdf.setLineWidth(0.25);
+                pdf.line(margin, margin + 5, pageW - margin, margin + 5);
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(6.5);
                 pdf.setTextColor(71, 85, 105);
@@ -10321,66 +10378,54 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 );
             }
 
-            // Preserve the section introduction page, then start content on a clean page.
+            // Start directly on a content page: no empty separator page.
+            var semanticBlocks = getDakaPdfSemanticBlocks(fixedClone);
+            if (!semanticBlocks.length) {
+                sectionStartPages[si] = null;
+                fixedClone.remove();
+                continue;
+            }
             preparePdfContentPage(true);
-            var captureBlocks = getDakaPdfCaptureBlocks(fixedClone);
 
             try {
-                for (var bi = 0; bi < captureBlocks.length; bi++) {
-                    var block = captureBlocks[bi];
-                    var blockCanvas = await html2canvas(block, {
-                        scale: captureScale,
-                        useCORS: true,
-                        allowTaint: false,
-                        backgroundColor: '#ffffff',
-                        logging: false,
-                        scrollX: 0,
-                        scrollY: 0,
-                        windowWidth: 794,
-                        windowHeight: Math.max(1123, block.scrollHeight || 0),
-                        onclone: function (doc) {
-                            doc.querySelectorAll('.daka-pdf-fixed-clone *').forEach(function (node) {
-                                node.style.setProperty('text-rendering', 'geometricPrecision', 'important');
-                                node.style.setProperty('-webkit-font-smoothing', 'antialiased', 'important');
-                            });
+                for (var bi = 0; bi < semanticBlocks.length; bi++) {
+                    var block = semanticBlocks[bi];
+                    if (block.title) {
+                        var titleLines = pdf.splitTextToSize(block.title, contentW - 14);
+                        var titleHeight = titleLines.length * (block.chapter ? 7 : 5.6) + 8;
+                        if (currentY + titleHeight > pageH - margin - 9) preparePdfContentPage(true);
+                        pdf.setFillColor(block.chapter ? 234 : 248, block.chapter ? 244 : 250, block.chapter ? 251 : 252);
+                        pdf.setDrawColor(block.chapter ? 3 : 203, block.chapter ? 105 : 213, block.chapter ? 161 : 225);
+                        pdf.roundedRect(margin, currentY, contentW, titleHeight, 2, 2, 'FD');
+                        pdf.setFillColor(sc[0], sc[1], sc[2]);
+                        pdf.rect(margin, currentY, 2.2, titleHeight, 'F');
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(block.chapter ? 13 : 10);
+                        pdf.setTextColor(15, 23, 42);
+                        pdf.text(titleLines, margin + 7, currentY + (block.chapter ? 8 : 6.5));
+                        currentY += titleHeight + 3;
+                    }
+                    for (var pi = 0; pi < block.paragraphs.length; pi++) {
+                        var paragraph = block.paragraphs[pi];
+                        var prefix = paragraph.bullet ? '\u2022  ' : '';
+                        var paragraphLines = pdf.splitTextToSize(prefix + paragraph.text, contentW - 12);
+                        var lineHeightMm = 4.6;
+                        var paragraphHeight = paragraphLines.length * lineHeightMm + 3;
+                        if (currentY + paragraphHeight > pageH - margin - 8) preparePdfContentPage(true);
+                        pdf.setFont('helvetica', paragraph.bullet ? 'normal' : 'normal');
+                        pdf.setFontSize(8.5);
+                        pdf.setTextColor(paragraph.url ? 3 : 51, paragraph.url ? 105 : 65, paragraph.url ? 161 : 85);
+                        pdf.text(paragraphLines, margin + 5, currentY + 4);
+                        if (paragraph.url && typeof pdf.link === 'function') {
+                            pdf.link(margin + 4, currentY, contentW - 8, paragraphHeight, { url: paragraph.url });
                         }
-                    });
-                    if (!blockCanvas || blockCanvas.width < 20 || blockCanvas.height < 20) continue;
-
-                    var blockHeightMm = blockCanvas.height * contentW / blockCanvas.width;
-                    var availableMm = pageH - margin - currentY;
-
-                    if (blockHeightMm <= printableH) {
-                        if (blockHeightMm > availableMm && currentY > margin) preparePdfContentPage(true);
-                        pdf.addImage(blockCanvas.toDataURL('image/png'), 'PNG', margin, currentY, contentW, blockHeightMm, undefined, 'NONE');
-                        currentY += blockHeightMm + 4;
-                    } else {
-                        var sourceY = 0;
-                        var pixelsPerMm = blockCanvas.width / contentW;
-                        while (sourceY < blockCanvas.height) {
-                            if (currentY > margin) preparePdfContentPage(true);
-                            var sourceHeight = Math.min(Math.floor(printableH * pixelsPerMm), blockCanvas.height - sourceY);
-                            var sliceCanvas = document.createElement('canvas');
-                            sliceCanvas.width = blockCanvas.width;
-                            sliceCanvas.height = sourceHeight;
-                            sliceCanvas.getContext('2d').drawImage(
-                                blockCanvas, 0, sourceY, blockCanvas.width, sourceHeight,
-                                0, 0, blockCanvas.width, sourceHeight
-                            );
-                            var sliceHeightMm = sourceHeight / pixelsPerMm;
-                            pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceHeightMm, undefined, 'NONE');
-                            sourceY += sourceHeight;
-                            currentY = margin + sliceHeightMm + 4;
-                            sliceCanvas.width = 1;
-                            sliceCanvas.height = 1;
-                        }
+                        currentY += paragraphHeight;
                     }
                     sectionCaptured = true;
-                    blockCanvas.width = 1;
-                    blockCanvas.height = 1;
+                    currentY += 3;
                 }
             } catch (captureErr) {
-                console.warn('[PDF] Capture composant échouée pour ' + section.label, captureErr);
+                console.warn('[PDF] Composition du document échouée pour ' + section.label, captureErr);
             } finally {
                 fixedClone.remove();
             }
@@ -10403,9 +10448,8 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             pdf.setPage(lastContentPage);
         }
 
-        // ════════════════════════════════════════════════════════
-        // PAGE FINALE — Récapitulatif + Keywords top 20
-        // ════════════════════════════════════════════════════════
+        // Add a final appendix only when it contains useful keyword data.
+        if (hasKw && selectedSectionKeys.has('keywords') && exportKeywords.length) {
         pdf.addPage();
         pdf.setFillColor(10, 15, 30);
         pdf.rect(0, 0, pageW, pageH, 'F');
@@ -10593,6 +10637,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             'Made by Daka  |  ' + (isEn ? 'Built for clearer decisions' : 'Conçu pour décider avec clarté'),
             pageW / 2, pageH - 7, { align: 'center' }
         );
+        }
 
         // Filigrane discret sur chaque page.
         var totalPdfPages = pdf.internal.getNumberOfPages();
@@ -10625,7 +10670,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             : 'report';
         var filename = 'Daka-Decision-Report-' + slug + '-' + Date.now() + '.pdf';
 
-        saveDakaPdfFile(pdf, filename);
+        saveDakaPdfFile(pdf, filename, exportOptions?.downloadWindow || null);
 
         toast.success(
             isEn
@@ -10635,6 +10680,9 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
     } catch (err) {
         console.error('[PDF FR/EN]', err);
+        if (exportOptions?.downloadWindow && !exportOptions.downloadWindow.closed) {
+            try { exportOptions.downloadWindow.close(); } catch (_) {}
+        }
 
         restorePdfExportDom(hiddenEls, openedDetails);
         hiddenEls = [];
