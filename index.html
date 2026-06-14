@@ -383,6 +383,26 @@ html, body {
 })();
 </script>
 <!-- DAKA_VIDEO_PATCH_END -->
+<style>
+.business-intel-shell{margin:22px 0 28px;padding:clamp(16px,2.5vw,28px);border:1px solid rgba(56,189,248,.22);border-radius:18px;background:#071120;color:#f8fafc;box-shadow:0 18px 45px rgba(0,0,0,.22)}
+.business-intel-kicker,.business-plan h3,.business-profiles h3{display:flex;align-items:center;gap:9px;color:#7dd3fc;font-weight:800;letter-spacing:0;font-size:.82rem;margin-bottom:14px}
+.business-verdict-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:14px}
+.business-verdict-card,.business-attack-card,.business-plan,.business-profiles,.business-watch{border:1px solid rgba(148,163,184,.16);border-radius:14px;background:#0c1728;padding:18px}
+.business-verdict-card h2,.business-attack-card h2{font-size:clamp(1.05rem,2vw,1.35rem);line-height:1.35;margin:12px 0;color:#fff}
+.business-leader{display:block;color:#67e8f9;font-size:clamp(1.15rem,2.3vw,1.65rem);overflow-wrap:anywhere}
+.business-type,.business-category,.business-confidence{display:inline-flex;padding:4px 8px;border-radius:6px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:0}
+.business-type-deduced{color:#fde68a;background:rgba(245,158,11,.12)}.business-type-recommended{color:#c4b5fd;background:rgba(139,92,246,.14)}
+.business-intel-list{display:grid;gap:7px;margin:12px 0;padding:0;list-style:none}.business-intel-list li{position:relative;padding-inline-start:17px;color:#cbd5e1;font-size:.82rem;line-height:1.55}.business-intel-list li:before{content:"";position:absolute;inset-inline-start:0;top:.58em;width:6px;height:6px;border-radius:50%;background:#22d3ee}
+.business-intel-deduced li:before{background:#f59e0b}.business-intel-recommended li:before{background:#a78bfa}.business-intel-empty{color:#64748b;font-size:.8rem}
+.business-intel-evidence{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}.business-intel-evidence a,.business-watch a{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:6px 9px;border:1px solid rgba(56,189,248,.18);border-radius:7px;color:#7dd3fc;font-size:.7rem;text-decoration:none;overflow-wrap:anywhere}
+.business-intel-evidence a:hover,.business-watch a:hover{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.42)}
+.business-plan,.business-profiles,.business-watch{margin-top:14px}.business-plan-column+ .business-plan-column{margin-top:16px}.business-plan-column h4{margin:0 0 9px;color:#e2e8f0;font-size:.88rem}
+.business-actions-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.business-action-card{min-width:0;border:1px solid rgba(148,163,184,.14);border-radius:10px;background:#091426;padding:13px}.business-action-card>div,.business-action-card footer{display:flex;justify-content:space-between;gap:6px;flex-wrap:wrap}.business-action-card strong{display:block;margin:10px 0 6px;font-size:.83rem;line-height:1.45;color:#f8fafc}.business-action-card p,.business-action-card footer{font-size:.68rem;line-height:1.45;color:#94a3b8}.business-category{color:#bbf7d0;background:rgba(34,197,94,.12)}.business-confidence{color:#bfdbfe;background:rgba(59,130,246,.12)}
+.business-profiles-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.business-profile-card{min-width:0;border:1px solid rgba(148,163,184,.14);border-radius:12px;background:#091426;overflow:hidden}.business-profile-card header{display:flex;align-items:center;gap:10px;padding:14px}.business-profile-card h4{margin:0;color:#fff;font-size:.9rem;overflow-wrap:anywhere}.business-profile-card small{color:#64748b;font-size:.65rem}.business-rank{display:grid;place-items:center;flex:0 0 30px;height:30px;border-radius:8px;background:#172554;color:#93c5fd;font-weight:900}.business-profile-link{margin-inline-start:auto;color:#7dd3fc}.business-profile-summary{display:grid;gap:8px;padding:0 14px 14px}.business-profile-summary div{display:grid;gap:3px}.business-profile-summary span,.business-profile-details h5{color:#64748b;font-size:.65rem;text-transform:uppercase;font-weight:800}.business-profile-summary strong{color:#cbd5e1;font-size:.77rem;line-height:1.45}.business-profile-angle{border-inline-start:2px solid #a78bfa;padding-inline-start:9px}.business-profile-card details{border-top:1px solid rgba(148,163,184,.12)}.business-profile-card summary,.business-watch summary{cursor:pointer;padding:11px 14px;color:#c4b5fd;font-size:.73rem;font-weight:800}.business-profile-details{padding:0 14px 14px}.business-watch>div{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.business-answer-grid{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px!important}.business-answer-grid article{min-width:0;padding:12px;border:1px solid rgba(148,163,184,.12);border-radius:9px;background:#091426}.business-answer-grid article strong{display:block;color:#f8fafc;font-size:.78rem;margin-bottom:6px}.business-answer-grid article p{margin:0;color:#cbd5e1;font-size:.74rem;line-height:1.5}
+@media(max-width:900px){.business-verdict-grid,.business-profiles-grid{grid-template-columns:1fr}.business-actions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.business-intel-shell{margin-inline:0;padding:12px;border-radius:12px}.business-verdict-card,.business-attack-card,.business-plan,.business-profiles,.business-watch{padding:13px}.business-actions-grid,.business-answer-grid{grid-template-columns:1fr}.business-profile-card header{align-items:flex-start}.business-intel-evidence a{width:100%}}
+</style>
 </head>
 <style>
     .decision-proof-panel { border-radius: 18px; }
@@ -6444,6 +6464,125 @@ function renderFunnelChart(flowData) {
 // ═══════════════════════════════════════════════════════════════════
 // 🎯 TAB 1: COMPETITORS ANALYSIS — VERSION FIXÉE + FILTRAGE V2
 // ═══════════════════════════════════════════════════════════════════
+function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}) {
+    const intel = data?.competitorIntelligence;
+    if (!intel || typeof intel !== 'object') return '';
+    const esc = typeof escapeHtml === 'function' ? escapeHtml : (v => String(v || ''));
+    const dir = isAr ? 'rtl' : 'ltr';
+    const labels = isAr ? {
+        kicker: 'قرار السوق', verdict: 'من يتصدر السوق ولماذا؟', attack: 'زاوية الهجوم الموصى بها',
+        actions: 'خطة التنفيذ ذات الأولوية', week: 'هذا الأسبوع', month: 'خلال 30 يوما',
+        profiles: 'ملفات المنافسين الخمسة الرئيسيين', watch: 'مراقبة السوق',
+        observed: 'ملاحظ', deduced: 'مستنتج', recommended: 'موصى به', confidence: 'الثقة',
+        strengths: 'نقاط القوة الملاحظة', weaknesses: 'الثغرات المستنتجة', missing: 'الأدلة غير الواضحة',
+        sell: 'ما الذي يبيعه', promise: 'وعده الرئيسي', angle: 'فرصة الهجوم', proof: 'مصادر قابلة للتحقق',
+        position: 'عبارة التموضع', answers: 'الإجابات الحاسمة السبع', noData: 'لا توجد بيانات كافية'
+    } : isEn ? {
+        kicker: 'Market decision', verdict: 'Who leads the market, and why?', attack: 'Recommended attack angle',
+        actions: 'Priority execution plan', week: 'This week', month: 'Next 30 days',
+        profiles: 'Top 5 competitor business profiles', watch: 'Market watch',
+        observed: 'Observed', deduced: 'Deduced', recommended: 'Recommended', confidence: 'Confidence',
+        strengths: 'Observed strengths', weaknesses: 'Deduced openings', missing: 'Insufficiently proven',
+        sell: 'What they sell', promise: 'Primary promise', angle: 'Attack opening', proof: 'Verifiable sources',
+        position: 'Positioning statement', answers: 'Seven decisive answers', noData: 'Insufficient data'
+    } : {
+        kicker: 'Decision marche', verdict: 'Qui domine le marche, et pourquoi ?', attack: "Angle d'attaque recommande",
+        actions: "Plan d'execution prioritaire", week: 'Cette semaine', month: 'Dans les 30 prochains jours',
+        profiles: 'Fiches business des 5 concurrents principaux', watch: 'Surveillance du marche',
+        observed: 'Observe', deduced: 'Deduit', recommended: 'Recommande', confidence: 'Confiance',
+        strengths: 'Forces observees', weaknesses: 'Ouvertures deduites', missing: 'Preuves insuffisantes',
+        sell: 'Ce qu’il vend', promise: 'Promesse principale', angle: "Angle d'attaque", proof: 'Sources consultables',
+        position: 'Phrase de positionnement', answers: 'Les sept reponses decisives', noData: 'Donnees insuffisantes'
+    };
+    const list = (items, tone = 'observed') => {
+        const arr = Array.isArray(items) ? items.filter(Boolean) : [];
+        return arr.length ? `<ul class="business-intel-list business-intel-${tone}">${arr.map(x => `<li>${esc(typeof x === 'string' ? x : x.action || x.title || '')}</li>`).join('')}</ul>` : `<p class="business-intel-empty">${esc(labels.noData)}</p>`;
+    };
+    const evidence = (links) => {
+        const arr = Array.isArray(links) ? links.filter(Boolean) : [];
+        return arr.length ? `<div class="business-intel-evidence">${arr.slice(0, 5).map((link, i) => {
+            const url = typeof link === 'string' ? link : link.url;
+            let name = typeof link === 'string' ? link : (link.label || link.url);
+            try { if (typeof link === 'string') name = new URL(link).hostname; } catch (_) {}
+            return `<a href="${esc(url)}" target="_blank" rel="noopener" data-no-collapse="true"><i class="fas fa-arrow-up-right-from-square"></i>${esc(name || `Source ${i + 1}`)}</a>`;
+        }).join('')}</div>` : '';
+    };
+    const verdict = intel.marketVerdict || {};
+    const attack = intel.recommendedAttackAngle || {};
+    const actions = Array.isArray(intel.priorityActions) ? intel.priorityActions : [];
+    const actionCards = (horizon) => actions.filter(x => x.horizon === horizon).map(action => `
+        <article class="business-action-card">
+            <div><span class="business-category">${esc(action.category || labels.recommended)}</span><span class="business-confidence">${esc(action.confidence || 'MEDIUM')}</span></div>
+            <strong>${esc(action.action)}</strong>
+            <p>${esc(action.why || '')}</p>
+            <footer><span>Impact: ${esc(action.impact || 'MEDIUM')}</span><span>Effort: ${esc(action.effort || 'MEDIUM')}</span></footer>
+        </article>`).join('');
+    const profiles = (intel.competitorProfiles || []).map((p, index) => `
+        <article class="business-profile-card">
+            <header>
+                <span class="business-rank">#${index + 1}</span>
+                <div><h4>${esc(p.domain || p.title)}</h4><small>${esc(labels.confidence)}: ${esc(p.confidence || 'LOW')}</small></div>
+                ${p.url ? `<a class="business-profile-link" href="${esc(p.url)}" target="_blank" rel="noopener" data-no-collapse="true" aria-label="${esc(labels.proof)}"><i class="fas fa-arrow-up-right-from-square"></i></a>` : ''}
+            </header>
+            <div class="business-profile-summary">
+                <div><span>${esc(labels.sell)}</span><strong>${esc(p.whatTheySell || labels.noData)}</strong></div>
+                <div><span>${esc(labels.promise)}</span><strong>${esc(p.primaryPromise || labels.noData)}</strong></div>
+                <div class="business-profile-angle"><span>${esc(labels.angle)}</span><strong>${esc(p.attackAngle || labels.noData)}</strong></div>
+            </div>
+            <details>
+                <summary>${esc(isAr ? 'عرض الأدلة والتفاصيل' : isEn ? 'View evidence and details' : 'Voir les preuves et details')}</summary>
+                <div class="business-profile-details">
+                    <section><h5>${esc(labels.observed)} · ${esc(labels.strengths)}</h5>${list(p.observedStrengths, 'observed')}</section>
+                    <section><h5>${esc(labels.deduced)} · ${esc(labels.weaknesses)}</h5>${list(p.deducedWeaknesses, 'deduced')}</section>
+                    <section><h5>${esc(labels.missing)}</h5>${list(p.missingProofs, 'recommended')}</section>
+                    ${evidence(p.evidenceLinks)}
+                </div>
+            </details>
+        </article>`).join('');
+    const surveillance = intel.surveillance || {};
+    const watchItems = [...(surveillance.competitors || []), ...(surveillance.marketSources || [])].slice(0, 10);
+    const finalAnswers = intel.finalAnswers || {};
+    const answerRows = [
+        [isAr ? 'من يتصدر؟' : isEn ? 'Who wins?' : 'Qui gagne ?', finalAnswers.whoWins],
+        [isAr ? 'لماذا؟' : isEn ? 'Why do they win?' : 'Pourquoi ?', finalAnswers.whyTheyWin],
+        [isAr ? 'أين نقاط الضعف؟' : isEn ? 'Where are the openings?' : 'Ou sont les faiblesses ?', finalAnswers.weaknesses],
+        [isAr ? 'ما الموقع الذي يجب اتخاذه؟' : isEn ? 'What position should you take?' : 'Quelle position prendre ?', finalAnswers.positionToTake],
+        [isAr ? 'ماذا تفعل هذا الأسبوع؟' : isEn ? 'What should happen this week?' : 'Que faire cette semaine ?', (finalAnswers.thisWeek || []).map(x => x.action)],
+        [isAr ? 'ماذا تبني خلال 30 يوما؟' : isEn ? 'What should be built in 30 days?' : 'Que construire sous 30 jours ?', (finalAnswers.next30Days || []).map(x => x.action)],
+        [isAr ? 'ما الأدلة الناقصة؟' : isEn ? 'Which proof is still missing?' : 'Quelles preuves manquent ?', finalAnswers.missingProofs]
+    ];
+    return `
+    <section class="business-intel-shell" data-export-feature="summary" dir="${dir}">
+        <div class="business-intel-kicker"><i class="fas fa-chess-queen"></i>${esc(labels.kicker)}</div>
+        <div class="business-verdict-grid">
+            <article class="business-verdict-card">
+                <span class="business-type business-type-deduced">${esc(labels.deduced)}</span>
+                <h2>${esc(labels.verdict)}</h2>
+                <strong class="business-leader">${esc(verdict.currentLeader || labels.noData)}</strong>
+                ${list(verdict.whyTheyWin, 'observed')}
+                <p>${esc(verdict.marketPattern || '')}</p>
+                ${evidence(verdict.evidenceLinks)}
+            </article>
+            <article class="business-attack-card">
+                <span class="business-type business-type-recommended">${esc(labels.recommended)}</span>
+                <h2>${esc(labels.attack)}</h2>
+                <strong>${esc(attack.positioningStatement || labels.noData)}</strong>
+                <p>${esc(attack.promiseToMake || '')}</p>
+                <h5>${esc(labels.missing)}</h5>
+                ${list(attack.proofsToAdd, 'recommended')}
+            </article>
+        </div>
+        <div class="business-plan">
+            <h3><i class="fas fa-list-check"></i>${esc(labels.actions)}</h3>
+            <div class="business-plan-column"><h4>${esc(labels.week)}</h4><div class="business-actions-grid">${actionCards('7_DAYS') || `<p class="business-intel-empty">${esc(labels.noData)}</p>`}</div></div>
+            <div class="business-plan-column"><h4>${esc(labels.month)}</h4><div class="business-actions-grid">${actionCards('30_DAYS') || `<p class="business-intel-empty">${esc(labels.noData)}</p>`}</div></div>
+        </div>
+        <div class="business-profiles"><h3><i class="fas fa-building"></i>${esc(labels.profiles)}</h3><div class="business-profiles-grid">${profiles}</div></div>
+        <details class="business-watch business-final-answers"><summary><i class="fas fa-circle-check"></i>${esc(labels.answers)}</summary><div class="business-answer-grid">${answerRows.map(([question, answer]) => `<article><strong>${esc(question)}</strong>${Array.isArray(answer) ? list(answer, 'deduced') : `<p>${esc(answer || labels.noData)}</p>`}</article>`).join('')}</div></details>
+        ${watchItems.length ? `<details class="business-watch"><summary><i class="fas fa-binoculars"></i>${esc(labels.watch)} (${watchItems.length})</summary><div>${watchItems.map(x => `<a href="${esc(x.url || '#')}" target="_blank" rel="noopener" data-no-collapse="true">${esc(x.domain || x.title || x.url)}</a>`).join('')}</div></details>` : ''}
+    </section>`;
+}
+
 async function displayCompetitorsResults(data) {
 
     const container = document.getElementById('resultsCompetitors');
@@ -7633,6 +7772,7 @@ console.log('DECISION LAYER PREVIEW:', decisionLayerHtml?.slice(0, 300));
 const reportLabels = getReportLabels({ isAr, isEn });
     container.innerHTML = `
         ${renderExecutiveSummary(data, 'competitors', { isAr, isEn })}
+        ${renderCompetitorDecisionLayer(data, { isAr, isEn })}
         ${renderReportSection('market', reportLabels.market, reportLabels.marketSub, 'fa-compass', `
             ${kgHtml}
             ${decisionProofHtml}

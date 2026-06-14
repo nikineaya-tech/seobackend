@@ -4956,6 +4956,246 @@ function geoMatchDetailsV2(rawUrl = '', geoData = {}, title = '', snippet = '') 
         gl
     };
 }
+
+const COMPETITOR_BUSINESS_CACHE = new Map();
+const COMPETITOR_BUSINESS_CACHE_TTL = 12 * 60 * 60 * 1000;
+
+function compactBusinessText(value, max = 220) {
+    return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+function competitorBusinessLabels(lang = 'fr') {
+    if (lang === 'ar') return {
+        fallbackSell: 'عرض تجاري مرتبط بطلب السوق',
+        weakTrust: 'الأدلة على الثقة والضمانات غير واضحة في الصفحة التي تمت معاينتها',
+        weakPrice: 'الأسعار وشروط الدفع غير واضحة في الصفحة التي تمت معاينتها',
+        weakDelivery: 'التسليم والإرجاع غير موضحين بما يكفي في الصفحة التي تمت معاينتها',
+        attack: 'اجعل عرضك أوضح وأكثر قابلية للإثبات وأسهل في المقارنة',
+        proof: 'أضف أدلة عملاء وشروطا واضحة وضمانا قابلا للتحقق'
+    };
+    if (lang === 'en') return {
+        fallbackSell: 'Commercial offer related to the observed market demand',
+        weakTrust: 'Trust proof and guarantees are not clear on the inspected page',
+        weakPrice: 'Pricing and payment terms are not clear on the inspected page',
+        weakDelivery: 'Delivery and returns are not sufficiently explained on the inspected page',
+        attack: 'Make your offer clearer, easier to prove, and easier to compare',
+        proof: 'Add customer proof, clear terms, and a verifiable guarantee'
+    };
+    return {
+        fallbackSell: 'Offre commerciale liee a la demande observee',
+        weakTrust: "Les preuves de confiance et garanties ne sont pas claires sur la page inspectee",
+        weakPrice: "Les prix et conditions de paiement ne sont pas clairs sur la page inspectee",
+        weakDelivery: "La livraison et les retours ne sont pas assez expliques sur la page inspectee",
+        attack: "Rendre l'offre plus claire, plus prouvable et plus facile a comparer",
+        proof: "Ajouter des preuves client, des conditions claires et une garantie verifiable"
+    };
+}
+
+async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
+    const labels = competitorBusinessLabels(lang);
+    const cacheKey = String(competitor.url || competitor.domain || '').toLowerCase();
+    const cached = COMPETITOR_BUSINESS_CACHE.get(cacheKey);
+    if (cached && Date.now() - cached.savedAt < COMPETITOR_BUSINESS_CACHE_TTL) return cached.value;
+
+    const fallback = {
+        whatTheySell: compactBusinessText(competitor.snippet, 180) || labels.fallbackSell,
+        primaryPromise: compactBusinessText(competitor.title, 160) || competitor.domain || labels.fallbackSell,
+        observedStrengths: compactBusinessText(competitor.snippet, 180) ? [compactBusinessText(competitor.snippet, 180)] : [],
+        deducedWeaknesses: [],
+        missingProofs: [],
+        attackAngle: labels.attack,
+        evidenceLinks: [competitor.url].filter(Boolean),
+        confidence: 'LOW',
+        observed: false,
+        signals: {}
+    };
+    if (!competitor.url || !isPublicHttpUrl(competitor.url)) return fallback;
+
+    try {
+        const response = await axios.get(competitor.url, {
+            timeout: 3500,
+            maxRedirects: 3,
+            maxContentLength: 900000,
+            headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/124.0 Safari/537.36' }
+        });
+        if (typeof response.data !== 'string') return fallback;
+
+        const $ = cheerio.load(response.data);
+        $('script,style,noscript,svg').remove();
+        const body = compactBusinessText($('body').text(), 9000).toLowerCase();
+        const headings = $('h1,h2').map((_, el) => compactBusinessText($(el).text(), 180)).get().filter(Boolean);
+        const ctas = $('a,button').map((_, el) => compactBusinessText($(el).text(), 90)).get()
+            .filter(text => /buy|shop|order|book|demo|trial|contact|quote|pricing|price|acheter|commander|reserver|devis|tarif|prix|contact|essai|اطلب|اشتر|تواصل|السعر/.test(text.toLowerCase()))
+            .slice(0, 8);
+        const pageHost = safeHostname(competitor.url);
+        const importantLinks = $('a[href]').map((_, el) => {
+            try {
+                const href = new URL($(el).attr('href'), competitor.url).href;
+                const label = compactBusinessText($(el).text(), 100);
+                return safeHostname(href) === pageHost && /pricing|price|tarif|prix|service|solution|product|produit|offer|offre|guarantee|garantie|delivery|livraison|return|retour|case|client|testimonial|avis/.test(`${href} ${label}`.toLowerCase())
+                    ? { url: href, label: label || href } : null;
+            } catch { return null; }
+        }).get().filter(Boolean);
+        const evidenceLinks = [...new Map(
+            [{ url: competitor.url, label: competitor.domain }, ...importantLinks].map(x => [x.url, x])
+        ).values()].slice(0, 8);
+
+        const signals = {
+            hasPrice: /(?:[$€£]|mad|dh|usd|eur)\s?\d|\d[\d\s.,]*(?:[$€£]|mad|dh|usd|eur)|pricing|tarif|prix/.test(body),
+            hasGuarantee: /guarantee|garantie|satisfait ou rembourse|money back|ضمان/.test(body),
+            hasDelivery: /delivery|shipping|livraison|expedition|توصيل|شحن/.test(body),
+            hasReturns: /return|refund|retour|remboursement|إرجاع|استرجاع/.test(body),
+            hasReviews: /testimonial|review|rating|avis client|temoignage|تقييم|آراء/.test(body),
+            hasContact: /contact|whatsapp|tel:|mailto:|demo|devis|تواصل|واتساب/.test(body),
+            hasCoverage: /countries|country|pays|europe|worldwide|international|maroc|morocco|دول|بلدان/.test(body),
+            hasFaq: /faq|frequently asked|questions frequentes|الأسئلة الشائعة/.test(body),
+            ctaCount: ctas.length
+        };
+        const observedStrengths = [];
+        if (signals.hasPrice) observedStrengths.push(lang === 'ar' ? 'يعرض إشارات سعر أو شروط دفع' : lang === 'en' ? 'Displays pricing or payment signals' : 'Affiche des signaux de prix ou de paiement');
+        if (signals.hasReviews) observedStrengths.push(lang === 'ar' ? 'يعرض أدلة أو آراء عملاء' : lang === 'en' ? 'Displays customer proof or reviews' : 'Affiche des preuves ou avis client');
+        if (signals.hasGuarantee) observedStrengths.push(lang === 'ar' ? 'يذكر ضمانا' : lang === 'en' ? 'Mentions a guarantee' : 'Mentionne une garantie');
+        if (signals.hasDelivery || signals.hasReturns) observedStrengths.push(lang === 'ar' ? 'يوضح التسليم أو الإرجاع' : lang === 'en' ? 'Explains delivery or returns' : 'Explique la livraison ou les retours');
+        if (signals.hasContact || signals.ctaCount) observedStrengths.push(lang === 'ar' ? 'يوفر مسارا واضحا للتواصل أو الشراء' : lang === 'en' ? 'Provides a clear contact or purchase path' : "Propose un parcours clair de contact ou d'achat");
+
+        const missingProofs = [];
+        if (!signals.hasReviews) missingProofs.push(labels.proof);
+        if (!signals.hasGuarantee) missingProofs.push(labels.weakTrust);
+        if (!signals.hasPrice) missingProofs.push(labels.weakPrice);
+        if (!signals.hasDelivery && !signals.hasReturns) missingProofs.push(labels.weakDelivery);
+        const deducedWeaknesses = missingProofs.slice(0, 3).map(text =>
+            lang === 'ar' ? `فرصة محتملة: ${text}` : lang === 'en' ? `Potential opening: ${text}` : `Ouverture potentielle : ${text}`
+        );
+
+        const value = {
+            whatTheySell: headings[0] || compactBusinessText(competitor.snippet, 180) || labels.fallbackSell,
+            primaryPromise: headings[1] || headings[0] || compactBusinessText(competitor.title, 160),
+            observedStrengths: observedStrengths.slice(0, 5),
+            deducedWeaknesses,
+            missingProofs: missingProofs.slice(0, 4),
+            attackAngle: missingProofs[0] || labels.attack,
+            evidenceLinks,
+            confidence: observedStrengths.length >= 3 ? 'HIGH' : 'MEDIUM',
+            observed: true,
+            signals
+        };
+        COMPETITOR_BUSINESS_CACHE.set(cacheKey, { savedAt: Date.now(), value });
+        if (COMPETITOR_BUSINESS_CACHE.size > 120) {
+            const oldest = COMPETITOR_BUSINESS_CACHE.keys().next().value;
+            COMPETITOR_BUSINESS_CACHE.delete(oldest);
+        }
+        return value;
+    } catch (error) {
+        console.warn(`[CompetitorBusiness] ${competitor.domain || competitor.url}: ${error.message}`);
+        return fallback;
+    }
+}
+
+async function enrichTopCompetitorsBusiness(competitors = [], lang = 'fr') {
+    const targets = competitors.slice(0, 5);
+    const results = new Array(targets.length);
+    let cursor = 0;
+    const worker = async () => {
+        while (cursor < targets.length) {
+            const index = cursor++;
+            results[index] = await fetchCompetitorBusinessProfile(targets[index], lang);
+        }
+    };
+    await Promise.all(Array.from({ length: Math.min(2, targets.length) }, worker));
+    return results;
+}
+
+function dedupeBusinessActions(actions = []) {
+    const seen = [];
+    const perCategory = {};
+    return actions.filter(item => {
+        const normalized = compactBusinessText(item?.action, 300).toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '');
+        if (!normalized || seen.some(x => x.includes(normalized) || normalized.includes(x))) return false;
+        const category = item.category || 'positionnement';
+        if ((perCategory[category] || 0) >= 2) return false;
+        perCategory[category] = (perCategory[category] || 0) + 1;
+        seen.push(normalized);
+        return true;
+    }).slice(0, 10);
+}
+
+function buildCompetitorDecisionIntelligence({ competitors = [], marketSources = [], mergedData = {}, lang = 'fr' } = {}) {
+    const isAr = lang === 'ar', isEn = lang === 'en';
+    const profiles = competitors.slice(0, 5).map(c => ({
+        domain: c.domain, title: c.title, url: c.url, position: c.position, competitorType: c.competitorType,
+        whatTheySell: c.businessProfile?.whatTheySell || c.snippet,
+        primaryPromise: c.businessProfile?.primaryPromise || c.title,
+        observedStrengths: c.businessProfile?.observedStrengths || [],
+        deducedWeaknesses: c.businessProfile?.deducedWeaknesses || [],
+        missingProofs: c.businessProfile?.missingProofs || [],
+        attackAngle: c.businessProfile?.attackAngle || mergedData.winningMove,
+        evidenceLinks: c.businessProfile?.evidenceLinks || [c.url].filter(Boolean),
+        confidence: c.businessProfile?.confidence || 'LOW'
+    }));
+    const leader = profiles[0] || {};
+    const evidenceLinks = [...new Set(profiles.flatMap(p => (p.evidenceLinks || []).map(x => x?.url || x)).filter(Boolean))].slice(0, 12);
+    const allWeaknesses = [...new Set(profiles.flatMap(p => p.deducedWeaknesses || []))].slice(0, 8);
+    const allProofs = [...new Set(profiles.flatMap(p => p.missingProofs || []))].slice(0, 8);
+    const leaderReasons = leader.observedStrengths?.length ? leader.observedStrengths : [leader.primaryPromise].filter(Boolean);
+    const rawActions = [
+        ...(mergedData.actionRoadmap || []).map(action => ({ category: 'acquisition', action })),
+        ...allProofs.slice(0, 2).map(action => ({ category: 'preuve', action })),
+        ...allWeaknesses.slice(0, 2).map(action => ({ category: 'confiance', action })),
+        { category: 'positionnement', action: mergedData.winningMove },
+        { category: 'offre', action: mergedData.productServiceAudit?.killShotFeature },
+        { category: 'message', action: mergedData.grandSlamOfferBlueprint?.theIrresistibleOffer },
+        { category: 'conversion', action: mergedData.duelComparison?.activationAARRR?.killShot }
+    ].filter(x => x.action).map((item, index) => ({
+        ...item,
+        why: allWeaknesses[index % Math.max(allWeaknesses.length, 1)] || leader.attackAngle || mergedData.winningMove,
+        impact: index < 3 ? 'HIGH' : 'MEDIUM',
+        effort: item.category === 'preuve' || item.category === 'message' ? 'LOW' : 'MEDIUM',
+        horizon: index < 5 ? '7_DAYS' : '30_DAYS',
+        type: 'recommended',
+        confidence: profiles.length ? 'MEDIUM' : 'LOW',
+        evidenceLinks: evidenceLinks.slice(0, 4)
+    }));
+    const priorityActions = dedupeBusinessActions(rawActions);
+    const marketPattern = mergedData.marketDynamics?.porterVerdict || mergedData.marketInsights?.notes || mergedData.marketInsights?.serpIntent;
+    const positionToTake = mergedData.winningMove || leader.attackAngle;
+    return {
+        marketVerdict: {
+            currentLeader: leader.domain || null,
+            whoWins: leader.domain || null,
+            whyTheyWin: leaderReasons,
+            marketPattern,
+            type: 'deduced',
+            confidence: leader.confidence || 'LOW',
+            evidenceLinks: leader.evidenceLinks || []
+        },
+        competitorProfiles: profiles,
+        recommendedAttackAngle: {
+            whatCompetitorsSell: [...new Set(profiles.map(p => p.whatTheySell).filter(Boolean))].slice(0, 4),
+            whatTheyDoNotProve: allProofs,
+            promiseToMake: mergedData.grandSlamOfferBlueprint?.theIrresistibleOffer || positionToTake,
+            positioningStatement: positionToTake,
+            proofsToAdd: allProofs,
+            type: 'recommended',
+            confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW',
+            evidenceLinks
+        },
+        priorityActions,
+        surveillance: {
+            competitors: competitors.slice(5, 10),
+            marketSources: marketSources.slice(0, 10)
+        },
+        finalAnswers: {
+            whoWins: leader.domain || null,
+            whyTheyWin: leaderReasons,
+            weaknesses: allWeaknesses,
+            positionToTake,
+            thisWeek: priorityActions.filter(x => x.horizon === '7_DAYS'),
+            next30Days: priorityActions.filter(x => x.horizon === '30_DAYS'),
+            missingProofs: allProofs
+        }
+    };
+}
+
 async function analyzeCompetitors(
     query,
     geo ,
@@ -5471,6 +5711,12 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
 });
 
     // ── 6. SCRAPING MOAT LEADER (SCRAPE.DO) ───────────────────
+const top5BusinessProfiles = await enrichTopCompetitorsBusiness(enrichedCompetitors, langObj.code);
+top5BusinessProfiles.forEach((profile, index) => {
+    if (enrichedCompetitors[index]) enrichedCompetitors[index].businessProfile = profile;
+});
+console.log(`[WarRoom-V10.0] Business profiles explored: ${top5BusinessProfiles.filter(Boolean).length}/5`);
+
   let leaderMoat = { status: ND };
 
 try {
@@ -5990,6 +6236,17 @@ let mergedData = {
 
     const top5Str = enrichedCompetitors.slice(0, 5).map(c => `#${c.position} ${c.domain} — ${c.snippet?.substring(0, 80)}`).join('\n');
     const top3Str = enrichedCompetitors.slice(0, 3).map(c => `${c.domain} : ${c.snippet?.substring(0, 60)}`).join('\n');
+    const competitorBusinessContext = enrichedCompetitors.slice(0, 5).map(c => {
+        const p = c.businessProfile || {};
+        return [
+            `${c.domain}`,
+            `offre=${p.whatTheySell || c.snippet || ND}`,
+            `promesse=${p.primaryPromise || c.title || ND}`,
+            `forces observees=${(p.observedStrengths || []).join(' | ') || ND}`,
+            `preuves insuffisantes=${(p.missingProofs || []).join(' | ') || ND}`,
+            `confiance=${p.confidence || 'LOW'}`
+        ].join(' ; ');
+    }).join('\n');
 
     const comparisonUserInstruction = hasUserSite
         ? `Pour "user", estime 6 scores réalistes (0-100) basés sur le contexte fourni.`
@@ -6014,15 +6271,17 @@ let mergedData = {
         : '';
 
     const agent1Prompt = `${langInstr}
-Analyse de marché SEO & Eugene Schwartz Framework :
+Lecture business de la demande et des forces du marche :
 - Niche : "${cleanQuery}" | Pays : ${geoData.location}
-TOP 5 de la SERP :
+TOP 5 DES ACTEURS COMMERCIAUX OBSERVES :
 ${top5Str}
+PROFILS BUSINESS INSPECTES :
+${competitorBusinessContext}
 ${paaPromptContext}
 ${keContext}
 
-Applique le framework Eugene Schwartz pour déduire le niveau de conscience et sophistication du marché.
-INSTRUCTION CRITIQUE: Pour 'vocabulary', donne exactement 4 mots-clés pertinents.
+Applique le framework Eugene Schwartz pour deduire le niveau de conscience et la sophistication du marche.
+INSTRUCTION CRITIQUE: Pour 'vocabulary', donne exactement 4 signaux de demande pertinents.
 IMPORTANT: N'invente jamais un volume, un trafic, un revenu ou un CPC. Si la source reelle manque, ecris exactement "${ND}".
 ${keContext ? `IMPORTANT: Le volume réel est fourni par Keywords Everywhere ci-dessus. Utilise ces chiffres EXACTS dans "volume". N'invente pas de chiffres.` : ''}
 
@@ -6060,15 +6319,18 @@ RÈGLES D'UTILISATION DU CONTEXTE :
 - Ne l'utilise JAMAIS comme preuve observée sur les concurrents.
 - N'invente pas les champs manquants.` : '';
 const agent2Prompt = `${langInstr}
-Stratégie SEO offensive & Topic Clusters :
+Plan offensif de visibilite marche et pages d'acquisition :
 - Niche : "${cleanQuery}" | Leader : ${enrichedCompetitors[0]?.domain || ND} | Pays : ${geoData.location}
 MOAT — Blog:${leaderMoat?.contentStrategy?.hasBlog ?? '?'} FAQ:${leaderMoat?.technicalMoat?.hasFaqSection ?? '?'} Schema:${leaderMoat?.technicalMoat?.schemaTagsCount ?? 0}
+PROFILS BUSINESS INSPECTES :
+${competitorBusinessContext}
 ${userBusinessContextBlock}
 ${keContext}
 ${relatedContext ? `Related Searches: ${relatedContext}` : ''}
 
-INSTRUCTION : Génère de VRAIS mots-clés basés sur ce qui manque au Top 3.
+INSTRUCTION : Genere de vrais signaux de demande et pages d'acquisition bases sur ce qui manque au Top 5.
 Exactement 6 pour 'primary', 4 pour 'longTail', 4 pour 'missingGaps'.
+Les trois actions doivent couvrir au moins trois categories distinctes parmi offre, message, preuve, positionnement, acquisition, confiance et conversion.
 ${kwData ? `IMPORTANT: Priorise les mots-clés avec le meilleur ratio volume/competition selon les données KE fournies.` : ''}
 
 JSON uniquement :
@@ -6089,16 +6351,18 @@ MASTERING & DUEL CMO (Reverse Engineering & Grand Slam Offer) :
 - Niche : "${cleanQuery}"
 - Top 3 Challengers : ${top3Context}
 - User Context : ${userContextStr}
+PROFILS BUSINESS INSPECTES :
+${competitorBusinessContext}
 ${userBusinessContextBlock}
 ${gscPromptContext}
 ${keContext}
 
 CADRE STRATÉGIQUE :
-1. Reverse-engineer le Top 3 pour identifier leurs piliers de succès et faiblesses.
+1. Analyse les offres, promesses et preuves des Top 5 pour identifier leurs piliers de succes et leurs faiblesses concretes.
 2. Utilise le framework "Grand Slam Offer" d'Alex Hormozi.
 3. RÈGLE : Si l'utilisateur n'a pas de site, la section "user" du duel DOIT être le "Gold Standard" déduit du Top 3.
 4. RÈGLE COHÉRENCE : 'killShotFeature' DOIT être la solution exacte qui détruit la 'weakestProductFeature'.
-5. RÈGLE ANTI-FLUFF : Remplace les termes vagues par des fonctionnalités précises.
+5. REGLE ANTI-FLUFF : Interdiction d'ecrire seulement "manque de personnalisation". Cite les frais, delais, garanties, retours, preuve client, couverture ou friction lorsque les profils inspectes le permettent.
 ${gscData ? `6. RÈGLE GSC : Utilise les données GSC réelles pour calibrer les recommandations.` : ''}
 
 JSON uniquement :
@@ -6144,6 +6408,8 @@ SWOT Offensif + Blue Ocean + Scores :
 - Niche : "${cleanQuery}"
 - Leader : ${enrichedCompetitors[0]?.domain || ND} (${enrichedCompetitors[0]?.snippet?.substring(0, 60) || ''})
 - Top 3 : ${top3Str}
+- Profils business inspectes :
+${competitorBusinessContext}
 - ${comparisonUserInstruction}
 
 JSON uniquement :
@@ -6205,6 +6471,13 @@ JSON uniquement :
     if (r4.blueOceanStrategy)       mergedData.blueOceanStrategy       = r4.blueOceanStrategy;
     if (r4.comparisonScores)        mergedData.comparisonScores        = r4.comparisonScores;
     if (r4.semanticDifferences)     mergedData.semanticDifferences     = r4.semanticDifferences;
+
+    const competitorIntelligence = buildCompetitorDecisionIntelligence({
+        competitors: enrichedCompetitors,
+        marketSources,
+        mergedData,
+        lang: langObj.code
+    });
 
     // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
   // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
@@ -6336,7 +6609,8 @@ const proofModel = buildCompetitorProofModel({
     apifyData,
     peopleAlsoAsk,
     relatedSearches,
-    userIntentContext
+    userIntentContext,
+    competitorIntelligence
 });
 const executiveBrief = buildExecutiveBrief({
     lang: langObj.code,
@@ -6374,6 +6648,7 @@ const finalResult = {
         shopping: shoppingData
     },
     ...mergedData,
+    competitorIntelligence,
     externalBot: GPT_BOT,
     apify: apifyData,
     proofModel,
