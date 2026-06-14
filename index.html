@@ -9261,6 +9261,12 @@ function cloneReportHtmlForExport(el, exportOptions = {}) {
     ).forEach(function (node) {
         node.remove();
     });
+    clone.querySelectorAll('[hidden], .hidden').forEach(function (node) {
+        node.remove();
+    });
+    clone.querySelectorAll('script, style, template, noscript, video, audio').forEach(function (node) {
+        node.remove();
+    });
     return clone.innerHTML;
 }
 
@@ -9293,36 +9299,92 @@ function createFixedPdfClone(el, exportOptions = {}) {
                 filter: none !important;
                 text-shadow: none !important;
             }
+            .daka-pdf-fixed-clone > * { width: 100% !important; }
             .daka-pdf-fixed-clone *::before,
-            .daka-pdf-fixed-clone *::after { animation: none !important; }
+            .daka-pdf-fixed-clone *::after { animation: none !important; content: none !important; }
             .daka-pdf-fixed-clone {
                 font-size: 14px !important;
-                line-height: 1.58 !important;
+                line-height: 1.62 !important;
             }
-            .daka-pdf-fixed-clone h1 { font-size: 28px !important; line-height: 1.2 !important; }
-            .daka-pdf-fixed-clone h2 { font-size: 22px !important; line-height: 1.3 !important; }
-            .daka-pdf-fixed-clone h3 { font-size: 17px !important; line-height: 1.38 !important; }
+            .daka-pdf-fixed-clone h1 { font-size: 28px !important; line-height: 1.22 !important; margin: 0 0 12px !important; }
+            .daka-pdf-fixed-clone h2 { font-size: 21px !important; line-height: 1.3 !important; margin: 0 0 10px !important; }
+            .daka-pdf-fixed-clone h3 { font-size: 16px !important; line-height: 1.4 !important; margin: 0 0 8px !important; }
             .daka-pdf-fixed-clone h4,
             .daka-pdf-fixed-clone h5,
             .daka-pdf-fixed-clone h6 { font-size: 14px !important; line-height: 1.42 !important; }
             .daka-pdf-fixed-clone p,
             .daka-pdf-fixed-clone li,
             .daka-pdf-fixed-clone td,
-            .daka-pdf-fixed-clone th { font-size: 12px !important; line-height: 1.58 !important; }
+            .daka-pdf-fixed-clone th { font-size: 12px !important; line-height: 1.62 !important; }
+            .daka-pdf-fixed-clone p { margin: 0 0 9px !important; }
+            .daka-pdf-fixed-clone ul,
+            .daka-pdf-fixed-clone ol { margin: 8px 0 10px !important; padding-inline-start: 22px !important; }
+            .daka-pdf-fixed-clone li { margin-bottom: 5px !important; }
             .daka-pdf-fixed-clone small { font-size: 10px !important; line-height: 1.5 !important; }
-            .daka-pdf-fixed-clone .report-section,
-            .daka-pdf-fixed-clone .executive-summary,
-            .daka-pdf-fixed-clone .result-card,
-            .daka-pdf-fixed-clone .card,
-            .daka-pdf-fixed-clone article {
-                margin: 0 0 18px !important;
-                padding: 18px !important;
-                border-radius: 10px !important;
-                border: 1px solid #dbe4ef !important;
+            .daka-pdf-fixed-clone .report-section {
+                margin: 0 0 24px !important;
+                padding: 0 !important;
+                border: 0 !important;
+                border-radius: 0 !important;
                 background: #ffffff !important;
                 color: #0f172a !important;
                 box-shadow: none !important;
                 overflow: visible !important;
+            }
+            .daka-pdf-fixed-clone .executive-summary,
+            .daka-pdf-fixed-clone .result-card,
+            .daka-pdf-fixed-clone .card,
+            .daka-pdf-fixed-clone .competitor-card,
+            .daka-pdf-fixed-clone .executive-block,
+            .daka-pdf-fixed-clone .executive-action,
+            .daka-pdf-fixed-clone .decision-proof-panel {
+                margin: 0 0 18px !important;
+                padding: 16px 18px !important;
+                border-radius: 8px !important;
+                border: 1px solid #dbe4ef !important;
+                border-left: 4px solid #0ea5e9 !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+            .daka-pdf-fixed-clone .report-section-head {
+                display: block !important;
+                margin: 0 0 13px !important;
+                padding: 13px 16px !important;
+                border: 0 !important;
+                border-left: 5px solid #0ea5e9 !important;
+                border-radius: 4px !important;
+                background: #f1f5f9 !important;
+            }
+            .daka-pdf-fixed-clone .report-section-body {
+                display: block !important;
+                padding: 0 !important;
+                border: 0 !important;
+            }
+            .daka-pdf-fixed-clone .daka-pdf-chapter-label {
+                display: block !important;
+                width: 100% !important;
+                margin: 20px 0 14px !important;
+                padding: 13px 16px !important;
+                border: 1px solid #cbd5e1 !important;
+                border-left: 6px solid #0369a1 !important;
+                border-radius: 6px !important;
+                background: #eaf4fb !important;
+                color: #0f172a !important;
+            }
+            .daka-pdf-fixed-clone .daka-pdf-chapter-label small {
+                display: block !important;
+                margin-bottom: 3px !important;
+                color: #0369a1 !important;
+                font-weight: 800 !important;
+                text-transform: uppercase !important;
+            }
+            .daka-pdf-fixed-clone .daka-pdf-chapter-label strong {
+                display: block !important;
+                font-size: 18px !important;
+                line-height: 1.35 !important;
+                color: #0f172a !important;
             }
             .daka-pdf-fixed-clone .executive-summary-head,
             .daka-pdf-fixed-clone .decision-proof-panel > div,
@@ -9344,17 +9406,28 @@ function createFixedPdfClone(el, exportOptions = {}) {
                 min-width: 0 !important;
                 justify-self: start !important;
             }
-            .daka-pdf-fixed-clone .report-section-body { display: block !important; }
-            .daka-pdf-fixed-clone table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
+            .daka-pdf-fixed-clone table { width: 100% !important; border-collapse: collapse !important; table-layout: fixed !important; }
             .daka-pdf-fixed-clone th,
-            .daka-pdf-fixed-clone td { padding: 7px !important; border: 1px solid #dbe4ef !important; }
+            .daka-pdf-fixed-clone td { padding: 8px !important; border: 1px solid #dbe4ef !important; vertical-align: top !important; }
             .daka-pdf-fixed-clone a { color: #0369a1 !important; text-decoration: underline !important; }
             .daka-pdf-table-cards { display: grid !important; grid-template-columns: 1fr !important; gap: 12px !important; }
-            .daka-pdf-table-card { border: 1px solid #dbe4ef !important; border-left: 4px solid #6366f1 !important; border-radius: 8px !important; padding: 14px !important; background: #ffffff !important; }
-            .daka-pdf-table-field { display: grid !important; grid-template-columns: 150px minmax(0, 1fr) !important; gap: 12px !important; padding: 7px 0 !important; border-bottom: 1px solid #eef2f7 !important; }
+            .daka-pdf-table-card { width: 100% !important; border: 1px solid #dbe4ef !important; border-left: 4px solid #0369a1 !important; border-radius: 7px !important; padding: 13px 15px !important; background: #ffffff !important; }
+            .daka-pdf-table-field { display: grid !important; grid-template-columns: 170px minmax(0, 1fr) !important; gap: 14px !important; padding: 8px 0 !important; border-bottom: 1px solid #eef2f7 !important; }
             .daka-pdf-table-field:last-child { border-bottom: 0 !important; }
             .daka-pdf-table-label { color: #475569 !important; font-size: 10px !important; font-weight: 800 !important; text-transform: uppercase !important; }
-            .daka-pdf-table-value { color: #0f172a !important; font-size: 12px !important; font-weight: 600 !important; overflow-wrap: break-word !important; }
+            .daka-pdf-table-value { min-width: 0 !important; color: #0f172a !important; font-size: 12px !important; font-weight: 600 !important; overflow-wrap: break-word !important; word-break: normal !important; }
+            .daka-pdf-fixed-clone .badge,
+            .daka-pdf-fixed-clone [class*="badge"],
+            .daka-pdf-fixed-clone [class*="pill"] {
+                display: inline-block !important;
+                width: auto !important;
+                padding: 3px 7px !important;
+                border-radius: 4px !important;
+                background: #e2e8f0 !important;
+                color: #334155 !important;
+                font-size: 9px !important;
+                font-weight: 800 !important;
+            }
         </style>
         <header style="margin-bottom:26px;padding:22px 24px;border-radius:12px;background:#071426;color:#fff;border-top:5px solid #06b6d4;">
             <div style="font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#67e8f9;font-weight:800;">DAKA · DECISION REPORT</div>
@@ -9387,7 +9460,7 @@ function createFixedPdfClone(el, exportOptions = {}) {
         node.style.setProperty('background-color', 'transparent', 'important');
         node.style.setProperty('background-image', 'none', 'important');
     });
-    shell.querySelectorAll('.result-card,.report-section,.competitor-card,.card,.executive-summary,.executive-block,.executive-action,.decision-proof-panel,article').forEach(function (card) {
+    shell.querySelectorAll('.result-card,.competitor-card,.card,.executive-summary,.executive-block,.executive-action,.decision-proof-panel').forEach(function (card) {
         card.style.setProperty('background', '#ffffff', 'important');
         card.style.setProperty('background-image', 'none', 'important');
         card.style.setProperty('color', '#0f172a', 'important');
@@ -9416,7 +9489,7 @@ function createFixedPdfClone(el, exportOptions = {}) {
         const maxColumns = rows.reduce(function (max, row) {
             return Math.max(max, row.children.length);
         }, 0);
-        if (maxColumns > 4 && rows.length) {
+        if (maxColumns >= 4 && rows.length) {
             const cards = document.createElement('div');
             cards.className = 'daka-pdf-table-cards';
             rows.filter(function (row) { return !row.closest('thead'); }).forEach(function (row, rowIndex) {
@@ -9441,6 +9514,26 @@ function createFixedPdfClone(el, exportOptions = {}) {
             if (cards.children.length) table.replaceWith(cards);
         }
     });
+    const chapterTitlesByKey = {};
+    const featureKeys = Array.isArray(exportOptions.featureKeys) ? exportOptions.featureKeys : [];
+    featureKeys.forEach(function (key, index) {
+        chapterTitlesByKey[key] = chapterTitles[index] || key;
+    });
+    shell.querySelectorAll('[data-export-feature]').forEach(function (chapter, index) {
+        chapter.classList.add('daka-pdf-chapter');
+        chapter.style.setProperty('width', '100%', 'important');
+        const key = chapter.getAttribute('data-export-feature') || '';
+        const heading = chapter.querySelector('h1,h2,h3,.report-section-title,.executive-summary-kicker');
+        const title = chapterTitlesByKey[key]
+            || String(heading?.innerText || heading?.textContent || '').replace(/\s+/g, ' ').trim()
+            || (STATE.currentLang === 'en' ? 'Decision chapter' : 'Chapitre décisionnel');
+        const label = document.createElement('div');
+        label.className = 'daka-pdf-chapter-label';
+        label.innerHTML = '<small>'
+            + escapeHtml(STATE.currentLang === 'en' ? ('Chapter ' + (index + 1)) : ('Chapitre ' + (index + 1)))
+            + '</small><strong>' + escapeHtml(title) + '</strong>';
+        chapter.prepend(label);
+    });
     shell.querySelectorAll('[style*="grid-template-columns"], [style*="display:grid"], [style*="display: grid"], .grid-2, .grid-3, .grid-4, .metrics-grid, .section-grid').forEach(function (grid) {
         grid.style.setProperty('display', 'grid', 'important');
         grid.style.setProperty('grid-template-columns', '1fr', 'important');
@@ -9453,6 +9546,10 @@ function createFixedPdfClone(el, exportOptions = {}) {
         flex.style.setProperty('gap', '10px', 'important');
     });
     document.body.appendChild(shell);
+    shell.querySelectorAll(':scope > *, .daka-pdf-chapter, .daka-pdf-chapter > *, .report-section-body > *, .executive-grid > *, .executive-actions > *').forEach(function (node) {
+        node.style.setProperty('width', '100%', 'important');
+        node.style.setProperty('min-width', '0', 'important');
+    });
     shell.querySelectorAll('*').forEach(function (node) {
         const computed = window.getComputedStyle(node);
         if (computed.display === 'grid' && computed.gridTemplateColumns.split(' ').length > 2) {
@@ -9463,6 +9560,31 @@ function createFixedPdfClone(el, exportOptions = {}) {
         }
     });
     return shell;
+}
+
+function getDakaPdfCaptureBlocks(root) {
+    const blocks = [];
+    const maxBlockHeight = 1850;
+    function collect(node, depth) {
+        if (!node || node.nodeType !== 1 || node.tagName === 'STYLE') return;
+        if (getExportableReportText(node).length === 0 && !node.querySelector('img,canvas,svg')) return;
+        const children = Array.from(node.children).filter(function (child) {
+            return child.tagName !== 'STYLE' && (getExportableReportText(child).length > 0 || child.querySelector('img,canvas,svg'));
+        });
+        const isChapter = node.classList.contains('daka-pdf-chapter');
+        const isBody = node.classList.contains('report-section-body');
+        if ((node.scrollHeight || 0) <= maxBlockHeight || !children.length || depth >= 5) {
+            blocks.push(node);
+            return;
+        }
+        if (isChapter || isBody || node.scrollHeight > 3000) {
+            children.forEach(function (child) { collect(child, depth + 1); });
+            return;
+        }
+        blocks.push(node);
+    }
+    Array.from(root.children).forEach(function (node) { collect(node, 0); });
+    return blocks;
 }
 
 function saveDakaPdfFile(pdf, filename) {
@@ -9742,20 +9864,25 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 '.copy-badge, .btn-copy-mini, .btn-cosmic, .btn-cyber, .btn-system,',
                 '.generator-grid, #tech-gen-output, .kw-filter-btn, #kwFilterBar,',
                 '[data-gen-type], .btn-export-pdf, .expert-dock, #magicPromptPlaceholder, .report-feature-nav { display:none !important; }',
-                '.result-card, .card, .magic-box, .diff-box {',
-                '  border:1px solid #dbe4ef !important; border-radius:10px !important;',
-                '  padding:16px !important; margin-bottom:16px !important;',
+                '.report-section { border:0 !important; padding:0 !important; margin:0 0 24px !important; background:#fff !important; }',
+                '.report-section-head { padding:13px 16px !important; margin-bottom:13px !important; border:0 !important; border-right:5px solid #0369a1 !important; border-radius:5px !important; background:#f1f5f9 !important; }',
+                '.report-section-body { display:block !important; padding:0 !important; }',
+                '.result-card, .card, .magic-box, .diff-box, .executive-block, .executive-action, .decision-proof-panel {',
+                '  border:1px solid #dbe4ef !important; border-right:4px solid #0369a1 !important; border-radius:8px !important;',
+                '  padding:15px 17px !important; margin-bottom:16px !important;',
                 '  background-color:#ffffff !important; color:#0f172a !important;',
-                '  page-break-inside:avoid; box-shadow:none !important; width: 100% !important; max-width: 100% !important; overflow: hidden !important; }', /* Force la limite de largeur */
+                '  page-break-inside:avoid; box-shadow:none !important; width:100% !important; min-width:0 !important; max-width:100% !important; overflow:visible !important; }',
                 'span, div, p, small { color:inherit !important; background-color:transparent !important; }',
-                'table { width:100%; border-collapse:collapse; font-size:11px; }',
+                'p, li, td, th, span, strong { overflow-wrap:break-word !important; word-break:normal !important; white-space:normal !important; }',
+                'table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:11px; }',
                 'th { background-color:#f1f5f9 !important; color:#334155 !important;',
                 '     padding:8px; border:1px solid #dbe4ef !important; text-align:right; }',
                 'td { padding:8px; border:1px solid #dbe4ef !important; color:#0f172a !important; background-color:#ffffff !important; }',
                 '.print-header { text-align:center; padding:20px; border-top:5px solid #06b6d4; margin-bottom:30px; background-color:#071426 !important; color:#ffffff !important; border-radius:10px; }',
                 '.print-header * { color:#ffffff !important; }',
                 'a { color:#0369a1 !important; text-decoration:underline; }',
-                'div[style*="display:flex"] { flex-wrap: wrap !important; }', /* Empêche les éléments flex de dépasser l'écran */
+                'div[style*="display:flex"] { flex-wrap:wrap !important; }',
+                'div[style*="display:grid"] { grid-template-columns:1fr !important; }',
                 'canvas { max-width: 100% !important; height: auto !important; margin: 0 auto !important; display: block !important; }',
                 'body::before { content:"Made by Daka"; position:fixed; inset:45% auto auto 18%; transform:rotate(-28deg); font-size:52px; font-weight:900; color:rgba(15,23,42,.045); pointer-events:none; z-index:9999; }',
                 '@page { margin:10mm; size:A4; }',
@@ -10153,7 +10280,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
             // ── Capture haute définition, composant par composant ──
             var mobilePdf = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 640;
-            var captureScale = mobilePdf ? 1.65 : 2.15;
+            var captureScale = mobilePdf ? 2 : 2.6;
             var fixedClone = createFixedPdfClone(section.el, {
                 includeDetails: includeDetails,
                 featureKeys: section.featureKeys,
@@ -10194,19 +10321,9 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 );
             }
 
-            preparePdfContentPage(false);
-            var captureBlocks = Array.from(fixedClone.children)
-                .filter(function (node) {
-                    return node.tagName !== 'STYLE' && getExportableReportText(node).length > 0;
-                })
-                .flatMap(function (node) {
-                    if (node.scrollHeight > 3200 && node.children.length > 1) {
-                        return Array.from(node.children).filter(function (child) {
-                            return getExportableReportText(child).length > 0;
-                        });
-                    }
-                    return [node];
-                });
+            // Preserve the section introduction page, then start content on a clean page.
+            preparePdfContentPage(true);
+            var captureBlocks = getDakaPdfCaptureBlocks(fixedClone);
 
             try {
                 for (var bi = 0; bi < captureBlocks.length; bi++) {
@@ -10220,7 +10337,13 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                         scrollX: 0,
                         scrollY: 0,
                         windowWidth: 794,
-                        windowHeight: Math.max(1123, block.scrollHeight || 0)
+                        windowHeight: Math.max(1123, block.scrollHeight || 0),
+                        onclone: function (doc) {
+                            doc.querySelectorAll('.daka-pdf-fixed-clone *').forEach(function (node) {
+                                node.style.setProperty('text-rendering', 'geometricPrecision', 'important');
+                                node.style.setProperty('-webkit-font-smoothing', 'antialiased', 'important');
+                            });
+                        }
                     });
                     if (!blockCanvas || blockCanvas.width < 20 || blockCanvas.height < 20) continue;
 
@@ -10229,7 +10352,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
                     if (blockHeightMm <= printableH) {
                         if (blockHeightMm > availableMm && currentY > margin) preparePdfContentPage(true);
-                        pdf.addImage(blockCanvas.toDataURL('image/png'), 'PNG', margin, currentY, contentW, blockHeightMm, undefined, 'FAST');
+                        pdf.addImage(blockCanvas.toDataURL('image/png'), 'PNG', margin, currentY, contentW, blockHeightMm, undefined, 'NONE');
                         currentY += blockHeightMm + 4;
                     } else {
                         var sourceY = 0;
@@ -10245,7 +10368,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                                 0, 0, blockCanvas.width, sourceHeight
                             );
                             var sliceHeightMm = sourceHeight / pixelsPerMm;
-                            pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceHeightMm, undefined, 'FAST');
+                            pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceHeightMm, undefined, 'NONE');
                             sourceY += sourceHeight;
                             currentY = margin + sliceHeightMm + 4;
                             sliceCanvas.width = 1;
