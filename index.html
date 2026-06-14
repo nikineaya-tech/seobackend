@@ -9119,31 +9119,33 @@ function createFixedPdfClone(el, exportOptions = {}) {
             .daka-pdf-fixed-clone, .daka-pdf-fixed-clone * {
                 box-sizing: border-box !important;
                 max-width: 100% !important;
-                min-width: 0 !important;
                 font-family: Arial, "Helvetica Neue", sans-serif !important;
                 letter-spacing: normal !important;
                 word-spacing: normal !important;
                 writing-mode: horizontal-tb !important;
                 text-orientation: mixed !important;
-                text-rendering: geometricPrecision;
+                text-rendering: optimizeLegibility !important;
+                -webkit-font-smoothing: antialiased !important;
+                filter: none !important;
+                text-shadow: none !important;
             }
             .daka-pdf-fixed-clone *::before,
             .daka-pdf-fixed-clone *::after { animation: none !important; }
             .daka-pdf-fixed-clone {
-                font-size: 12px !important;
-                line-height: 1.62 !important;
+                font-size: 14px !important;
+                line-height: 1.58 !important;
             }
-            .daka-pdf-fixed-clone h1 { font-size: 25px !important; line-height: 1.18 !important; }
-            .daka-pdf-fixed-clone h2 { font-size: 19px !important; line-height: 1.28 !important; }
-            .daka-pdf-fixed-clone h3 { font-size: 15px !important; line-height: 1.35 !important; }
+            .daka-pdf-fixed-clone h1 { font-size: 28px !important; line-height: 1.2 !important; }
+            .daka-pdf-fixed-clone h2 { font-size: 22px !important; line-height: 1.3 !important; }
+            .daka-pdf-fixed-clone h3 { font-size: 17px !important; line-height: 1.38 !important; }
             .daka-pdf-fixed-clone h4,
             .daka-pdf-fixed-clone h5,
-            .daka-pdf-fixed-clone h6 { font-size: 12px !important; line-height: 1.4 !important; }
+            .daka-pdf-fixed-clone h6 { font-size: 14px !important; line-height: 1.42 !important; }
             .daka-pdf-fixed-clone p,
             .daka-pdf-fixed-clone li,
             .daka-pdf-fixed-clone td,
-            .daka-pdf-fixed-clone th { font-size: 10px !important; line-height: 1.62 !important; }
-            .daka-pdf-fixed-clone small { font-size: 8px !important; line-height: 1.5 !important; }
+            .daka-pdf-fixed-clone th { font-size: 12px !important; line-height: 1.58 !important; }
+            .daka-pdf-fixed-clone small { font-size: 10px !important; line-height: 1.5 !important; }
             .daka-pdf-fixed-clone .report-section,
             .daka-pdf-fixed-clone .executive-summary,
             .daka-pdf-fixed-clone .result-card,
@@ -9179,10 +9181,16 @@ function createFixedPdfClone(el, exportOptions = {}) {
                 justify-self: start !important;
             }
             .daka-pdf-fixed-clone .report-section-body { display: block !important; }
-            .daka-pdf-fixed-clone table { border-collapse: collapse !important; }
+            .daka-pdf-fixed-clone table { width: 100% !important; border-collapse: collapse !important; table-layout: auto !important; }
             .daka-pdf-fixed-clone th,
             .daka-pdf-fixed-clone td { padding: 7px !important; border: 1px solid #dbe4ef !important; }
             .daka-pdf-fixed-clone a { color: #0369a1 !important; text-decoration: underline !important; }
+            .daka-pdf-table-cards { display: grid !important; grid-template-columns: 1fr !important; gap: 12px !important; }
+            .daka-pdf-table-card { border: 1px solid #dbe4ef !important; border-left: 4px solid #6366f1 !important; border-radius: 8px !important; padding: 14px !important; background: #ffffff !important; }
+            .daka-pdf-table-field { display: grid !important; grid-template-columns: 150px minmax(0, 1fr) !important; gap: 12px !important; padding: 7px 0 !important; border-bottom: 1px solid #eef2f7 !important; }
+            .daka-pdf-table-field:last-child { border-bottom: 0 !important; }
+            .daka-pdf-table-label { color: #475569 !important; font-size: 10px !important; font-weight: 800 !important; text-transform: uppercase !important; }
+            .daka-pdf-table-value { color: #0f172a !important; font-size: 12px !important; font-weight: 600 !important; overflow-wrap: break-word !important; }
         </style>
         <header style="margin-bottom:26px;padding:22px 24px;border-radius:12px;background:#071426;color:#fff;border-top:5px solid #06b6d4;">
             <div style="font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#67e8f9;font-weight:800;">DAKA · DECISION REPORT</div>
@@ -9200,7 +9208,6 @@ function createFixedPdfClone(el, exportOptions = {}) {
         node.style.setProperty('inset', 'auto', 'important');
         node.style.setProperty('float', 'none', 'important');
         node.style.setProperty('max-width', '100%', 'important');
-        node.style.setProperty('min-width', '0', 'important');
         node.style.setProperty('box-sizing', 'border-box', 'important');
         node.style.setProperty('writing-mode', 'horizontal-tb', 'important');
         node.style.setProperty('text-orientation', 'mixed', 'important');
@@ -9237,15 +9244,60 @@ function createFixedPdfClone(el, exportOptions = {}) {
     });
     shell.querySelectorAll('table').forEach(function (table) {
         table.style.width = '100%';
-        table.style.tableLayout = 'fixed';
-        table.style.overflowWrap = 'anywhere';
+        table.style.tableLayout = 'auto';
+        const rows = Array.from(table.querySelectorAll('tr'));
+        const headers = Array.from(table.querySelectorAll('thead th')).map(function (cell, index) {
+            return String(cell.innerText || cell.textContent || ('Colonne ' + (index + 1))).trim();
+        });
+        const maxColumns = rows.reduce(function (max, row) {
+            return Math.max(max, row.children.length);
+        }, 0);
+        if (maxColumns > 4 && rows.length) {
+            const cards = document.createElement('div');
+            cards.className = 'daka-pdf-table-cards';
+            rows.filter(function (row) { return !row.closest('thead'); }).forEach(function (row, rowIndex) {
+                const cells = Array.from(row.children);
+                if (!cells.length) return;
+                const card = document.createElement('article');
+                card.className = 'daka-pdf-table-card';
+                cells.forEach(function (cell, cellIndex) {
+                    const value = String(cell.innerText || cell.textContent || '').replace(/\s+/g, ' ').trim();
+                    if (!value) return;
+                    const field = document.createElement('div');
+                    field.className = 'daka-pdf-table-field';
+                    field.innerHTML = '<strong class="daka-pdf-table-label">'
+                        + escapeHtml(headers[cellIndex] || ('Champ ' + (cellIndex + 1)))
+                        + '</strong><span class="daka-pdf-table-value">'
+                        + escapeHtml(value)
+                        + '</span>';
+                    card.appendChild(field);
+                });
+                if (card.children.length) cards.appendChild(card);
+            });
+            if (cards.children.length) table.replaceWith(cards);
+        }
     });
-    shell.querySelectorAll('[style*="grid-template-columns"], .grid-2, .grid-3, .grid-4, .metrics-grid, .section-grid').forEach(function (grid) {
+    shell.querySelectorAll('[style*="grid-template-columns"], [style*="display:grid"], [style*="display: grid"], .grid-2, .grid-3, .grid-4, .metrics-grid, .section-grid').forEach(function (grid) {
         grid.style.setProperty('display', 'grid', 'important');
-        grid.style.setProperty('grid-template-columns', grid.children.length > 1 ? 'repeat(2, minmax(0, 1fr))' : '1fr', 'important');
-        grid.style.setProperty('gap', '10px', 'important');
+        grid.style.setProperty('grid-template-columns', '1fr', 'important');
+        grid.style.setProperty('gap', '12px', 'important');
+    });
+    shell.querySelectorAll('[style*="display:flex"], [style*="display: flex"]').forEach(function (flex) {
+        flex.style.setProperty('display', 'flex', 'important');
+        flex.style.setProperty('flex-wrap', 'wrap', 'important');
+        flex.style.setProperty('align-items', 'flex-start', 'important');
+        flex.style.setProperty('gap', '10px', 'important');
     });
     document.body.appendChild(shell);
+    shell.querySelectorAll('*').forEach(function (node) {
+        const computed = window.getComputedStyle(node);
+        if (computed.display === 'grid' && computed.gridTemplateColumns.split(' ').length > 2) {
+            node.style.setProperty('grid-template-columns', '1fr', 'important');
+        }
+        if (computed.display === 'flex' && node.scrollWidth > node.clientWidth) {
+            node.style.setProperty('flex-wrap', 'wrap', 'important');
+        }
+    });
     return shell;
 }
 
@@ -9935,113 +9987,33 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 });
             }
 
-            // ── Capture html2canvas ───────────────────────────
-            var canvas;
+            // ── Capture haute définition, composant par composant ──
             var mobilePdf = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth <= 640;
-            var captureScale = mobilePdf ? 1.15 : 1.6;
+            var captureScale = mobilePdf ? 1.65 : 2.15;
             var fixedClone = createFixedPdfClone(section.el, {
                 includeDetails: includeDetails,
                 featureKeys: section.featureKeys,
                 featureTitles: section.featureTitles,
                 title: section.label
             });
-            var maxCanvasHeight = mobilePdf ? 14000 : 24000;
-            if ((fixedClone.scrollHeight || 0) * captureScale > maxCanvasHeight) {
-                captureScale = Math.max(.62, maxCanvasHeight / fixedClone.scrollHeight);
-            }
-            try {
-                canvas = await html2canvas(fixedClone, {
-                    scale:           captureScale,
-                    useCORS:         true,
-                    allowTaint:      true,
-                    backgroundColor: '#ffffff',
-                    logging:         false,
-                    scrollX:         0,
-                    scrollY:         0,
-                    windowWidth:     794,
-                    windowHeight:    fixedClone.scrollHeight || 1123,
-                    onclone: function (clonedDoc) {
-                        clonedDoc.querySelectorAll('details').forEach(function (details) {
-                            details.setAttribute('open', 'open');
-                        });
-                        // Dans le clone — masquer boutons/loaders
-                        var toHide = clonedDoc.querySelectorAll(
-                            'button, .btn-gen, .no-print, .kw-filter-btn, #kwFilterBar, ' +
-                            '.loading-state, .toast-container, .export-bubble-wrapper, ' +
-                            '.btn-export-pdf, .btn-copy-mini, [data-gen-type]'
-                        );
-                        toHide.forEach(function (el) { el.style.display = 'none'; });
-                    }
-                });
-            } catch (captureErr) {
-                console.warn('[PDF] Capture échouée pour ' + section.label, captureErr);
-                continue;
-            } finally {
-                fixedClone.remove();
-            }
+            await document.fonts?.ready?.catch(function () {});
+            await new Promise(function (resolve) {
+                requestAnimationFrame(function () { requestAnimationFrame(resolve); });
+            });
 
-            if (!canvas || canvas.width < 20 || canvas.height < 20) {
-                console.warn('[PDF] Capture vide pour ' + section.label);
-                continue;
-            }
-            capturedSections++;
+            var printableH = pageH - margin * 2;
+            var currentY = margin;
+            var contentPage = 0;
+            var sectionCaptured = false;
 
-            var imgData    = canvas.toDataURL('image/jpeg', 0.92);
-            var imgW       = canvas.width;
-            var imgH       = canvas.height;
-
-            // Ratio mm/px
-            var mmPerPx    = contentW / (imgW / captureScale);
-            var imgHeightMm = (imgH / captureScale) * mmPerPx;
-
-            // Pagination automatique si contenu > 1 page
-            var printableH  = pageH - margin * 2;
-            var pagesNeeded = Math.ceil(imgHeightMm / printableH);
-
-            for (var p = 0; p < pagesNeeded; p++) {
-                if (p > 0) pdf.addPage();
-
-                // Fond page
+            function preparePdfContentPage(addPage) {
+                if (addPage) pdf.addPage();
+                contentPage++;
+                currentY = margin;
                 pdf.setFillColor(255, 255, 255);
                 pdf.rect(0, 0, pageW, pageH, 'F');
-
-                // Bande couleur top
                 pdf.setFillColor(sc[0], sc[1], sc[2]);
                 pdf.rect(0, 0, pageW, 2, 'F');
-
-                // Portion de l'image à afficher sur cette page
-                var srcY      = p * (printableH / mmPerPx) * captureScale;
-                var srcH      = Math.min(
-                    (printableH / mmPerPx) * captureScale,
-                    imgH - srcY
-                );
-
-                if (srcH <= 0) break;
-
-                // Créer un canvas temporaire pour la tranche
-                var sliceCanvas  = document.createElement('canvas');
-                sliceCanvas.width  = imgW;
-                sliceCanvas.height = srcH;
-                var ctx = sliceCanvas.getContext('2d');
-                ctx.drawImage(canvas, 0, srcY, imgW, srcH, 0, 0, imgW, srcH);
-
-                var sliceData   = sliceCanvas.toDataURL('image/jpeg', 0.92);
-                var sliceHeightMm = (srcH / captureScale) * mmPerPx;
-
-                pdf.addImage(sliceData, 'JPEG', margin, margin, contentW, sliceHeightMm);
-
-                // Header mini sur chaque page (sauf première de section)
-                if (p > 0) {
-                    pdf.setFont('helvetica', 'normal');
-                    pdf.setFontSize(6.5);
-                    pdf.setTextColor(71, 85, 105);
-                    pdf.text(
-                        'DAKA  |  ' + section.label + '  (' + (p + 1) + '/' + pagesNeeded + ')',
-                        margin, margin - 3
-                    );
-                }
-
-                // Footer page
                 pdf.setFillColor(sc[0], sc[1], sc[2]);
                 pdf.rect(0, pageH - 2, pageW, 2, 'F');
                 pdf.setFont('helvetica', 'normal');
@@ -10056,16 +10028,76 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                     pageW - margin, pageH - 4,
                     { align: 'right' }
                 );
-                pdf.setTextColor(108, 99, 255);
-                pdf.text(isEn ? 'Back to summary' : 'Retour au sommaire', pageW / 2, pageH - 4, { align: 'center' });
-                if (typeof pdf.link === 'function') {
-                    pdf.link(pageW / 2 - 22, pageH - 8, 44, 7, { pageNumber: 1 });
-                }
             }
 
-            // Libérer mémoire
-            canvas  = null;
-            sliceCanvas = null;
+            preparePdfContentPage(false);
+            var captureBlocks = Array.from(fixedClone.children)
+                .filter(function (node) {
+                    return node.tagName !== 'STYLE' && getExportableReportText(node).length > 0;
+                })
+                .flatMap(function (node) {
+                    if (node.scrollHeight > 3200 && node.children.length > 1) {
+                        return Array.from(node.children).filter(function (child) {
+                            return getExportableReportText(child).length > 0;
+                        });
+                    }
+                    return [node];
+                });
+
+            try {
+                for (var bi = 0; bi < captureBlocks.length; bi++) {
+                    var block = captureBlocks[bi];
+                    var blockCanvas = await html2canvas(block, {
+                        scale: captureScale,
+                        useCORS: true,
+                        allowTaint: false,
+                        backgroundColor: '#ffffff',
+                        logging: false,
+                        scrollX: 0,
+                        scrollY: 0,
+                        windowWidth: 794,
+                        windowHeight: Math.max(1123, block.scrollHeight || 0)
+                    });
+                    if (!blockCanvas || blockCanvas.width < 20 || blockCanvas.height < 20) continue;
+
+                    var blockHeightMm = blockCanvas.height * contentW / blockCanvas.width;
+                    var availableMm = pageH - margin - currentY;
+
+                    if (blockHeightMm <= printableH) {
+                        if (blockHeightMm > availableMm && currentY > margin) preparePdfContentPage(true);
+                        pdf.addImage(blockCanvas.toDataURL('image/png'), 'PNG', margin, currentY, contentW, blockHeightMm, undefined, 'FAST');
+                        currentY += blockHeightMm + 4;
+                    } else {
+                        var sourceY = 0;
+                        var pixelsPerMm = blockCanvas.width / contentW;
+                        while (sourceY < blockCanvas.height) {
+                            if (currentY > margin) preparePdfContentPage(true);
+                            var sourceHeight = Math.min(Math.floor(printableH * pixelsPerMm), blockCanvas.height - sourceY);
+                            var sliceCanvas = document.createElement('canvas');
+                            sliceCanvas.width = blockCanvas.width;
+                            sliceCanvas.height = sourceHeight;
+                            sliceCanvas.getContext('2d').drawImage(
+                                blockCanvas, 0, sourceY, blockCanvas.width, sourceHeight,
+                                0, 0, blockCanvas.width, sourceHeight
+                            );
+                            var sliceHeightMm = sourceHeight / pixelsPerMm;
+                            pdf.addImage(sliceCanvas.toDataURL('image/png'), 'PNG', margin, margin, contentW, sliceHeightMm, undefined, 'FAST');
+                            sourceY += sourceHeight;
+                            currentY = margin + sliceHeightMm + 4;
+                            sliceCanvas.width = 1;
+                            sliceCanvas.height = 1;
+                        }
+                    }
+                    sectionCaptured = true;
+                    blockCanvas.width = 1;
+                    blockCanvas.height = 1;
+                }
+            } catch (captureErr) {
+                console.warn('[PDF] Capture composant échouée pour ' + section.label, captureErr);
+            } finally {
+                fixedClone.remove();
+            }
+            if (sectionCaptured) capturedSections++;
         }
 
         if (!capturedSections) {
