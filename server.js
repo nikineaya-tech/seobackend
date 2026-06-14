@@ -1503,6 +1503,8 @@ function resolveSerpGeo(input) {
     
     // Comprehensive geo mapping (70+ locations)
     const geoMap = {
+        'global english': { loc: 'Global English', gl: 'us', dom: 'google.com' },
+        'global': { loc: 'Global English', gl: 'us', dom: 'google.com' },
         // 🇲🇦 MOROCCO (Top priority)
         'maroc': { loc: 'Morocco', gl: 'ma', dom: 'google.co.ma' },
         'morocco': { loc: 'Morocco', gl: 'ma', dom: 'google.co.ma' },
@@ -5392,6 +5394,439 @@ function buildCompetitorDecisionIntelligence({ competitors = [], marketSources =
     };
 }
 
+// Competitor Intelligence V2: business-first classification and decision layer.
+const MARKETPLACE_HOST_PATTERNS = [
+    'amazon.', 'jumia.', 'aliexpress.', 'ebay.', 'etsy.', 'walmart.', 'noon.'
+];
+const SOCIAL_SOURCE_HOST_PATTERNS = [
+    'instagram.com', 'facebook.com', 'tiktok.com', 'youtube.com', 'youtu.be',
+    'linkedin.com', 'pinterest.com', 'x.com', 'twitter.com', 'snapchat.com'
+];
+
+function cleanCompetitorBusinessText(value, max = 260) {
+    const iconWords = /\b(?:arrow_right_alt|arrow_forward|location_on|open_in_new|chevron_right|expand_more|menu|search|close|home|shopping_cart|person|login|logout|favorite|share|more_vert)\b/gi;
+    const source = String(value || '');
+    if (/(?:Ã.|Ø.|Ù.|â.){2,}/.test(source)) return '';
+    return source
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\b(?:class|style|onclick|aria-label|data-[\w-]+)\s*=\s*["'][^"']*["']/gi, ' ')
+        .replace(iconWords, ' ')
+        .replace(/\bCHAPITRE\b/gi, ' ')
+        .replace(/\s*([|·•])\s*/g, ' · ')
+        .replace(/(?:\s*·\s*){2,}/g, ' · ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, max);
+}
+
+function dedupeBusinessInsights(items = [], limit = 5) {
+    const accepted = [];
+    const fingerprints = [];
+    for (const item of items) {
+        const clean = cleanCompetitorBusinessText(typeof item === 'string' ? item : item?.action || item?.reason || item?.title, 320);
+        if (!clean) continue;
+        const fingerprint = clean.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+            .replace(/\b(?:les|des|une|pour|avec|dans|the|and|with|that|this|على|في|من|مع)\b/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!fingerprint || fingerprints.some(x => x.includes(fingerprint) || fingerprint.includes(x))) continue;
+        fingerprints.push(fingerprint);
+        accepted.push(typeof item === 'string' ? clean : { ...item, action: item.action ? clean : item.action, reason: item.reason ? clean : item.reason });
+        if (accepted.length >= limit) break;
+    }
+    return accepted;
+}
+
+function localizeCompetitorMarketName(geo = '', lang = 'fr') {
+    const raw = String(geo || '').trim();
+    const normalized = raw.toLowerCase();
+    const country = normalized.includes('global') || normalized.includes('worldwide')
+        ? 'global'
+        : normalized.includes('morocco') || normalized.includes('maroc') ? 'morocco'
+        : normalized.includes('saudi') || normalized.includes('arabie saoudite') ? 'saudi'
+        : normalized.includes('emirates') || normalized.includes('uae') || normalized.includes('émirats') ? 'uae'
+        : normalized.includes('france') ? 'france'
+        : null;
+    const names = {
+        fr: { global: 'marché global anglophone', morocco: 'Maroc', saudi: 'Arabie saoudite', uae: 'Émirats arabes unis', france: 'France' },
+        en: { global: 'Global English market', morocco: 'Morocco', saudi: 'Saudi Arabia', uae: 'United Arab Emirates', france: 'France' },
+        ar: { global: 'السوق العالمي باللغة الإنجليزية', morocco: 'المغرب', saudi: 'السعودية', uae: 'الإمارات', france: 'فرنسا' }
+    };
+    return names[lang]?.[country] || raw || names[lang]?.global || 'Global English market';
+}
+
+function competitorMarketPhrase(geo = '', lang = 'fr') {
+    const name = localizeCompetitorMarketName(geo, lang);
+    if (lang === 'ar') return `في ${name}`;
+    if (lang === 'en') return name === 'Global English market' ? 'in the Global English market' : `in ${name}`;
+    if (name === 'Maroc') return 'au Maroc';
+    if (name === 'Émirats arabes unis') return 'aux Émirats arabes unis';
+    if (name === 'marché global anglophone') return 'sur le marché global anglophone';
+    return `en ${name}`;
+}
+
+function competitorGeoMismatchNote(query = '', geo = '', lang = 'fr') {
+    const isGlobal = /global|worldwide/i.test(String(geo || ''));
+    const mentionsMorocco = /morocco|maroc|المغرب/i.test(String(query || ''));
+    if (!isGlobal || !mentionsMorocco) return null;
+    if (lang === 'ar') return 'تحتوي عبارة البحث على Morocco، لكن السوق المختار هو Global English. يجب اعتبار النتائج إشارات عامة مع ضرورة التحقق محليا.';
+    if (lang === 'en') return 'The query mentions Morocco, but the selected target is Global English. Treat these as global signals that still require local verification.';
+    return 'La requête mentionne Morocco, mais le ciblage sélectionné est Global English. Les résultats doivent être interprétés comme signaux globaux avec vérification locale nécessaire.';
+}
+
+function detectCompetitorBusinessArchetype(query = '', competitors = []) {
+    const blob = `${query} ${competitors.map(x => `${x.title || ''} ${x.snippet || ''} ${x.competitorType || ''}`).join(' ')}`.toLowerCase();
+    if (/compl[eé]ment|vitamin|caf[eé]ine|caffeine|ginseng|mineraux|min[eé]raux|effervescent|fatigue|concentration|energy|[ée]nergie|nutrition|sant[eé]/i.test(blob)) return 'supplement';
+    if (/agence|agency|service|consulting|conseil|saas|software|logiciel|formation|marketing|intelligence artificielle|\bia\b|\bai\b|b2b|prestation|accompagnement/i.test(blob)) return 'service';
+    if (/e-?commerce|boutique|shop|store|produit|product|retail|livraison|delivery|marketplace|acheter|buy/i.test(blob)) return 'physical_product';
+    return 'generic';
+}
+
+function marketResultLabelsV2(category = 'market_source', lang = 'fr') {
+    const all = {
+        fr: {
+            direct_competitor: ['Concurrent direct', 'À battre commercialement', 'Comparer son offre, ses preuves et son parcours de décision.'],
+            competitor_brand: ['Marque concurrente', 'Alternative choisie par le client', 'Comparer promesse, composition, disponibilité, prix et preuves.'],
+            reseller: ['Revendeur / canal de distribution', 'Canal de distribution', 'Comparer prix, disponibilité, avis et présentation de l’offre.'],
+            marketplace: ['Marketplace / canal de distribution', 'Canal de distribution', 'Comparer prix, popularité, avis et standards de présentation.'],
+            social_source: ['Source sociale', 'Signal marché', 'Comprendre les contenus, commentaires, tendances et mots des clients.'],
+            educational_content: ['Contenu éducatif', 'Source marché', 'Comprendre les questions, objections et attentes du marché.'],
+            media_blog: ['Média / blog', 'Source marché', 'Observer les thèmes visibles et le vocabulaire employé.'],
+            directory_comparator: ['Annuaire / comparateur', 'Source marché', 'Repérer des acteurs et comparer leur présence, sans le traiter comme concurrent direct.'],
+            market_source: ['Source marché', 'Signal marché', 'Utiliser cette source pour comprendre la demande, pas comme modèle concurrent.']
+        },
+        en: {
+            direct_competitor: ['Direct competitor', 'Commercial competitor to beat', 'Compare its offer, proof, and decision journey.'],
+            competitor_brand: ['Competing brand', 'Customer alternative', 'Compare promise, composition, availability, pricing, and proof.'],
+            reseller: ['Reseller / distribution channel', 'Distribution channel', 'Compare pricing, availability, reviews, and offer presentation.'],
+            marketplace: ['Marketplace / distribution channel', 'Distribution channel', 'Compare pricing, popularity, reviews, and presentation standards.'],
+            social_source: ['Social source', 'Market signal', 'Understand content, comments, trends, and customer language.'],
+            educational_content: ['Educational content', 'Market source', 'Understand questions, objections, and market expectations.'],
+            media_blog: ['Media / blog', 'Market source', 'Observe visible topics and language.'],
+            directory_comparator: ['Directory / comparator', 'Market source', 'Discover actors without treating the source as a direct competitor.'],
+            market_source: ['Market source', 'Market signal', 'Use this source to understand demand, not as a competitor model.']
+        },
+        ar: {
+            direct_competitor: ['منافس مباشر', 'منافس تجاري يجب التفوق عليه', 'قارن العرض والأدلة ومسار اتخاذ القرار.'],
+            competitor_brand: ['علامة منافسة', 'بديل يختاره العميل', 'قارن الوعد والتركيبة والتوفر والسعر والأدلة.'],
+            reseller: ['بائع / قناة توزيع', 'قناة توزيع', 'قارن السعر والتوفر والآراء وطريقة عرض المنتج.'],
+            marketplace: ['سوق إلكتروني / قناة توزيع', 'قناة توزيع', 'قارن الأسعار والشعبية والآراء ومعايير عرض المنتج.'],
+            social_source: ['مصدر اجتماعي', 'إشارة سوق', 'افهم المحتوى والتعليقات والاتجاهات ولغة العملاء.'],
+            educational_content: ['محتوى تعليمي', 'مصدر لفهم السوق', 'افهم الأسئلة والاعتراضات وتوقعات السوق.'],
+            media_blog: ['إعلام / مدونة', 'مصدر لفهم السوق', 'راقب المواضيع الظاهرة واللغة المستخدمة.'],
+            directory_comparator: ['دليل / موقع مقارنة', 'مصدر لفهم السوق', 'اكتشف الفاعلين دون اعتباره منافسا مباشرا.'],
+            market_source: ['مصدر لفهم السوق', 'إشارة سوق', 'استخدمه لفهم الطلب وليس كنموذج منافس.']
+        }
+    };
+    const selected = all[lang]?.[category] || all[lang]?.market_source || all.en.market_source;
+    return { typeLabel: selected[0], role: selected[1], recommendedUse: selected[2] };
+}
+
+function classifyMarketResultV2({ url = '', title = '', snippet = '', query = '', lang = 'fr' } = {}) {
+    const host = safeHostname(url);
+    const path = safePath(url);
+    const blob = `${host} ${path} ${title} ${snippet}`.toLowerCase();
+    const queryBlob = String(query || '').toLowerCase();
+    const queryTokens = queryBlob.split(/[^\p{L}\p{N}]+/u).filter(x => x.length >= 4);
+    const relevantMatches = queryTokens.filter(token => blob.includes(token)).length;
+    const shallowCommercialPage = path.split('/').filter(Boolean).length <= 2 && relevantMatches >= 1;
+    const commercialScore = commercialIntentScore(url, title, snippet);
+    let category = 'market_source';
+    let isRealCompetitor = false;
+    let sourceGroup = 'marketSources';
+    let rejectionReason = 'insufficient_commercial_signals';
+
+    if (!host) {
+        category = 'market_source'; rejectionReason = 'invalid_url';
+    } else if (SOCIAL_SOURCE_HOST_PATTERNS.some(x => host.includes(x))) {
+        category = 'social_source'; sourceGroup = 'socialSources'; rejectionReason = 'social_signal_not_competitor';
+    } else if (MARKETPLACE_HOST_PATTERNS.some(x => host.includes(x)) || /marketplace|place de march[eé]/i.test(blob)) {
+        category = 'marketplace'; sourceGroup = 'distributionChannels'; rejectionReason = 'distribution_channel_not_direct_competitor';
+        if (/marketplace|place de march[eé]|marketplace platform/i.test(queryBlob)) {
+            isRealCompetitor = true; sourceGroup = 'competitors'; rejectionReason = null;
+        }
+    } else if (/pharmacie|parapharmacie|pharmacy|revendeur|retailer|distributeur|distributor|cocooncenter/i.test(blob)) {
+        category = 'reseller'; sourceGroup = 'distributionChannels'; rejectionReason = 'reseller_not_direct_competitor';
+        if (/pharmacie|parapharmacie|revendeur|retailer|e-?commerce/i.test(queryBlob)) {
+            isRealCompetitor = true; sourceGroup = 'competitors'; rejectionReason = null;
+        }
+    } else if (/wikipedia|encyclop[eé]die|forum|reddit|quora/i.test(blob)) {
+        category = 'educational_content'; rejectionReason = 'educational_source';
+    } else if (/\/(?:blog|news|article|guide|actualite|magazine)\b|blog|article|guide|news|magazine|m[eé]dia/i.test(blob)) {
+        category = 'media_blog'; rejectionReason = 'informational_source';
+    } else if (/annuaire|directory|comparateur|comparison|classement|top\s+\d+/i.test(blob)) {
+        category = 'directory_comparator'; rejectionReason = 'directory_or_comparator';
+    } else if (commercialScore >= 25 || shallowCommercialPage || /officiel|official|marque|brand|service|solution|produit|product|saas|logiciel|software|agence|agency/i.test(blob)) {
+        const productBrandSignal = /compl[eé]ment|vitamin|caf[eé]ine|ginseng|nutrition|cosm[eé]tique|produit|product/i.test(`${queryBlob} ${blob}`);
+        category = /marque|brand|officiel|official|laboratoire|lab\b/i.test(blob) || productBrandSignal ? 'competitor_brand' : 'direct_competitor';
+        isRealCompetitor = true;
+        sourceGroup = 'competitors';
+        rejectionReason = null;
+    }
+
+    const labels = marketResultLabelsV2(category, lang);
+    return { category, isRealCompetitor, sourceGroup, rejectionReason, commercialScore, ...labels };
+}
+
+function competitorConfidenceExplanation(confidence = 'LOW', lang = 'fr') {
+    if (confidence === 'HIGH') {
+        return lang === 'ar' ? 'الثقة مرتفعة: تم استكشاف الصفحة، والعرض واضح، وتوجد عدة إشارات تجارية وأدلة مرئية.'
+            : lang === 'en' ? 'High confidence: the page was explored, the offer is clear, and several commercial signals and proofs are visible.'
+            : 'Confiance élevée : page explorée, offre claire, signaux commerciaux visibles et plusieurs preuves détectées.';
+    }
+    if (confidence === 'MEDIUM') {
+        return lang === 'ar' ? 'الثقة متوسطة: توجد إشارات مرصودة على الصفحة، لكن بعض الأسعار أو أدلة العملاء ما زالت غير واضحة.'
+            : lang === 'en' ? 'Medium confidence: page signals were observed, but some pricing or customer proof remains unclear.'
+            : 'Confiance moyenne : signaux observés sur la page, mais certaines données tarifaires ou preuves clients restent peu claires.';
+    }
+    return lang === 'ar' ? 'الثقة ضعيفة: تم رصد النتيجة، لكن لم يتم تأكيد التوفر المحلي أو استخراج أدلة كافية من الصفحة.'
+        : lang === 'en' ? 'Low confidence: the result was detected, but local availability or sufficient page evidence could not be confirmed.'
+        : 'Confiance faible : résultat détecté, mais page peu explorée ou disponibilité locale non confirmée.';
+}
+
+function archetypeBusinessCopy(archetype, query, geo, lang = 'fr') {
+    const market = competitorMarketPhrase(geo, lang);
+    const cleanQuery = cleanCompetitorBusinessText(query, 100);
+    const copy = {
+        supplement: {
+            fr: {
+                sell: `Complément alimentaire orienté énergie, concentration et vitalité autour de « ${cleanQuery} ».`,
+                proof: ['Composition et dosage clairement vérifiables', 'Précautions, conformité et mode d’utilisation', `Prix, disponibilité locale et avis clients ${market}`],
+                position: `Devenir l’offre la plus transparente et rassurante ${market} sur la composition, le dosage, la sécurité, le prix et la disponibilité.`,
+                promise: `Une énergie mieux expliquée : composition, dosage, précautions, prix local et preuves clients visibles avant l’achat.`
+            },
+            en: {
+                sell: `Energy, focus, and vitality supplement related to “${cleanQuery}”.`,
+                proof: ['Clearly verifiable composition and dosage', 'Precautions, compliance, and usage instructions', `Local pricing, availability, and customer reviews ${market}`],
+                position: `Become the most transparent and reassuring offer ${market} on composition, dosage, safety, pricing, and availability.`,
+                promise: 'Energy with clearer proof: composition, dosage, precautions, local pricing, and customer reviews visible before purchase.'
+            },
+            ar: {
+                sell: `مكمل غذائي للطاقة والتركيز والحيوية مرتبط بطلب «${cleanQuery}».`,
+                proof: ['تركيبة وجرعة قابلة للتحقق بوضوح', 'الاحتياطات والمطابقة وطريقة الاستخدام', `السعر والتوفر المحلي وآراء العملاء ${market}`],
+                position: `بناء العرض الأكثر شفافية وطمأنينة ${market} من حيث التركيبة والجرعة والسلامة والسعر والتوفر.`,
+                promise: 'طاقة بأدلة أوضح: التركيبة والجرعة والاحتياطات والسعر المحلي وآراء العملاء قبل الشراء.'
+            }
+        },
+        service: {
+            fr: {
+                sell: `Service spécialisé en « ${cleanQuery} » avec conseil, exécution et accompagnement.`,
+                proof: ['Cas clients et résultats vérifiables', 'Livrables, délais, révisions et conditions de paiement', 'Support, accompagnement et conditions de remboursement'],
+                position: `Devenir l’offre la plus claire et la plus vérifiable ${market}, avec livrables, délais, prix, résultats et accompagnement explicités.`,
+                promise: `Un diagnostic clair, des livrables précis, des délais annoncés et des résultats vérifiables.`
+            },
+            en: {
+                sell: `Specialist “${cleanQuery}” service combining advice, execution, and support.`,
+                proof: ['Verifiable client cases and outcomes', 'Deliverables, timelines, revisions, and payment terms', 'Support, follow-up, and refund conditions'],
+                position: `Become the clearest and easiest-to-verify offer ${market}, with explicit deliverables, timelines, pricing, outcomes, and support.`,
+                promise: 'A clear diagnosis, precise deliverables, stated timelines, and verifiable outcomes.'
+            },
+            ar: {
+                sell: `خدمة متخصصة في «${cleanQuery}» تجمع بين الاستشارة والتنفيذ والمواكبة.`,
+                proof: ['حالات عملاء ونتائج قابلة للتحقق', 'مخرجات وآجال ومراجعات وشروط دفع واضحة', 'دعم ومواكبة وشروط استرجاع واضحة'],
+                position: `بناء العرض الأكثر وضوحا وقابلية للتحقق ${market} مع توضيح المخرجات والآجال والأسعار والنتائج والمواكبة.`,
+                promise: 'تشخيص واضح ومخرجات دقيقة وآجال معلنة ونتائج قابلة للتحقق.'
+            }
+        },
+        physical_product: {
+            fr: {
+                sell: `Produit vendu en ligne autour de « ${cleanQuery} ».`,
+                proof: ['Prix total et preuve de stock', 'Livraison, retours et garantie', 'Avis clients et photos réelles'],
+                position: `Devenir l’offre la plus simple à comparer et la plus rassurante ${market}, avec prix, stock, livraison, retours et preuves visibles.`,
+                promise: 'Prix total, stock, livraison, garantie et preuves visibles avant la commande.'
+            },
+            en: {
+                sell: `Online product offer related to “${cleanQuery}”.`,
+                proof: ['Total price and stock proof', 'Delivery, returns, and guarantee', 'Customer reviews and real photos'],
+                position: `Become the easiest offer to compare and trust ${market}, with visible pricing, stock, delivery, returns, and proof.`,
+                promise: 'Total pricing, stock, delivery, guarantee, and proof visible before ordering.'
+            },
+            ar: {
+                sell: `منتج يباع عبر الإنترنت مرتبط بطلب «${cleanQuery}».`,
+                proof: ['السعر الإجمالي وإثبات المخزون', 'التوصيل والإرجاع والضمان', 'آراء العملاء وصور حقيقية'],
+                position: `بناء العرض الأسهل مقارنة والأكثر طمأنينة ${market} مع إظهار السعر والمخزون والتوصيل والإرجاع والأدلة.`,
+                promise: 'السعر الإجمالي والمخزون والتوصيل والضمان والأدلة ظاهرة قبل الطلب.'
+            }
+        }
+    };
+    return copy[archetype]?.[lang] || copy.service[lang] || copy.service.en;
+}
+
+async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', query = '', geo = '', userContext = {} } = {}) {
+    const archetypeContext = [query, userContext?.offer, userContext?.audience].filter(Boolean).join(' ');
+    const archetype = detectCompetitorBusinessArchetype(archetypeContext, competitors);
+    const generic = archetypeBusinessCopy(archetype, query, geo, lang);
+    const rawProfiles = await enrichTopCompetitorsBusiness(competitors, lang);
+    return rawProfiles.map((raw, index) => {
+        const competitor = competitors[index] || {};
+        const signals = raw?.signals || {};
+        const observedStrengths = dedupeBusinessInsights([
+            ...(raw?.structuralStrengths || []),
+            ...(raw?.observedStrengths || [])
+        ], 3);
+        const observedText = cleanCompetitorBusinessText(raw?.whatTheySell, 220);
+        const tooGeneric = !observedText || /offre commerciale|commercial offer|عرض تجاري|demande observ|market demand/i.test(observedText);
+        const proofGaps = [...generic.proof];
+        const removeProofGap = pattern => {
+            const proofIndex = proofGaps.findIndex(x => pattern.test(x));
+            if (proofIndex >= 0) proofGaps.splice(proofIndex, 1);
+        };
+        if (signals.hasReviews) removeProofGap(/avis|review|آراء/i);
+        if (signals.hasPrice) removeProofGap(/prix|pricing|price|السعر/i);
+        const missingProofs = dedupeBusinessInsights([...(raw?.missingProofs || []), ...proofGaps].filter(Boolean), 3);
+        const weaknesses = dedupeBusinessInsights([
+            ...(raw?.deducedWeaknesses || []),
+            ...missingProofs.map(x => lang === 'ar' ? `فرصة قابلة للتحقق: ${x}` : lang === 'en' ? `Verifiable opening: ${x}` : `Ouverture à vérifier : ${x}`)
+        ], 3);
+        const confidence = raw?.confidence || 'LOW';
+        return {
+            ...raw,
+            whatTheySell: tooGeneric ? generic.sell : observedText,
+            primaryPromise: cleanCompetitorBusinessText(raw?.primaryPromise || competitor.title, 200),
+            observedStrengths,
+            structuralStrengths: observedStrengths,
+            deducedWeaknesses: weaknesses,
+            missingProofs,
+            attackAngle: cleanCompetitorBusinessText(weaknesses[0] || generic.position, 260),
+            concreteAction: cleanCompetitorBusinessText(generic.proof.join(' · '), 300),
+            confidence,
+            confidenceExplanation: competitorConfidenceExplanation(confidence, lang),
+            archetype,
+            classification: competitor.classification || null,
+            evidenceLinks: (raw?.evidenceLinks || [competitor.url]).filter(Boolean).slice(0, 6)
+        };
+    });
+}
+
+function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = '', lang = 'fr', archetype = 'generic', missingProofs = [] } = {}) {
+    const generic = archetypeBusinessCopy(archetype === 'generic' ? 'service' : archetype, query, geo, lang);
+    const leaderName = leader.domain || (lang === 'ar' ? 'المتصدر' : lang === 'en' ? 'the leader' : 'le leader');
+    const pageComparison = lang === 'ar' ? `أنشئ صفحة مقارنة واضحة مع ${leaderName} تشرح الفروق في العرض والسعر والأدلة.`
+        : lang === 'en' ? `Publish a clear comparison page against ${leaderName}, covering offer, pricing, and proof.`
+        : `Publier une page comparative claire face à ${leaderName}, couvrant l’offre, le prix et les preuves.`;
+    const actions = [
+        { category: 'positionnement', action: pageComparison, why: generic.position, impact: 'HIGH', effort: 'MEDIUM', horizon: '7_DAYS' },
+        { category: 'preuve', action: generic.proof[0], why: missingProofs[0] || generic.promise, impact: 'HIGH', effort: 'LOW', horizon: '7_DAYS' },
+        { category: 'offre', action: generic.proof[1], why: missingProofs[1] || generic.position, impact: 'HIGH', effort: 'LOW', horizon: '7_DAYS' },
+        { category: 'confiance', action: generic.proof[2], why: missingProofs[2] || generic.promise, impact: 'HIGH', effort: 'MEDIUM', horizon: '30_DAYS' },
+        { category: 'conversion', action: generic.promise, why: generic.position, impact: 'HIGH', effort: 'MEDIUM', horizon: '30_DAYS' }
+    ];
+    return dedupeBusinessActions(actions).slice(0, 6);
+}
+
+function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources = [], mergedData = {}, lang = 'fr', query = '', geo = '', userContext = {} } = {}) {
+    const archetypeContext = [query, userContext?.offer, userContext?.audience].filter(Boolean).join(' ');
+    const archetype = detectCompetitorBusinessArchetype(archetypeContext, competitors);
+    const generic = archetypeBusinessCopy(archetype === 'generic' ? 'service' : archetype, query, geo, lang);
+    const profiles = competitors.slice(0, 5).map(c => {
+        const profile = c.businessProfile || {};
+        return {
+            domain: c.domain, title: c.title, url: c.url, position: c.position,
+            competitorType: c.competitorType, category: c.category, typeLabel: c.typeLabel || c.type,
+            whatTheySell: cleanCompetitorBusinessText(profile.whatTheySell || c.snippet || generic.sell, 220),
+            primaryPromise: cleanCompetitorBusinessText(profile.primaryPromise || c.title, 200),
+            observedStrengths: dedupeBusinessInsights(profile.observedStrengths || [], 3),
+            deducedWeaknesses: dedupeBusinessInsights(profile.deducedWeaknesses || [], 3),
+            missingProofs: dedupeBusinessInsights(profile.missingProofs || [], 3),
+            attackAngle: cleanCompetitorBusinessText(profile.attackAngle || generic.position, 250),
+            concreteAction: cleanCompetitorBusinessText(profile.concreteAction || generic.proof.join(' · '), 300),
+            evidenceLinks: (profile.evidenceLinks || [c.url]).filter(Boolean).slice(0, 5),
+            confidence: profile.confidence || 'LOW',
+            confidenceExplanation: profile.confidenceExplanation || competitorConfidenceExplanation(profile.confidence || 'LOW', lang),
+            signals: profile.signals || {},
+            geoMatched: c.geoMatched,
+            commercialIntentScore: c.commercialIntentScore
+        };
+    });
+    const leader = profiles[0] || {};
+    const allEvidence = [...new Set(profiles.flatMap(x => (x.evidenceLinks || []).map(link => link?.url || link)).filter(Boolean))].slice(0, 12);
+    const weaknesses = dedupeBusinessInsights(profiles.flatMap(x => x.deducedWeaknesses || []), 3);
+    const missingProofs = dedupeBusinessInsights(profiles.flatMap(x => x.missingProofs || []), 3);
+    const reasons = dedupeBusinessInsights([
+        ...(leader.observedStrengths || []),
+        leader.geoMatched ? (lang === 'ar' ? 'حضور واضح وملائم للسوق المستهدف.' : lang === 'en' ? 'Clear relevance and presence in the target market.' : 'Présence claire et pertinente sur le marché ciblé.') : null,
+        Number(leader.commercialIntentScore || 0) >= 50 ? (lang === 'ar' ? 'مسار تجاري واضح يساعد الزائر على فهم العرض واتخاذ قرار.' : lang === 'en' ? 'A clear commercial journey helps visitors understand the offer and decide.' : 'Un parcours commercial clair aide le visiteur à comprendre l’offre et décider.') : null
+    ].filter(Boolean), 3);
+    if (!reasons.length && leader.domain) {
+        reasons.push(lang === 'ar'
+            ? 'هو أول منافس تجاري مباشر تم رصده، لكن سبب تفوقه يحتاج إلى أدلة إضافية قبل اعتباره حقيقة.'
+            : lang === 'en'
+                ? 'It is the first observed direct commercial competitor, but its advantage still requires additional evidence.'
+                : 'Il est le premier concurrent commercial direct observé, mais son avantage doit encore être confirmé par des preuves supplémentaires.');
+    }
+    const reasonDetails = reasons.map(reason => ({
+        reason, scope: 'brand_site', type: 'observed', confidence: leader.confidence || 'LOW',
+        evidenceLinks: leader.evidenceLinks || []
+    }));
+    const actions = buildDeterministicBusinessActionsV2({ leader, query, geo, lang, archetype, missingProofs }).map(x => ({
+        ...x, type: 'recommended', confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW', evidenceLinks: allEvidence.slice(0, 4)
+    }));
+    const grouped = { competitors: [], distributionChannels: [], socialSources: [], marketSources: [] };
+    for (const source of marketSources) {
+        const key = source.sourceGroup && grouped[source.sourceGroup] ? source.sourceGroup : 'marketSources';
+        grouped[key].push(source);
+    }
+    grouped.competitors = competitors.slice(5, 10).map(x => ({
+        ...x,
+        role: marketResultLabelsV2('direct_competitor', lang).role,
+        recommendedUse: marketResultLabelsV2('direct_competitor', lang).recommendedUse
+    }));
+    const demandSignals = dedupeBusinessInsights([
+        ...(mergedData.marketInsights?.vocabulary || []),
+        ...(mergedData.marketInsights?.relatedSearches || []).map(x => x?.query || x)
+    ], 5);
+    const mismatchNote = competitorGeoMismatchNote(query, geo, lang);
+    const noDirectCompetitor = lang === 'ar' ? 'لم يتم تأكيد منافس مباشر' : lang === 'en' ? 'No direct competitor confirmed' : 'Aucun concurrent direct confirmé';
+    const marketPattern = profiles.length >= 3
+        ? (lang === 'ar' ? 'السوق يضم عدة عروض تجارية قابلة للمقارنة؛ التفوق يتطلب وعدا أوضح وأدلة أقوى.'
+            : lang === 'en' ? 'The market contains several comparable commercial offers; winning requires a clearer promise and stronger proof.'
+            : 'Le marché contient plusieurs offres commerciales comparables ; gagner exige une promesse plus claire et des preuves plus fortes.')
+        : (lang === 'ar' ? 'عدد المنافسين المباشرين المؤكدين محدود؛ يجب التحقق من الفرصة محليا قبل الاستثمار.'
+            : lang === 'en' ? 'Few direct competitors are confirmed; validate the opportunity locally before investing.'
+            : 'Peu de concurrents directs sont confirmés ; valider l’opportunité localement avant d’investir.');
+    return {
+        positioning: lang === 'ar'
+            ? 'Daka لاستخبارات السوق — محرك لتحليل السوق والمنافسة والطلب والعرض والقرار التجاري.'
+            : lang === 'en'
+                ? 'Daka Market Insight Intelligence — market, competition, demand, offer, and business decision engine.'
+                : 'Daka Market Insight Intelligence — moteur d’analyse marché, concurrence, demande, offre et décision business.',
+        geoInterpretation: { market: localizeCompetitorMarketName(geo, lang), mismatchNote },
+        productMarketStudy: {
+            subject: query, geo: localizeCompetitorMarketName(geo, lang), archetype,
+            observedDemandSignals: demandSignals,
+            observedOfferPatterns: dedupeBusinessInsights(profiles.map(x => x.whatTheySell), 5),
+            buyerDecisionFactors: generic.proof,
+            exploitableOpenings: weaknesses,
+            type: 'deduced', confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW', evidenceLinks: allEvidence
+        },
+        marketVerdict: {
+            currentLeader: leader.domain || noDirectCompetitor, whoWins: leader.domain || noDirectCompetitor,
+            whyTheyWin: reasons, whyTheyWinDetails: reasonDetails, marketPattern,
+            type: 'deduced', confidence: leader.confidence || 'LOW',
+            confidenceExplanation: leader.confidenceExplanation || competitorConfidenceExplanation(leader.confidence || 'LOW', lang),
+            evidenceLinks: leader.evidenceLinks || []
+        },
+        competitorProfiles: profiles,
+        recommendedAttackAngle: {
+            whatCompetitorsSell: dedupeBusinessInsights(profiles.map(x => x.whatTheySell), 4),
+            whatTheyDoNotProve: missingProofs, promiseToMake: generic.promise,
+            positioningStatement: generic.position, proofsToAdd: missingProofs.length ? missingProofs : generic.proof,
+            type: 'recommended', confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW', evidenceLinks: allEvidence
+        },
+        priorityActions: actions,
+        surveillance: grouped,
+        finalAnswers: {
+            whoWins: leader.domain || noDirectCompetitor, whyTheyWin: reasons, weaknesses,
+            positionToTake: generic.position,
+            thisWeek: actions.filter(x => x.horizon === '7_DAYS').slice(0, 3),
+            next30Days: actions.filter(x => x.horizon === '30_DAYS').slice(0, 3),
+            missingProofs: missingProofs.length ? missingProofs : generic.proof.slice(0, 3)
+        }
+    };
+}
+
 async function analyzeCompetitors(
     query,
     geo ,
@@ -5817,7 +6252,7 @@ const gscData =
         const commercialScore = commercialIntentScore(url, title, snippet);
         const geoMatch = geoMatchDetailsV2(url, geoData, title, snippet);
         const geoScore = Math.max(geoBoostScore(url, geoData, title, snippet), geoMatch.score || 0);
-        const classification = classifyCompetitorType(url, title, snippet, langObj.code);
+        const classification = classifyMarketResultV2({ url, title, snippet, query: cleanQuery, lang: langObj.code });
 
         return {
             raw: r,
@@ -5829,9 +6264,15 @@ const gscData =
             blocked,
             officialLike,
             commercialScore,
-            isRealCompetitor: !blocked && officialLike && commercialScore >= 25,
-            competitorType: classification.competitorType,
-            rejectionReason: competitorRejectionReason(url, title, snippet, commercialScore),
+            isRealCompetitor: classification.isRealCompetitor,
+            competitorType: classification.category,
+            category: classification.category,
+            typeLabel: classification.typeLabel,
+            marketRole: classification.role,
+            recommendedUse: classification.recommendedUse,
+            sourceGroup: classification.sourceGroup,
+            classification,
+            rejectionReason: classification.rejectionReason,
             geoScore,
             geoMatch
         };
@@ -5845,6 +6286,11 @@ const gscData =
         domain: x.domain,
         snippet: x.snippet,
         commercialIntentScore: x.commercialScore,
+        category: x.category,
+        typeLabel: x.typeLabel,
+        role: x.marketRole,
+        recommendedUse: x.recommendedUse,
+        sourceGroup: x.sourceGroup,
         rejectionReason: x.rejectionReason || 'not_a_business_competitor'
     }))
     .slice(0, 10);
@@ -5868,8 +6314,7 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
     if (SOCIAL_COMPETITOR_DOMAINS.some(d => domain.includes(d))) {
         type = isAr ? 'شبكات اجتماعية' : isEn ? 'Social Profile' : 'Réseau social';
     } else {
-        const classified = classifyCompetitorType(url, r.title || '', r.snippet || '', langObj?.code || lang);
-        type = classified.type;
+        type = x.typeLabel;
     }
 
     const commercialScore = x.commercialScore;
@@ -5902,12 +6347,21 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
         sitelinks: Array.isArray(r.sitelinks) ? r.sitelinks.length : (r.sitelinks ? 1 : 0),
         commercialIntentScore: commercialScore,
         isRealCompetitor,
-        competitorType
+        competitorType,
+        category: x.category,
+        typeLabel: x.typeLabel,
+        marketRole: x.marketRole,
+        classification: x.classification
     };
 });
 
     // ── 6. SCRAPING MOAT LEADER (SCRAPE.DO) ───────────────────
-const top5BusinessProfiles = await enrichTopCompetitorsBusiness(enrichedCompetitors, langObj.code);
+const top5BusinessProfiles = await enrichTopCompetitorsBusinessV2(enrichedCompetitors, {
+    lang: langObj.code,
+    query: cleanQuery,
+    geo: geoData.location,
+    userContext: userIntentContext
+});
 top5BusinessProfiles.forEach((profile, index) => {
     if (enrichedCompetitors[index]) enrichedCompetitors[index].businessProfile = profile;
 });
@@ -6363,14 +6817,19 @@ let mergedData = {
         `LANGUE OBLIGATOIRE : ${langObj.name.toUpperCase()}`,
         forceLanguageLine,
         '',
-        'Tu es un stratège SEO, analyste de marché et expert en ingénierie d\'offres (méthode Alex Hormozi).',
+        'Tu es un analyste senior de marché, concurrence, demande et ingénierie d\'offres.',
         'REGLES ABSOLUES :',
         '1. JSON valide uniquement. Zero texte hors JSON.',
         '2. Tu ne dois inventer aucun chiffre réel (trafic, CA, conversion).',
         `3. Si une donnée est introuvable, formule une recommandation experte ou écrit exactement "${ND}".`,
         '4. Sois ultra-précis, tranchant et stratégique.',
         '5. INTERDICTION STRICTE du "Fluff" marketing.',
-        '6. OBLIGATION DE PRÉCISION : Décris l\'action MÉCANIQUE exacte.'
+        '6. OBLIGATION DE PRÉCISION : Décris l\'action MÉCANIQUE exacte.',
+        '7. POSITIONNEMENT : produis un dossier Market Insight Intelligence, pas un rapport SEO.',
+        '8. SÉPARE strictement les faits observés, les déductions et les recommandations.',
+        '9. ADAPTE chaque action au type de business : service/SaaS, produit physique ou complément alimentaire.',
+        '10. N utilise jamais livraison/retours pour un service ; parle de livrables, délais, révisions, paiement et accompagnement.',
+        '11. Ne présente jamais une hypothèse comme une preuve observée.'
     ].join('\n');
 
     // ── 12. HELPER callAgent ──────────────────────────────────
@@ -6668,14 +7127,21 @@ JSON uniquement :
     if (r4.comparisonScores)        mergedData.comparisonScores        = r4.comparisonScores;
     if (r4.semanticDifferences)     mergedData.semanticDifferences     = r4.semanticDifferences;
 
-    const competitorIntelligence = buildCompetitorDecisionIntelligence({
+    const competitorIntelligence = buildCompetitorDecisionIntelligenceV2({
         competitors: enrichedCompetitors,
         marketSources,
         mergedData,
         lang: langObj.code,
         query: cleanQuery,
-        geo: geoData.location
+        geo: geoData.location,
+        userContext: userIntentContext
     });
+    // Keep legacy report blocks aligned with the verified business decision layer.
+    mergedData.winningMove = competitorIntelligence.finalAnswers?.positionToTake || mergedData.winningMove;
+    mergedData.actionRoadmap = (competitorIntelligence.priorityActions || [])
+        .map(item => item.action)
+        .filter(Boolean)
+        .slice(0, 6);
 
     // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
   // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
