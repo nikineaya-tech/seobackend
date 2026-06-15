@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node scraper-worker.js",
     "start:orchestrator": "node scraper-orchestrator.js",
-    "postinstall": "npx playwright install chromium --with-deps || echo 'Playwright install skipped'",
+    "postinstall": "echo Playwright browsers provided by Docker image",
     "check": "node -v"
   },
   "dependencies": {
