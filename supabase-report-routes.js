@@ -74,7 +74,19 @@ async function saveGeneratedReportForUser(supabase, options) {
 
 function registerReportRoutes(app, { supabase, requireAuth }) {
     const freeMonthlyQuota = Math.max(1, Number(process.env.FREE_REPORTS_PER_MONTH || 15));
+function getQuotaPolicy(email = '') {
+    const e = String(email || '').trim().toLowerCase();
 
+    if (e === 'nikineaya@gmail.com') {
+        return { plan: 'owner_unlimited', unlimited: true, limit: null };
+    }
+
+    if (e === 'ecm00bcm@gmail.com') {
+        return { plan: 'pro_150', unlimited: false, limit: 150 };
+    }
+
+    return { plan: 'free', unlimited: false, limit: freeMonthlyQuota };
+}
     function ensureReportsConfigured(res) {
         if (supabase) return true;
         res.status(503).json({
@@ -85,7 +97,7 @@ function registerReportRoutes(app, { supabase, requireAuth }) {
         return false;
     }
 
-    async function getQuota(userId) {
+    async function getQuota(userId, email = '') {
         const start = new Date();
         start.setUTCDate(1);
         start.setUTCHours(0, 0, 0, 0);
@@ -99,13 +111,16 @@ function registerReportRoutes(app, { supabase, requireAuth }) {
         if (error) throw new Error(`REPORT_QUOTA_FAILED: ${error.message}`);
 
         const used = Number(count || 0);
-        return {
-            plan: 'free',
-            limit: freeMonthlyQuota,
-            used,
-            remaining: Math.max(0, freeMonthlyQuota - used),
-            resetsAt: new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1)).toISOString()
-        };
+        const policy = getQuotaPolicy(email);
+
+return {
+    plan: policy.plan,
+    unlimited: policy.unlimited,
+    limit: policy.limit,
+    used,
+    remaining: policy.unlimited ? null : Math.max(0, policy.limit - used),
+    resetsAt: new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 1)).toISOString()
+};
     }
 
     async function requireReportQuota(req, res, next) {
@@ -113,9 +128,9 @@ function registerReportRoutes(app, { supabase, requireAuth }) {
         if (!ensureReportsConfigured(res)) return;
 
         try {
-            const quota = await getQuota(req.user.id);
+            const quota = await getQuota(req.user.id, req.user.email);
             req.reportQuota = quota;
-            if (quota.remaining <= 0) {
+            if (!quota.unlimited && quota.remaining <= 0) {
                 return res.status(429).json({
                     success: false,
                     error: 'FREE_QUOTA_EXHAUSTED',
@@ -164,7 +179,7 @@ function registerReportRoutes(app, { supabase, requireAuth }) {
                     .then(async report => {
                         let quota = req.reportQuota || null;
                         try {
-                            quota = await getQuota(req.user.id);
+                            quota = await getQuota(req.user.id, req.user.email);
                         } catch (quotaError) {
                             console.warn('[Reports] quota refresh failed:', quotaError.message);
                         }
@@ -191,7 +206,7 @@ function registerReportRoutes(app, { supabase, requireAuth }) {
     app.get('/api/reports/quota', requireAuth, async (req, res) => {
         if (!ensureReportsConfigured(res)) return;
         try {
-            return res.json({ success: true, quota: await getQuota(req.user.id) });
+            return res.json({ success: true, quota: await getQuota(req.user.id, req.user.email) });
         } catch (error) {
             return res.status(500).json({ success: false, error: error.message });
         }
@@ -226,7 +241,7 @@ function registerReportRoutes(app, { supabase, requireAuth }) {
         return res.status(201).json({
             success: true,
             report: data,
-            quota: await getQuota(req.user.id)
+            quota: await getQuota(req.user.id, req.user.email)
         });
     });
 
@@ -245,7 +260,7 @@ function registerReportRoutes(app, { supabase, requireAuth }) {
         const { data, error } = await query;
 
         if (error) return res.status(500).json({ success: false, error: error.message });
-        return res.json({ success: true, reports: data || [], quota: await getQuota(req.user.id) });
+        return res.json({ success: true, reports: data || [], quota: await getQuota(req.user.id, req.user.email) });
     });
 
     app.get('/api/reports/price-history', requireAuth, async (req, res) => {
