@@ -200,7 +200,84 @@ async function waitForJobResult(jobId, timeout = 90000) {
     timeoutError.code = 'QUEUE_TIMEOUT';
     throw timeoutError;
 }
+// ═══════════════════════════════════════════════════════════════════
+// SCRAPING ROUTER — Render business / Railway scraping-only
+// ═══════════════════════════════════════════════════════════════════
 
+const SCRAPING_EXECUTION_LAYER = String(
+    process.env.SCRAPING_EXECUTION_LAYER || 'railway'
+).toLowerCase();
+
+const RENDER_SCRAPING_FALLBACK = ['1', 'true', 'yes', 'on'].includes(
+    String(process.env.RENDER_SCRAPING_FALLBACK || 'false').toLowerCase()
+);
+
+function shouldUseRailwayScraping() {
+    return (
+        SCRAPING_EXECUTION_LAYER === 'railway' &&
+        supabase &&
+        process.env.WORKER_MODE !== 'scraping-only'
+    );
+}
+
+async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
+    if (!supabase) {
+        throw new Error('RAILWAY_SCRAPING_REQUIRES_SUPABASE');
+    }
+
+    const allowedTypes = new Set([
+        'scrape',
+        'scrape-url',
+        'scrape_url',
+        'deep-scrape',
+        'deep_scrape',
+        'product-scrape',
+        'product_scrape',
+        'page-scrape',
+        'page_scrape'
+    ]);
+
+    if (!allowedTypes.has(type)) {
+        throw new Error(`INVALID_RAILWAY_SCRAPE_JOB_TYPE: ${type}`);
+    }
+
+    const jobId = await enqueueJob(type, {
+        ...payload,
+        _requestedBy: 'render-server',
+        _executionLayer: 'railway',
+        _createdAt: new Date().toISOString()
+    });
+
+    if (!jobId) {
+        throw new Error('RAILWAY_SCRAPE_JOB_NOT_CREATED');
+    }
+
+    console.log(
+        `[RAILWAY-SCRAPE] Job créé: ${jobId} type=${type} url=${payload.url || payload.targetUrl || payload.website || 'N/A'}`
+    );
+
+    const result = await waitForJobResult(jobId, timeout);
+
+    return {
+        ...result,
+        sourceJobId: jobId,
+        executionLayer: 'railway'
+    };
+}
+
+async function scrapeUrlViaRailway(url, options = {}) {
+    return runScrapeOnRailway('deep-scrape', {
+        url,
+        explore: options.explore !== false,
+        maxExtraPages: options.maxExtraPages ?? 3,
+        maxPages: options.maxPages ?? 4,
+        maxDepth: options.maxDepth ?? 1,
+        maxClicks: options.maxClicks ?? 6,
+        maxButtonsPerPage: options.maxButtonsPerPage ?? 4,
+        crawlBudgetMs: options.crawlBudgetMs ?? 45000,
+        sameOriginOnly: options.sameOriginOnly !== false
+    }, options.timeout || 120000);
+}
 function queuedJobMiddleware(type) {
     return async (req, res, next) => {
         if (!supabase || req.queueBypass === true || req.get('x-daka-worker-bypass') === '1') {
@@ -3229,12 +3306,150 @@ async function exploreFunnelCommerce(url, options = {}) {
     deduced: { productIntent: 'unknown', offerType: 'unknown', pricingConfidence: 'LOW', trustConfidence: 'LOW' },
     recommended: buildStrategicPricingFromCommerce({}, userSignal, {})
   });
+  const buildCommerceFromRailwayResult = (railwayResult = {}) => {
+    const mainPage =
+      railwayResult.mainPage ||
+      (Array.isArray(railwayResult.pages) ? railwayResult.pages[0] : null) ||
+      {};
 
+    const pages = Array.isArray(railwayResult.pages) && railwayResult.pages.length
+      ? railwayResult.pages
+      : [mainPage].filter(Boolean);
+
+    const products = pages
+      .flatMap(page => Array.isArray(page.productCards) ? page.productCards : [])
+      .slice(0, 8)
+      .map(p => ({
+        name: p.title || p.name || '',
+        url: p.url || null,
+        image: p.image || null,
+        cta: p.cta || '',
+        price: null,
+        currency: null,
+        textSample: p.textPreview || ''
+      }));
+
+    const priceCandidates = pages
+      .flatMap(page => Array.isArray(page.prices) ? page.prices : [])
+      .filter(p => Number.isFinite(Number(p.value)))
+      .map(p => ({
+        ...p,
+        value: Number(p.value),
+        currency: p.currency || null,
+        source: p.source || 'railway'
+      }));
+
+    const numericPrices = priceCandidates
+      .map(p => Number(p.value))
+      .filter(n => Number.isFinite(n) && n > 0);
+
+    const mergedTrust = pages.reduce((acc, page) => {
+      const trust = page.trustSignals || {};
+      for (const [key, value] of Object.entries(trust)) {
+        if (Array.isArray(value)) {
+          acc[key] = uniqueByKey([...(acc[key] || []), ...value], x => x.url || x);
+        } else {
+          acc[key] = Boolean(acc[key] || value);
+        }
+      }
+      return acc;
+    }, {});
+
+    const observed = {
+      products,
+      pricingPages: [],
+      priceStats: {
+        count: numericPrices.length,
+        min: numericPrices.length ? Math.min(...numericPrices) : null,
+        max: numericPrices.length ? Math.max(...numericPrices) : null,
+        median: medianNumber(numericPrices),
+        currency: priceCandidates.find(p => p.currency)?.currency || userSignal.currency || null
+      },
+      trustSignals: mergedTrust,
+      seoSignals: {
+        title: mainPage.title || '',
+        metaDescription: mainPage.metaDescription || '',
+        h1: mainPage.h1 ? [mainPage.h1] : [],
+        h2: mainPage.headings?.h2 || [],
+        schemaCount: Array.isArray(mainPage.jsonLd) ? mainPage.jsonLd.length : 0,
+        imageCount: Array.isArray(mainPage.images) ? mainPage.images.length : 0,
+        missingAltCount: Array.isArray(mainPage.images) ? mainPage.images.filter(img => !img.alt).length : 0
+      },
+      evidenceLinks: pages
+        .flatMap(page => [
+          ...(Array.isArray(page.internalLinks) ? page.internalLinks : []),
+          ...(Array.isArray(page.externalLinks) ? page.externalLinks : [])
+        ])
+        .slice(0, 16)
+        .map(link => ({
+          type: link.type || link.source || 'link',
+          url: link.url,
+          label: link.label || link.url
+        })),
+      priceCandidates
+    };
+
+    const trustCount = Object.entries(mergedTrust)
+      .filter(([, v]) => Array.isArray(v) ? v.length : !!v)
+      .length;
+
+    const recommended = buildStrategicPricingFromCommerce(observed, userSignal, mergedTrust);
+
+    const result = {
+      success: products.length > 0 || numericPrices.length > 0,
+      mode: 'railway',
+      executionLayer: 'railway',
+      sourceJobId: railwayResult.sourceJobId || null,
+      elapsed: Date.now() - startedAt,
+      observed,
+      userContext: {
+        userPriceRange: userSignal.raw,
+        userPrices: userSignal.prices.map(p => p.value)
+      },
+      deduced: {
+        productIntent: products.length ? 'product_or_catalog' : 'unknown',
+        offerType: products.length ? 'product' : 'unknown',
+        pricingConfidence: recommended.confidence,
+        trustConfidence: trustCount >= 6 ? 'HIGH' : trustCount >= 3 ? 'MEDIUM' : 'LOW'
+      },
+      recommended
+    };
+
+    cache.set(cacheKey, result, 60 * 10);
+    return result;
+  };
   const softTimeoutMs = Number(process.env.FUNNEL_COMMERCE_TIMEOUT_MS || 14000);
 
-  const run = async () => {
+    const run = async () => {
     let browserSession = null;
     try {
+      if (shouldUseRailwayScraping()) {
+        console.log(`[SCRAPING-ROUTER] Commerce exploration envoyée à Railway: ${url}`);
+
+        try {
+          const railwayResult = await scrapeUrlViaRailway(url, {
+            explore: true,
+            maxPages: 4,
+            maxExtraPages: 3,
+            maxDepth: 1,
+            maxClicks: 6,
+            maxButtonsPerPage: 4,
+            crawlBudgetMs: 45000,
+            timeout: 120000
+          });
+
+          return buildCommerceFromRailwayResult(railwayResult);
+        } catch (railwayError) {
+          console.warn(`[SCRAPING-ROUTER] Railway commerce scraping failed: ${railwayError.message}`);
+
+          if (!RENDER_SCRAPING_FALLBACK) {
+            return empty(`RAILWAY_COMMERCE_SCRAPING_FAILED: ${railwayError.message}`);
+          }
+
+          console.warn('[SCRAPING-ROUTER] Fallback Render autorisé pour exploreFunnelCommerce');
+        }
+      }
+
       browserSession = await launchPlaywright(url);
       let html = browserSession?.html || '';
       let snapshot = null;
@@ -4209,9 +4424,315 @@ const EXTRACTION_NOT_FOUND =
             redirectIntel: { totalRedirects: 0, isFunnelRedirect: false, chain: [] }
         };
     };
+    const buildScrapeStealthFromRailwayResult = (railwayResult = {}) => {
+        const mainPage =
+            railwayResult.mainPage ||
+            (Array.isArray(railwayResult.pages) ? railwayResult.pages[0] : null) ||
+            {};
 
-    try {
+        const headings = mainPage.headings || {};
+        const h1List = Array.isArray(headings.h1)
+            ? headings.h1
+            : mainPage.h1
+                ? [mainPage.h1]
+                : [];
+
+        const h2List = Array.isArray(headings.h2) ? headings.h2 : [];
+        const h3List = Array.isArray(headings.h3) ? headings.h3 : [];
+
+        const prices = Array.isArray(mainPage.prices) ? mainPage.prices : [];
+        const firstPrice = prices.find(p => Number.isFinite(Number(p.value))) || null;
+
+        const primaryPrice = firstPrice ? Number(firstPrice.value) : null;
+        const currency = firstPrice?.currency || null;
+
+        const bodyText = normText(
+            mainPage.text ||
+            mainPage.bodyText ||
+            mainPage.textPreview ||
+            mainPage.title ||
+            ''
+        ).slice(0, 15000);
+
+        const cmsSignals = mainPage.cmsSignals || {};
+        const ecommerceSignals = mainPage.ecommerceSignals || {};
+        const trust = mainPage.trustSignals || {};
+        const metaDescription = mainPage.metaDescription || '';
+
+        const priceIntel = {
+            ...emptyPriceIntel(),
+            detected: Boolean(primaryPrice),
+            primaryPrice,
+            minPrice: primaryPrice,
+            maxPrice: primaryPrice,
+            priceRange: null,
+            currency,
+            all: primaryPrice ? [primaryPrice] : [],
+            prices,
+            currentPrices: prices,
+            oldPrices: [],
+            struckPrices: [],
+            schemaPrices: [],
+            domPrices: prices,
+            textPrices: [],
+            planPrices: [],
+            fromPrices: [],
+            installmentPrices: [],
+            discountRate: null,
+            pricingModel: primaryPrice ? 'one-time' : 'unknown',
+            confidence: primaryPrice ? 'MEDIUM' : 'LOW',
+            confidenceBand: primaryPrice ? 'MEDIUM' : 'LOW',
+            confidenceScore: primaryPrice ? 0.66 : 0,
+            primarySource: firstPrice?.source || 'railway',
+            primaryKind: firstPrice?.kind || 'current',
+            extractionStatus: primaryPrice ? 'FOUND' : EXTRACTION_NOT_FOUND,
+            isBlocked: !railwayResult.success,
+            blockingReasons: railwayResult.success ? [] : ['railway_scrape_failed'],
+            sourceEvidence: prices.slice(0, 10),
+            auditTrail: {
+                observedValues: prices.map(p => p.value).filter(Boolean),
+                rejectedValues: [],
+                selectedValue: primaryPrice,
+                selectionReason: primaryPrice ? 'railway_first_valid_price' : 'no_price_selected',
+                conflicts: [],
+                timestamp: new Date().toISOString(),
+                evidenceCount: prices.length
+            }
+        };
+
+        const cms =
+            cmsSignals.shopify ? 'Shopify' :
+            cmsSignals.wordpress ? 'WordPress' :
+            cmsSignals.woocommerce ? 'WooCommerce' :
+            cmsSignals.prestashop ? 'PrestaShop' :
+            cmsSignals.magento ? 'Magento' :
+            cmsSignals.wix ? 'Wix' :
+            cmsSignals.webflow ? 'Webflow' :
+            'Custom';
+
+        return {
+            success: Boolean(railwayResult.success),
+            executionLayer: 'railway',
+            sourceJobId: railwayResult.sourceJobId || null,
+            fetchLayer: railwayResult.provider || 'railway-scraper',
+            html: '',
+            error: railwayResult.success ? null : railwayResult.error || 'RAILWAY_SCRAPING_FAILED',
+            duration: railwayResult.durationMs || Date.now() - startTime,
+
+            visualDNA: {
+                dominantColors: ['#3b82f6', '#1e293b', '#10b981'],
+                googleFonts: []
+            },
+
+            techStack: {
+                cms,
+                hasSSL: validUrl.startsWith('https'),
+                hasWhatsApp: Boolean(
+                    trust.hasWhatsapp ||
+                    (Array.isArray(mainPage.whatsappLinks) && mainPage.whatsappLinks.length)
+                ),
+                hasSchema: Array.isArray(mainPage.jsonLd) && mainPage.jsonLd.length > 0,
+                hasGA4: Boolean(cmsSignals.googleTagManager),
+                hasGTM: Boolean(cmsSignals.googleTagManager),
+                hasFBPixel: Boolean(cmsSignals.facebookPixel),
+                hasTikTok: Boolean(cmsSignals.tiktokPixel),
+                hasHotjar: false,
+                hasClarity: false,
+                hasLiveChat: false,
+                hasCountdown: false,
+                hasExitIntent: false,
+                hasCDN: false,
+                isMobile: true
+            },
+
+            copyIntel: {
+                headlines: {
+                    h1: h1List.slice(0, 8),
+                    h2: h2List.slice(0, 12),
+                    h3: h3List.slice(0, 12)
+                },
+                realCTAs: Array.isArray(mainPage.ctas)
+                    ? mainPage.ctas.map(c => c.text || c.label || '').filter(Boolean).slice(0, 20)
+                    : [],
+                heroText: bodyText.substring(0, 300),
+                testimonials: [],
+                guarantees: [],
+                faq: Array.isArray(mainPage.faq?.detectedBlocks)
+                    ? mainPage.faq.detectedBlocks.slice(0, 5)
+                    : [],
+                bulletBenefits: [],
+                allButtons: [],
+                pageSections: []
+            },
+
+            priceIntel,
+
+            pricingDebug: {
+                observedCount: prices.length,
+                oldDetected: 0,
+                currentDetected: prices.length,
+                struckDetected: 0,
+                blockedReasons: priceIntel.blockingReasons || [],
+                selectedReason: priceIntel.auditTrail?.selectionReason || null,
+                evidence: prices.slice(0, 10)
+            },
+
+            trustSignals: {
+                hasSSL: validUrl.startsWith('https'),
+                hasWhatsApp: Boolean(
+                    trust.hasWhatsapp ||
+                    (Array.isArray(mainPage.whatsappLinks) && mainPage.whatsappLinks.length)
+                ),
+                hasPhoneNumber: Array.isArray(mainPage.phones) && mainPage.phones.length > 0,
+                hasReviews: Boolean(trust.hasReviews),
+                hasMoneyBackGuarantee: Boolean(trust.hasGuarantee),
+                hasPaymentLogos: false,
+                hasLegalPages: false,
+                hasCOD: Boolean(ecommerceSignals.hasCOD),
+                trustScore: null
+            },
+
+            contacts: {
+                phones: Array.isArray(mainPage.phones) ? mainPage.phones : [],
+                emails: Array.isArray(mainPage.emails) ? mainPage.emails : []
+            },
+
+            schemaData: {
+                types: Array.isArray(mainPage.jsonLd) ? mainPage.jsonLd.map(x => x.type).filter(Boolean) : [],
+                count: Array.isArray(mainPage.jsonLd) ? mainPage.jsonLd.length : 0
+            },
+
+            sections: {
+                hasHero: Boolean(h1List.length),
+                hasFeatures: Boolean(h2List.length),
+                hasTrust: Boolean(trust.hasReviews || trust.hasGuarantee),
+                hasPricing: Boolean(primaryPrice || ecommerceSignals.hasPrice),
+                hasTestim: Boolean(trust.hasReviews),
+                hasFAQ: Boolean(mainPage.faq?.detectedBlocks?.length || mainPage.faq?.jsonLdFaqs?.length),
+                hasCTA: Array.isArray(mainPage.ctas) && mainPage.ctas.length > 0,
+                hasFooter: false
+            },
+
+            meta: {
+                title: mainPage.title || '',
+                description: metaDescription,
+                canonical: mainPage.canonical || validUrl,
+                ogImage: mainPage.openGraph?.['og:image'] || '',
+                ogTitle: mainPage.openGraph?.['og:title'] || '',
+                ogDescription: mainPage.openGraph?.['og:description'] || '',
+                robots: '',
+                hasOG: Boolean(mainPage.openGraph && Object.keys(mainPage.openGraph).length),
+                lang: mainPage.language || '',
+                keywords: ''
+            },
+
+            wordCount: Number(mainPage.wordCount || 0),
+            bodyText,
+
+            trackingIntel: {
+                hasGoogleAnalytics: Boolean(cmsSignals.googleTagManager),
+                hasGTM: Boolean(cmsSignals.googleTagManager),
+                hasFacebookPixel: Boolean(cmsSignals.facebookPixel),
+                hasTikTokPixel: Boolean(cmsSignals.tiktokPixel),
+                hasHotjar: false,
+                hasClarity: false
+            },
+
+            performanceIntel: {
+                hasCountdown: false,
+                hasExitIntent: false,
+                hasLiveChat: false,
+                hasSSL: validUrl.startsWith('https'),
+                hasCDN: false,
+                isMobileOptimized: true
+            },
+
+            seoIntel: {
+                title: mainPage.title || '',
+                titleLength: String(mainPage.title || '').length,
+                metaDescription,
+                description: metaDescription,
+                descriptionLength: String(metaDescription || '').length,
+                keywordsMeta: [],
+                headingCounts: {
+                    h1: h1List.length,
+                    h2: h2List.length,
+                    h3: h3List.length
+                },
+                h1: h1List[0] || '',
+                h2s: h2List,
+                h3s: h3List,
+                canonical: mainPage.canonical || validUrl,
+                hasCanonical: Boolean(mainPage.canonical),
+                robots: '',
+                ogTitle: mainPage.openGraph?.['og:title'] || '',
+                ogDescription: mainPage.openGraph?.['og:description'] || '',
+                ogImage: mainPage.openGraph?.['og:image'] || '',
+                lang: mainPage.language || null,
+                schemaTypes: Array.isArray(mainPage.jsonLd) ? mainPage.jsonLd.map(x => x.type).filter(Boolean) : [],
+                schemaCount: Array.isArray(mainPage.jsonLd) ? mainPage.jsonLd.length : 0,
+                hasSchema: Array.isArray(mainPage.jsonLd) && mainPage.jsonLd.length > 0,
+                wordCount: Number(mainPage.wordCount || 0)
+            },
+
+            brand: {
+                fullTextSample: bodyText,
+                wordCount: Number(mainPage.wordCount || 0),
+                hasSSL: validUrl.startsWith('https')
+            },
+
+            redirectIntel: {
+                totalRedirects: 0,
+                isFunnelRedirect: false,
+                chain: []
+            },
+
+            railwaySummary: railwayResult.summary || null,
+            railwayAttempts: railwayResult.attempts || []
+        };
+    };
+       try {
         console.log(`🧠 Smart scraping enhanced: ${validUrl}`);
+
+        if (shouldUseRailwayScraping()) {
+            console.log(`[SCRAPING-ROUTER] Render détecté → scraping envoyé à Railway: ${validUrl}`);
+
+            try {
+                const railwayResult = await scrapeUrlViaRailway(validUrl, {
+                    explore: true,
+                    maxPages: 4,
+                    maxExtraPages: 3,
+                    maxDepth: 1,
+                    maxClicks: 6,
+                    maxButtonsPerPage: 4,
+                    crawlBudgetMs: 45000,
+                    timeout: 120000
+                });
+
+                const adapted = buildScrapeStealthFromRailwayResult(railwayResult);
+
+                console.log(
+                    `✅ scrapeStealth Railway OK — ${adapted.duration}ms` +
+                    ` | Layer: ${adapted.fetchLayer}` +
+                    ` | Job: ${adapted.sourceJobId || 'N/A'}` +
+                    ` | Prix: ${adapted.priceIntel.primaryPrice ?? 'N/A'} ${adapted.priceIntel.currency ?? ''}` +
+                    ` | Status: ${adapted.priceIntel.extractionStatus}`
+                );
+
+                return adapted;
+            } catch (railwayError) {
+                console.warn(`[SCRAPING-ROUTER] Railway scraping failed: ${railwayError.message}`);
+
+                if (!RENDER_SCRAPING_FALLBACK) {
+                    return EMPTY_RESULT(
+                        `RAILWAY_SCRAPING_FAILED: ${railwayError.message}`,
+                        'railway'
+                    );
+                }
+
+                console.warn('[SCRAPING-ROUTER] Fallback Render autorisé par RENDER_SCRAPING_FALLBACK=true');
+            }
+        }
 
         pw = await playwrightWrapper.launchPlaywright(validUrl);
         if (!pw) throw new Error('launchPlaywright returned null');
