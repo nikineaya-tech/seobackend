@@ -44,3 +44,9 @@ if (stillForbidden.length) {
   console.error(`[RenderRoutingPatch] Failed: still found forbidden queued middleware for: ${stillForbidden.join(', ')}`);
   process.exit(1);
 }
+
+try {
+  require('./funnel-premium-runtime-patch.cjs');
+} catch (error) {
+  console.warn('[RenderRoutingPatch] Funnel premium runtime patch skipped:', error.message);
+}
