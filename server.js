@@ -238,6 +238,7 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
         'scrape_url',
         'deep-scrape',
         'deep_scrape',
+        'scrape_funnel_deep',
         'product-scrape',
         'product_scrape',
         'page-scrape',
@@ -9497,7 +9498,7 @@ function buildCompetitorsRequestKey({ query = '', geo = '', lang = 'fr', url = '
     ].join('|');
 }
 
-app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedReport('competitors'), warRoomLimiter, queuedJobMiddleware('competitors'), async (req, res) => {
+app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedReport('competitors'), warRoomLimiter, async (req, res) => {
     const startTime = Date.now();
     const isProd    = process.env.NODE_ENV === 'production';
 
@@ -11329,7 +11330,7 @@ function getFeatureI18n(lang = 'fr') {
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
 // ============================================================================
-app.post('/api/analyze-funnel', requireAuth, requireReportQuota, persistGeneratedReport('funnel'), analysisLimiter, queuedJobMiddleware('funnel'), async (req, res) => {
+app.post('/api/analyze-funnel', requireAuth, requireReportQuota, persistGeneratedReport('funnel'), analysisLimiter, async (req, res) => {
     const startTime = Date.now();
     const requestId = `SPY12-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
     
@@ -14617,7 +14618,7 @@ app.post('/api/generate', async (req, res) => {
 });
 
 // ========== KEYWORDS GENERATOR ==========
-app.post('/api/generate-keywords', requireAuth, requireReportQuota, persistGeneratedReport('keywords'), queuedJobMiddleware('keywords'), async (req, res) => {
+app.post('/api/generate-keywords', requireAuth, requireReportQuota, persistGeneratedReport('keywords'), async (req, res) => {
     const start = Date.now();
     try {
         const {
@@ -14808,7 +14809,7 @@ async function getDeepStructure(html, url) {
 // =================================================================
 // ☢️ MODULE SEO TECHNIQUE : GOD MODE V2 (ANTI-CRASH & MULTI-LANG)
 
-app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGeneratedReport('technical'), queuedJobMiddleware('technical'), async (req, res) => {
+app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGeneratedReport('technical'), async (req, res) => {
     const startTime = Date.now();
     const requestId = `TECH-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
 

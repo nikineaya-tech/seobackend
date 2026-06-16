@@ -4463,7 +4463,7 @@ function resetAnalysis(type) {
             window.compRadarInstance.destroy();
             window.compRadarInstance = null;
         }
-        if (window.benchmarkChartInstance instanceof Chart) {
+        if (window.benchmarkChartInstance && typeof window.benchmarkChartInstance.destroy === 'function') {
             window.benchmarkChartInstance.destroy();
             window.benchmarkChartInstance = null;
         }
@@ -4474,7 +4474,7 @@ function resetAnalysis(type) {
         STATE.lastFunnelResults = null;
         document.getElementById('btn-export-funnel-pdf')?.style
     && (document.getElementById('btn-export-funnel-pdf').style.display = 'inline-flex');
-        if (window.funnelChartInstance instanceof Chart) {
+        if (window.funnelChartInstance && typeof window.funnelChartInstance.destroy === 'function') {
             window.funnelChartInstance.destroy();
             window.funnelChartInstance = null;
         }
@@ -6037,7 +6037,9 @@ function renderBenchmarkChart(data) {
     const ctx = document.getElementById('benchmarkChart')?.getContext('2d');
     if (!ctx || typeof Chart === 'undefined') return; // 🔥 FIX SÉCURITÉ
 
-    if (window.benchmarkChartInstance) window.benchmarkChartInstance.destroy();
+    if (window.benchmarkChartInstance && typeof window.benchmarkChartInstance.destroy === 'function') {
+        window.benchmarkChartInstance.destroy();
+    }
 
     const industryAvg = 65;
     const top10 = 88;
@@ -6067,7 +6069,9 @@ function renderFunnelChart(flowData) {
     const canvas = document.getElementById('funnelChart');
     if (!canvas || typeof Chart === 'undefined') return; // 🔥 FIX SÉCURITÉ
 
-    if (window.funnelChartInstance) window.funnelChartInstance.destroy();
+    if (window.funnelChartInstance && typeof window.funnelChartInstance.destroy === 'function') {
+        window.funnelChartInstance.destroy();
+    }
 
     const ctx = canvas.getContext('2d');
     const isAr = STATE.currentLang === 'ar';
@@ -14011,7 +14015,9 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
         // Donut Score Global
         const donutCtx = document.getElementById('scoreDonut')?.getContext('2d');
         if (donutCtx && typeof Chart !== 'undefined') {
-            if (window.scoreDonut) window.scoreDonut.destroy();
+            if (window.scoreDonut && typeof window.scoreDonut.destroy === 'function') {
+                window.scoreDonut.destroy();
+            }
             window.scoreDonut = new Chart(donutCtx, {
                 type: 'doughnut',
                 data: {
@@ -14037,7 +14043,9 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
         // Bar Chart Sections (CTA vs no CTA)
         const barCtx = document.getElementById('funnelBarChart')?.getContext('2d');
         if (barCtx && typeof Chart !== 'undefined' && sections.length) {
-            if (window.funnelBarChart) window.funnelBarChart.destroy();
+            if (window.funnelBarChart && typeof window.funnelBarChart.destroy === 'function') {
+                window.funnelBarChart.destroy();
+            }
             const sliced = sections.slice(0, 7);
             window.funnelBarChart = new Chart(barCtx, {
                 type: 'bar',
