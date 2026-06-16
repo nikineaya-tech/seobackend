@@ -6,59 +6,29 @@ const path = require('path');
 const serverPath = path.join(__dirname, '..', 'server.js');
 const server = fs.readFileSync(serverPath, 'utf8');
 
-const forbiddenQueuedTypes = [
-  'competitors',
-  'funnel',
-  'technical',
-  'technical-seo',
-  'keywords',
-  'seo-assets',
-  'generate-seo-assets'
+const businessRoutes = [
+  { route: '/api/competitors', type: 'competitors' },
+  { route: '/api/analyze-funnel', type: 'funnel' },
+  { route: '/api/generate-keywords', type: 'keywords' },
+  { route: '/api/technical-seo', type: 'technical' }
 ];
 
-let patched = server;
-const changedTypes = [];
+const escapeRegExp = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-for (const type of forbiddenQueuedTypes) {
-  const escapedType = type.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const rx = new RegExp(`,\\s*queuedJobMiddleware\\(\\s*['\"]${escapedType}['\"]\\s*\\)`, 'g');
-  const before = patched;
-  patched = patched.replace(rx, '');
-  if (patched !== before) changedTypes.push(type);
-}
-
-if (patched !== server) {
-  fs.writeFileSync(serverPath, patched, 'utf8');
-  console.log(`[RenderRoutingPatch] Removed queuedJobMiddleware for: ${changedTypes.join(', ')}`);
-  console.log('[RenderRoutingPatch] Business/AI routes will run on Render. Railway remains scraping-only.');
-} else {
-  console.log('[RenderRoutingPatch] No forbidden business queue middleware found. Nothing to patch.');
-}
-
-const stillForbidden = forbiddenQueuedTypes.filter(type => {
-  const rx = new RegExp(`queuedJobMiddleware\\(\\s*['\"]${type.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['\"]\\s*\\)`);
-  return rx.test(fs.readFileSync(serverPath, 'utf8'));
+const violations = businessRoutes.filter(({ route, type }) => {
+  const rx = new RegExp(
+    `app\\.post\\(\\s*['"]${escapeRegExp(route)}['"][\\s\\S]*?queuedJobMiddleware\\(\\s*['"]${escapeRegExp(type)}['"]\\s*\\)[\\s\\S]*?async\\s*\\(`,
+    'm'
+  );
+  return rx.test(server);
 });
 
-if (stillForbidden.length) {
-  console.error(`[RenderRoutingPatch] Failed: still found forbidden queued middleware for: ${stillForbidden.join(', ')}`);
+if (violations.length) {
+  console.error('[RenderRoutingCheck] Business routes must run on Render, not Railway:');
+  for (const item of violations) {
+    console.error(`- ${item.route} still uses queuedJobMiddleware('${item.type}')`);
+  }
   process.exit(1);
 }
 
-try {
-  require('./index-score-donut-hotfix.cjs');
-} catch (error) {
-  console.warn('[RenderRoutingPatch] Score donut hotfix skipped:', error.message);
-}
-
-try {
-  require('./funnel-premium-runtime-patch.cjs');
-} catch (error) {
-  console.warn('[RenderRoutingPatch] Funnel premium runtime patch skipped:', error.message);
-}
-
-try {
-  require('./funnel-premium-normalizer-hotfix.cjs');
-} catch (error) {
-  console.warn('[RenderRoutingPatch] Funnel normalizer hotfix skipped:', error.message);
-}
+console.log('[RenderRoutingCheck] Business routes run on Render. Railway remains scraping-only.');
