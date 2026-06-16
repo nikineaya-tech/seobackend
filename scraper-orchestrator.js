@@ -193,6 +193,20 @@ function extractTrustSignals(html, text) {
     };
 }
 
+function detectLightSections(text = '', snapshot = {}) {
+    const t = String(text || '').toLowerCase();
+    return {
+        hasHero: Boolean(snapshot.h1),
+        hasFeatures: /(fonctionnalit|caract|features|services|bénéfices|benefits|avantages)/i.test(t),
+        hasTrust: /(avis|review|témoignage|garantie|secure|sécurisé|ضمان)/i.test(t),
+        hasPricing: /\d+\s*(mad|dh|€|\$|eur|usd|درهم)/i.test(t),
+        hasTestim: /(avis|review|témoignage|testimonial|clients? satisfaits?)/i.test(t),
+        hasFAQ: /\bfaq\b|questions fréquentes|foire aux questions|أسئلة/i.test(t),
+        hasCTA: Array.isArray(snapshot.ctas) && snapshot.ctas.length > 0,
+        hasFooter: /(mentions légales|privacy|conditions|copyright|©)/i.test(t)
+    };
+}
+
 function detectPageType(text, html) {
     const t = (text || '').toLowerCase();
     if (/\d+\s*(mad|dh|€|\$|درهم)/.test(t) && /(plan|formule|pack|starter|pro|premium|abonnement|pricing)/i.test(t)) return 'pricing';
@@ -336,6 +350,44 @@ async function orchestrateFunnelExploration(url, options = {}) {
         await mainTab.goto(url, { waitUntil: 'domcontentloaded', timeout: cfg.domTimeout });
         await safeScroll(mainTab, 0.3);
 
+        const homeSnapshot = await mainTab.evaluate(() => {
+            const norm = v => String(v || '').replace(/\s+/g, ' ').trim();
+            const text = norm(document.body?.innerText || '').slice(0, 12000);
+            const ctas = Array.from(document.querySelectorAll('a,button,[role="button"]'))
+                .map(el => norm(el.innerText || el.getAttribute('aria-label') || el.getAttribute('title') || ''))
+                .filter(Boolean)
+                .filter(t => /acheter|commander|contact|devis|réserver|demander|essayer|commencer|signup|buy|order|get started|book|اشتر|اطلب|اتصل/i.test(t))
+                .slice(0, 20);
+            const headings = level => Array.from(document.querySelectorAll(level))
+                .map(el => norm(el.innerText))
+                .filter(Boolean)
+                .slice(0, level === 'h1' ? 5 : 12);
+            return {
+                url: location.href,
+                title: norm(document.title),
+                metaDescription: norm(document.querySelector('meta[name="description"]')?.content || ''),
+                h1: headings('h1')[0] || '',
+                headings: { h1: headings('h1'), h2: headings('h2'), h3: headings('h3') },
+                ctas,
+                textPreview: text.slice(0, 1200),
+                text,
+                images: Array.from(document.querySelectorAll('img')).map(img => ({
+                    src: img.currentSrc || img.src || '',
+                    alt: norm(img.alt || '')
+                })).filter(img => img.src).slice(0, 24),
+                links: Array.from(document.querySelectorAll('a[href]')).map(a => ({
+                    url: a.href,
+                    label: norm(a.innerText || a.getAttribute('aria-label') || a.href)
+                })).filter(x => x.url).slice(0, 80),
+                wordCount: text.split(/\s+/).filter(Boolean).length,
+                language: document.documentElement.lang || ''
+            };
+        }).catch(() => ({}));
+
+        homeSnapshot.prices = extractPricesFromText(homeSnapshot.text || '');
+        homeSnapshot.trustSignals = extractTrustSignals('', homeSnapshot.text || '');
+        homeSnapshot.sections = detectLightSections(homeSnapshot.text || '', homeSnapshot);
+
         const allCandidates  = await detectAllCandidates(mainTab);
         const topCandidates  = allCandidates.slice(0, cfg.maxCandidates);
         await mainTab.close();
@@ -397,7 +449,7 @@ async function orchestrateFunnelExploration(url, options = {}) {
 
         // ── SYNTHÈSE ──────────────────────────────────────────────
         const totalElapsed = Date.now() - startTime;
-        const synthesis = synthesizeResults(allResults, url, totalElapsed);
+        const synthesis = synthesizeResults(allResults, url, totalElapsed, homeSnapshot);
 
         console.log(`[Orchestrator] ✅ DONE in ${totalElapsed}ms | YES=${synthesis.yesCount} MAYBE=${synthesis.maybeCount} NO=${synthesis.noCount} | prices=${synthesis.funnelAnalysis.prices.length}`);
 
@@ -422,7 +474,7 @@ function mergedTrustSignals(trustArray) {
     return merged;
 }
 
-function synthesizeResults(results, originUrl, totalElapsed) {
+function synthesizeResults(results, originUrl, totalElapsed, homeSnapshot = {}) {
     const YES   = results.filter((r) => r.verdict === 'YES');
     const MAYBE = results.filter((r) => r.verdict === 'MAYBE');
     const NO    = results.filter((r) => r.verdict === 'NO');
@@ -450,6 +502,24 @@ function synthesizeResults(results, originUrl, totalElapsed) {
     return {
         success:       true,
         originUrl,
+        mainPage: {
+            url: homeSnapshot.url || originUrl,
+            title: homeSnapshot.title || '',
+            metaDescription: homeSnapshot.metaDescription || '',
+            h1: homeSnapshot.h1 || '',
+            headings: homeSnapshot.headings || { h1: [], h2: [], h3: [] },
+            ctas: homeSnapshot.ctas || [],
+            prices: homeSnapshot.prices || [],
+            trustSignals: homeSnapshot.trustSignals || {},
+            sections: homeSnapshot.sections || {},
+            images: homeSnapshot.images || [],
+            internalLinks: (homeSnapshot.links || []).filter(l => {
+                try { return new URL(l.url).origin === new URL(originUrl).origin; } catch { return false; }
+            }).slice(0, 24),
+            textPreview: homeSnapshot.textPreview || '',
+            wordCount: homeSnapshot.wordCount || 0,
+            language: homeSnapshot.language || ''
+        },
 
         exploration: {
             pagesExplored:  results.length,

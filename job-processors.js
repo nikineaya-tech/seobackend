@@ -43,6 +43,139 @@ const JOB_TIMEOUTS = {
 
 const RENDER1_URL = process.env.RENDER1_URL || process.env.API_BASE_URL || '';
 
+function compactText(value, max = 700) {
+    if (typeof value !== 'string') return value;
+    const clean = value.replace(/\s+/g, ' ').trim();
+    return clean.length > max ? `${clean.slice(0, max)}...` : clean;
+}
+
+function normalizeRailwayPriceCandidate(item = {}) {
+    const value = Number(item.value ?? item.price ?? item.amount);
+    const currency = item.currency || null;
+    const hasCurrency = Boolean(currency);
+    let rejectedReason = null;
+    if (!Number.isFinite(value) || value <= 0) rejectedReason = 'not_numeric';
+    else if (!hasCurrency) rejectedReason = 'missing_currency';
+    else if (value < 10 && !/USD|EUR|GBP/i.test(String(currency))) rejectedReason = 'too_low_for_currency';
+    return {
+        value: Number.isFinite(value) ? value : null,
+        currency,
+        period: item.period || null,
+        source: item.source || 'railway-orchestrator',
+        context: compactText(item.context || item.raw || '', 220),
+        confidence: rejectedReason ? 'INVALID' : 'MEDIUM',
+        rejectedReason
+    };
+}
+
+function compactRailwayFunnelResult(result = {}, url = '') {
+    const analysis = result.funnelAnalysis || {};
+    const commerce = result.commerceExploration || {};
+    const evidenceLinks = Array.isArray(commerce.evidenceLinks) ? commerce.evidenceLinks : [];
+    const uncertainLinks = Array.isArray(commerce.uncertainLinks) ? commerce.uncertainLinks : [];
+    const negativeSummaries = Array.isArray(commerce.negativeSummaries) ? commerce.negativeSummaries : [];
+    const priceCandidates = (Array.isArray(analysis.prices) ? analysis.prices : [])
+        .map(normalizeRailwayPriceCandidate);
+    const validPrices = priceCandidates.filter(p => !p.rejectedReason && Number.isFinite(p.value));
+    const rejectedPriceCandidates = priceCandidates.filter(p => p.rejectedReason).slice(0, 12);
+    const values = validPrices.map(p => p.value).sort((a, b) => a - b);
+    const priceStats = values.length ? {
+        min: values[0],
+        max: values[values.length - 1],
+        median: values[Math.floor(values.length / 2)],
+        count: values.length,
+        currency: validPrices.find(p => p.currency)?.currency || null
+    } : null;
+
+    return {
+        success: Boolean(result.success),
+        url,
+        executionLayer: 'railway',
+        mainPage: result.mainPage ? {
+            url: result.mainPage.url || url,
+            title: compactText(result.mainPage.title || '', 180),
+            metaDescription: compactText(result.mainPage.metaDescription || '', 320),
+            h1: compactText(result.mainPage.h1 || '', 180),
+            headings: {
+                h1: (result.mainPage.headings?.h1 || []).slice(0, 5).map(x => compactText(x, 160)),
+                h2: (result.mainPage.headings?.h2 || []).slice(0, 10).map(x => compactText(x, 160)),
+                h3: (result.mainPage.headings?.h3 || []).slice(0, 10).map(x => compactText(x, 160))
+            },
+            ctas: (result.mainPage.ctas || []).slice(0, 12).map(x => ({ text: compactText(x.text || x, 120) })),
+            prices: (result.mainPage.prices || []).map(normalizeRailwayPriceCandidate).filter(p => !p.rejectedReason).slice(0, 12),
+            trustSignals: result.mainPage.trustSignals || {},
+            sections: result.mainPage.sections || {},
+            images: (result.mainPage.images || []).slice(0, 12).map(img => ({
+                src: img.src,
+                alt: compactText(img.alt || '', 100)
+            })),
+            internalLinks: (result.mainPage.internalLinks || []).slice(0, 18).map(link => ({
+                url: link.url,
+                label: compactText(link.label || link.url || '', 140)
+            })),
+            textPreview: compactText(result.mainPage.textPreview || '', 900),
+            wordCount: result.mainPage.wordCount || 0,
+            language: result.mainPage.language || ''
+        } : null,
+        exploration: {
+            pagesExplored: result.exploration?.pagesExplored || 0,
+            pagesWithData: result.exploration?.pagesWithData || 0,
+            pagesUncertain: result.exploration?.pagesUncertain || 0,
+            pagesEmpty: result.exploration?.pagesEmpty || 0,
+            totalElapsedMs: result.exploration?.totalElapsedMs || null
+        },
+        funnelAnalysis: {
+            priceStats,
+            prices: validPrices.slice(0, 20),
+            rejectedPriceCandidates,
+            priceConfidence: validPrices.length >= 2 ? 'HIGH' : validPrices.length === 1 ? 'MEDIUM' : (priceCandidates.length ? 'INVALID' : 'LOW'),
+            priceExtractionReason: validPrices.length ? 'railway_confirmed_price_candidates' : (priceCandidates.length ? 'railway_candidates_rejected_or_unconfirmed' : 'railway_no_price_detected'),
+            positioning: analysis.positioning || 'unknown',
+            confidence: analysis.confidence || 'low',
+            trustSignals: analysis.trustSignals || {},
+            plansFound: Array.isArray(analysis.plansFound) ? analysis.plansFound.slice(0, 10) : [],
+            ctasFound: Array.isArray(analysis.ctasFound) ? analysis.ctasFound.slice(0, 12) : []
+        },
+        commerceExploration: {
+            evidenceLinks: evidenceLinks.slice(0, 12).map(link => ({
+                url: link.url,
+                type: link.type,
+                confidence: link.confidence,
+                priceCount: link.priceCount || 0,
+                prices: (link.prices || []).map(normalizeRailwayPriceCandidate).filter(p => !p.rejectedReason).slice(0, 5),
+                plans: (link.plans || []).slice(0, 6),
+                ctas: (link.ctas || []).slice(0, 8),
+                trust: link.trust || {},
+                elapsedMs: link.elapsedMs || null,
+                summary: compactText(link.summary || '', 320)
+            })),
+            uncertainLinks: uncertainLinks.slice(0, 8).map(link => ({
+                url: link.url,
+                type: link.type,
+                confidence: link.confidence,
+                summary: compactText(link.summary || link.partialText || '', 320)
+            })),
+            negativeSummaries: negativeSummaries.slice(0, 8).map(link => ({
+                url: link.url,
+                type: link.type,
+                reason: compactText(link.reason || '', 240)
+            }))
+        },
+        verdict: {
+            yesCount: result.yesCount || 0,
+            maybeCount: result.maybeCount || 0,
+            noCount: result.noCount || 0,
+            confidence: analysis.confidence || 'low',
+            positioning: analysis.positioning || 'unknown'
+        },
+        limits: {
+            noRawHtmlReturned: true,
+            maxEvidenceLinks: 12,
+            maxTextPerField: 700
+        }
+    };
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // CORE: FIND HANDLER IN EXPRESS APP
 // ═══════════════════════════════════════════════════════════════════
@@ -233,20 +366,7 @@ async function processScrapeFunnelDeep(payload) {
         maxConcurrentTabs,
     });
 
-    return {
-        success:             result.success,
-        url,
-        exploration:         result.exploration,
-        funnelAnalysis:      result.funnelAnalysis,
-        commerceExploration: result.commerceExploration,
-        verdict: {
-            yesCount:   result.yesCount,
-            maybeCount: result.maybeCount,
-            noCount:    result.noCount,
-            confidence: result.funnelAnalysis?.confidence || 'low',
-            positioning: result.funnelAnalysis?.positioning || 'unknown',
-        },
-    };
+    return compactRailwayFunnelResult(result, url);
 }
 
 /**
@@ -339,7 +459,14 @@ function processJob(type, payload) {
         case 'scrape_competitors':   return processScrapeCompetitors(payload);
 
         // ── Scrape multi-agent (Orchestrateur BOT+SubBots) ──────
-        case 'scrape_funnel_deep':   return processScrapeFunnelDeep(payload);
+        case 'scrape_funnel_deep':
+        case 'deep-scrape':
+        case 'deep_scrape':
+        case 'scrape-url':
+        case 'scrape_url':
+        case 'page-scrape':
+        case 'page_scrape':
+            return processScrapeFunnelDeep(payload);
         case 'scrape_funnel_multi':  return processScrapeFunnelMulti(payload);
 
         default:

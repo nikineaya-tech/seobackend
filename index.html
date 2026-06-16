@@ -760,6 +760,57 @@ html, body {
     }
     .feature-gpt-bubble span { display:none; }
 }
+.funnel-surgery-shell { display:grid; gap:16px; margin-bottom:22px; }
+.surgery-hero {
+    display:grid; grid-template-columns:minmax(0,1.5fr) minmax(220px,.65fr);
+    gap:16px; padding:22px; border-radius:18px; border:1px solid rgba(56,189,248,.22);
+    background:radial-gradient(circle at 10% 0%, rgba(56,189,248,.18), transparent 32%), linear-gradient(135deg, rgba(15,23,42,.96), rgba(30,41,59,.9));
+    box-shadow:0 22px 60px rgba(0,0,0,.22);
+}
+.surgery-hero small,.surgery-copy-card small { color:#67e8f9; font-weight:900; letter-spacing:.12em; text-transform:uppercase; font-size:.68rem; }
+.surgery-hero h2 { margin:8px 0 10px; color:#fff; font-size:clamp(1.28rem,2.4vw,2rem); line-height:1.18; }
+.surgery-hero p,.surgery-mini-card p,.surgery-plan-action p,.surgery-copy-card p,.surgery-value-card p,.surgery-order p { margin:7px 0 0; color:#cbd5e1; line-height:1.55; font-size:.82rem; }
+.surgery-hero-facts { display:grid; gap:9px; align-content:center; }
+.surgery-hero-facts span,.surgery-mini-card em,.surgery-plan-action span {
+    display:inline-flex; width:fit-content; color:#bbf7d0; background:rgba(34,197,94,.1);
+    border:1px solid rgba(34,197,94,.22); border-radius:999px; padding:5px 10px; font-size:.7rem; font-weight:800; font-style:normal;
+}
+.surgery-card-grid,.surgery-plan-grid,.surgery-copy-grid,.surgery-proof-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+.surgery-mini-card,.surgery-plan-card,.surgery-copy-card,.surgery-value-card,.surgery-proof-grid article {
+    padding:14px; border-radius:14px; border:1px solid rgba(148,163,184,.15); background:rgba(15,23,42,.72);
+}
+.surgery-mini-card-top { display:flex; justify-content:space-between; gap:10px; align-items:flex-start; margin-bottom:8px; }
+.surgery-mini-card strong,.surgery-plan-card h4,.surgery-proof-grid h4 { color:#f8fafc; font-size:.9rem; }
+.surgery-mini-card small,.surgery-empty { display:block; color:#7f8da3; font-size:.75rem; line-height:1.5; }
+.surgery-table-wrap { width:100%; overflow-x:auto; border:1px solid rgba(148,163,184,.14); border-radius:14px; }
+.surgery-table { width:100%; min-width:760px; border-collapse:collapse; background:rgba(15,23,42,.68); }
+.surgery-table th,.surgery-table td {
+    padding:11px 12px; border-bottom:1px solid rgba(148,163,184,.12); text-align:start;
+    color:#dbeafe; vertical-align:top; font-size:.78rem; line-height:1.45;
+}
+.surgery-table th { color:#67e8f9; background:rgba(56,189,248,.07); font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; }
+.surgery-order { display:grid; gap:8px; }
+.surgery-order div {
+    display:grid; grid-template-columns:34px 1fr; gap:10px; align-items:center; padding:10px;
+    border-radius:12px; border:1px solid rgba(99,102,241,.16); background:rgba(99,102,241,.06);
+}
+.surgery-order b {
+    display:inline-grid; place-items:center; width:28px; height:28px; border-radius:50%;
+    color:#fff; background:linear-gradient(135deg,#38bdf8,#8b5cf6); font-size:.72rem;
+}
+.surgery-order span { color:#e2e8f0; font-weight:700; font-size:.84rem; }
+.surgery-plan-action { padding:10px 0; border-top:1px solid rgba(148,163,184,.1); }
+.surgery-plan-action div { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+.surgery-limits { display:grid; gap:10px; }
+.surgery-limits div {
+    display:flex; justify-content:space-between; gap:12px; padding:10px; border-radius:12px;
+    background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.07); color:#cbd5e1;
+}
+@media(max-width:760px) {
+    .surgery-hero { grid-template-columns:1fr; padding:16px; }
+    .surgery-card-grid,.surgery-plan-grid,.surgery-copy-grid,.surgery-proof-grid { grid-template-columns:1fr; }
+    .surgery-table th,.surgery-table td { padding:9px; font-size:.72rem; }
+}
 @media(prefers-reduced-motion:reduce) {
     .competitor-intel-content { animation:none; }
     .competitor-intel-count i { transition:none; }
@@ -14625,9 +14676,244 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
     </section>`;
 }
 
+function cleanFunnelReportForRender(data = {}) {
+    const clone = data && typeof data === 'object' ? data : {};
+    const surgery = clone.funnelSurgery || {};
+    const safeList = value => Array.isArray(value)
+        ? value.filter(Boolean).filter(item => {
+            const text = typeof item === 'string' ? item : JSON.stringify(item || {});
+            return text && !/html|rawHtml|<script|<style|undefined|null$/i.test(text);
+        }).slice(0, 8)
+        : [];
+    if (surgery.sectionDiagnosis) {
+        ['keep', 'improve', 'move', 'removeOrMerge', 'add'].forEach(key => {
+            surgery.sectionDiagnosis[key] = safeList(surgery.sectionDiagnosis[key]);
+        });
+    }
+    surgery.surgeryMatrix = safeList(surgery.surgeryMatrix).slice(0, 32);
+    surgery.frictions = safeList(surgery.frictions).slice(0, 5);
+    clone.funnelSurgery = surgery;
+    return clone;
+}
+
+function renderFunnelSurgeryList(items = [], opts = {}) {
+    const esc = opts.esc || escapeHtml;
+    const empty = opts.empty || 'Aucun élément prioritaire détecté.';
+    if (!Array.isArray(items) || !items.length) {
+        return `<div class="surgery-empty">${esc(empty)}</div>`;
+    }
+    return `<div class="surgery-card-grid">${items.slice(0, opts.limit || 8).map(item => {
+        const title = item.section || item.friction || item.action || item.name || item.title || 'Action';
+        const body = item.action || item.correction || item.problem || item.reason || item.conversionImpact || item.evidence || '';
+        const evidence = item.evidence || item.observedEvidence || item.currentPosition || '';
+        return `<article class="surgery-mini-card">
+            <div class="surgery-mini-card-top">
+                <strong>${esc(title)}</strong>
+                ${item.priority ? `<span>${esc(item.priority)}</span>` : ''}
+            </div>
+            ${body ? `<p>${esc(body)}</p>` : ''}
+            ${evidence ? `<small>${esc(evidence)}</small>` : ''}
+            ${item.confidence ? `<em>${esc(item.confidence)}</em>` : ''}
+        </article>`;
+    }).join('')}</div>`;
+}
+
+function renderFunnelSurgeryMatrix(rows = [], opts = {}) {
+    const esc = opts.esc || escapeHtml;
+    if (!Array.isArray(rows) || !rows.length) return `<div class="surgery-empty">Section Surgery Matrix indisponible.</div>`;
+    return `<div class="surgery-table-wrap">
+        <table class="surgery-table">
+            <thead><tr>
+                <th>Section</th><th>Présente ?</th><th>Décision</th><th>Action</th><th>Priorité</th><th>Confiance</th>
+            </tr></thead>
+            <tbody>${rows.slice(0, 32).map(row => `<tr>
+                <td>${esc(row.section || '')}</td>
+                <td>${esc(row.present || '')}</td>
+                <td>${esc(row.decision || '')}</td>
+                <td>${esc(row.action || row.problem || '')}</td>
+                <td>${esc(row.priority || '')}</td>
+                <td>${esc(row.confidence || '')}</td>
+            </tr>`).join('')}</tbody>
+        </table>
+    </div>`;
+}
+
+function renderFunnelPriorityPlan(plan = {}, opts = {}) {
+    const esc = opts.esc || escapeHtml;
+    const groups = [
+        ['Maintenant', plan.now],
+        ['Sous 7 jours', plan.sevenDays],
+        ['Sous 30 jours', plan.thirtyDays]
+    ];
+    return `<div class="surgery-plan-grid">${groups.map(([label, items]) => `
+        <article class="surgery-plan-card">
+            <h4>${esc(label)}</h4>
+            ${(Array.isArray(items) && items.length ? items.slice(0, 3).map(action => `
+                <div class="surgery-plan-action">
+                    <strong>${esc(action.action || '')}</strong>
+                    ${action.why ? `<p>${esc(action.why)}</p>` : ''}
+                    <div><span>Impact: ${esc(action.impact || 'MEDIUM')}</span><span>Effort: ${esc(action.effort || 'MEDIUM')}</span><span>${esc(action.confidence || 'MEDIUM')}</span></div>
+                </div>
+            `).join('') : `<p class="surgery-empty">Aucune action prioritaire confirmée.</p>`)}
+        </article>
+    `).join('')}</div>`;
+}
+
+function renderFunnelCopyReady(copy = {}, opts = {}) {
+    const esc = opts.esc || escapeHtml;
+    const entries = Object.entries(copy || {}).filter(([, value]) => value && (!(Array.isArray(value)) || value.length));
+    if (!entries.length) return `<div class="surgery-empty">Aucun bloc prêt à copier disponible.</div>`;
+    return `<div class="surgery-copy-grid">${entries.slice(0, 12).map(([key, value]) => `
+        <article class="surgery-copy-card">
+            <small>${esc(key.replace(/([A-Z])/g, ' $1'))}</small>
+            <p>${esc(Array.isArray(value) ? value.join(' · ') : String(value))}</p>
+        </article>
+    `).join('')}</div>`;
+}
+
+function renderFunnelSurgeryExperience(data = {}, opts = {}) {
+    const isAr = !!opts.isAr;
+    const isEn = !!opts.isEn;
+    const esc = escapeHtml;
+    const surgery = data.funnelSurgery || {};
+    if (!surgery || !Object.keys(surgery).length) return '';
+    const t = isAr ? {
+        verdict: 'حكم القمع',
+        offer: 'العرض المكتشف',
+        diagnosis: 'تشخيص أقسام الصفحة',
+        matrix: 'Section Surgery Matrix',
+        keep: 'الأقسام الموجودة التي يجب الحفاظ عليها',
+        improve: 'الأقسام الموجودة التي يجب تحسينها',
+        move: 'الأقسام التي يجب نقلها',
+        remove: 'الأقسام التي يجب حذفها أو دمجها',
+        add: 'الأقسام الناقصة التي يجب إضافتها',
+        order: 'الترتيب الجديد المقترح للصفحة',
+        friction: 'عوائق تمنع الشراء',
+        proof: 'الأدلة والثقة',
+        price: 'العرض والسعر والقيمة المتصورة',
+        message: 'الرسالة والوعد و CTA',
+        mobile: 'تجربة الهاتف واحتكاك UX',
+        plan: 'خطة التصحيح ذات الأولوية',
+        copy: 'أقسام جاهزة للنسخ',
+        limits: 'البيانات المرصودة والحدود'
+    } : isEn ? {
+        verdict: 'Funnel Verdict',
+        offer: 'Detected offer',
+        diagnosis: 'Page section diagnosis',
+        matrix: 'Section Surgery Matrix',
+        keep: 'Sections to keep',
+        improve: 'Sections to improve',
+        move: 'Sections to move',
+        remove: 'Sections to remove or merge',
+        add: 'Missing sections to add',
+        order: 'Recommended page order',
+        friction: 'Purchase-blocking frictions',
+        proof: 'Proof and trust',
+        price: 'Offer, price and perceived value',
+        message: 'Message, promise and CTA',
+        mobile: 'Mobile experience and UX friction',
+        plan: 'Priority correction plan',
+        copy: 'Copy-ready sections',
+        limits: 'Observed data and limits'
+    } : {
+        verdict: 'Verdict Funnel',
+        offer: 'Offre détectée',
+        diagnosis: 'Diagnostic des sections de la page',
+        matrix: 'Section Surgery Matrix',
+        keep: 'Sections présentes à garder',
+        improve: 'Sections présentes à améliorer',
+        move: 'Sections à déplacer',
+        remove: 'Sections à supprimer ou fusionner',
+        add: 'Sections manquantes à ajouter',
+        order: 'Nouvel ordre recommandé de la page',
+        friction: 'Frictions qui bloquent l’achat',
+        proof: 'Preuves et confiance',
+        price: 'Offre, prix et valeur perçue',
+        message: 'Message, promesse et CTA',
+        mobile: 'Expérience mobile et friction UX',
+        plan: 'Plan de correction prioritaire',
+        copy: 'Sections prêtes à copier',
+        limits: 'Données observées et limites'
+    };
+    const offer = surgery.offerDetected || {};
+    const diagnosis = surgery.sectionDiagnosis || {};
+    const verdictHtml = `<div class="surgery-hero">
+        <div>
+            <small>${esc(t.verdict)}</small>
+            <h2>${esc(surgery.verdict?.summary || 'Funnel Analyse = Section Surgery + Conversion Diagnosis + Reconstruction Plan.')}</h2>
+            <p>${esc(offer.offerType ? `${t.offer}: ${offer.offerType}` : t.offer)}</p>
+        </div>
+        <div class="surgery-hero-facts">
+            <span>${esc(surgery.verdict?.confidence || 'MEDIUM')}</span>
+            <span>${offer.price ? `${esc(offer.price)} ${esc(offer.currency || '')}` : (isEn ? 'Price unconfirmed' : isAr ? 'السعر غير مؤكد' : 'Prix non confirmé')}</span>
+            <span>${esc(offer.priceConfidence || 'LOW')}</span>
+        </div>
+    </div>`;
+    const orderHtml = `<div class="surgery-order">
+        ${(surgery.recommendedOrder?.recommendedOrder || []).map((item, index) => `<div><b>${index + 1}</b><span>${esc(item)}</span></div>`).join('')}
+        ${surgery.recommendedOrder?.justification ? `<p>${esc(surgery.recommendedOrder.justification)}</p>` : ''}
+    </div>`;
+    const proof = surgery.proofTrust || {};
+    const proofHtml = `<div class="surgery-proof-grid">
+        <article><h4>Présentes</h4>${renderFunnelSurgeryList((proof.present || []).map(section => ({ section, action: 'Signal observé' })), { esc, empty: 'Aucune preuve forte observée.' })}</article>
+        <article><h4>Faibles</h4>${renderFunnelSurgeryList((proof.weak || []).map(section => ({ section, action: 'À renforcer' })), { esc, empty: 'Aucune faiblesse isolée.' })}</article>
+        <article><h4>Manquantes</h4>${renderFunnelSurgeryList((proof.missing || []).map(section => ({ section, action: proof.placement || 'À placer près du CTA.' })), { esc, empty: 'Aucune preuve manquante prioritaire.' })}</article>
+    </div>`;
+    const price = surgery.offerPriceValue || {};
+    const priceHtml = `<div class="surgery-value-card">
+        <strong>${esc(price.priceStatus || 'UNCONFIRMED')}</strong>
+        <p>${esc(price.action || '')}</p>
+        <div><span>Confiance: ${esc(price.priceConfidence || 'LOW')}</span><span>Valeur perçue: ${esc(price.valuePerception || 'LOW')}</span></div>
+    </div>`;
+    const msg = surgery.messagePromiseCta || {};
+    const msgHtml = renderFunnelCopyReady({
+        currentH1: msg.currentH1,
+        proposedH1: msg.proposedH1,
+        proposedSubtitle: msg.proposedSubtitle,
+        proposedCta: msg.proposedCta,
+        microcopy: msg.microcopy,
+        reassurance: msg.reassurance
+    }, { esc });
+    const mobile = surgery.mobileUx || {};
+    const mobileHtml = `${renderFunnelSurgeryList((mobile.risks || []).map(section => ({ section, action: mobile.simplify || '' })), { esc, empty: mobile.simplify || 'Aucun blocage mobile prioritaire confirmé.' })}
+        <div class="surgery-value-card"><strong>Sticky CTA</strong><p>${esc(mobile.stickyCta || '')}</p></div>`;
+    const limits = surgery.observedDataLimits || {};
+    const limitsHtml = `<div class="surgery-limits">
+        <div><b>Source</b><span>${esc(limits.sourceScraping || 'unknown')}</span></div>
+        <div><b>Confiance</b><span>${esc(limits.confidence || 'LOW')}</span></div>
+        <div><b>Prix confirmé</b><span>${limits.priceConfirmed ? 'Oui' : 'Non'}</span></div>
+        ${(limits.limits || []).map(x => `<p>${esc(x)}</p>`).join('')}
+    </div>`;
+    return `
+        <section class="funnel-surgery-shell">
+            ${verdictHtml}
+            ${renderReportSection('funnel-diagnostic', t.diagnosis, 'Garder, améliorer, déplacer, fusionner ou ajouter.', 'fa-stethoscope', `
+                <h4>${esc(t.keep)}</h4>${renderFunnelSurgeryList(diagnosis.keep, { esc })}
+                <h4>${esc(t.improve)}</h4>${renderFunnelSurgeryList(diagnosis.improve, { esc })}
+                <h4>${esc(t.add)}</h4>${renderFunnelSurgeryList(diagnosis.add, { esc })}
+            `, { isAr, isEn, open: true })}
+            ${renderReportSection('funnel-surgery-matrix', t.matrix, 'Lecture opérationnelle section par section.', 'fa-table-list', renderFunnelSurgeryMatrix(surgery.surgeryMatrix, { esc }), { isAr, isEn, open: true })}
+            ${renderReportSection('funnel-add', t.add, 'Les blocs qui répondent aux questions avant achat.', 'fa-plus', renderFunnelSurgeryList(surgery.missingSections, { esc }), { isAr, isEn, open: true })}
+            ${renderReportSection('funnel-remove', t.remove, 'Ce qui ralentit ou disperse la décision.', 'fa-compress', renderFunnelSurgeryList(surgery.removeOrMergeSections, { esc, empty: 'Aucune suppression prioritaire confirmée.' }), { isAr, isEn, open: true })}
+            ${renderReportSection('funnel-order', t.order, 'Reconstruction proposée pour réduire les hésitations.', 'fa-arrow-down-wide-short', orderHtml, { isAr, isEn, open: true })}
+            ${renderReportSection('funnel-plan', t.plan, 'Maintenant, 7 jours, 30 jours.', 'fa-list-check', renderFunnelPriorityPlan(surgery.priorityPlan, { esc }), { isAr, isEn, open: true })}
+            ${renderReportSection('funnel-keep', t.keep, 'Ce qui aide déjà la conversion.', 'fa-lock', renderFunnelSurgeryList(surgery.keepSections, { esc }), { isAr, isEn })}
+            ${renderReportSection('funnel-improve', t.improve, 'Présent, mais pas encore assez convaincant.', 'fa-wand-magic-sparkles', renderFunnelSurgeryList(surgery.improveSections, { esc }), { isAr, isEn })}
+            ${renderReportSection('funnel-move', t.move, 'À rapprocher du moment de décision.', 'fa-up-down-left-right', renderFunnelSurgeryList(surgery.moveSections, { esc, empty: 'Aucun déplacement prioritaire confirmé.' }), { isAr, isEn })}
+            ${renderReportSection('funnel-frictions', t.friction, 'Maximum 5 blocages liés à une preuve.', 'fa-triangle-exclamation', renderFunnelSurgeryList(surgery.frictions, { esc }), { isAr, isEn })}
+            ${renderReportSection('funnel-proof', t.proof, 'Ce qui rassure, ce qui manque, où le placer.', 'fa-shield-halved', proofHtml, { isAr, isEn })}
+            ${renderReportSection('funnel-price-value', t.price, 'Ne pas utiliser de prix faible ou non confirmé comme fait.', 'fa-hand-holding-dollar', priceHtml, { isAr, isEn })}
+            ${renderReportSection('funnel-message', t.message, 'H1, sous-titre, CTA, microcopy.', 'fa-pen-nib', msgHtml, { isAr, isEn })}
+            ${renderReportSection('funnel-mobile', t.mobile, 'Lecture mobile et CTA pouce.', 'fa-mobile-screen-button', mobileHtml, { isAr, isEn })}
+            ${renderReportSection('funnel-copy-ready', t.copy, 'Textes directement utilisables.', 'fa-copy', renderFunnelCopyReady(surgery.copyReadySections, { esc }), { isAr, isEn })}
+            ${renderReportSection('funnel-limits', t.limits, 'Ce qui a été observé et ce qui reste à vérifier.', 'fa-circle-info', limitsHtml, { isAr, isEn })}
+        </section>`;
+}
+
 function displayFunnelResults(data) {
     const container = document.getElementById('resultsFunnel');
     if (!container) return;
+    data = cleanFunnelReportForRender(data);
     const isAr = STATE.currentLang === 'ar';
     const isEn = STATE.currentLang === 'en';
     const dir  = isAr ? 'rtl' : 'ltr';
@@ -17243,24 +17529,17 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
   <div id="funnelReport" dir="${dir}">
     ${renderExecutiveSummary(data, 'funnel', { isAr, isEn })}
     ${renderFoundSourcesBar(data, 'funnel', { isAr, isEn })}
-    ${renderReportSection('audit', funnelReportLabels.audit, funnelReportLabels.auditSub, 'fa-shield-halved', `
-        ${cotHtml}
-        ${headerHtml}
+    ${renderFunnelSurgeryExperience(data, { isAr, isEn })}
+    ${renderReportSection('funnel-complete-dossier', isAr ? 'الملف الكامل' : isEn ? 'Complete dossier' : 'Dossier complet', isAr ? 'تفاصيل إضافية بدون تكرار القراءة الأساسية.' : isEn ? 'Extra details without repeating the core reading.' : 'Détails complémentaires sans répéter la lecture principale.', 'fa-folder-open', `
         ${decisionProofHtml}
         ${fieldGuideTopHtml}
         ${auditSummaryHtml}
         ${auditScorecardHtml}
         ${auditIssuesHtml}
-    `, { isAr, isEn })}
-
-    ${renderReportSection('money', funnelReportLabels.money, funnelReportLabels.moneySub, 'fa-hand-holding-dollar', `
         ${financialHtml}
         ${aarrHtml}
         ${pricingHtml}
         ${blueprintHtml}
-    `, { isAr, isEn })}
-
-    ${renderReportSection('page', funnelReportLabels.page, funnelReportLabels.pageSub, 'fa-pen-nib', `
         ${designHtml}
         ${perfTrustHtml}
         ${copyHtml}
@@ -17268,7 +17547,6 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
         ${sectionsHtml}
         ${counterHtml}
     `, { isAr, isEn })}
-
     ${renderFeatureGptBubbles('funnel', { isAr, isEn })}
     ${renderReportSection('proof', funnelReportLabels.proof, funnelReportLabels.proofSub, 'fa-link', fieldStudiesBottomHtml, { isAr, isEn })}
     <div id="magicPromptPlaceholder"></div>

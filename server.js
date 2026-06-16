@@ -231,6 +231,7 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
         'scrape_url',
         'deep-scrape',
         'deep_scrape',
+        'scrape_funnel_deep',
         'product-scrape',
         'product_scrape',
         'page-scrape',
@@ -266,7 +267,7 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
 }
 
 async function scrapeUrlViaRailway(url, options = {}) {
-    return runScrapeOnRailway('deep-scrape', {
+    return runScrapeOnRailway('scrape_funnel_deep', {
         url,
         explore: options.explore !== false,
         maxExtraPages: options.maxExtraPages ?? 3,
@@ -278,8 +279,514 @@ async function scrapeUrlViaRailway(url, options = {}) {
         sameOriginOnly: options.sameOriginOnly !== false
     }, options.timeout || 120000);
 }
+
+const FUNNEL_SCRAPE_CACHE_TTL_MS = Number(process.env.FUNNEL_SCRAPE_CACHE_TTL_MS || 20 * 60 * 1000);
+const funnelScrapeInFlight = new Map();
+const funnelScrapeShortCache = new Map();
+
+function normalizeFunnelCacheUrl(rawUrl = '') {
+    try {
+        const u = new URL(String(rawUrl || '').trim());
+        u.hash = '';
+        u.searchParams.sort?.();
+        return u.href.replace(/\/$/, '');
+    } catch {
+        return String(rawUrl || '').trim().replace(/\/$/, '');
+    }
+}
+
+function getFunnelShortCache(key) {
+    const entry = funnelScrapeShortCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.createdAt > FUNNEL_SCRAPE_CACHE_TTL_MS) {
+        funnelScrapeShortCache.delete(key);
+        return null;
+    }
+    return entry.value;
+}
+
+async function runFunnelScrapeOnce(namespace, url, producer) {
+    const key = `${namespace}:${normalizeFunnelCacheUrl(url)}`;
+    const cached = getFunnelShortCache(key);
+    if (cached) return { ...cached, fromShortScrapeCache: true };
+    if (funnelScrapeInFlight.has(key)) return funnelScrapeInFlight.get(key);
+
+    const promise = Promise.resolve()
+        .then(producer)
+        .then(result => {
+            const safeResult = cleanFunnelScrapePayload(result);
+            funnelScrapeShortCache.set(key, { value: safeResult, createdAt: Date.now() });
+            return safeResult;
+        })
+        .finally(() => funnelScrapeInFlight.delete(key));
+
+    funnelScrapeInFlight.set(key, promise);
+    return promise;
+}
+
+function limitFunnelText(value, max = 3000) {
+    if (typeof value !== 'string') return value;
+    const clean = value.replace(/\s+/g, ' ').trim();
+    return clean.length > max ? clean.slice(0, max) + '...' : clean;
+}
+
+function cleanFunnelScrapePayload(input, depth = 0) {
+    if (input == null || typeof input !== 'object') return limitFunnelText(input, 4000);
+    if (depth > 5) return null;
+
+    const dropKeys = new Set([
+        'html', 'rawHtml', 'bodyHtml', 'outerHTML', 'innerHTML', 'scripts',
+        'styles', 'style', 'svg', 'raw', 'logs', 'debug', 'screenshots',
+        'screenshot', 'dom', 'document', 'buffer', 'cookies'
+    ]);
+    const textLimits = {
+        bodyText: 9000,
+        fullTextSample: 9000,
+        text: 6000,
+        partialText: 700,
+        textPreview: 700,
+        context: 320,
+        summary: 500,
+        description: 500
+    };
+
+    if (Array.isArray(input)) {
+        return input.slice(0, depth <= 2 ? 80 : 25).map(item => cleanFunnelScrapePayload(item, depth + 1));
+    }
+
+    const out = {};
+    for (const [key, value] of Object.entries(input)) {
+        if (dropKeys.has(key)) continue;
+        if (typeof value === 'function') continue;
+        if (typeof value === 'string') {
+            out[key] = limitFunnelText(value, textLimits[key] || 1600);
+            continue;
+        }
+        out[key] = cleanFunnelScrapePayload(value, depth + 1);
+    }
+    return out;
+}
+
+function hardenFunnelPriceIntel(priceIntel = {}) {
+    const clone = cleanFunnelScrapePayload(priceIntel) || {};
+    const candidates = [
+        ...(Array.isArray(clone.schemaPrices) ? clone.schemaPrices.map(v => ({ value: v, source: 'schema' })) : []),
+        ...(Array.isArray(clone.prices) ? clone.prices : []),
+        ...(Array.isArray(clone.currentPrices) ? clone.currentPrices : []),
+        ...(Array.isArray(clone.domPrices) ? clone.domPrices : []),
+        ...(Array.isArray(clone.textPrices) ? clone.textPrices : [])
+    ]
+        .map(c => typeof c === 'number' ? { value: c } : c)
+        .filter(Boolean)
+        .map(c => ({
+            ...c,
+            value: Number(c.value ?? c.price ?? c.amount),
+            currency: c.currency || clone.currency || null,
+            source: c.source || clone.primarySource || 'unknown',
+            context: limitFunnelText(c.context || c.raw || '', 220)
+        }));
+
+    const rejected = [];
+    const valid = [];
+    for (const c of candidates) {
+        const hasCurrency = Boolean(c.currency);
+        const strongSource = /schema|json|offer|dom|railway/i.test(String(c.source || ''));
+        let reason = '';
+        if (!Number.isFinite(c.value) || c.value <= 0) reason = 'not_numeric';
+        else if (!hasCurrency) reason = 'missing_currency';
+        else if (c.value < 10 && !/USD|EUR|GBP/i.test(String(c.currency))) reason = 'too_low_for_currency';
+        else if (c.value < 1) reason = 'too_low';
+        else if (!strongSource && c.value < 120) reason = 'weak_source_low_value';
+        if (reason) rejected.push({ ...c, reason });
+        else valid.push(c);
+    }
+
+    const selected = valid
+        .sort((a, b) => {
+            const score = src => /schema|json|offer/i.test(String(src || '')) ? 3 : /dom|railway/i.test(String(src || '')) ? 2 : 1;
+            return score(b.source) - score(a.source);
+        })[0] || null;
+
+    const originalConfidence = String(clone.confidenceBand || clone.confidence || '').toUpperCase();
+    const priceConfidence = selected
+        ? (/schema|json|offer/i.test(String(selected.source || '')) ? 'HIGH' : 'MEDIUM')
+        : (candidates.length ? 'INVALID' : 'LOW');
+
+    const isConfirmed = Boolean(selected && ['HIGH', 'MEDIUM'].includes(priceConfidence));
+    return {
+        ...clone,
+        primaryPrice: isConfirmed ? selected.value : null,
+        minPrice: isConfirmed ? (clone.minPrice || selected.value) : null,
+        maxPrice: isConfirmed ? (clone.maxPrice || selected.value) : null,
+        currency: isConfirmed ? selected.currency : (clone.currency || null),
+        detected: isConfirmed,
+        priceConfidence,
+        confidence: priceConfidence === 'INVALID' ? 'LOW' : priceConfidence,
+        confidenceBand: priceConfidence === 'INVALID' ? 'LOW' : priceConfidence,
+        currencyDetected: selected?.currency || clone.currency || null,
+        priceEvidence: selected ? [selected, ...valid.filter(v => v !== selected).slice(0, 4)] : [],
+        rejectedPriceCandidates: rejected.slice(0, 12),
+        priceExtractionReason: selected
+            ? `confirmed_from_${selected.source || 'observed_source'}`
+            : candidates.length
+                ? 'price_candidates_rejected_or_unconfirmed'
+                : 'no_price_candidate_detected',
+        originalConfidence: originalConfidence || null
+    };
+}
+
+function getConfirmedFunnelPrice(priceIntel = {}) {
+    const n = Number(priceIntel.primaryPrice);
+    const confidence = String(priceIntel.priceConfidence || priceIntel.confidenceBand || priceIntel.confidence || '').toUpperCase();
+    return Number.isFinite(n) && n > 0 && ['HIGH', 'MEDIUM'].includes(confidence) ? n : 0;
+}
+
+function inferFunnelOfferType({ text = '', projectIdentity = {}, commerceExploration = {} } = {}) {
+    const source = `${projectIdentity.businessModel || ''} ${projectIdentity.siteType || ''} ${projectIdentity.niche || ''} ${text}`.toLowerCase();
+    if (/saas|software|logiciel|abonnement|trial|demo|intégration|integration|onboarding/.test(source)) return 'saas';
+    if (/formation|course|cours|programme|module|certificat|formateur/.test(source)) return 'formation';
+    if (/service|agence|consulting|prestation|audit|devis|rdv|appointment|livrable|accompagnement/.test(source)) return 'service';
+    if (/shop|boutique|e-?commerce|panier|checkout|produit|livraison|retour|stock|cart|product/.test(source)) return 'ecommerce';
+    if ((commerceExploration?.observed?.products || []).length) return 'ecommerce';
+    return 'generic';
+}
+
+function buildFunnelSectionSurgeryModel({
+    lang = 'fr',
+    validUrl = '',
+    scrape = {},
+    h1Main = '',
+    h2List = [],
+    h3List = [],
+    ctaList = [],
+    sectionsDetailed = [],
+    missingCriticalSections = [],
+    detectedPrice = null,
+    currency = null,
+    priceIntel = {},
+    commerceExploration = {},
+    socialProofs = [],
+    hasSSL = false,
+    hasWhatsApp = false,
+    phones = [],
+    emails = [],
+    imagesCount = 0,
+    wordCount = 0,
+    localScore = 0,
+    safeContext = {}
+} = {}) {
+    const isEn = lang === 'en';
+    const isAr = lang === 'ar';
+    const yes = isAr ? 'نعم' : isEn ? 'Yes' : 'Oui';
+    const no = isAr ? 'لا' : isEn ? 'No' : 'Non';
+    const labels = {
+        keep: isAr ? 'إبقاء' : isEn ? 'Keep' : 'Garder',
+        improve: isAr ? 'تحسين' : isEn ? 'Improve' : 'Améliorer',
+        move: isAr ? 'نقل' : isEn ? 'Move' : 'Déplacer',
+        remove: isAr ? 'دمج أو حذف' : isEn ? 'Remove or merge' : 'Supprimer ou fusionner',
+        add: isAr ? 'إضافة' : isEn ? 'Add' : 'Ajouter',
+        high: isAr ? 'عالية' : isEn ? 'High' : 'Haute',
+        medium: isAr ? 'متوسطة' : isEn ? 'Medium' : 'Moyenne',
+        low: isAr ? 'منخفضة' : isEn ? 'Low' : 'Basse'
+    };
+
+    const presentTypes = new Set((sectionsDetailed || []).map(s => String(s.type || '').toUpperCase()));
+    const text = [
+        h1Main,
+        ...(h2List || []),
+        ...(h3List || []),
+        scrape?.bodyText,
+        scrape?.brand?.fullTextSample
+    ].filter(Boolean).join(' ').toLowerCase();
+    const offerType = inferFunnelOfferType({ text, projectIdentity: scrape?.projectIdentity || {}, commerceExploration });
+    const priceConfirmed = getConfirmedFunnelPrice(priceIntel) || detectedPrice || null;
+    const trust = scrape?.trustSignals || {};
+    const hasReviews = Boolean(trust.hasReviews || socialProofs.length);
+    const hasGuarantee = Boolean(trust.hasMoneyBackGuarantee || trust.hasGuarantee || /garantie|warranty|refund|remboursement|ضمان/.test(text));
+    const hasDelivery = Boolean(trust.hasCOD || /livraison|shipping|delivery|retour|return|stock|توصيل/.test(text));
+    const hasFAQ = presentTypes.has('FAQ') || Boolean(scrape?.sections?.hasFAQ);
+    const hasCTA = ctaList.length > 0 || presentTypes.has('CTA');
+    const hasPrice = Boolean(priceConfirmed || presentTypes.has('PRICING') || scrape?.sections?.hasPricing);
+    const hasHero = presentTypes.has('HERO') || Boolean(h1Main && h1Main !== 'Non détecté');
+    const hasImages = Number(imagesCount) > 0;
+    const hasForm = presentTypes.has('FORM') || Boolean(phones.length || emails.length || hasWhatsApp);
+    const hasLegal = Boolean(trust.hasLegalPages || /mentions légales|privacy|conditions|terms|سياسة/.test(text));
+    const productWords = offerType === 'ecommerce';
+
+    const evidence = value => value || (isAr ? 'غير مؤكد في الصفحات المتاحة' : isEn ? 'Not confirmed in accessible pages' : 'Non confirmé dans les pages accessibles');
+    const actionFor = (section, present) => {
+        const ecommerce = {
+            'Livraison': isAr ? 'اعرض délai, coût, zones couvertes et conditions de retour près du prix.' : isEn ? 'Show delivery time, cost, coverage and returns near the price.' : 'Afficher délai, coût, zones couvertes et retours près du prix.',
+            'Garantie': isAr ? 'أضف ضمانا واضحا مع مدة وشروط قصيرة قبل CTA.' : isEn ? 'Add a clear guarantee with duration and conditions before the CTA.' : 'Ajouter une garantie claire avec durée et conditions avant le CTA.',
+            'Avis clients': isAr ? 'أضف 3 avis vérifiables avec photo ou source.' : isEn ? 'Add 3 verifiable reviews with photo or source.' : 'Ajouter 3 avis vérifiables avec photo ou source.',
+            'FAQ': isAr ? 'أجب عن السعر، livraison, retours, usage et sécurité avant achat.' : isEn ? 'Answer price, delivery, returns, usage and safety before purchase.' : 'Répondre au prix, livraison, retours, usage et sécurité avant achat.'
+        };
+        const service = {
+            'Livraison': isAr ? 'استبدلها بوضوح livrables, délais, révisions et accompagnement.' : isEn ? 'Replace with clear deliverables, timelines, revisions and support.' : 'Remplacer par livrables, délais, révisions et accompagnement clairs.',
+            'Garantie': isAr ? 'أضف conditions de révision ou satisfaction clairement formulées.' : isEn ? 'Add clear revision or satisfaction conditions.' : 'Ajouter des conditions de révision ou satisfaction claires.',
+            'Avis clients': isAr ? 'أضف cas clients vérifiables et résultats obtenus.' : isEn ? 'Add verifiable case studies and outcomes.' : 'Ajouter cas clients vérifiables et résultats obtenus.',
+            'FAQ': isAr ? 'Traite budget, délais, livrables, paiement et objections.' : isEn ? 'Handle budget, timelines, deliverables, payment and objections.' : 'Traiter budget, délais, livrables, paiement et objections.'
+        };
+        const map = productWords ? ecommerce : service;
+        return map[section] || (present
+            ? (isAr ? 'حافظ على القسم واجعله أقرب إلى CTA إذا كان يؤثر على القرار.' : isEn ? 'Keep the section and bring it closer to the CTA if it affects the decision.' : 'Garder la section et la rapprocher du CTA si elle influence la décision.')
+            : (isAr ? 'أضف هذا القسم avec contenu concret et preuve visible.' : isEn ? 'Add this section with concrete content and visible proof.' : 'Ajouter cette section avec contenu concret et preuve visible.'));
+    };
+
+    const catalog = [
+        { name: 'Header / navigation', present: true, critical: true, evidence: 'URL analysée et navigation chargée' },
+        { name: 'Hero', present: hasHero, critical: true, evidence: h1Main },
+        { name: 'H1', present: Boolean(h1Main && !/non|na|undefined/i.test(h1Main)), critical: true, evidence: h1Main },
+        { name: 'Sous-titre', present: h2List.length > 0, critical: true, evidence: h2List[0] },
+        { name: 'CTA principal', present: hasCTA, critical: true, evidence: ctaList[0] },
+        { name: 'CTA secondaire', present: ctaList.length > 1, critical: false, evidence: ctaList[1] },
+        { name: 'Image produit', present: hasImages, critical: offerType === 'ecommerce', evidence: `${imagesCount} image(s) détectée(s)` },
+        { name: 'Vidéo produit', present: /video|youtube|vimeo|mp4/.test(text), critical: false, evidence: 'Signal vidéo détecté' },
+        { name: 'Galerie', present: imagesCount >= 4, critical: offerType === 'ecommerce', evidence: `${imagesCount} image(s) détectée(s)` },
+        { name: 'Bénéfices', present: presentTypes.has('BENEFITS') || h2List.length >= 2, critical: true, evidence: h2List.slice(0, 2).join(' | ') },
+        { name: 'Caractéristiques', present: presentTypes.has('FEATURES'), critical: false, evidence: 'Section FEATURES détectée' },
+        { name: 'Prix', present: hasPrice, critical: true, evidence: priceConfirmed ? `${priceConfirmed} ${currency || ''}` : priceIntel.priceExtractionReason },
+        { name: 'Offre / bundle / pack', present: presentTypes.has('OFFER') || /pack|bundle|offre|formule|bonus/.test(text), critical: true, evidence: 'Signal offre détecté' },
+        { name: 'Livraison', present: hasDelivery, critical: offerType === 'ecommerce', evidence: 'Signal livraison/retour détecté' },
+        { name: 'Garantie', present: hasGuarantee, critical: true, evidence: 'Signal garantie détecté' },
+        { name: 'Retours', present: /retour|return|refund|remboursement/.test(text), critical: offerType === 'ecommerce', evidence: 'Signal retour/remboursement détecté' },
+        { name: 'Avis clients', present: hasReviews, critical: true, evidence: `${socialProofs.length} preuve(s) sociale(s)` },
+        { name: 'Témoignages', present: presentTypes.has('SOCIAL_PROOF'), critical: true, evidence: 'SOCIAL_PROOF détecté' },
+        { name: 'FAQ', present: hasFAQ, critical: true, evidence: 'FAQ détectée' },
+        { name: 'Badges de confiance', present: presentTypes.has('TRUST') || Boolean(trust.hasPaymentLogos), critical: true, evidence: 'Signal trust détecté' },
+        { name: 'Paiement sécurisé', present: Boolean(trust.hasPaymentLogos || hasSSL), critical: offerType === 'ecommerce', evidence: hasSSL ? 'SSL détecté' : '' },
+        { name: 'WhatsApp / contact', present: hasForm, critical: true, evidence: [hasWhatsApp ? 'WhatsApp' : null, phones[0], emails[0]].filter(Boolean).join(' | ') },
+        { name: 'Formulaire', present: presentTypes.has('FORM'), critical: offerType !== 'ecommerce', evidence: 'FORM détecté' },
+        { name: 'Checkout / panier', present: presentTypes.has('CHECKOUT') || /checkout|panier|cart/.test(text), critical: offerType === 'ecommerce', evidence: 'Signal panier/checkout détecté' },
+        { name: 'Comparaison', present: presentTypes.has('COMPARISON'), critical: false, evidence: 'COMPARISON détectée' },
+        { name: 'Urgence / rareté', present: /stock|limited|limité|rare|urgence|aujourd/.test(text), critical: false, evidence: 'Signal urgence/rareté détecté' },
+        { name: 'Bonus', present: /bonus|cadeau|free|gratuit/.test(text), critical: false, evidence: 'Signal bonus détecté' },
+        { name: 'Footer', present: presentTypes.has('FOOTER') || hasLegal, critical: true, evidence: hasLegal ? 'Pages légales détectées' : 'Footer détecté' },
+        { name: 'Pages légales', present: hasLegal, critical: offerType === 'ecommerce', evidence: 'Signal légal détecté' },
+        { name: 'Réseaux sociaux', present: /instagram|facebook|tiktok|linkedin|youtube/.test(text), critical: false, evidence: 'Signal réseau social détecté' },
+        { name: 'Comment ça marche', present: presentTypes.has('PROCESS'), critical: offerType !== 'ecommerce', evidence: 'PROCESS détecté' },
+        { name: 'Objections', present: presentTypes.has('OBJECTIONS') || hasFAQ, critical: true, evidence: hasFAQ ? 'FAQ détectée' : 'OBJECTIONS détectées' },
+        { name: 'Résultats attendus', present: presentTypes.has('BENEFITS') || presentTypes.has('CASE_STUDIES'), critical: true, evidence: 'BENEFITS/CASE_STUDIES détecté' }
+    ];
+
+    const rows = catalog.map(item => {
+        const decision = item.present
+            ? (['Prix', 'Garantie', 'Avis clients', 'FAQ', 'CTA principal', 'Hero'].includes(item.name) && item.critical ? labels.improve : labels.keep)
+            : labels.add;
+        return {
+            section: item.name,
+            present: item.present ? yes : no,
+            decision,
+            evidence: item.present ? evidence(item.evidence) : (isAr ? 'غير مرصود في الصفحات المتاحة' : isEn ? 'Not detected in accessible pages' : 'Non détecté dans les pages accessibles'),
+            problem: item.present
+                ? (decision === labels.improve ? (isAr ? 'القسم موجود لكن يحتاج إلى إثبات أو وضوح أقوى.' : isEn ? 'Present but needs stronger clarity or proof.' : 'Présent mais doit gagner en clarté ou en preuve.') : '')
+                : (isAr ? 'غيابه يترك سؤالا قبل القرار.' : isEn ? 'Its absence leaves an unanswered question before conversion.' : 'Son absence laisse une question avant la conversion.'),
+            conversionImpact: item.critical ? (isAr ? 'تأثير مباشر على القرار' : isEn ? 'Direct decision impact' : 'Impact direct sur la décision') : (isAr ? 'تأثير متوسط على الفهم' : isEn ? 'Medium clarity impact' : 'Impact moyen sur la compréhension'),
+            action: actionFor(item.name, item.present),
+            priority: item.critical ? labels.high : labels.medium,
+            confidence: item.present ? 'HIGH' : 'MEDIUM'
+        };
+    });
+
+    const keepSections = rows.filter(r => r.decision === labels.keep).slice(0, 6);
+    const improveSections = rows.filter(r => r.decision === labels.improve).slice(0, 8);
+    const missingSections = rows.filter(r => r.decision === labels.add && /Haute|High|عالية/.test(r.priority)).slice(0, 8);
+
+    const moveSections = [
+        hasReviews ? { section: 'Avis clients', currentPosition: 'Position exacte à vérifier', recommendedPosition: 'Juste après offre/prix', reason: isEn ? 'Reviews reduce hesitation before the buying decision.' : isAr ? 'الآراء تقلل التردد قبل قرار الشراء.' : 'Les avis réduisent l’hésitation avant la décision.', impact: 'MEDIUM', confidence: 'MEDIUM' } : null,
+        hasGuarantee ? { section: 'Garantie', currentPosition: 'Position exacte à vérifier', recommendedPosition: 'Près du prix et du CTA', reason: isEn ? 'Guarantee lowers perceived risk.' : isAr ? 'الضمان يقلل المخاطرة المتصورة.' : 'La garantie réduit le risque perçu.', impact: 'HIGH', confidence: 'MEDIUM' } : null,
+        hasFAQ ? { section: 'FAQ', currentPosition: 'Position exacte à vérifier', recommendedPosition: 'Avant le CTA final', reason: isEn ? 'FAQ answers objections before action.' : isAr ? 'الأسئلة الشائعة تجيب عن الاعتراضات قبل الإجراء.' : 'La FAQ traite les objections avant l’action.', impact: 'MEDIUM', confidence: 'MEDIUM' } : null
+    ].filter(Boolean);
+
+    const removeOrMergeSections = [
+        wordCount > 1800 && ctaList.length < 2 ? {
+            section: 'Texte long',
+            reason: isEn ? 'Long content with few calls to action slows the decision.' : isAr ? 'النص الطويل مع CTA قليل يبطئ القرار.' : 'Un texte long avec peu de CTA ralentit la décision.',
+            action: isEn ? 'Merge into 5 benefit bullets and repeat the CTA.' : isAr ? 'ادمجه في 5 فوائد وكرر CTA.' : 'Fusionner en 5 bénéfices et répéter le CTA.',
+            priority: labels.medium,
+            confidence: 'MEDIUM'
+        } : null,
+        ctaList.length > 6 ? {
+            section: 'CTA dispersés',
+            reason: isEn ? 'Too many CTA variants can dilute action.' : isAr ? 'كثرة صيغ CTA تضعف وضوح الإجراء.' : 'Trop de variantes de CTA diluent l’action.',
+            action: isEn ? 'Keep one primary CTA and one secondary CTA.' : isAr ? 'احتفظ بزر رئيسي وزر ثانوي فقط.' : 'Garder un CTA principal et un CTA secondaire.',
+            priority: labels.medium,
+            confidence: 'HIGH'
+        } : null
+    ].filter(Boolean);
+
+    const orderByType = {
+        ecommerce: ['Header simple', 'Hero avec produit + promesse + CTA', 'Preuves rapides: livraison, garantie, paiement, avis', 'Bénéfices principaux', 'Images / démonstration produit', 'Offre + prix + ce que vous recevez', 'Avis clients', 'Livraison + retours + garantie', 'FAQ avant achat', 'CTA final / WhatsApp / achat', 'Footer légal'],
+        service: ['Hero avec résultat promis', 'Problème client', 'Solution', 'Livrables', 'Cas clients', 'Process', 'Offre / appel', 'FAQ objections', 'CTA final'],
+        saas: ['Hero', 'Cas d’usage', 'Démo / screenshots', 'Bénéfices', 'Fonctionnalités', 'Pricing', 'Preuves clients', 'Sécurité / intégrations', 'FAQ', 'CTA final'],
+        formation: ['Hero avec résultat attendu', 'Programme', 'Profil formateur', 'Preuves élèves', 'Accès et durée', 'Bonus', 'Garantie', 'FAQ', 'CTA final'],
+        generic: ['Hero clair', 'Preuves rapides', 'Bénéfices', 'Offre', 'Preuves clients', 'FAQ objections', 'CTA final']
+    };
+
+    const frictions = [
+        !hasCTA ? ['CTA faible ou absent', 'Aucun CTA exploitable détecté', 'Le visiteur ne connaît pas la prochaine étape', 'Ajouter un CTA principal visible sous le H1', labels.high, 'HIGH'] : null,
+        !hasPrice ? ['Prix non confirmé', priceIntel.priceExtractionReason || 'Aucun prix fiable', 'La valeur et le risque restent flous', 'Clarifier prix, devise, contenu inclus et garantie', labels.high, 'HIGH'] : null,
+        !hasReviews ? ['Preuve sociale absente', 'Avis/témoignages non détectés', 'La confiance avant achat reste faible', 'Ajouter 3 preuves vérifiables près de l’offre', labels.high, 'HIGH'] : null,
+        !hasGuarantee ? ['Garantie peu claire', 'Garantie non détectée', 'Le risque perçu reste élevé', 'Ajouter durée, conditions et phrase de réassurance', labels.medium, 'MEDIUM'] : null,
+        offerType === 'ecommerce' && !hasDelivery ? ['Livraison/retours absents', 'Délai ou retours non détectés', 'Le client hésite avant paiement', 'Ajouter livraison, retours, stock et paiement sécurisé', labels.high, 'HIGH'] : null
+    ].filter(Boolean).slice(0, 5).map(([friction, observedEvidence, impact, correction, priority, confidence]) => ({
+        friction, observedEvidence, conversionImpact: impact, correction, priority, confidence
+    }));
+
+    const immediate = [
+        !hasCTA ? 'Ajouter un CTA principal visible sous le H1.' : null,
+        !hasPrice ? 'Clarifier prix, devise et contenu exact de l’offre.' : null,
+        !hasReviews ? 'Ajouter preuves clients ou avis vérifiables près de l’offre.' : null
+    ].filter(Boolean).slice(0, 3);
+    const sevenDays = [
+        !hasFAQ ? 'Créer une FAQ avant achat pour traiter les objections.' : null,
+        !hasGuarantee ? 'Ajouter un bloc garantie/risque avec conditions simples.' : null,
+        offerType === 'ecommerce' && !hasDelivery ? 'Ajouter livraison, retours, stock et paiement sécurisé.' : null
+    ].filter(Boolean).slice(0, 3);
+    const thirtyDays = [
+        offerType === 'saas' ? 'Construire une page pricing claire avec démo et cas d’usage.' : null,
+        offerType === 'service' ? 'Publier 2 cas clients vérifiables avec livrables et délais.' : null,
+        offerType === 'ecommerce' ? 'Construire une galerie produit réelle avec avis, FAQ et preuves de stock.' : null,
+        'Tester un ordre de page reconstruit autour de preuve, prix et CTA.'
+    ].filter(Boolean).slice(0, 3);
+
+    const proposedH1 = h1Main && !/non|na|undefined/i.test(h1Main)
+        ? h1Main
+        : (offerType === 'service'
+            ? 'Obtenez un résultat clair, avec un accompagnement transparent.'
+            : offerType === 'saas'
+                ? 'Pilotez votre activité plus vite avec une solution simple à adopter.'
+                : 'Commandez le bon produit, avec prix clair et garanties visibles.');
+
+    const confidence = scrape?.success === false ? 'LOW' : localScore >= 65 ? 'HIGH' : localScore >= 40 ? 'MEDIUM' : 'LOW';
+
+    return {
+        version: 'section-surgery-v1',
+        verdict: {
+            title: isEn ? 'Funnel Verdict' : isAr ? 'حكم القمع' : 'Verdict Funnel',
+            canConvert: localScore >= 55 && hasCTA,
+            summary: isEn
+                ? 'The page can convert if the first screen, proof and offer clarity are tightened.'
+                : isAr
+                    ? 'يمكن للصفحة التحويل إذا تم توضيح الشاشة الأولى والإثبات والعرض.'
+                    : 'La page peut convertir si le premier écran, les preuves et l’offre deviennent plus clairs.',
+            confidence
+        },
+        offerDetected: {
+            offerType,
+            h1: h1Main || null,
+            ctas: ctaList.slice(0, 5),
+            price: priceConfirmed,
+            currency,
+            priceConfidence: priceIntel.priceConfidence || 'LOW'
+        },
+        sectionDiagnosis: {
+            keep: keepSections,
+            improve: improveSections,
+            move: moveSections,
+            removeOrMerge: removeOrMergeSections,
+            add: missingSections
+        },
+        surgeryMatrix: rows.slice(0, 32),
+        keepSections,
+        improveSections,
+        moveSections,
+        removeOrMergeSections,
+        missingSections,
+        recommendedOrder: {
+            currentOrder: (sectionsDetailed || []).map(s => s.label || s.type).filter(Boolean).slice(0, 14),
+            recommendedOrder: orderByType[offerType] || orderByType.generic,
+            justification: isEn ? 'The recommended order reduces uncertainty before the main action.' : isAr ? 'الترتيب المقترح يقلل الغموض قبل الإجراء الرئيسي.' : 'L’ordre recommandé réduit l’incertitude avant l’action principale.'
+        },
+        frictions,
+        proofTrust: {
+            present: [
+                hasSSL ? 'SSL / HTTPS' : null,
+                hasWhatsApp ? 'WhatsApp' : null,
+                hasReviews ? 'Avis ou témoignages' : null,
+                hasGuarantee ? 'Garantie' : null,
+                hasDelivery ? 'Livraison / retours' : null
+            ].filter(Boolean),
+            weak: [
+                !hasReviews ? 'Avis clients vérifiables' : null,
+                !hasGuarantee ? 'Garantie claire' : null,
+                !hasPrice ? 'Prix confirmé' : null
+            ].filter(Boolean),
+            missing: missingSections.map(x => x.section).slice(0, 6),
+            placement: isEn ? 'Place proof near price, CTA and FAQ.' : isAr ? 'ضع الإثبات قرب السعر وCTA وFAQ.' : 'Placer les preuves près du prix, du CTA et de la FAQ.'
+        },
+        offerPriceValue: {
+            offerClarity: h1Main ? 'MEDIUM' : 'LOW',
+            priceStatus: priceConfirmed ? 'CONFIRMED' : 'UNCONFIRMED',
+            price: priceConfirmed,
+            currency,
+            priceConfidence: priceIntel.priceConfidence || 'LOW',
+            valuePerception: hasReviews && hasGuarantee ? 'MEDIUM' : 'LOW',
+            action: priceConfirmed
+                ? 'Relier le prix à ce que le client reçoit, aux preuves et à la garantie.'
+                : 'Ne pas utiliser ce prix comme fait. Clarifier prix, devise et contenu exact de l’offre.'
+        },
+        messagePromiseCta: {
+            currentH1: h1Main || null,
+            currentPrimaryCta: ctaList[0] || null,
+            proposedH1,
+            proposedSubtitle: offerType === 'ecommerce'
+                ? 'Prix clair, livraison expliquée, paiement sécurisé et preuve client avant achat.'
+                : 'Livrables, délais, accompagnement et preuves visibles avant la prise de contact.',
+            proposedCta: offerType === 'ecommerce' ? 'Commander maintenant' : 'Demander un diagnostic',
+            microcopy: offerType === 'ecommerce'
+                ? 'Livraison claire · Paiement sécurisé · Garantie disponible'
+                : 'Réponse rapide · Livrables clairs · Révision possible',
+            reassurance: hasGuarantee ? 'Garantie visible à renforcer.' : 'Recommandation : ajouter une garantie ou une condition de réassurance.'
+        },
+        mobileUx: {
+            risks: [
+                ctaList.length === 0 ? 'CTA mobile non confirmé' : null,
+                wordCount > 1800 ? 'Blocs longs à réduire sur mobile' : null,
+                imagesCount === 0 ? 'Visuel produit/service non confirmé' : null
+            ].filter(Boolean),
+            simplify: 'Garder le résumé, les preuves, le prix et le CTA visibles; placer les détails en accordéons.',
+            stickyCta: hasCTA ? 'Tester un sticky CTA mobile reprenant le CTA principal.' : 'Ajouter un sticky CTA mobile après validation du CTA principal.',
+            confidence: 'MEDIUM'
+        },
+        priorityPlan: {
+            now: immediate.map((action, i) => ({ action, why: 'Bloque la décision immédiate', impact: 'HIGH', effort: 'LOW', confidence: 'HIGH', priority: i + 1 })),
+            sevenDays: sevenDays.map((action, i) => ({ action, why: 'Réduit les objections avant achat/contact', impact: 'MEDIUM', effort: 'MEDIUM', confidence: 'MEDIUM', priority: i + 1 })),
+            thirtyDays: thirtyDays.map((action, i) => ({ action, why: 'Construit un système de preuve durable', impact: 'HIGH', effort: 'MEDIUM', confidence: 'MEDIUM', priority: i + 1 }))
+        },
+        copyReadySections: {
+            hero: proposedH1,
+            h1: proposedH1,
+            subtitle: offerType === 'ecommerce'
+                ? 'Tout ce qu’il faut pour décider vite: prix, preuve, livraison et garantie au même endroit.'
+                : 'Une offre claire, des livrables précis et un accompagnement visible avant la prise de contact.',
+            cta: offerType === 'ecommerce' ? 'Commander maintenant' : 'Planifier un diagnostic',
+            microcopy: offerType === 'ecommerce' ? 'Paiement sécurisé · Livraison expliquée · Garantie disponible' : 'Sans engagement · Réponse rapide · Plan d’action clair',
+            guaranteeBlock: 'Recommandation : ajoutez une garantie courte avec durée, conditions et limites.',
+            deliveryBlock: offerType === 'ecommerce' ? 'Ajoutez délai, coût, zones couvertes, retours et preuve de stock.' : 'Remplacez par livrables, délais, révisions et niveau d’accompagnement.',
+            faqBlock: ['Quel est le prix exact ?', 'Que reçoit le client ?', 'Quels délais ?', 'Quelles garanties ?', 'Comment contacter le support ?'],
+            objectionBlock: 'Si vous hésitez, voici exactement ce qui est inclus, ce qui ne l’est pas, et comment nous réduisons le risque.',
+            whatsappMessage: offerType === 'ecommerce' ? 'Bonjour, je veux confirmer le prix, la livraison et la disponibilité du produit.' : 'Bonjour, je veux comprendre les livrables, délais et conditions de votre offre.'
+        },
+        observedDataLimits: {
+            pagesAnalyzed: commerceExploration?.observed?.evidenceLinks?.length || 1,
+            sourceScraping: scrape?.executionLayer || scrape?.fetchLayer || 'unknown',
+            confidence,
+            priceConfirmed: Boolean(priceConfirmed),
+            priceReason: priceIntel.priceExtractionReason || null,
+            inaccessibleElements: scrape?.error ? [String(scrape.error).slice(0, 180)] : [],
+            limits: scrape?.success === false
+                ? ['Analyse partielle : certaines pages n’étaient pas accessibles automatiquement. Les recommandations sont basées sur les signaux observés.']
+                : ['Les positions exactes des sections peuvent nécessiter une vérification visuelle manuelle.']
+        },
+        userContext: safeContext
+    };
+}
 function queuedJobMiddleware(type) {
     return async (req, res, next) => {
+        if (type === 'funnel' && shouldUseRailwayScraping()) {
+            return next();
+        }
         if (!supabase || req.queueBypass === true || req.get('x-daka-worker-bypass') === '1') {
             return next();
         }
@@ -10799,8 +11306,12 @@ const langInstr = isAr
         // ══════════════════════════════════════════════════════════════
         console.log(`${requestId} Scraping deep...`);
 
-        let scrape = await deepScrapeFunnel(validUrl);
-        scrapedRawData = scrape; // Conservation pour le fallback en cas d'erreur IA
+        let scrape = await runFunnelScrapeOnce('deep-scrape', validUrl, () => deepScrapeFunnel(validUrl));
+        if (scrape?.html) scrape.html = String(scrape.html).slice(0, 180000);
+        if (scrape?.bodyText) scrape.bodyText = limitFunnelText(scrape.bodyText, 12000);
+        if (scrape?.brand?.fullTextSample) scrape.brand.fullTextSample = limitFunnelText(scrape.brand.fullTextSample, 12000);
+        scrape.priceIntel = hardenFunnelPriceIntel(scrape.priceIntel || {});
+        scrapedRawData = cleanFunnelScrapePayload(scrape); // Conservation safe pour le fallback en cas d'erreur IA
 
         if (!scrape || typeof scrape !== 'object') {
             console.warn(`${requestId} Scrape null — fallback vide`);
@@ -10821,22 +11332,22 @@ const langInstr = isAr
             };
         }
 
-        const commerceExploration = await exploreFunnelCommerce(validUrl, {
+        const commerceExploration = await runFunnelScrapeOnce('commerce-exploration', validUrl, () => exploreFunnelCommerce(validUrl, {
             lang: validLang,
             userContext: safeContext,
             baseScrape: scrape,
             requestId
-        });
+        }));
 
         const commercePriceCandidates = Array.isArray(commerceExploration?.observed?.priceCandidates)
             ? commerceExploration.observed.priceCandidates
             : [];
 
         if (commercePriceCandidates.length) {
-            scrape.priceIntel = finalizePriceIntel([
+            scrape.priceIntel = hardenFunnelPriceIntel(finalizePriceIntel([
                 ...((Array.isArray(scrape.priceIntel?.prices) && scrape.priceIntel.prices) || []),
                 ...commercePriceCandidates
-            ], scrape.html || '');
+            ], scrape.html || ''));
         }
 
         const commerceTrust = commerceExploration?.observed?.trustSignals || {};
@@ -11259,7 +11770,7 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
             return 'NONDETECTE';
         })();
 
-      const detectedPrice = pri?.detected ? ((pri.primaryPrice ?? pri.primaryPrice ?? 0) > 0 ? (pri.primaryPrice ?? pri.detectedPrice) : null) : null;
+      const detectedPrice = getConfirmedFunnelPrice(pri) || null;
         const currency = (pri?.currency && pri.currency !== 'UNKNOWN') ? pri.currency : null;
 
         const quickLocalScore = {
@@ -11300,6 +11811,31 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
             return str.length > maxLen ? str.substring(0, maxLen) + '...TRONQUÉ' : str;
         };
 
+        const funnelSurgery = buildFunnelSectionSurgeryModel({
+            lang: validLang,
+            validUrl,
+            scrape,
+            h1Main,
+            h2List,
+            h3List,
+            ctaList,
+            sectionsDetailed,
+            missingCriticalSections,
+            detectedPrice,
+            currency,
+            priceIntel,
+            commerceExploration,
+            socialProofs,
+            hasSSL,
+            hasWhatsApp,
+            phones,
+            emails,
+            imagesCount,
+            wordCount,
+            localScore,
+            safeContext
+        });
+
         // ── 5. SHARED CONTEXT ─────────────────────────────────
         const sharedContext = `
 ═══════════════════════════════════════
@@ -11310,7 +11846,7 @@ STACK           : ${techCMS}
 SSL             : ${hasSSL}
 SCHEMA JSON-LD  : ${schemaTypes.join(', ') || 'Absent'}
 MOT COUNT       : ${wordCount} mots
-PRIX DÉTECTÉ    : ${getCanonicalPrice(priceIntel) > 0 ? `${getCanonicalPrice(priceIntel)} ${currency}` : 'AUCUN_PRIX_DETECTE'}
+PRIX DÉTECTÉ    : ${getConfirmedFunnelPrice(priceIntel) > 0 ? `${getConfirmedFunnelPrice(priceIntel)} ${currency}` : 'PRIX_NON_CONFIRME'}
 TÉLÉPHONES      : ${phones.length > 0 ? phones.join(', ') : 'AUCUN_NUMERO_DETECTE_SUR_LA_PAGE'}
 EMAILS          : ${emails.length > 0 ? emails.join(', ') : 'AUCUN_EMAIL_DETECTE_SUR_LA_PAGE'}
 WHATSAPP        : ${hasWhatsApp ? 'OUI' : 'NON'}
@@ -11340,6 +11876,14 @@ SECTIONS:
 TRIGGERS PSYCHO : ${safeSerialize(psychTriggers, 400)}
 SIGNAUX PERF    : ${safeSerialize(perfSignals, 300)}
 SCORE LOCAL     : ${localScore}/100
+SECTION SURGERY :
+${JSON.stringify({
+  verdict: funnelSurgery.verdict,
+  offerDetected: funnelSurgery.offerDetected,
+  frictions: funnelSurgery.frictions,
+  missingSections: funnelSurgery.missingSections?.slice(0, 6),
+  priorityPlan: funnelSurgery.priorityPlan
+}).slice(0, 3500)}
 
 RÈGLES ANTI-HALLUCINATION :
 1. Utilise UNIQUEMENT les données ci-dessus.
@@ -11354,7 +11898,7 @@ ${formatUserContextForPrompt(safeContext, ND)}
 
         const sharedContextShort = `
 URL: ${validUrl} | Stack: ${techCMS} | SSL: ${hasSSL}
-Prix: ${getCanonicalPrice(priceIntel) > 0 ? `${getCanonicalPrice(priceIntel)} ${currency}` : 'AUCUN_PRIX_DETECTE'}
+Prix: ${getConfirmedFunnelPrice(priceIntel) > 0 ? `${getConfirmedFunnelPrice(priceIntel)} ${currency}` : 'PRIX_NON_CONFIRME'}
 Words: ${wordCount} | H1: ${h1Main}
 CTAs: ${ctaList.slice(0,3).join(' | ')}
 Colors: ${primaryColor} / ${secondColor} | WA: ${hasWhatsApp}
@@ -11426,7 +11970,7 @@ ${sharedContext}
       "socialProofCount": ${socialProofs.length},
       "socialProofQuality": "${socialProofs.length > 0 ? 'analyser' : 'ABSENT — critique'}",
       "urgencyFOMO": "présent|absent|faible",
-      "priceAnchoring": "${getCanonicalPrice(priceIntel) > 0 ? getCanonicalPrice(priceIntel) + ' ' + currency + ' — analyser' : 'ABSENT'}",
+      "priceAnchoring": "${getConfirmedFunnelPrice(priceIntel) > 0 ? getConfirmedFunnelPrice(priceIntel) + ' ' + currency + ' — analyser' : 'PRIX_NON_CONFIRME'}",
       "trustBadges": "${trustSection ? 'présent' : 'ABSENT'}",
       "weaknesses": ["faiblesse réelle"],
       "fix": "action corrective"
@@ -11483,7 +12027,7 @@ ${langInstr}
 ÉTAPE 1 — RÉFLEXION (Chain of Thought) :
 → Quel est le chemin exact du visiteur depuis l'arrivée jusqu'à l'achat ?
 → À quelle étape le visiteur abandonne-t-il le plus probablement ?
-→ ${getCanonicalPrice(priceIntel) > 0 ? `Le prix ${getCanonicalPrice(priceIntel)} ${currency} est-il bien ancré psychologiquement ?` : `Aucun prix détecté : analyse uniquement la présentation tarifaire sans inventer de prix.`}
+→ ${getConfirmedFunnelPrice(priceIntel) > 0 ? `Le prix ${getConfirmedFunnelPrice(priceIntel)} ${currency} est-il bien ancré psychologiquement ?` : `Prix non confirmé : analyse uniquement la présentation tarifaire sans inventer de prix.`}
 → Les CTAs "${ctaList.slice(0,2).join('" et "')}" déclenchent-ils l'action ?
 → Y a-t-il un système de nurturing ou tout est one-shot ?
 
@@ -11501,7 +12045,7 @@ ${sharedContext}
     "stages": [
       { "stage": "ACQUISITION", "score": 0, "source": "trafic probable SEO|Pub|Social|Direct", "verdict": "verdict basé sur données", "fix": "action corrective" },
       { "stage": "ACTIVATION",  "score": 0, "hook": "accroche détectée : ${h1Main}", "verdict": "verdict", "fix": "action corrective" },
-      { "stage": "DESIRE",      "score": 0, "socialProof": "${socialProofs.length} preuves sociales", "pricePresentation": "${getCanonicalPrice(priceIntel) > 0 ? getCanonicalPrice(priceIntel) + ' ' + currency : 'ABSENT'}", "verdict": "verdict", "fix": "action corrective" },
+      { "stage": "DESIRE",      "score": 0, "socialProof": "${socialProofs.length} preuves sociales", "pricePresentation": "${getConfirmedFunnelPrice(priceIntel) > 0 ? getConfirmedFunnelPrice(priceIntel) + ' ' + currency : 'PRIX_NON_CONFIRME'}", "verdict": "verdict", "fix": "action corrective" },
       { "stage": "ACTION",      "score": 0, "ctaMain": "${ctaList[0] || ND}", "frictions": ["friction réelle basée sur données"], "verdict": "verdict", "fix": "action corrective" },
       { "stage": "RETENTION",   "score": 0, "hasEmail": ${emails.length > 0}, "hasWhatsApp": ${hasWhatsApp}, "nurturingSystem": "présent|absent|faible", "verdict": "verdict", "fix": "action corrective" }
     ],
@@ -11510,7 +12054,7 @@ ${sharedContext}
     "dropOffStage": "étape la plus risquée"
   },
     "pricingPsychology": {
-    "getCanonicalPrice(priceIntel)": ${getCanonicalPrice(priceIntel) ?? 'null'},
+    "confirmedPrice": ${getConfirmedFunnelPrice(priceIntel) || 'null'},
     "currency": ${currency ? `"${currency}"` : 'null'},
     "priceAnchoring": "présent/absent + impact",
     "psychologicalPrice": "ND si aucun prix détecté ; ne jamais inventer",
@@ -11603,7 +12147,7 @@ if (r1Safe.webCharte) {
 
 // ✅ APRÈS — calcul local basé sur pri (déjà disponible dans le scope)
 const computedPricingPsychology = (() => {
-    const price = getCanonicalPrice(pri);
+    const price = getConfirmedFunnelPrice(pri);
     if (!price || price <= 0) return {};
     return {
         priceDetected:    true,
@@ -11651,7 +12195,7 @@ Funnel Type    : ${r2Safe.funnelMapping?.funnelType || ND}
 Conversion Est.: ${r2Safe.funnelMapping?.estimatedConversionRate || ND}
 Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
 Top Weakness   : ${r2Safe.copywritingDeep?.topWeakness || ND}
-Prix détecté   : ${getCanonicalPrice(priceIntel)} ${currency}
+Prix confirmé  : ${getConfirmedFunnelPrice(priceIntel) > 0 ? `${getConfirmedFunnelPrice(priceIntel)} ${currency}` : 'PRIX_NON_CONFIRME'}
 
 ÉTAPE 2 — RÉPONSE JSON en ${targetLang} :
 {
@@ -11677,12 +12221,12 @@ Prix détecté   : ${getCanonicalPrice(priceIntel)} ${currency}
   "financialProjection": {
     "currentConversionRate": "${r2Safe.funnelMapping?.estimatedConversionRate || '1-2%'}",
     "targetConversionRate": "taux cible après fixes",
-    "getCanonicalPrice(priceIntel)": ${getCanonicalPrice(priceIntel)},
+    "confirmedPrice": ${getConfirmedFunnelPrice(priceIntel) || 'null'},
     "currency": "${currency}",
     "monthlyVisitorsEstimate": "estimation trafic mensuel basée sur données réelles",
     "currentMonthlyRevenue": "estimation revenus actuels",
     "projectedMonthlyRevenue": "projection après optimisation",
-    "potentialGain": "[CALCULE basé sur taux conversion estimé × trafic × ${getCanonicalPrice(priceIntel) || 'prix détecté'}]",
+    "potentialGain": "[CALCULE uniquement si prix confirmé × taux conversion estimé × trafic]",
     "roiVerdict": "verdict ROI si corrections appliquées"
   },
   "technicalAudit": {
@@ -11924,7 +12468,7 @@ const v12CR = (() => {
     const n = parseFloat(String(raw).replace(/[^0-9.]/g, ''));
     return isNaN(n) ? 0.02 : n / 100;
 })();
-const v12Basket   = getCanonicalPrice(priceIntel) > 0 ? detectedPrice : null;
+const v12Basket   = getConfirmedFunnelPrice(priceIntel) > 0 ? detectedPrice : null;
 const v12StealPot = (v12Traffic && v12Basket)
     ? Math.max(0, Math.round((0.05 - v12CR) * v12Traffic * v12Basket))
     : null;
@@ -12184,6 +12728,9 @@ const proofModel = buildFunnelProofModel({
     socialProofs,
     detectedPrice,
     currency,
+    priceConfidence: priceIntel.priceConfidence || priceIntel.confidenceBand || priceIntel.confidence || 'LOW',
+    priceExtractionReason: priceIntel.priceExtractionReason || null,
+    rejectedPriceCandidates: priceIntel.rejectedPriceCandidates || [],
     localScore,
     v12Traffic,
     v12Basket,
@@ -12261,6 +12808,7 @@ const finalResponse = {
     auditQuickWins,
     auditEvidence,
     concreteActionPlan,
+    funnelSurgery,
     proofModel,
     executiveBrief,
     dataIntegrity,
@@ -12353,7 +12901,6 @@ const finalResponse = {
     },
 };
 
-        cache.set(cacheKey, finalResponse);
         console.log(`✅ [${requestId}] V12 GOD TIER DONE — ${finalResponse.meta.duration} | Score: ${finalResponse.globalScoring?.overall}/100`);
         /* finalResponse.apify = await callApify({
   query: cleanQuery || req.body?.query || '',
@@ -12466,8 +13013,9 @@ try {
         }
     );
 }
-        cache.set(cacheKey, finalResponse);
-        res.json(finalResponse);
+        const safeFinalResponse = cleanFunnelScrapePayload(finalResponse);
+        cache.set(cacheKey, safeFinalResponse);
+        res.json(safeFinalResponse);
 
     } catch (error) {
         // ═══════════════════════════════════════════════════════════════════════
@@ -12504,7 +13052,7 @@ try {
                 url: req.body?.url,
                 partial: true,
                 errorContext: error.message,
-                data: scrapedRawData, // On retourne le scrape complet
+                data: cleanFunnelScrapePayload(scrapedRawData),
                 summary: {
                     title: scrapedRawData.meta?.title || '',
                     cms: scrapedRawData.techStack?.cms || 'Unknown',
@@ -16249,6 +16797,14 @@ async function deepScrapeFunnel(url) {
         let scrapeResult = await scrapeStealth(url);
 
         if (detectBotBlocked(scrapeResult) && scrapeResult?.fetchLayer !== 'scrape.do') {
+            if (shouldUseRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
+                console.warn(`[DEEP SCRAPE] Railway incomplet pour ${url}. Fallback Render/Scrape.do desactive.`);
+                return finalizeError(
+                    scrapeResult?.error || scrapeResult?.message || 'RAILWAY_SCRAPING_PARTIAL_NO_RENDER_FALLBACK',
+                    'railway'
+                );
+            }
+
             console.warn(`⚠️ [DEEP SCRAPE] Page vide ou bloquée détectée. Activation de SCRAPE.DO...`);
 
             const scrapeDoToken = process.env.SCRAPEDOTOKEN || process.env.SCRAPE_DO_TOKEN;
