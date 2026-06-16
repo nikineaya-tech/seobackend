@@ -5005,6 +5005,12 @@ const EXTRACTION_NOT_FOUND =
                     .join('')
                 : '',
             prices.map(p => `<span class="price">${escHtml([p.value, p.currency].filter(Boolean).join(' '))}</span>`).join(''),
+            Array.isArray(mainPage.productCards)
+                ? mainPage.productCards
+                    .slice(0, 8)
+                    .map(p => `<article class="product-card"><h2>${escHtml(p.title || p.name || '')}</h2><p>${escHtml(p.textPreview || p.description || '')}</p><a>${escHtml(p.cta || '')}</a></article>`)
+                    .join('')
+                : '',
             `<main>${escHtml(bodyText)}</main>`,
             '</body></html>'
         ].join('');
@@ -5053,6 +5059,39 @@ const EXTRACTION_NOT_FOUND =
                 evidenceCount: prices.length
             }
         });
+
+        const pageSections = (() => {
+            const out = [];
+            const seen = new Set();
+            const add = (type, label, score = 70, evidence = '') => {
+                if (!type || seen.has(type)) return;
+                seen.add(type);
+                out.push({ type, label: label || type, present: true, score, evidence });
+            };
+
+            if (Array.isArray(mainPage.sections)) {
+                mainPage.sections.forEach(section => {
+                    if (typeof section === 'string') add(section.toUpperCase(), section);
+                    else add(String(section.type || section.name || '').toUpperCase(), section.label || section.name || section.type, section.score || 70, section.evidence || '');
+                });
+            } else if (mainPage.sections && typeof mainPage.sections === 'object') {
+                Object.entries(mainPage.sections).forEach(([key, value]) => {
+                    if (value) add(String(key).replace(/^has/i, '').toUpperCase(), key, 70, 'railway_section_signal');
+                });
+            }
+
+            if (h1List.length) add('HERO', 'Hero', 80, h1List[0]);
+            if (h2List.length) add('FEATURES', 'Benefits / sections', 65, h2List.slice(0, 3).join(' | '));
+            if (Array.isArray(mainPage.productCards) && mainPage.productCards.length) add('OFFER', 'Offer / product cards', 85, `${mainPage.productCards.length} product cards`);
+            if (priceIntel.detected || ecommerceSignals.hasPrice) add('PRICING', 'Price / offer', priceIntel.detected ? 85 : 55, priceIntel.priceExtractionReason || '');
+            if (trust.hasReviews) add('SOCIAL_PROOF', 'Social proof', 75, 'reviews signal');
+            if (trust.hasGuarantee || trust.hasDelivery || trust.hasContact || trust.hasWhatsapp) add('TRUST', 'Trust signals', 75, 'trust signal');
+            if (mainPage.faq?.detectedBlocks?.length || mainPage.faq?.jsonLdFaqs?.length) add('FAQ', 'FAQ', 80, 'faq detected');
+            if (Array.isArray(mainPage.ctas) && mainPage.ctas.length) add('CTA', 'CTA', 80, mainPage.ctas.slice(0, 3).map(c => c.text || c.label || '').filter(Boolean).join(' | '));
+            if (Array.isArray(mainPage.forms) && mainPage.forms.length) add('FORM', 'Form', 70, `${mainPage.forms.length} form(s)`);
+            if (Array.isArray(mainPage.contactLinks) && mainPage.contactLinks.length) add('CONTACT', 'Contact', 70, `${mainPage.contactLinks.length} contact links`);
+            return out;
+        })();
 
         const cms =
             cmsSignals.shopify ? 'Shopify' :
@@ -5115,9 +5154,11 @@ const EXTRACTION_NOT_FOUND =
                 faq: Array.isArray(mainPage.faq?.detectedBlocks)
                     ? mainPage.faq.detectedBlocks.slice(0, 5)
                     : [],
-                bulletBenefits: [],
-                allButtons: [],
-                pageSections: []
+                bulletBenefits: h2List.slice(0, 8),
+                allButtons: Array.isArray(mainPage.ctas)
+                    ? mainPage.ctas.map(c => c.text || c.label || '').filter(Boolean).slice(0, 20)
+                    : [],
+                pageSections
             },
 
             priceIntel,
@@ -5158,13 +5199,13 @@ const EXTRACTION_NOT_FOUND =
             },
 
             sections: {
-                hasHero: Boolean(h1List.length),
-                hasFeatures: Boolean(h2List.length),
-                hasTrust: Boolean(trust.hasReviews || trust.hasGuarantee),
-                hasPricing: Boolean(primaryPrice || ecommerceSignals.hasPrice),
-                hasTestim: Boolean(trust.hasReviews),
-                hasFAQ: Boolean(mainPage.faq?.detectedBlocks?.length || mainPage.faq?.jsonLdFaqs?.length),
-                hasCTA: Array.isArray(mainPage.ctas) && mainPage.ctas.length > 0,
+                hasHero: pageSections.some(s => s.type === 'HERO'),
+                hasFeatures: pageSections.some(s => s.type === 'FEATURES'),
+                hasTrust: pageSections.some(s => s.type === 'TRUST'),
+                hasPricing: pageSections.some(s => s.type === 'PRICING'),
+                hasTestim: pageSections.some(s => s.type === 'SOCIAL_PROOF'),
+                hasFAQ: pageSections.some(s => s.type === 'FAQ'),
+                hasCTA: pageSections.some(s => s.type === 'CTA'),
                 hasFooter: false
             },
 

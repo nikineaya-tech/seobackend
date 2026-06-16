@@ -102,6 +102,19 @@ function compactRailwayFunnelResult(result = {}, url = '') {
             },
             ctas: (result.mainPage.ctas || []).slice(0, 12).map(x => ({ text: compactText(x.text || x, 120) })),
             prices: (result.mainPage.prices || []).map(normalizeRailwayPriceCandidate).filter(p => !p.rejectedReason).slice(0, 12),
+            productCards: (result.mainPage.productCards || []).slice(0, 8).map(p => ({
+                title: compactText(p.title || p.name || '', 160),
+                name: compactText(p.name || p.title || '', 160),
+                url: p.url || null,
+                image: p.image || null,
+                cta: compactText(p.cta || '', 80),
+                textPreview: compactText(p.textPreview || p.description || '', 260)
+            })),
+            forms: (result.mainPage.forms || []).slice(0, 5).map(form => ({
+                action: form.action || null,
+                method: form.method || null,
+                inputs: Array.isArray(form.inputs) ? form.inputs.slice(0, 8) : []
+            })),
             trustSignals: result.mainPage.trustSignals || {},
             sections: result.mainPage.sections || {},
             images: (result.mainPage.images || []).slice(0, 12).map(img => ({
@@ -112,7 +125,14 @@ function compactRailwayFunnelResult(result = {}, url = '') {
                 url: link.url,
                 label: compactText(link.label || link.url || '', 140)
             })),
-            textPreview: compactText(result.mainPage.textPreview || '', 900),
+            externalLinks: (result.mainPage.externalLinks || []).slice(0, 14).map(link => ({
+                url: link.url,
+                label: compactText(link.label || link.url || '', 140)
+            })),
+            socialLinks: (result.mainPage.socialLinks || []).slice(0, 10),
+            whatsappLinks: (result.mainPage.whatsappLinks || []).slice(0, 5),
+            contactLinks: (result.mainPage.contactLinks || []).slice(0, 8),
+            textPreview: compactText(result.mainPage.textPreview || '', 2200),
             wordCount: result.mainPage.wordCount || 0,
             language: result.mainPage.language || ''
         } : null,
@@ -170,7 +190,7 @@ function compactRailwayFunnelResult(result = {}, url = '') {
         limits: {
             noRawHtmlReturned: true,
             maxEvidenceLinks: 12,
-            maxTextPerField: 700
+            maxTextPerField: 2200
         }
     };
 }

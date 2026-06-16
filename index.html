@@ -5903,10 +5903,16 @@ function authCopy() {
 }
 
 async function getAuthAccessToken() {
-    await Promise.race([authReady, new Promise(resolve => setTimeout(resolve, 2500))]);
+    await authReady;
     if (!dakaAuthClient) return null;
-    const { data } = await dakaAuthClient.auth.getSession();
-    return data?.session?.access_token || null;
+    let { data } = await dakaAuthClient.auth.getSession();
+    let session = data?.session || null;
+    const expiresAtMs = Number(session?.expires_at || 0) * 1000;
+    if (session?.refresh_token && (!session.access_token || expiresAtMs - Date.now() < 60000)) {
+        const refreshed = await dakaAuthClient.auth.refreshSession();
+        session = refreshed.data?.session || session;
+    }
+    return session?.access_token || null;
 }
 
 function refreshAuthCopy() {
@@ -5967,6 +5973,18 @@ async function initSupabaseAuth() {
                 flowType: 'pkce'
             }
         });
+
+        const currentUrl = new URL(window.location.href);
+        if (currentUrl.searchParams.has('code')) {
+            try {
+                await dakaAuthClient.auth.exchangeCodeForSession(currentUrl.searchParams.get('code'));
+                currentUrl.searchParams.delete('code');
+                currentUrl.searchParams.delete('state');
+                window.history.replaceState({}, document.title, `${currentUrl.pathname}${currentUrl.search}${currentUrl.hash}`);
+            } catch (exchangeError) {
+                console.warn('[Auth] code exchange failed:', exchangeError.message);
+            }
+        }
 
         const { data } = await dakaAuthClient.auth.getSession();
         await updateAuthUI(data?.session?.user || null);
@@ -6160,7 +6178,11 @@ async function shareSavedReport(id) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', initSupabaseAuth);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initSupabaseAuth);
+} else {
+    initSupabaseAuth();
+}
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
 async function analyzeWithPolling(endpoint, payload, resultsHandler) {
@@ -6177,6 +6199,12 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
             reject(new DOMException('Analysis cancelled', 'AbortError'));
         }, { once: true });
     });
+
+    const authToken = typeof getAuthAccessToken === 'function' ? await getAuthAccessToken() : null;
+    if (!authToken) {
+        if (typeof openAuthModal === 'function') openAuthModal();
+        throw new Error(authCopy().login || 'Connexion requise');
+    }
 
     const initial = await api.post(
         endpoint,
