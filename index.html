@@ -6171,6 +6171,100 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             <i class="fas ${icon}" style="color:${color};font-size:1rem;"></i> ${text}
         </h3>`;
 
+    const sourceUrl = item => item?.url || item?.link || item?.productLink || item?.product_link || item?.sourceUrl || item?.href || '';
+    const sourceTitle = item => safeText(item?.title || item?.name || item?.domain || sourceUrl(item), 'Donnée non confirmée');
+    const sourceConfidence = item => safeText(item?.confidence || 'LOW', 'LOW');
+    const sourceEvidence = item => safeText(item?.observedEvidence || item?.evidence || item?.snippet || item?.whyRelevant, 'Donnée non confirmée');
+    const sourceWhy = item => safeText(item?.whyRelevant || item?.recommendedUse || item?.role, 'Source partiellement accessible');
+    const sourceSafe = value => typeof escapeHtml === 'function' ? escapeHtml(value) : safe(value);
+
+    const marketSourcesModel = data.marketProductSources || {};
+    const marketGroups = marketSourcesModel.groups || {};
+    const normalizeSourceItems = value => Array.isArray(value)
+        ? value.filter(item => sourceUrl(item)).slice(0, 8)
+        : [];
+
+    const renderMarketSourceItem = item => {
+        const url = sourceUrl(item);
+        const host = (() => {
+            try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url; }
+        })();
+        const confidence = sourceConfidence(item);
+        const confColor = confidence === 'HIGH' ? '#34d399' : confidence === 'MEDIUM' ? '#f59e0b' : '#94a3b8';
+        return `
+            <article style="padding:12px;border-radius:12px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.08);display:grid;gap:8px;">
+                <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;">
+                    <strong style="color:#f8fafc;font-size:0.88rem;line-height:1.4;" dir="auto">${sourceSafe(sourceTitle(item))}</strong>
+                    <span style="color:${confColor};font-size:0.66rem;font-weight:900;letter-spacing:.06em;">${sourceSafe(confidence)}</span>
+                </div>
+                <a href="${sourceSafe(url)}" title="${sourceSafe(url)}" target="_blank" rel="noopener"
+                   style="color:#7dd3fc;text-decoration:none;font-size:0.78rem;word-break:break-word;">
+                    <i class="fas fa-external-link-alt" style="font-size:0.65rem;"></i> ${sourceSafe(host)}
+                </a>
+                <div style="display:flex;flex-wrap:wrap;gap:7px;">
+                    <span style="font-size:0.66rem;color:#c4b5fd;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.2);padding:3px 7px;border-radius:999px;">${sourceSafe(item.sourceType || item.type || 'contentProof')}</span>
+                    <span style="font-size:0.66rem;color:#93c5fd;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.18);padding:3px 7px;border-radius:999px;">${sourceSafe(item.source || item.category || 'source')}</span>
+                </div>
+                <p style="margin:0;color:#cbd5e1;font-size:0.78rem;line-height:1.55;" dir="auto">${sourceSafe(sourceWhy(item))}</p>
+                <small style="color:#94a3b8;font-size:0.72rem;line-height:1.45;" dir="auto">${sourceSafe(sourceEvidence(item))}</small>
+            </article>`;
+    };
+
+    const renderMarketSourceGroup = ({ title, icon, color, items, empty }) => `
+        <section style="min-width:0;padding:14px;border-radius:14px;background:rgba(15,23,42,.58);border:1px solid rgba(148,163,184,.16);">
+            <h4 style="margin:0 0 12px;color:#fff;font-size:0.9rem;display:flex;gap:8px;align-items:center;">
+                <i class="fas ${icon}" style="color:${color};"></i>${sourceSafe(title)}
+            </h4>
+            <div style="display:grid;gap:10px;">
+                ${items.length ? items.map(renderMarketSourceItem).join('') : `<p style="margin:0;color:#94a3b8;font-size:0.82rem;line-height:1.6;" dir="auto">${sourceSafe(empty)}</p>`}
+            </div>
+        </section>`;
+
+    const sameProductSources = normalizeSourceItems(marketGroups.sameProductPage);
+    const youtubeSources = normalizeSourceItems(marketGroups.youtubeVideo);
+    const marketplaceSources = normalizeSourceItems(marketGroups.marketplaceProduct);
+    const proofSources = [
+        ...normalizeSourceItems(marketGroups.contentProof),
+        ...normalizeSourceItems(marketGroups.weakOrUnconfirmed)
+    ].slice(0, 8);
+
+    const marketProductSourcesHtml = `
+        <div style="display:grid;gap:14px;">
+            <p style="margin:0;color:#cbd5e1;font-size:0.9rem;line-height:1.65;" dir="auto">
+                ${isAr ? 'مصادر سوق قابلة للنقر حول المنتج والطلب المرصود.' : isEn ? 'Clickable market sources around the product and observed demand.' : 'Sources marché cliquables autour du produit et de la demande observée.'}
+            </p>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px;">
+                ${renderMarketSourceGroup({
+                    title: isAr ? 'صفحات تبيع نفس المنتج' : isEn ? 'Pages selling the same product' : 'Pages vendant le même produit',
+                    icon: 'fa-bag-shopping',
+                    color: '#34d399',
+                    items: sameProductSources,
+                    empty: 'Aucune page vendant le même produit n’a été confirmée dans les résultats accessibles.'
+                })}
+                ${renderMarketSourceGroup({
+                    title: isAr ? 'فيديوهات YouTube مرتبطة' : isEn ? 'Related YouTube videos' : 'Vidéos YouTube liées',
+                    icon: 'fa-video',
+                    color: '#ef4444',
+                    items: youtubeSources,
+                    empty: 'Aucune vidéo YouTube pertinente détectée dans les résultats accessibles.'
+                })}
+                ${renderMarketSourceGroup({
+                    title: isAr ? 'Marketplaces / shopping' : isEn ? 'Marketplaces / shopping' : 'Marketplaces / shopping',
+                    icon: 'fa-store',
+                    color: '#f59e0b',
+                    items: marketplaceSources,
+                    empty: isAr ? 'لم يتم تأكيد أي marketplace في النتائج المتاحة.' : isEn ? 'No marketplace or shopping source was confirmed in accessible results.' : 'Aucune marketplace ou source shopping confirmée dans les résultats accessibles.'
+                })}
+                ${renderMarketSourceGroup({
+                    title: isAr ? 'الأدلة وروابط المصادر' : isEn ? 'Proof and source links' : 'Preuves et liens sources',
+                    icon: 'fa-link',
+                    color: '#7dd3fc',
+                    items: proofSources,
+                    empty: isAr ? 'لم يتم تأكيد روابط مصادر إضافية في النتائج المتاحة.' : isEn ? 'No additional proof source link was confirmed in accessible results.' : 'Aucun lien source supplémentaire confirmé dans les résultats accessibles.'
+                })}
+            </div>
+        </div>`;
+
     // ─── LABELS I18N ───────────────────────────────────────────────
     const t = {
         // Titres de sections
@@ -7288,6 +7382,8 @@ const reportLabels = getReportLabels({ isAr, isEn });
             ${marketDynHtml}
             ${gscHtml}
         `, { isAr, isEn })}
+
+        ${renderReportSection('market-product-sources', isAr ? 'مصادر السوق المكتشفة حول المنتج' : isEn ? 'Detected market sources around the product' : 'Sources marché détectées autour du produit', isAr ? 'صفحات منتج، فيديوهات، marketplaces وروابط تحقق.' : isEn ? 'Product pages, videos, marketplaces, and proof links.' : 'Pages produit, vidéos, marketplaces et liens de preuve.', 'fa-magnifying-glass-chart', marketProductSourcesHtml, { isAr, isEn, open: true })}
 
         ${renderReportSection('plan', reportLabels.plan, reportLabels.planSub, 'fa-list-check', `
             ${winningMoveHtml}
