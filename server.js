@@ -238,7 +238,6 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
         'scrape_url',
         'deep-scrape',
         'deep_scrape',
-        'scrape_funnel_deep',
         'product-scrape',
         'product_scrape',
         'page-scrape',
@@ -274,7 +273,7 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
 }
 
 async function scrapeUrlViaRailway(url, options = {}) {
-    return runScrapeOnRailway('scrape_funnel_deep', {
+    return runScrapeOnRailway('deep-scrape', {
         url,
         explore: options.explore !== false,
         maxExtraPages: options.maxExtraPages ?? 3,
@@ -3949,7 +3948,7 @@ async function exploreFunnelCommerce(url, options = {}) {
     const run = async () => {
     let browserSession = null;
     try {
-      if (wantsRailwayScraping()) {
+      if (shouldUseRailwayScraping()) {
         console.log(`[SCRAPING-ROUTER] Commerce exploration envoyée à Railway: ${url}`);
 
         try {
@@ -3974,6 +3973,10 @@ async function exploreFunnelCommerce(url, options = {}) {
 
           console.warn('[SCRAPING-ROUTER] Fallback Render autorisé pour exploreFunnelCommerce');
         }
+      }
+
+      if (wantsRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
+        return empty('RAILWAY_COMMERCE_SCRAPING_REQUIRES_SUPABASE');
       }
 
       browserSession = await launchPlaywright(url);
@@ -4979,6 +4982,7 @@ const EXTRACTION_NOT_FOUND =
             mainPage.title ||
             ''
         ).slice(0, 15000);
+        const metaDescription = mainPage.metaDescription || '';
 
         const escHtml = (value = '') => String(value ?? '')
             .replace(/&/g, '&amp;')
@@ -5008,9 +5012,8 @@ const EXTRACTION_NOT_FOUND =
         const cmsSignals = mainPage.cmsSignals || {};
         const ecommerceSignals = mainPage.ecommerceSignals || {};
         const trust = mainPage.trustSignals || {};
-        const metaDescription = mainPage.metaDescription || '';
 
-        const priceIntel = {
+        const priceIntel = hardenFunnelPriceIntel({
             ...emptyPriceIntel(),
             detected: Boolean(primaryPrice),
             primaryPrice,
@@ -5049,7 +5052,7 @@ const EXTRACTION_NOT_FOUND =
                 timestamp: new Date().toISOString(),
                 evidenceCount: prices.length
             }
-        };
+        });
 
         const cms =
             cmsSignals.shopify ? 'Shopify' :
@@ -5246,7 +5249,7 @@ const EXTRACTION_NOT_FOUND =
        try {
         console.log(`🧠 Smart scraping enhanced: ${validUrl}`);
 
-        if (wantsRailwayScraping()) {
+        if (shouldUseRailwayScraping()) {
             console.log(`[SCRAPING-ROUTER] Render détecté → scraping envoyé à Railway: ${validUrl}`);
 
             try {
@@ -5284,6 +5287,10 @@ const EXTRACTION_NOT_FOUND =
 
                 console.warn('[SCRAPING-ROUTER] Fallback Render autorisé par RENDER_SCRAPING_FALLBACK=true');
             }
+        }
+
+        if (wantsRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
+            return EMPTY_RESULT('RAILWAY_SCRAPING_REQUIRES_SUPABASE', 'railway');
         }
 
         pw = await playwrightWrapper.launchPlaywright(validUrl);

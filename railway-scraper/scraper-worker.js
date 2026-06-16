@@ -116,7 +116,13 @@ async function processScrapingJob(job) {
 
   const options = {
     explore: payload.explore !== false,
-    maxExtraPages: payload.maxExtraPages
+    maxPages: payload.maxPages,
+    maxExtraPages: payload.maxExtraPages,
+    maxDepth: payload.maxDepth,
+    maxClicks: payload.maxClicks,
+    maxButtonsPerPage: payload.maxButtonsPerPage,
+    crawlBudgetMs: payload.crawlBudgetMs,
+    sameOriginOnly: payload.sameOriginOnly !== false
   };
 
   return urls.length === 1

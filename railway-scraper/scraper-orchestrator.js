@@ -18,15 +18,16 @@ const BROWSERLESS_API_TOKEN = process.env.BROWSERLESS_API_TOKEN || '';
 const BROWSERLESS_URL = process.env.BROWSERLESS_URL || 'https://production-sfo.browserless.io';
 const SCRAPE_DO_TOKEN = process.env.SCRAPE_DO_TOKEN || '';
 
-const ENABLE_BROWSERLESS = String(process.env.SCRAPER_ENABLE_BROWSERLESS || 'true') !== 'false';
+const ENABLE_BROWSERLESS = ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPER_ENABLE_BROWSERLESS || 'false').toLowerCase());
 const ENABLE_SCRAPEDO = String(process.env.SCRAPER_ENABLE_SCRAPEDO || 'true') !== 'false';
 const SCRAPEDO_TIMEOUT_MS = Math.max(10000, Number(process.env.SCRAPEDO_TIMEOUT_MS || 45000));
 const DEFAULT_CRAWL_OPTIONS = {
-  maxPages: Math.max(1, Number(process.env.SCRAPER_MAX_PAGES || 12)),
-  maxDepth: Math.max(0, Number(process.env.SCRAPER_MAX_DEPTH || 2)),
-  maxClicks: Math.max(0, Number(process.env.SCRAPER_MAX_CLICKS || 20)),
-  maxButtonsPerPage: Math.max(0, Number(process.env.SCRAPER_MAX_BUTTONS_PER_PAGE || 8)),
-  crawlBudgetMs: Math.max(15000, Number(process.env.SCRAPER_CRAWL_BUDGET_MS || 120000)),
+  maxPages: Math.max(1, Number(process.env.SCRAPER_MAX_PAGES || 4)),
+  maxExtraPages: Math.max(0, Number(process.env.SCRAPER_MAX_EXTRA_PAGES || 3)),
+  maxDepth: Math.max(0, Number(process.env.SCRAPER_MAX_DEPTH || 1)),
+  maxClicks: Math.max(0, Number(process.env.SCRAPER_MAX_CLICKS || 6)),
+  maxButtonsPerPage: Math.max(0, Number(process.env.SCRAPER_MAX_BUTTONS_PER_PAGE || 4)),
+  crawlBudgetMs: Math.max(15000, Number(process.env.SCRAPER_CRAWL_BUDGET_MS || 45000)),
   sameOriginOnly: String(process.env.SCRAPER_SAME_ORIGIN_ONLY || 'true') !== 'false'
 };
 
@@ -128,6 +129,7 @@ function isSameOriginUrl(rawUrl, rootUrl) {
 function buildCrawlOptions(options = {}) {
   return {
     maxPages: Math.max(1, Number(options.maxPages || DEFAULT_CRAWL_OPTIONS.maxPages)),
+    maxExtraPages: Math.max(0, Number(options.maxExtraPages ?? DEFAULT_CRAWL_OPTIONS.maxExtraPages)),
     maxDepth: Math.max(0, Number(options.maxDepth ?? DEFAULT_CRAWL_OPTIONS.maxDepth)),
     maxClicks: Math.max(0, Number(options.maxClicks ?? DEFAULT_CRAWL_OPTIONS.maxClicks)),
     maxButtonsPerPage: Math.max(0, Number(options.maxButtonsPerPage ?? DEFAULT_CRAWL_OPTIONS.maxButtonsPerPage)),

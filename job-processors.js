@@ -9,7 +9,7 @@
 // Types scraping simples :
 //   scrape_funnel | scrape_product | scrape_competitors
 // Types scraping multi-agent (Orchestrateur) :
-//   scrape_funnel_deep  → 1 URL → orchestrateFunnelExploration()
+//   deep-scrape         → 1 URL → orchestrateFunnelExploration()
 //   scrape_funnel_multi → N URLs → batch orchestrateFunnelExploration()
 // ═══════════════════════════════════════════════════════════════════
 
@@ -36,7 +36,6 @@ const JOB_TIMEOUTS = {
     scrape_funnel:       Number(process.env.TIMEOUT_SCRAPE        || 60000),  // 1 min
     scrape_product:      Number(process.env.TIMEOUT_SCRAPE        || 60000),
     scrape_competitors:  Number(process.env.TIMEOUT_SCRAPE        || 90000),  // 1.5 min
-    scrape_funnel_deep:  Number(process.env.TIMEOUT_DEEP          || 35000),  // 35s (budget 20s + marge)
     scrape_funnel_multi: Number(process.env.TIMEOUT_MULTI         || 120000), // 2 min
     default:             Number(process.env.WORKER_JOB_TIMEOUT_MS || 180000),
 };
@@ -350,14 +349,14 @@ async function processScrapeCompetitors(payload) {
 // ═══════════════════════════════════════════════════════════════════
 
 /**
- * scrape_funnel_deep : explore 1 URL en profondeur avec l'orchestrateur
+ * deep-scrape : explore 1 URL en profondeur avec l'orchestrateur
  * Payload: { url, lang?, userPriceRange?, maxCandidates?, maxConcurrentTabs? }
  */
 async function processScrapeFunnelDeep(payload) {
     const { url, lang = 'fr', userPriceRange, maxCandidates = 8, maxConcurrentTabs = 3 } = payload;
-    if (!url) throw new Error('scrape_funnel_deep: url required');
+    if (!url) throw new Error('deep-scrape: url required');
 
-    console.log(`[Processor:scrape_funnel_deep] ► ${url}`);
+    console.log(`[Processor:deep-scrape] ► ${url}`);
 
     const result = await orchestrateFunnelExploration(url, {
         lang,
@@ -459,7 +458,6 @@ function processJob(type, payload) {
         case 'scrape_competitors':   return processScrapeCompetitors(payload);
 
         // ── Scrape multi-agent (Orchestrateur BOT+SubBots) ──────
-        case 'scrape_funnel_deep':
         case 'deep-scrape':
         case 'deep_scrape':
         case 'scrape-url':
