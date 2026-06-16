@@ -46,6 +46,12 @@ if (stillForbidden.length) {
 }
 
 try {
+  require('./index-score-donut-hotfix.cjs');
+} catch (error) {
+  console.warn('[RenderRoutingPatch] Score donut hotfix skipped:', error.message);
+}
+
+try {
   require('./funnel-premium-runtime-patch.cjs');
 } catch (error) {
   console.warn('[RenderRoutingPatch] Funnel premium runtime patch skipped:', error.message);
