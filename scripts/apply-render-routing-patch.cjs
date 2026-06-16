@@ -50,3 +50,9 @@ try {
 } catch (error) {
   console.warn('[RenderRoutingPatch] Funnel premium runtime patch skipped:', error.message);
 }
+
+try {
+  require('./funnel-premium-normalizer-hotfix.cjs');
+} catch (error) {
+  console.warn('[RenderRoutingPatch] Funnel normalizer hotfix skipped:', error.message);
+}
