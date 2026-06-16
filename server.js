@@ -314,9 +314,21 @@ async function runFunnelScrapeOnce(namespace, url, producer) {
     const promise = Promise.resolve()
         .then(producer)
         .then(result => {
-            const safeResult = cleanFunnelScrapePayload(result);
-            funnelScrapeShortCache.set(key, { value: safeResult, createdAt: Date.now() });
-            return safeResult;
+            let cacheValue = result;
+            if (cacheValue && typeof cacheValue === 'object') {
+                cacheValue = { ...cacheValue };
+                if (cacheValue.html) cacheValue.html = String(cacheValue.html).slice(0, 180000);
+                if (cacheValue.rawHtml) delete cacheValue.rawHtml;
+                if (cacheValue.bodyText) cacheValue.bodyText = limitFunnelText(cacheValue.bodyText, 12000);
+                if (cacheValue.brand?.fullTextSample) {
+                    cacheValue.brand = {
+                        ...cacheValue.brand,
+                        fullTextSample: limitFunnelText(cacheValue.brand.fullTextSample, 12000)
+                    };
+                }
+            }
+            funnelScrapeShortCache.set(key, { value: cacheValue, createdAt: Date.now() });
+            return cacheValue;
         })
         .finally(() => funnelScrapeInFlight.delete(key));
 
@@ -4961,6 +4973,31 @@ const EXTRACTION_NOT_FOUND =
             ''
         ).slice(0, 15000);
 
+        const escHtml = (value = '') => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        const syntheticHtml = [
+            '<!doctype html><html><head>',
+            `<title>${escHtml(mainPage.title || '')}</title>`,
+            metaDescription ? `<meta name="description" content="${escHtml(metaDescription)}">` : '',
+            '</head><body>',
+            h1List.map(h => `<h1>${escHtml(h)}</h1>`).join(''),
+            h2List.map(h => `<h2>${escHtml(h)}</h2>`).join(''),
+            h3List.map(h => `<h3>${escHtml(h)}</h3>`).join(''),
+            Array.isArray(mainPage.ctas)
+                ? mainPage.ctas
+                    .map(c => `<a href="${escHtml(c.href || '#')}">${escHtml(c.text || c.label || '')}</a>`)
+                    .join('')
+                : '',
+            prices.map(p => `<span class="price">${escHtml([p.value, p.currency].filter(Boolean).join(' '))}</span>`).join(''),
+            `<main>${escHtml(bodyText)}</main>`,
+            '</body></html>'
+        ].join('');
+
         const cmsSignals = mainPage.cmsSignals || {};
         const ecommerceSignals = mainPage.ecommerceSignals || {};
         const trust = mainPage.trustSignals || {};
@@ -5022,7 +5059,8 @@ const EXTRACTION_NOT_FOUND =
             executionLayer: 'railway',
             sourceJobId: railwayResult.sourceJobId || null,
             fetchLayer: railwayResult.provider || 'railway-scraper',
-            html: '',
+            html: syntheticHtml,
+            bodyText,
             error: railwayResult.success ? null : railwayResult.error || 'RAILWAY_SCRAPING_FAILED',
             duration: railwayResult.durationMs || Date.now() - startTime,
 
