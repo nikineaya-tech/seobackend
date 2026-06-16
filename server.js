@@ -212,9 +212,16 @@ const RENDER_SCRAPING_FALLBACK = ['1', 'true', 'yes', 'on'].includes(
     String(process.env.RENDER_SCRAPING_FALLBACK || 'false').toLowerCase()
 );
 
-function shouldUseRailwayScraping() {
+function wantsRailwayScraping() {
     return (
         SCRAPING_EXECUTION_LAYER === 'railway' &&
+        process.env.WORKER_MODE !== 'scraping-only'
+    );
+}
+
+function shouldUseRailwayScraping() {
+    return (
+        wantsRailwayScraping() &&
         supabase &&
         process.env.WORKER_MODE !== 'scraping-only'
     );
@@ -796,7 +803,7 @@ function buildFunnelSectionSurgeryModel({
 }
 function queuedJobMiddleware(type) {
     return async (req, res, next) => {
-        if (type === 'funnel' && shouldUseRailwayScraping()) {
+        if (type === 'funnel' && wantsRailwayScraping()) {
             return next();
         }
         if (!supabase || req.queueBypass === true || req.get('x-daka-worker-bypass') === '1') {
@@ -3942,7 +3949,7 @@ async function exploreFunnelCommerce(url, options = {}) {
     const run = async () => {
     let browserSession = null;
     try {
-      if (shouldUseRailwayScraping()) {
+      if (wantsRailwayScraping()) {
         console.log(`[SCRAPING-ROUTER] Commerce exploration envoyée à Railway: ${url}`);
 
         try {
@@ -5239,7 +5246,7 @@ const EXTRACTION_NOT_FOUND =
        try {
         console.log(`🧠 Smart scraping enhanced: ${validUrl}`);
 
-        if (shouldUseRailwayScraping()) {
+        if (wantsRailwayScraping()) {
             console.log(`[SCRAPING-ROUTER] Render détecté → scraping envoyé à Railway: ${validUrl}`);
 
             try {
@@ -16835,7 +16842,7 @@ async function deepScrapeFunnel(url) {
         let scrapeResult = await scrapeStealth(url);
 
         if (detectBotBlocked(scrapeResult) && scrapeResult?.fetchLayer !== 'scrape.do') {
-            if (shouldUseRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
+            if (wantsRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
                 console.warn(`[DEEP SCRAPE] Railway incomplet pour ${url}. Fallback Render/Scrape.do desactive.`);
                 return finalizeError(
                     scrapeResult?.error || scrapeResult?.message || 'RAILWAY_SCRAPING_PARTIAL_NO_RENDER_FALLBACK',
