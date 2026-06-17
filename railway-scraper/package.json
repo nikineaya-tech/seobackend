@@ -5,10 +5,10 @@
   "description": "Isolated Railway service for scraping jobs only. No AI routes, no pricing pipeline, no frontend.",
   "main": "scraper-worker.js",
   "scripts": {
-    "start": "node scraper-worker.js",
-    "start:orchestrator": "node scraper-orchestrator.js",
+    "start": "node -r ./landing-section-preload.js scraper-worker.js",
+    "start:orchestrator": "node -r ./landing-section-preload.js scraper-orchestrator.js",
     "postinstall": "echo Playwright browsers provided by Docker image",
-    "check": "node -v"
+    "check": "node -v && node --check landing-section-preload.js && node --check scraper-worker.js && node --check scraper-orchestrator.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
