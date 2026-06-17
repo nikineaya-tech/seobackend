@@ -276,28 +276,89 @@ function buildSafeJobResult(result = {}) {
       : [];
 
   const main = result.mainPage || result.page || pages[0] || result || {};
+
   const sections = collectSectionBlocks(result)
     .slice(0, 35)
     .map(normalizeSectionBlock)
     .filter(Boolean);
 
-  return {
+  const headings = collectUnique([
+    result.h1,
+    main.h1,
+    ...arr(result.headings),
+    ...arr(main.headings),
+    ...sections.flatMap(section => arr(section.headings)),
+    ...sections.map(section => section.title)
+  ], 30, 180);
+
+  const ctas = collectObjects([
+    ...arr(result.ctas),
+    ...arr(main.ctas),
+    ...sections.flatMap(section => arr(section.ctas))
+  ], 30);
+
+  const images = collectObjects([
+    ...arr(result.images),
+    ...arr(main.images),
+    ...sections.flatMap(section => arr(section.images))
+  ], 30);
+
+  const links = collectObjects([
+    ...arr(result.links),
+    ...arr(main.links),
+    ...sections.flatMap(section => arr(section.links))
+  ], 40);
+
+  const prices = collectObjects([
+    ...arr(result.prices),
+    ...arr(result.priceSignals),
+    ...arr(main.prices),
+    ...arr(main.priceSignals),
+    ...sections.flatMap(section => arr(section.prices || section.priceSignals))
+  ], 20);
+
+  const bodyText = buildBodyText(result, main, sections);
+
+  const safe = {
     success: result.success !== false,
     compacted: true,
-    compactStrategy: 'worker-direct-safe-result',
+    compactStrategy: 'worker-direct-safe-result-render-compatible',
+
     provider: clean(result.provider || result.layer || 'railway-playwright', 80),
     layer: clean(result.layer || result.provider || 'railway-playwright', 80),
+    source: clean(result.source || result.provider || 'railway-playwright', 80),
+
     url: clean(result.url || result.targetUrl || main.url || '', 500),
+    finalUrl: clean(result.finalUrl || main.finalUrl || main.url || result.url || '', 500),
     title: clean(result.title || main.title || '', 240),
-    h1: clean(result.h1 || main.h1 || '', 240),
+    h1: clean(result.h1 || main.h1 || headings[0] || '', 240),
     metaDescription: clean(result.metaDescription || main.metaDescription || '', 500),
+
+    bodyText,
+    text: bodyText,
+    content: bodyText,
+
+    headings,
+    h2: headings.slice(1, 12),
+    h3: headings.slice(12, 24),
+
+    ctas,
+    images,
+    links,
+    prices,
+
     cms: clean(result.cms || main.cms || '', 80),
-    price: scalar(result.price || result.primaryPrice || main.price),
-    currency: clean(result.currency || main.currency || '', 20),
+    colors: arr(result.colors || main.colors).slice(0, 8).map(color => clean(color, 40)),
+
+    price: scalar(result.price || result.primaryPrice || main.price || prices[0]?.value),
+    currency: clean(result.currency || main.currency || prices[0]?.currency || '', 20),
     priceIntel: normalizePriceIntel(result.priceIntel || result.pricingIntel || main.priceIntel),
+
     sectionRawBlocks: sections,
     sectionBlocks: sections,
     sectionsDetailed: sections,
+    sections: sections,
+
     pagesExplored: pages
       .slice(0, 8)
       .map(page => ({
@@ -306,20 +367,58 @@ function buildSafeJobResult(result = {}) {
         sectionRawBlocksFound: arr(page?.sectionRawBlocks || page?.sectionBlocks || page?.sectionsDetailed).length
       }))
       .filter(page => page.url),
+
+    mainPage: {
+      url: clean(main.url || result.url || '', 500),
+      title: clean(main.title || result.title || '', 240),
+      h1: clean(main.h1 || result.h1 || headings[0] || '', 240),
+      metaDescription: clean(main.metaDescription || result.metaDescription || '', 500),
+      bodyText,
+      text: bodyText,
+      headings,
+      ctas,
+      images,
+      links,
+      prices,
+      sectionRawBlocks: sections,
+      sectionBlocks: sections,
+      sectionsDetailed: sections
+    },
+
+    scrapeData: {
+      url: clean(result.url || main.url || '', 500),
+      title: clean(result.title || main.title || '', 240),
+      h1: clean(result.h1 || main.h1 || headings[0] || '', 240),
+      bodyText,
+      headings,
+      ctas,
+      images,
+      links,
+      prices,
+      sectionRawBlocks: sections,
+      sectionsDetailed: sections
+    },
+
     counts: {
       pages: pages.length,
       sectionRawBlocks: sections.length,
-      images: countNestedArray(result, 'images'),
-      ctas: countNestedArray(result, 'ctas'),
-      prices: countNestedArray(result, 'prices')
+      headings: headings.length,
+      images: images.length,
+      ctas: ctas.length,
+      links: links.length,
+      prices: prices.length
     },
+
     limits: {
       htmlRemoved: true,
       scriptsRemoved: true,
       stylesRemoved: true,
-      rawResultNotStored: true
+      rawResultNotStored: true,
+      renderCompatibility: true
     }
   };
+
+  return safe;
 }
 
 function buildMinimalJobResult(result = {}, error) {
@@ -329,26 +428,159 @@ function buildMinimalJobResult(result = {}, error) {
     success: true,
     partial: true,
     fallback: true,
+    compacted: true,
+    compactStrategy: 'worker-direct-minimal-render-compatible',
     fallbackReason: clean(error?.message || error || 'done update failed', 500),
+
+    provider: safe.provider,
+    layer: safe.layer,
+    source: safe.source,
+
     url: safe.url,
+    finalUrl: safe.finalUrl,
     title: safe.title,
     h1: safe.h1,
     metaDescription: safe.metaDescription,
-    provider: safe.provider,
-    layer: safe.layer,
+
+    bodyText: safe.bodyText,
+    text: safe.bodyText,
+    content: safe.bodyText,
+
+    headings: safe.headings,
+    h2: safe.h2,
+    h3: safe.h3,
+
+    ctas: safe.ctas.slice(0, 20),
+    images: safe.images.slice(0, 20),
+    links: safe.links.slice(0, 25),
+    prices: safe.prices.slice(0, 15),
+
+    price: safe.price,
+    currency: safe.currency,
+    priceIntel: safe.priceIntel,
+
     sectionRawBlocks: safe.sectionRawBlocks.slice(0, 20),
     sectionBlocks: safe.sectionBlocks.slice(0, 20),
     sectionsDetailed: safe.sectionsDetailed.slice(0, 20),
+    sections: safe.sections.slice(0, 20),
+
     pagesExplored: safe.pagesExplored.slice(0, 5),
+
+    mainPage: {
+      url: safe.url,
+      title: safe.title,
+      h1: safe.h1,
+      metaDescription: safe.metaDescription,
+      bodyText: safe.bodyText,
+      text: safe.bodyText,
+      headings: safe.headings,
+      ctas: safe.ctas.slice(0, 15),
+      images: safe.images.slice(0, 15),
+      links: safe.links.slice(0, 15),
+      prices: safe.prices.slice(0, 10),
+      sectionRawBlocks: safe.sectionRawBlocks.slice(0, 20),
+      sectionsDetailed: safe.sectionsDetailed.slice(0, 20)
+    },
+
+    scrapeData: {
+      url: safe.url,
+      title: safe.title,
+      h1: safe.h1,
+      bodyText: safe.bodyText,
+      headings: safe.headings,
+      ctas: safe.ctas.slice(0, 15),
+      images: safe.images.slice(0, 15),
+      links: safe.links.slice(0, 15),
+      prices: safe.prices.slice(0, 10),
+      sectionRawBlocks: safe.sectionRawBlocks.slice(0, 20),
+      sectionsDetailed: safe.sectionsDetailed.slice(0, 20)
+    },
+
     counts: safe.counts,
+
     limits: {
       htmlRemoved: true,
       fallbackMinimal: true,
-      rawResultNotStored: true
+      rawResultNotStored: true,
+      renderCompatibility: true
     }
   };
 }
+function buildBodyText(result, main, sections) {
+  const chunks = [
+    result.bodyText,
+    result.text,
+    result.content,
+    main.bodyText,
+    main.text,
+    main.content,
+    ...sections.flatMap(section => [
+      section.title,
+      ...arr(section.headings),
+      ...arr(section.paragraphs),
+      section.textPreview
+    ])
+  ];
 
+  return collectUnique(chunks, 80, 500)
+    .join('\n')
+    .slice(0, 12000);
+}
+
+function collectUnique(values, limit = 30, max = 180) {
+  const seen = new Set();
+  const output = [];
+
+  for (const value of values || []) {
+    const cleaned = clean(value, max);
+    if (!cleaned) continue;
+
+    const key = cleaned.toLowerCase();
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    output.push(cleaned);
+
+    if (output.length >= limit) break;
+  }
+
+  return output;
+}
+
+function collectObjects(values, limit = 30) {
+  const seen = new Set();
+  const output = [];
+
+  for (const value of values || []) {
+    if (!value) continue;
+
+    const item = typeof value === 'object'
+      ? normalizeSmallObject(value)
+      : { text: clean(value, 180) };
+
+    const key = JSON.stringify(item).slice(0, 300);
+    if (seen.has(key)) continue;
+
+    seen.add(key);
+    output.push(item);
+
+    if (output.length >= limit) break;
+  }
+
+  return output;
+}
+
+function normalizeSmallObject(value = {}) {
+  return {
+    text: clean(value.text || value.label || value.title || value.alt || value.value || '', 180),
+    label: clean(value.label || value.text || value.title || '', 180),
+    url: clean(value.url || value.href || value.src || '', 500),
+    href: clean(value.href || value.url || '', 500),
+    value: scalar(value.value || value.price || ''),
+    currency: clean(value.currency || '', 20),
+    context: clean(value.context || '', 200)
+  };
+}
 function collectSectionBlocks(root) {
   const out = [];
   const seen = new WeakSet();
