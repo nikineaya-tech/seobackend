@@ -80,6 +80,42 @@ function buildClientScript() {
 
   function asArray(value) { return Array.isArray(value) ? value : []; }
 
+  function ensureScoreDonutDestroy() {
+    const donut = window.scoreDonut;
+    if (!donut || typeof donut !== 'object' || typeof donut.destroy === 'function') return;
+    try {
+      Object.defineProperty(donut, 'destroy', {
+        value: function noopScoreDonutDestroy() {},
+        configurable: true,
+        writable: true
+      });
+    } catch (error) {
+      try { donut.destroy = function noopScoreDonutDestroy() {}; } catch (ignored) {}
+    }
+  }
+
+  function installScoreDonutGuard() {
+    if (window.__dakaScoreDonutGuardInstalled) return;
+    window.__dakaScoreDonutGuardInstalled = true;
+    try {
+      let currentScoreDonut = window.scoreDonut;
+      Object.defineProperty(window, 'scoreDonut', {
+        configurable: true,
+        get: function () { return currentScoreDonut; },
+        set: function (value) {
+          currentScoreDonut = value;
+          ensureScoreDonutDestroy();
+        }
+      });
+    } catch (error) {}
+    ensureScoreDonutDestroy();
+    setTimeout(ensureScoreDonutDestroy, 0);
+    setTimeout(ensureScoreDonutDestroy, 250);
+    setTimeout(ensureScoreDonutDestroy, 1000);
+  }
+
+  installScoreDonutGuard();
+
   function getScanner(data) {
     if (!data || typeof data !== 'object') return null;
     return data.funnelSectionScanner ||
@@ -160,6 +196,7 @@ function buildClientScript() {
   }
 
   function mount(scanner) {
+    ensureScoreDonutDestroy();
     if (!scanner || !asArray(scanner.surgeryMatrix).length) return;
     const card = findExistingSectionsCard();
     if (!card) return;
@@ -173,6 +210,7 @@ function buildClientScript() {
   }
 
   function scheduleMount(scanner) {
+    ensureScoreDonutDestroy();
     window.__dakaLatestFunnelSectionScanner = scanner;
     setTimeout(function () { mount(scanner); }, 60);
     setTimeout(function () { mount(scanner); }, 400);
@@ -184,9 +222,11 @@ function buildClientScript() {
     const wrapped = function () {
       return originalFetch.apply(this, arguments).then(function (response) {
         try {
+          ensureScoreDonutDestroy();
           const requestUrl = String(arguments[0]?.url || arguments[0] || '');
           if (/\/api\/(analyze-funnel|funnel)\b/i.test(requestUrl)) {
             response.clone().json().then(function (data) {
+              ensureScoreDonutDestroy();
               const scanner = getScanner(data);
               if (scanner) scheduleMount(scanner);
             }).catch(function () {});
@@ -200,6 +240,7 @@ function buildClientScript() {
   }
 
   const observer = new MutationObserver(function () {
+    ensureScoreDonutDestroy();
     if (window.__dakaLatestFunnelSectionScanner) mount(window.__dakaLatestFunnelSectionScanner);
   });
   if (document.documentElement) observer.observe(document.documentElement, { childList: true, subtree: true });
