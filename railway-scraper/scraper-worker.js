@@ -92,7 +92,51 @@ async function updateJob(jobId, patch) {
     .update(patch)
     .eq('id', jobId);
 
-  if (error) throw new Error(`Job update failed: ${error.message}`);
+  if (error) {
+    // Log the full Supabase/PostgREST error so we can diagnose JSON rejection.
+    console.error(
+      `[RailwayScraper:${WORKER_ID}] Supabase error job=${jobId} — ` +
+      `code=${error.code || 'unknown'} message=${error.message} ` +
+      `hint=${error.hint || ''} details=${error.details || ''}`
+    );
+    throw new Error(`Job update failed: ${error.message}`);
+  }
+}
+
+/**
+ * Verify a value is JSON-serializable and return its byte size.
+ * Returns -1 if serialization fails (circular refs, BigInt, etc.).
+ */
+function assertJsonSafe(value) {
+  try {
+    return Buffer.byteLength(JSON.stringify(value), 'utf8');
+  } catch (err) {
+    return -1;
+  }
+}
+
+/**
+ * Build an ultra-minimal result stub for when even buildMinimalJobResult
+ * produces something that can't be serialized.
+ */
+function buildEmergencyResult(rawResult, reason) {
+  return {
+    success: true,
+    compacted: true,
+    compactStrategy: 'worker-emergency-stub',
+    emergencyReason: String(reason || 'json-serialize-failed').slice(0, 200),
+    url: clean(
+      (rawResult && (rawResult.url || rawResult.targetUrl)) ||
+      (rawResult && rawResult.mainPage && rawResult.mainPage.url) || '',
+      500
+    ),
+    title: clean((rawResult && rawResult.title) || '', 240),
+    sectionRawBlocks: [],
+    sectionBlocks: [],
+    sectionsDetailed: [],
+    counts: { pages: 0, sectionRawBlocks: 0 },
+    limits: { htmlRemoved: true, emergencyFallback: true }
+  };
 }
 
 function extractUrls(payload = {}) {
@@ -161,48 +205,106 @@ async function claimAndProcess() {
       const rawResult = await processScrapingJob(job);
       const safeResult = buildSafeJobResult(rawResult);
 
+      // Pre-flight JSON check: catch non-serializable values before Supabase
+      // ever sees them.  If this fails, skip straight to the minimal fallback.
+      const safeResultBytes = assertJsonSafe(safeResult);
+      if (safeResultBytes === -1) {
+        console.warn(
+          `[RailwayScraper:${WORKER_ID}] safeResult is not JSON-serializable job=${job.id} — ` +
+          `skipping to minimal fallback`
+        );
+      }
+
       console.log(
         `[RailwayScraper:${WORKER_ID}] Result ready job=${job.id} ` +
-        `size=${jsonSize(safeResult)} bytes sections=${countSections(safeResult)}`
+        `size=${safeResultBytes === -1 ? 'NON-SERIALIZABLE' : safeResultBytes} bytes ` +
+        `sections=${countSections(safeResult)}`
       );
 
-      try {
-        await updateJob(job.id, {
-          status: 'done',
-          result: safeResult,
-          error: null,
-          finished_at: new Date().toISOString()
-        });
+      // Layer 1: attempt with the full safe result (only if it serializes).
+      let savedWithFull = false;
+      if (safeResultBytes !== -1) {
+        try {
+          await updateJob(job.id, {
+            status: 'done',
+            result: safeResult,
+            error: null,
+            finished_at: new Date().toISOString()
+          });
 
-        METRICS.done++;
-        console.log(
-          `[RailwayScraper:${WORKER_ID}] Done job=${job.id} type=${job.type} ` +
-          `in ${Date.now() - startedAt}ms | sections=${countSections(safeResult)}`
-        );
-      } catch (saveError) {
-        console.error(
-          `[RailwayScraper:${WORKER_ID}] Done update failed job=${job.id}: ${saveError.message}`
-        );
+          METRICS.done++;
+          savedWithFull = true;
+          console.log(
+            `[RailwayScraper:${WORKER_ID}] Done job=${job.id} type=${job.type} ` +
+            `in ${Date.now() - startedAt}ms | sections=${countSections(safeResult)}`
+          );
+        } catch (saveError) {
+          console.error(
+            `[RailwayScraper:${WORKER_ID}] Done update failed job=${job.id}: ${saveError.message}`
+          );
+        }
+      }
 
-        const fallbackResult = buildMinimalJobResult(rawResult, saveError);
+      // Layer 2: minimal fallback — fewer sections, stripped fields.
+      if (!savedWithFull) {
+        const fallbackResult = buildMinimalJobResult(rawResult, 'full-result-save-failed');
+        const fallbackBytes = assertJsonSafe(fallbackResult);
 
         console.log(
           `[RailwayScraper:${WORKER_ID}] Fallback result ready job=${job.id} ` +
-          `size=${jsonSize(fallbackResult)} bytes sections=${countSections(fallbackResult)}`
+          `size=${fallbackBytes === -1 ? 'NON-SERIALIZABLE' : fallbackBytes} bytes ` +
+          `sections=${countSections(fallbackResult)}`
         );
 
-        await updateJob(job.id, {
-          status: 'done',
-          result: fallbackResult,
-          error: null,
-          finished_at: new Date().toISOString()
-        });
+        // Layer 3: if even the minimal fallback won't serialize, use an
+        // emergency stub that is guaranteed to be JSON-safe.
+        const resultToSave = fallbackBytes === -1
+          ? buildEmergencyResult(rawResult, 'fallback-result-not-serializable')
+          : fallbackResult;
 
-        METRICS.done++;
-        console.warn(
-          `[RailwayScraper:${WORKER_ID}] Done with fallback job=${job.id} type=${job.type} ` +
-          `in ${Date.now() - startedAt}ms | sections=${countSections(fallbackResult)}`
-        );
+        if (fallbackBytes === -1) {
+          console.warn(
+            `[RailwayScraper:${WORKER_ID}] Fallback result also non-serializable job=${job.id} — ` +
+            `using emergency stub`
+          );
+        }
+
+        try {
+          await updateJob(job.id, {
+            status: 'done',
+            result: resultToSave,
+            error: null,
+            finished_at: new Date().toISOString()
+          });
+
+          METRICS.done++;
+          console.warn(
+            `[RailwayScraper:${WORKER_ID}] Done with fallback job=${job.id} type=${job.type} ` +
+            `in ${Date.now() - startedAt}ms | sections=${countSections(resultToSave)} ` +
+            `strategy=${resultToSave.compactStrategy || 'minimal'}`
+          );
+        } catch (fallbackSaveError) {
+          // Both attempts failed — mark the job as error so it can be retried
+          // or inspected, rather than silently disappearing.
+          console.error(
+            `[RailwayScraper:${WORKER_ID}] Fallback update also failed job=${job.id}: ` +
+            `${fallbackSaveError.message} — marking job as error`
+          );
+          try {
+            await updateJob(job.id, {
+              status: 'error',
+              result: null,
+              error: `All result save attempts failed. Last error: ${fallbackSaveError.message}`.slice(0, 2000),
+              finished_at: new Date().toISOString()
+            });
+          } catch (finalErr) {
+            METRICS.pollErrors++;
+            console.error(
+              `[RailwayScraper:${WORKER_ID}] CRITICAL all save attempts failed job=${job.id}: ` +
+              `${finalErr.message}`
+            );
+          }
+        }
       }
     } catch (jobError) {
       const isNonScrapingJob = jobError?.code === 'NON_SCRAPING_JOB';

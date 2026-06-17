@@ -17,6 +17,8 @@ const MAX_RESULT_BYTES = Number(process.env.MAX_SCRAPE_RESULT_JSON_BYTES || 2500
 const DROP_KEYS = /^(html|rawHtml|bodyHtml|innerHTML|outerHTML|scripts?|styles?|svg|rawSvg|screenshot|screenshotBase64|buffer|dom|document)$/i;
 const SECTION_KEYS = /^(sectionRawBlocks|sectionBlocks|sectionsDetailed|domSections|rawSections)$/i;
 
+console.log('[RailwayJsonSanitize] Preload registered — waiting for @supabase/supabase-js load');
+
 Module._load = function patchedLoad(request, parent, isMain) {
   const loaded = originalLoad.apply(this, arguments);
   if (request !== '@supabase/supabase-js' || !loaded || loaded.__dakaJsonSanitizePatched) return loaded;
@@ -36,12 +38,51 @@ Module._load = function patchedLoad(request, parent, isMain) {
       const originalUpdate = builder.update.bind(builder);
       builder.update = function patchedUpdate(patch) {
         if (patch && Object.prototype.hasOwnProperty.call(patch, 'result')) {
-          patch = { ...patch, result: sanitizeResult(patch.result) };
+          try {
+            patch = { ...patch, result: sanitizeResult(patch.result) };
+          } catch (sanitizeErr) {
+            console.error('[RailwayJsonSanitize] sanitizeResult threw — using emergency stub:', sanitizeErr.message);
+            patch = {
+              ...patch,
+              result: {
+                success: false,
+                compacted: true,
+                compactStrategy: 'json-sanitize-emergency-fallback',
+                sanitizeError: String(sanitizeErr.message).slice(0, 200),
+                url: cleanString((patch.result && (patch.result.url || patch.result.targetUrl)) || '', 500),
+                title: cleanString((patch.result && patch.result.title) || '', 240)
+              }
+            };
+          }
         }
         if (patch && patch.error !== undefined && patch.error !== null) {
           patch = { ...patch, error: cleanString(patch.error, 2000) };
         }
-        return originalUpdate(patch);
+
+        // Wrap the actual Supabase call so we can log the real error detail
+        // (PostgREST errors like "Empty or invalid json" are otherwise swallowed).
+        const queryBuilder = originalUpdate(patch);
+        const originalThen = queryBuilder.then ? queryBuilder.then.bind(queryBuilder) : null;
+        if (originalThen) {
+          queryBuilder.then = function wrappedThen(onFulfilled, onRejected) {
+            return originalThen(
+              function (response) {
+                if (response && response.error) {
+                  console.error(
+                    '[RailwayJsonSanitize] Supabase update error — ' +
+                    `code=${response.error.code || 'unknown'} ` +
+                    `message=${response.error.message || response.error} ` +
+                    `hint=${response.error.hint || ''} ` +
+                    `details=${response.error.details || ''}`
+                  );
+                }
+                return onFulfilled ? onFulfilled(response) : response;
+              },
+              onRejected
+            );
+          };
+        }
+        return queryBuilder;
       };
 
       builder.__dakaJsonSanitizeBuilder = true;
@@ -53,7 +94,7 @@ Module._load = function patchedLoad(request, parent, isMain) {
   };
 
   loaded.__dakaJsonSanitizePatched = true;
-  console.log('[RailwayJsonSanitize] Supabase scrape_jobs result sanitizer enabled');
+  console.log('[RailwayJsonSanitize] Supabase scrape_jobs result sanitizer active');
   return loaded;
 };
 
