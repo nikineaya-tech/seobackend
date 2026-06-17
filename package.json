@@ -4,11 +4,11 @@
   "description": "Daka All-in-One : Moteur stratégique fusionnant Gemini 2.0, GPT-4 et Claude 3.5 pour une domination SEO totale.",
   "main": "server.js",
   "scripts": {
-    "start": "node -r ./scripts/funnel-section-strategist-preload.cjs server.js",
+    "start": "node -r ./scripts/funnel-section-strategist-preload.cjs -r ./scripts/funnel-section-ui-preload.cjs server.js",
     "start:worker": "cd railway-scraper && npm start",
     "dev": "nodemon server.js",
     "dev:worker": "cd railway-scraper && npm run start",
-    "prod": "NODE_ENV=production node -r ./scripts/funnel-section-strategist-preload.cjs server.js",
+    "prod": "NODE_ENV=production node -r ./scripts/funnel-section-strategist-preload.cjs -r ./scripts/funnel-section-ui-preload.cjs server.js",
     "prod:worker": "cd railway-scraper && npm start",
     "postinstall": "npx playwright install chromium --with-deps || echo 'Playwright install skipped'",
     "health": "curl -s http://localhost:8080 | node -e \"const d=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8'));console.log('Status:',d.status,'| Jobs done:',d.metrics.done,'| Uptime:',d.uptime);\"",
@@ -17,7 +17,7 @@
     "pm2:restart": "pm2 restart daka-all-in-one",
     "pm2:logs": "pm2 logs daka-all-in-one",
     "pm2:monit": "pm2 monit",
-    "check": "node -v && node --check scripts/funnel-section-strategist-preload.cjs && node scripts/apply-render-routing-patch.cjs",
+    "check": "node -v && node --check scripts/funnel-section-strategist-preload.cjs && node --check scripts/funnel-section-ui-preload.cjs && node scripts/apply-render-routing-patch.cjs",
     "env:check": "node -e \"console.log({NODE_ENV:process.env.NODE_ENV||'development',PORT:process.env.PORT||'not-set'});\""
   },
   "keywords": ["seo", "ai-fusion", "daka-all-in-one", "scraping", "stealth"],
