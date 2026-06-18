@@ -1508,6 +1508,8 @@ function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
   const { internalLinks, externalLinks } = extractAllLinks($, url);
   const socialContact = extractSocialAndContactLinks(externalLinks, html, text);
   const paginationSignals = extractPaginationSignals($, url);
+  const sectionRawBlocks = extractSectionBlocksFromHtml($);
+  const compactHtml = buildCompactStructuralHtml({ title, metaDescription, sectionBlocks: sectionRawBlocks });
 
   return {
     url,
@@ -1532,6 +1534,15 @@ function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
     emails: socialContact.emails,
     phones: socialContact.phones,
     paginationSignals,
+    bodyText: text.slice(0, 25000),
+    finalUrl: url,
+    buttons: ctas,
+    ctaTexts: ctas.map(cta => cta.text || cta.label || '').filter(Boolean).slice(0, 30),
+    sectionRawBlocks,
+    sectionsDetailed: sectionRawBlocks,
+    aboveTheFoldText: text.slice(0, 1800),
+    viewportData: null,
+    html: compactHtml,
     wordCount: text.split(/\s+/).filter(Boolean).length,
     prices,
     links,
@@ -1554,6 +1565,162 @@ function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
     htmlLength: html.length,
     scrapedAt: new Date().toISOString()
   };
+}
+
+function guessFunnelSectionType(value = '') {
+  const text = String(value || '').toLowerCase();
+  const rules = [
+    ['hero', /hero|banner|masthead|above.?the.?fold|accueil|principale/],
+    ['social_proof', /avis|review|testimonial|témoignage|rating|étoile|clients? satisfaits?|trusted by/],
+    ['pricing', /prix|price|pricing|tarif|plan|abonnement|mad|dhs|eur|usd/],
+    ['guarantee', /garantie|guarantee|warranty|rembours|refund|money back/],
+    ['delivery', /livraison|delivery|shipping|expédition|retour|returns?/],
+    ['faq', /faq|questions? fréquentes?|frequently asked|accordion/],
+    ['benefits', /bénéfice|benefit|avantage|résultat|pourquoi choisir|why choose/],
+    ['features', /fonctionnalité|feature|caractéristique|specification|service/],
+    ['offer', /offre|offer|bundle|pack|ce que vous recevez|inclus/],
+    ['payment', /paiement|payment|checkout|visa|mastercard|paypal|cmi/],
+    ['cta', /commander|acheter|buy|essayer|démarrer|contact|devis|réserver|s'inscrire/],
+    ['footer', /footer|mentions légales|privacy|conditions|copyright/]
+  ];
+  return rules.find(([, pattern]) => pattern.test(text))?.[0] || 'unknown';
+}
+
+function buildCompactStructuralHtml({ title = '', metaDescription = '', sectionBlocks = [] } = {}) {
+  const escape = value => String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+  const sections = (sectionBlocks || []).slice(0, 30).map(block => {
+    const headings = (block.headings || []).slice(0, 5).map(heading => `<h2>${escape(heading)}</h2>`).join('');
+    const buttons = (block.buttons || []).slice(0, 6).map(button => `<button>${escape(typeof button === 'string' ? button : button?.text || button?.label || '')}</button>`).join('');
+    return `<section data-type="${escape(block.typeGuess || 'unknown')}">${headings}<p>${escape(block.textPreview || block.text || '')}</p>${buttons}</section>`;
+  }).join('');
+  return [
+    '<!doctype html><html><head>',
+    `<title>${escape(title)}</title>`,
+    metaDescription ? `<meta name="description" content="${escape(metaDescription)}">` : '',
+    '</head><body>', sections, '</body></html>'
+  ].join('').slice(0, 70000);
+}
+
+function extractSectionBlocksFromHtml($) {
+  const blocks = [];
+  const seen = new Set();
+  const nodes = $('body > header, body > main > section, body > main > article, body > section, body > article, [role="main"] > section, footer').toArray();
+  const candidates = nodes.length ? nodes : $('header, main, section, article, footer').toArray().slice(0, 24);
+
+  candidates.slice(0, 30).forEach((el, index) => {
+    const node = $(el);
+    const text = compactText(node.text(), 4500);
+    if (text.length < 30) return;
+    const fingerprint = text.slice(0, 180).toLowerCase();
+    if (seen.has(fingerprint)) return;
+    seen.add(fingerprint);
+    const headings = node.find('h1,h2,h3').map((_, h) => compactText($(h).text(), 220)).get().filter(Boolean).slice(0, 8);
+    const buttons = node.find('button,[role="button"],a.btn,a.button,input[type="submit"]').map((_, button) => compactText($(button).text() || $(button).attr('value') || $(button).attr('aria-label'), 160)).get().filter(Boolean).slice(0, 10);
+    const links = node.find('a[href]').map((_, link) => ({
+      text: compactText($(link).text() || $(link).attr('aria-label'), 140),
+      href: compactText($(link).attr('href'), 500)
+    })).get().filter(link => link.href).slice(0, 12);
+    const images = node.find('img').map((_, image) => ({
+      src: compactText($(image).attr('src') || $(image).attr('data-src'), 500),
+      alt: compactText($(image).attr('alt'), 180)
+    })).get().filter(image => image.src).slice(0, 8);
+    const identity = [el.name, node.attr('id'), node.attr('class'), headings.join(' '), text.slice(0, 500)].filter(Boolean).join(' ');
+    const typeGuess = guessFunnelSectionType(identity);
+    const priceMentions = (text.match(/(?:MAD|DHS?|DH|EUR|€|USD|\$)\s?\d[\d.,]*|\d[\d.,]*\s?(?:MAD|DHS?|DH|EUR|€|USD|\$)/gi) || []).slice(0, 8);
+    const trustMentions = (text.match(/[^.!?]*(?:garantie|avis|témoignage|livraison|paiement sécurisé|retour|support|certifié)[^.!?]*/gi) || []).map(item => compactText(item, 220)).slice(0, 6);
+
+    blocks.push({
+      index: blocks.length + 1,
+      typeGuess,
+      selector: [el.name || 'section', node.attr('id') ? `#${node.attr('id')}` : '', node.attr('class') ? `.${String(node.attr('class')).trim().split(/\s+/).slice(0, 2).join('.')}` : ''].join(''),
+      text,
+      textPreview: compactText(text, 420),
+      headings,
+      buttons,
+      links,
+      images,
+      priceMentions,
+      trustMentions,
+      position: typeGuess === 'footer' ? 'footer' : index < 2 ? 'above_the_fold' : index < Math.ceil(candidates.length * 0.65) ? 'middle' : 'lower',
+      visible: true,
+      importanceScore: Math.min(100, 35 + Math.min(30, headings.length * 8) + Math.min(20, buttons.length * 7) + Math.min(15, Math.round(text.length / 250)))
+    });
+  });
+
+  return blocks;
+}
+
+async function extractVisibleSectionBlocks(page) {
+  return page.evaluate(() => {
+    const clean = (value, max = 4500) => String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
+    const selectors = 'body > header, body > main > section, body > main > article, body > section, body > article, [role="main"] > section, footer';
+    let nodes = Array.from(document.querySelectorAll(selectors));
+    if (!nodes.length) nodes = Array.from(document.querySelectorAll('header, main, section, article, footer')).slice(0, 24);
+    const viewport = { width: window.innerWidth, height: window.innerHeight, scrollHeight: document.documentElement.scrollHeight };
+    const seen = new Set();
+    const blocks = [];
+    const guess = value => {
+      const text = String(value || '').toLowerCase();
+      const rules = [
+        ['hero', /hero|banner|masthead|above.?the.?fold|accueil|principale/],
+        ['social_proof', /avis|review|testimonial|témoignage|rating|étoile|clients? satisfaits?|trusted by/],
+        ['pricing', /prix|price|pricing|tarif|plan|abonnement|mad|dhs|eur|usd/],
+        ['guarantee', /garantie|guarantee|warranty|rembours|refund|money back/],
+        ['delivery', /livraison|delivery|shipping|expédition|retour|returns?/],
+        ['faq', /faq|questions? fréquentes?|frequently asked|accordion/],
+        ['benefits', /bénéfice|benefit|avantage|résultat|pourquoi choisir|why choose/],
+        ['features', /fonctionnalité|feature|caractéristique|specification|service/],
+        ['offer', /offre|offer|bundle|pack|ce que vous recevez|inclus/],
+        ['payment', /paiement|payment|checkout|visa|mastercard|paypal|cmi/],
+        ['cta', /commander|acheter|buy|essayer|démarrer|contact|devis|réserver|s'inscrire/],
+        ['footer', /footer|mentions légales|privacy|conditions|copyright/]
+      ];
+      return (rules.find(([, pattern]) => pattern.test(text)) || ['unknown'])[0];
+    };
+
+    nodes.slice(0, 30).forEach((node, index) => {
+      const text = clean(node.innerText || node.textContent || '');
+      if (text.length < 30) return;
+      const fingerprint = text.slice(0, 180).toLowerCase();
+      if (seen.has(fingerprint)) return;
+      seen.add(fingerprint);
+      const rect = node.getBoundingClientRect();
+      const headings = Array.from(node.querySelectorAll('h1,h2,h3')).map(el => clean(el.innerText, 220)).filter(Boolean).slice(0, 8);
+      const buttons = Array.from(node.querySelectorAll('button,[role="button"],a.btn,a.button,input[type="submit"]')).map(el => clean(el.innerText || el.value || el.getAttribute('aria-label'), 160)).filter(Boolean).slice(0, 10);
+      const links = Array.from(node.querySelectorAll('a[href]')).map(el => ({ text: clean(el.innerText || el.getAttribute('aria-label'), 140), href: clean(el.href, 500) })).filter(link => link.href).slice(0, 12);
+      const images = Array.from(node.querySelectorAll('img')).map(el => ({ src: clean(el.currentSrc || el.src, 500), alt: clean(el.alt, 180) })).filter(image => image.src).slice(0, 8);
+      const identity = [node.tagName, node.id, node.className, headings.join(' '), text.slice(0, 500)].join(' ');
+      const typeGuess = guess(identity);
+      const absoluteTop = rect.top + window.scrollY;
+      blocks.push({
+        index: blocks.length + 1,
+        typeGuess,
+        selector: node.id ? `#${node.id}` : `${node.tagName.toLowerCase()}:nth-of-type(${index + 1})`,
+        text,
+        textPreview: clean(text, 420),
+        headings,
+        buttons,
+        links,
+        images,
+        priceMentions: (text.match(/(?:MAD|DHS?|DH|EUR|€|USD|\$)\s?\d[\d.,]*|\d[\d.,]*\s?(?:MAD|DHS?|DH|EUR|€|USD|\$)/gi) || []).slice(0, 8),
+        trustMentions: (text.match(/[^.!?]*(?:garantie|avis|témoignage|livraison|paiement sécurisé|retour|support|certifié)[^.!?]*/gi) || []).map(item => clean(item, 220)).slice(0, 6),
+        position: typeGuess === 'footer' ? 'footer' : absoluteTop <= viewport.height * 1.15 ? 'above_the_fold' : absoluteTop <= viewport.scrollHeight * 0.65 ? 'middle' : 'lower',
+        visible: rect.width > 0 && rect.height > 0 && getComputedStyle(node).visibility !== 'hidden',
+        importanceScore: Math.min(100, 35 + Math.min(30, headings.length * 8) + Math.min(20, buttons.length * 7) + Math.min(15, Math.round(text.length / 250)))
+      });
+    });
+
+    const aboveTheFoldText = clean(Array.from(document.querySelectorAll('body *')).filter(node => {
+      const rect = node.getBoundingClientRect();
+      return rect.top >= 0 && rect.top < window.innerHeight && rect.width > 0 && rect.height > 0;
+    }).map(node => node.innerText || '').join(' '), 2200);
+    return { blocks, viewport, aboveTheFoldText };
+  }).catch(() => ({ blocks: [], viewport: null, aboveTheFoldText: '' }));
 }
 
 async function scrapeSinglePage(page, url, options = {}){
@@ -1593,6 +1760,9 @@ const discoveredTargets = await discoverClickableTargets(page, url, options);
 const clickExploration = options.clickExplore === false
   ? { clickedButtons: [], discoveredAfterClicks: [], totalClicked: 0, totalChanged: 0 }
   : await clickUsefulButtons(page, url, options);
+const structuralData = await extractVisibleSectionBlocks(page);
+const bodyText = String(text || '').replace(/\s+/g, ' ').trim().slice(0, 25000);
+const compactHtml = buildCompactStructuralHtml({ title, metaDescription, sectionBlocks: structuralData.blocks });
 
   return {
   url,
@@ -1617,6 +1787,15 @@ const clickExploration = options.clickExplore === false
   emails: socialContact.emails,
   phones: socialContact.phones,
   paginationSignals,
+  bodyText,
+  finalUrl: page.url() || url,
+  buttons: ctas,
+  ctaTexts: ctas.map(cta => cta.text || cta.label || '').filter(Boolean).slice(0, 30),
+  sectionRawBlocks: structuralData.blocks,
+  sectionsDetailed: structuralData.blocks,
+  aboveTheFoldText: structuralData.aboveTheFoldText,
+  viewportData: structuralData.viewport,
+  html: compactHtml,
   wordCount: text.split(/\s+/).filter(Boolean).length,
   prices,
    links,

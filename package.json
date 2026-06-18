@@ -17,7 +17,7 @@
     "pm2:restart": "node scripts/apply-render-routing-patch.cjs && pm2 restart daka-all-in-one",
     "pm2:logs": "pm2 logs daka-all-in-one",
     "pm2:monit": "pm2 monit",
-    "check": "node -v && node scripts/apply-render-routing-patch.cjs",
+    "check": "node --check server.js && node --check railway-scraper/scraper-orchestrator.js && node --check railway-scraper/scraper-worker.js && node --check scripts/apply-render-routing-patch.cjs && node --check scripts/funnel-premium-runtime-patch.cjs && node --check scripts/funnel-premium-normalizer-hotfix.cjs",
     "env:check": "node -e \"console.log({SUPABASE_URL:!!process.env.SUPABASE_URL,SUPABASE_SERVICE_KEY:!!process.env.SUPABASE_SERVICE_KEY,OPENROUTER_API_KEY:!!process.env.OPENROUTER_API_KEY,RENDER1_URL:process.env.RENDER1_URL||'NOT SET',PLAYWRIGHT_BROWSERS_PATH:process.env.PLAYWRIGHT_BROWSERS_PATH||'NOT SET'});\""
   },
   "keywords": ["seo", "ai-fusion", "daka-all-in-one", "scraping", "stealth"],

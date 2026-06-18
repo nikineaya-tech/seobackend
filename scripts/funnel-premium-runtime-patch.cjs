@@ -15,68 +15,6 @@ function patchServer() {
   const helperMarker = '// DAKA_FUNNEL_PREMIUM_SERVER_PATCH_START';
   const helperCode = `
 ${helperMarker}
-async function runFunnelDeepScrapeSafely(url, requestId) {
-    if (shouldUseRailwayScraping()) {
-        console.log('[SCRAPING-ROUTER] Funnel deep scrape sent to Railway: ' + url);
-        try {
-            return await scrapeUrlViaRailway(url, {
-                explore: true,
-                maxPages: 4,
-                maxExtraPages: 3,
-                maxDepth: 1,
-                maxClicks: 6,
-                maxButtonsPerPage: 4,
-                crawlBudgetMs: 45000,
-                timeout: 120000
-            });
-        } catch (railwayError) {
-            console.warn('[SCRAPING-ROUTER] Railway funnel scraping failed: ' + railwayError.message);
-            if (!RENDER_SCRAPING_FALLBACK) {
-                return {
-                    success: false,
-                    status: 'partial',
-                    executionLayer: 'railway',
-                    fetchLayer: 'railway-partial',
-                    confidence: 'LOW',
-                    error: 'RAILWAY_SCRAPING_FAILED',
-                    message: 'Analyse partielle : Railway n a pas pu scraper cette page automatiquement. Render n a pas relance Browserless ou Scrape.do afin de proteger la memoire.',
-                    url,
-                    html: '',
-                    bodyText: '',
-                    brand: { fullTextSample: '', wordCount: 0, hasSSL: /^https:/i.test(url) },
-                    visualDNA: { dominantColors: [] },
-                    priceIntel: { detected: false, primaryPrice: null, currency: null, confidence: 'LOW', priceConfidence: 'INVALID', priceEvidence: [], rejectedPriceCandidates: [], currencyDetected: null, priceExtractionReason: railwayError.message },
-                    copyIntel: { headlines: { h1: [], h2: [], h3: [] }, realCTAs: [], pageSections: [], heroText: '', testimonials: [], guarantees: [], faq: [], bulletBenefits: [], allButtons: [] },
-                    trustSignals: { hasSSL: /^https:/i.test(url), hasWhatsApp: false, hasReviews: false, hasGuarantee: false, hasDelivery: false },
-                    techStack: { cms: 'Unknown', hasWhatsApp: false },
-                    contacts: { phones: [], emails: [] },
-                    schemaData: { types: [], count: 0 },
-                    performanceIntel: {},
-                    pagesExplored: [],
-                    scrapingLimits: ['Railway unavailable or blocked', 'Render fallback disabled']
-                };
-            }
-            console.warn('[SCRAPING-ROUTER] Render fallback enabled for funnel scraping.');
-        }
-    }
-    return deepScrapeFunnel(url);
-}
-
-async function runFunnelCommerceExplorationSafely(url, options = {}) {
-    if (shouldUseRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
-        console.log('[SCRAPING-ROUTER] Commerce exploration skipped on Render. Railway deep scrape remains source of truth.');
-        return {
-            success: false,
-            status: 'partial',
-            executionLayer: 'railway-only',
-            observed: { priceCandidates: [], trustSignals: {} },
-            pagesExplored: [],
-            limits: ['Commerce exploration disabled on Render to protect memory']
-        };
-    }
-    return exploreFunnelCommerce(url, options);
-}
-
 const FUNNEL_ANALYSIS_ROUTE_CACHE_TTL_MS = Number(process.env.FUNNEL_ANALYSIS_CACHE_TTL_MS || 20 * 60 * 1000);
 const funnelAnalysisRouteInFlight = new Map();
 const funnelAnalysisRouteCache = new Map();
@@ -159,17 +97,13 @@ function funnelAnalysisDedupeMiddleware(req, res, next) {
     if (code.includes(marker)) code = code.replace(marker, helperCode + '\n' + marker);
   }
 
-  code = code.replace("let scrape = await runFunnelScrapeOnce('deep-scrape', validUrl, () => deepScrapeFunnel(validUrl));", "let scrape = await runFunnelScrapeOnce('deep-scrape', validUrl, () => runFunnelDeepScrapeSafely(validUrl, requestId));");
-
-  code = code.replace(/const commerceExploration = await runFunnelScrapeOnce\('commerce-exploration', validUrl, \(\) => exploreFunnelCommerce\(validUrl, \{[\s\S]*?requestId\s*\}\)\);/, "const commerceExploration = await runFunnelCommerceExplorationSafely(validUrl, { lang: validLang, userContext: safeContext, baseScrape: scrape, requestId });");
-
   if (!code.includes('analysisLimiter, funnelAnalysisDedupeMiddleware, async (req, res) =>')) {
     code = code.replace('analysisLimiter, async (req, res) =>', 'analysisLimiter, funnelAnalysisDedupeMiddleware, async (req, res) =>');
   }
 
   if (code !== original) {
     fs.writeFileSync(serverPath, code, 'utf8');
-    console.log('[FunnelPremiumPatch] server.js patched: Railway-only scrape, route dedupe, cache.');
+    console.log('[FunnelPremiumPatch] server.js patched: route dedupe and cache only.');
   } else {
     console.log('[FunnelPremiumPatch] server.js already patched.');
   }
@@ -214,5 +148,5 @@ const nativeFetch=window.fetch.bind(window);window.fetch=async function(input,in
   console.log('[FunnelPremiumPatch] index.html patched: premium funnel render, loader, PDF button.');
 }
 
-patchServer();
+console.log('[FunnelPremiumPatch] Backend source patch disabled; routing and dedupe are implemented in server.js.');
 patchIndex();

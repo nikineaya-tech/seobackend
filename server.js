@@ -385,6 +385,93 @@ function cleanFunnelScrapePayload(input, depth = 0) {
     return out;
 }
 
+const FUNNEL_ANALYSIS_ROUTE_CACHE_TTL_MS = Number(process.env.FUNNEL_ANALYSIS_CACHE_TTL_MS || 20 * 60 * 1000);
+const funnelAnalysisRouteInFlight = new Map();
+const funnelAnalysisRouteCache = new Map();
+
+function buildFunnelAnalysisRouteKey(req) {
+    try {
+        const body = req.body || {};
+        const rawUrl = body.url || body.targetUrl || body.website || '';
+        if (!rawUrl) return null;
+        const authUser = req.user?.id || req.user?.email || req.auth?.user?.id || req.auth?.user?.email || 'auth';
+        const context = body.context || {};
+        const contextBits = [
+            body.offer, body.audience, body.objective, body.priceRange, body.cityRegion, body.country, body.geo,
+            context.offer, context.audience, context.objective, context.priceRange, context.cityOrRegion
+        ].filter(Boolean).join('|').slice(0, 300);
+        return [
+            req.path || '/api/analyze-funnel',
+            authUser,
+            normalizeFunnelCacheUrl(rawUrl),
+            body.userLang || body.lang || 'fr',
+            body.mode || 'deep',
+            body.salesAngle || 'aggressive',
+            contextBits
+        ].join('::');
+    } catch {
+        return null;
+    }
+}
+
+function getFunnelAnalysisRouteCache(key) {
+    const entry = funnelAnalysisRouteCache.get(key);
+    if (!entry) return null;
+    if (Date.now() - entry.createdAt > FUNNEL_ANALYSIS_ROUTE_CACHE_TTL_MS) {
+        funnelAnalysisRouteCache.delete(key);
+        return null;
+    }
+    return entry.value;
+}
+
+function funnelAnalysisDedupeMiddleware(req, res, next) {
+    if (req.method !== 'POST') return next();
+    const key = buildFunnelAnalysisRouteKey(req);
+    if (!key || req.body?.skipCache) return next();
+    const cached = getFunnelAnalysisRouteCache(key);
+    if (cached) {
+        console.log('[FUNNEL-ROUTE-DEDUPE] Cache HIT');
+        return res.json({ ...cached, fromRouteCache: true });
+    }
+    const existing = funnelAnalysisRouteInFlight.get(key);
+    if (existing) {
+        console.log('[FUNNEL-ROUTE-DEDUPE] Awaiting in-flight report');
+        return existing.then(body => res.json({ ...body, fromInFlight: true })).catch(next);
+    }
+
+    let settled = false;
+    let resolveShared;
+    let rejectShared;
+    const sharedPromise = new Promise((resolve, reject) => {
+        resolveShared = resolve;
+        rejectShared = reject;
+    });
+    funnelAnalysisRouteInFlight.set(key, sharedPromise);
+    const originalJson = res.json.bind(res);
+    res.json = body => {
+        if (!settled) {
+            settled = true;
+            funnelAnalysisRouteInFlight.delete(key);
+            if (res.statusCode < 400 && body && typeof body === 'object') {
+                const safeBody = cleanFunnelScrapePayload(body);
+                funnelAnalysisRouteCache.set(key, { value: safeBody, createdAt: Date.now() });
+                resolveShared(safeBody);
+            } else {
+                rejectShared(new Error(body?.message || body?.error || `FUNNEL_ROUTE_FAILED_${res.statusCode}`));
+            }
+        }
+        return originalJson(body);
+    };
+    res.on('close', () => {
+        if (!settled && !res.headersSent) {
+            settled = true;
+            funnelAnalysisRouteInFlight.delete(key);
+            rejectShared(new Error('FUNNEL_ROUTE_CLOSED'));
+        }
+    });
+    return next();
+}
+
 function hardenFunnelPriceIntel(priceIntel = {}) {
     const clone = cleanFunnelScrapePayload(priceIntel) || {};
     const candidates = [
@@ -800,47 +887,170 @@ function buildFunnelSectionSurgeryModel({
         userContext: safeContext
     };
 }
-function queuedJobMiddleware(type) {
-    return async (req, res, next) => {
-        if (type === 'funnel' && wantsRailwayScraping()) {
-            return next();
-        }
-        if (!supabase || req.queueBypass === true || req.get('x-daka-worker-bypass') === '1') {
-            return next();
-        }
-
-        let jobId;
-        try {
-            jobId = await enqueueJob(type, {
-                ...(req.body || {}),
-                _authUserId: req.user?.id || null
-            });
-        } catch (error) {
-            console.warn(`[Queue] ${type} enqueue failed, using direct processing:`, error.message);
-            return next();
-        }
-
-        if (!jobId) return next();
-
-        if (req.body?.async === true) {
-            return res.json({ success: true, jobId, status: 'queued' });
-        }
-
-        try {
-            const result = await waitForJobResult(jobId, 90000);
-            return res.json(result);
-        } catch (error) {
-            const status = error.code === 'QUEUE_TIMEOUT' ? 504 : 500;
-            return res.status(status).json({
-                success: false,
-                jobId,
-                error: error.code || 'QUEUE_PROCESSING_FAILED',
-                message: error.code === 'QUEUE_TIMEOUT'
-                    ? 'Analyse trop longue - réessayez dans quelques secondes.'
-                    : error.message
-            });
-        }
+function funnelSectionParserAgent({
+    lang = 'fr',
+    scrape = {},
+    sectionsDetailed = [],
+    h1Main = '',
+    ctaList = [],
+    funnelSurgery = null
+} = {}) {
+    const isEn = lang === 'en';
+    const isAr = lang === 'ar';
+    const rawBlocks = [
+        ...(Array.isArray(scrape.sectionRawBlocks) ? scrape.sectionRawBlocks : []),
+        ...(Array.isArray(scrape.sectionsDetailed) ? scrape.sectionsDetailed : [])
+    ].slice(0, 40);
+    const typeAliases = {
+        HERO: 'HERO', FEATURES: 'FEATURES', BENEFITS: 'BENEFITS', OFFER: 'OFFER', PRICING: 'PRICING',
+        PRICE: 'PRICING', TRUST: 'TRUST', SOCIAL_PROOF: 'SOCIAL_PROOF', REVIEWS: 'SOCIAL_PROOF',
+        FAQ: 'FAQ', DELIVERY: 'DELIVERY', GUARANTEE: 'GUARANTEE', PAYMENT: 'PAYMENT', CTA: 'CTA',
+        FORM: 'FORM', CHECKOUT: 'CHECKOUT', CONTACT: 'CONTACT', FOOTER: 'FOOTER', PROBLEM: 'PROBLEM',
+        OBJECTIONS: 'OBJECTIONS', COMPARISON: 'COMPARISON', UNKNOWN: 'UNKNOWN'
     };
+    const normalizeType = value => typeAliases[String(value || 'UNKNOWN').trim().toUpperCase()] || String(value || 'UNKNOWN').trim().toUpperCase();
+    const clean = (value, max = 700) => limitFunnelText(typeof value === 'string' ? value : '', max) || '';
+    const unique = values => [...new Set((values || []).filter(Boolean).map(value => clean(value, 260)))];
+    const blocksByType = new Map();
+
+    rawBlocks.forEach(block => {
+        const type = normalizeType(block?.typeGuess || block?.type);
+        if (!blocksByType.has(type)) blocksByType.set(type, []);
+        blocksByType.get(type).push(block);
+    });
+    (sectionsDetailed || []).forEach(section => {
+        const type = normalizeType(section?.type);
+        if (!blocksByType.has(type)) blocksByType.set(type, [{ ...section, textPreview: section.evidence || '', headings: [], buttons: [] }]);
+    });
+
+    if (h1Main && !blocksByType.has('HERO')) {
+        blocksByType.set('HERO', [{ typeGuess: 'hero', textPreview: h1Main, headings: [h1Main], buttons: ctaList.slice(0, 2), importanceScore: 60, position: 'above_the_fold' }]);
+    }
+    if (ctaList.length && !blocksByType.has('CTA')) {
+        blocksByType.set('CTA', [{ typeGuess: 'cta', textPreview: ctaList.join(' | '), headings: [], buttons: ctaList, importanceScore: 60 }]);
+    }
+
+    const required = ['HERO', 'PROBLEM', 'BENEFITS', 'FEATURES', 'OFFER', 'PRICING', 'CTA', 'SOCIAL_PROOF', 'GUARANTEE', 'DELIVERY', 'PAYMENT', 'FAQ', 'OBJECTIONS', 'COMPARISON', 'FOOTER'];
+    const labels = {
+        HERO: 'Hero', PROBLEM: isEn ? 'Customer problem' : isAr ? 'مشكلة العميل' : 'Problème client',
+        BENEFITS: isEn ? 'Benefits' : isAr ? 'الفوائد' : 'Bénéfices', FEATURES: isEn ? 'Features' : isAr ? 'الخصائص' : 'Caractéristiques',
+        OFFER: isEn ? 'Offer' : isAr ? 'العرض' : 'Offre', PRICING: isEn ? 'Price' : isAr ? 'السعر' : 'Prix',
+        CTA: 'CTA', SOCIAL_PROOF: isEn ? 'Social proof' : isAr ? 'الدليل الاجتماعي' : 'Preuves sociales',
+        GUARANTEE: isEn ? 'Guarantee' : isAr ? 'الضمان' : 'Garantie', DELIVERY: isEn ? 'Delivery' : isAr ? 'التوصيل' : 'Livraison',
+        PAYMENT: isEn ? 'Payment' : isAr ? 'الدفع' : 'Paiement', FAQ: 'FAQ', OBJECTIONS: isEn ? 'Objections' : isAr ? 'الاعتراضات' : 'Objections',
+        COMPARISON: isEn ? 'Comparison' : isAr ? 'المقارنة' : 'Comparaison', FOOTER: 'Footer'
+    };
+    const improvementFor = type => ({
+        HERO: isEn ? 'Make the result, audience and primary action visible above the fold.' : isAr ? 'أظهر النتيجة والجمهور والإجراء الرئيسي أعلى الصفحة.' : 'Rendre le résultat, la cible et l’action principale visibles dès le premier écran.',
+        PRICING: isEn ? 'Connect the price to what is included, the guarantee and the primary CTA.' : isAr ? 'اربط السعر بما يتضمنه العرض والضمان وزر الإجراء.' : 'Relier le prix au contenu inclus, à la garantie et au CTA principal.',
+        CTA: isEn ? 'Use one action-oriented primary CTA and repeat it at decision points.' : isAr ? 'استخدم زر إجراء رئيسيا واضحا وكرره عند نقاط القرار.' : 'Utiliser un CTA principal orienté action et le répéter aux points de décision.',
+        SOCIAL_PROOF: isEn ? 'Add verifiable reviews with source, context and result.' : isAr ? 'أضف آراء قابلة للتحقق مع المصدر والنتيجة.' : 'Ajouter des avis vérifiables avec source, contexte et résultat.',
+        GUARANTEE: isEn ? 'State the duration, conditions and limits near the offer.' : isAr ? 'وضح المدة والشروط والحدود قرب العرض.' : 'Préciser durée, conditions et limites près de l’offre.',
+        DELIVERY: isEn ? 'Show time, cost, coverage and return conditions before checkout.' : isAr ? 'اعرض المدة والتكلفة والمناطق وشروط الإرجاع قبل الدفع.' : 'Afficher délai, coût, zones couvertes et retours avant le paiement.',
+        FAQ: isEn ? 'Answer the objections detected around price, use, delivery and guarantee.' : isAr ? 'أجب عن الاعتراضات المتعلقة بالسعر والاستخدام والتوصيل والضمان.' : 'Répondre aux objections liées au prix, à l’usage, à la livraison et à la garantie.'
+    }[type] || (isEn ? 'Clarify this section with one promise, one proof and one action.' : isAr ? 'وضح هذا القسم بوعد واحد ودليل واحد وإجراء واحد.' : 'Clarifier cette section avec une promesse, une preuve et une action.'));
+
+    const presentSections = [];
+    const weakSections = [];
+    for (const [type, blocks] of blocksByType.entries()) {
+        if (type === 'UNKNOWN') continue;
+        const block = blocks[0] || {};
+        const evidence = unique([
+            ...(Array.isArray(block.headings) ? block.headings.map(value => `${isEn ? 'Heading' : isAr ? 'عنوان' : 'Titre'}: ${value}`) : []),
+            ...(Array.isArray(block.buttons) ? block.buttons.map(value => `${isEn ? 'Button' : isAr ? 'زر' : 'Bouton'}: ${typeof value === 'string' ? value : value?.text || value?.label || ''}`) : []),
+            block.textPreview ? `${isEn ? 'Observed text' : isAr ? 'نص مرصود' : 'Texte observé'}: ${clean(block.textPreview, 320)}` : null
+        ]).slice(0, 5);
+        const importance = Number(block.importanceScore || block.score || 0);
+        const quality = importance >= 72 && evidence.length >= 2 ? 'strong' : importance >= 45 || evidence.length >= 2 ? 'medium' : 'weak';
+        const item = {
+            sectionType: type.toLowerCase(),
+            label: labels[type] || type,
+            status: quality === 'weak' ? 'present_but_weak' : 'present',
+            quality,
+            detectedText: clean(block.text || block.textPreview || evidence[0] || '', 900),
+            evidence,
+            position: block.position || null,
+            problems: quality === 'weak' ? [isEn ? 'The section is detected but its proof or action is weak.' : isAr ? 'تم رصد القسم لكن الدليل أو الإجراء ضعيف.' : 'La section est détectée mais sa preuve ou son action reste faible.'] : [],
+            improvements: quality === 'strong' ? [] : [improvementFor(type)],
+            recommendedRewrite: quality === 'weak' ? { title: labels[type] || type, guidance: improvementFor(type) } : null,
+            confidence: block.text || block.textPreview ? 'HIGH' : 'MEDIUM'
+        };
+        presentSections.push(item);
+        if (quality === 'weak') weakSections.push(item);
+        console.log(`[FUNNEL-SECTIONS] ${type.toLowerCase()} present quality=${quality}`);
+    }
+
+    const missingSections = required.filter(type => !blocksByType.has(type)).map(type => {
+        const priority = ['HERO', 'OFFER', 'CTA', 'SOCIAL_PROOF', 'GUARANTEE', 'PRICING'].includes(type) ? 'high' : 'medium';
+        const item = {
+            sectionType: type.toLowerCase(),
+            label: labels[type] || type,
+            status: 'missing',
+            whyItMatters: improvementFor(type),
+            evidenceOfAbsence: [
+                `${isEn ? 'No matching structural block detected' : isAr ? 'لم يتم رصد قسم مطابق' : 'Aucun bloc structurel correspondant détecté'}: ${labels[type] || type}`,
+                `${isEn ? 'Checked blocks' : isAr ? 'الكتل المفحوصة' : 'Blocs vérifiés'}: ${rawBlocks.length}`
+            ],
+            recommendedSection: { title: labels[type] || type, structure: [improvementFor(type)], exampleCopy: null },
+            priority,
+            confidence: rawBlocks.length ? 'HIGH' : 'LOW'
+        };
+        console.log(`[FUNNEL-SECTIONS] ${type.toLowerCase()} missing priority=${priority}`);
+        return item;
+    });
+
+    const sectionsToAdd = missingSections.filter(item => item.priority === 'high').slice(0, 6).map(item => ({
+        sectionType: item.sectionType,
+        priority: item.priority,
+        reason: item.whyItMatters,
+        suggestedPlacement: ['social_proof', 'guarantee', 'pricing'].includes(item.sectionType)
+            ? (isEn ? 'Near the offer and primary CTA' : isAr ? 'قرب العرض وزر الإجراء الرئيسي' : 'Près de l’offre et du CTA principal')
+            : (isEn ? 'Before the final CTA' : isAr ? 'قبل زر الإجراء النهائي' : 'Avant le CTA final'),
+        suggestedContent: item.recommendedSection
+    }));
+    const sectionsToModify = weakSections.slice(0, 8).map(item => ({
+        sectionType: item.sectionType,
+        currentProblem: item.problems[0],
+        currentEvidence: item.evidence[0] || null,
+        newRecommendation: item.improvements[0],
+        suggestedCTA: item.sectionType === 'cta' ? (isEn ? 'Start now' : isAr ? 'ابدأ الآن' : 'Commencer maintenant') : null,
+        confidence: item.confidence
+    }));
+    const blueprintOrder = ['HERO', 'PROBLEM', 'BENEFITS', 'FEATURES', 'OFFER', 'PRICING', 'SOCIAL_PROOF', 'GUARANTEE', 'DELIVERY', 'PAYMENT', 'FAQ', 'CTA', 'FOOTER'];
+    const finalPageBlueprint = blueprintOrder.map((type, index) => ({
+        order: index + 1,
+        sectionType: type.toLowerCase(),
+        action: !blocksByType.has(type) ? 'add' : weakSections.some(item => item.sectionType === type.toLowerCase()) ? 'modify' : 'keep',
+        reason: !blocksByType.has(type)
+            ? `${labels[type] || type}: ${isEn ? 'not detected' : isAr ? 'غير مرصود' : 'non détecté'}`
+            : weakSections.some(item => item.sectionType === type.toLowerCase()) ? improvementFor(type) : (isEn ? 'Useful observed section' : isAr ? 'قسم مرصود ومفيد' : 'Section utile observée')
+    }));
+    const readiness = Math.round(Math.max(0, Math.min(100,
+        (presentSections.length / required.length) * 65 +
+        (presentSections.filter(item => item.quality === 'strong').length / Math.max(1, presentSections.length)) * 35
+    )));
+
+    const result = {
+        summary: {
+            totalDetectedSections: presentSections.length,
+            criticalMissingSections: missingSections.filter(item => item.priority === 'high').map(item => item.sectionType).slice(0, 6),
+            strongestSections: presentSections.filter(item => item.quality === 'strong').map(item => item.sectionType).slice(0, 5),
+            weakestSections: weakSections.map(item => item.sectionType).slice(0, 5),
+            funnelReadinessScore: readiness,
+            evidenceBlocksAnalyzed: rawBlocks.length
+        },
+        presentSections,
+        weakSections,
+        missingSections,
+        sectionsToAdd,
+        sectionsToModify,
+        finalPageBlueprint,
+        sectionSurgeryMatrix: funnelSurgery?.surgeryMatrix || [],
+        source: scrape.executionLayer || scrape.fetchLayer || 'unknown',
+        confidence: rawBlocks.length >= 3 ? 'HIGH' : rawBlocks.length ? 'MEDIUM' : 'LOW'
+    };
+    console.log(`[FUNNEL-SECTIONS] present=${presentSections.length} weak=${weakSections.length} missing=${missingSections.length} add=${sectionsToAdd.length} modify=${sectionsToModify.length}`);
+    return result;
 }
 
 // Trust proxy for Render.com
@@ -5110,6 +5320,17 @@ const EXTRACTION_NOT_FOUND =
             fetchLayer: railwayResult.provider || 'railway-scraper',
             html: syntheticHtml,
             bodyText,
+            finalUrl: mainPage.finalUrl || mainPage.url || validUrl,
+            sectionRawBlocks: Array.isArray(mainPage.sectionRawBlocks) ? mainPage.sectionRawBlocks.slice(0, 30) : [],
+            sectionsDetailed: Array.isArray(mainPage.sectionsDetailed) ? mainPage.sectionsDetailed.slice(0, 30) : [],
+            aboveTheFoldText: limitFunnelText(mainPage.aboveTheFoldText || '', 2200),
+            viewportData: mainPage.viewportData || null,
+            ctaTexts: Array.isArray(mainPage.ctaTexts) ? mainPage.ctaTexts.slice(0, 30) : [],
+            productInfo: Array.isArray(mainPage.productCards) ? mainPage.productCards.slice(0, 8) : [],
+            offerInfo: {
+                prices: prices.slice(0, 12),
+                ctas: Array.isArray(mainPage.ctas) ? mainPage.ctas.slice(0, 20) : []
+            },
             error: railwayResult.success ? null : railwayResult.error || 'RAILWAY_SCRAPING_FAILED',
             duration: railwayResult.durationMs || Date.now() - startTime,
 
@@ -9698,7 +9919,7 @@ function buildCompetitorsRequestKey({ query = '', geo = '', lang = 'fr', url = '
     ].join('|');
 }
 
-app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedReport('competitors'), warRoomLimiter, queuedJobMiddleware('competitors'), async (req, res) => {
+app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedReport('competitors'), warRoomLimiter, async (req, res) => {
     const startTime = Date.now();
     const isProd    = process.env.NODE_ENV === 'production';
 
@@ -11530,7 +11751,7 @@ function getFeatureI18n(lang = 'fr') {
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
 // ============================================================================
-app.post('/api/analyze-funnel', requireAuth, requireReportQuota, persistGeneratedReport('funnel'), analysisLimiter, queuedJobMiddleware('funnel'), async (req, res) => {
+app.post('/api/analyze-funnel', requireAuth, requireReportQuota, persistGeneratedReport('funnel'), analysisLimiter, funnelAnalysisDedupeMiddleware, async (req, res) => {
     const startTime = Date.now();
     const requestId = `SPY12-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
     
@@ -11915,13 +12136,38 @@ const missingCriticalSections = criticalSectionRules
   .filter(rule => rule.required && !hasSection(rule.type))
   .map(rule => rule.type);
 
-const sectionsDetailed = allSections.map((s, index) => ({
-  index: index + 1,
-  type: s.type || 'UNKNOWN',
-  label: sectionLabels[s.type] || s.type || 'Unknown',
-  present: s.present !== false,
-  score: s.score ?? null
-}));
+const rawRailwaySections = [
+  ...(Array.isArray(scrape.sectionRawBlocks) ? scrape.sectionRawBlocks : []),
+  ...(Array.isArray(scrape.sectionsDetailed) ? scrape.sectionsDetailed : [])
+].slice(0, 40);
+const normalizeRailwaySectionType = value => String(value || 'UNKNOWN').trim().toUpperCase();
+const sectionsDetailed = allSections.map((s, index) => {
+  const type = normalizeRailwaySectionType(s.type || s.typeGuess);
+  const observed = rawRailwaySections.find(block => normalizeRailwaySectionType(block.typeGuess || block.type) === type);
+  return {
+    ...(observed || {}),
+    ...s,
+    index: index + 1,
+    type,
+    label: sectionLabels[type] || observed?.typeGuess || type || 'Unknown',
+    present: s.present !== false,
+    score: s.score ?? observed?.importanceScore ?? null,
+    evidence: s.evidence || observed?.textPreview || observed?.headings?.[0] || null
+  };
+});
+rawRailwaySections.forEach(block => {
+  const type = normalizeRailwaySectionType(block.typeGuess || block.type);
+  if (type === 'UNKNOWN' || sectionsDetailed.some(section => section.type === type)) return;
+  sectionsDetailed.push({
+    ...block,
+    index: sectionsDetailed.length + 1,
+    type,
+    label: sectionLabels[type] || block.typeGuess || type,
+    present: block.visible !== false,
+    score: block.importanceScore ?? null,
+    evidence: block.textPreview || block.headings?.[0] || null
+  });
+});
 // ─── CTA Coverage + Images Count ─────────────────────────────────────────────
 const ctaCoverage = allSections.length > 0
     ? Math.min(100, Math.round((ctaList.length / allSections.length) * 100))
@@ -12128,6 +12374,14 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
             wordCount,
             localScore,
             safeContext
+        });
+        const sectionsAudit = funnelSectionParserAgent({
+            lang: validLang,
+            scrape,
+            sectionsDetailed,
+            h1Main,
+            ctaList,
+            funnelSurgery
         });
 
         // ── 5. SHARED CONTEXT ─────────────────────────────────
@@ -13103,6 +13357,8 @@ const finalResponse = {
     auditEvidence,
     concreteActionPlan,
     funnelSurgery,
+    sectionsAudit,
+    pageArchitectureDetected: sectionsAudit,
     proofModel,
     executiveBrief,
     dataIntegrity,
@@ -13131,6 +13387,8 @@ const finalResponse = {
 
     sectionsDetected: sectionsDetailed.map(s => s.type),
     sectionsDetailed,
+    sectionRawBlocks: rawRailwaySections,
+    sectionsAudit,
     missingCriticalSections,
     sectionsCount: sectionsDetailed.length,
 
@@ -14818,7 +15076,7 @@ app.post('/api/generate', async (req, res) => {
 });
 
 // ========== KEYWORDS GENERATOR ==========
-app.post('/api/generate-keywords', requireAuth, requireReportQuota, persistGeneratedReport('keywords'), queuedJobMiddleware('keywords'), async (req, res) => {
+app.post('/api/generate-keywords', requireAuth, requireReportQuota, persistGeneratedReport('keywords'), async (req, res) => {
     const start = Date.now();
     try {
         const {
@@ -14922,49 +15180,6 @@ async function getDeepMetrics($, validUrl) {
  * 🧮 DAKA-MATH ENGINE : Calculateur de performance déductif
  * Analyse la structure pour prédire les scores Google Lighthouse
  */
-async function getRealPageSpeed(html, url) {
-    const $ = cheerio.load(html);
-    
-    // 1. Collecte des variables physiques
-    const domNodes = $('*').length; // Nombre total d'éléments
-    const scriptCount = $('script[src]').length; // Scripts externes
-    const cssCount = $('link[rel="stylesheet"]').length; // CSS externes
-    const imageCount = $('img').length;
-    const pageSizeKB = Buffer.byteLength(html, 'utf8') / 1024;
-
-    // 2. Calcul du Score de Performance (Base 100)
-    // On applique des pénalités mathématiques basées sur les standards Lighthouse
-    let score = 100;
-    score -= (domNodes / 100);             // -1 point par 100 nœuds
-    score -= (scriptCount * 3);            // -3 points par script externe
-    score -= (pageSizeKB / 50);            // -1 point par 50KB de HTML
-    score -= (imageCount * 0.5);           // -0.5 point par image
-
-    const finalScore = Math.round(Math.max(15, Math.min(98, score)));
-
-    // 3. Modélisation Mathématique des Core Web Vitals
-    // LCP (Largest Contentful Paint) en secondes
-    const lcp = (1.2 + (domNodes / 1000) + (pageSizeKB / 200)).toFixed(1);
-    
-    // TBT (Total Blocking Time) en ms (Poids des scripts)
-    const tbt = Math.round((scriptCount * 45) + (domNodes / 10));
-    
-    // CLS (Cumulative Layout Shift) - Déduction basée sur les images
-    const cls = (imageCount * 0.005).toFixed(3);
-
-    console.log(`🧮 Calcul Mathématique réussi pour ${url} : Score ${finalScore}`);
-
-    return {
-        score: finalScore,
-        metrics: {
-            lcp: `${lcp}s`,
-            tbt: `${tbt}ms`,
-            cls: cls,
-            fcp: `${(parseFloat(lcp) * 0.6).toFixed(1)}s`
-        }
-    };
-}
-
 // 2. ANALYSEUR DE STRUCTURE PROFONDE (DOM INTELLIGENCE)
 async function getDeepStructure(html, url) {
     const $ = cheerio.load(html);
@@ -15009,7 +15224,7 @@ async function getDeepStructure(html, url) {
 // =================================================================
 // ☢️ MODULE SEO TECHNIQUE : GOD MODE V2 (ANTI-CRASH & MULTI-LANG)
 
-app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGeneratedReport('technical'), queuedJobMiddleware('technical'), async (req, res) => {
+app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGeneratedReport('technical'), async (req, res) => {
     const startTime = Date.now();
     const requestId = `TECH-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
 
@@ -16349,113 +16564,6 @@ function mergePriceIntel(base = {}, extra = {}) {
         : merged;
 }
 
-function mergeScrapeData(base, extra) {
-    const empty = EMPTY_SCRAPE_RESULT();
-    return {
-        ...empty,
-        ...base,
-        ...extra,
-
-        visualDNA: {
-            ...empty.visualDNA,
-            ...base?.visualDNA,
-            ...extra?.visualDNA
-        },
-
-        techStack: {
-            ...empty.techStack,
-            ...base?.techStack,
-            ...extra?.techStack
-        },
-
-        copyIntel: {
-            ...empty.copyIntel,
-            ...base?.copyIntel,
-            ...extra?.copyIntel,
-            headlines: {
-                ...empty.copyIntel.headlines,
-                ...base?.copyIntel?.headlines,
-                ...extra?.copyIntel?.headlines
-            }
-        },
-
-        chapterIntel: {
-            ...empty.chapterIntel,
-            ...base?.chapterIntel,
-            ...extra?.chapterIntel
-        },
-
-        priceIntel: mergePriceIntel(base?.priceIntel, extra?.priceIntel),
-
-        trustSignals: {
-            ...empty.trustSignals,
-            ...base?.trustSignals,
-            ...extra?.trustSignals
-        },
-
-        contacts: {
-            ...empty.contacts,
-            ...base?.contacts,
-            ...extra?.contacts
-        },
-
-        schemaData: {
-            ...empty.schemaData,
-            ...base?.schemaData,
-            ...extra?.schemaData
-        },
-
-        sections: {
-            ...empty.sections,
-            ...base?.sections,
-            ...extra?.sections
-        },
-
-        meta: {
-            ...empty.meta,
-            ...base?.meta,
-            ...extra?.meta
-        },
-
-        seoIntel: mergeSeoIntel(base?.seoIntel || empty.seoIntel, extra?.seoIntel || {}),
-
-        contentIntel: {
-            ...empty.contentIntel,
-            ...base?.contentIntel,
-            ...extra?.contentIntel
-        },
-
-        trackingIntel: {
-            ...empty.trackingIntel,
-            ...base?.trackingIntel,
-            ...extra?.trackingIntel
-        },
-
-        performanceIntel: {
-            ...empty.performanceIntel,
-            ...base?.performanceIntel,
-            ...extra?.performanceIntel
-        },
-
-        brand: {
-            ...empty.brand,
-            ...base?.brand,
-            ...extra?.brand
-        },
-
-        redirectIntel: {
-            ...empty.redirectIntel,
-            ...base?.redirectIntel,
-            ...extra?.redirectIntel
-        },
-
-        frameworkData: {
-            ...empty.frameworkData,
-            ...base?.frameworkData,
-            ...extra?.frameworkData
-        }
-    };
-}
 function mergeSeoIntel(base = {}, extra = {}) {
     const pickArray = (a, b) => (Array.isArray(a) && a.length ? a : (Array.isArray(b) ? b : []));
     const pickObject = (a, b, fallback = {}) => {
@@ -16968,6 +17076,146 @@ function mergeScrapeData(base = {}, extra = {}) {
 // 🔍 DEEP SCRAPE FUNNEL
 // ═══════════════════════════════════════════════════════════════════
 
+function normalizeScrapeForFunnel(scrapeResult = {}) {
+    const source = scrapeResult && typeof scrapeResult === 'object' ? scrapeResult : {};
+    const mainPage = source.mainPage || (Array.isArray(source.pages) ? source.pages[0] : null) || {};
+    const normalizeText = (value, max = 12000) => limitFunnelText(typeof value === 'string' ? value : '', max) || '';
+    const normalizeList = (value, max = 20) => Array.isArray(value) ? value.filter(Boolean).slice(0, max) : [];
+    const escapeHtml = (value = '') => String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+
+    const railwaySource = Boolean(
+        source.sourceJobId ||
+        source._executionLayer === 'railway' ||
+        source.executionLayer === 'railway' ||
+        /railway/i.test(String(source.fetchLayer || source.provider || source.source || ''))
+    );
+
+    const existingSections = normalizeList(source.copyIntel?.pageSections, 40);
+    const rawSections = [
+        ...normalizeList(source.sectionRawBlocks, 40),
+        ...normalizeList(source.sectionsDetailed, 40)
+    ];
+    const pageSections = [...existingSections];
+    const seenSections = new Set(pageSections.map(section => String(section?.type || section?.name || section).toUpperCase()));
+    const addSection = (section, fallbackType = '') => {
+        const rawType = typeof section === 'string'
+            ? section
+            : section?.type || section?.typeGuess || section?.name || section?.label || fallbackType;
+        const type = String(rawType || '').trim().toUpperCase();
+        if (!type || seenSections.has(type)) return;
+        seenSections.add(type);
+        pageSections.push(typeof section === 'object'
+            ? { ...section, type, present: section.present !== false }
+            : { type, label: String(section), present: true, score: 60 });
+    };
+
+    rawSections.forEach(section => addSection(section));
+    if (Array.isArray(mainPage.sections)) {
+        mainPage.sections.forEach(section => addSection(section));
+    } else if (mainPage.sections && typeof mainPage.sections === 'object') {
+        Object.entries(mainPage.sections).forEach(([key, value]) => {
+            if (value) addSection({ type: key.replace(/^has/i, ''), label: key, present: true });
+        });
+    }
+    if (!pageSections.length && source.sections && typeof source.sections === 'object') {
+        Object.entries(source.sections).forEach(([key, value]) => {
+            if (value) addSection({ type: key.replace(/^has/i, ''), label: key, present: true });
+        });
+    }
+
+    const headings = {
+        h1: normalizeList(source.copyIntel?.headlines?.h1?.length ? source.copyIntel.headlines.h1 : mainPage.headings?.h1, 8),
+        h2: normalizeList(source.copyIntel?.headlines?.h2?.length ? source.copyIntel.headlines.h2 : mainPage.headings?.h2, 12),
+        h3: normalizeList(source.copyIntel?.headlines?.h3?.length ? source.copyIntel.headlines.h3 : mainPage.headings?.h3, 12)
+    };
+    if (!headings.h1.length && mainPage.h1) headings.h1.push(mainPage.h1);
+
+    const bodyText = normalizeText(
+        source.bodyText ||
+        source.contentIntel?.bodyText ||
+        source.contentIntel?.text ||
+        source.brand?.fullTextSample ||
+        mainPage.bodyText ||
+        mainPage.text ||
+        mainPage.textPreview ||
+        '',
+        12000
+    );
+    const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
+    const priceIntel = hardenFunnelPriceIntel(source.priceIntel || {});
+    const confirmedPrice = getConfirmedFunnelPrice(priceIntel);
+    const sectionsCount = pageSections.length;
+    const ctaCount = normalizeList(source.copyIntel?.realCTAs?.length ? source.copyIntel.realCTAs : source.ctaTexts, 30).length;
+    const railwayUsable = railwaySource && (sectionsCount > 0 || bodyText.length > 200 || confirmedPrice > 0 || ctaCount > 0);
+
+    let html = typeof source.html === 'string' ? source.html : '';
+    let syntheticHtmlBuilt = false;
+    if (railwayUsable && html.length < 200) {
+        const title = source.meta?.title || source.seoIntel?.title || mainPage.title || '';
+        const description = source.meta?.description || source.seoIntel?.metaDescription || mainPage.metaDescription || '';
+        const ctas = normalizeList(source.copyIntel?.realCTAs?.length ? source.copyIntel.realCTAs : mainPage.ctas, 15);
+        const sectionHtml = pageSections.slice(0, 30).map(section => {
+            const label = section?.label || section?.name || section?.type || section;
+            const evidence = section?.evidence || section?.text || '';
+            return `<section data-funnel-section="${escapeHtml(section?.type || label)}"><h2>${escapeHtml(label)}</h2>${evidence ? `<p>${escapeHtml(evidence)}</p>` : ''}</section>`;
+        }).join('');
+        html = [
+            '<!doctype html><html><head>',
+            `<title>${escapeHtml(title)}</title>`,
+            description ? `<meta name="description" content="${escapeHtml(description)}">` : '',
+            '</head><body>',
+            headings.h1.map(value => `<h1>${escapeHtml(value)}</h1>`).join(''),
+            headings.h2.map(value => `<h2>${escapeHtml(value)}</h2>`).join(''),
+            headings.h3.map(value => `<h3>${escapeHtml(value)}</h3>`).join(''),
+            sectionHtml,
+            ctas.map(cta => `<a href="#">${escapeHtml(typeof cta === 'string' ? cta : cta?.text || cta?.label || '')}</a>`).join(''),
+            confirmedPrice ? `<span class="price">${escapeHtml(`${confirmedPrice} ${priceIntel.currency || ''}`.trim())}</span>` : '',
+            `<main>${escapeHtml(bodyText)}</main>`,
+            '</body></html>'
+        ].join('').slice(0, 70000);
+        syntheticHtmlBuilt = true;
+    }
+
+    const normalized = mergeScrapeData(EMPTY_SCRAPE_RESULT(), {
+        ...source,
+        success: railwayUsable ? true : Boolean(source.success),
+        html,
+        bodyText,
+        copyIntel: {
+            ...(source.copyIntel || {}),
+            headlines: headings,
+            pageSections
+        },
+        contentIntel: {
+            ...(source.contentIntel || {}),
+            bodyText,
+            wordCount: source.contentIntel?.wordCount || source.seoIntel?.wordCount || source.brand?.wordCount || wordCount
+        },
+        brand: {
+            ...(source.brand || {}),
+            fullTextSample: bodyText,
+            wordCount: source.brand?.wordCount || wordCount
+        },
+        priceIntel
+    });
+
+    delete normalized.rawHtml;
+    delete normalized.bodyHtml;
+    normalized._funnelNormalization = {
+        railwayUsable,
+        sectionsCount,
+        bodyLength: bodyText.length,
+        ctaCount,
+        syntheticHtmlBuilt
+    };
+    return normalized;
+}
+
 async function deepScrapeFunnel(url) {
     const startTime = Date.now();
     console.log(`🔍 [DEEP SCRAPE] Analyse profonde : ${url}`);
@@ -17090,8 +17338,21 @@ async function deepScrapeFunnel(url) {
     try {
         let scrapeResult = await scrapeStealth(url);
 
-        if (detectBotBlocked(scrapeResult) && scrapeResult?.fetchLayer !== 'scrape.do') {
-            if (wantsRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
+        scrapeResult = normalizeScrapeForFunnel(scrapeResult);
+        const normalizationMeta = scrapeResult?._funnelNormalization || {};
+        delete scrapeResult._funnelNormalization;
+        const railwayUsable = Boolean(normalizationMeta.railwayUsable);
+        const normalizedSections = Number(normalizationMeta.sectionsCount || 0);
+        const normalizedBody = Number(normalizationMeta.bodyLength || 0);
+
+        console.log(`[DEEP SCRAPE] Railway normalized before check usable=${railwayUsable} sections=${normalizedSections} body=${normalizedBody}`);
+        if (normalizationMeta.syntheticHtmlBuilt) {
+            console.log(`[DEEP SCRAPE] Synthetic HTML built from Railway compact result sections=${normalizedSections} body=${normalizedBody}`);
+        }
+        console.log(`[FUNNEL-DATA] normalized sections=${normalizedSections} body=${normalizedBody}`);
+
+        if (!railwayUsable && detectBotBlocked(scrapeResult) && scrapeResult?.fetchLayer !== 'scrape.do') {
+            if (shouldUseRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
                 console.warn(`[DEEP SCRAPE] Railway incomplet pour ${url}. Fallback Render/Scrape.do desactive.`);
                 return finalizeError(
                     scrapeResult?.error || scrapeResult?.message || 'RAILWAY_SCRAPING_PARTIAL_NO_RENDER_FALLBACK',

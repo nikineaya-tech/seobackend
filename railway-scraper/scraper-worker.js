@@ -159,6 +159,12 @@ async function claimAndProcess() {
 
     try {
       const result = await processScrapingJob(job);
+      const mainPage = result?.mainPage || (Array.isArray(result?.pages) ? result.pages[0] : null) || {};
+      const sectionCount = Array.isArray(mainPage.sectionRawBlocks)
+        ? mainPage.sectionRawBlocks.length
+        : Array.isArray(mainPage.sectionsDetailed) ? mainPage.sectionsDetailed.length : 0;
+      const bodyLength = String(mainPage.bodyText || '').length;
+      console.log(`[RAILWAY-SCRAPE] done sections=${sectionCount} body=${bodyLength}`);
 
       await updateJob(job.id, {
         status: 'done',
