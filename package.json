@@ -1,7 +1,7 @@
 {
   "name": "daka-all-in-one",
   "version": "5.2.1",
-  "description": "Daka All-in-One : Moteur stratégique fusionnant Gemini 2.0, GPT-4 et Claude 3.5 pour une domination SEO totale.",
+  "description": "Daka Market Intelligence Spyer: market, competitor, demand, offer and conversion decision engine.",
   "main": "server.js",
   "scripts": {
     "start": "node scripts/apply-render-routing-patch.cjs && node server.js",
@@ -17,10 +17,10 @@
     "pm2:restart": "node scripts/apply-render-routing-patch.cjs && pm2 restart daka-all-in-one",
     "pm2:logs": "pm2 logs daka-all-in-one",
     "pm2:monit": "pm2 monit",
-    "check": "node --check server.js && node --check railway-scraper/scraper-orchestrator.js && node --check railway-scraper/scraper-worker.js && node --check scripts/apply-render-routing-patch.cjs && node --check scripts/funnel-premium-runtime-patch.cjs && node --check scripts/funnel-premium-normalizer-hotfix.cjs",
+    "check": "node --check server.js && node --check railway-scraper/scraper-orchestrator.js && node --check railway-scraper/scraper-worker.js && node --check scripts/apply-render-routing-patch.cjs",
     "env:check": "node -e \"console.log({SUPABASE_URL:!!process.env.SUPABASE_URL,SUPABASE_SERVICE_KEY:!!process.env.SUPABASE_SERVICE_KEY,OPENROUTER_API_KEY:!!process.env.OPENROUTER_API_KEY,RENDER1_URL:process.env.RENDER1_URL||'NOT SET',PLAYWRIGHT_BROWSERS_PATH:process.env.PLAYWRIGHT_BROWSERS_PATH||'NOT SET'});\""
   },
-  "keywords": ["seo", "ai-fusion", "daka-all-in-one", "scraping", "stealth"],
+  "keywords": ["market-intelligence", "competitor-research", "conversion", "daka", "scraping"],
   "author": {
     "name": "Daka Team",
     "url": "https://seo.mktnstrategix.com"

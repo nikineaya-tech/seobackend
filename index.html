@@ -7,8 +7,8 @@
 
    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' https://etjwmqnbfsevlwaeixwb.supabase.co blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://seobackend-f81n.onrender.com http://localhost:10000;">
 
-    <title>Daka - Intelligence marketing et croissance</title>
-    <meta name="description" content="Daka transforme les signaux du marché, les pages et les concurrents en actions concrètes pour mieux vendre.">
+    <title>Daka Market Intelligence Spyer - Voir le marché avant d'agir</title>
+    <meta name="description" content="Daka observe les concurrents, les pages, la demande et les preuves du marché pour transformer les signaux réels en décisions business.">
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -3219,6 +3219,155 @@ table tbody td {
 
 }
 
+/* Market Intelligence Spyer: Funnel V2 progressive disclosure */
+.funnel-v2-overview {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(34, 197, 94, .28);
+  border-radius: 8px;
+  background: #07111f;
+  box-shadow: 0 18px 42px rgba(0, 0, 0, .24), inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+.funnel-v2-kicker {
+  color: #4ade80;
+  font-size: .7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+.funnel-v2-verdict {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(1.08rem, 2vw, 1.42rem);
+  line-height: 1.45;
+}
+.funnel-v2-lead {
+  margin: -4px 0 2px;
+  max-width: 74ch;
+  color: #aebed3;
+  font-size: .86rem;
+  line-height: 1.65;
+}
+.funnel-v2-group {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+.funnel-v2-group > h4 {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: .86rem;
+}
+.funnel-v2-metrics,
+.funnel-v2-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.funnel-v2-metric,
+.funnel-v2-card {
+  min-width: 0;
+  padding: 13px;
+  border: 1px solid rgba(148, 163, 184, .16);
+  border-radius: 8px;
+  background: #0b1628;
+  color: #dbeafe;
+  overflow-wrap: anywhere;
+  transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+.funnel-v2-card:hover {
+  border-color: rgba(56, 189, 248, .42);
+  background: #0d1a2e;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, .2);
+}
+.funnel-v2-metric strong {
+  display: block;
+  margin-top: 4px;
+  color: #f8fafc;
+  font-size: 1.15rem;
+}
+.funnel-v2-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.funnel-v2-card h4 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: .88rem;
+  line-height: 1.4;
+}
+.funnel-v2-status {
+  flex: 0 0 auto;
+  padding: 3px 8px;
+  border: 1px solid rgba(148, 163, 184, .2);
+  border-radius: 999px;
+  font-size: .64rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.funnel-v2-status.strong,
+.funnel-v2-status-observed { color: #4ade80; border-color: rgba(34, 197, 94, .35); }
+.funnel-v2-status.medium,
+.funnel-v2-status-modify { color: #7dd3fc; border-color: rgba(56, 189, 248, .35); }
+.funnel-v2-status.weak,
+.funnel-v2-status.missing,
+.funnel-v2-status-weak,
+.funnel-v2-status-missing { color: #fbbf24; border-color: rgba(245, 158, 11, .38); }
+.funnel-v2-evidence,
+.funnel-v2-actions {
+  display: grid;
+  gap: 6px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.funnel-v2-evidence span,
+.funnel-v2-actions span {
+  display: block;
+  color: #aebed3;
+  font-size: .76rem;
+  line-height: 1.5;
+}
+.funnel-v2-evidence small,
+.funnel-v2-actions small { color: #64748b; font-size: .63rem; font-weight: 800; text-transform: uppercase; }
+.funnel-v2-evidence span::before { content: "• "; color: #38bdf8; font-weight: 800; }
+.funnel-v2-actions span::before { content: "• "; color: #4ade80; font-weight: 800; }
+.funnel-v2-blueprint {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+.funnel-v2-step {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr);
+  gap: 8px;
+  min-width: 0;
+  padding: 11px;
+  border-left: 3px solid #38bdf8;
+  background: #0b1628;
+  color: #cbd5e1;
+  font-size: .76rem;
+  line-height: 1.45;
+}
+.funnel-v2-step b { color: #38bdf8; }
+.funnel-v2-step span { display: grid; gap: 3px; }
+.funnel-v2-step small { color: #94a3b8; }
+.funnel-v2-step strong { color: #f8fafc; }
+@media (max-width: 640px) {
+  .funnel-v2-overview { padding: 13px; }
+  .funnel-v2-metrics,
+  .funnel-v2-grid,
+  .funnel-v2-blueprint { grid-template-columns: 1fr; }
+  .funnel-v2-card { padding: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .funnel-v2-card { transition: none; }
+}
+
     </style>
 <body>
  <div class="main-wrapper">
@@ -3241,19 +3390,19 @@ table tbody td {
                 <nav class="nav-tabs">
                     <button class="nav-btn active" data-tab="competitors">
                         <i class="fas fa-chess-knight"></i>
-                        <span data-i18n="navcompetitors">Concurrents</span>
+                        <span data-i18n="navcompetitors">Radar marché</span>
                     </button>
                     <button class="nav-btn" data-tab="funnel">
                         <i class="fas fa-filter"></i>
-                        <span data-i18n="navfunnel">Funnel AIDA</span>
+                        <span data-i18n="navfunnel">Page & conversion</span>
                     </button>
                     <button class="nav-btn" data-tab="technical">
                         <i class="fas fa-microchip"></i>
-                        <span data-i18n="navtechnical">Audit site</span>
+                        <span data-i18n="navtechnical">Fondations</span>
                     </button>
                    <button class="nav-btn" data-tab="keywords">
     <i class="fas fa-key"></i>
-    <span data-i18n="navkeywords">Mots-clés</span>
+    <span data-i18n="navkeywords">Demande marché</span>
 </button>
                 </nav>
 
@@ -3406,11 +3555,11 @@ table tbody td {
                 <div style="flex: 1;">
                     <h1 class="card-title">
                         <i class="fas fa-chess-queen" style="color: var(--accent-secondary);"></i>
-                        <span data-i18n="tab1_title">Lecture du marché</span>
-                        <span class="highlight" data-i18n="tab1_title_highlight">Concurrents</span>
+                        <span data-i18n="tab1_title">Espionnez le marché.</span>
+                        <span class="highlight" data-i18n="tab1_title_highlight">Décidez avant les autres.</span>
                     </h1>
                     <p class="card-subtitle" data-i18n="tab1_subtitle">
-                        Analyse avancée du marché : repérez les failles et obtenez une feuille de route claire.
+                        Voyez qui gagne, ce qui convainc les clients et l'ouverture exacte à exploiter.
                     </p>
                 </div>
 
@@ -3555,13 +3704,13 @@ table tbody td {
                 <div class="card-header" style="border-bottom: 1px solid rgba(16, 185, 129, 0.2); padding-bottom: 20px; margin-bottom: 25px;">
                     <h1 class="card-title">
                         <i class="fas fa-user-secret" style="color: #10b981; text-shadow: 0 0 15px rgba(16,185,129,0.5);"></i>
-                        <span data-i18n="tab2_title">Corriger une page qui vend</span>
-                        <span class="highlight">Plan concret</span>
+                        <span data-i18n="tab2_title">Révélez ce qui bloque la vente</span>
+                        <span class="highlight">Plan de reconstruction</span>
                     </h1>
                     <p class="card-subtitle" data-i18n="tab2_subtitle">Recevez les changements a faire, les preuves observees et des exemples de textes prets a tester.</p>
                 </div>
 
-                <form id="funnelForm" onsubmit="analyzeFunnel(event)">
+                <form id="funnelForm">
                     <div class="form-group" style="margin-bottom: 25px;">
                         <label class="form-label" data-i18n="label_funnel_url"><i class="fas fa-crosshairs"></i> URL de la Cible (Concurrent)</label>
                         <div class="input-wrapper">
@@ -4027,9 +4176,9 @@ table tbody td {
         <footer class="footer">
     <div class="container">
         <p>
-            <strong>Daka All-in-One v5.0.0</strong> |
-            Propulsé par <span style="background: var(--gradient-cosmic); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 800;">Moteur Daka</span> |
-            Made with ❤️ by <strong data-i18n="footer_author">Daka Team</strong>
+            <strong>Daka Market Intelligence Spyer</strong> |
+            Voir le marché. Comprendre la décision. Agir avant les autres. |
+            <strong data-i18n="footer_author">Daka Team</strong>
         </p>
         <p style="margin-top: 0.5rem; font-size: 0.75rem; color: var(--text-muted);">
             © 2026 All Rights Reserved |
@@ -4047,16 +4196,16 @@ table tbody td {
     const TRANSLATIONS = {
     fr: {
         // --- Header & App ---
-        appname: 'SEO Gen Pro',
-        appbadge: 'PRO',
-navkeywords: 'Mots-clés',
+        appname: 'Daka Spyer',
+        appbadge: 'MARKET INTEL',
+navkeywords: 'Demande marché',
         // --- Navigation ---
-        navcompetitors: 'Concurrents',
-        navfunnel: 'Funnel AIDA',
-        navtechnical: 'Audit site',
-        tab4_title: 'Opportunités de',
-        tab4_highlight: 'recherche',
-        tab4_subtitle: 'Extraction sémantique multilingue avancée — Volume · KD · CPC · Intent',
+        navcompetitors: 'Radar marché',
+        navfunnel: 'Page & conversion',
+        navtechnical: 'Fondations',
+        tab4_title: 'Demandes qui',
+        tab4_highlight: 'font acheter',
+        tab4_subtitle: 'Repérez les intentions réelles, leur potentiel et les pages capables de les convertir.',
 
         // --- Server Status ---
         serverchecking: 'Vérification...',
@@ -4064,17 +4213,17 @@ navkeywords: 'Mots-clés',
         serveroffline: 'hors ligne',
 
         // --- Tab 1: Competitors (Concurrents) ---
-        tab1_title: 'Lecture du marché',
-        tab1_title_highlight: 'Concurrents',
-        tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrète peut vous faire prendre sa place.',
-        label_keyword: '🎯 Mot-clé cible',
+        tab1_title: 'Espionnez le marché.',
+        tab1_title_highlight: 'Décidez avant les autres.',
+        tab1_subtitle: 'Voyez qui gagne, ce qui convainc les clients et l’ouverture exacte à exploiter.',
+        label_keyword: '🎯 Marché, produit ou service à observer',
         placeholder_keyword: 'Ex: chaussures running Maroc',
         label_url: '🔗 URL à analyser (optionnel)',
         placeholder_url: 'https://votre-site.com',
         label_country: '🌍 Pays cible',
         label_analysis_lang: '💬 Langue d\'analyse',
         label_options: '⚙️ Options d\'analyse',
-        btn_analyze: 'LANCER L\'EXTRACTION STRATÉGIQUE',
+        btn_analyze: 'RÉVÉLER LE TERRAIN DE JEU',
 
         // --- Loading States Tab 1 (Competitors) ---
         loading_comp_title: 'Daka prépare votre avantage...',
@@ -4084,7 +4233,7 @@ navkeywords: 'Mots-clés',
         phase_comp_3: 'Parts de marché à voler',
 
         // --- Tab 2: Funnel (AIDA) ---
-        tab2_title: 'Website & Funnel Audit',
+        tab2_title: 'Révélez ce qui bloque la vente',
         tab2_subtitle: 'Analyse prédictive des revenus et autopsie chirurgicale de la structure de vente.',
         label_funnel_url: '🔗 URL de la cible (Concurrent)',
         placeholder_funnel_url: 'https://votre-site.com/landing-page',
@@ -4161,16 +4310,16 @@ navkeywords: 'Mots-clés',
 
     ar: {
         // --- Header & App ---
-        appname: 'SEO Gen Pro',
-        appbadge: 'برو',
-navkeywords: 'الكلمات المفتاحية',
+        appname: 'داكا سباير',
+        appbadge: 'ذكاء السوق',
+navkeywords: 'طلب السوق',
         // --- Navigation ---
-        navcompetitors: 'المنافسون',
-        navfunnel: 'مسار التحويل',
-        navtechnical: 'فحص الموقع',
-        tab4_title: 'مولد',
-        tab4_highlight: 'الكلمات الرابحة',
-        tab4_subtitle: 'استخراج دلالي متقدم متعدد اللغات — الحجم · الصعوبة · النقرة · النية',
+        navcompetitors: 'رادار السوق',
+        navfunnel: 'الصفحة والتحويل',
+        navtechnical: 'الأساس التقني',
+        tab4_title: 'الطلبات التي',
+        tab4_highlight: 'تدفع للشراء',
+        tab4_subtitle: 'اكتشف نوايا العملاء الحقيقية والفرص القابلة للتحويل إلى مبيعات.',
 
         // --- Server Status ---
         serverchecking: 'جاري التحقق...',
@@ -4178,10 +4327,10 @@ navkeywords: 'الكلمات المفتاحية',
         serveroffline: 'غير متصل',
 
         // --- Tab 1: Competitors ---
-        tab1_title: 'تحليل متعدد الذكاء الاصطناعي',
-        tab1_title_highlight: 'للمنافسين',
-        tab1_subtitle: 'المحرك الاستراتيجي المطلق: اكتشف الثغرات واستخرج خارطة الطريق للسيطرة على السوق. 🏆',
-        label_keyword: '🎯 الكلمة المفتاحية المستهدفة',
+        tab1_title: 'راقب السوق.',
+        tab1_title_highlight: 'اتخذ القرار قبل الآخرين.',
+        tab1_subtitle: 'اعرف من يتصدر، لماذا يختاره العملاء، وأين توجد فرصتك الحقيقية.',
+        label_keyword: '🎯 السوق أو المنتج أو الخدمة المراد دراستها',
         placeholder_keyword: 'مثال: أحذية رياضية المغرب',
         label_url: '🔗 رابط URL للتحليل (اختياري)',
         placeholder_url: 'https://yoursite.com',
@@ -4198,8 +4347,8 @@ navkeywords: 'الكلمات المفتاحية',
         phase_comp_3: 'الحصص السوقية المستهدفة',
 
         // --- Tab 2: Funnel ---
-        tab2_title: 'Website & Funnel Audit',
-        tab2_subtitle: 'تحليل الإيرادات التنبؤية وتشريح دقيق لهيكل المبيعات الخاص بمنافسك.',
+        tab2_title: 'اكشف ما يمنع البيع',
+        tab2_subtitle: 'نقرأ الصفحة كعميل ونحدد أين يضعف الوعد والثقة والقرار.',
         label_funnel_url: '🔗 رابط URL الهدف (المنافس)',
         placeholder_funnel_url: 'https://yoursite.com/landing-page',
         label_funnel_lang: '💬 اللغة',
@@ -4275,16 +4424,16 @@ navkeywords: 'الكلمات المفتاحية',
 
     en: {
         // --- Header & App ---
-        appname: 'SEO Gen Pro',
-        appbadge: 'PRO',
-navkeywords: 'Keywords',
+        appname: 'Daka Spyer',
+        appbadge: 'MARKET INTEL',
+navkeywords: 'Market demand',
         // --- Navigation ---
-        navcompetitors: 'Competitors',
-        navfunnel: 'AIDA Funnel',
-        navtechnical: 'Site Audit',
-        tab4_title: 'Keyword',
-        tab4_highlight: 'Opportunity',
-        tab4_subtitle: 'Advanced multilingual semantic extraction — Volume · KD · CPC · Intent',
+        navcompetitors: 'Market radar',
+        navfunnel: 'Page & conversion',
+        navtechnical: 'Foundations',
+        tab4_title: 'Demand that',
+        tab4_highlight: 'drives buying',
+        tab4_subtitle: 'Find real customer intent, commercial potential and the pages that can convert it.',
 
         // --- Server Status ---
         serverchecking: 'Checking...',
@@ -4292,17 +4441,17 @@ navkeywords: 'Keywords',
         serveroffline: 'offline',
 
         // --- Tab 1: Competitors ---
-        tab1_title: 'Market Intelligence',
-        tab1_title_highlight: 'Competitors',
-        tab1_subtitle: 'See who wins, why they win, and the exact move that can help you take the market.',
-        label_keyword: '🎯 Target keyword',
+        tab1_title: 'Spy on the market.',
+        tab1_title_highlight: 'Decide before the rest.',
+        tab1_subtitle: 'See who wins, what persuades customers and the exact opening you can exploit.',
+        label_keyword: '🎯 Market, product or service to investigate',
         placeholder_keyword: 'Ex: running shoes Morocco',
         label_url: '🔗 URL to analyze (optional)',
         placeholder_url: 'https://example.com',
         label_country: '🌍 Target country',
         label_analysis_lang: '💬 Analysis language',
         label_options: '⚙️ Analysis options',
-        btn_analyze: 'LAUNCH STRATEGIC EXTRACTION',
+        btn_analyze: 'REVEAL THE PLAYING FIELD',
 
         // --- Loading States Tab 1 (Competitors) ---
         loading_comp_title: 'Daka is shaping your advantage...',
@@ -4312,8 +4461,8 @@ navkeywords: 'Keywords',
         phase_comp_3: 'Market share to steal',
 
         // --- Tab 2: Funnel (AIDA) ---
-        tab2_title: 'Website & Funnel Audit',
-        tab2_subtitle: 'Predictive revenue analysis and surgical autopsy of the sales structure.',
+        tab2_title: 'Reveal what blocks the sale',
+        tab2_subtitle: 'We read the page like a customer and expose the gaps in promise, trust and decision.',
         label_funnel_url: '🔗 Target URL (Competitor)',
         placeholder_funnel_url: 'https://example.com/landing-page',
         label_funnel_lang: '💬 Language',
@@ -8699,7 +8848,7 @@ function restorePdfExportDom(hiddenEls, openedDetails) {
 }
 
 
-window.exportFullAnalysisToPDF = async function () {
+window.exportFullAnalysisToPDFLegacy = async function () {
 
     // ══════════════════════════════════════════════════════════════
     // GARDE-FOUS
@@ -8801,14 +8950,14 @@ window.exportFullAnalysisToPDF = async function () {
                 '<head>',
                 '<meta charset="UTF-8">',
                 '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
-                '<title>SEO Gen Pro \u2014 \u062a\u0642\u0631\u064a\u0631 \u0634\u0627\u0645\u0644<\/title>',
+                '<title>Daka Market Intelligence Spyer \u2014 \u062a\u0642\u0631\u064a\u0631 \u0634\u0627\u0645\u0644<\/title>',
                 // 🔥 CHANGEMENT 2 : Réparation de la balise <link> de la police (erreur de syntaxe)
 
                 '<style>', cssRules, '<\/style>',
                 '<\/head>',
                 '<body>',
                 '<div class="print-header">',
-                '  <h1 style="font-size:1.6rem;margin:0;color:#c4b5fd;">SEO Gen Pro<\/h1>',
+                '  <h1 style="font-size:1.6rem;margin:0;color:#c4b5fd;">Daka Market Intelligence Spyer<\/h1>',
                 '  <p style="color:#94a3b8;margin:5px 0;font-size:0.9rem;">\u062a\u0642\u0631\u064a\u0631 \u062a\u062d\u0644\u064a\u0644 \u0634\u0627\u0645\u0644<\/p>',
                 '  <p style="color:#64748b;font-size:0.75rem;margin:0;">' + arDate + '<\/p>',
                 '<\/div>',
@@ -9485,6 +9634,240 @@ window.exportFullAnalysisToPDF = async function () {
         if (btn) { btn.innerHTML = origHTML; btn.disabled = false; }
     }
 
+};
+
+function collectNativePdfBlocks(root) {
+    const clone = root.cloneNode(true);
+    clone.querySelectorAll('details').forEach(details => { details.open = true; });
+    clone.querySelectorAll([
+        'button', '.no-print', '.report-section-toggle', '.report-feature-nav',
+        '.expert-dock', '.global-expert-bubble', '.loading-state', '.toast-container',
+        '.export-bubble-wrapper', 'canvas', 'video', 'audio', 'script', 'style'
+    ].join(',')).forEach(node => node.remove());
+
+    const cleanText = value => String(value || '')
+        .replace(/arrow_right_alt|location_on|expand_more|chevron_right/gi, ' ')
+        .replace(/\b(null|undefined|NaN)\b/gi, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    const useless = /^(voir détails|afficher les preuves|réduire|ouvrir|cliquez|open|show details)$/i;
+    const seen = new Set();
+    const blocks = [];
+
+    clone.querySelectorAll('h1,h2,h3,h4,p,li,tr').forEach(node => {
+        const text = cleanText(node.textContent);
+        if (!text || text.length < 2 || useless.test(text)) return;
+        if (/données insuffisantes|data insufficient|بيانات غير كافية/i.test(text) && text.length < 90) return;
+        const key = text.toLocaleLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        const anchor = node.matches('a[href]') ? node : node.querySelector('a[href]');
+        blocks.push({
+            type: /^H[1-4]$/.test(node.tagName) ? node.tagName.toLowerCase() : node.tagName === 'LI' ? 'li' : node.tagName === 'TR' ? 'row' : 'p',
+            text: text.slice(0, 1800),
+            href: anchor?.href || ''
+        });
+    });
+    return blocks;
+}
+
+window.exportFullAnalysisToPDF = async function () {
+    if (STATE.currentLang === 'ar') {
+        return window.exportFullAnalysisToPDFLegacy();
+    }
+    if (STATE.isExporting) return;
+    if (!window.jspdf?.jsPDF) {
+        return toast.error(STATE.currentLang === 'en' ? 'PDF engine is unavailable.' : 'Le moteur PDF est indisponible.');
+    }
+
+    const isEn = STATE.currentLang === 'en';
+    const definitions = [
+        { id: 'resultsCompetitors', label: isEn ? 'Market and competitors' : 'Marché et concurrents', active: !!STATE.lastAnalysisResults },
+        { id: 'resultsFunnel', label: isEn ? 'Page and conversion' : 'Page et conversion', active: !!STATE.lastFunnelResults },
+        { id: 'resultsTechnical', label: isEn ? 'Technical foundations' : 'Fondations techniques', active: !!STATE.lastTechnicalResults },
+        { id: 'resultsKeywords', label: isEn ? 'Market demand' : 'Demande marché', active: Array.isArray(STATE.lastKeywords) ? STATE.lastKeywords.length > 0 : !!STATE.lastKeywords }
+    ];
+    const reports = definitions.filter(item => item.active).map(item => {
+        const element = document.getElementById(item.id);
+        return element ? { ...item, blocks: collectNativePdfBlocks(element) } : null;
+    }).filter(item => item && item.blocks.length);
+    if (!reports.length) {
+        return toast.warning(isEn ? 'No completed report is ready.' : 'Aucun rapport terminé n’est prêt.');
+    }
+
+    STATE.isExporting = true;
+    const button = document.getElementById('btn-export-global');
+    const original = button?.innerHTML || '';
+    if (button) {
+        button.disabled = true;
+        button.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> ${isEn ? 'Building report...' : 'Construction du rapport...'}`;
+    }
+
+    try {
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4', compress: true, putOnlyUsedFonts: true });
+        const pageW = 210;
+        const pageH = 297;
+        const left = 17;
+        const right = 17;
+        const width = pageW - left - right;
+        const bottom = 274;
+        let y = 0;
+        let currentChapter = '';
+
+        const reportUrl = STATE.lastInputs?.funnelUrl || STATE.lastInputs?.url || STATE.lastInputs?.techUrl || '';
+        let domain = 'Daka report';
+        try { domain = new URL(reportUrl).hostname.replace(/^www\./, ''); } catch {}
+
+        const paintPage = () => {
+            pdf.setFillColor(248, 250, 252);
+            pdf.rect(0, 0, pageW, pageH, 'F');
+            pdf.setFillColor(15, 23, 42);
+            pdf.rect(0, 0, pageW, 11, 'F');
+            pdf.setFillColor(34, 211, 238);
+            pdf.rect(0, 11, pageW, 1.2, 'F');
+            y = 22;
+        };
+        const newPage = () => { pdf.addPage(); paintPage(); };
+        const ensureSpace = needed => { if (y + needed > bottom) newPage(); };
+        const setBody = () => {
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(9.4);
+            pdf.setTextColor(51, 65, 85);
+        };
+        const writeLines = (text, options = {}) => {
+            const fontSize = options.fontSize || 9.4;
+            const lineHeight = options.lineHeight || 4.8;
+            const indent = options.indent || 0;
+            const lines = pdf.splitTextToSize(text, width - indent);
+            ensureSpace(lines.length * lineHeight + 3);
+            pdf.setFont('helvetica', options.bold ? 'bold' : 'normal');
+            pdf.setFontSize(fontSize);
+            pdf.setTextColor(...(options.color || [51, 65, 85]));
+            lines.forEach((line, index) => {
+                const lineY = y + index * lineHeight;
+                pdf.text(line, left + indent, lineY);
+                if (options.href) {
+                    const linkWidth = Math.min(width - indent, pdf.getTextWidth(line));
+                    pdf.link(left + indent, lineY - fontSize * 0.3, linkWidth, lineHeight, { url: options.href });
+                }
+            });
+            y += lines.length * lineHeight + (options.after ?? 2.5);
+        };
+
+        paintPage();
+        pdf.setFillColor(15, 23, 42);
+        pdf.rect(0, 0, pageW, pageH, 'F');
+        pdf.setFillColor(124, 58, 237);
+        pdf.rect(0, 0, 7, pageH, 'F');
+        pdf.setFillColor(34, 211, 238);
+        pdf.rect(7, 0, 1.4, pageH, 'F');
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(11);
+        pdf.setTextColor(103, 232, 249);
+        pdf.text('DAKA MARKET INTELLIGENCE SPYER', 21, 39);
+        pdf.setFontSize(28);
+        pdf.setTextColor(248, 250, 252);
+        const coverTitle = isEn ? 'Decision report' : 'Dossier décisionnel';
+        pdf.text(coverTitle, 21, 58);
+        pdf.setFontSize(15);
+        pdf.setTextColor(196, 181, 253);
+        pdf.text(domain, 21, 70);
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(10);
+        pdf.setTextColor(148, 163, 184);
+        pdf.text(isEn ? 'Prepared by the Daka teams' : 'Rapport préparé par les équipes Daka', 21, 82);
+        pdf.text(new Date().toLocaleDateString(isEn ? 'en-GB' : 'fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }), 21, 90);
+
+        let coverY = 116;
+        pdf.setFont('helvetica', 'bold');
+        pdf.setFontSize(10);
+        pdf.setTextColor(103, 232, 249);
+        pdf.text(isEn ? 'INCLUDED INTELLIGENCE' : 'INTELLIGENCES INCLUSES', 21, coverY);
+        coverY += 10;
+        reports.forEach((report, index) => {
+            pdf.setFillColor(30, 41, 59);
+            pdf.roundedRect(21, coverY, 168, 14, 2, 2, 'F');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(9.5);
+            pdf.setTextColor(241, 245, 249);
+            pdf.text(`${index + 1}. ${report.label}`, 27, coverY + 8.8);
+            coverY += 18;
+        });
+        pdf.setFont('helvetica', 'normal');
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 116, 139);
+        pdf.text('Made by Daka', pageW - 21, pageH - 16, { align: 'right' });
+
+        reports.forEach(report => {
+            newPage();
+            currentChapter = report.label;
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(19);
+            pdf.setTextColor(15, 23, 42);
+            pdf.text(report.label, left, y);
+            y += 8;
+            pdf.setDrawColor(124, 58, 237);
+            pdf.setLineWidth(0.8);
+            pdf.line(left, y, left + 38, y);
+            y += 10;
+
+            report.blocks.forEach(block => {
+                if (block.type === 'h1' || block.type === 'h2') {
+                    ensureSpace(15);
+                    y += 2;
+                    writeLines(block.text, { fontSize: block.type === 'h1' ? 15 : 12.5, lineHeight: 6, bold: true, color: [15, 23, 42], after: 4 });
+                } else if (block.type === 'h3' || block.type === 'h4') {
+                    ensureSpace(11);
+                    writeLines(block.text, { fontSize: 10.5, lineHeight: 5.2, bold: true, color: [88, 28, 135], after: 3 });
+                } else if (block.type === 'li') {
+                    writeLines(`• ${block.text}`, { indent: 4, lineHeight: 4.7, after: 1.3, href: block.href });
+                } else if (block.type === 'row') {
+                    pdf.setFillColor(241, 245, 249);
+                    ensureSpace(10);
+                    pdf.roundedRect(left, y - 3.5, width, Math.max(8, pdf.splitTextToSize(block.text, width - 6).length * 4.5 + 3), 1.5, 1.5, 'F');
+                    writeLines(block.text, { indent: 3, fontSize: 8.3, lineHeight: 4.4, after: 3, href: block.href });
+                } else {
+                    setBody();
+                    writeLines(block.text, { href: block.href });
+                }
+            });
+        });
+
+        const totalPages = pdf.getNumberOfPages();
+        for (let page = 2; page <= totalPages; page++) {
+            pdf.setPage(page);
+            pdf.setFont('helvetica', 'normal');
+            pdf.setFontSize(7.2);
+            pdf.setTextColor(100, 116, 139);
+            pdf.text('Daka Market Intelligence Spyer', left, pageH - 9);
+            pdf.text(`${page - 1} / ${totalPages - 1}`, pageW - right, pageH - 9, { align: 'right' });
+            pdf.setTextColor(124, 58, 237);
+            pdf.text('Made by Daka', pageW / 2, pageH - 9, { align: 'center', angle: 0 });
+        }
+
+        const filename = `Daka-Market-Intelligence-${domain.replace(/[^a-z0-9]+/gi, '-').slice(0, 42)}-${Date.now()}.pdf`;
+        const blob = pdf.output('blob');
+        const blobUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = filename;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+        toast.success(isEn ? 'Native PDF downloaded.' : 'PDF natif téléchargé.');
+    } catch (error) {
+        console.error('[DAKA NATIVE PDF]', error);
+        toast.error((isEn ? 'PDF export failed: ' : 'Échec de l’export PDF : ') + (error.message || 'Erreur inconnue'));
+    } finally {
+        STATE.isExporting = false;
+        if (button) {
+            button.disabled = false;
+            button.innerHTML = original;
+        }
+    }
 };
 
 
@@ -10445,6 +10828,21 @@ function cleanRenderedOutput(root) {
             parent.style.display = 'none';
         }
     });
+
+    root.querySelectorAll('.report-section-body button, .report-section-body a').forEach(control => {
+        control.setAttribute('data-no-collapse', 'true');
+        if (control.tagName === 'BUTTON' && !control.hasAttribute('type')) {
+            control.setAttribute('type', 'button');
+        }
+    });
+
+    const seenParagraphs = new Set();
+    root.querySelectorAll('.report-section-body p').forEach(paragraph => {
+        const normalized = String(paragraph.textContent || '').replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+        if (normalized.length < 80) return;
+        if (seenParagraphs.has(normalized)) paragraph.remove();
+        else seenParagraphs.add(normalized);
+    });
 }
 
 function setButtonLoading(btnId, loading) {
@@ -10614,6 +11012,9 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
     const isOpen = expanded ? 'open' : '';
     const dir = opts.isAr ? 'rtl' : 'ltr';
     const noCollapse = opts.noCollapse === true;
+    window.__dakaReportSectionSequence = (window.__dakaReportSectionSequence || 0) + 1;
+    const sectionKey = String(key || 'section').replace(/[^a-z0-9_-]+/gi, '-');
+    const sectionId = `report-section-${sectionKey}-${window.__dakaReportSectionSequence}`;
     const preview = summarizeReportHtml(opts.summary || '', subtitle || labels.openHint);
     const safe = typeof escapeHtml === 'function'
         ? escapeHtml
@@ -10636,8 +11037,9 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
 
     return `
     <section class="report-section report-section-${safe(key)} ${expanded ? 'report-section-open' : ''} fade-in-up"
-        dir="${dir}" data-report-toggle="1" tabindex="0" role="button" aria-expanded="${expanded ? 'true' : 'false'}">
-        <div class="report-section-head">
+        dir="${dir}" data-report-toggle="1" aria-expanded="${expanded ? 'true' : 'false'}">
+        <div class="report-section-head" role="button" tabindex="0"
+            aria-expanded="${expanded ? 'true' : 'false'}" aria-controls="${sectionId}">
             <span class="report-section-icon"><i class="fas ${safe(icon || 'fa-layer-group')}"></i></span>
             <span class="report-section-copy">
                 <strong>${safe(title)}</strong>
@@ -10645,7 +11047,7 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
             </span>
         </div>
         ${preview ? `<p class="report-section-preview" dir="auto">${safe(preview)}</p>` : ''}
-        <details class="report-section-details" data-report-details="1" ${isOpen}>
+        <details id="${sectionId}" class="report-section-details" data-report-details="1" ${isOpen}>
             <summary>
                 <span class="report-section-toggle"><small>${safe(labels.openHint || '')}</small><i class="fas fa-chevron-down"></i></span>
             </summary>
@@ -10660,6 +11062,7 @@ function setReportSectionOpen(section, open) {
     details.open = Boolean(open);
     section.classList.toggle('report-section-open', details.open);
     section.setAttribute('aria-expanded', details.open ? 'true' : 'false');
+    section.querySelector(':scope > .report-section-head')?.setAttribute('aria-expanded', details.open ? 'true' : 'false');
 }
 
 function isReportSectionInteractiveTarget(target) {
@@ -10675,7 +11078,10 @@ if (!window.__dakaReportToggleBound) {
 
     document.addEventListener('click', (event) => {
         const section = event.target.closest('.report-section[data-report-toggle="1"]');
-        if (!section || isReportSectionInteractiveTarget(event.target)) return;
+        if (!section || isReportSectionInteractiveTarget(event.target) || event.target.closest('[data-no-collapse="true"]')) return;
+
+        const trigger = event.target.closest('.report-section-head, .report-section-preview, .report-section-details > summary');
+        if (!trigger || trigger.closest('.report-section') !== section) return;
 
         const details = section.querySelector(':scope > .report-section-details');
         if (!details) return;
@@ -10686,8 +11092,9 @@ if (!window.__dakaReportToggleBound) {
 
     document.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
-        const section = event.target.closest?.('.report-section[data-report-toggle="1"]');
-        if (!section || event.target !== section) return;
+        const trigger = event.target.closest?.('.report-section-head');
+        const section = trigger?.closest('.report-section[data-report-toggle="1"]');
+        if (!section || event.target !== trigger) return;
 
         const details = section.querySelector(':scope > .report-section-details');
         if (!details) return;
@@ -10837,6 +11244,14 @@ function initEventListeners() {
 
 async function analyzeFunnel(e) {
   if (e) e.preventDefault();
+  if (STATE.funnelRequestInFlight) {
+    return toast.info(STATE.currentLang === 'ar'
+      ? 'التحليل جار بالفعل لنفس الطلب.'
+      : STATE.currentLang === 'en'
+        ? 'This funnel analysis is already running.'
+        : 'Cette analyse de page est déjà en cours.');
+  }
+  STATE.funnelRequestInFlight = true;
 
   const elUrl = document.getElementById('funnelUrl');
   const url   = elUrl?.value.trim();
@@ -10901,6 +11316,7 @@ async function analyzeFunnel(e) {
     console.error('Funnel Error:', error);
     toast.error(error.message || 'Erreur de connexion.');
   } finally {
+    STATE.funnelRequestInFlight = false;
     setButtonLoading('funnelBtn', false);
     hideLoading('loadingFunnel');
   }
@@ -11419,6 +11835,78 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
     </section>`;
 }
 
+function renderFunnelSectionAuditV2(data, opts = {}) {
+    const isAr = opts.isAr === true;
+    const isEn = opts.isEn === true;
+    const audit = data?.sectionsAudit || data?.funnelSectionParser?.sectionsAudit || data?.pageArchitectureDetected?.sectionsAudit || {};
+    const summary = audit.summary || {};
+    const arrays = {
+        present: Array.isArray(audit.presentSections) ? audit.presentSections : [],
+        weak: Array.isArray(audit.weakSections) ? audit.weakSections : [],
+        missing: Array.isArray(audit.missingSections) ? audit.missingSections : [],
+        add: Array.isArray(audit.sectionsToAdd) ? audit.sectionsToAdd : [],
+        modify: Array.isArray(audit.sectionsToModify) ? audit.sectionsToModify : [],
+        blueprint: Array.isArray(audit.finalPageBlueprint) ? audit.finalPageBlueprint : []
+    };
+    const hasAudit = Object.values(arrays).some(list => list.length) || Number(summary.totalDetectedSections) > 0;
+    if (!hasAudit) return '';
+
+    const esc = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+    const labels = isAr ? {
+        kicker: 'تشريح الصفحة والتحويل', title: 'ما الذي يقنع العميل، وما الذي يوقف القرار؟',
+        sub: 'قراءة بنيوية مبنية على العناصر والنصوص التي تم رصدها فعليا.', detected: 'أقسام مرصودة',
+        readiness: 'جاهزية التحويل', weak: 'أقسام ضعيفة', missing: 'أقسام حرجة مفقودة',
+        presentTitle: 'البنية المرصودة', weakTitle: 'ما يجب تقويته', missingTitle: 'ما يجب إضافته',
+        modifyTitle: 'تعديلات دقيقة', blueprintTitle: 'ترتيب الصفحة المقترح', evidence: 'الدليل', actions: 'الإجراء'
+    } : isEn ? {
+        kicker: 'Page and conversion surgery', title: 'What persuades the visitor, and what blocks the decision?',
+        sub: 'A structural reading based on elements and copy actually observed on the page.', detected: 'Detected sections',
+        readiness: 'Conversion readiness', weak: 'Weak sections', missing: 'Critical gaps',
+        presentTitle: 'Observed architecture', weakTitle: 'What needs strengthening', missingTitle: 'What must be added',
+        modifyTitle: 'Precise modifications', blueprintTitle: 'Recommended page order', evidence: 'Evidence', actions: 'Action'
+    } : {
+        kicker: 'Chirurgie de page et conversion', title: 'Ce qui convainc le visiteur, et ce qui bloque sa décision',
+        sub: 'Une lecture structurelle fondée sur les éléments et les textes réellement observés.', detected: 'Sections détectées',
+        readiness: 'Prêt à convertir', weak: 'Sections faibles', missing: 'Manques critiques',
+        presentTitle: 'Architecture observée', weakTitle: 'Ce qu’il faut renforcer', missingTitle: 'Ce qu’il faut ajouter',
+        modifyTitle: 'Modifications précises', blueprintTitle: 'Nouvel ordre de page', evidence: 'Preuve', actions: 'Action'
+    };
+
+    const list = value => (Array.isArray(value) ? value : [value]).filter(Boolean).slice(0, 4);
+    const card = (item, tone) => {
+        const name = item.sectionType || item.name || item.section || item.title || (isAr ? 'قسم' : isEn ? 'Section' : 'Section');
+        const status = item.quality || item.status || item.priority || item.confidence || '';
+        const body = item.detectedText || item.currentProblem || item.whyItMatters || item.reason || item.currentEvidence || '';
+        const evidence = list(item.evidence || item.evidenceOfAbsence || item.problems);
+        const actions = list(item.improvements || item.recommendedSection?.structure || item.suggestedContent?.bullets || item.newRecommendation || item.action);
+        return `<article class="funnel-v2-card funnel-v2-card-${tone}">
+            <div class="funnel-v2-card-head"><strong>${esc(name)}</strong>${status ? `<span class="funnel-v2-status funnel-v2-status-${tone}">${esc(status)}</span>` : ''}</div>
+            ${body ? `<p dir="auto">${esc(body)}</p>` : ''}
+            ${evidence.length ? `<div class="funnel-v2-evidence"><small>${esc(labels.evidence)}</small>${evidence.map(value => `<span dir="auto">${esc(typeof value === 'object' ? value.text || value.label || value.value : value)}</span>`).join('')}</div>` : ''}
+            ${actions.length ? `<div class="funnel-v2-actions"><small>${esc(labels.actions)}</small>${actions.map(value => `<span dir="auto">${esc(typeof value === 'object' ? value.action || value.text || value.label : value)}</span>`).join('')}</div>` : ''}
+        </article>`;
+    };
+    const group = (title, items, tone) => items.length ? `<section class="funnel-v2-group"><h4>${esc(title)}</h4><div class="funnel-v2-grid">${items.slice(0, 8).map(item => card(item, tone)).join('')}</div></section>` : '';
+    const readiness = Number(summary.funnelReadinessScore);
+
+    return `<div class="funnel-v2-overview">
+        <div class="funnel-v2-kicker">${esc(labels.kicker)}</div>
+        <h2 class="funnel-v2-verdict">${esc(labels.title)}</h2>
+        <p class="funnel-v2-lead">${esc(labels.sub)}</p>
+        <div class="funnel-v2-metrics">
+            <div class="funnel-v2-metric"><strong>${Number(summary.totalDetectedSections) || arrays.present.length}</strong><span>${esc(labels.detected)}</span></div>
+            <div class="funnel-v2-metric"><strong>${Number.isFinite(readiness) ? `${Math.round(readiness)}/100` : '—'}</strong><span>${esc(labels.readiness)}</span></div>
+            <div class="funnel-v2-metric"><strong>${arrays.weak.length}</strong><span>${esc(labels.weak)}</span></div>
+            <div class="funnel-v2-metric"><strong>${arrays.missing.length}</strong><span>${esc(labels.missing)}</span></div>
+        </div>
+        ${group(labels.presentTitle, arrays.present, 'observed')}
+        ${group(labels.weakTitle, arrays.weak, 'weak')}
+        ${group(labels.missingTitle, arrays.missing.concat(arrays.add).slice(0, 8), 'missing')}
+        ${group(labels.modifyTitle, arrays.modify, 'modify')}
+        ${arrays.blueprint.length ? `<section class="funnel-v2-group"><h4>${esc(labels.blueprintTitle)}</h4><ol class="funnel-v2-blueprint">${arrays.blueprint.slice(0, 12).map((step, index) => `<li class="funnel-v2-step"><b>${Number(step.order) || index + 1}</b><span><strong>${esc(step.sectionType || step.section || '')}</strong><small>${esc(step.reason || step.action || '')}</small></span></li>`).join('')}</ol></section>` : ''}
+    </div>`;
+}
+
 function displayFunnelResults(data) {
     const container = document.getElementById('resultsFunnel');
     if (!container) return;
@@ -11734,9 +12222,10 @@ const decisionProofHtml = renderDecisionProofPanel(data, { isAr, isEn, dir, esc:
     // ── pageArchitecture ──────────────────────────────
     // BUG-FIX CRITIQUE : backend retourne sectionsAudit, pas pageArchitecture.arborescence
    if (!data.pageArchitecture) {
+    const sectionAuditSource = data.sectionsAudit || data.funnelSectionParser?.sectionsAudit || {};
     const sectionsSource =
         data.rawIntel?.sectionsDetailed ||
-        data.sectionsAudit ||
+        sectionAuditSource.presentSections ||
         data.rawIntel?.sectionsDetected ||
         data.rawIntel?.pageSections ||
         [];
@@ -14033,8 +14522,17 @@ const auditIssuesHtml = `
     </div>
 </div>`;
 const funnelReportLabels = getReportLabels({ isAr, isEn });
+const funnelArchitectureHtml = renderFunnelSectionAuditV2(data, { isAr, isEn });
    container.innerHTML = `
   <div id="funnelReport" dir="${dir}">
+    ${funnelArchitectureHtml ? renderReportSection(
+        'architecture-v2',
+        isAr ? 'هندسة الصفحة المكتشفة' : isEn ? 'Detected page architecture' : 'Architecture de page détectée',
+        isAr ? 'الأقسام المرصودة، نقاط الضعف، العناصر المفقودة وترتيب إعادة البناء.' : isEn ? 'Observed sections, weak points, missing blocks and the reconstruction order.' : 'Sections observées, points faibles, blocs manquants et ordre de reconstruction.',
+        'fa-sitemap',
+        funnelArchitectureHtml,
+        { isAr, isEn, open: true }
+    ) : ''}
     ${renderReportSection('audit', funnelReportLabels.audit, funnelReportLabels.auditSub, 'fa-shield-halved', `
         ${cotHtml}
         ${headerHtml}
@@ -15609,8 +16107,13 @@ const PDF_EXPORT = {
     cursor: auto;
 }
 
-.report-section[data-report-toggle="1"] .report-section-body {
+.report-section[data-report-toggle="1"] .report-section-head,
+.report-section[data-report-toggle="1"] .report-section-preview {
     cursor: pointer;
+}
+
+.report-section[data-report-toggle="1"] .report-section-body {
+    cursor: auto;
 }
 
 .report-section-body a,
@@ -15880,6 +16383,42 @@ const PDF_EXPORT = {
     justify-content: center;
 }
 
+.competitor-action-stack {
+    min-width: 168px;
+}
+
+.competitor-action-stack [data-competitor-action] {
+    min-height: 40px;
+    padding: 9px 13px !important;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: flex-start !important;
+    gap: 9px;
+    color: #f8fafc !important;
+    font-size: 0.75rem !important;
+    font-weight: 850 !important;
+    line-height: 1.25;
+    white-space: normal !important;
+    text-align: start;
+    border: 1px solid rgba(103, 232, 249, 0.2) !important;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(124, 58, 237, 0.22)) !important;
+    box-shadow: 0 8px 20px rgba(2, 6, 23, 0.22);
+}
+
+.competitor-action-stack [data-competitor-action]:hover,
+.competitor-action-stack [data-competitor-action]:focus-visible {
+    border-color: rgba(103, 232, 249, 0.52) !important;
+    background: linear-gradient(135deg, rgba(14, 165, 233, 0.3), rgba(124, 58, 237, 0.34)) !important;
+    transform: translateY(-1px);
+}
+
+.competitor-action-stack [data-competitor-action] i {
+    width: 18px;
+    color: #67e8f9;
+    text-align: center;
+    flex: 0 0 auto;
+}
+
 @media (max-width: 768px) {
     .loading-state {
         --loader-size: clamp(172px, 56vmin, 248px);
@@ -15950,6 +16489,7 @@ const PDF_EXPORT = {
         display: grid !important;
         grid-template-columns: 1fr;
         gap: 8px !important;
+        min-width: 0;
     }
 
     .context-brief {

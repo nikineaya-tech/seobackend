@@ -51,14 +51,4 @@ try {
   console.warn('[RenderRoutingPatch] Score donut hotfix skipped:', error.message);
 }
 
-try {
-  require('./funnel-premium-runtime-patch.cjs');
-} catch (error) {
-  console.warn('[RenderRoutingPatch] Funnel premium runtime patch skipped:', error.message);
-}
-
-try {
-  require('./funnel-premium-normalizer-hotfix.cjs');
-} catch (error) {
-  console.warn('[RenderRoutingPatch] Funnel normalizer hotfix skipped:', error.message);
-}
+console.log('[RenderRoutingPatch] Funnel UI and normalization are native; no runtime HTML patch applied.');
