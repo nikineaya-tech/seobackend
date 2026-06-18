@@ -87,19 +87,43 @@ healthServer.listen(PORT, () => {
 });
 
 async function updateJob(jobId, patch) {
-  const { error } = await supabase
-    .from('scrape_jobs')
-    .update(patch)
-    .eq('id', jobId);
+  const safePatch = JSON.parse(JSON.stringify(patch, (_key, value) => {
+    if (typeof value === 'bigint') return value.toString();
+    if (typeof value === 'number' && !Number.isFinite(value)) return null;
+    if (value === undefined) return null;
+    return value;
+  }));
 
-  if (error) {
-    // Log the full Supabase/PostgREST error so we can diagnose JSON rejection.
+  const body = JSON.stringify(safePatch);
+
+  if (!body || body === 'undefined') {
+    throw new Error('Job update failed before request: empty JSON body');
+  }
+
+  const endpoint =
+    `${SUPABASE_URL.replace(/\/$/, '')}/rest/v1/scrape_jobs?id=eq.${encodeURIComponent(jobId)}`;
+
+  const response = await fetch(endpoint, {
+    method: 'PATCH',
+    headers: {
+      apikey: SUPABASE_SERVICE_KEY,
+      Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=minimal'
+    },
+    body
+  });
+
+  if (!response.ok) {
+    const responseText = await response.text().catch(() => '');
+
     console.error(
-      `[RailwayScraper:${WORKER_ID}] Supabase error job=${jobId} — ` +
-      `code=${error.code || 'unknown'} message=${error.message} ` +
-      `hint=${error.hint || ''} details=${error.details || ''}`
+      `[RailwayScraper:${WORKER_ID}] Supabase REST update failed job=${jobId} — ` +
+      `status=${response.status} bodySize=${Buffer.byteLength(body, 'utf8')} ` +
+      `response=${responseText.slice(0, 800)}`
     );
-    throw new Error(`Job update failed: ${error.message}`);
+
+    throw new Error(`Job update failed: HTTP ${response.status} ${responseText.slice(0, 300)}`);
   }
 }
 function buildSmallJobResult(source = {}, strategy = 'small-direct-result') {
