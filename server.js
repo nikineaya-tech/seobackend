@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════
-// SEO GEN PRO API v3.0.0 - PRODUCTION ULTRA-GRADE
+// DAKA MARKET INTELLIGENCE SPYER API v3.0.0 - PRODUCTION ULTRA-GRADE
 // DevOps Level: LEGENDARY | Bttle-tested | Scale: 100K+ req/day
 // Architecture: Microservices-ready | Event-driven | Zero-downtime
 // ═══════════════════════════════════════════════════════════════════
@@ -7121,7 +7121,7 @@ function archetypeBusinessCopy(archetype, query, geo, lang = 'fr') {
             fr: {
                 sell: `Complément alimentaire orienté énergie, concentration et vitalité autour de « ${cleanQuery} ».`,
                 proof: ['Composition et dosage clairement vérifiables', 'Précautions, conformité et mode d’utilisation', `Prix, disponibilité locale et avis clients ${market}`],
-                position: `Devenir l’offre la plus transparente et rassurante ${market} sur la composition, le dosage, la sécurité, le prix et la disponibilité.`,
+                position: `Construire l'offre la plus claire et la plus rassurante ${market}, avec composition, dosage, sécurité, prix et disponibilité faciles à vérifier.`,
                 promise: `Une énergie mieux expliquée : composition, dosage, précautions, prix local et preuves clients visibles avant l’achat.`
             },
             en: {
@@ -8365,8 +8365,10 @@ let mergedData = {
         '7. POSITIONNEMENT : produis un dossier Market Insight Intelligence, pas un rapport SEO.',
         '8. SÉPARE strictement les faits observés, les déductions et les recommandations.',
         '9. ADAPTE chaque action au type de business : service/SaaS, produit physique ou complément alimentaire.',
-        '10. N utilise jamais livraison/retours pour un service ; parle de livrables, délais, révisions, paiement et accompagnement.',
-        '11. Ne présente jamais une hypothèse comme une preuve observée.'
+        '10. N utilise jamais livraison/retours pour un service ; parle de livrables, delais, revisions, paiement et accompagnement.',
+        '11. Ne presente jamais une hypothese comme une preuve observee.',
+        '12. Ne repete pas mot pour mot le meme paragraphe dans le resume et dans les sections detaillees.',
+        '13. Adapte explicitement le vocabulaire au type de business : service/SaaS ou produit physique.'
     ].join('\n');
 
     // ── 12. HELPER callAgent ──────────────────────────────────
@@ -9217,7 +9219,7 @@ async function callOpenRouterAPI(prompt, options = {}) {
                         'Authorization': `Bearer ${apiKey}`,
                         'Content-Type':  'application/json',
                         'HTTP-Referer':  process.env.APP_URL || 'https://seo.mktnstrategix.com',
-                        'X-Title':       'SEO Gen Pro'
+                        'X-Title':       'Daka Market Intelligence Spyer'
                     },
                     timeout: modelTimeout // ⚡ C'EST ICI LA MAGIE DE LA VITESSE
                 }
@@ -14937,7 +14939,7 @@ app.get('/api/job/:id', requireAuth, async (req, res) => {
 app.get('/', (req, res) => {
     res.json({
         success: true,
-        name: 'SEO Gen Pro API',
+        name: 'Daka Market Intelligence Spyer API',
         version: '3.0.0',
         status: 'online',
         uptime: formatDuration(Date.now() - METRICS.startTime),
@@ -19223,7 +19225,7 @@ function buildPDFFromReport(R) {
   // PAGE COVER
   // ══════════════════════════════════════════════════════════════
   newPage(); y=36;
-  bold(26); tc(C.white);  doc.text('SEO GEN PRO', W/2, y, {align:'center'}); y+=10;
+  bold(26); tc(C.white);  doc.text('DAKA MARKET INTELLIGENCE SPYER', W/2, y, {align:'center'}); y+=10;
   bold(11); tc(C.purple); doc.text('RAPPORT COMPLET DAKA', W/2, y, {align:'center'}); y+=10;
 
   var sects = [];
@@ -19724,7 +19726,7 @@ const ALLOWED_ORIGINS = [
 if (require.main === module && process.env.WORKER_MODE !== 'true') {
 server = app.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '═'.repeat(70));
-    console.log('🚀 SEO GEN PRO API v3.0.0 - ULTRA COMPETITIVE MODE');
+    console.log('🚀 DAKA MARKET INTELLIGENCE SPYER API v3.0.0 - ULTRA COMPETITIVE MODE');
     console.log('═'.repeat(70));
     console.log(`🌍 Server running on: http://0.0.0.0:${PORT}`);
     console.log(`📦 Environment: ${NODE_ENV}`);

@@ -11858,6 +11858,19 @@ function renderFunnelSectionAuditV2(data, opts = {}) {
     const isEn = opts.isEn === true;
     const audit = data?.sectionsAudit || data?.funnelSectionParser?.sectionsAudit || data?.pageArchitectureDetected?.sectionsAudit || {};
     const summary = audit.summary || {};
+    const offerTypeRaw = String(
+        data?.offerType ||
+        data?.businessType ||
+        data?.businessModel ||
+        data?.marketType ||
+        data?.funnelType ||
+        ''
+    ).toLowerCase();
+    const offerKind = /service|agency|saas|software|logiciel|consult|formation|coaching/.test(offerTypeRaw)
+        ? 'service'
+        : /ecommerce|product|physical|shop|boutique|store|retail|product/i.test(offerTypeRaw)
+            ? 'physical_product'
+            : 'general';
     const arrays = {
         present: Array.isArray(audit.presentSections) ? audit.presentSections : [],
         weak: Array.isArray(audit.weakSections) ? audit.weakSections : [],
@@ -11871,23 +11884,26 @@ function renderFunnelSectionAuditV2(data, opts = {}) {
 
     const esc = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
     const labels = isAr ? {
-        kicker: 'تشريح الصفحة والتحويل', title: 'ما الذي يقنع العميل، وما الذي يوقف القرار؟',
-        sub: 'قراءة بنيوية مبنية على العناصر والنصوص التي تم رصدها فعليا.', detected: 'أقسام مرصودة',
+        kicker: 'استخبارات السوق والصفحة', title: 'الصفحة تقنع أم تُربك؟ هذا ما تكشفه لك Daka',
+        sub: 'نقرأ ما هو موجود فعليا: ما يدفع الشراء، ما يوقفه، وما يجب إضافته أو تحريكه.', detected: 'أقسام مرصودة',
         readiness: 'جاهزية التحويل', weak: 'أقسام ضعيفة', missing: 'أقسام حرجة مفقودة',
         presentTitle: 'البنية المرصودة', weakTitle: 'ما يجب تقويته', missingTitle: 'ما يجب إضافته',
-        modifyTitle: 'تعديلات دقيقة', blueprintTitle: 'ترتيب الصفحة المقترح', evidence: 'الدليل', actions: 'الإجراء'
+        modifyTitle: 'تعديلات دقيقة', blueprintTitle: 'ترتيب الصفحة المقترح', evidence: 'الدليل', actions: 'الإجراء',
+        pulse: 'نبض الصفحة', suspense: 'ما سنكشفه لاحقا'
     } : isEn ? {
-        kicker: 'Page and conversion surgery', title: 'What persuades the visitor, and what blocks the decision?',
-        sub: 'A structural reading based on elements and copy actually observed on the page.', detected: 'Detected sections',
+        kicker: 'Market and page intelligence', title: 'Does the page persuade or confuse? Daka reveals it',
+        sub: 'We read what is actually there: what drives purchase, what blocks it, and what should be added or moved.', detected: 'Detected sections',
         readiness: 'Conversion readiness', weak: 'Weak sections', missing: 'Critical gaps',
         presentTitle: 'Observed architecture', weakTitle: 'What needs strengthening', missingTitle: 'What must be added',
-        modifyTitle: 'Precise modifications', blueprintTitle: 'Recommended page order', evidence: 'Evidence', actions: 'Action'
+        modifyTitle: 'Precise modifications', blueprintTitle: 'Recommended page order', evidence: 'Evidence', actions: 'Action',
+        pulse: 'Page pulse', suspense: 'What we will uncover next'
     } : {
-        kicker: 'Chirurgie de page et conversion', title: 'Ce qui convainc le visiteur, et ce qui bloque sa décision',
-        sub: 'Une lecture structurelle fondée sur les éléments et les textes réellement observés.', detected: 'Sections détectées',
+        kicker: 'Intelligence marché et page', title: 'La page vend-elle vraiment ou crée-t-elle du doute ?',
+        sub: 'On lit les éléments présents: ce qui pousse à agir, ce qui ralentit, et ce qu’il faut ajouter ou déplacer.', detected: 'Sections détectées',
         readiness: 'Prêt à convertir', weak: 'Sections faibles', missing: 'Manques critiques',
         presentTitle: 'Architecture observée', weakTitle: 'Ce qu’il faut renforcer', missingTitle: 'Ce qu’il faut ajouter',
-        modifyTitle: 'Modifications précises', blueprintTitle: 'Nouvel ordre de page', evidence: 'Preuve', actions: 'Action'
+        modifyTitle: 'Modifications précises', blueprintTitle: 'Nouvel ordre de page', evidence: 'Preuve', actions: 'Action',
+        pulse: 'Pouls de la page', suspense: 'Ce que le reste du rapport va révéler'
     };
 
     const list = value => (Array.isArray(value) ? value : [value]).filter(Boolean).slice(0, 4);
@@ -11906,16 +11922,42 @@ function renderFunnelSectionAuditV2(data, opts = {}) {
     };
     const group = (title, items, tone) => items.length ? `<section class="funnel-v2-group"><h4>${esc(title)}</h4><div class="funnel-v2-grid">${items.slice(0, 8).map(item => card(item, tone)).join('')}</div></section>` : '';
     const readiness = Number(summary.funnelReadinessScore);
+    const kindLabel = isAr
+        ? (offerKind === 'service' ? 'خدمة / SaaS' : offerKind === 'physical_product' ? 'منتج مادي' : 'عرض mixte')
+        : isEn
+            ? (offerKind === 'service' ? 'Service / SaaS' : offerKind === 'physical_product' ? 'Physical product' : 'Mixed offer')
+            : (offerKind === 'service' ? 'Service / SaaS' : offerKind === 'physical_product' ? 'Produit physique' : 'Offre mixte');
+    const suspenseText = isAr
+        ? 'ما يظهر الآن يحدد ما يجب تغييره قبل أن نخسر الانتباه والقرار.'
+        : isEn
+            ? 'What you see now defines what must change before attention and decision are lost.'
+            : 'Ce que vous voyez maintenant dicte ce qu’il faut changer avant de perdre l’attention et la décision.';
 
     return `<div class="funnel-v2-overview">
-        <div class="funnel-v2-kicker">${esc(labels.kicker)}</div>
+        <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;">
+            <div class="funnel-v2-kicker">${esc(labels.kicker)}</div>
+            <div style="padding:4px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.2);background:rgba(255,255,255,.03);color:#c4b5fd;font-size:.68rem;font-weight:800;">${esc(kindLabel)}</div>
+        </div>
         <h2 class="funnel-v2-verdict">${esc(labels.title)}</h2>
         <p class="funnel-v2-lead">${esc(labels.sub)}</p>
+        <div style="padding:14px 16px;border-radius:12px;background:linear-gradient(135deg,rgba(99,102,241,.12),rgba(6,182,212,.08));border:1px solid rgba(99,102,241,.22);color:#e2e8f0;font-size:.86rem;line-height:1.65;">
+            <strong style="color:#f8fafc;">${esc(labels.pulse)}:</strong> ${esc(suspenseText)}
+        </div>
         <div class="funnel-v2-metrics">
             <div class="funnel-v2-metric"><strong>${Number(summary.totalDetectedSections) || arrays.present.length}</strong><span>${esc(labels.detected)}</span></div>
             <div class="funnel-v2-metric"><strong>${Number.isFinite(readiness) ? `${Math.round(readiness)}/100` : '—'}</strong><span>${esc(labels.readiness)}</span></div>
             <div class="funnel-v2-metric"><strong>${arrays.weak.length}</strong><span>${esc(labels.weak)}</span></div>
             <div class="funnel-v2-metric"><strong>${arrays.missing.length}</strong><span>${esc(labels.missing)}</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
+            <div style="padding:12px 14px;border-radius:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.16);">
+                <div style="font-size:.68rem;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#4ade80;margin-bottom:6px;">${esc(isAr ? 'ما يحرك الشراء' : isEn ? 'What moves the sale' : 'Ce qui pousse à acheter')}</div>
+                <div style="color:#e2e8f0;font-size:.84rem;line-height:1.55;">${esc(summary.strongestSections?.[0] || (isAr ? 'القسم الأقوى هو أول إشارة يجب الحفاظ عليها.' : isEn ? 'The strongest section is the first signal to preserve.' : 'La section la plus forte est le premier signal à préserver.'))}</div>
+            </div>
+            <div style="padding:12px 14px;border-radius:10px;background:rgba(245,158,11,.06);border:1px solid rgba(245,158,11,.16);">
+                <div style="font-size:.68rem;font-weight:800;letter-spacing:.8px;text-transform:uppercase;color:#fbbf24;margin-bottom:6px;">${esc(isAr ? 'ما يخلق التردد' : isEn ? 'What creates hesitation' : 'Ce qui crée l’hésitation')}</div>
+                <div style="color:#e2e8f0;font-size:.84rem;line-height:1.55;">${esc(summary.weakestSections?.[0] || (isAr ? 'القسم الأضعف يكشف أين نخسر الانتباه.' : isEn ? 'The weakest section shows where attention is lost.' : 'La section la plus faible montre où l’attention se perd.'))}</div>
+            </div>
         </div>
         ${group(labels.presentTitle, arrays.present, 'observed')}
         ${group(labels.weakTitle, arrays.weak, 'weak')}
