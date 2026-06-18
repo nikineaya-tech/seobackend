@@ -1044,6 +1044,8 @@ function funnelSectionParserAgent({
         missingSections,
         sectionsToAdd,
         sectionsToModify,
+        sectionsToRemove: removeOrMergeSections,
+        sectionsToRemoveOrMerge: removeOrMergeSections,
         finalPageBlueprint,
         sectionSurgeryMatrix: funnelSurgery?.surgeryMatrix || [],
         source: scrape.executionLayer || scrape.fetchLayer || 'unknown',

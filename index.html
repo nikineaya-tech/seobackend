@@ -11877,6 +11877,7 @@ function renderFunnelSectionAuditV2(data, opts = {}) {
         missing: Array.isArray(audit.missingSections) ? audit.missingSections : [],
         add: Array.isArray(audit.sectionsToAdd) ? audit.sectionsToAdd : [],
         modify: Array.isArray(audit.sectionsToModify) ? audit.sectionsToModify : [],
+        remove: Array.isArray(audit.sectionsToRemove) ? audit.sectionsToRemove : Array.isArray(audit.sectionsToRemoveOrMerge) ? audit.sectionsToRemoveOrMerge : [],
         blueprint: Array.isArray(audit.finalPageBlueprint) ? audit.finalPageBlueprint : []
     };
     const hasAudit = Object.values(arrays).some(list => list.length) || Number(summary.totalDetectedSections) > 0;
@@ -11887,22 +11888,22 @@ function renderFunnelSectionAuditV2(data, opts = {}) {
         kicker: 'استخبارات السوق والصفحة', title: 'الصفحة تقنع أم تُربك؟ هذا ما تكشفه لك Daka',
         sub: 'نقرأ ما هو موجود فعليا: ما يدفع الشراء، ما يوقفه، وما يجب إضافته أو تحريكه.', detected: 'أقسام مرصودة',
         readiness: 'جاهزية التحويل', weak: 'أقسام ضعيفة', missing: 'أقسام حرجة مفقودة',
-        presentTitle: 'البنية المرصودة', weakTitle: 'ما يجب تقويته', missingTitle: 'ما يجب إضافته',
-        modifyTitle: 'تعديلات دقيقة', blueprintTitle: 'ترتيب الصفحة المقترح', evidence: 'الدليل', actions: 'الإجراء',
+        presentTitle: 'الأقسام الموجودة', weakTitle: 'الأقسام التي يجب تعديلها', missingTitle: 'الأقسام الغائبة',
+        modifyTitle: 'تعديلات دقيقة', removeTitle: 'الأقسام التي يجب حذفها أو دمجها', blueprintTitle: 'ترتيب الصفحة المقترح', evidence: 'الدليل', actions: 'الإجراء',
         pulse: 'نبض الصفحة', suspense: 'ما سنكشفه لاحقا'
     } : isEn ? {
         kicker: 'Market and page intelligence', title: 'Does the page persuade or confuse? Daka reveals it',
         sub: 'We read what is actually there: what drives purchase, what blocks it, and what should be added or moved.', detected: 'Detected sections',
         readiness: 'Conversion readiness', weak: 'Weak sections', missing: 'Critical gaps',
-        presentTitle: 'Observed architecture', weakTitle: 'What needs strengthening', missingTitle: 'What must be added',
-        modifyTitle: 'Precise modifications', blueprintTitle: 'Recommended page order', evidence: 'Evidence', actions: 'Action',
+        presentTitle: 'Present sections', weakTitle: 'Sections to modify', missingTitle: 'Missing sections',
+        modifyTitle: 'Precise modifications', removeTitle: 'Sections to remove or merge', blueprintTitle: 'Recommended page order', evidence: 'Evidence', actions: 'Action',
         pulse: 'Page pulse', suspense: 'What we will uncover next'
     } : {
         kicker: 'Intelligence marché et page', title: 'La page vend-elle vraiment ou crée-t-elle du doute ?',
         sub: 'On lit les éléments présents: ce qui pousse à agir, ce qui ralentit, et ce qu’il faut ajouter ou déplacer.', detected: 'Sections détectées',
         readiness: 'Prêt à convertir', weak: 'Sections faibles', missing: 'Manques critiques',
-        presentTitle: 'Architecture observée', weakTitle: 'Ce qu’il faut renforcer', missingTitle: 'Ce qu’il faut ajouter',
-        modifyTitle: 'Modifications précises', blueprintTitle: 'Nouvel ordre de page', evidence: 'Preuve', actions: 'Action',
+        presentTitle: 'Sections présentes', weakTitle: 'Sections à modifier', missingTitle: 'Sections absentes',
+        modifyTitle: 'Modifications précises', removeTitle: 'Sections à supprimer ou fusionner', blueprintTitle: 'Nouvel ordre de page', evidence: 'Preuve', actions: 'Action',
         pulse: 'Pouls de la page', suspense: 'Ce que le reste du rapport va révéler'
     };
 
@@ -11946,8 +11947,11 @@ function renderFunnelSectionAuditV2(data, opts = {}) {
         <div class="funnel-v2-metrics">
             <div class="funnel-v2-metric"><strong>${Number(summary.totalDetectedSections) || arrays.present.length}</strong><span>${esc(labels.detected)}</span></div>
             <div class="funnel-v2-metric"><strong>${Number.isFinite(readiness) ? `${Math.round(readiness)}/100` : '—'}</strong><span>${esc(labels.readiness)}</span></div>
+            <div class="funnel-v2-metric"><strong>${arrays.present.length}</strong><span>${esc(labels.presentTitle)}</span></div>
+            <div class="funnel-v2-metric"><strong>${arrays.modify.length}</strong><span>${esc(labels.modifyTitle)}</span></div>
             <div class="funnel-v2-metric"><strong>${arrays.weak.length}</strong><span>${esc(labels.weak)}</span></div>
             <div class="funnel-v2-metric"><strong>${arrays.missing.length}</strong><span>${esc(labels.missing)}</span></div>
+            <div class="funnel-v2-metric"><strong>${arrays.remove.length}</strong><span>${esc(labels.removeTitle)}</span></div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
             <div style="padding:12px 14px;border-radius:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.16);">
@@ -11963,6 +11967,7 @@ function renderFunnelSectionAuditV2(data, opts = {}) {
         ${group(labels.weakTitle, arrays.weak, 'weak')}
         ${group(labels.missingTitle, arrays.missing.concat(arrays.add).slice(0, 8), 'missing')}
         ${group(labels.modifyTitle, arrays.modify, 'modify')}
+        ${group(labels.removeTitle, arrays.remove, 'remove')}
         ${arrays.blueprint.length ? `<section class="funnel-v2-group"><h4>${esc(labels.blueprintTitle)}</h4><ol class="funnel-v2-blueprint">${arrays.blueprint.slice(0, 12).map((step, index) => `<li class="funnel-v2-step"><b>${Number(step.order) || index + 1}</b><span><strong>${esc(step.sectionType || step.section || '')}</strong><small>${esc(step.reason || step.action || '')}</small></span></li>`).join('')}</ol></section>` : ''}
     </div>`;
 }
