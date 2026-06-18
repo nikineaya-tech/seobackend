@@ -209,8 +209,33 @@ function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result')
   const images = safeLinkArray(source.images, 6);
   const links = safeLinkArray(source.links, 8);
   const prices = safePriceArray(source.prices, 5);
+const compatPage = {
+  url: clean(source.url || '', 500),
+  finalUrl: clean(source.finalUrl || source.url || '', 500),
+  title: clean(source.title || '', 220),
+  h1: clean(source.h1 || '', 220),
+  metaDescription: clean(source.metaDescription || '', 400),
 
+  bodyText,
+  text: bodyText,
+  content: bodyText,
+
+  headings,
+  ctas,
+  images,
+  links,
+  prices,
+
+  sectionRawBlocks: smallSections,
+  sectionBlocks: smallSections,
+  sectionsDetailed: smallSections,
+  sections: smallSections
+};
   return {
+    mainPage: compatPage,
+scrapeData: compatPage,
+data: compatPage,
+pagesExplored: [compatPage],
     success: source.success !== false,
     partial: true,
     compacted: true,
