@@ -11422,7 +11422,24 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
         </div>
     </section>`;
 }
+function resolveFunnelScore(data) {
+  const candidates = [
+    data?.score,
+    data?.overallScore,
+    data?.funnelScore,
+    data?.analysisScore,
+    data?.scores?.overall,
+    data?.scores?.funnel,
+    data?.report?.score,
+    data?.report?.overallScore,
+    data?.result?.score,
+    data?.result?.overallScore
+  ];
 
+  const value = candidates.find(v => Number.isFinite(Number(v)));
+  return Math.max(0, Math.min(100, Math.round(Number(value || 0))));
+}
+const score = resolveFunnelScore(responseData);
 function displayFunnelResults(data) {
     const container = document.getElementById('resultsFunnel');
     if (!container) return;

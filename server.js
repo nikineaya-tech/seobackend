@@ -11527,6 +11527,66 @@ function getFeatureI18n(lang = 'fr') {
   return dict[lang] || dict.fr;
 }
 
+function normalizeScrapeForFunnel(raw = {}) {
+  const result = raw.result || raw;
+  const mainPage = result.mainPage || result.scrapeData || result.data || result;
+
+  const sections =
+    result.sectionRawBlocks ||
+    result.sectionsDetailed ||
+    result.sections ||
+    mainPage.sectionRawBlocks ||
+    mainPage.sectionsDetailed ||
+    mainPage.sections ||
+    [];
+
+  const bodyText =
+    result.bodyText ||
+    result.text ||
+    result.content ||
+    mainPage.bodyText ||
+    mainPage.text ||
+    mainPage.content ||
+    '';
+
+  return {
+    ...result,
+    mainPage: {
+      ...mainPage,
+      bodyText,
+      text: bodyText,
+      content: bodyText,
+      sectionRawBlocks: sections,
+      sectionsDetailed: sections,
+      sections
+    },
+    scrapeData: {
+      ...mainPage,
+      bodyText,
+      text: bodyText,
+      content: bodyText,
+      sectionRawBlocks: sections,
+      sectionsDetailed: sections,
+      sections
+    },
+    bodyText,
+    text: bodyText,
+    content: bodyText,
+    sectionRawBlocks: sections,
+    sectionsDetailed: sections,
+    sections,
+    pagesExplored: Array.isArray(result.pagesExplored) && result.pagesExplored.length
+      ? result.pagesExplored
+      : [mainPage]
+  };
+}
+scrapeResult = normalizeScrapeForFunnel(scrapeResult);
+
+console.log(
+  `[FUNNEL-DATA] normalized sections=${scrapeResult.sectionRawBlocks?.length || 0} ` +
+  `body=${String(scrapeResult.bodyText || '').length} ` +
+  `title=${scrapeResult.title || scrapeResult.mainPage?.title || ''}`
+);
 
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
