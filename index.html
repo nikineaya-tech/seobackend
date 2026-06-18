@@ -8950,7 +8950,7 @@ window.exportFullAnalysisToPDFLegacy = async function () {
                 '<head>',
                 '<meta charset="UTF-8">',
                 '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
-                '<title>Daka Market Intelligence Spyer \u2014 \u062a\u0642\u0631\u064a\u0631 \u0634\u0627\u0645\u0644<\/title>',
+                '<title>Daka Market Intelligence Spyer \u2014 \u062a\u0642\u0631\u064a\u0631 \u0627\u0633\u062a\u062e\u0628\u0627\u0631\u0627\u062a \u0627\u0644\u0633\u0648\u0642<\/title>',
                 // 🔥 CHANGEMENT 2 : Réparation de la balise <link> de la police (erreur de syntaxe)
 
                 '<style>', cssRules, '<\/style>',
@@ -8958,7 +8958,7 @@ window.exportFullAnalysisToPDFLegacy = async function () {
                 '<body>',
                 '<div class="print-header">',
                 '  <h1 style="font-size:1.6rem;margin:0;color:#c4b5fd;">Daka Market Intelligence Spyer<\/h1>',
-                '  <p style="color:#94a3b8;margin:5px 0;font-size:0.9rem;">\u062a\u0642\u0631\u064a\u0631 \u062a\u062d\u0644\u064a\u0644 \u0634\u0627\u0645\u0644<\/p>',
+                '  <p style="color:#94a3b8;margin:5px 0;font-size:0.9rem;">\u062a\u0642\u0631\u064a\u0631 \u0627\u0633\u062a\u062e\u0628\u0627\u0631\u0627\u062a \u0627\u0644\u0633\u0648\u0642 \u0648\u0627\u0644\u0642\u0631\u0627\u0631<\/p>',
                 '  <p style="color:#64748b;font-size:0.75rem;margin:0;">' + arDate + '<\/p>',
                 '<\/div>',
                 arContent.length
@@ -9118,7 +9118,7 @@ window.exportFullAnalysisToPDFLegacy = async function () {
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(32);
         pdf.setTextColor(255, 255, 255);
-        pdf.text('SEO Gen Pro', pageW / 2, 55, { align: 'center' });
+        pdf.text('Daka Market Intelligence Spyer', pageW / 2, 55, { align: 'center' });
 
         // Sous-titre
         pdf.setFont('helvetica', 'normal');
@@ -9375,7 +9375,7 @@ window.exportFullAnalysisToPDFLegacy = async function () {
                     pdf.setFontSize(6.5);
                     pdf.setTextColor(sc[0], sc[1], sc[2]);
                     pdf.text(
-                        'SEO Gen Pro  |  ' + section.label + '  (' + (p + 1) + '/' + pagesNeeded + ')',
+                        'Daka Market Intelligence Spyer  |  ' + section.label + '  (' + (p + 1) + '/' + pagesNeeded + ')',
                         margin, margin - 3
                     );
                 }
@@ -9387,7 +9387,7 @@ window.exportFullAnalysisToPDFLegacy = async function () {
                 pdf.setFontSize(6.5);
                 pdf.setTextColor(100, 116, 139);
                 pdf.text(
-                    'SEO Gen Pro  \u2014  ' + section.label,
+                    'Daka Market Intelligence Spyer  \u2014  ' + section.label,
                     margin, pageH - 4
                 );
                 pdf.text(
@@ -9762,28 +9762,46 @@ window.exportFullAnalysisToPDF = async function () {
         pdf.rect(0, 0, 7, pageH, 'F');
         pdf.setFillColor(34, 211, 238);
         pdf.rect(7, 0, 1.4, pageH, 'F');
+        const pdfBrand = 'Daka Market Intelligence Spyer';
+        const coverTitle = isEn
+            ? 'Market intelligence report'
+            : STATE.currentLang === 'ar'
+                ? 'تقرير استخبارات السوق'
+                : 'Rapport d intelligence marché';
+        const coverHook = isEn
+            ? 'See the market before the market sees you.'
+            : STATE.currentLang === 'ar'
+                ? 'شاهد السوق قبل أن يراك السوق.'
+                : 'Voir le marché avant que le marché ne vous voie.';
+        const coverSub = isEn
+            ? 'Signals, friction, proof and the next move in one premium dossier.'
+            : STATE.currentLang === 'ar'
+                ? 'إشارات السوق، الاحتكاكات، الأدلة، والخطوة التالية في ملف واحد.'
+                : 'Signaux, frictions, preuves et prochaine action dans un dossier premium.';
+
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(11);
         pdf.setTextColor(103, 232, 249);
-        pdf.text('DAKA MARKET INTELLIGENCE SPYER', 21, 39);
+        pdf.text(pdfBrand.toUpperCase(), 21, 39);
         pdf.setFontSize(28);
         pdf.setTextColor(248, 250, 252);
-        const coverTitle = isEn ? 'Decision report' : 'Dossier décisionnel';
         pdf.text(coverTitle, 21, 58);
-        pdf.setFontSize(15);
+        pdf.setFontSize(12.8);
         pdf.setTextColor(196, 181, 253);
-        pdf.text(domain, 21, 70);
+        pdf.text(coverHook, 21, 68);
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(10);
         pdf.setTextColor(148, 163, 184);
-        pdf.text(isEn ? 'Prepared by the Daka teams' : 'Rapport préparé par les équipes Daka', 21, 82);
-        pdf.text(new Date().toLocaleDateString(isEn ? 'en-GB' : 'fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }), 21, 90);
+        pdf.text(coverSub, 21, 78);
+        pdf.text(domain, 21, 88);
+        pdf.text(isEn ? 'Prepared by the Daka teams' : STATE.currentLang === 'ar' ? 'أُعد بواسطة فرق Daka' : 'Rapport préparé par les équipes Daka', 21, 98);
+        pdf.text(new Date().toLocaleDateString(isEn ? 'en-GB' : 'fr-FR', { year: 'numeric', month: 'long', day: 'numeric' }), 21, 106);
 
-        let coverY = 116;
+        let coverY = 124;
         pdf.setFont('helvetica', 'bold');
         pdf.setFontSize(10);
         pdf.setTextColor(103, 232, 249);
-        pdf.text(isEn ? 'INCLUDED INTELLIGENCE' : 'INTELLIGENCES INCLUSES', 21, coverY);
+        pdf.text(isEn ? 'INCLUDED INTELLIGENCE' : STATE.currentLang === 'ar' ? 'الذكاءات المدرجة' : 'INTELLIGENCES INCLUSES', 21, coverY);
         coverY += 10;
         reports.forEach((report, index) => {
             pdf.setFillColor(30, 41, 59);
@@ -9840,7 +9858,7 @@ window.exportFullAnalysisToPDF = async function () {
             pdf.setFont('helvetica', 'normal');
             pdf.setFontSize(7.2);
             pdf.setTextColor(100, 116, 139);
-            pdf.text('Daka Market Intelligence Spyer', left, pageH - 9);
+            pdf.text(pdfBrand, left, pageH - 9);
             pdf.text(`${page - 1} / ${totalPages - 1}`, pageW - right, pageH - 9, { align: 'right' });
             pdf.setTextColor(124, 58, 237);
             pdf.text('Made by Daka', pageW / 2, pageH - 9, { align: 'center', angle: 0 });
@@ -10071,7 +10089,7 @@ function generateLocalReportHtml(data) {
         </div>
 
         <div style="text-align: center; font-size: 10px; color: #475569; margin-top: 40px; border-top: 1px solid #1e293b; padding-top: 15px;">
-            Généré localement par SEO Gen Pro Turbo Engine
+            Généré localement par Daka Market Intelligence Spyer
         </div>
     </div>`;
 }
@@ -14766,12 +14784,12 @@ function copyMagicPrompt(btn) {
 }
 async function initApp() {
     try {
-        console.log('SEO Gen Pro v5.0.0 - Initializing...');
+        console.log('Daka Market Intelligence Spyer v5.0.0 - Initializing...');
         await checkServerStatus();
         initEventListeners();
         setInterval(checkServerStatus, 30000);
         console.log('App ready');
-        setTimeout(() => toast.success('SEO Gen Pro pret !'), 500);
+        setTimeout(() => toast.success('Daka Market Intelligence Spyer pret !'), 500);
     } catch (error) {
         console.error('Init error:', error);
         toast.error('Erreur initialisation');
@@ -14810,7 +14828,7 @@ if (CONFIG.DEBUG_MODE) {
         // 🔥 FIX : J'ai supprimé "exportResults" qui faisait crasher l'initialisation
         checkServerStatus
     };
-    console.log('SEO GEN PRO READY - ON ECRASE GEMINI !');
+    console.log('DAKA MARKET INTELLIGENCE SPYER READY - ON ECRASE GEMINI !');
 }
 
 
