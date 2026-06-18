@@ -14,7 +14,7 @@
     "health": "node -e \"fetch('http://localhost:8080').then(r=>r.json()).then(d=>console.log('Status:',d.status,'| Uptime:',d.uptime)).catch(e=>{console.error(e.message);process.exit(1)})\"",
     "pm2:start": "pm2 start server.js --name daka-all-in-one -i max",
     "pm2:stop": "pm2 stop daka-all-in-one",
-    "pm2:restart": "pm2 restart server.js",
+    "pm2:restart": "pm2 restart daka-all-in-one",
     "pm2:logs": "pm2 logs daka-all-in-one",
     "pm2:monit": "pm2 monit",
     "check": "node -v && node --check scripts/funnel-railway-usable-preload.cjs && node --check scripts/funnel-route-dedupe-preload.cjs && node --check scripts/funnel-section-strategist-preload.cjs && node --check scripts/funnel-section-ui-preload.cjs && node scripts/apply-render-routing-patch.cjs",
