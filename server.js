@@ -11548,8 +11548,49 @@ function normalizeScrapeForFunnel(raw = {}) {
     mainPage.text ||
     mainPage.content ||
     '';
+const headings = result.headings || mainPage.headings || [];
+const ctas = result.ctas || mainPage.ctas || [];
+const title = result.title || mainPage.title || '';
+const h1 = result.h1 || mainPage.h1 || title || '';
+const finalUrl = result.finalUrl || mainPage.finalUrl || result.url || mainPage.url || '';
+const wordCount = String(bodyText || '').split(/\s+/).filter(Boolean).length;
 
+const rebuiltCopyIntel = {
+  ...(result.copyIntel || {}),
+  headlines: result.copyIntel?.headlines || {
+    h1: h1 ? [h1] : [],
+    h2: headings.slice(0, 8),
+    h3: []
+  },
+  realCTAs: Array.isArray(result.copyIntel?.realCTAs) && result.copyIntel.realCTAs.length
+    ? result.copyIntel.realCTAs
+    : ctas,
+  allButtons: Array.isArray(result.copyIntel?.allButtons) && result.copyIntel.allButtons.length
+    ? result.copyIntel.allButtons
+    : ctas,
+  pageSections: Array.isArray(result.copyIntel?.pageSections) && result.copyIntel.pageSections.length
+    ? result.copyIntel.pageSections
+    : sections,
+  heroText: result.copyIntel?.heroText || String(bodyText || '').slice(0, 1200),
+  bulletBenefits: result.copyIntel?.bulletBenefits || sections
+    .map(s => s?.title || s?.textPreview || '')
+    .filter(Boolean)
+    .slice(0, 8),
+  testimonials: result.copyIntel?.testimonials || [],
+  guarantees: result.copyIntel?.guarantees || [],
+  faq: result.copyIntel?.faq || []
+};
+
+const rebuiltBrand = {
+  ...(result.brand || {}),
+  fullTextSample: result.brand?.fullTextSample || bodyText,
+  wordCount: result.brand?.wordCount || wordCount,
+  hasSSL: result.brand?.hasSSL ?? /^https:/i.test(finalUrl)
+};
   return {
+    copyIntel: rebuiltCopyIntel,
+brand: rebuiltBrand,
+html: result.html || bodyText,
     ...result,
     mainPage: {
       ...mainPage,
@@ -11580,13 +11621,7 @@ function normalizeScrapeForFunnel(raw = {}) {
       : [mainPage]
   };
 }
-scrapeResult = normalizeScrapeForFunnel(scrapeResult);
 
-console.log(
-  `[FUNNEL-DATA] normalized sections=${scrapeResult.sectionRawBlocks?.length || 0} ` +
-  `body=${String(scrapeResult.bodyText || '').length} ` +
-  `title=${scrapeResult.title || scrapeResult.mainPage?.title || ''}`
-);
 
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
@@ -11686,7 +11721,15 @@ const langInstr = isAr
                 redirectIntel:    { totalRedirects: 0, isFunnelRedirect: false },
             };
         }
+scrape = normalizeScrapeForFunnel(scrape);
 
+console.log(
+  `[FUNNEL-DATA] normalized sections=${scrape.sectionRawBlocks?.length || 0} ` +
+  `body=${String(scrape.bodyText || '').length} ` +
+  `title=${scrape.title || scrape.mainPage?.title || ''}`
+);
+
+scrapedRawData = cleanFunnelScrapePayload(scrape);
         const commerceExploration = await runFunnelScrapeOnce('commerce-exploration', validUrl, () => exploreFunnelCommerce(validUrl, {
             lang: validLang,
             userContext: safeContext,
