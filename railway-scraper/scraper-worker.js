@@ -86,15 +86,34 @@ healthServer.listen(PORT, () => {
   console.log(`[RailwayScraper:${WORKER_ID}] Health server listening on ${PORT}`);
 });
 
+function sanitizeJsonString(value) {
+  return String(value || '')
+    .replace(/\u0000/g, '')
+    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
+    .replace(/[\uD800-\uDFFF]/g, '') // supprime les surrogates Unicode cassés
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 async function updateJob(jobId, patch) {
   const safePatch = JSON.parse(JSON.stringify(patch, (_key, value) => {
     if (typeof value === 'bigint') return value.toString();
     if (typeof value === 'number' && !Number.isFinite(value)) return null;
+    if (typeof value === 'string') return sanitizeJsonString(value);
     if (value === undefined) return null;
     return value;
   }));
 
   const body = JSON.stringify(safePatch);
+
+  try {
+    JSON.parse(body);
+  } catch (parseError) {
+    console.error(
+      `[RailwayScraper:${WORKER_ID}] Local JSON parse failed job=${jobId}: ${parseError.message}`
+    );
+    throw new Error(`Job update failed before request: invalid local JSON`);
+  }
 
   if (!body || body === 'undefined') {
     throw new Error('Job update failed before request: empty JSON body');
@@ -108,10 +127,10 @@ async function updateJob(jobId, patch) {
     headers: {
       apikey: SUPABASE_SERVICE_KEY,
       Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
-      'Content-Type': 'application/json',
+      'Content-Type': 'application/json; charset=utf-8',
       Prefer: 'return=minimal'
     },
-    body
+    body: Buffer.from(body, 'utf8')
   });
 
   if (!response.ok) {
@@ -120,6 +139,8 @@ async function updateJob(jobId, patch) {
     console.error(
       `[RailwayScraper:${WORKER_ID}] Supabase REST update failed job=${jobId} — ` +
       `status=${response.status} bodySize=${Buffer.byteLength(body, 'utf8')} ` +
+      `first=${body.slice(0, 120)} ` +
+      `last=${body.slice(-120)} ` +
       `response=${responseText.slice(0, 800)}`
     );
 
