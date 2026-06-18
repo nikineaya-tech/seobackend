@@ -126,85 +126,121 @@ async function updateJob(jobId, patch) {
     throw new Error(`Job update failed: HTTP ${response.status} ${responseText.slice(0, 300)}`);
   }
 }
-function buildSmallJobResult(source = {}, strategy = 'small-direct-result') {
-const sections = Array.isArray(source.sectionRawBlocks)
-? source.sectionRawBlocks
-: [];
+function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result') {
+  const sections = Array.isArray(source.sectionRawBlocks)
+    ? source.sectionRawBlocks
+    : [];
 
-const smallSections = sections.slice(0, 8).map((section, index) => ({
-position: Number(section.position || index + 1) || index + 1,
-type: clean(section.type || section.detectedType || '', 80),
-title: clean(section.title || section.label || '', 180),
-textPreview: clean(section.textPreview || section.text || '', 350),
-headings: arr(section.headings).slice(0, 4).map(v => clean(v, 140)).filter(Boolean),
-ctas: arr(section.ctas).slice(0, 3).map(cta => ({
-text: clean(cta?.text || cta?.label || cta || '', 100),
-href: clean(cta?.href || cta?.url || '', 220)
-})),
-prices: arr(section.prices || section.priceSignals).slice(0, 3),
-confidence: clean(section.confidence || 'MEDIUM', 30)
-}));
+  const safeTextArray = (value, limit = 10, max = 180) => {
+    return arr(value)
+      .slice(0, limit)
+      .map(item => clean(
+        typeof item === 'string'
+          ? item
+          : item?.text || item?.label || item?.title || item?.alt || item?.value || '',
+        max
+      ))
+      .filter(Boolean);
+  };
 
-const bodyText = clean(
-source.bodyText || source.text || source.content || '',
-5000
-);
+  const safeLinkArray = (value, limit = 8) => {
+    return arr(value)
+      .slice(0, limit)
+      .map(item => ({
+        text: clean(item?.text || item?.label || item?.title || item?.alt || '', 120),
+        url: clean(item?.url || item?.href || item?.src || '', 400)
+      }))
+      .filter(item => item.text || item.url);
+  };
 
-const counts = source.counts && typeof source.counts === 'object'
-? source.counts
-: {};
+  const safePriceArray = (value, limit = 5) => {
+    return arr(value)
+      .slice(0, limit)
+      .map(item => ({
+        value: clean(item?.value ?? item?.price ?? item ?? '', 80),
+        currency: clean(item?.currency || '', 20),
+        context: clean(item?.context || item?.label || '', 160)
+      }))
+      .filter(item => item.value || item.currency || item.context);
+  };
 
-return {
-success: source.success !== false,
-partial: true,
-compacted: true,
-compactStrategy: strategy,
+  const smallSections = sections.slice(0, 8).map((section, index) => ({
+    position: Number(section.position || index + 1) || index + 1,
+    type: clean(section.type || section.detectedType || '', 80),
+    title: clean(section.title || section.label || '', 180),
+    textPreview: clean(section.textPreview || section.text || '', 350),
+    headings: safeTextArray(section.headings, 4, 140),
+    paragraphs: safeTextArray(section.paragraphs, 4, 180),
+    ctas: safeLinkArray(section.ctas, 3),
+    images: safeLinkArray(section.images, 3),
+    links: safeLinkArray(section.links, 3),
+    prices: safePriceArray(section.prices || section.priceSignals, 3),
+    confidence: clean(section.confidence || 'MEDIUM', 30)
+  }));
 
+  const bodyText = clean(
+    source.bodyText || source.text || source.content || '',
+    4000
+  );
 
-provider: clean(source.provider || 'railway-playwright', 80),
-layer: clean(source.layer || 'railway-playwright', 80),
-source: clean(source.source || 'railway-playwright', 80),
+  const headings = safeTextArray(source.headings, 15, 160);
+  const ctas = safeLinkArray(source.ctas, 6);
+  const images = safeLinkArray(source.images, 6);
+  const links = safeLinkArray(source.links, 8);
+  const prices = safePriceArray(source.prices, 5);
 
-url: clean(source.url || '', 500),
-finalUrl: clean(source.finalUrl || source.url || '', 500),
-title: clean(source.title || '', 240),
-h1: clean(source.h1 || '', 240),
-metaDescription: clean(source.metaDescription || '', 500),
+  return {
+    success: source.success !== false,
+    partial: true,
+    compacted: true,
+    compactStrategy: strategy,
 
-bodyText,
-text: bodyText,
-content: bodyText,
+    provider: clean(source.provider || 'railway-playwright', 80),
+    layer: clean(source.layer || 'railway-playwright', 80),
 
-headings: arr(source.headings).slice(0, 20).map(v => clean(v, 180)).filter(Boolean),
-ctas: arr(source.ctas).slice(0, 10),
-images: arr(source.images).slice(0, 10),
-links: arr(source.links).slice(0, 12),
-prices: arr(source.prices).slice(0, 8),
+    url: clean(source.url || '', 500),
+    finalUrl: clean(source.finalUrl || source.url || '', 500),
+    title: clean(source.title || '', 220),
+    h1: clean(source.h1 || '', 220),
+    metaDescription: clean(source.metaDescription || '', 400),
 
-price: scalar(source.price),
-currency: clean(source.currency || '', 20),
+    bodyText,
+    text: bodyText,
+    content: bodyText,
 
-sectionRawBlocks: smallSections,
-sectionBlocks: smallSections,
-sectionsDetailed: smallSections,
-sections: smallSections,
+    headings,
+    ctas,
+    images,
+    links,
+    prices,
 
-counts: {
-  ...counts,
-  originalSections: sections.length,
-  savedSections: smallSections.length
-},
+    price: clean(source.price || '', 80),
+    currency: clean(source.currency || '', 20),
 
-limits: {
-  hotfixSmallResult: true,
-  htmlRemoved: true,
-  rawResultNotStored: true,
-  maxBodyText: 5000,
-  maxSections: 8
-}
+    sectionRawBlocks: smallSections,
+    sectionBlocks: smallSections,
+    sectionsDetailed: smallSections,
+    sections: smallSections,
 
+    counts: {
+      originalSections: sections.length,
+      savedSections: smallSections.length,
+      headings: headings.length,
+      ctas: ctas.length,
+      images: images.length,
+      links: links.length,
+      prices: prices.length
+    },
 
-};
+    limits: {
+      ultraSafeResult: true,
+      htmlRemoved: true,
+      rawObjectsRemoved: true,
+      rawResultNotStored: true,
+      maxBodyText: 4000,
+      maxSections: 8
+    }
+  };
 }
 
 /**
