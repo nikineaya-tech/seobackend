@@ -102,6 +102,86 @@ async function updateJob(jobId, patch) {
     throw new Error(`Job update failed: ${error.message}`);
   }
 }
+function buildSmallJobResult(source = {}, strategy = 'small-direct-result') {
+const sections = Array.isArray(source.sectionRawBlocks)
+? source.sectionRawBlocks
+: [];
+
+const smallSections = sections.slice(0, 8).map((section, index) => ({
+position: Number(section.position || index + 1) || index + 1,
+type: clean(section.type || section.detectedType || '', 80),
+title: clean(section.title || section.label || '', 180),
+textPreview: clean(section.textPreview || section.text || '', 350),
+headings: arr(section.headings).slice(0, 4).map(v => clean(v, 140)).filter(Boolean),
+ctas: arr(section.ctas).slice(0, 3).map(cta => ({
+text: clean(cta?.text || cta?.label || cta || '', 100),
+href: clean(cta?.href || cta?.url || '', 220)
+})),
+prices: arr(section.prices || section.priceSignals).slice(0, 3),
+confidence: clean(section.confidence || 'MEDIUM', 30)
+}));
+
+const bodyText = clean(
+source.bodyText || source.text || source.content || '',
+5000
+);
+
+const counts = source.counts && typeof source.counts === 'object'
+? source.counts
+: {};
+
+return {
+success: source.success !== false,
+partial: true,
+compacted: true,
+compactStrategy: strategy,
+
+
+provider: clean(source.provider || 'railway-playwright', 80),
+layer: clean(source.layer || 'railway-playwright', 80),
+source: clean(source.source || 'railway-playwright', 80),
+
+url: clean(source.url || '', 500),
+finalUrl: clean(source.finalUrl || source.url || '', 500),
+title: clean(source.title || '', 240),
+h1: clean(source.h1 || '', 240),
+metaDescription: clean(source.metaDescription || '', 500),
+
+bodyText,
+text: bodyText,
+content: bodyText,
+
+headings: arr(source.headings).slice(0, 20).map(v => clean(v, 180)).filter(Boolean),
+ctas: arr(source.ctas).slice(0, 10),
+images: arr(source.images).slice(0, 10),
+links: arr(source.links).slice(0, 12),
+prices: arr(source.prices).slice(0, 8),
+
+price: scalar(source.price),
+currency: clean(source.currency || '', 20),
+
+sectionRawBlocks: smallSections,
+sectionBlocks: smallSections,
+sectionsDetailed: smallSections,
+sections: smallSections,
+
+counts: {
+  ...counts,
+  originalSections: sections.length,
+  savedSections: smallSections.length
+},
+
+limits: {
+  hotfixSmallResult: true,
+  htmlRemoved: true,
+  rawResultNotStored: true,
+  maxBodyText: 5000,
+  maxSections: 8
+}
+
+
+};
+}
 
 /**
  * Verify a value is JSON-serializable and return its byte size.
@@ -176,199 +256,139 @@ async function processScrapingJob(job) {
 }
 
 async function claimAndProcess() {
-  if (stopping || processing) return;
-  processing = true;
+if (stopping || processing) return;
+processing = true;
+
+try {
+const { data, error } = await supabase.rpc('claim_next_job', {
+p_worker_id: WORKER_ID
+});
+
+
+if (error) {
+  METRICS.pollErrors++;
+  throw new Error(`Claim failed: ${error.message}`);
+}
+
+const job = Array.isArray(data) ? data[0] : data;
+if (!job?.id) return;
+
+METRICS.claimed++;
+METRICS.currentJobId = job.id;
+METRICS.lastJobId = job.id;
+METRICS.lastJobType = job.type;
+METRICS.lastJobAt = new Date().toISOString();
+
+console.log(`[RailwayScraper:${WORKER_ID}] Processing job=${job.id} type=${job.type}`);
+const startedAt = Date.now();
+
+try {
+  const rawResult = await processScrapingJob(job);
+  const safeResult = buildSafeJobResult(rawResult);
+  const safeResultBytes = assertJsonSafe(safeResult);
+
+  console.log(
+    `[RailwayScraper:${WORKER_ID}] Result ready job=${job.id} ` +
+    `size=${safeResultBytes === -1 ? 'NON-SERIALIZABLE' : safeResultBytes} bytes ` +
+    `sections=${countSections(safeResult)}`
+  );
+
+  const smallResult = safeResultBytes === -1
+    ? buildEmergencyResult(rawResult, 'safe-result-not-serializable')
+    : buildSmallJobResult(safeResult);
+
+  const smallResultBytes = assertJsonSafe(smallResult);
+
+  console.log(
+    `[RailwayScraper:${WORKER_ID}] Small result ready job=${job.id} ` +
+    `size=${smallResultBytes === -1 ? 'NON-SERIALIZABLE' : smallResultBytes} bytes ` +
+    `sections=${countSections(smallResult)}`
+  );
+
+  if (smallResultBytes === -1) {
+    throw new Error('Small result is not JSON serializable');
+  }
+
+  await updateJob(job.id, {
+    status: 'done',
+    result: smallResult,
+    error: null,
+    finished_at: new Date().toISOString()
+  });
+
+  METRICS.done++;
+
+  console.log(
+    `[RailwayScraper:${WORKER_ID}] Done job=${job.id} type=${job.type} ` +
+    `in ${Date.now() - startedAt}ms | sections=${countSections(smallResult)} ` +
+    `strategy=${smallResult.compactStrategy || 'small'}`
+  );
+} catch (jobError) {
+  const isNonScrapingJob = jobError?.code === 'NON_SCRAPING_JOB';
+  const retryCount = isNonScrapingJob
+    ? Number(job.retry_count || 0)
+    : Number(job.retry_count || 0) + 1;
+
+  const shouldRetry = !isNonScrapingJob && retryCount < MAX_RETRIES;
+  const errorMessage = String(jobError?.message || jobError).slice(0, 2000);
+
+  const errorPatch = {
+    status: shouldRetry ? 'pending' : 'error',
+    retry_count: retryCount,
+    error: errorMessage,
+    finished_at: shouldRetry ? null : new Date().toISOString()
+  };
+
+  if (isNonScrapingJob) {
+    errorPatch.result = {
+      success: false,
+      code: 'NON_SCRAPING_JOB',
+      message: errorMessage,
+      allowedJobTypes: [...ALLOWED_JOB_TYPES],
+      routeTo: 'Render API backend'
+    };
+  }
 
   try {
-    const { data, error } = await supabase.rpc('claim_next_job', {
-      p_worker_id: WORKER_ID
-    });
-
-    if (error) {
-      METRICS.pollErrors++;
-      throw new Error(`Claim failed: ${error.message}`);
-    }
-
-    const job = Array.isArray(data) ? data[0] : data;
-    if (!job?.id) return;
-
-    METRICS.claimed++;
-    METRICS.currentJobId = job.id;
-    METRICS.lastJobId = job.id;
-    METRICS.lastJobType = job.type;
-    METRICS.lastJobAt = new Date().toISOString();
-
-    console.log(`[RailwayScraper:${WORKER_ID}] Processing job=${job.id} type=${job.type}`);
-    const startedAt = Date.now();
-
-    try {
-      const rawResult = await processScrapingJob(job);
-      const safeResult = buildSafeJobResult(rawResult);
-
-      // Pre-flight JSON check: catch non-serializable values before Supabase
-      // ever sees them.  If this fails, skip straight to the minimal fallback.
-      const safeResultBytes = assertJsonSafe(safeResult);
-      if (safeResultBytes === -1) {
-        console.warn(
-          `[RailwayScraper:${WORKER_ID}] safeResult is not JSON-serializable job=${job.id} — ` +
-          `skipping to minimal fallback`
-        );
-      }
-
-      console.log(
-        `[RailwayScraper:${WORKER_ID}] Result ready job=${job.id} ` +
-        `size=${safeResultBytes === -1 ? 'NON-SERIALIZABLE' : safeResultBytes} bytes ` +
-        `sections=${countSections(safeResult)}`
-      );
-
-      // Layer 1: attempt with the full safe result (only if it serializes).
-      let savedWithFull = false;
-      if (safeResultBytes !== -1) {
-        try {
-          await updateJob(job.id, {
-            status: 'done',
-            result: safeResult,
-            error: null,
-            finished_at: new Date().toISOString()
-          });
-
-          METRICS.done++;
-          savedWithFull = true;
-          console.log(
-            `[RailwayScraper:${WORKER_ID}] Done job=${job.id} type=${job.type} ` +
-            `in ${Date.now() - startedAt}ms | sections=${countSections(safeResult)}`
-          );
-        } catch (saveError) {
-          console.error(
-            `[RailwayScraper:${WORKER_ID}] Done update failed job=${job.id}: ${saveError.message}`
-          );
-        }
-      }
-
-      // Layer 2: minimal fallback — fewer sections, stripped fields.
-      if (!savedWithFull) {
-        const fallbackResult = buildMinimalJobResult(rawResult, 'full-result-save-failed');
-        const fallbackBytes = assertJsonSafe(fallbackResult);
-
-        console.log(
-          `[RailwayScraper:${WORKER_ID}] Fallback result ready job=${job.id} ` +
-          `size=${fallbackBytes === -1 ? 'NON-SERIALIZABLE' : fallbackBytes} bytes ` +
-          `sections=${countSections(fallbackResult)}`
-        );
-
-        // Layer 3: if even the minimal fallback won't serialize, use an
-        // emergency stub that is guaranteed to be JSON-safe.
-        const resultToSave = fallbackBytes === -1
-          ? buildEmergencyResult(rawResult, 'fallback-result-not-serializable')
-          : fallbackResult;
-
-        if (fallbackBytes === -1) {
-          console.warn(
-            `[RailwayScraper:${WORKER_ID}] Fallback result also non-serializable job=${job.id} — ` +
-            `using emergency stub`
-          );
-        }
-
-        try {
-          await updateJob(job.id, {
-            status: 'done',
-            result: resultToSave,
-            error: null,
-            finished_at: new Date().toISOString()
-          });
-
-          METRICS.done++;
-          console.warn(
-            `[RailwayScraper:${WORKER_ID}] Done with fallback job=${job.id} type=${job.type} ` +
-            `in ${Date.now() - startedAt}ms | sections=${countSections(resultToSave)} ` +
-            `strategy=${resultToSave.compactStrategy || 'minimal'}`
-          );
-        } catch (fallbackSaveError) {
-          // Both attempts failed — mark the job as error so it can be retried
-          // or inspected, rather than silently disappearing.
-          console.error(
-            `[RailwayScraper:${WORKER_ID}] Fallback update also failed job=${job.id}: ` +
-            `${fallbackSaveError.message} — marking job as error`
-          );
-          try {
-            await updateJob(job.id, {
-              status: 'error',
-              result: null,
-              error: `All result save attempts failed. Last error: ${fallbackSaveError.message}`.slice(0, 2000),
-              finished_at: new Date().toISOString()
-            });
-          } catch (finalErr) {
-            METRICS.pollErrors++;
-            console.error(
-              `[RailwayScraper:${WORKER_ID}] CRITICAL all save attempts failed job=${job.id}: ` +
-              `${finalErr.message}`
-            );
-          }
-        }
-      }
-    } catch (jobError) {
-      const isNonScrapingJob = jobError?.code === 'NON_SCRAPING_JOB';
-      const retryCount = isNonScrapingJob
-        ? Number(job.retry_count || 0)
-        : Number(job.retry_count || 0) + 1;
-
-      const shouldRetry = !isNonScrapingJob && retryCount < MAX_RETRIES;
-      const errorMessage = String(jobError?.message || jobError).slice(0, 2000);
-
-      const errorPatch = {
-        status: shouldRetry ? 'pending' : 'error',
-        retry_count: retryCount,
-        error: errorMessage,
-        finished_at: shouldRetry ? null : new Date().toISOString()
-      };
-
-      if (isNonScrapingJob) {
-        errorPatch.result = {
-          success: false,
-          code: 'NON_SCRAPING_JOB',
-          message: errorMessage,
-          allowedJobTypes: [...ALLOWED_JOB_TYPES],
-          routeTo: 'Render API backend'
-        };
-      }
-
-      try {
-        await updateJob(job.id, errorPatch);
-      } catch (errorUpdateFailure) {
-        METRICS.pollErrors++;
-        console.error(
-          `[RailwayScraper:${WORKER_ID}] CRITICAL error-state update failed job=${job.id}: ` +
-          `${errorUpdateFailure.message}`
-        );
-      }
-
-      if (isNonScrapingJob) {
-        METRICS.rejected++;
-        console.warn(
-          `[RailwayScraper:${WORKER_ID}] Rejected non-scraping job=${job.id} ` +
-          `type=${job.type}. Must run on Render.`
-        );
-      } else if (shouldRetry) {
-        METRICS.retried++;
-        console.warn(
-          `[RailwayScraper:${WORKER_ID}] Retry ${retryCount}/${MAX_RETRIES} ` +
-          `job=${job.id}: ${jobError.message}`
-        );
-      } else {
-        METRICS.failed++;
-        console.error(
-          `[RailwayScraper:${WORKER_ID}] Failed job=${job.id}: ${jobError.message}`
-        );
-      }
-    }
-  } catch (err) {
+    await updateJob(job.id, errorPatch);
+  } catch (errorUpdateFailure) {
     METRICS.pollErrors++;
-    console.error(`[RailwayScraper:${WORKER_ID}] Poll error: ${err.message}`);
-  } finally {
-    METRICS.currentJobId = null;
-    processing = false;
+    console.error(
+      `[RailwayScraper:${WORKER_ID}] CRITICAL error-state update failed job=${job.id}: ` +
+      `${errorUpdateFailure.message}`
+    );
+  }
+
+  if (isNonScrapingJob) {
+    METRICS.rejected++;
+    console.warn(
+      `[RailwayScraper:${WORKER_ID}] Rejected non-scraping job=${job.id} ` +
+      `type=${job.type}. Must run on Render.`
+    );
+  } else if (shouldRetry) {
+    METRICS.retried++;
+    console.warn(
+      `[RailwayScraper:${WORKER_ID}] Retry ${retryCount}/${MAX_RETRIES} ` +
+      `job=${job.id}: ${jobError.message}`
+    );
+  } else {
+    METRICS.failed++;
+    console.error(
+      `[RailwayScraper:${WORKER_ID}] Failed job=${job.id}: ${jobError.message}`
+    );
   }
 }
+
+
+} catch (err) {
+METRICS.pollErrors++;
+console.error(`[RailwayScraper:${WORKER_ID}] Poll error: ${err.message}`);
+} finally {
+METRICS.currentJobId = null;
+processing = false;
+}
+}
+
 
 function buildSafeJobResult(result = {}) {
   const pages = Array.isArray(result.pages)
