@@ -3833,13 +3833,16 @@ async function exploreFunnelCommerce(url, options = {}) {
     recommended: buildStrategicPricingFromCommerce({}, userSignal, {})
   });
   const buildCommerceFromRailwayResult = (railwayResult = {}) => {
-    const mainPage =
-      railwayResult.mainPage ||
-      (Array.isArray(railwayResult.pages) ? railwayResult.pages[0] : null) ||
-      {};
-
-    const pages = Array.isArray(railwayResult.pages) && railwayResult.pages.length
+    const exploredPages = Array.isArray(railwayResult.pages) && railwayResult.pages.length
       ? railwayResult.pages
+      : (Array.isArray(railwayResult.pagesExplored) ? railwayResult.pagesExplored : []);
+    const mainPage = railwayResult.mainPage
+      || exploredPages.find(page => page && typeof page === 'object')
+      || railwayResult.scrapeData
+      || railwayResult.data
+      || railwayResult;
+    const pages = exploredPages.filter(page => page && typeof page === 'object').length
+      ? exploredPages.filter(page => page && typeof page === 'object')
       : [mainPage].filter(Boolean);
 
     const products = pages
@@ -3944,6 +3947,31 @@ async function exploreFunnelCommerce(url, options = {}) {
     cache.set(cacheKey, result, 60 * 10);
     return result;
   };
+
+  const baseScrape = options.baseScrape && typeof options.baseScrape === 'object'
+    ? options.baseScrape
+    : null;
+  const baseSectionCount = [
+    baseScrape?.sectionRawBlocks,
+    baseScrape?.sectionsDetailed,
+    baseScrape?.mainPage?.sectionRawBlocks,
+    baseScrape?.mainPage?.sectionsDetailed
+  ].reduce((max, value) => Math.max(max, Array.isArray(value) ? value.length : 0), 0);
+  const baseBodyLength = String(
+    baseScrape?.bodyText || baseScrape?.text || baseScrape?.content
+      || baseScrape?.mainPage?.bodyText || ''
+  ).length;
+  const baseCtaCount = Array.isArray(baseScrape?.copyIntel?.realCTAs)
+    ? baseScrape.copyIntel.realCTAs.length
+    : (Array.isArray(baseScrape?.ctas) ? baseScrape.ctas.length : 0);
+  if (baseScrape && (baseSectionCount > 0 || baseBodyLength > 200 || baseCtaCount > 0 || baseScrape?.priceIntel?.detected)) {
+    console.log(
+      `[FUNNEL-DEDUPE] Commerce reuses deep scrape sections=${baseSectionCount} ` +
+      `body=${baseBodyLength} ctas=${baseCtaCount}; no second Railway job`
+    );
+    return buildCommerceFromRailwayResult(baseScrape);
+  }
+
   const softTimeoutMs = Number(process.env.FUNNEL_COMMERCE_TIMEOUT_MS || 14000);
 
     const run = async () => {

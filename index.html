@@ -3824,7 +3824,7 @@ table tbody td {
                     <p class="card-subtitle" data-i18n="tab2_subtitle">Recevez les changements a faire, les preuves observees et des exemples de textes prets a tester.</p>
                 </div>
 
-                <form id="funnelForm" onsubmit="analyzeFunnel(event)">
+                <form id="funnelForm">
                     <div class="form-group" style="margin-bottom: 25px;">
                         <label class="form-label" data-i18n="label_funnel_url"><i class="fas fa-crosshairs"></i> URL de la Cible (Concurrent)</label>
                         <div class="input-wrapper">
@@ -6140,6 +6140,7 @@ window.tabManager = tabManager;
 window.dakaCurrentAbortController = null;
 window.dakaAnalysisCancelled = false;
 window.dakaActiveAnalysisId = 0;
+window.dakaFunnelAnalysisInFlight = null;
 
 const DAKA_LOADER_COPY = {
   competitors: {
@@ -6213,6 +6214,7 @@ function cancelDakaAnalysis() {
   window.dakaAnalysisCancelled = true;
   window.dakaActiveAnalysisId += 1;
   window.dakaCurrentAbortController?.abort();
+  window.dakaFunnelAnalysisInFlight = null;
   hideDakaLoader();
   toast.info(STATE.currentLang === 'ar' ? 'تم إلغاء التحليل.' : STATE.currentLang === 'en' ? 'Analysis cancelled.' : 'Analyse annulée.');
 }
@@ -13032,7 +13034,10 @@ function initEventListeners() {
 
 
 async function analyzeFunnel(e) {
-  if (e) e.preventDefault();
+  if (e) {
+    e.preventDefault();
+    e.stopImmediatePropagation?.();
+  }
 
   const elUrl = document.getElementById('funnelUrl');
   const url   = elUrl?.value.trim();
@@ -13060,6 +13065,29 @@ async function analyzeFunnel(e) {
       : 'Format URL invalide. Ex: https://concurrent.com'
     );
   }
+
+  const requestKey = (() => {
+    try {
+      const normalized = new URL(url.startsWith('http') ? url : `https://${url}`);
+      normalized.hash = '';
+      normalized.hostname = normalized.hostname.toLowerCase().replace(/^www\./, '');
+      normalized.pathname = normalized.pathname.replace(/\/+$/, '') || '/';
+      return `${normalized.toString()}|${lang}|${angle}`;
+    } catch (_) {
+      return `${url.toLowerCase()}|${lang}|${angle}`;
+    }
+  })();
+  if (window.dakaFunnelAnalysisInFlight) {
+    const message = STATE.currentLang === 'ar'
+      ? 'تحليل Funnel جار بالفعل. انتظر النتيجة أو ألغ التحليل الحالي.'
+      : STATE.currentLang === 'en'
+        ? 'A Funnel analysis is already running. Wait for it or cancel it first.'
+        : 'Une analyse Funnel est déjà en cours. Attendez le résultat ou annulez-la.';
+    toast.info(message);
+    return;
+  }
+  const runToken = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  window.dakaFunnelAnalysisInFlight = { token: runToken, requestKey, startedAt: Date.now() };
 
   /* ── RESET avant nouvelle analyse ────────────────────────── */
   resetAnalysis('funnel');
@@ -13098,6 +13126,9 @@ async function analyzeFunnel(e) {
     console.error('Funnel Error:', error);
     toast.error(error.message || 'Erreur de connexion.');
   } finally {
+    if (window.dakaFunnelAnalysisInFlight?.token === runToken) {
+      window.dakaFunnelAnalysisInFlight = null;
+    }
     setButtonLoading('funnelBtn', false);
     hideLoading('loadingFunnel');
   }
