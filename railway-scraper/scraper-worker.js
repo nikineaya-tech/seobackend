@@ -389,13 +389,9 @@ console.log(`[RailwayScraper:${WORKER_ID}] Processing job=${job.id} type=${job.t
 const startedAt = Date.now();
 
 try {
-    const rawResult = await processScrapingJob(job);
-    const safeResult = buildSafeJobResult(rawResult);
-    const safeResultBytes = assertJsonSafe(safeResult);
-    const safeMainPage = safeResult?.mainPage || safeResult?.page || safeResult;
-    const safeSectionCount = countSections(safeResult);
-    const safeBodyLength = String(safeMainPage?.bodyText || safeResult?.bodyText || '').length;
-    console.log(`[RAILWAY-SCRAPE] done sections=${safeSectionCount} body=${safeBodyLength}`);
+  const rawResult = await processScrapingJob(job);
+  const safeResult = buildSafeJobResult(rawResult);
+  const safeResultBytes = assertJsonSafe(safeResult);
 
   console.log(
     `[RailwayScraper:${WORKER_ID}] Result ready job=${job.id} ` +
