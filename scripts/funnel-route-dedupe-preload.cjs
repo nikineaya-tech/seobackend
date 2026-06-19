@@ -55,7 +55,8 @@ function createDedupeRouteHandler(routePath, handlers) {
     if (!key) return runHandlers(req, res, next, handlers);
 
     const cached = completed.get(key);
-    if (cached && Date.now() - cached.createdAt <= CACHE_TTL_MS) {
+    const bypassCompletedCache = req.body?.skipCache === true || req.query?.skipCache === 'true';
+    if (!bypassCompletedCache && cached && Date.now() - cached.createdAt <= CACHE_TTL_MS) {
       console.log(`${LOG} Cache HIT for ${shortKey(key)}`);
       return sendCaptured(res, cached.payload);
     }
@@ -82,8 +83,14 @@ function createDedupeRouteHandler(routePath, handlers) {
 
     const finishSuccess = payload => {
       if (!payload) return;
-      completed.set(key, { payload, createdAt: Date.now() });
-      trimCompletedCache();
+      const statusCode = Number(payload.statusCode || 200);
+      const responseBody = payload.body;
+      const cacheable = statusCode >= 200 && statusCode < 300
+        && !(responseBody && typeof responseBody === 'object' && responseBody.success === false);
+      if (cacheable) {
+        completed.set(key, { payload, createdAt: Date.now() });
+        trimCompletedCache();
+      }
       inFlight.delete(key);
       resolveEntry(payload);
     };
@@ -198,12 +205,20 @@ function buildDedupeKey(req, routePath) {
   const normalizedUrl = normalizeUrl(url);
   if (!normalizedUrl) return '';
 
-  const lang = pickFirstString(body.lang, body.language, req.query?.lang, req.query?.language, 'auto').toLowerCase();
+  const lang = pickFirstString(body.userLang, body.lang, body.language, req.query?.lang, req.query?.language, 'auto').toLowerCase();
   const country = pickFirstString(body.country, body.geo, body.market, req.query?.country, 'auto').toLowerCase();
+  const businessContext = body.context && typeof body.context === 'object' ? body.context : {};
   const context = hashShort(JSON.stringify({
     offerType: body.offerType || body.type || '',
     mode: body.mode || body.analysisMode || '',
-    source: body.source || ''
+    source: body.source || '',
+    salesAngle: body.salesAngle || body.angle || '',
+    offer: businessContext.offer || '',
+    audience: businessContext.audience || '',
+    objective: businessContext.objective || '',
+    priceRange: businessContext.priceRange || '',
+    knownCompetitors: businessContext.knownCompetitors || '',
+    cityOrRegion: businessContext.cityOrRegion || ''
   }));
   const userScope = buildUserScope(req);
 
@@ -238,6 +253,7 @@ function normalizeUrl(value) {
     }
     parsed.hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
     parsed.pathname = parsed.pathname.replace(/\/+$/, '') || '/';
+    parsed.searchParams.sort?.();
     return parsed.toString();
   } catch {
     return raw.toLowerCase().slice(0, 300);

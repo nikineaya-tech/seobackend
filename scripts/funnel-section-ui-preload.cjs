@@ -197,6 +197,7 @@ function buildClientScript() {
 
   function mount(scanner) {
     ensureScoreDonutDestroy();
+    if (document.querySelector('#resultsFunnel .funnel-surgery-shell')) return;
     if (!scanner || !asArray(scanner.surgeryMatrix).length) return;
     const card = findExistingSectionsCard();
     if (!card) return;

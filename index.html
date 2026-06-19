@@ -3824,7 +3824,7 @@ table tbody td {
                     <p class="card-subtitle" data-i18n="tab2_subtitle">Recevez les changements a faire, les preuves observees et des exemples de textes prets a tester.</p>
                 </div>
 
-                <form id="funnelForm" onsubmit="analyzeFunnel(event)">
+                <form id="funnelForm">
                     <div class="form-group" style="margin-bottom: 25px;">
                         <label class="form-label" data-i18n="label_funnel_url"><i class="fas fa-crosshairs"></i> URL de la Cible (Concurrent)</label>
                         <div class="input-wrapper">
@@ -6140,6 +6140,7 @@ window.tabManager = tabManager;
 window.dakaCurrentAbortController = null;
 window.dakaAnalysisCancelled = false;
 window.dakaActiveAnalysisId = 0;
+window.dakaFunnelAnalysisInFlight = null;
 
 const DAKA_LOADER_COPY = {
   competitors: {
@@ -6213,6 +6214,7 @@ function cancelDakaAnalysis() {
   window.dakaAnalysisCancelled = true;
   window.dakaActiveAnalysisId += 1;
   window.dakaCurrentAbortController?.abort();
+  window.dakaFunnelAnalysisInFlight = null;
   hideDakaLoader();
   toast.info(STATE.currentLang === 'ar' ? 'تم إلغاء التحليل.' : STATE.currentLang === 'en' ? 'Analysis cancelled.' : 'Analyse annulée.');
 }
@@ -9541,7 +9543,13 @@ function createFixedPdfClone(el, exportOptions = {}) {
             .daka-pdf-fixed-clone .competitor-card,
             .daka-pdf-fixed-clone .executive-block,
             .daka-pdf-fixed-clone .executive-action,
-            .daka-pdf-fixed-clone .decision-proof-panel {
+            .daka-pdf-fixed-clone .decision-proof-panel,
+            .daka-pdf-fixed-clone .funnel-v2-hero,
+            .daka-pdf-fixed-clone .funnel-v2-action,
+            .daka-pdf-fixed-clone .funnel-v2-order > div,
+            .daka-pdf-fixed-clone .funnel-v2-facts > div,
+            .daka-pdf-fixed-clone .funnel-v2-copy-stack > div,
+            .daka-pdf-fixed-clone .funnel-v2-missing-architecture {
                 margin: 0 0 18px !important;
                 padding: 16px 18px !important;
                 border-radius: 8px !important;
@@ -9551,6 +9559,57 @@ function createFixedPdfClone(el, exportOptions = {}) {
                 color: #0f172a !important;
                 box-shadow: none !important;
                 overflow: visible !important;
+            }
+            .daka-pdf-fixed-clone .funnel-surgery-shell {
+                margin: 0 0 20px !important;
+                padding: 0 !important;
+                border: 1px solid #cbd5e1 !important;
+                border-radius: 8px !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                box-shadow: none !important;
+                overflow: visible !important;
+            }
+            .daka-pdf-fixed-clone .funnel-surgery-hero {
+                display: grid !important;
+                grid-template-columns: 1fr auto !important;
+                gap: 12px !important;
+                padding: 16px 18px !important;
+                border-bottom: 1px solid #dbe4ef !important;
+                background: #eaf4fb !important;
+            }
+            .daka-pdf-fixed-clone .funnel-surgery-hero h2,
+            .daka-pdf-fixed-clone .funnel-surgery-item-head strong { color: #0f172a !important; }
+            .daka-pdf-fixed-clone .funnel-surgery-hero p,
+            .daka-pdf-fixed-clone .funnel-surgery-item p { color: #334155 !important; }
+            .daka-pdf-fixed-clone .funnel-surgery-grid,
+            .daka-pdf-fixed-clone .funnel-surgery-list { display: block !important; padding: 12px !important; }
+            .daka-pdf-fixed-clone .funnel-surgery-category {
+                display: block !important;
+                margin: 0 0 12px !important;
+                border: 1px solid #dbe4ef !important;
+                border-radius: 6px !important;
+                background: #ffffff !important;
+                break-inside: avoid !important;
+            }
+            .daka-pdf-fixed-clone .funnel-surgery-category > summary {
+                display: grid !important;
+                grid-template-columns: auto 1fr !important;
+                padding: 10px 12px !important;
+                border-bottom: 1px solid #e2e8f0 !important;
+                background: #f8fafc !important;
+                list-style: none !important;
+            }
+            .daka-pdf-fixed-clone .funnel-surgery-chevron { display: none !important; }
+            .daka-pdf-fixed-clone .funnel-surgery-item {
+                margin: 0 0 8px !important;
+                padding: 10px 12px !important;
+                border: 1px solid #e2e8f0 !important;
+                border-left: 4px solid #0ea5e9 !important;
+                border-radius: 5px !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                break-inside: avoid !important;
             }
             .daka-pdf-fixed-clone .report-section-head {
                 display: block !important;
@@ -9895,10 +9954,13 @@ function getDakaExportModules() {
             team: isAr ? 'فريق Daka للتحويل والعرض' : isEn ? 'Daka Conversion & Offer Team' : 'Équipe Daka Conversion & Offre',
             features: [
                 feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
-                feature('audit', 'fa-shield-halved', 'Diagnostic de la page', 'Page diagnosis', 'تشخيص الصفحة'),
+                feature('page', 'fa-layer-group', 'Architecture de la page', 'Page architecture', 'بنية الصفحة'),
+                feature('page-order', 'fa-arrow-down-1-9', 'Nouvel ordre recommandé', 'Recommended page order', 'الترتيب المقترح للصفحة'),
+                feature('frictions', 'fa-triangle-exclamation', 'Frictions de conversion', 'Conversion blockers', 'عوائق التحويل'),
                 feature('money', 'fa-hand-holding-dollar', 'Offre, prix et confiance', 'Offer, price and trust', 'العرض والسعر والثقة'),
-                feature('page', 'fa-pen-nib', 'Sections et textes', 'Sections and copy', 'الأقسام والنصوص'),
-                feature('proof', 'fa-link', 'Preuves et liens à consulter', 'Evidence and links to review', 'الأدلة والروابط للفحص')
+                feature('message', 'fa-bullseye', 'Message, promesse et CTA', 'Message, promise and CTA', 'الرسالة والوعد وCTA'),
+                feature('plan', 'fa-list-check', 'Plan de reconstruction', 'Reconstruction plan', 'خطة إعادة البناء'),
+                feature('details', 'fa-database', 'Données observées et limites', 'Observed data and limits', 'البيانات المرصودة والحدود')
             ]
         },
         {
@@ -12981,7 +13043,10 @@ function initEventListeners() {
 
 
 async function analyzeFunnel(e) {
-  if (e) e.preventDefault();
+  if (e) {
+    e.preventDefault();
+    e.stopImmediatePropagation?.();
+  }
 
   const elUrl = document.getElementById('funnelUrl');
   const url   = elUrl?.value.trim();
@@ -13009,6 +13074,29 @@ async function analyzeFunnel(e) {
       : 'Format URL invalide. Ex: https://concurrent.com'
     );
   }
+
+  const requestKey = (() => {
+    try {
+      const normalized = new URL(url.startsWith('http') ? url : `https://${url}`);
+      normalized.hash = '';
+      normalized.hostname = normalized.hostname.toLowerCase().replace(/^www\./, '');
+      normalized.pathname = normalized.pathname.replace(/\/+$/, '') || '/';
+      return `${normalized.toString()}|${lang}|${angle}`;
+    } catch (_) {
+      return `${url.toLowerCase()}|${lang}|${angle}`;
+    }
+  })();
+  if (window.dakaFunnelAnalysisInFlight) {
+    const message = STATE.currentLang === 'ar'
+      ? 'تحليل Funnel جار بالفعل. انتظر النتيجة أو ألغ التحليل الحالي.'
+      : STATE.currentLang === 'en'
+        ? 'A Funnel analysis is already running. Wait for it or cancel it first.'
+        : 'Une analyse Funnel est déjà en cours. Attendez le résultat ou annulez-la.';
+    toast.info(message);
+    return;
+  }
+  const runToken = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  window.dakaFunnelAnalysisInFlight = { token: runToken, requestKey, startedAt: Date.now() };
 
   /* ── RESET avant nouvelle analyse ────────────────────────── */
   resetAnalysis('funnel');
@@ -13047,6 +13135,9 @@ async function analyzeFunnel(e) {
     console.error('Funnel Error:', error);
     toast.error(error.message || 'Erreur de connexion.');
   } finally {
+    if (window.dakaFunnelAnalysisInFlight?.token === runToken) {
+      window.dakaFunnelAnalysisInFlight = null;
+    }
     setButtonLoading('funnelBtn', false);
     hideLoading('loadingFunnel');
   }
@@ -13646,7 +13737,73 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
     </section>`;
 }
 
-function displayFunnelResults(data) {
+function repairFunnelSurgeryText(value) {
+    const text = String(value ?? '');
+    if (!/[ÃÂØÙ]/.test(text)) return text;
+    try { return decodeURIComponent(escape(text)); } catch (_) { return text; }
+}
+
+function normalizeFunnelSurgeryForRender(data = {}) {
+    const source = data.funnelSurgery || data.funnelSectionSurgery || data.sectionSurgery || data.funnelSectionScanner || data.spyReport?.funnelSurgery || data.spyReport?.funnelSectionSurgery || {};
+    const diagnosis = source.sectionDiagnosis || source.scanner || {};
+    const matrix = Array.isArray(source.surgeryMatrix) ? source.surgeryMatrix : [];
+    const list = (...values) => values.find(value => Array.isArray(value) && value.length) || [];
+    const rowsFor = pattern => matrix.filter(row => pattern.test(repairFunnelSurgeryText(row?.decision).toLowerCase()));
+    return {
+        matrix,
+        keep: list(diagnosis.keep, source.keepSections, rowsFor(/garder|keep|إبقاء/)),
+        improve: list(diagnosis.improve, source.improveSections, source.updateSections, source.sectionsToModify, rowsFor(/améliorer|ameliorer|improve|modify|modifier|تحسين/)),
+        move: list(diagnosis.move, source.moveSections, rowsFor(/déplacer|deplacer|move|نقل/)),
+        remove: list(diagnosis.removeOrMerge, source.removeOrMergeSections, source.sectionsToRemoveOrMerge, source.sectionsToRemove, rowsFor(/supprimer|fusionner|remove|merge|حذف|دمج/)),
+        add: list(diagnosis.add, source.missingSections, source.sectionsToAdd, rowsFor(/ajouter|add|missing|إضافة/))
+    };
+}
+
+function renderFunnelSectionSurgery(data, opts = {}) {
+    const isAr = Boolean(opts.isAr), isEn = Boolean(opts.isEn), dir = isAr ? 'rtl' : 'ltr';
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+    const model = normalizeFunnelSurgeryForRender(data);
+    if (!(model.matrix.length || model.keep.length || model.improve.length || model.move.length || model.remove.length || model.add.length)) return '';
+    const copy = isAr ? {
+        eyebrow: 'تشريح صفحة التحويل', title: 'بنية الصفحة المكتشفة', subtitle: 'ما يجب الحفاظ عليه أو تعديله أو نقله أو حذفه أو إضافته، بناء على العناصر المرصودة.',
+        keep: 'أقسام يجب الحفاظ عليها', improve: 'أقسام يجب تعديلها', move: 'أقسام يجب نقلها', remove: 'أقسام يجب حذفها أو دمجها', add: 'أقسام غائبة يجب إضافتها',
+        evidence: 'الدليل المرصود', action: 'الإجراء الدقيق', confidence: 'الثقة', empty: 'لا توجد توصية موثوقة في هذه الفئة.', checked: 'عنصرا تم فحصه'
+    } : isEn ? {
+        eyebrow: 'Conversion page surgery', title: 'Detected page architecture', subtitle: 'What to keep, modify, move, remove, merge, or add from observed page signals.',
+        keep: 'Sections to keep', improve: 'Sections to modify', move: 'Sections to move', remove: 'Sections to remove or merge', add: 'Missing sections to add',
+        evidence: 'Observed evidence', action: 'Exact action', confidence: 'Confidence', empty: 'No reliable recommendation in this category.', checked: 'items checked'
+    } : {
+        eyebrow: 'Chirurgie de la page de vente', title: 'Architecture de page détectée', subtitle: 'Ce qu’il faut garder, modifier, déplacer, supprimer, fusionner ou ajouter à partir des éléments observés.',
+        keep: 'Sections présentes à garder', improve: 'Sections présentes à modifier', move: 'Sections à déplacer', remove: 'Sections à supprimer ou fusionner', add: 'Sections absentes à ajouter',
+        evidence: 'Preuve observée', action: 'Action exacte', confidence: 'Confiance', empty: 'Aucune recommandation fiable dans cette catégorie.', checked: 'éléments vérifiés'
+    };
+    const valueFor = (item, keys, fallback = '') => {
+        for (const key of keys) {
+            const value = item?.[key];
+            if (value !== null && value !== undefined && String(value).trim()) return repairFunnelSurgeryText(Array.isArray(value) ? value.join(' · ') : value).trim();
+        }
+        return fallback;
+    };
+    const definitions = [
+        ['keep', copy.keep, 'fa-circle-check', '#22c55e'], ['improve', copy.improve, 'fa-pen-ruler', '#f59e0b'],
+        ['move', copy.move, 'fa-arrows-up-down-left-right', '#38bdf8'], ['remove', copy.remove, 'fa-code-merge', '#fb7185'],
+        ['add', copy.add, 'fa-circle-plus', '#a78bfa']
+    ];
+    const renderItem = (item, index) => {
+        const name = valueFor(item, ['section', 'sectionType', 'name', 'label'], `Section ${index + 1}`);
+        const evidence = valueFor(item, ['evidence', 'observedEvidence', 'detectedText', 'currentEvidence', 'reason', 'evidenceOfAbsence']);
+        const action = valueFor(item, ['action', 'correction', 'improvement', 'newRecommendation', 'recommendedPosition', 'suggestedPlacement', 'currentProblem']);
+        const priority = valueFor(item, ['priority'], 'MEDIUM'), confidence = valueFor(item, ['confidence'], 'MEDIUM');
+        return `<article class="funnel-surgery-item" dir="${dir}"><div class="funnel-surgery-item-head"><strong dir="auto">${safe(name)}</strong><span>${safe(priority)}</span></div>${evidence ? `<p><b>${safe(copy.evidence)}:</b> <span dir="auto">${safe(evidence)}</span></p>` : ''}${action ? `<p><b>${safe(copy.action)}:</b> <span dir="auto">${safe(action)}</span></p>` : ''}<small>${safe(copy.confidence)}: ${safe(confidence)}</small></article>`;
+    };
+    const categories = definitions.map(([key, label, icon, color], categoryIndex) => {
+        const items = model[key] || [];
+        return `<details class="funnel-surgery-category" style="--surgery-accent:${color}" ${categoryIndex < 2 ? 'open' : ''}><summary data-no-collapse="true"><span class="funnel-surgery-category-icon"><i class="fas ${icon}"></i></span><span><strong>${safe(label)}</strong><small>${items.length} section${items.length > 1 ? 's' : ''}</small></span><i class="fas fa-chevron-down funnel-surgery-chevron"></i></summary><div class="funnel-surgery-list">${items.length ? items.slice(0, 10).map(renderItem).join('') : `<p class="funnel-surgery-empty">${safe(copy.empty)}</p>`}</div></details>`;
+    }).join('');
+    const total = model.matrix.length || definitions.reduce((sum, def) => sum + (model[def[0]] || []).length, 0);
+    return `<section class="funnel-surgery-shell" data-export-feature="page" dir="${dir}"><header class="funnel-surgery-hero"><div><span>${safe(copy.eyebrow)}</span><h2>${safe(copy.title)}</h2><p>${safe(copy.subtitle)}</p></div><div class="funnel-surgery-total"><strong>${total}</strong><small>${safe(copy.checked)}</small></div></header><div class="funnel-surgery-grid">${categories}</div></section>`;
+}
+function displayFunnelResultsLegacy(data) {
     const container = document.getElementById('resultsFunnel');
     if (!container) return;
     const isAr = STATE.currentLang === 'ar';
@@ -13704,6 +13861,7 @@ const auditSectionMap = Array.isArray(data.auditSectionMap) && data.auditSection
 
 const auditEvidence = data.auditEvidence || data.rawIntel?.evidence || {};
 const decisionProofHtml = renderDecisionProofPanel(data, { isAr, isEn, dir, esc: escapeHtml });
+const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
     // ══════════════════════════════════════════════════
     // ✅ NORMALISATION V12 → V9/V10 RÉTRO-COMPAT
     // ══════════════════════════════════════════════════
@@ -16263,6 +16421,7 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
    container.innerHTML = `
   <div id="funnelReport" dir="${dir}">
     ${renderExecutiveSummary(data, 'funnel', { isAr, isEn })}
+    ${funnelSurgeryHtml}
     ${renderReportSection('audit', funnelReportLabels.audit, funnelReportLabels.auditSub, 'fa-shield-halved', `
         ${cotHtml}
         ${headerHtml}
@@ -16414,6 +16573,165 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
       : isEn ? '✅ Analysis complete!'
       :        '✅ Analyse complète !'
     );
+}
+function funnelV2Text(value, fallback = '') {
+    if (value === null || value === undefined) return fallback;
+    if (typeof value === 'string' || typeof value === 'number') {
+        const text = repairFunnelSurgeryText(value).trim();
+        return text && !/^(null|undefined|n\/a|na)$/i.test(text) ? text : fallback;
+    }
+    if (Array.isArray(value)) return value.map(item => funnelV2Text(item)).filter(Boolean).join(' · ') || fallback;
+    if (typeof value === 'object') {
+        for (const key of ['action', 'title', 'summary', 'verdict', 'section', 'friction', 'name', 'value', 'text', 'label']) {
+            const text = funnelV2Text(value[key]);
+            if (text) return text;
+        }
+    }
+    return fallback;
+}
+
+function funnelV2Array(...values) {
+    const selected = values.find(value => Array.isArray(value) && value.length) || [];
+    const seen = new Set();
+    return selected.filter(item => {
+        const key = funnelV2Text(item).toLowerCase().replace(/\s+/g, ' ').slice(0, 180);
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+function renderFunnelV2Cards(items, opts = {}) {
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+    const list = Array.isArray(items) ? items : [];
+    if (!list.length) return '';
+    return `<div class="funnel-v2-card-grid">${list.slice(0, opts.limit || 6).map((item, index) => {
+        const object = item && typeof item === 'object' ? item : { title: item };
+        const title = funnelV2Text(object.section || object.sectionType || object.friction || object.title || object.action || object.name, `${opts.itemLabel || 'Action'} ${index + 1}`);
+        const observation = funnelV2Text(object.observedEvidence || object.evidence || object.detectedText || object.currentEvidence || object.problem || object.reason || object.why);
+        const action = funnelV2Text(object.correction || object.action || object.improvement || object.newRecommendation || object.recommendedPosition || object.howTo);
+        const priority = funnelV2Text(object.priority || object.impact, 'MEDIUM');
+        const confidence = funnelV2Text(object.confidence, 'MEDIUM');
+        return `<article class="funnel-v2-action" style="--funnel-v2-accent:${safe(opts.accent || '#22d3ee')}">
+            <div class="funnel-v2-action-head"><strong dir="auto">${safe(title)}</strong><span>${safe(priority)}</span></div>
+            ${observation ? `<p dir="auto"><b>${safe(opts.observationLabel || 'Observation')}:</b> ${safe(observation)}</p>` : ''}
+            ${action && action !== title ? `<p dir="auto"><b>${safe(opts.actionLabel || 'Action')}:</b> ${safe(action)}</p>` : ''}
+            <small>${safe(opts.confidenceLabel || 'Confiance')}: ${safe(confidence)}</small>
+        </article>`;
+    }).join('')}</div>`;
+}
+
+function displayFunnelResults(data = {}) {
+    const container = document.getElementById('resultsFunnel');
+    if (!container) return;
+    const isAr = STATE.currentLang === 'ar';
+    const isEn = STATE.currentLang === 'en';
+    const dir = isAr ? 'rtl' : 'ltr';
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+    const copy = isAr ? {
+        kicker: 'قرار التحويل', title: 'ما الذي يمنع الصفحة من البيع الآن؟', partial: 'تم استلام بيانات جزئية. يعرض Daka فقط الإشارات القابلة للتحقق.',
+        checked: 'قسم تم فحصه', fixes: 'إجراءات ذات أولوية', confidence: 'الثقة', architecture: 'هندسة الصفحة', architectureSub: 'الأقسام الموجودة والناقصة وما يجب تغييره.',
+        order: 'الترتيب الجديد للصفحة', orderSub: 'تسلسل يقلل التردد قبل الإجراء الرئيسي.', current: 'الترتيب المرصود', recommended: 'الترتيب المقترح',
+        frictions: 'العوائق التي تمنع التحويل', frictionsSub: 'مشكلات مثبتة وتأثيرها والإصلاح الدقيق.', offer: 'العرض والسعر والثقة', offerSub: 'وضوح القيمة والسعر والأدلة التي تقلل المخاطر.',
+        message: 'الرسالة والوعد وCTA', messageSub: 'النصوص الحاسمة التي يجب عرضها قبل القرار.', plan: 'خطة إعادة البناء', planSub: 'الآن، خلال 7 أيام، وخلال 30 يوما.',
+        now: 'الآن', seven: 'خلال 7 أيام', thirty: 'خلال 30 يوما', observed: 'الملاحظة', action: 'الإجراء', details: 'البيانات المرصودة والحدود', detailsSub: 'مصدر القراءة ومستوى الثقة وما يجب التحقق منه.',
+        noData: 'لم تصل بنية الأقسام في هذه الاستجابة. أعد التحليل بعد التحقق من Railway.', expert: 'خبير Funnel'
+    } : isEn ? {
+        kicker: 'Conversion decision', title: 'What prevents this page from selling now?', partial: 'Partial data received. Daka shows only verifiable signals.',
+        checked: 'sections checked', fixes: 'priority fixes', confidence: 'Confidence', architecture: 'Page architecture', architectureSub: 'What exists, what is missing, and what must change.',
+        order: 'Recommended page order', orderSub: 'A sequence that reduces hesitation before the primary action.', current: 'Observed order', recommended: 'Recommended order',
+        frictions: 'Conversion blockers', frictionsSub: 'Observed problems, impact, and exact correction.', offer: 'Offer, price and trust', offerSub: 'Value clarity, pricing, and proof that lowers risk.',
+        message: 'Message, promise and CTA', messageSub: 'Decision copy to place before the action.', plan: 'Reconstruction plan', planSub: 'Now, within 7 days, and within 30 days.',
+        now: 'Now', seven: 'Within 7 days', thirty: 'Within 30 days', observed: 'Observation', action: 'Action', details: 'Observed data and limits', detailsSub: 'Reading source, confidence, and manual checks.',
+        noData: 'No section architecture arrived in this response. Run the analysis again after checking Railway.', expert: 'Funnel expert'
+    } : {
+        kicker: 'Décision conversion', title: 'Ce qui empêche cette page de vendre maintenant', partial: 'Données partielles reçues. Daka affiche uniquement les signaux vérifiables.',
+        checked: 'sections vérifiées', fixes: 'corrections prioritaires', confidence: 'Confiance', architecture: 'Architecture de la page', architectureSub: 'Ce qui existe, ce qui manque et ce qu’il faut changer.',
+        order: 'Nouvel ordre recommandé', orderSub: 'Un parcours qui réduit l’hésitation avant l’action principale.', current: 'Ordre observé', recommended: 'Ordre recommandé',
+        frictions: 'Frictions qui bloquent la conversion', frictionsSub: 'Problèmes observés, impact et correction exacte.', offer: 'Offre, prix et confiance', offerSub: 'Clarté de la valeur, prix et preuves qui réduisent le risque.',
+        message: 'Message, promesse et CTA', messageSub: 'Les textes décisifs à placer avant l’action.', plan: 'Plan de reconstruction', planSub: 'Maintenant, sous 7 jours et sous 30 jours.',
+        now: 'Maintenant', seven: 'Sous 7 jours', thirty: 'Sous 30 jours', observed: 'Observation', action: 'Action', details: 'Données observées et limites', detailsSub: 'Source de lecture, confiance et vérifications manuelles.',
+        noData: 'Aucune architecture de sections n’est arrivée dans cette réponse. Relancez après vérification de Railway.', expert: 'Expert Funnel'
+    };
+
+    try {
+        const surgerySource = data.funnelSurgery || data.funnelSectionSurgery || data.sectionSurgery || data.funnelSectionScanner || {};
+        const surgery = normalizeFunnelSurgeryForRender(data);
+        const verdict = surgerySource.verdict || {};
+        const sectionTotal = Number(surgery.matrix.length || (surgery.keep.length + surgery.improve.length + surgery.move.length + surgery.remove.length + surgery.add.length) || data.rawIntel?.sectionsDetailed?.length || data.rawIntel?.sectionsDetected?.length || 0);
+        const priorityTotal = Number((surgery.improve?.length || 0) + (surgery.remove?.length || 0) + (surgery.add?.length || 0));
+        const confidence = funnelV2Text(verdict.confidence || surgerySource.observedDataLimits?.confidence || data.scrapeReliability?.confidence, 'LOW');
+        const verdictText = funnelV2Text(verdict.summary || data.auditSummary?.verdict || data.executiveBrief?.priority, copy.partial);
+        const surgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
+        const order = surgerySource.recommendedOrder || {};
+        const currentOrder = funnelV2Array(order.currentOrder, data.rawIntel?.sectionsDetected);
+        const recommendedOrder = funnelV2Array(order.recommendedOrder, surgerySource.finalPageBlueprint);
+        const frictions = funnelV2Array(surgerySource.frictions, data.auditIssues, data.conversionFriction?.frictions);
+        const offer = surgerySource.offerPriceValue || {};
+        const offerDetected = surgerySource.offerDetected || {};
+        const message = surgerySource.messagePromiseCta || {};
+        const proof = surgerySource.proofTrust || {};
+        const plan = surgerySource.priorityPlan || {};
+        const limits = surgerySource.observedDataLimits || {};
+
+        const orderHtml = (currentOrder.length || recommendedOrder.length) ? `<div class="funnel-v2-order">
+            ${currentOrder.length ? `<div><span>${safe(copy.current)}</span><ol>${currentOrder.slice(0, 12).map(item => `<li>${safe(funnelV2Text(item))}</li>`).join('')}</ol></div>` : ''}
+            ${recommendedOrder.length ? `<div class="recommended"><span>${safe(copy.recommended)}</span><ol>${recommendedOrder.slice(0, 12).map(item => `<li>${safe(funnelV2Text(item))}</li>`).join('')}</ol></div>` : ''}
+        </div>` : `<p class="funnel-v2-empty">${safe(copy.noData)}</p>`;
+
+        const offerRows = [
+            [isAr ? 'نوع العرض' : isEn ? 'Offer type' : 'Type d’offre', offerDetected.offerType],
+            [isAr ? 'H1 المرصود' : isEn ? 'Observed H1' : 'H1 observé', offerDetected.h1 || message.currentH1],
+            [isAr ? 'السعر' : isEn ? 'Price' : 'Prix', offer.price ? `${offer.price} ${offer.currency || ''}` : (isAr ? 'غير مؤكد' : isEn ? 'Unconfirmed' : 'Non confirmé')],
+            [isAr ? 'وضوح العرض' : isEn ? 'Offer clarity' : 'Clarté de l’offre', offer.offerClarity],
+            [isAr ? 'القيمة المدركة' : isEn ? 'Perceived value' : 'Valeur perçue', offer.valuePerception],
+            [isAr ? 'الإجراء' : isEn ? 'Action' : 'Action', offer.action]
+        ].filter(([, value]) => funnelV2Text(value));
+        const offerHtml = `<div class="funnel-v2-facts">${offerRows.map(([label, value]) => `<div><small>${safe(label)}</small><strong dir="auto">${safe(funnelV2Text(value))}</strong></div>`).join('')}</div>
+            ${(proof.present?.length || proof.weak?.length || proof.missing?.length) ? `<div class="funnel-v2-proof-row">${funnelV2Array(proof.present, proof.weak, proof.missing).slice(0, 8).map(item => `<span>${safe(funnelV2Text(item))}</span>`).join('')}</div>` : ''}`;
+        const messageRows = [
+            [isAr ? 'H1 مقترح' : isEn ? 'Proposed H1' : 'H1 proposé', message.proposedH1],
+            [isAr ? 'العنوان الفرعي' : isEn ? 'Proposed subtitle' : 'Sous-titre proposé', message.proposedSubtitle],
+            ['CTA', message.proposedCta],
+            ['Microcopy', message.microcopy],
+            [isAr ? 'طمأنة' : isEn ? 'Reassurance' : 'Réassurance', message.reassurance]
+        ].filter(([, value]) => funnelV2Text(value));
+        const messageHtml = messageRows.length ? `<div class="funnel-v2-copy-stack">${messageRows.map(([label, value]) => `<div><small>${safe(label)}</small><p dir="auto">${safe(funnelV2Text(value))}</p></div>`).join('')}</div>` : `<p class="funnel-v2-empty">${safe(copy.noData)}</p>`;
+        const planColumn = (title, items, accent) => `<div class="funnel-v2-plan-column" style="--funnel-v2-accent:${accent}"><h4>${safe(title)}</h4>${renderFunnelV2Cards(items, { accent, limit: 3, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">—</p>`}</div>`;
+        const planHtml = `<div class="funnel-v2-plan">${planColumn(copy.now, funnelV2Array(plan.now), '#fb7185')}${planColumn(copy.seven, funnelV2Array(plan.sevenDays), '#f59e0b')}${planColumn(copy.thirty, funnelV2Array(plan.thirtyDays), '#22c55e')}</div>`;
+        const detailRows = [
+            [isAr ? 'الصفحات المحللة' : isEn ? 'Pages analyzed' : 'Pages analysées', limits.pagesAnalyzed],
+            [isAr ? 'مصدر القراءة' : isEn ? 'Reading source' : 'Source de lecture', limits.sourceScraping || data.scrapeReliability?.executionLayer],
+            [copy.confidence, limits.confidence || confidence],
+            [isAr ? 'السعر مؤكد' : isEn ? 'Price confirmed' : 'Prix confirmé', limits.priceConfirmed === true ? (isAr ? 'نعم' : isEn ? 'Yes' : 'Oui') : (isAr ? 'لا' : isEn ? 'No' : 'Non')]
+        ].filter(([, value]) => value !== null && value !== undefined && value !== '');
+        const detailsHtml = `<div class="funnel-v2-facts">${detailRows.map(([label, value]) => `<div><small>${safe(label)}</small><strong dir="auto">${safe(funnelV2Text(value))}</strong></div>`).join('')}</div>
+            ${funnelV2Array(limits.limits, limits.inaccessibleElements).length ? `<ul class="funnel-v2-limit-list">${funnelV2Array(limits.limits, limits.inaccessibleElements).map(item => `<li>${safe(funnelV2Text(item))}</li>`).join('')}</ul>` : ''}`;
+
+        container.innerHTML = `<div id="funnelReport" class="funnel-v2-report" dir="${dir}">
+            <section class="funnel-v2-hero" data-export-feature="summary">
+                <div class="funnel-v2-hero-copy"><span>${safe(copy.kicker)}</span><h2>${safe(copy.title)}</h2><p dir="auto">${safe(verdictText)}</p></div>
+                <div class="funnel-v2-metrics"><div><strong>${sectionTotal}</strong><small>${safe(copy.checked)}</small></div><div><strong>${priorityTotal}</strong><small>${safe(copy.fixes)}</small></div><div><strong>${safe(confidence)}</strong><small>${safe(copy.confidence)}</small></div></div>
+            </section>
+            ${surgeryHtml || `<section class="funnel-v2-missing-architecture" data-export-feature="page"><i class="fas fa-triangle-exclamation"></i><p>${safe(copy.noData)}</p></section>`}
+            ${renderReportSection('page-order', copy.order, copy.orderSub, 'fa-arrow-down-1-9', orderHtml, { isAr, isEn, open: true })}
+            ${renderReportSection('frictions', copy.frictions, copy.frictionsSub, 'fa-triangle-exclamation', renderFunnelV2Cards(frictions, { accent: '#fb7185', limit: 5, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">${safe(copy.partial)}</p>`, { isAr, isEn, open: true })}
+            ${renderReportSection('money', copy.offer, copy.offerSub, 'fa-tags', offerHtml, { isAr, isEn })}
+            ${renderReportSection('message', copy.message, copy.messageSub, 'fa-bullseye', messageHtml, { isAr, isEn })}
+            ${renderReportSection('plan', copy.plan, copy.planSub, 'fa-list-check', planHtml, { isAr, isEn, open: true })}
+            ${renderReportSection('details', copy.details, copy.detailsSub, 'fa-database', detailsHtml, { isAr, isEn })}
+            ${renderExpertDock('funnel', { isAr, isEn })}
+        </div>`;
+        cleanRenderedOutput(container);
+        showResults('resultsFunnel');
+        STATE.lastFunnelResults = data;
+        window.updateExportBadges?.();
+    } catch (error) {
+        console.error('[FunnelV2] Render failed:', error);
+        container.innerHTML = `<section class="funnel-v2-render-error" dir="${dir}"><i class="fas fa-triangle-exclamation"></i><div><strong>${safe(copy.partial)}</strong><p>${safe(copy.noData)}</p></div></section>`;
+        showResults('resultsFunnel');
+        STATE.lastFunnelResults = data;
+    }
 }
 // ════════════════════════════════════════════════════════════════
 // MAGIC PROMPT - Redesign Prompt Display
@@ -18057,6 +18375,104 @@ const PDF_EXPORT = {
     .executive-nav button { flex: 1 1 130px; }
 }
 
+.funnel-v2-report { min-width: 0; width: 100%; }
+.funnel-v2-hero { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(280px,.75fr); gap:18px; align-items:stretch; margin:18px 0 22px; padding:22px; border:1px solid rgba(34,211,238,.28); border-radius:16px; background:radial-gradient(circle at 8% 0%,rgba(34,211,238,.14),transparent 34%),linear-gradient(145deg,#071426,#0f172a 64%,#111827); box-shadow:0 22px 48px rgba(0,0,0,.24); }
+.funnel-v2-hero-copy > span { color:#67e8f9; font-size:.67rem; font-weight:900; letter-spacing:.11em; text-transform:uppercase; }
+.funnel-v2-hero h2 { margin:8px 0; color:#f8fafc; font-size:clamp(1.3rem,2.5vw,2rem); line-height:1.18; }
+.funnel-v2-hero p { margin:0; max-width:760px; color:#cbd5e1; font-size:.93rem; line-height:1.68; }
+.funnel-v2-metrics { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; align-content:center; }
+.funnel-v2-metrics > div { min-width:0; padding:13px 8px; text-align:center; border:1px solid rgba(148,163,184,.14); border-radius:10px; background:rgba(2,6,23,.52); }
+.funnel-v2-metrics strong { display:block; color:#f8fafc; font-size:clamp(1rem,2vw,1.38rem); line-height:1.1; overflow-wrap:anywhere; }
+.funnel-v2-metrics small { display:block; margin-top:5px; color:#94a3b8; font-size:.58rem; font-weight:800; line-height:1.35; }
+.funnel-v2-card-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.funnel-v2-action { min-width:0; padding:13px; border:1px solid rgba(148,163,184,.13); border-inline-start:4px solid var(--funnel-v2-accent); border-radius:9px; background:rgba(2,6,23,.46); }
+.funnel-v2-action-head { display:flex; align-items:flex-start; justify-content:space-between; gap:9px; margin-bottom:7px; }
+.funnel-v2-action-head strong { min-width:0; color:#f8fafc; font-size:.82rem; line-height:1.4; overflow-wrap:anywhere; }
+.funnel-v2-action-head span { flex:0 0 auto; padding:3px 7px; border:1px solid var(--funnel-v2-accent); border-radius:999px; color:var(--funnel-v2-accent); font-size:.56rem; font-weight:900; }
+.funnel-v2-action p { margin:5px 0; color:#b9c4d4; font-size:.75rem; line-height:1.55; overflow-wrap:anywhere; }
+.funnel-v2-action p b { color:#e2e8f0; }
+.funnel-v2-action small { color:#7dd3fc; font-size:.61rem; font-weight:800; }
+.funnel-v2-order { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.funnel-v2-order > div { padding:14px; border:1px solid rgba(148,163,184,.13); border-radius:10px; background:rgba(2,6,23,.38); }
+.funnel-v2-order > div.recommended { border-color:rgba(34,197,94,.24); background:rgba(34,197,94,.045); }
+.funnel-v2-order span { color:#7dd3fc; font-size:.68rem; font-weight:900; text-transform:uppercase; }
+.funnel-v2-order ol { margin:12px 0 0; padding-inline-start:22px; color:#d7e0ec; }
+.funnel-v2-order li { margin:0 0 8px; padding-inline-start:4px; font-size:.79rem; line-height:1.45; }
+.funnel-v2-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
+.funnel-v2-facts > div { min-width:0; padding:12px; border:1px solid rgba(148,163,184,.13); border-radius:9px; background:rgba(2,6,23,.4); }
+.funnel-v2-facts small { display:block; margin-bottom:5px; color:#7dd3fc; font-size:.61rem; font-weight:900; text-transform:uppercase; }
+.funnel-v2-facts strong { display:block; color:#e2e8f0; font-size:.78rem; line-height:1.48; overflow-wrap:anywhere; }
+.funnel-v2-proof-row { display:flex; flex-wrap:wrap; gap:7px; margin-top:10px; }
+.funnel-v2-proof-row span { padding:5px 8px; border:1px solid rgba(34,197,94,.2); border-radius:999px; color:#86efac; background:rgba(34,197,94,.06); font-size:.65rem; }
+.funnel-v2-copy-stack { display:grid; gap:9px; }
+.funnel-v2-copy-stack > div { padding:12px 14px; border-inline-start:4px solid #a78bfa; border-radius:8px; background:rgba(139,92,246,.065); }
+.funnel-v2-copy-stack small { color:#c4b5fd; font-size:.62rem; font-weight:900; text-transform:uppercase; }
+.funnel-v2-copy-stack p { margin:5px 0 0; color:#f1f5f9; font-size:.84rem; line-height:1.55; }
+.funnel-v2-plan { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.funnel-v2-plan-column { min-width:0; }
+.funnel-v2-plan-column h4 { margin:0 0 9px; padding-bottom:8px; border-bottom:2px solid var(--funnel-v2-accent); color:#f8fafc; font-size:.8rem; }
+.funnel-v2-plan-column .funnel-v2-card-grid { grid-template-columns:1fr; }
+.funnel-v2-empty { margin:0; padding:13px; color:#94a3b8; font-size:.78rem; line-height:1.55; }
+.funnel-v2-limit-list { margin:12px 0 0; padding-inline-start:20px; color:#cbd5e1; font-size:.76rem; line-height:1.55; }
+.funnel-v2-missing-architecture,.funnel-v2-render-error { display:flex; align-items:flex-start; gap:12px; margin:16px 0; padding:15px; border:1px solid rgba(245,158,11,.28); border-radius:10px; color:#fde68a; background:rgba(245,158,11,.07); }
+.funnel-v2-missing-architecture p,.funnel-v2-render-error p { margin:0; font-size:.8rem; line-height:1.55; }
+.funnel-v2-render-error strong { display:block; margin-bottom:5px; color:#fff; }
+@media (max-width:820px) { .funnel-v2-hero { grid-template-columns:1fr; padding:16px; } .funnel-v2-card-grid,.funnel-v2-order,.funnel-v2-facts,.funnel-v2-plan { grid-template-columns:1fr; } }
+@media (max-width:430px) { .funnel-v2-hero { margin:12px 0 16px; padding:14px; border-radius:12px; } .funnel-v2-hero h2 { font-size:1.2rem; } .funnel-v2-hero p { font-size:.8rem; } .funnel-v2-metrics > div { padding:10px 5px; } .funnel-v2-action { padding:11px; } }
+@media (prefers-reduced-motion:reduce) { .funnel-v2-report *,.funnel-v2-report *::before,.funnel-v2-report *::after { animation:none !important; transition:none !important; } }
+.funnel-surgery-shell {
+    margin: 18px 0 22px;
+    overflow: hidden;
+    border: 1px solid rgba(34, 211, 238, .24);
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(6, 18, 36, .98), rgba(15, 23, 42, .96));
+    box-shadow: 0 20px 52px rgba(0, 0, 0, .22);
+}
+.funnel-surgery-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 18px;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid rgba(148, 163, 184, .14);
+    background: radial-gradient(circle at 4% 0%, rgba(34, 211, 238, .12), transparent 34%), radial-gradient(circle at 96% 0%, rgba(139, 92, 246, .14), transparent 36%);
+}
+.funnel-surgery-hero > div:first-child > span { color: #67e8f9; font-size: .66rem; font-weight: 900; letter-spacing: .1em; text-transform: uppercase; }
+.funnel-surgery-hero h2 { margin: 7px 0 5px; color: #fff; font-size: clamp(1.1rem, 2vw, 1.5rem); line-height: 1.25; }
+.funnel-surgery-hero p { margin: 0; max-width: 720px; color: #a5b4c7; font-size: .84rem; line-height: 1.6; }
+.funnel-surgery-total { min-width: 98px; padding: 12px; text-align: center; border-radius: 14px; border: 1px solid rgba(167, 139, 250, .24); background: rgba(139, 92, 246, .1); }
+.funnel-surgery-total strong { display: block; color: #fff; font-size: 1.45rem; }
+.funnel-surgery-total small { color: #c4b5fd; font-size: .62rem; font-weight: 800; }
+.funnel-surgery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px; }
+.funnel-surgery-category { min-width: 0; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--surgery-accent) 26%, transparent); background: rgba(255, 255, 255, .025); }
+.funnel-surgery-category:last-child { grid-column: 1 / -1; }
+.funnel-surgery-category > summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 62px; padding: 12px; cursor: pointer; list-style: none; }
+.funnel-surgery-category > summary::-webkit-details-marker { display: none; }
+.funnel-surgery-category > summary > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
+.funnel-surgery-category > summary strong { color: #f8fafc; font-size: .82rem; overflow-wrap: anywhere; }
+.funnel-surgery-category > summary small { color: #94a3b8; font-size: .65rem; }
+.funnel-surgery-category-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: var(--surgery-accent); background: color-mix(in srgb, var(--surgery-accent) 12%, transparent); }
+.funnel-surgery-chevron { color: #64748b; transition: transform .2s ease; }
+.funnel-surgery-category[open] .funnel-surgery-chevron { transform: rotate(180deg); }
+.funnel-surgery-list { display: grid; gap: 8px; padding: 0 10px 10px; }
+.funnel-surgery-item { min-width: 0; padding: 11px; border-radius: 11px; border-inline-start: 3px solid var(--surgery-accent); background: rgba(2, 6, 23, .42); }
+.funnel-surgery-item-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
+.funnel-surgery-item-head strong { color: #f8fafc; font-size: .79rem; line-height: 1.35; overflow-wrap: anywhere; }
+.funnel-surgery-item-head span { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; color: var(--surgery-accent); background: color-mix(in srgb, var(--surgery-accent) 10%, transparent); font-size: .56rem; font-weight: 900; }
+.funnel-surgery-item p { margin: 4px 0; color: #b7c2d3; font-size: .72rem; line-height: 1.55; overflow-wrap: anywhere; }
+.funnel-surgery-item p b { color: #e2e8f0; }
+.funnel-surgery-item small { display: block; margin-top: 6px; color: #7dd3fc; font-size: .6rem; font-weight: 800; }
+.funnel-surgery-empty { margin: 0; padding: 10px; color: #64748b; font-size: .72rem; }
+@media (max-width: 700px) {
+    .funnel-surgery-shell { border-radius: 14px; }
+    .funnel-surgery-hero { grid-template-columns: minmax(0, 1fr) 74px; gap: 10px; padding: 14px; }
+    .funnel-surgery-hero p { font-size: .76rem; }
+    .funnel-surgery-total { min-width: 0; padding: 9px 6px; }
+    .funnel-surgery-total strong { font-size: 1.18rem; }
+    .funnel-surgery-grid { grid-template-columns: 1fr; padding: 9px; }
+    .funnel-surgery-category:last-child { grid-column: auto; }
+    .funnel-surgery-category > summary { min-height: 56px; padding: 10px; }
+}
 .report-section {
     margin: 18px 0;
     border-radius: 18px;
