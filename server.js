@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════
-// DAKA MARKET INTELLIGENCE SPYER API v3.0.0 - PRODUCTION ULTRA-GRADE
+// SEO GEN PRO API v3.0.0 - PRODUCTION ULTRA-GRADE
 // DevOps Level: LEGENDARY | Bttle-tested | Scale: 100K+ req/day
 // Architecture: Microservices-ready | Event-driven | Zero-downtime
 // ═══════════════════════════════════════════════════════════════════
@@ -238,6 +238,7 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
         'scrape_url',
         'deep-scrape',
         'deep_scrape',
+        'scrape_funnel_deep',
         'product-scrape',
         'product_scrape',
         'page-scrape',
@@ -383,93 +384,6 @@ function cleanFunnelScrapePayload(input, depth = 0) {
         out[key] = cleanFunnelScrapePayload(value, depth + 1);
     }
     return out;
-}
-
-const FUNNEL_ANALYSIS_ROUTE_CACHE_TTL_MS = Number(process.env.FUNNEL_ANALYSIS_CACHE_TTL_MS || 20 * 60 * 1000);
-const funnelAnalysisRouteInFlight = new Map();
-const funnelAnalysisRouteCache = new Map();
-
-function buildFunnelAnalysisRouteKey(req) {
-    try {
-        const body = req.body || {};
-        const rawUrl = body.url || body.targetUrl || body.website || '';
-        if (!rawUrl) return null;
-        const authUser = req.user?.id || req.user?.email || req.auth?.user?.id || req.auth?.user?.email || 'auth';
-        const context = body.context || {};
-        const contextBits = [
-            body.offer, body.audience, body.objective, body.priceRange, body.cityRegion, body.country, body.geo,
-            context.offer, context.audience, context.objective, context.priceRange, context.cityOrRegion
-        ].filter(Boolean).join('|').slice(0, 300);
-        return [
-            req.path || '/api/analyze-funnel',
-            authUser,
-            normalizeFunnelCacheUrl(rawUrl),
-            body.userLang || body.lang || 'fr',
-            body.mode || 'deep',
-            body.salesAngle || 'aggressive',
-            contextBits
-        ].join('::');
-    } catch {
-        return null;
-    }
-}
-
-function getFunnelAnalysisRouteCache(key) {
-    const entry = funnelAnalysisRouteCache.get(key);
-    if (!entry) return null;
-    if (Date.now() - entry.createdAt > FUNNEL_ANALYSIS_ROUTE_CACHE_TTL_MS) {
-        funnelAnalysisRouteCache.delete(key);
-        return null;
-    }
-    return entry.value;
-}
-
-function funnelAnalysisDedupeMiddleware(req, res, next) {
-    if (req.method !== 'POST') return next();
-    const key = buildFunnelAnalysisRouteKey(req);
-    if (!key || req.body?.skipCache) return next();
-    const cached = getFunnelAnalysisRouteCache(key);
-    if (cached) {
-        console.log('[FUNNEL-ROUTE-DEDUPE] Cache HIT');
-        return res.json({ ...cached, fromRouteCache: true });
-    }
-    const existing = funnelAnalysisRouteInFlight.get(key);
-    if (existing) {
-        console.log('[FUNNEL-ROUTE-DEDUPE] Awaiting in-flight report');
-        return existing.then(body => res.json({ ...body, fromInFlight: true })).catch(next);
-    }
-
-    let settled = false;
-    let resolveShared;
-    let rejectShared;
-    const sharedPromise = new Promise((resolve, reject) => {
-        resolveShared = resolve;
-        rejectShared = reject;
-    });
-    funnelAnalysisRouteInFlight.set(key, sharedPromise);
-    const originalJson = res.json.bind(res);
-    res.json = body => {
-        if (!settled) {
-            settled = true;
-            funnelAnalysisRouteInFlight.delete(key);
-            if (res.statusCode < 400 && body && typeof body === 'object') {
-                const safeBody = cleanFunnelScrapePayload(body);
-                funnelAnalysisRouteCache.set(key, { value: safeBody, createdAt: Date.now() });
-                resolveShared(safeBody);
-            } else {
-                rejectShared(new Error(body?.message || body?.error || `FUNNEL_ROUTE_FAILED_${res.statusCode}`));
-            }
-        }
-        return originalJson(body);
-    };
-    res.on('close', () => {
-        if (!settled && !res.headersSent) {
-            settled = true;
-            funnelAnalysisRouteInFlight.delete(key);
-            rejectShared(new Error('FUNNEL_ROUTE_CLOSED'));
-        }
-    });
-    return next();
 }
 
 function hardenFunnelPriceIntel(priceIntel = {}) {
@@ -887,172 +801,47 @@ function buildFunnelSectionSurgeryModel({
         userContext: safeContext
     };
 }
-function funnelSectionParserAgent({
-    lang = 'fr',
-    scrape = {},
-    sectionsDetailed = [],
-    h1Main = '',
-    ctaList = [],
-    funnelSurgery = null
-} = {}) {
-    const isEn = lang === 'en';
-    const isAr = lang === 'ar';
-    const rawBlocks = [
-        ...(Array.isArray(scrape.sectionRawBlocks) ? scrape.sectionRawBlocks : []),
-        ...(Array.isArray(scrape.sectionsDetailed) ? scrape.sectionsDetailed : [])
-    ].slice(0, 40);
-    const typeAliases = {
-        HERO: 'HERO', FEATURES: 'FEATURES', BENEFITS: 'BENEFITS', OFFER: 'OFFER', PRICING: 'PRICING',
-        PRICE: 'PRICING', TRUST: 'TRUST', SOCIAL_PROOF: 'SOCIAL_PROOF', REVIEWS: 'SOCIAL_PROOF',
-        FAQ: 'FAQ', DELIVERY: 'DELIVERY', GUARANTEE: 'GUARANTEE', PAYMENT: 'PAYMENT', CTA: 'CTA',
-        FORM: 'FORM', CHECKOUT: 'CHECKOUT', CONTACT: 'CONTACT', FOOTER: 'FOOTER', PROBLEM: 'PROBLEM',
-        OBJECTIONS: 'OBJECTIONS', COMPARISON: 'COMPARISON', UNKNOWN: 'UNKNOWN'
+function queuedJobMiddleware(type) {
+    return async (req, res, next) => {
+        if (type === 'funnel' && wantsRailwayScraping()) {
+            return next();
+        }
+        if (!supabase || req.queueBypass === true || req.get('x-daka-worker-bypass') === '1') {
+            return next();
+        }
+
+        let jobId;
+        try {
+            jobId = await enqueueJob(type, {
+                ...(req.body || {}),
+                _authUserId: req.user?.id || null
+            });
+        } catch (error) {
+            console.warn(`[Queue] ${type} enqueue failed, using direct processing:`, error.message);
+            return next();
+        }
+
+        if (!jobId) return next();
+
+        if (req.body?.async === true) {
+            return res.json({ success: true, jobId, status: 'queued' });
+        }
+
+        try {
+            const result = await waitForJobResult(jobId, 90000);
+            return res.json(result);
+        } catch (error) {
+            const status = error.code === 'QUEUE_TIMEOUT' ? 504 : 500;
+            return res.status(status).json({
+                success: false,
+                jobId,
+                error: error.code || 'QUEUE_PROCESSING_FAILED',
+                message: error.code === 'QUEUE_TIMEOUT'
+                    ? 'Analyse trop longue - réessayez dans quelques secondes.'
+                    : error.message
+            });
+        }
     };
-    const normalizeType = value => typeAliases[String(value || 'UNKNOWN').trim().toUpperCase()] || String(value || 'UNKNOWN').trim().toUpperCase();
-    const clean = (value, max = 700) => limitFunnelText(typeof value === 'string' ? value : '', max) || '';
-    const unique = values => [...new Set((values || []).filter(Boolean).map(value => clean(value, 260)))];
-    const blocksByType = new Map();
-
-    rawBlocks.forEach(block => {
-        const type = normalizeType(block?.typeGuess || block?.type);
-        if (!blocksByType.has(type)) blocksByType.set(type, []);
-        blocksByType.get(type).push(block);
-    });
-    (sectionsDetailed || []).forEach(section => {
-        const type = normalizeType(section?.type);
-        if (!blocksByType.has(type)) blocksByType.set(type, [{ ...section, textPreview: section.evidence || '', headings: [], buttons: [] }]);
-    });
-
-    if (h1Main && !blocksByType.has('HERO')) {
-        blocksByType.set('HERO', [{ typeGuess: 'hero', textPreview: h1Main, headings: [h1Main], buttons: ctaList.slice(0, 2), importanceScore: 60, position: 'above_the_fold' }]);
-    }
-    if (ctaList.length && !blocksByType.has('CTA')) {
-        blocksByType.set('CTA', [{ typeGuess: 'cta', textPreview: ctaList.join(' | '), headings: [], buttons: ctaList, importanceScore: 60 }]);
-    }
-
-    const required = ['HERO', 'PROBLEM', 'BENEFITS', 'FEATURES', 'OFFER', 'PRICING', 'CTA', 'SOCIAL_PROOF', 'GUARANTEE', 'DELIVERY', 'PAYMENT', 'FAQ', 'OBJECTIONS', 'COMPARISON', 'FOOTER'];
-    const labels = {
-        HERO: 'Hero', PROBLEM: isEn ? 'Customer problem' : isAr ? 'مشكلة العميل' : 'Problème client',
-        BENEFITS: isEn ? 'Benefits' : isAr ? 'الفوائد' : 'Bénéfices', FEATURES: isEn ? 'Features' : isAr ? 'الخصائص' : 'Caractéristiques',
-        OFFER: isEn ? 'Offer' : isAr ? 'العرض' : 'Offre', PRICING: isEn ? 'Price' : isAr ? 'السعر' : 'Prix',
-        CTA: 'CTA', SOCIAL_PROOF: isEn ? 'Social proof' : isAr ? 'الدليل الاجتماعي' : 'Preuves sociales',
-        GUARANTEE: isEn ? 'Guarantee' : isAr ? 'الضمان' : 'Garantie', DELIVERY: isEn ? 'Delivery' : isAr ? 'التوصيل' : 'Livraison',
-        PAYMENT: isEn ? 'Payment' : isAr ? 'الدفع' : 'Paiement', FAQ: 'FAQ', OBJECTIONS: isEn ? 'Objections' : isAr ? 'الاعتراضات' : 'Objections',
-        COMPARISON: isEn ? 'Comparison' : isAr ? 'المقارنة' : 'Comparaison', FOOTER: 'Footer'
-    };
-    const improvementFor = type => ({
-        HERO: isEn ? 'Make the result, audience and primary action visible above the fold.' : isAr ? 'أظهر النتيجة والجمهور والإجراء الرئيسي أعلى الصفحة.' : 'Rendre le résultat, la cible et l’action principale visibles dès le premier écran.',
-        PRICING: isEn ? 'Connect the price to what is included, the guarantee and the primary CTA.' : isAr ? 'اربط السعر بما يتضمنه العرض والضمان وزر الإجراء.' : 'Relier le prix au contenu inclus, à la garantie et au CTA principal.',
-        CTA: isEn ? 'Use one action-oriented primary CTA and repeat it at decision points.' : isAr ? 'استخدم زر إجراء رئيسيا واضحا وكرره عند نقاط القرار.' : 'Utiliser un CTA principal orienté action et le répéter aux points de décision.',
-        SOCIAL_PROOF: isEn ? 'Add verifiable reviews with source, context and result.' : isAr ? 'أضف آراء قابلة للتحقق مع المصدر والنتيجة.' : 'Ajouter des avis vérifiables avec source, contexte et résultat.',
-        GUARANTEE: isEn ? 'State the duration, conditions and limits near the offer.' : isAr ? 'وضح المدة والشروط والحدود قرب العرض.' : 'Préciser durée, conditions et limites près de l’offre.',
-        DELIVERY: isEn ? 'Show time, cost, coverage and return conditions before checkout.' : isAr ? 'اعرض المدة والتكلفة والمناطق وشروط الإرجاع قبل الدفع.' : 'Afficher délai, coût, zones couvertes et retours avant le paiement.',
-        FAQ: isEn ? 'Answer the objections detected around price, use, delivery and guarantee.' : isAr ? 'أجب عن الاعتراضات المتعلقة بالسعر والاستخدام والتوصيل والضمان.' : 'Répondre aux objections liées au prix, à l’usage, à la livraison et à la garantie.'
-    }[type] || (isEn ? 'Clarify this section with one promise, one proof and one action.' : isAr ? 'وضح هذا القسم بوعد واحد ودليل واحد وإجراء واحد.' : 'Clarifier cette section avec une promesse, une preuve et une action.'));
-
-    const presentSections = [];
-    const weakSections = [];
-    for (const [type, blocks] of blocksByType.entries()) {
-        if (type === 'UNKNOWN') continue;
-        const block = blocks[0] || {};
-        const evidence = unique([
-            ...(Array.isArray(block.headings) ? block.headings.map(value => `${isEn ? 'Heading' : isAr ? 'عنوان' : 'Titre'}: ${value}`) : []),
-            ...(Array.isArray(block.buttons) ? block.buttons.map(value => `${isEn ? 'Button' : isAr ? 'زر' : 'Bouton'}: ${typeof value === 'string' ? value : value?.text || value?.label || ''}`) : []),
-            block.textPreview ? `${isEn ? 'Observed text' : isAr ? 'نص مرصود' : 'Texte observé'}: ${clean(block.textPreview, 320)}` : null
-        ]).slice(0, 5);
-        const importance = Number(block.importanceScore || block.score || 0);
-        const quality = importance >= 72 && evidence.length >= 2 ? 'strong' : importance >= 45 || evidence.length >= 2 ? 'medium' : 'weak';
-        const item = {
-            sectionType: type.toLowerCase(),
-            label: labels[type] || type,
-            status: quality === 'weak' ? 'present_but_weak' : 'present',
-            quality,
-            detectedText: clean(block.text || block.textPreview || evidence[0] || '', 900),
-            evidence,
-            position: block.position || null,
-            problems: quality === 'weak' ? [isEn ? 'The section is detected but its proof or action is weak.' : isAr ? 'تم رصد القسم لكن الدليل أو الإجراء ضعيف.' : 'La section est détectée mais sa preuve ou son action reste faible.'] : [],
-            improvements: quality === 'strong' ? [] : [improvementFor(type)],
-            recommendedRewrite: quality === 'weak' ? { title: labels[type] || type, guidance: improvementFor(type) } : null,
-            confidence: block.text || block.textPreview ? 'HIGH' : 'MEDIUM'
-        };
-        presentSections.push(item);
-        if (quality === 'weak') weakSections.push(item);
-        console.log(`[FUNNEL-SECTIONS] ${type.toLowerCase()} present quality=${quality}`);
-    }
-
-    const missingSections = required.filter(type => !blocksByType.has(type)).map(type => {
-        const priority = ['HERO', 'OFFER', 'CTA', 'SOCIAL_PROOF', 'GUARANTEE', 'PRICING'].includes(type) ? 'high' : 'medium';
-        const item = {
-            sectionType: type.toLowerCase(),
-            label: labels[type] || type,
-            status: 'missing',
-            whyItMatters: improvementFor(type),
-            evidenceOfAbsence: [
-                `${isEn ? 'No matching structural block detected' : isAr ? 'لم يتم رصد قسم مطابق' : 'Aucun bloc structurel correspondant détecté'}: ${labels[type] || type}`,
-                `${isEn ? 'Checked blocks' : isAr ? 'الكتل المفحوصة' : 'Blocs vérifiés'}: ${rawBlocks.length}`
-            ],
-            recommendedSection: { title: labels[type] || type, structure: [improvementFor(type)], exampleCopy: null },
-            priority,
-            confidence: rawBlocks.length ? 'HIGH' : 'LOW'
-        };
-        console.log(`[FUNNEL-SECTIONS] ${type.toLowerCase()} missing priority=${priority}`);
-        return item;
-    });
-
-    const sectionsToAdd = missingSections.filter(item => item.priority === 'high').slice(0, 6).map(item => ({
-        sectionType: item.sectionType,
-        priority: item.priority,
-        reason: item.whyItMatters,
-        suggestedPlacement: ['social_proof', 'guarantee', 'pricing'].includes(item.sectionType)
-            ? (isEn ? 'Near the offer and primary CTA' : isAr ? 'قرب العرض وزر الإجراء الرئيسي' : 'Près de l’offre et du CTA principal')
-            : (isEn ? 'Before the final CTA' : isAr ? 'قبل زر الإجراء النهائي' : 'Avant le CTA final'),
-        suggestedContent: item.recommendedSection
-    }));
-    const sectionsToModify = weakSections.slice(0, 8).map(item => ({
-        sectionType: item.sectionType,
-        currentProblem: item.problems[0],
-        currentEvidence: item.evidence[0] || null,
-        newRecommendation: item.improvements[0],
-        suggestedCTA: item.sectionType === 'cta' ? (isEn ? 'Start now' : isAr ? 'ابدأ الآن' : 'Commencer maintenant') : null,
-        confidence: item.confidence
-    }));
-    const blueprintOrder = ['HERO', 'PROBLEM', 'BENEFITS', 'FEATURES', 'OFFER', 'PRICING', 'SOCIAL_PROOF', 'GUARANTEE', 'DELIVERY', 'PAYMENT', 'FAQ', 'CTA', 'FOOTER'];
-    const finalPageBlueprint = blueprintOrder.map((type, index) => ({
-        order: index + 1,
-        sectionType: type.toLowerCase(),
-        action: !blocksByType.has(type) ? 'add' : weakSections.some(item => item.sectionType === type.toLowerCase()) ? 'modify' : 'keep',
-        reason: !blocksByType.has(type)
-            ? `${labels[type] || type}: ${isEn ? 'not detected' : isAr ? 'غير مرصود' : 'non détecté'}`
-            : weakSections.some(item => item.sectionType === type.toLowerCase()) ? improvementFor(type) : (isEn ? 'Useful observed section' : isAr ? 'قسم مرصود ومفيد' : 'Section utile observée')
-    }));
-    const readiness = Math.round(Math.max(0, Math.min(100,
-        (presentSections.length / required.length) * 65 +
-        (presentSections.filter(item => item.quality === 'strong').length / Math.max(1, presentSections.length)) * 35
-    )));
-
-    const result = {
-        summary: {
-            totalDetectedSections: presentSections.length,
-            criticalMissingSections: missingSections.filter(item => item.priority === 'high').map(item => item.sectionType).slice(0, 6),
-            strongestSections: presentSections.filter(item => item.quality === 'strong').map(item => item.sectionType).slice(0, 5),
-            weakestSections: weakSections.map(item => item.sectionType).slice(0, 5),
-            funnelReadinessScore: readiness,
-            evidenceBlocksAnalyzed: rawBlocks.length
-        },
-        presentSections,
-        weakSections,
-        missingSections,
-        sectionsToAdd,
-        sectionsToModify,
-        sectionsToRemove: removeOrMergeSections,
-        sectionsToRemoveOrMerge: removeOrMergeSections,
-        finalPageBlueprint,
-        sectionSurgeryMatrix: funnelSurgery?.surgeryMatrix || [],
-        source: scrape.executionLayer || scrape.fetchLayer || 'unknown',
-        confidence: rawBlocks.length >= 3 ? 'HIGH' : rawBlocks.length ? 'MEDIUM' : 'LOW'
-    };
-    console.log(`[FUNNEL-SECTIONS] present=${presentSections.length} weak=${weakSections.length} missing=${missingSections.length} add=${sectionsToAdd.length} modify=${sectionsToModify.length}`);
-    return result;
 }
 
 // Trust proxy for Render.com
@@ -1977,7 +1766,7 @@ class InputValidator {
         
         // Keep: Arabic (0600-06FF), Latin (0000-007F, 0080-00FF), 
         // Cyrillic (0400-04FF), digits, spaces, basic punctuation
-        cleaned = cleaned.replace(/[^\u0600-\u06FF\u0400-\u04FFa-zA-Z0-9À-ÿ\s\-+.,!?;:()\[\]{}'"/%&@#]/g, ' ');
+        cleaned = cleaned.replace(/[^\u0600-\u06FF\u0400-\u04FFa-zA-Z0-9\u00C0-\u00FF\s+.,!?;:()\[\]{}'"\/%&@#-]/g, ' ');
         
         // Remove multiple spaces
         cleaned = cleaned.replace(/\s+/g, ' ').trim();
@@ -5322,17 +5111,6 @@ const EXTRACTION_NOT_FOUND =
             fetchLayer: railwayResult.provider || 'railway-scraper',
             html: syntheticHtml,
             bodyText,
-            finalUrl: mainPage.finalUrl || mainPage.url || validUrl,
-            sectionRawBlocks: Array.isArray(mainPage.sectionRawBlocks) ? mainPage.sectionRawBlocks.slice(0, 30) : [],
-            sectionsDetailed: Array.isArray(mainPage.sectionsDetailed) ? mainPage.sectionsDetailed.slice(0, 30) : [],
-            aboveTheFoldText: limitFunnelText(mainPage.aboveTheFoldText || '', 2200),
-            viewportData: mainPage.viewportData || null,
-            ctaTexts: Array.isArray(mainPage.ctaTexts) ? mainPage.ctaTexts.slice(0, 30) : [],
-            productInfo: Array.isArray(mainPage.productCards) ? mainPage.productCards.slice(0, 8) : [],
-            offerInfo: {
-                prices: prices.slice(0, 12),
-                ctas: Array.isArray(mainPage.ctas) ? mainPage.ctas.slice(0, 20) : []
-            },
             error: railwayResult.success ? null : railwayResult.error || 'RAILWAY_SCRAPING_FAILED',
             duration: railwayResult.durationMs || Date.now() - startTime,
 
@@ -7123,7 +6901,7 @@ function archetypeBusinessCopy(archetype, query, geo, lang = 'fr') {
             fr: {
                 sell: `Complément alimentaire orienté énergie, concentration et vitalité autour de « ${cleanQuery} ».`,
                 proof: ['Composition et dosage clairement vérifiables', 'Précautions, conformité et mode d’utilisation', `Prix, disponibilité locale et avis clients ${market}`],
-                position: `Construire l'offre la plus claire et la plus rassurante ${market}, avec composition, dosage, sécurité, prix et disponibilité faciles à vérifier.`,
+                position: `Devenir l’offre la plus transparente et rassurante ${market} sur la composition, le dosage, la sécurité, le prix et la disponibilité.`,
                 promise: `Une énergie mieux expliquée : composition, dosage, précautions, prix local et preuves clients visibles avant l’achat.`
             },
             en: {
@@ -8367,10 +8145,8 @@ let mergedData = {
         '7. POSITIONNEMENT : produis un dossier Market Insight Intelligence, pas un rapport SEO.',
         '8. SÉPARE strictement les faits observés, les déductions et les recommandations.',
         '9. ADAPTE chaque action au type de business : service/SaaS, produit physique ou complément alimentaire.',
-        '10. N utilise jamais livraison/retours pour un service ; parle de livrables, delais, revisions, paiement et accompagnement.',
-        '11. Ne presente jamais une hypothese comme une preuve observee.',
-        '12. Ne repete pas mot pour mot le meme paragraphe dans le resume et dans les sections detaillees.',
-        '13. Adapte explicitement le vocabulaire au type de business : service/SaaS ou produit physique.'
+        '10. N utilise jamais livraison/retours pour un service ; parle de livrables, délais, révisions, paiement et accompagnement.',
+        '11. Ne présente jamais une hypothèse comme une preuve observée.'
     ].join('\n');
 
     // ── 12. HELPER callAgent ──────────────────────────────────
@@ -9221,7 +8997,7 @@ async function callOpenRouterAPI(prompt, options = {}) {
                         'Authorization': `Bearer ${apiKey}`,
                         'Content-Type':  'application/json',
                         'HTTP-Referer':  process.env.APP_URL || 'https://seo.mktnstrategix.com',
-                        'X-Title':       'Daka Market Intelligence Spyer'
+                        'X-Title':       'SEO Gen Pro'
                     },
                     timeout: modelTimeout // ⚡ C'EST ICI LA MAGIE DE LA VITESSE
                 }
@@ -11751,11 +11527,106 @@ function getFeatureI18n(lang = 'fr') {
   return dict[lang] || dict.fr;
 }
 
+function normalizeScrapeForFunnel(raw = {}) {
+  const result = raw.result || raw;
+  const mainPage = result.mainPage || result.scrapeData || result.data || result;
+
+  const sections =
+    result.sectionRawBlocks ||
+    result.sectionsDetailed ||
+    result.sections ||
+    mainPage.sectionRawBlocks ||
+    mainPage.sectionsDetailed ||
+    mainPage.sections ||
+    [];
+
+  const bodyText =
+    result.bodyText ||
+    result.text ||
+    result.content ||
+    mainPage.bodyText ||
+    mainPage.text ||
+    mainPage.content ||
+    '';
+const headings = result.headings || mainPage.headings || [];
+const ctas = result.ctas || mainPage.ctas || [];
+const title = result.title || mainPage.title || '';
+const h1 = result.h1 || mainPage.h1 || title || '';
+const finalUrl = result.finalUrl || mainPage.finalUrl || result.url || mainPage.url || '';
+const wordCount = String(bodyText || '').split(/\s+/).filter(Boolean).length;
+
+const rebuiltCopyIntel = {
+  ...(result.copyIntel || {}),
+  headlines: result.copyIntel?.headlines || {
+    h1: h1 ? [h1] : [],
+    h2: headings.slice(0, 8),
+    h3: []
+  },
+  realCTAs: Array.isArray(result.copyIntel?.realCTAs) && result.copyIntel.realCTAs.length
+    ? result.copyIntel.realCTAs
+    : ctas,
+  allButtons: Array.isArray(result.copyIntel?.allButtons) && result.copyIntel.allButtons.length
+    ? result.copyIntel.allButtons
+    : ctas,
+  pageSections: Array.isArray(result.copyIntel?.pageSections) && result.copyIntel.pageSections.length
+    ? result.copyIntel.pageSections
+    : sections,
+  heroText: result.copyIntel?.heroText || String(bodyText || '').slice(0, 1200),
+  bulletBenefits: result.copyIntel?.bulletBenefits || sections
+    .map(s => s?.title || s?.textPreview || '')
+    .filter(Boolean)
+    .slice(0, 8),
+  testimonials: result.copyIntel?.testimonials || [],
+  guarantees: result.copyIntel?.guarantees || [],
+  faq: result.copyIntel?.faq || []
+};
+
+const rebuiltBrand = {
+  ...(result.brand || {}),
+  fullTextSample: result.brand?.fullTextSample || bodyText,
+  wordCount: result.brand?.wordCount || wordCount,
+  hasSSL: result.brand?.hasSSL ?? /^https:/i.test(finalUrl)
+};
+  return {
+    copyIntel: rebuiltCopyIntel,
+brand: rebuiltBrand,
+html: result.html || bodyText,
+    ...result,
+    mainPage: {
+      ...mainPage,
+      bodyText,
+      text: bodyText,
+      content: bodyText,
+      sectionRawBlocks: sections,
+      sectionsDetailed: sections,
+      sections
+    },
+    scrapeData: {
+      ...mainPage,
+      bodyText,
+      text: bodyText,
+      content: bodyText,
+      sectionRawBlocks: sections,
+      sectionsDetailed: sections,
+      sections
+    },
+    bodyText,
+    text: bodyText,
+    content: bodyText,
+    sectionRawBlocks: sections,
+    sectionsDetailed: sections,
+    sections,
+    pagesExplored: Array.isArray(result.pagesExplored) && result.pagesExplored.length
+      ? result.pagesExplored
+      : [mainPage]
+  };
+}
+
 
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
 // ============================================================================
-app.post('/api/analyze-funnel', requireAuth, requireReportQuota, persistGeneratedReport('funnel'), analysisLimiter, funnelAnalysisDedupeMiddleware, async (req, res) => {
+app.post('/api/analyze-funnel', requireAuth, requireReportQuota, persistGeneratedReport('funnel'), analysisLimiter, async (req, res) => {
     const startTime = Date.now();
     const requestId = `SPY12-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
     
@@ -11850,7 +11721,15 @@ const langInstr = isAr
                 redirectIntel:    { totalRedirects: 0, isFunnelRedirect: false },
             };
         }
+scrape = normalizeScrapeForFunnel(scrape);
 
+console.log(
+  `[FUNNEL-DATA] normalized sections=${scrape.sectionRawBlocks?.length || 0} ` +
+  `body=${String(scrape.bodyText || '').length} ` +
+  `title=${scrape.title || scrape.mainPage?.title || ''}`
+);
+
+scrapedRawData = cleanFunnelScrapePayload(scrape);
         const commerceExploration = await runFunnelScrapeOnce('commerce-exploration', validUrl, () => exploreFunnelCommerce(validUrl, {
             lang: validLang,
             userContext: safeContext,
@@ -12140,38 +12019,13 @@ const missingCriticalSections = criticalSectionRules
   .filter(rule => rule.required && !hasSection(rule.type))
   .map(rule => rule.type);
 
-const rawRailwaySections = [
-  ...(Array.isArray(scrape.sectionRawBlocks) ? scrape.sectionRawBlocks : []),
-  ...(Array.isArray(scrape.sectionsDetailed) ? scrape.sectionsDetailed : [])
-].slice(0, 40);
-const normalizeRailwaySectionType = value => String(value || 'UNKNOWN').trim().toUpperCase();
-const sectionsDetailed = allSections.map((s, index) => {
-  const type = normalizeRailwaySectionType(s.type || s.typeGuess);
-  const observed = rawRailwaySections.find(block => normalizeRailwaySectionType(block.typeGuess || block.type) === type);
-  return {
-    ...(observed || {}),
-    ...s,
-    index: index + 1,
-    type,
-    label: sectionLabels[type] || observed?.typeGuess || type || 'Unknown',
-    present: s.present !== false,
-    score: s.score ?? observed?.importanceScore ?? null,
-    evidence: s.evidence || observed?.textPreview || observed?.headings?.[0] || null
-  };
-});
-rawRailwaySections.forEach(block => {
-  const type = normalizeRailwaySectionType(block.typeGuess || block.type);
-  if (type === 'UNKNOWN' || sectionsDetailed.some(section => section.type === type)) return;
-  sectionsDetailed.push({
-    ...block,
-    index: sectionsDetailed.length + 1,
-    type,
-    label: sectionLabels[type] || block.typeGuess || type,
-    present: block.visible !== false,
-    score: block.importanceScore ?? null,
-    evidence: block.textPreview || block.headings?.[0] || null
-  });
-});
+const sectionsDetailed = allSections.map((s, index) => ({
+  index: index + 1,
+  type: s.type || 'UNKNOWN',
+  label: sectionLabels[s.type] || s.type || 'Unknown',
+  present: s.present !== false,
+  score: s.score ?? null
+}));
 // ─── CTA Coverage + Images Count ─────────────────────────────────────────────
 const ctaCoverage = allSections.length > 0
     ? Math.min(100, Math.round((ctaList.length / allSections.length) * 100))
@@ -12378,14 +12232,6 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
             wordCount,
             localScore,
             safeContext
-        });
-        const sectionsAudit = funnelSectionParserAgent({
-            lang: validLang,
-            scrape,
-            sectionsDetailed,
-            h1Main,
-            ctaList,
-            funnelSurgery
         });
 
         // ── 5. SHARED CONTEXT ─────────────────────────────────
@@ -13361,8 +13207,6 @@ const finalResponse = {
     auditEvidence,
     concreteActionPlan,
     funnelSurgery,
-    sectionsAudit,
-    pageArchitectureDetected: sectionsAudit,
     proofModel,
     executiveBrief,
     dataIntegrity,
@@ -13391,8 +13235,6 @@ const finalResponse = {
 
     sectionsDetected: sectionsDetailed.map(s => s.type),
     sectionsDetailed,
-    sectionRawBlocks: rawRailwaySections,
-    sectionsAudit,
     missingCriticalSections,
     sectionsCount: sectionsDetailed.length,
 
@@ -14941,7 +14783,7 @@ app.get('/api/job/:id', requireAuth, async (req, res) => {
 app.get('/', (req, res) => {
     res.json({
         success: true,
-        name: 'Daka Market Intelligence Spyer API',
+        name: 'SEO Gen Pro API',
         version: '3.0.0',
         status: 'online',
         uptime: formatDuration(Date.now() - METRICS.startTime),
@@ -15184,6 +15026,49 @@ async function getDeepMetrics($, validUrl) {
  * 🧮 DAKA-MATH ENGINE : Calculateur de performance déductif
  * Analyse la structure pour prédire les scores Google Lighthouse
  */
+async function getRealPageSpeed(html, url) {
+    const $ = cheerio.load(html);
+    
+    // 1. Collecte des variables physiques
+    const domNodes = $('*').length; // Nombre total d'éléments
+    const scriptCount = $('script[src]').length; // Scripts externes
+    const cssCount = $('link[rel="stylesheet"]').length; // CSS externes
+    const imageCount = $('img').length;
+    const pageSizeKB = Buffer.byteLength(html, 'utf8') / 1024;
+
+    // 2. Calcul du Score de Performance (Base 100)
+    // On applique des pénalités mathématiques basées sur les standards Lighthouse
+    let score = 100;
+    score -= (domNodes / 100);             // -1 point par 100 nœuds
+    score -= (scriptCount * 3);            // -3 points par script externe
+    score -= (pageSizeKB / 50);            // -1 point par 50KB de HTML
+    score -= (imageCount * 0.5);           // -0.5 point par image
+
+    const finalScore = Math.round(Math.max(15, Math.min(98, score)));
+
+    // 3. Modélisation Mathématique des Core Web Vitals
+    // LCP (Largest Contentful Paint) en secondes
+    const lcp = (1.2 + (domNodes / 1000) + (pageSizeKB / 200)).toFixed(1);
+    
+    // TBT (Total Blocking Time) en ms (Poids des scripts)
+    const tbt = Math.round((scriptCount * 45) + (domNodes / 10));
+    
+    // CLS (Cumulative Layout Shift) - Déduction basée sur les images
+    const cls = (imageCount * 0.005).toFixed(3);
+
+    console.log(`🧮 Calcul Mathématique réussi pour ${url} : Score ${finalScore}`);
+
+    return {
+        score: finalScore,
+        metrics: {
+            lcp: `${lcp}s`,
+            tbt: `${tbt}ms`,
+            cls: cls,
+            fcp: `${(parseFloat(lcp) * 0.6).toFixed(1)}s`
+        }
+    };
+}
+
 // 2. ANALYSEUR DE STRUCTURE PROFONDE (DOM INTELLIGENCE)
 async function getDeepStructure(html, url) {
     const $ = cheerio.load(html);
@@ -16568,6 +16453,113 @@ function mergePriceIntel(base = {}, extra = {}) {
         : merged;
 }
 
+function mergeScrapeData(base, extra) {
+    const empty = EMPTY_SCRAPE_RESULT();
+    return {
+        ...empty,
+        ...base,
+        ...extra,
+
+        visualDNA: {
+            ...empty.visualDNA,
+            ...base?.visualDNA,
+            ...extra?.visualDNA
+        },
+
+        techStack: {
+            ...empty.techStack,
+            ...base?.techStack,
+            ...extra?.techStack
+        },
+
+        copyIntel: {
+            ...empty.copyIntel,
+            ...base?.copyIntel,
+            ...extra?.copyIntel,
+            headlines: {
+                ...empty.copyIntel.headlines,
+                ...base?.copyIntel?.headlines,
+                ...extra?.copyIntel?.headlines
+            }
+        },
+
+        chapterIntel: {
+            ...empty.chapterIntel,
+            ...base?.chapterIntel,
+            ...extra?.chapterIntel
+        },
+
+        priceIntel: mergePriceIntel(base?.priceIntel, extra?.priceIntel),
+
+        trustSignals: {
+            ...empty.trustSignals,
+            ...base?.trustSignals,
+            ...extra?.trustSignals
+        },
+
+        contacts: {
+            ...empty.contacts,
+            ...base?.contacts,
+            ...extra?.contacts
+        },
+
+        schemaData: {
+            ...empty.schemaData,
+            ...base?.schemaData,
+            ...extra?.schemaData
+        },
+
+        sections: {
+            ...empty.sections,
+            ...base?.sections,
+            ...extra?.sections
+        },
+
+        meta: {
+            ...empty.meta,
+            ...base?.meta,
+            ...extra?.meta
+        },
+
+        seoIntel: mergeSeoIntel(base?.seoIntel || empty.seoIntel, extra?.seoIntel || {}),
+
+        contentIntel: {
+            ...empty.contentIntel,
+            ...base?.contentIntel,
+            ...extra?.contentIntel
+        },
+
+        trackingIntel: {
+            ...empty.trackingIntel,
+            ...base?.trackingIntel,
+            ...extra?.trackingIntel
+        },
+
+        performanceIntel: {
+            ...empty.performanceIntel,
+            ...base?.performanceIntel,
+            ...extra?.performanceIntel
+        },
+
+        brand: {
+            ...empty.brand,
+            ...base?.brand,
+            ...extra?.brand
+        },
+
+        redirectIntel: {
+            ...empty.redirectIntel,
+            ...base?.redirectIntel,
+            ...extra?.redirectIntel
+        },
+
+        frameworkData: {
+            ...empty.frameworkData,
+            ...base?.frameworkData,
+            ...extra?.frameworkData
+        }
+    };
+}
 function mergeSeoIntel(base = {}, extra = {}) {
     const pickArray = (a, b) => (Array.isArray(a) && a.length ? a : (Array.isArray(b) ? b : []));
     const pickObject = (a, b, fallback = {}) => {
@@ -17080,797 +17072,1045 @@ function mergeScrapeData(base = {}, extra = {}) {
 // 🔍 DEEP SCRAPE FUNNEL
 // ═══════════════════════════════════════════════════════════════════
 
-function normalizeScrapeForFunnel(scrapeResult = {}) {
-    const source = scrapeResult && typeof scrapeResult === 'object' ? scrapeResult : {};
-    const mainPage = source.mainPage || (Array.isArray(source.pages) ? source.pages[0] : null) || {};
-    const normalizeText = (value, max = 12000) => limitFunnelText(typeof value === 'string' ? value : '', max) || '';
-    const normalizeList = (value, max = 20) => Array.isArray(value) ? value.filter(Boolean).slice(0, max) : [];
-    const escapeHtml = (value = '') => String(value ?? '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-
-    const railwaySource = Boolean(
-        source.sourceJobId ||
-        source._executionLayer === 'railway' ||
-        source.executionLayer === 'railway' ||
-        /railway/i.test(String(source.fetchLayer || source.provider || source.source || ''))
-    );
-
-    const existingSections = normalizeList(source.copyIntel?.pageSections, 40);
-    const rawSections = [
-        ...normalizeList(source.sectionRawBlocks, 40),
-        ...normalizeList(source.sectionsDetailed, 40)
-    ];
-    const pageSections = [...existingSections];
-    const seenSections = new Set(pageSections.map(section => String(section?.type || section?.name || section).toUpperCase()));
-    const addSection = (section, fallbackType = '') => {
-        const rawType = typeof section === 'string'
-            ? section
-            : section?.type || section?.typeGuess || section?.name || section?.label || fallbackType;
-        const type = String(rawType || '').trim().toUpperCase();
-        if (!type || seenSections.has(type)) return;
-        seenSections.add(type);
-        pageSections.push(typeof section === 'object'
-            ? { ...section, type, present: section.present !== false }
-            : { type, label: String(section), present: true, score: 60 });
-    };
-
-    rawSections.forEach(section => addSection(section));
-    if (Array.isArray(mainPage.sections)) {
-        mainPage.sections.forEach(section => addSection(section));
-    } else if (mainPage.sections && typeof mainPage.sections === 'object') {
-        Object.entries(mainPage.sections).forEach(([key, value]) => {
-            if (value) addSection({ type: key.replace(/^has/i, ''), label: key, present: true });
-        });
-    }
-    if (!pageSections.length && source.sections && typeof source.sections === 'object') {
-        Object.entries(source.sections).forEach(([key, value]) => {
-            if (value) addSection({ type: key.replace(/^has/i, ''), label: key, present: true });
-        });
-    }
-
-    const headings = {
-        h1: normalizeList(source.copyIntel?.headlines?.h1?.length ? source.copyIntel.headlines.h1 : mainPage.headings?.h1, 8),
-        h2: normalizeList(source.copyIntel?.headlines?.h2?.length ? source.copyIntel.headlines.h2 : mainPage.headings?.h2, 12),
-        h3: normalizeList(source.copyIntel?.headlines?.h3?.length ? source.copyIntel.headlines.h3 : mainPage.headings?.h3, 12)
-    };
-    if (!headings.h1.length && mainPage.h1) headings.h1.push(mainPage.h1);
-
-    const bodyText = normalizeText(
-        source.bodyText ||
-        source.contentIntel?.bodyText ||
-        source.contentIntel?.text ||
-        source.brand?.fullTextSample ||
-        mainPage.bodyText ||
-        mainPage.text ||
-        mainPage.textPreview ||
-        '',
-        12000
-    );
-    const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
-    const priceIntel = hardenFunnelPriceIntel(source.priceIntel || {});
-    const confirmedPrice = getConfirmedFunnelPrice(priceIntel);
-    const sectionsCount = pageSections.length;
-    const ctaCount = normalizeList(source.copyIntel?.realCTAs?.length ? source.copyIntel.realCTAs : source.ctaTexts, 30).length;
-    const railwayUsable = railwaySource && (sectionsCount > 0 || bodyText.length > 200 || confirmedPrice > 0 || ctaCount > 0);
-
-    let html = typeof source.html === 'string' ? source.html : '';
-    let syntheticHtmlBuilt = false;
-    if (railwayUsable && html.length < 200) {
-        const title = source.meta?.title || source.seoIntel?.title || mainPage.title || '';
-        const description = source.meta?.description || source.seoIntel?.metaDescription || mainPage.metaDescription || '';
-        const ctas = normalizeList(source.copyIntel?.realCTAs?.length ? source.copyIntel.realCTAs : mainPage.ctas, 15);
-        const sectionHtml = pageSections.slice(0, 30).map(section => {
-            const label = section?.label || section?.name || section?.type || section;
-            const evidence = section?.evidence || section?.text || '';
-            return `<section data-funnel-section="${escapeHtml(section?.type || label)}"><h2>${escapeHtml(label)}</h2>${evidence ? `<p>${escapeHtml(evidence)}</p>` : ''}</section>`;
-        }).join('');
-        html = [
-            '<!doctype html><html><head>',
-            `<title>${escapeHtml(title)}</title>`,
-            description ? `<meta name="description" content="${escapeHtml(description)}">` : '',
-            '</head><body>',
-            headings.h1.map(value => `<h1>${escapeHtml(value)}</h1>`).join(''),
-            headings.h2.map(value => `<h2>${escapeHtml(value)}</h2>`).join(''),
-            headings.h3.map(value => `<h3>${escapeHtml(value)}</h3>`).join(''),
-            sectionHtml,
-            ctas.map(cta => `<a href="#">${escapeHtml(typeof cta === 'string' ? cta : cta?.text || cta?.label || '')}</a>`).join(''),
-            confirmedPrice ? `<span class="price">${escapeHtml(`${confirmedPrice} ${priceIntel.currency || ''}`.trim())}</span>` : '',
-            `<main>${escapeHtml(bodyText)}</main>`,
-            '</body></html>'
-        ].join('').slice(0, 70000);
-        syntheticHtmlBuilt = true;
-    }
-
-    const normalized = mergeScrapeData(EMPTY_SCRAPE_RESULT(), {
-        ...source,
-        success: railwayUsable ? true : Boolean(source.success),
-        html,
-        bodyText,
-        copyIntel: {
-            ...(source.copyIntel || {}),
-            headlines: headings,
-            pageSections
-        },
-        contentIntel: {
-            ...(source.contentIntel || {}),
-            bodyText,
-            wordCount: source.contentIntel?.wordCount || source.seoIntel?.wordCount || source.brand?.wordCount || wordCount
-        },
-        brand: {
-            ...(source.brand || {}),
-            fullTextSample: bodyText,
-            wordCount: source.brand?.wordCount || wordCount
-        },
-        priceIntel
-    });
-
-    delete normalized.rawHtml;
-    delete normalized.bodyHtml;
-    normalized._funnelNormalization = {
-        railwayUsable,
-        sectionsCount,
-        bodyLength: bodyText.length,
-        ctaCount,
-        syntheticHtmlBuilt
-    };
-    return normalized;
-}
-
 async function deepScrapeFunnel(url) {
-    const startTime = Date.now();
-    console.log(`🔍 [DEEP SCRAPE] Analyse profonde : ${url}`);
+  const startTime = Date.now();
+  console.log(`🔍 [DEEP SCRAPE] Analyse profonde : ${url}`);
 
-    const finalizeError = (message, layer = 'browser') => {
-        const base = EMPTY_SCRAPE_RESULT(message, layer);
-        return {
-            ...base,
-            duration: Date.now() - startTime,
-            sectionsFound: 0,
-            h1: null,
-            price: null,
-            phones: 0
-        };
+  const finalizeError = (message, layer = 'browser') => {
+    const base = EMPTY_SCRAPE_RESULT(message, layer);
+
+    return {
+      ...base,
+      duration: Date.now() - startTime,
+      sectionsFound: 0,
+      h1: null,
+      price: null,
+      phones: 0
+    };
+  };
+
+  const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
+
+  const normText = (value) => {
+    if (typeof value !== 'string') return '';
+    return value.replace(/\s+/g, ' ').trim();
+  };
+
+  const wordStatus = (count = 0) => {
+    if (count < 200) return 'INSUFFISANT (< 200 mots)';
+    if (count < 500) return 'FAIBLE (200-500 mots)';
+    if (count < 1000) return 'MOYEN (500-1000 mots)';
+    return 'BON (> 1000 mots)';
+  };
+
+  const normalizePhones = (text = '') => {
+    const phoneRegex =
+      /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
+
+    return unique((String(text || '').match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
+  };
+
+  const normalizeEmails = (text = '') => {
+    const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
+
+    return unique(
+      (String(text || '').match(emailRegex) || []).filter(e => !/example|test/i.test(e))
+    ).slice(0, 5);
+  };
+
+  const inferSections = ($) => ({
+    hasHero: Boolean($([
+      '.hero', '#hero', '.banner', '.masthead', '.hero-section',
+      '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
+    ].join(',')).length),
+
+    hasFeatures: Boolean($([
+      '.feature', '.features', '#features', '.service', '.services',
+      '#service', '.benefits', '.benefit', '.solutions',
+      '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
+    ].join(',')).length),
+
+    hasTrust: Boolean($([
+      '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
+      '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
+      '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
+      '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
+      '[class*="reassurance"]', '[class*="trusted"]'
+    ].join(',')).length),
+
+    hasPricing: Boolean($([
+      '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
+      '.tarifs', '.tarif', '.offres', '.offer',
+      '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
+    ].join(',')).length),
+
+    hasTestim: Boolean($([
+      '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
+      '.ratings', '.social-proof',
+      '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
+    ].join(',')).length),
+
+    hasFAQ: Boolean($([
+      '.faq', '#faq', 'details', '.accordion', '.questions',
+      '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
+    ].join(',')).length),
+
+    hasCTA: Boolean($([
+      '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
+      '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
+    ].join(',')).length),
+
+    hasFooter: Boolean($('footer, .footer, #footer, [class*="footer"]').length)
+  });
+
+  const inferPageSections = (sections = {}) => {
+    const map = {
+      HERO: sections.hasHero,
+      FEATURES: sections.hasFeatures,
+      TRUST: sections.hasTrust,
+      SOCIAL_PROOF: sections.hasTestim,
+      PRICING: sections.hasPricing,
+      FAQ: sections.hasFAQ,
+      CTA: sections.hasCTA,
+      FOOTER: sections.hasFooter
     };
 
-    const unique = (arr = []) => [...new Set((arr || []).filter(Boolean))];
-    const normText = (v) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim() : '');
-    const wordStatus = (count = 0) =>
-        count < 200 ? 'INSUFFISANT (< 200 mots)' :
-        count < 500 ? 'FAIBLE (200-500 mots)' :
-        count < 1000 ? 'MOYEN (500-1000 mots)' :
-        'BON (> 1000 mots)';
-
-    const normalizePhones = (text = '') => {
-        const phoneRegex = /(\+212|00212|0)([ .\-]?[5-7]\d)([ .\-]?\d{2}){3}|(\+\d{1,3}[\s\-]?\(?\d{1,4}\)?[\s\-]?\d{3,4}[\s\-]?\d{3,4})/g;
-        return unique((text.match(phoneRegex) || []).map(p => p.trim())).slice(0, 5);
-    };
-
-    const normalizeEmails = (text = '') => {
-        const emailRegex = /[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/g;
-        return unique((text.match(emailRegex) || []).filter(e => !/example|test/i.test(e))).slice(0, 5);
-    };
-
-    // ─── Section detection helpers ──────────────────────────────────
-    const inferSections = ($) => ({
-        hasHero: !!$([
-            '.hero', '#hero', '.banner', '.masthead', '.hero-section',
-            '[class*="hero"]', '[id*="hero"]', '[class*="banner"]'
-        ].join(',')).length,
-        hasFeatures: !!$([
-            '.feature', '.features', '#features', '.service', '.services',
-            '#service', '.benefits', '.benefit', '.solutions',
-            '[class*="feature"]', '[id*="feature"]', '[class*="benefit"]', '[id*="service"]'
-        ].join(',')).length,
-        hasTrust: !!$([
-            '.trust', '.trust-bar', '.badge', '.badges', '.guarantee', '.guarantees',
-            '.security', '.certifications', '.reassurance', '.trusted-by', '.logo-bar',
-            '[class*="trust"]', '[id*="trust"]', '[class*="badge"]',
-            '[class*="guarantee"]', '[class*="security"]', '[class*="certif"]',
-            '[class*="reassurance"]', '[class*="trusted"]'
-        ].join(',')).length,
-        hasPricing: !!$([
-            '.pricing', '#pricing', '.price', '.prices', '.plans', '.plan',
-            '.tarifs', '.tarif', '.offres', '.offer',
-            '[class*="pricing"]', '[class*="price"]', '[id*="pricing"]', '[class*="plan"]'
-        ].join(',')).length,
-        hasTestim: !!$([
-            '.testimonial', '.testimonials', '.review', '.reviews', '.avis',
-            '.ratings', '.social-proof',
-            '[class*="testimonial"]', '[class*="review"]', '[class*="avis"]'
-        ].join(',')).length,
-        hasFAQ: !!$([
-            '.faq', '#faq', 'details', '.accordion', '.questions',
-            '.questions-frequentes', '[class*="faq"]', '[id*="faq"]'
-        ].join(',')).length,
-        hasCTA: !!$([
-            '.cta', '#cta', '.call-to-action', '.sticky-cta', '.contact-section',
-            '[class*="cta"]', '[id*="cta"]', '[href*="contact"]', '[href*="whatsapp"]', '[href*="wa.me"]'
-        ].join(',')).length,
-        hasFooter: !!$('footer, .footer, #footer, [class*="footer"]').length
-    });
-
-    const inferPageSections = (sections = {}) => {
-        const map = {
-            HERO: sections.hasHero,
-            FEATURES: sections.hasFeatures,
-            TRUST: sections.hasTrust,
-            SOCIAL_PROOF: sections.hasTestim,
-            PRICING: sections.hasPricing,
-            FAQ: sections.hasFAQ,
-            CTA: sections.hasCTA,
-            FOOTER: sections.hasFooter
-        };
-        return Object.entries(map)
-            .filter(([, v]) => v)
-            .map(([type]) => ({ type, present: true, score: 60 }));
-    };
-
-    const detectBotBlocked = (scrapeResult) => {
-        const htmlLower = (scrapeResult?.html || '').toLowerCase();
-        const h1Lower = (scrapeResult?.copyIntel?.headlines?.h1?.[0] || '').toLowerCase();
-        const titleLower = (scrapeResult?.meta?.title || '').toLowerCase();
-        const wc =
-            scrapeResult?.contentIntel?.wordCount ??
-            scrapeResult?.seoIntel?.wordCount ??
-            scrapeResult?.brand?.wordCount ??
-            scrapeResult?.wordCount ??
-            0;
-
-        return (
-            !scrapeResult?.success ||
-            !scrapeResult?.html ||
-            scrapeResult.html.length < 800 ||
-            wc < 20 ||
-            h1Lower.includes('you have been blocked') ||
-            h1Lower.includes('access denied') ||
-            titleLower.includes('attention required') ||
-            titleLower.includes('security measure') ||
-            titleLower.includes('cloudflare') ||
-            htmlLower.includes('ray id:') ||
-            htmlLower.includes('captcha') ||
-            (
-                !scrapeResult?.copyIntel?.headlines?.h1?.length &&
-                scrapeResult?.visualDNA?.dominantColors?.[0] === '#3b82f6'
-            )
-        );
-    };
-
-    try {
-        let scrapeResult = await scrapeStealth(url);
-
-        scrapeResult = normalizeScrapeForFunnel(scrapeResult);
-        const normalizationMeta = scrapeResult?._funnelNormalization || {};
-        delete scrapeResult._funnelNormalization;
-        const railwayUsable = Boolean(normalizationMeta.railwayUsable);
-        const normalizedSections = Number(normalizationMeta.sectionsCount || 0);
-        const normalizedBody = Number(normalizationMeta.bodyLength || 0);
-
-        console.log(`[DEEP SCRAPE] Railway normalized before check usable=${railwayUsable} sections=${normalizedSections} body=${normalizedBody}`);
-        if (normalizationMeta.syntheticHtmlBuilt) {
-            console.log(`[DEEP SCRAPE] Synthetic HTML built from Railway compact result sections=${normalizedSections} body=${normalizedBody}`);
-        }
-        console.log(`[FUNNEL-DATA] normalized sections=${normalizedSections} body=${normalizedBody}`);
-
-        if (!railwayUsable && detectBotBlocked(scrapeResult) && scrapeResult?.fetchLayer !== 'scrape.do') {
-            if (shouldUseRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
-                console.warn(`[DEEP SCRAPE] Railway incomplet pour ${url}. Fallback Render/Scrape.do desactive.`);
-                return finalizeError(
-                    scrapeResult?.error || scrapeResult?.message || 'RAILWAY_SCRAPING_PARTIAL_NO_RENDER_FALLBACK',
-                    'railway'
-                );
-            }
-
-            console.warn(`⚠️ [DEEP SCRAPE] Page vide ou bloquée détectée. Activation de SCRAPE.DO...`);
-
-            const scrapeDoToken = process.env.SCRAPEDOTOKEN || process.env.SCRAPE_DO_TOKEN;
-            if (!scrapeDoToken) {
-                throw new Error('Bloqué par anti-bot, et aucun token Scrape.do disponible.');
-            }
-
-            try {
-                const scrapeDoUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(url)}&render=true`;
-
-                const fallbackRes = await RetryManager.executeWithRetry(
-                    () => axios.get(scrapeDoUrl, { timeout: 45000 }),
-                    { context: 'ScrapeDo-DeepFallback' }
-                );
-
-                const fallbackHtml = typeof fallbackRes?.data === 'string'
-                    ? fallbackRes.data
-                    : (fallbackRes?.data?.html || fallbackRes?.data?.body || '');
-
-                if (!fallbackHtml || fallbackHtml.length < 500) {
-                    throw new Error('Réponse de Scrape.do invalide ou trop courte.');
-                }
-
-                console.log(`✅ [DEEP SCRAPE] Sauvetage Scrape.do réussi (${fallbackHtml.length} chars) !`);
-
-                scrapeResult = mergeScrapeData(scrapeResult, {
-                    success: true,
-                    fetchLayer: 'scrape.do',
-                    html: fallbackHtml,
-                    bodyText: '',
-                    duration: Date.now() - startTime
-                });
-            } catch (e) {
-                console.error(`❌ [DEEP SCRAPE] Scrape.do a aussi échoué: ${e.message}`);
-                throw new Error('Anti-bot infranchissable (browser + Scrape.do bloqués).');
-            }
-        }
-
-        const html = scrapeResult?.html || '';
-        if (!html || html.length < 200) {
-            throw new Error('HTML vide ou insuffisant après scraping.');
-        }
-
-        const $ = cheerio.load(html);
-        const bodyText = normText(
-            scrapeResult?.bodyText ||
-            scrapeResult?.contentIntel?.bodyText ||
-            $('body').text()
-        );
-
-        const seoIntelDeep = extractSEOIntel(html, url);
-
-        const metaTitle = scrapeResult?.meta?.title || seoIntelDeep.title || normText($('title').text()) || '';
-        const metaDescription =
-            scrapeResult?.meta?.description ||
-            scrapeResult?.meta?.metaDescription ||
-            seoIntelDeep.metaDescription ||
-            $('meta[name="description"]').attr('content') ||
-            '';
-
-        const metaKeywords =
-            scrapeResult?.meta?.keywords ||
-            $('meta[name="keywords"]').attr('content') ||
-            '';
-
-        const canonical =
-            scrapeResult?.meta?.canonical ||
-            seoIntelDeep.canonical ||
-            $('link[rel="canonical"]').attr('href') ||
-            '';
-
-        const ogTitle =
-            scrapeResult?.meta?.ogTitle ||
-            seoIntelDeep.ogTitle ||
-            $('meta[property="og:title"]').attr('content') ||
-            '';
-
-        const ogDescription =
-            scrapeResult?.meta?.ogDescription ||
-            seoIntelDeep.ogDescription ||
-            $('meta[property="og:description"]').attr('content') ||
-            '';
-
-        const ogImage =
-            scrapeResult?.meta?.ogImage ||
-            seoIntelDeep.ogImage ||
-            $('meta[property="og:image"]').attr('content') ||
-            '';
-
-        const robots =
-            scrapeResult?.meta?.robots ||
-            seoIntelDeep.robots ||
-            $('meta[name="robots"]').attr('content') ||
-            '';
-
-        const lang =
-            scrapeResult?.meta?.lang ||
-            seoIntelDeep.lang ||
-            $('html').attr('lang') ||
-            '';
-
-        const schemaTypes = unique([
-            ...(Array.isArray(scrapeResult?.schemaData?.types) ? scrapeResult.schemaData.types : []),
-            ...(Array.isArray(seoIntelDeep.schemaTypes) ? seoIntelDeep.schemaTypes : [])
-        ]);
-
-        const schemaData = {
-            types: schemaTypes,
-            count: schemaTypes.length
-        };
-
-        // ── ★ PRICING LAYER 1: Observed extraction ────────────────────
-        // Sources: existing prices from scrapeStealth + fresh schema/text/dom extraction
-        // All routed through the Observed-First pipeline (no fallback, no inference)
-        const schemaPrices = [];
-        $('script[type="application/ld+json"]').each((_, el) => {
-            try {
-                const content = $(el).html()?.substring(0, 50000);
-                if (!content) return;
-                const parsed = JSON.parse(content);
-                const entries = Array.isArray(parsed) ? parsed : [parsed];
-                // ★ Uses module extractSchemaPricesFromNode (with pushValidatedPrice guard)
-                entries.forEach(entry => extractSchemaPricesFromNode(entry, schemaPrices));
-            } catch {}
-        });
-
-        const rawPriceIntel = scrapeResult?.priceIntel || EMPTY_SCRAPE_RESULT().priceIntel;
-        // ★ Uses module extractTextPrices + extractDomPrices (with noise + heuristic guards)
-        const textPrices    = extractTextPrices(bodyText, html);
-        const domPrices     = extractDomPrices($, html);
-        const existingPrices = Array.isArray(rawPriceIntel?.prices) ? rawPriceIntel.prices : [];
-
-        // ★ finalizePriceIntel now returns PriceIntelObserved with:
-        //   extractionStatus, confidenceBand, confidenceScore, isBlocked,
-        //   blockingReasons, auditTrail, sourceEvidence — plus all legacy fields
-        const priceIntel = finalizePriceIntel([
-            ...existingPrices,
-            ...schemaPrices,
-            ...textPrices,
-            ...domPrices
-        ], html);  // ← html passed as 2nd arg for currency detection + model classification
-
-        const h1List = unique(
-            $('h1').map((_, el) => normText($(el).text())).get().filter(t => t.length > 2)
-        ).slice(0, 8);
-
-        const h2List = unique(
-            $('h2').map((_, el) => normText($(el).text())).get().filter(t => t.length > 2)
-        ).slice(0, 12);
-
-        const h3List = unique(
-            $('h3').map((_, el) => normText($(el).text())).get().filter(t => t.length > 2)
-        ).slice(0, 12);
-
-        const allButtons = unique(
-            $('button, a, input[type="submit"], input[type="button"]')
-                .map((_, el) => normText($(el).text() || $(el).val() || $(el).attr('aria-label') || ''))
-                .get()
-                .filter(t => t.length > 1 && t.length < 80)
-        ).slice(0, 30);
-
-        const realCTAs = unique(
-            $('a.button, a.btn, button, .cta, [class*="button"], [class*="btn"], [class*="cta"]')
-                .map((_, el) => normText($(el).text() || $(el).val() || $(el).attr('aria-label') || ''))
-                .get()
-                .filter(t => t.length > 2 && t.length < 60)
-        ).slice(0, 20);
-
-        const testimonials = unique(
-            $('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')
-                .map((_, el) => normText($(el).text()).substring(0, 120))
-                .get()
-                .filter(Boolean)
-        ).slice(0, 5);
-
-        const sections = {
-            ...inferSections($),
-            ...(scrapeResult?.sections || {})
-        };
-
-        const pageSections =
-            Array.isArray(scrapeResult?.copyIntel?.pageSections) && scrapeResult.copyIntel.pageSections.length
-                ? scrapeResult.copyIntel.pageSections
-                : inferPageSections(sections);
-
-        const chapterIntel = { chapters: [] };
-        const sectionKeywords = {
-            HERO:         ['hero', 'banner', 'main'],
-            FEATURES:     ['feature', 'avantage', 'service', 'produit'],
-            TRUST:        ['trust', 'reassurance', 'garantie', 'guarantee'],
-            SOCIAL_PROOF: ['testimonial', 'testimonials', 'review', 'reviews', 'avis', 'clients', 'rating'],
-            PRICING:      ['price', 'pricing', 'tarif', 'offre'],
-            FAQ:          ['faq', 'question'],
-            CTA:          ['action', 'contact', 'footer-cta'],
-            FOOTER:       ['footer']
-        };
-
-        if (!pageSections.length) {
-            Object.entries(sectionKeywords).forEach(([type, keywords]) => {
-                const selector = keywords
-                    .map(k => `[id*="${k}"], [class*="${k}"], section[class*="${k}"]`)
-                    .join(', ');
-
-                const found = $(selector).first();
-                if (!found.length) return;
-
-                const title = normText(found.find('h1, h2, h3').first().text()) || type;
-                const textSample = normText(found.text()).substring(0, 220);
-
-                chapterIntel.chapters.push({
-                    type,
-                    title,
-                    textSample,
-                    wordCount: found.text().trim().split(/\s+/).filter(Boolean).length
-                });
-            });
-        } else {
-            chapterIntel.chapters = pageSections.map((s, i) => ({
-                type:      s.type || `SECTION_${i + 1}`,
-                title:     s.title || s.type || `Section ${i + 1}`,
-                textSample: s.textSample || '',
-                wordCount: (s.textSample || '').split(/\s+/).filter(Boolean).length
-            }));
-        }
-
-        let visualDNA = scrapeResult?.visualDNA || null;
-        if (!visualDNA || !Array.isArray(visualDNA.dominantColors) || !visualDNA.dominantColors.length) {
-            const styleContent =
-                ($('style').text() || '') + ' ' +
-                $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
-
-            const colorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi;
-            const allColors  = styleContent.match(colorRegex) || [];
-            const colorCounts = {};
-
-            allColors.forEach(c => {
-                const norm = c.toLowerCase().replace(/\s+/g, '');
-                if (!['#ffffff', '#000000', '#fff', '#000', 'transparent', 'rgba(0,0,0,0)'].includes(norm)) {
-                    colorCounts[norm] = (colorCounts[norm] || 0) + 1;
-                }
-            });
-
-            const dominantColors = Object.entries(colorCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 5)
-                .map(([color]) => color);
-
-            visualDNA = {
-                dominantColors: dominantColors.length ? dominantColors : ['#3b82f6', '#1e293b', '#10b981'],
-                googleFonts: Array.isArray(scrapeResult?.visualDNA?.googleFonts) ? scrapeResult.visualDNA.googleFonts : []
-            };
-        } else {
-            visualDNA = {
-                dominantColors: visualDNA.dominantColors,
-                googleFonts: Array.isArray(visualDNA.googleFonts) ? visualDNA.googleFonts : []
-            };
-        }
-
-        const contacts = {
-            phones:
-                Array.isArray(scrapeResult?.contacts?.phones) && scrapeResult.contacts.phones.length
-                    ? scrapeResult.contacts.phones
-                    : normalizePhones(bodyText),
-            emails:
-                Array.isArray(scrapeResult?.contacts?.emails) && scrapeResult.contacts.emails.length
-                    ? scrapeResult.contacts.emails
-                    : normalizeEmails(bodyText)
-        };
-
-        const trustSignals = {
-            hasSSL:               scrapeResult?.trustSignals?.hasSSL ?? seoIntelDeep.hasSSL ?? url.startsWith('https'),
-            hasWhatsApp:          scrapeResult?.trustSignals?.hasWhatsApp ?? seoIntelDeep.hasWhatsApp ?? /whatsapp|wa\.me/i.test(html),
-            hasPhoneNumber:       scrapeResult?.trustSignals?.hasPhoneNumber ?? (contacts.phones.length > 0),
-            hasReviews:           scrapeResult?.trustSignals?.hasReviews ?? (testimonials.length > 0),
-            hasMoneyBackGuarantee: scrapeResult?.trustSignals?.hasMoneyBackGuarantee ?? /garantie|money back|refund/i.test(bodyText),
-            hasPaymentLogos:      scrapeResult?.trustSignals?.hasPaymentLogos ?? /visa|mastercard|paypal|cmi/i.test(html),
-            hasLegalPages:        scrapeResult?.trustSignals?.hasLegalPages ?? /mentions légales|privacy|conditions|terms/i.test(bodyText),
-            hasCOD:               scrapeResult?.trustSignals?.hasCOD ?? seoIntelDeep.hasCOD ?? /cash on delivery|contre-remboursement|paiement à la livraison/i.test(bodyText),
-            trustScore:           scrapeResult?.trustSignals?.trustScore ?? null
-        };
-
-        const contentIntel = {
-            paragraphCount:           seoIntelDeep.paragraphs ?? $('p').length,
-            listCount:                seoIntelDeep.listCount ?? $('ul, ol').length,
-            imageCount:               seoIntelDeep.totalImages ?? $('img').length,
-            buttonCount:              seoIntelDeep.buttonCount ?? $('button').length,
-            internalLinks:            Array.isArray(seoIntelDeep.internalLinks) ? seoIntelDeep.internalLinks.slice(0, 50) : [],
-            externalLinks:            Array.isArray(seoIntelDeep.externalLinks) ? seoIntelDeep.externalLinks.slice(0, 30) : [],
-            externalOutboundLinks:    Array.isArray(seoIntelDeep.externalOutboundLinks) ? seoIntelDeep.externalOutboundLinks.slice(0, 30) : [],
-            internalLinkObjects:      Array.isArray(seoIntelDeep.internalLinkObjects) ? seoIntelDeep.internalLinkObjects.slice(0, 20) : [],
-            externalOutboundLinkObjects: Array.isArray(seoIntelDeep.externalOutboundLinkObjects) ? seoIntelDeep.externalOutboundLinkObjects.slice(0, 20) : [],
-            brokenLinks:               Array.isArray(seoIntelDeep.brokenLinkObjects) ? seoIntelDeep.brokenLinkObjects.slice(0, 20) : [],
-            wordCount:                seoIntelDeep.wordCount ?? bodyText.split(/\s+/).filter(Boolean).length,
-            bodyText:                 bodyText.substring(0, 15000),
-            contentStatus:            seoIntelDeep.contentStatus || wordStatus(seoIntelDeep.wordCount ?? bodyText.split(/\s+/).filter(Boolean).length),
-            totalImages:              seoIntelDeep.totalImages ?? 0,
-            missingAlt:               seoIntelDeep.missingAlt ?? 0,
-            webpImages:               seoIntelDeep.webpImages ?? 0,
-            lazyLoadImages:           seoIntelDeep.lazyLoadImages ?? 0,
-            hasVideo:                 !!seoIntelDeep.hasVideo,
-            linkSummary:              seoIntelDeep.linkSummary || { totalAnchors: 0, internalCount: 0, externalOutboundCount: 0, ignoredCount: 0 }
-        };
-
-        const copyIntel = {
-            headlines: {
-                h1: Array.isArray(scrapeResult?.copyIntel?.headlines?.h1) && scrapeResult.copyIntel.headlines.h1.length
-                    ? scrapeResult.copyIntel.headlines.h1 : h1List,
-                h2: Array.isArray(scrapeResult?.copyIntel?.headlines?.h2) && scrapeResult.copyIntel.headlines.h2.length
-                    ? scrapeResult.copyIntel.headlines.h2 : h2List,
-                h3: Array.isArray(scrapeResult?.copyIntel?.headlines?.h3) && scrapeResult.copyIntel.headlines.h3.length
-                    ? scrapeResult.copyIntel.headlines.h3 : h3List
-            },
-            realCTAs:      Array.isArray(scrapeResult?.copyIntel?.realCTAs) && scrapeResult.copyIntel.realCTAs.length ? scrapeResult.copyIntel.realCTAs : realCTAs,
-            heroText:      scrapeResult?.copyIntel?.heroText || bodyText.substring(0, 400),
-            testimonials:  Array.isArray(scrapeResult?.copyIntel?.testimonials) && scrapeResult.copyIntel.testimonials.length ? scrapeResult.copyIntel.testimonials : testimonials,
-            guarantees:    Array.isArray(scrapeResult?.copyIntel?.guarantees) ? scrapeResult.copyIntel.guarantees : [],
-            faq:           Array.isArray(scrapeResult?.copyIntel?.faq) ? scrapeResult.copyIntel.faq : [],
-            bulletBenefits: Array.isArray(scrapeResult?.copyIntel?.bulletBenefits) ? scrapeResult.copyIntel.bulletBenefits : [],
-            allButtons:    Array.isArray(scrapeResult?.copyIntel?.allButtons) && scrapeResult.copyIntel.allButtons.length ? scrapeResult.copyIntel.allButtons : allButtons,
-            pageSections
-        };
-
-        const perfFallback = typeof extractPerfSignals === 'function' ? extractPerfSignals(html) : null;
-        const performanceIntel = {
-            hasCountdown:     scrapeResult?.performanceIntel?.hasCountdown ?? seoIntelDeep.hasCountdown ?? perfFallback?.hasCountdown ?? false,
-            hasExitIntent:    scrapeResult?.performanceIntel?.hasExitIntent ?? seoIntelDeep.hasExitIntent ?? perfFallback?.hasExitIntent ?? false,
-            hasLiveChat:      scrapeResult?.performanceIntel?.hasLiveChat ?? seoIntelDeep.hasLiveChat ?? perfFallback?.hasLiveChat ?? false,
-            hasSSL:           scrapeResult?.performanceIntel?.hasSSL ?? seoIntelDeep.hasSSL ?? perfFallback?.hasSSL ?? url.startsWith('https'),
-            hasCDN:           scrapeResult?.performanceIntel?.hasCDN ?? seoIntelDeep.hasCDN ?? perfFallback?.hasCDN ?? false,
-            isMobileOptimized: scrapeResult?.performanceIntel?.isMobileOptimized ?? !!$('meta[name="viewport"]').length,
-            hasMinified:      seoIntelDeep.hasMinified ?? perfFallback?.hasMinified ?? false,
-            hasPreload:       seoIntelDeep.hasPreload ?? perfFallback?.hasPreload ?? false,
-            hasPopup:         seoIntelDeep.hasPopup ?? perfFallback?.hasPopup ?? false,
-            hasStickyCTA:     seoIntelDeep.hasStickyCTA ?? perfFallback?.hasStickyCTA ?? false,
-            hasVideo:         seoIntelDeep.hasVideo ?? perfFallback?.hasVideo ?? false,
-            hasServiceWorker: seoIntelDeep.hasServiceWorker ?? perfFallback?.hasServiceWorker ?? false
-        };
-
-        const brand = {
-            fullTextSample: bodyText.substring(0, 15000),
-            wordCount: contentIntel.wordCount,
-            hasSSL: url.startsWith('https')
-        };
-
-        const frameworkData = {
-            trustSignals,
-            techStack: scrapeResult?.techStack || { cms: 'Unknown' },
-            technicalSummary: seoIntelDeep.technicalSummary || {}
-        };
-
-        const seoIntel = {
-            title:              metaTitle,
-            titleLength:        seoIntelDeep.titleLength ?? metaTitle.length,
-            metaDescription:    metaDescription,
-            description:        metaDescription,
-            descriptionLength:  seoIntelDeep.descriptionLength ?? metaDescription.length,
-            keywordsMeta:       (metaKeywords || '').split(',').map(k => k.trim()).filter(Boolean).slice(0, 20),
-            topKeywords:        Array.isArray(seoIntelDeep.topKeywords) ? seoIntelDeep.topKeywords : [],
-            headingCounts: {
-                h1: copyIntel.headlines.h1.length,
-                h2: copyIntel.headlines.h2.length,
-                h3: copyIntel.headlines.h3.length
-            },
-            h1:             copyIntel.headlines.h1[0] || '',
-            h2s:            copyIntel.headlines.h2,
-            h3s:            copyIntel.headlines.h3,
-            hasCanonical:   !!canonical,
-            hasRobotsMeta:  !!robots,
-            canonical,
-            robots,
-            ogTitle,
-            ogDescription,
-            ogImage,
-            issues:         Array.isArray(seoIntelDeep.issues) ? seoIntelDeep.issues : [],
-            seoScore:       seoIntelDeep.seoScore ?? 0,
-            seoGrade:       seoIntelDeep.seoGrade ?? 'F',
-            hreflang:       Array.isArray(seoIntelDeep.hreflang) ? seoIntelDeep.hreflang : [],
-            hasHreflang:    !!seoIntelDeep.hasHreflang,
-            aeoSignals:     seoIntelDeep.aeoSignals || EMPTY_SCRAPE_RESULT().seoIntel.aeoSignals,
-            schemaTypes:    Array.isArray(seoIntelDeep.schemaTypes) ? seoIntelDeep.schemaTypes : schemaData.types,
-            schemaCount:    seoIntelDeep.schemaCount ?? schemaData.count ?? 0,
-            hasSchema:      !!seoIntelDeep.hasSchema || schemaData.count > 0,
-            paragraphs:     seoIntelDeep.paragraphs ?? 0,
-            listCount:      seoIntelDeep.listCount ?? 0,
-            buttonCount:    seoIntelDeep.buttonCount ?? 0,
-            wordCount:      contentIntel.wordCount,
-            contentStatus:  contentIntel.contentStatus,
-            totalImages:    seoIntelDeep.totalImages ?? 0,
-            missingAlt:     seoIntelDeep.missingAlt ?? 0,
-            webpImages:     seoIntelDeep.webpImages ?? 0,
-            lazyLoadImages: seoIntelDeep.lazyLoadImages ?? 0,
-            hasVideo:       !!seoIntelDeep.hasVideo,
-            scriptCount:    seoIntelDeep.scriptCount ?? 0,
-            inlineScriptCount: seoIntelDeep.inlineScriptCount ?? 0,
-            externalScripts: seoIntelDeep.externalScripts ?? 0,
-            cssCount:       seoIntelDeep.cssCount ?? 0,
-            cssFiles:       seoIntelDeep.cssFiles ?? seoIntelDeep.cssCount ?? 0,
-            hasMinified:    !!seoIntelDeep.hasMinified,
-            hasServiceWorker: !!seoIntelDeep.hasServiceWorker,
-            hasCDN:         !!seoIntelDeep.hasCDN,
-            hasPreload:     !!seoIntelDeep.hasPreload,
-            hasSSL:         !!seoIntelDeep.hasSSL,
-            charset:        seoIntelDeep.charset ?? null,
-            hasFAQ:         !!seoIntelDeep.hasFAQ,
-            hasHowTo:       !!seoIntelDeep.hasHowTo,
-            hasDefinitions: !!seoIntelDeep.hasDefinitions,
-            hasExitIntent:  !!seoIntelDeep.hasExitIntent,
-            hasPopup:       !!seoIntelDeep.hasPopup,
-            hasCountdown:   !!seoIntelDeep.hasCountdown,
-            hasStickyCTA:   !!seoIntelDeep.hasStickyCTA,
-            hasLiveChat:    !!seoIntelDeep.hasLiveChat,
-            hasWhatsApp:    !!seoIntelDeep.hasWhatsApp,
-            hasCOD:         !!seoIntelDeep.hasCOD,
-            internalLinks:             contentIntel.internalLinks,
-            externalLinks:             contentIntel.externalLinks,
-            externalOutboundLinks:     contentIntel.externalOutboundLinks,
-            internalLinkObjects:       contentIntel.internalLinkObjects,
-            externalOutboundLinkObjects: contentIntel.externalOutboundLinkObjects,
-            linkSummary:    contentIntel.linkSummary,
-            technicalSummary: seoIntelDeep.technicalSummary || {}
-        };
-
-        const finalResult = mergeScrapeData(scrapeResult, {
-            success: !!scrapeResult?.success,
-            fetchLayer: scrapeResult?.fetchLayer || 'browser',
-            html,
-            duration: Date.now() - startTime,
-            visualDNA,
-            techStack: scrapeResult?.techStack || { cms: 'Unknown' },
-            copyIntel,
-            chapterIntel,
-            priceIntel,         // ← PriceIntelObserved (Observed-First)
-            trustSignals,
-            contacts,
-            schemaData,
-            sections,
-            meta: {
-                title:       metaTitle,
-                description: metaDescription,
-                keywords:    metaKeywords,
-                canonical,
-                ogImage,
-                ogTitle,
-                ogDescription,
-                robots,
-                lang,
-                hasOG: !!ogTitle
-            },
-            seoIntel,
-            contentIntel,
-            trackingIntel: scrapeResult?.trackingIntel || EMPTY_SCRAPE_RESULT().trackingIntel,
-            performanceIntel,
-            brand,
-            redirectIntel: scrapeResult?.redirectIntel || { totalRedirects: 0, isFunnelRedirect: false, chain: [] },
-            frameworkData
-        });
-
-        const allSections = finalResult.copyIntel?.pageSections || [];
-        finalResult.sectionsFound = allSections.length;
-        finalResult.h1    = finalResult.copyIntel?.headlines?.h1?.[0] || null;
-        // ★ getCanonicalPrice respects isBlocked — null if price not confirmed
-        // ✅ CORRECT
-finalResult.price = getCanonicalPrice(finalResult.priceIntel);
-        finalResult.phones = finalResult.contacts?.phones?.length || 0;
-
-        console.log(
-            `✅ [DEEP SCRAPE] OK — ${Date.now() - startTime}ms` +
-            ` | Layer: ${finalResult.fetchLayer}` +
-            ` | Colors: ${(finalResult.visualDNA?.dominantColors || []).slice(0, 3).join(',')}` +
-            ` | CMS: ${finalResult.techStack?.cms || 'Unknown'}` +
-            // ★ New: show extractionStatus + confidenceBand
-            ` | Prix: ${finalResult.priceIntel?.primaryPrice ?? 'N/A'} ${finalResult.priceIntel?.currency ?? ''}` +
-            ` | Status: ${finalResult.priceIntel?.extractionStatus ?? 'N/A'}` +
-            ` | Confidence: ${finalResult.priceIntel?.confidenceBand ?? 'N/A'}` +
-            ` | Range: ${finalResult.priceIntel?.priceRange ? `${finalResult.priceIntel.priceRange.min}-${finalResult.priceIntel.priceRange.max}` : 'N/A'}` +
-            ` | Model: ${finalResult.priceIntel?.pricingModel || 'unknown'}` +
-            ` | Score: ${finalResult.priceIntel?.primaryScore ?? 'N/A'}` +
-            ` | H1: ${finalResult.copyIntel?.headlines?.h1?.[0]?.substring(0, 40) || 'N/A'}`
-        );
-
-        // ★ Extended PRICE DEBUG: now includes extractionStatus, isBlocked, auditTrail summary
-        console.log('PRICE DEBUG', {
-            existingPrices:  existingPrices.length,
-            schemaPrices:    schemaPrices.length,
-            textPrices:      textPrices.length,
-            domPrices:       domPrices.length,
-            primaryPrice:    priceIntel?.primaryPrice,
-            primaryPrice:       priceIntel?.primaryPrice,
-            currency:        priceIntel?.currency,
-            model:           priceIntel?.pricingModel,
-            // ★ New fields
-            extractionStatus: priceIntel?.extractionStatus,
-            confidenceBand:   priceIntel?.confidenceBand,
-            confidenceScore:  priceIntel?.confidenceScore,
-            isBlocked:        priceIntel?.isBlocked,
-            blockingReasons:  priceIntel?.blockingReasons,
-            auditEvidenceCount: priceIntel?.auditTrail?.evidenceCount,
-            conflicts:        priceIntel?.auditTrail?.conflicts?.length,
-        });
-
-        return finalResult;
-    } catch (error) {
-        console.error(`❌ [DEEP SCRAPE] CRASH: ${error.message}`);
-        return finalizeError(error.message, 'browser');
+    return Object.entries(map)
+      .filter(([, value]) => value)
+      .map(([type]) => ({ type, present: true, score: 60 }));
+  };
+
+  const detectBotBlocked = (scrapeResult) => {
+    const htmlLower = String(scrapeResult?.html || '').toLowerCase();
+    const h1Lower = String(scrapeResult?.copyIntel?.headlines?.h1?.[0] || '').toLowerCase();
+    const titleLower = String(scrapeResult?.meta?.title || scrapeResult?.title || '').toLowerCase();
+
+    const wc =
+      scrapeResult?.contentIntel?.wordCount ??
+      scrapeResult?.seoIntel?.wordCount ??
+      scrapeResult?.brand?.wordCount ??
+      scrapeResult?.wordCount ??
+      0;
+
+    const hasCompactSections =
+      Array.isArray(scrapeResult?.sectionRawBlocks) &&
+      scrapeResult.sectionRawBlocks.length > 0;
+
+    const hasCompactBody =
+      String(scrapeResult?.bodyText || scrapeResult?.text || scrapeResult?.content || '').length > 200;
+
+    if (hasCompactSections || hasCompactBody || scrapeResult?.priceIntel?.detected) {
+      return false;
     }
+
+    return (
+      !scrapeResult?.success ||
+      !scrapeResult?.html ||
+      String(scrapeResult.html || '').length < 800 ||
+      wc < 20 ||
+      h1Lower.includes('you have been blocked') ||
+      h1Lower.includes('access denied') ||
+      titleLower.includes('attention required') ||
+      titleLower.includes('security measure') ||
+      titleLower.includes('cloudflare') ||
+      htmlLower.includes('ray id:') ||
+      htmlLower.includes('captcha') ||
+      (
+        !scrapeResult?.copyIntel?.headlines?.h1?.length &&
+        scrapeResult?.visualDNA?.dominantColors?.[0] === '#3b82f6'
+      )
+    );
+  };
+
+  try {
+    let scrapeResult = await scrapeStealth(url);
+
+    scrapeResult = normalizeScrapeForFunnel(scrapeResult);
+
+    const hasRailwaySections =
+      Array.isArray(scrapeResult?.sectionRawBlocks) &&
+      scrapeResult.sectionRawBlocks.length > 0;
+
+    const hasRailwayBody =
+      String(scrapeResult?.bodyText || scrapeResult?.text || scrapeResult?.content || '').length > 200;
+
+    const railwayUsable =
+      hasRailwaySections ||
+      hasRailwayBody ||
+      scrapeResult?.priceIntel?.detected;
+
+    console.log(
+      `[DEEP SCRAPE] Railway normalized before completeness check ` +
+      `sections=${scrapeResult.sectionRawBlocks?.length || 0} ` +
+      `body=${String(scrapeResult.bodyText || '').length} ` +
+      `title=${scrapeResult.title || scrapeResult.mainPage?.title || ''} ` +
+      `priceDetected=${Boolean(scrapeResult?.priceIntel?.detected)}`
+    );
+
+    if (detectBotBlocked(scrapeResult) && scrapeResult?.fetchLayer !== 'scrape.do') {
+      if (wantsRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
+        if (railwayUsable) {
+  console.log(
+    `[DEEP SCRAPE] Railway utilisable malgré status partiel pour ${url}. ` +
+    `sections=${scrapeResult.sectionRawBlocks?.length || 0} ` +
+    `body=${String(scrapeResult.bodyText || '').length}`
+  );
+} else {
+  console.warn(
+    `[DEEP SCRAPE] Railway incomplet pour ${url}. ` +
+    `Fallback Render/Scrape.do desactive.`
+  );
+
+  return finalizeError(
+    scrapeResult?.error ||
+      scrapeResult?.message ||
+      'RAILWAY_SCRAPING_PARTIAL_NO_RENDER_FALLBACK',
+    'railway'
+  );
 }
 
+        console.warn(
+          `[DEEP SCRAPE] Railway incomplet pour ${url}. ` +
+          `Fallback Render/Scrape.do desactive.`
+        );
+
+        return finalizeError(
+          scrapeResult?.error ||
+            scrapeResult?.message ||
+            'RAILWAY_SCRAPING_PARTIAL_NO_RENDER_FALLBACK',
+          'railway'
+        );
+      }
+
+      console.warn(`⚠️ [DEEP SCRAPE] Page vide ou bloquée détectée. Activation de SCRAPE.DO...`);
+
+      const scrapeDoToken = process.env.SCRAPEDOTOKEN || process.env.SCRAPE_DO_TOKEN;
+
+      if (!scrapeDoToken) {
+        throw new Error('Bloqué par anti-bot, et aucun token Scrape.do disponible.');
+      }
+
+      try {
+        const scrapeDoUrl =
+          `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(url)}&render=true`;
+
+        const fallbackRes = await RetryManager.executeWithRetry(
+          () => axios.get(scrapeDoUrl, { timeout: 45000 }),
+          { context: 'ScrapeDo-DeepFallback' }
+        );
+
+        const fallbackHtml =
+          typeof fallbackRes?.data === 'string'
+            ? fallbackRes.data
+            : (fallbackRes?.data?.html || fallbackRes?.data?.body || '');
+
+        if (!fallbackHtml || fallbackHtml.length < 500) {
+          throw new Error('Réponse de Scrape.do invalide ou trop courte.');
+        }
+
+        console.log(`✅ [DEEP SCRAPE] Sauvetage Scrape.do réussi (${fallbackHtml.length} chars) !`);
+
+        scrapeResult = mergeScrapeData(scrapeResult, {
+          success: true,
+          fetchLayer: 'scrape.do',
+          html: fallbackHtml,
+          bodyText: '',
+          duration: Date.now() - startTime
+        });
+      } catch (fallbackError) {
+        console.error(`❌ [DEEP SCRAPE] Scrape.do a aussi échoué: ${fallbackError.message}`);
+        throw new Error('Anti-bot infranchissable (browser + Scrape.do bloqués).');
+      }
+    }
+        // Normalisation finale après éventuel fallback
+    scrapeResult = normalizeScrapeForFunnel(scrapeResult);
+
+    const compactSections =
+      Array.isArray(scrapeResult?.sectionRawBlocks) && scrapeResult.sectionRawBlocks.length
+        ? scrapeResult.sectionRawBlocks
+        : Array.isArray(scrapeResult?.sectionsDetailed) && scrapeResult.sectionsDetailed.length
+          ? scrapeResult.sectionsDetailed
+          : Array.isArray(scrapeResult?.sections) && scrapeResult.sections.length
+            ? scrapeResult.sections
+            : [];
+
+    const compactBodyText = normText(
+      scrapeResult?.bodyText ||
+      scrapeResult?.text ||
+      scrapeResult?.content ||
+      scrapeResult?.mainPage?.bodyText ||
+      scrapeResult?.scrapeData?.bodyText ||
+      compactSections
+        .map(section => [
+          section?.title,
+          section?.textPreview,
+          ...(Array.isArray(section?.headings) ? section.headings : []),
+          ...(Array.isArray(section?.paragraphs) ? section.paragraphs : [])
+        ].filter(Boolean).join(' '))
+        .join(' ')
+    );
+
+    let html = String(scrapeResult?.html || '');
+
+    if ((!html || html.length < 200) && compactBodyText.length > 50) {
+      const syntheticSectionsHtml = compactSections
+        .map(section => {
+          const title = normText(section?.title || section?.type || '');
+          const text = normText(
+            section?.textPreview ||
+            section?.text ||
+            (Array.isArray(section?.paragraphs) ? section.paragraphs.join(' ') : '')
+          );
+
+          return `<section data-type="${String(section?.type || 'SECTION').replace(/"/g, '')}">
+            ${title ? `<h2>${title}</h2>` : ''}
+            ${text ? `<p>${text}</p>` : ''}
+          </section>`;
+        })
+        .join('\n');
+
+      html = `
+        <!doctype html>
+        <html>
+          <head>
+            <title>${normText(scrapeResult?.title || scrapeResult?.h1 || url)}</title>
+            <meta name="description" content="${normText(scrapeResult?.metaDescription || '').replace(/"/g, "'")}">
+          </head>
+          <body>
+            ${scrapeResult?.h1 ? `<h1>${normText(scrapeResult.h1)}</h1>` : ''}
+            <main>
+              <p>${compactBodyText}</p>
+              ${syntheticSectionsHtml}
+            </main>
+          </body>
+        </html>
+      `;
+    }
+
+    if (!html || html.length < 200) {
+      throw new Error('HTML vide ou insuffisant après scraping.');
+    }
+
+    const $ = cheerio.load(html);
+
+    const bodyText = normText(
+      compactBodyText ||
+      scrapeResult?.bodyText ||
+      scrapeResult?.contentIntel?.bodyText ||
+      $('body').text()
+    );
+
+    const seoIntelDeep = extractSEOIntel(html, url);
+
+    const metaTitle =
+      scrapeResult?.meta?.title ||
+      scrapeResult?.title ||
+      seoIntelDeep.title ||
+      normText($('title').text()) ||
+      '';
+
+    const metaDescription =
+      scrapeResult?.meta?.description ||
+      scrapeResult?.meta?.metaDescription ||
+      scrapeResult?.metaDescription ||
+      seoIntelDeep.metaDescription ||
+      $('meta[name="description"]').attr('content') ||
+      '';
+
+    const metaKeywords =
+      scrapeResult?.meta?.keywords ||
+      $('meta[name="keywords"]').attr('content') ||
+      '';
+
+    const canonical =
+      scrapeResult?.meta?.canonical ||
+      seoIntelDeep.canonical ||
+      $('link[rel="canonical"]').attr('href') ||
+      '';
+
+    const ogTitle =
+      scrapeResult?.meta?.ogTitle ||
+      seoIntelDeep.ogTitle ||
+      $('meta[property="og:title"]').attr('content') ||
+      '';
+
+    const ogDescription =
+      scrapeResult?.meta?.ogDescription ||
+      seoIntelDeep.ogDescription ||
+      $('meta[property="og:description"]').attr('content') ||
+      '';
+
+    const ogImage =
+      scrapeResult?.meta?.ogImage ||
+      seoIntelDeep.ogImage ||
+      $('meta[property="og:image"]').attr('content') ||
+      '';
+
+    const robots =
+      scrapeResult?.meta?.robots ||
+      seoIntelDeep.robots ||
+      $('meta[name="robots"]').attr('content') ||
+      '';
+
+    const lang =
+      scrapeResult?.meta?.lang ||
+      seoIntelDeep.lang ||
+      $('html').attr('lang') ||
+      '';
+
+    const schemaTypes = unique([
+      ...(Array.isArray(scrapeResult?.schemaData?.types) ? scrapeResult.schemaData.types : []),
+      ...(Array.isArray(seoIntelDeep.schemaTypes) ? seoIntelDeep.schemaTypes : [])
+    ]);
+
+    const schemaData = {
+      types: schemaTypes,
+      count: schemaTypes.length
+    };
+
+    const schemaPrices = [];
+
+    $('script[type="application/ld+json"]').each((_, el) => {
+      try {
+        const content = $(el).html()?.substring(0, 50000);
+        if (!content) return;
+
+        const parsed = JSON.parse(content);
+        const entries = Array.isArray(parsed) ? parsed : [parsed];
+
+        entries.forEach(entry => extractSchemaPricesFromNode(entry, schemaPrices));
+      } catch {}
+    });
+
+    const rawPriceIntel =
+      scrapeResult?.priceIntel ||
+      EMPTY_SCRAPE_RESULT().priceIntel;
+
+    const textPrices = extractTextPrices(bodyText, html);
+    const domPrices = extractDomPrices($, html);
+
+    const existingPrices = Array.isArray(rawPriceIntel?.prices)
+      ? rawPriceIntel.prices
+      : [];
+
+    const compactPrices = Array.isArray(scrapeResult?.prices)
+      ? scrapeResult.prices.map(price => ({
+          value: Number(price?.value ?? price?.price ?? price),
+          currency: price?.currency || scrapeResult?.currency || rawPriceIntel?.currency || null,
+          source: 'railway-compact',
+          context: price?.context || price?.label || ''
+        }))
+      : [];
+
+    const priceIntel = finalizePriceIntel([
+      ...existingPrices,
+      ...compactPrices,
+      ...schemaPrices,
+      ...textPrices,
+      ...domPrices
+    ], html);
+
+    const h1List = unique([
+      scrapeResult?.h1,
+      ...(Array.isArray(scrapeResult?.copyIntel?.headlines?.h1) ? scrapeResult.copyIntel.headlines.h1 : []),
+      ...$('h1').map((_, el) => normText($(el).text())).get()
+    ].filter(t => t && t.length > 2)).slice(0, 8);
+
+    const h2List = unique([
+      ...(Array.isArray(scrapeResult?.headings) ? scrapeResult.headings : []),
+      ...(Array.isArray(scrapeResult?.copyIntel?.headlines?.h2) ? scrapeResult.copyIntel.headlines.h2 : []),
+      ...$('h2').map((_, el) => normText($(el).text())).get()
+    ].filter(t => t && t.length > 2)).slice(0, 12);
+
+    const h3List = unique([
+      ...(Array.isArray(scrapeResult?.copyIntel?.headlines?.h3) ? scrapeResult.copyIntel.headlines.h3 : []),
+      ...$('h3').map((_, el) => normText($(el).text())).get()
+    ].filter(t => t && t.length > 2)).slice(0, 12);
+
+    const allButtons = unique([
+      ...(Array.isArray(scrapeResult?.ctas)
+        ? scrapeResult.ctas.map(cta => cta?.text || cta?.label || cta?.title || cta).filter(Boolean)
+        : []),
+      ...$('button, a, input[type="submit"], input[type="button"]')
+        .map((_, el) => normText($(el).text() || $(el).val() || $(el).attr('aria-label') || ''))
+        .get()
+    ].filter(t => t.length > 1 && t.length < 80)).slice(0, 30);
+
+    const realCTAs = unique([
+      ...(Array.isArray(scrapeResult?.ctas)
+        ? scrapeResult.ctas.map(cta => cta?.text || cta?.label || cta?.title || cta).filter(Boolean)
+        : []),
+      ...$('a.button, a.btn, button, .cta, [class*="button"], [class*="btn"], [class*="cta"]')
+        .map((_, el) => normText($(el).text() || $(el).val() || $(el).attr('aria-label') || ''))
+        .get()
+    ].filter(t => t.length > 2 && t.length < 60)).slice(0, 20);
+
+    const testimonials = unique(
+      $('[class*="review"],[class*="testimonial"],[class*="avis"],[data-rating],[class*="rating"]')
+        .map((_, el) => normText($(el).text()).substring(0, 120))
+        .get()
+        .filter(Boolean)
+    ).slice(0, 5);
+
+    const sections = {
+      ...inferSections($),
+      ...(scrapeResult?.sections && !Array.isArray(scrapeResult.sections) ? scrapeResult.sections : {})
+    };
+
+    const pageSections =
+      Array.isArray(scrapeResult?.copyIntel?.pageSections) && scrapeResult.copyIntel.pageSections.length
+        ? scrapeResult.copyIntel.pageSections
+        : compactSections.length
+          ? compactSections.map((section, index) => ({
+              type: section?.type || `SECTION_${index + 1}`,
+              title: section?.title || section?.type || `Section ${index + 1}`,
+              textSample: section?.textPreview || section?.text || '',
+              present: true,
+              score: 70
+            }))
+          : inferPageSections(sections);
+
+    const chapterIntel = { chapters: [] };
+
+    if (pageSections.length) {
+      chapterIntel.chapters = pageSections.map((section, index) => ({
+        type: section.type || `SECTION_${index + 1}`,
+        title: section.title || section.type || `Section ${index + 1}`,
+        textSample: section.textSample || section.textPreview || section.text || '',
+        wordCount: String(section.textSample || section.textPreview || section.text || '')
+          .split(/\s+/)
+          .filter(Boolean)
+          .length
+      }));
+    }
+        let visualDNA = scrapeResult?.visualDNA || null;
+
+    if (!visualDNA || !Array.isArray(visualDNA.dominantColors) || !visualDNA.dominantColors.length) {
+      const styleContent =
+        ($('style').text() || '') + ' ' +
+        $('[style]').map((_, el) => $(el).attr('style') || '').get().join(' ');
+
+      const colorRegex =
+        /#(?:[0-9a-fA-F]{3,4}){1,2}\b|rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)/gi;
+
+      const allColors = styleContent.match(colorRegex) || [];
+      const colorCounts = {};
+
+      allColors.forEach(color => {
+        const normalizedColor = color.toLowerCase().replace(/\s+/g, '');
+
+        if (
+          ![
+            '#ffffff',
+            '#000000',
+            '#fff',
+            '#000',
+            'transparent',
+            'rgba(0,0,0,0)'
+          ].includes(normalizedColor)
+        ) {
+          colorCounts[normalizedColor] = (colorCounts[normalizedColor] || 0) + 1;
+        }
+      });
+
+      const dominantColors = Object.entries(colorCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([color]) => color);
+
+      visualDNA = {
+        dominantColors: dominantColors.length
+          ? dominantColors
+          : ['#3b82f6', '#1e293b', '#10b981'],
+        googleFonts: Array.isArray(scrapeResult?.visualDNA?.googleFonts)
+          ? scrapeResult.visualDNA.googleFonts
+          : []
+      };
+    } else {
+      visualDNA = {
+        dominantColors: visualDNA.dominantColors,
+        googleFonts: Array.isArray(visualDNA.googleFonts)
+          ? visualDNA.googleFonts
+          : []
+      };
+    }
+
+    const contacts = {
+      phones:
+        Array.isArray(scrapeResult?.contacts?.phones) && scrapeResult.contacts.phones.length
+          ? scrapeResult.contacts.phones
+          : normalizePhones(bodyText),
+
+      emails:
+        Array.isArray(scrapeResult?.contacts?.emails) && scrapeResult.contacts.emails.length
+          ? scrapeResult.contacts.emails
+          : normalizeEmails(bodyText)
+    };
+
+    const trustSignals = {
+      hasSSL:
+        scrapeResult?.trustSignals?.hasSSL ??
+        seoIntelDeep.hasSSL ??
+        url.startsWith('https'),
+
+      hasWhatsApp:
+        scrapeResult?.trustSignals?.hasWhatsApp ??
+        seoIntelDeep.hasWhatsApp ??
+        /whatsapp|wa\.me/i.test(html),
+
+      hasPhoneNumber:
+        scrapeResult?.trustSignals?.hasPhoneNumber ??
+        contacts.phones.length > 0,
+
+      hasReviews:
+        scrapeResult?.trustSignals?.hasReviews ??
+        testimonials.length > 0,
+
+      hasMoneyBackGuarantee:
+        scrapeResult?.trustSignals?.hasMoneyBackGuarantee ??
+        /garantie|money back|refund|remboursement/i.test(bodyText),
+
+      hasPaymentLogos:
+        scrapeResult?.trustSignals?.hasPaymentLogos ??
+        /visa|mastercard|paypal|cmi/i.test(html),
+
+      hasLegalPages:
+        scrapeResult?.trustSignals?.hasLegalPages ??
+        /mentions légales|privacy|conditions|terms|سياسة|خصوصية/i.test(bodyText),
+
+      hasCOD:
+        scrapeResult?.trustSignals?.hasCOD ??
+        seoIntelDeep.hasCOD ??
+        /cash on delivery|contre-remboursement|paiement à la livraison|الدفع عند الاستلام|توصيل/i.test(bodyText),
+
+      trustScore:
+        scrapeResult?.trustSignals?.trustScore ?? null
+    };
+
+    const contentIntel = {
+      paragraphCount: seoIntelDeep.paragraphs ?? $('p').length,
+      listCount: seoIntelDeep.listCount ?? $('ul, ol').length,
+      imageCount: seoIntelDeep.totalImages ?? $('img').length,
+      buttonCount: seoIntelDeep.buttonCount ?? $('button').length,
+
+      internalLinks: Array.isArray(seoIntelDeep.internalLinks)
+        ? seoIntelDeep.internalLinks.slice(0, 50)
+        : [],
+
+      externalLinks: Array.isArray(seoIntelDeep.externalLinks)
+        ? seoIntelDeep.externalLinks.slice(0, 30)
+        : [],
+
+      externalOutboundLinks: Array.isArray(seoIntelDeep.externalOutboundLinks)
+        ? seoIntelDeep.externalOutboundLinks.slice(0, 30)
+        : [],
+
+      internalLinkObjects: Array.isArray(seoIntelDeep.internalLinkObjects)
+        ? seoIntelDeep.internalLinkObjects.slice(0, 20)
+        : [],
+
+      externalOutboundLinkObjects: Array.isArray(seoIntelDeep.externalOutboundLinkObjects)
+        ? seoIntelDeep.externalOutboundLinkObjects.slice(0, 20)
+        : [],
+
+      brokenLinks: Array.isArray(seoIntelDeep.brokenLinkObjects)
+        ? seoIntelDeep.brokenLinkObjects.slice(0, 20)
+        : [],
+
+      wordCount: seoIntelDeep.wordCount ?? bodyText.split(/\s+/).filter(Boolean).length,
+      bodyText: bodyText.substring(0, 15000),
+
+      contentStatus:
+        seoIntelDeep.contentStatus ||
+        wordStatus(seoIntelDeep.wordCount ?? bodyText.split(/\s+/).filter(Boolean).length),
+
+      totalImages: seoIntelDeep.totalImages ?? 0,
+      missingAlt: seoIntelDeep.missingAlt ?? 0,
+      webpImages: seoIntelDeep.webpImages ?? 0,
+      lazyLoadImages: seoIntelDeep.lazyLoadImages ?? 0,
+      hasVideo: Boolean(seoIntelDeep.hasVideo),
+
+      linkSummary:
+        seoIntelDeep.linkSummary || {
+          totalAnchors: 0,
+          internalCount: 0,
+          externalOutboundCount: 0,
+          ignoredCount: 0
+        }
+    };
+
+    const copyIntel = {
+      headlines: {
+        h1:
+          Array.isArray(scrapeResult?.copyIntel?.headlines?.h1) &&
+          scrapeResult.copyIntel.headlines.h1.length
+            ? scrapeResult.copyIntel.headlines.h1
+            : h1List,
+
+        h2:
+          Array.isArray(scrapeResult?.copyIntel?.headlines?.h2) &&
+          scrapeResult.copyIntel.headlines.h2.length
+            ? scrapeResult.copyIntel.headlines.h2
+            : h2List,
+
+        h3:
+          Array.isArray(scrapeResult?.copyIntel?.headlines?.h3) &&
+          scrapeResult.copyIntel.headlines.h3.length
+            ? scrapeResult.copyIntel.headlines.h3
+            : h3List
+      },
+
+      realCTAs:
+        Array.isArray(scrapeResult?.copyIntel?.realCTAs) &&
+        scrapeResult.copyIntel.realCTAs.length
+          ? scrapeResult.copyIntel.realCTAs
+          : realCTAs,
+
+      heroText:
+        scrapeResult?.copyIntel?.heroText ||
+        bodyText.substring(0, 800),
+
+      testimonials:
+        Array.isArray(scrapeResult?.copyIntel?.testimonials) &&
+        scrapeResult.copyIntel.testimonials.length
+          ? scrapeResult.copyIntel.testimonials
+          : testimonials,
+
+      guarantees:
+        Array.isArray(scrapeResult?.copyIntel?.guarantees)
+          ? scrapeResult.copyIntel.guarantees
+          : [],
+
+      faq:
+        Array.isArray(scrapeResult?.copyIntel?.faq)
+          ? scrapeResult.copyIntel.faq
+          : [],
+
+      bulletBenefits:
+        Array.isArray(scrapeResult?.copyIntel?.bulletBenefits) &&
+        scrapeResult.copyIntel.bulletBenefits.length
+          ? scrapeResult.copyIntel.bulletBenefits
+          : pageSections
+              .map(section => section?.title || section?.textSample || section?.textPreview || '')
+              .filter(Boolean)
+              .slice(0, 8),
+
+      allButtons:
+        Array.isArray(scrapeResult?.copyIntel?.allButtons) &&
+        scrapeResult.copyIntel.allButtons.length
+          ? scrapeResult.copyIntel.allButtons
+          : allButtons,
+
+      pageSections
+    };
+
+    const perfFallback =
+      typeof extractPerfSignals === 'function'
+        ? extractPerfSignals(html)
+        : null;
+
+    const performanceIntel = {
+      hasCountdown:
+        scrapeResult?.performanceIntel?.hasCountdown ??
+        seoIntelDeep.hasCountdown ??
+        perfFallback?.hasCountdown ??
+        false,
+
+      hasExitIntent:
+        scrapeResult?.performanceIntel?.hasExitIntent ??
+        seoIntelDeep.hasExitIntent ??
+        perfFallback?.hasExitIntent ??
+        false,
+
+      hasLiveChat:
+        scrapeResult?.performanceIntel?.hasLiveChat ??
+        seoIntelDeep.hasLiveChat ??
+        perfFallback?.hasLiveChat ??
+        false,
+
+      hasSSL:
+        scrapeResult?.performanceIntel?.hasSSL ??
+        seoIntelDeep.hasSSL ??
+        perfFallback?.hasSSL ??
+        url.startsWith('https'),
+
+      hasCDN:
+        scrapeResult?.performanceIntel?.hasCDN ??
+        seoIntelDeep.hasCDN ??
+        perfFallback?.hasCDN ??
+        false,
+
+      isMobileOptimized:
+        scrapeResult?.performanceIntel?.isMobileOptimized ??
+        Boolean($('meta[name="viewport"]').length),
+
+      hasMinified:
+        seoIntelDeep.hasMinified ??
+        perfFallback?.hasMinified ??
+        false,
+
+      hasPreload:
+        seoIntelDeep.hasPreload ??
+        perfFallback?.hasPreload ??
+        false,
+
+      hasPopup:
+        seoIntelDeep.hasPopup ??
+        perfFallback?.hasPopup ??
+        false,
+
+      hasStickyCTA:
+        seoIntelDeep.hasStickyCTA ??
+        perfFallback?.hasStickyCTA ??
+        false,
+
+      hasVideo:
+        seoIntelDeep.hasVideo ??
+        perfFallback?.hasVideo ??
+        false,
+
+      hasServiceWorker:
+        seoIntelDeep.hasServiceWorker ??
+        perfFallback?.hasServiceWorker ??
+        false
+    };
+
+    const brand = {
+      fullTextSample: bodyText.substring(0, 15000),
+      wordCount: contentIntel.wordCount,
+      hasSSL: url.startsWith('https')
+    };
+
+    const frameworkData = {
+      trustSignals,
+      techStack: scrapeResult?.techStack || { cms: 'Unknown' },
+      technicalSummary: seoIntelDeep.technicalSummary || {}
+    };
+    const finalResult = mergeScrapeData(scrapeResult, {
+      success: Boolean(
+        scrapeResult?.success ||
+        pageSections.length ||
+        bodyText.length > 200 ||
+        priceIntel?.detected
+      ),
+
+      fetchLayer:
+        scrapeResult?.fetchLayer ||
+        scrapeResult?.layer ||
+        scrapeResult?.executionLayer ||
+        'browser',
+
+      html,
+      bodyText,
+      text: bodyText,
+      content: bodyText,
+
+      duration: Date.now() - startTime,
+
+      url,
+      finalUrl:
+        scrapeResult?.finalUrl ||
+        scrapeResult?.mainPage?.finalUrl ||
+        scrapeResult?.url ||
+        url,
+
+      title: metaTitle,
+      h1: copyIntel.headlines.h1[0] || null,
+      metaDescription,
+
+      visualDNA,
+
+      techStack:
+        scrapeResult?.techStack ||
+        { cms: 'Unknown' },
+
+      copyIntel,
+      chapterIntel,
+      priceIntel,
+      trustSignals,
+      contacts,
+      schemaData,
+      sections,
+
+      sectionRawBlocks: compactSections,
+      sectionBlocks: compactSections,
+      sectionsDetailed: compactSections,
+
+      pagesExplored: Array.isArray(scrapeResult?.pagesExplored) && scrapeResult.pagesExplored.length
+        ? scrapeResult.pagesExplored
+        : [
+            {
+              url,
+              finalUrl:
+                scrapeResult?.finalUrl ||
+                scrapeResult?.mainPage?.finalUrl ||
+                scrapeResult?.url ||
+                url,
+              title: metaTitle,
+              h1: copyIntel.headlines.h1[0] || null,
+              bodyText,
+              text: bodyText,
+              content: bodyText,
+              sectionRawBlocks: compactSections,
+              sectionsDetailed: compactSections,
+              sections: compactSections
+            }
+          ],
+
+      mainPage: {
+        ...(scrapeResult?.mainPage || {}),
+        url,
+        finalUrl:
+          scrapeResult?.finalUrl ||
+          scrapeResult?.mainPage?.finalUrl ||
+          scrapeResult?.url ||
+          url,
+        title: metaTitle,
+        h1: copyIntel.headlines.h1[0] || null,
+        metaDescription,
+        bodyText,
+        text: bodyText,
+        content: bodyText,
+        sectionRawBlocks: compactSections,
+        sectionBlocks: compactSections,
+        sectionsDetailed: compactSections,
+        sections: compactSections,
+        copyIntel,
+        brand,
+        priceIntel,
+        trustSignals,
+        contacts
+      },
+
+      scrapeData: {
+        ...(scrapeResult?.scrapeData || {}),
+        url,
+        finalUrl:
+          scrapeResult?.finalUrl ||
+          scrapeResult?.scrapeData?.finalUrl ||
+          scrapeResult?.url ||
+          url,
+        title: metaTitle,
+        h1: copyIntel.headlines.h1[0] || null,
+        metaDescription,
+        bodyText,
+        text: bodyText,
+        content: bodyText,
+        sectionRawBlocks: compactSections,
+        sectionBlocks: compactSections,
+        sectionsDetailed: compactSections,
+        sections: compactSections,
+        copyIntel,
+        brand,
+        priceIntel,
+        trustSignals,
+        contacts
+      },
+
+      meta: {
+        title: metaTitle,
+        description: metaDescription,
+        keywords: metaKeywords,
+        canonical,
+        ogImage,
+        ogTitle,
+        ogDescription,
+        robots,
+        lang,
+        hasOG: Boolean(ogTitle)
+      },
+
+      seoIntel,
+      contentIntel,
+
+      trackingIntel:
+        scrapeResult?.trackingIntel ||
+        EMPTY_SCRAPE_RESULT().trackingIntel,
+
+      performanceIntel,
+
+      brand,
+
+      redirectIntel:
+        scrapeResult?.redirectIntel ||
+        {
+          totalRedirects: 0,
+          isFunnelRedirect: false,
+          chain: []
+        },
+
+      frameworkData
+    });
+
+    const allSections =
+      finalResult.copyIntel?.pageSections ||
+      finalResult.sectionRawBlocks ||
+      [];
+
+    finalResult.sectionsFound = Array.isArray(allSections)
+      ? allSections.length
+      : 0;
+
+    finalResult.h1 =
+      finalResult.copyIntel?.headlines?.h1?.[0] ||
+      finalResult.h1 ||
+      null;
+
+    finalResult.price = getCanonicalPrice(finalResult.priceIntel);
+
+    finalResult.phones =
+      finalResult.contacts?.phones?.length ||
+      0;
+
+    console.log(
+      `[FUNNEL-DATA] deep final sections=${finalResult.sectionsFound} ` +
+      `body=${String(finalResult.bodyText || '').length} ` +
+      `title=${finalResult.title || ''} ` +
+      `price=${finalResult.price ?? 'N/A'}`
+    );
+
+    console.log(
+      `✅ [DEEP SCRAPE] OK — ${Date.now() - startTime}ms` +
+      ` | Layer: ${finalResult.fetchLayer}` +
+      ` | Colors: ${(finalResult.visualDNA?.dominantColors || []).slice(0, 3).join(',')}` +
+      ` | CMS: ${finalResult.techStack?.cms || 'Unknown'}` +
+      ` | Prix: ${finalResult.priceIntel?.primaryPrice ?? 'N/A'} ${finalResult.priceIntel?.currency ?? ''}` +
+      ` | Status: ${finalResult.priceIntel?.extractionStatus ?? 'N/A'}` +
+      ` | Confidence: ${finalResult.priceIntel?.confidenceBand ?? 'N/A'}` +
+      ` | Range: ${
+        finalResult.priceIntel?.priceRange
+          ? `${finalResult.priceIntel.priceRange.min}-${finalResult.priceIntel.priceRange.max}`
+          : 'N/A'
+      }` +
+      ` | Model: ${finalResult.priceIntel?.pricingModel || 'unknown'}` +
+      ` | Score: ${finalResult.priceIntel?.primaryScore ?? 'N/A'}` +
+      ` | H1: ${finalResult.copyIntel?.headlines?.h1?.[0]?.substring(0, 40) || 'N/A'}`
+    );
+
+    console.log('PRICE DEBUG', {
+      existingPrices: existingPrices.length,
+      schemaPrices: schemaPrices.length,
+      textPrices: textPrices.length,
+      domPrices: domPrices.length,
+      compactPrices: compactPrices.length,
+      primaryPrice: priceIntel?.primaryPrice,
+      currency: priceIntel?.currency,
+      model: priceIntel?.pricingModel,
+      extractionStatus: priceIntel?.extractionStatus,
+      confidenceBand: priceIntel?.confidenceBand,
+      confidenceScore: priceIntel?.confidenceScore,
+      isBlocked: priceIntel?.isBlocked,
+      blockingReasons: priceIntel?.blockingReasons,
+      auditEvidenceCount: priceIntel?.auditTrail?.evidenceCount,
+      conflicts: priceIntel?.auditTrail?.conflicts?.length
+    });
+
+    return finalResult;
+  } catch (error) {
+    console.error(`❌ [DEEP SCRAPE] CRASH: ${error.message}`);
+    return finalizeError(error.message, 'browser');
+  }
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // 🕷️ MODULE 1: SCRAPING ENGINE (FULL EXTRACTION & HTML DUMP)
@@ -19227,7 +19467,7 @@ function buildPDFFromReport(R) {
   // PAGE COVER
   // ══════════════════════════════════════════════════════════════
   newPage(); y=36;
-  bold(26); tc(C.white);  doc.text('DAKA MARKET INTELLIGENCE SPYER', W/2, y, {align:'center'}); y+=10;
+  bold(26); tc(C.white);  doc.text('SEO GEN PRO', W/2, y, {align:'center'}); y+=10;
   bold(11); tc(C.purple); doc.text('RAPPORT COMPLET DAKA', W/2, y, {align:'center'}); y+=10;
 
   var sects = [];
@@ -19728,7 +19968,7 @@ const ALLOWED_ORIGINS = [
 if (require.main === module && process.env.WORKER_MODE !== 'true') {
 server = app.listen(PORT, '0.0.0.0', () => {
     console.log('\n' + '═'.repeat(70));
-    console.log('🚀 DAKA MARKET INTELLIGENCE SPYER API v3.0.0 - ULTRA COMPETITIVE MODE');
+    console.log('🚀 SEO GEN PRO API v3.0.0 - ULTRA COMPETITIVE MODE');
     console.log('═'.repeat(70));
     console.log(`🌍 Server running on: http://0.0.0.0:${PORT}`);
     console.log(`📦 Environment: ${NODE_ENV}`);
@@ -19978,11 +20218,12 @@ app.post('/api/prepare-global-report', async (req, res) => {
         console.log(`✅ /api/prepare-global-report — ${Date.now() - startTime}ms | tech:${!!report.tech} | biz:${!!report.biz} | funnel:${!!report.funnel} | kw:${!!report.keywords}`);
         res.json({ success: true, report });
 
-    } catch (error) {
+       } catch (error) {
         console.error('❌ /api/prepare-global-report:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
+
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({
@@ -20001,14 +20242,12 @@ app.use((req, res) => {
     });
 });
 
-
-
 // Global Error Handler
 app.use((error, req, res, next) => {
     console.error('💥 Unhandled error:', error);
-    
+
     const statusCode = error.statusCode || 500;
-    
+
     res.status(statusCode).json({
         success: false,
         error: error.message || 'Internal Server Error',
@@ -20017,6 +20256,7 @@ app.use((error, req, res, next) => {
 });
 
 console.log('✅ Error handlers configured');
+
 // Handle server errors
 if (server) server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
