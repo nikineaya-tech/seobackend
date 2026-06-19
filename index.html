@@ -419,6 +419,35 @@ html, body {
         justify-content: flex-end;
         min-width: 44px;
     }
+    .daka-clock {
+        width: 56px;
+        height: 56px;
+        flex: 0 0 56px;
+        border-radius: 50%;
+        display: grid;
+        place-content: center;
+        gap: 2px;
+        text-align: center;
+        color: #f8fafc;
+        background:
+            radial-gradient(circle at 32% 24%, rgba(255,255,255,.18), transparent 30%),
+            linear-gradient(145deg, rgba(34,211,238,.16), rgba(139,92,246,.24));
+        border: 1px solid rgba(103,232,249,.34);
+        box-shadow: inset 0 0 18px rgba(139,92,246,.12), 0 8px 24px rgba(2,6,23,.28);
+        font-variant-numeric: tabular-nums;
+        user-select: none;
+    }
+    .daka-clock span {
+        font-size: .72rem;
+        font-weight: 900;
+        line-height: 1;
+    }
+    .daka-clock small {
+        color: #a5f3fc;
+        font-size: .52rem;
+        font-weight: 800;
+        line-height: 1;
+    }
     .auth-login-btn,
     .auth-logout-btn {
         min-height: 40px;
@@ -601,9 +630,23 @@ html, body {
             min-width: 40px;
             padding: 8px;
         }
+        .daka-clock {
+            width: 48px;
+            height: 48px;
+            flex-basis: 48px;
+        }
         .auth-email-row,
         .report-history-item { grid-template-columns: 1fr; }
         .report-history-actions { justify-content: flex-start; }
+    }
+    @media (max-width: 430px) {
+        .daka-clock {
+            width: 44px;
+            height: 44px;
+            flex-basis: 44px;
+        }
+        .daka-clock span { font-size: .66rem; }
+        .daka-clock small { font-size: .46rem; }
     }
 </style>
     <style>
@@ -3423,6 +3466,11 @@ table tbody td {
                     <i class="fas fa-volume-high"></i>
                 </button>
 
+                <div class="daka-clock" id="daka-clock" role="timer" aria-label="Heure et date locales">
+                    <span id="daka-clock-time">--:--</span>
+                    <small id="daka-clock-date">--/--</small>
+                </div>
+
                 <div class="auth-shell" id="auth-shell">
                     <button id="btn-google-login" class="auth-login-btn" type="button" onclick="openAuthModal()">
                         <i class="fab fa-google"></i>
@@ -5088,9 +5136,9 @@ document.addEventListener('DOMContentLoaded', () => {
         window.i18n = i18n;
         applyPremiumMicrocopy();
         Object.assign(TRANSLATIONS.fr, {
-            appname: 'Daka',
-            appbadge: 'PRO',
-            navkeywords: 'Mots-clés',
+            appname: 'Daka Market Intelligence Spyer',
+            appbadge: 'INTELLIGENCE MARCHÉ',
+            navkeywords: 'Demande marché',
             navtechnical: 'Audit site',
             tab1_title: 'Lecture du marché',
             tab1_title_highlight: 'Concurrents',
@@ -5114,9 +5162,9 @@ document.addEventListener('DOMContentLoaded', () => {
             btn_keywords: 'TROUVER LES MOTS-CLÉS GAGNANTS'
         });
         Object.assign(TRANSLATIONS.en, {
-            appname: 'Daka',
-            appbadge: 'PRO',
-            navkeywords: 'Keywords',
+            appname: 'Daka Market Intelligence Spyer',
+            appbadge: 'MARKET INTEL',
+            navkeywords: 'Market demand',
             navtechnical: 'Site audit',
             tab1_title: 'Market Intelligence',
             tab1_title_highlight: 'Competitors',
@@ -5140,9 +5188,9 @@ document.addEventListener('DOMContentLoaded', () => {
             btn_keywords: 'FIND WINNING KEYWORDS'
         });
         Object.assign(TRANSLATIONS.ar, {
-            appname: 'داكا',
-            appbadge: 'برو',
-            navkeywords: 'الكلمات المفتاحية',
+            appname: 'داكا لاستخبارات السوق',
+            appbadge: 'ذكاء السوق',
+            navkeywords: 'طلب السوق',
             navtechnical: 'فحص الموقع',
             tab1_title: 'ذكاء السوق',
             tab1_title_highlight: 'المنافسون',
@@ -14829,11 +14877,38 @@ function copyMagicPrompt(btn) {
         }, 3000);
     });
 }
+function updateDakaClock() {
+    const timeNode = document.getElementById('daka-clock-time');
+    const dateNode = document.getElementById('daka-clock-date');
+    const clockNode = document.getElementById('daka-clock');
+    if (!timeNode || !dateNode || !clockNode) return;
+
+    const now = new Date();
+    const language = STATE.currentLang === 'ar' ? 'ar-MA' : STATE.currentLang === 'en' ? 'en-GB' : 'fr-MA';
+    timeNode.textContent = new Intl.DateTimeFormat(language, {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false
+    }).format(now);
+    dateNode.textContent = new Intl.DateTimeFormat(language, {
+        day: '2-digit',
+        month: 'short'
+    }).format(now).replace('.', '');
+    clockNode.title = new Intl.DateTimeFormat(language, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    }).format(now);
+}
+
 async function initApp() {
     try {
         console.log('Daka Market Intelligence Spyer v5.0.0 - Initializing...');
-        await checkServerStatus();
+        updateDakaClock();
         initEventListeners();
+        await checkServerStatus();
+        setInterval(updateDakaClock, 30000);
         setInterval(checkServerStatus, 30000);
         console.log('App ready');
         setTimeout(() => toast.success('Daka Market Intelligence Spyer pret !'), 500);
@@ -16087,7 +16162,8 @@ const PDF_EXPORT = {
     padding: 0 16px 16px;
     display: inline-flex;
     align-items: center;
-    pointer-events: none;
+    pointer-events: auto;
+    touch-action: manipulation;
 }
 
 .report-section-details summary::-webkit-details-marker {
@@ -16485,6 +16561,27 @@ const PDF_EXPORT = {
 }
 
 @media (max-width: 768px) {
+    main,
+    .container,
+    .tab-content,
+    .results-container,
+    #funnelReport {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .results-container {
+        overflow-x: clip;
+    }
+
+    .report-section {
+        margin: 12px 0;
+        border-radius: 14px;
+        transform: none !important;
+        box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+    }
     .loading-state {
         --loader-size: clamp(172px, 56vmin, 248px);
         padding: 22px 14px !important;
@@ -16540,13 +16637,97 @@ const PDF_EXPORT = {
     .report-section-head {
         grid-template-columns: auto minmax(0, 1fr);
         gap: 10px;
-        align-items: start;
+        align-items: center;
+        min-height: 64px;
+        padding: 13px;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .report-section-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+    }
+
+    .report-section-copy strong {
+        font-size: 0.96rem;
+        line-height: 1.3;
+    }
+
+    .report-section-copy small {
+        font-size: 0.74rem;
+        line-height: 1.4;
+    }
+
+    .report-section-preview {
+        margin: 0 13px 12px;
+        padding: 11px 12px;
+        font-size: 0.82rem;
+        line-height: 1.55;
+    }
+
+    .report-section-details summary {
+        width: 100%;
+        min-height: 48px;
+        padding: 0 13px 12px;
+        box-sizing: border-box;
     }
 
     .report-section-toggle {
-        justify-self: start;
-        min-width: 88px;
-        margin-top: 2px;
+        width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        margin: 0;
+        justify-content: space-between;
+        padding: 0 14px;
+        border-radius: 10px;
+    }
+
+    .report-section-toggle small {
+        font-size: 0.7rem;
+    }
+
+    .report-section-body {
+        min-width: 0;
+        padding: 0 13px 14px;
+        overflow-x: auto;
+        overscroll-behavior-inline: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .report-section-body button,
+    .report-section-body a.btn,
+    .report-section-body [role="button"],
+    .micro-details summary,
+    .competitor-action-stack [data-competitor-action] {
+        min-height: 44px !important;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .report-section-body table {
+        min-width: 640px;
+    }
+
+    .auth-modal,
+    .reports-history-modal,
+    .export-studio-modal {
+        position: fixed !important;
+        inset: 0 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 12px !important;
+    }
+
+    .auth-modal-panel,
+    .reports-history-panel,
+    .export-studio-panel {
+        width: min(100%, 620px) !important;
+        max-height: calc(100dvh - 24px) !important;
+        margin: 0 !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
     }
 
     .competitor-action-stack {
@@ -16586,6 +16767,50 @@ const PDF_EXPORT = {
 
     .expert-card {
         min-height: auto;
+    }
+
+    .export-bubble-wrapper {
+        position: fixed !important;
+        top: auto !important;
+        right: max(12px, env(safe-area-inset-right)) !important;
+        bottom: max(14px, env(safe-area-inset-bottom)) !important;
+        left: auto !important;
+        z-index: 1200 !important;
+    }
+
+    [dir="rtl"] .export-bubble-wrapper {
+        right: auto !important;
+        left: max(12px, env(safe-area-inset-left)) !important;
+    }
+}
+
+@media (max-width: 430px) {
+    .report-section {
+        margin: 10px 0;
+        border-radius: 12px;
+    }
+
+    .report-section-head,
+    .report-section-body {
+        padding-left: 11px;
+        padding-right: 11px;
+    }
+
+    .report-section-preview {
+        margin-left: 11px;
+        margin-right: 11px;
+    }
+
+    .report-section-copy small {
+        display: -webkit-box;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .expert-dock-grid,
+    .competitor-action-stack {
+        grid-template-columns: 1fr !important;
     }
 }
 
