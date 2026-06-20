@@ -13133,7 +13133,39 @@ async function analyzeFunnel(e) {
   } catch (error) {
     if (error?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
     console.error('Funnel Error:', error);
-    toast.error(error.message || 'Erreur de connexion.');
+
+    const isAr = STATE.currentLang === 'ar';
+    const isEn = STATE.currentLang === 'en';
+    const status = Number(error?.status || error?.data?.status || 0);
+    const authError = status === 401 || /AUTH_REQUIRED|INVALID_SESSION|Connectez-vous/i.test(String(error?.message || ''));
+    const quotaError = status === 429 || /QUOTA|quota/i.test(String(error?.message || ''));
+    const title = authError
+      ? (isAr ? 'يجب تسجيل الدخول' : isEn ? 'Sign-in required' : 'Connexion requise')
+      : quotaError
+        ? (isAr ? 'تم بلوغ حد التقارير' : isEn ? 'Report quota reached' : 'Quota de rapports atteint')
+        : (isAr ? 'تعذر إكمال التحليل' : isEn ? 'Analysis could not be completed' : 'L’analyse n’a pas pu être terminée');
+    const message = String(
+      error?.data?.message ||
+      error?.message ||
+      (isAr ? 'تحقق من الاتصال ثم أعد المحاولة.' : isEn ? 'Check the connection and try again.' : 'Vérifiez la connexion puis relancez.')
+    );
+
+    const results = document.getElementById('resultsFunnel');
+    if (results) {
+      results.innerHTML = `<section class="funnel-v2-render-error" dir="${isAr ? 'rtl' : 'ltr'}">
+        <i class="fas fa-triangle-exclamation"></i>
+        <div>
+          <strong>${escapeHtml(title)}</strong>
+          <p dir="auto">${escapeHtml(message)}</p>
+          ${authError ? `<button type="button" data-no-collapse="true" class="btn-primary" onclick="event.stopPropagation();openAuthModal()">
+            <i class="fas fa-right-to-bracket"></i> ${isAr ? 'تسجيل الدخول' : isEn ? 'Sign in' : 'Se connecter'}
+          </button>` : ''}
+        </div>
+      </section>`;
+      showResults('resultsFunnel');
+    }
+    if (authError) openAuthModal();
+    toast.error(message);
   } finally {
     if (window.dakaFunnelAnalysisInFlight?.token === runToken) {
       window.dakaFunnelAnalysisInFlight = null;
