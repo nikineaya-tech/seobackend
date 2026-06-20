@@ -21,7 +21,6 @@ const ALLOWED_JOB_TYPES = new Set([
   'scrape_url',
   'deep-scrape',
   'deep_scrape',
-  'scrape_funnel_deep', // Legacy compatibility for jobs created before the Railway router fix.
   'product-scrape',
   'product_scrape',
   'page-scrape',
