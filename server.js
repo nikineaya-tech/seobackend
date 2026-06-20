@@ -28,7 +28,6 @@ const axios = require('axios');
 const cors = require('cors');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
-const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 const { registerAuthRoutes } = require('./supabase-auth-routes');
 const { registerReportRoutes } = require('./supabase-report-routes');
@@ -1130,14 +1129,6 @@ app.use(express.static('public', {
     etag: true,
     lastModified: true
 }));
-
-const FRONTEND_INDEX_FILE = path.join(__dirname, 'index.html');
-app.get(['/seodaka4444', '/app'], (req, res) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    res.setHeader('X-Daka-Frontend-Source', 'github-main');
-    return res.sendFile(FRONTEND_INDEX_FILE);
-});
 
 // ═══════════════════════════════════════════════════════════════════
 // REQUEST LOGGING MIDDLEWARE
