@@ -342,6 +342,85 @@ async function runFunnelScrapeOnce(namespace, url, producer) {
     return promise;
 }
 
+const funnelAnalysisInFlight = new Map();
+
+function buildFunnelAnalysisDedupeKey(req) {
+    const body = req.body || {};
+    const normalizedUrl = normalizeFunnelCacheUrl(
+        body.url || body.targetUrl || body.websiteUrl || body.funnelUrl || ''
+    );
+    if (!normalizedUrl) return '';
+
+    const userId = String(req.user?.id || 'anonymous');
+    const lang = String(body.userLang || body.lang || body.language || 'fr').toLowerCase();
+    const country = String(body.country || body.geo || body.market || '').toLowerCase();
+    const context = body.context && typeof body.context === 'object' ? body.context : {};
+    const contextHash = crypto
+        .createHash('sha1')
+        .update(JSON.stringify({
+            offer: context.offer || '',
+            audience: context.audience || '',
+            objective: context.objective || '',
+            priceRange: context.priceRange || '',
+            knownCompetitors: context.knownCompetitors || '',
+            cityOrRegion: context.cityOrRegion || '',
+            mode: body.mode || '',
+            salesAngle: body.salesAngle || ''
+        }))
+        .digest('hex')
+        .slice(0, 12);
+
+    return [userId, normalizedUrl, lang, country, contextHash].join('|');
+}
+
+function dedupeFunnelAnalysis(req, res, next) {
+    const key = buildFunnelAnalysisDedupeKey(req);
+    if (!key) return next();
+
+    const active = funnelAnalysisInFlight.get(key);
+    if (active) {
+        console.log(`[FUNNEL-DEDUPE] Reusing in-flight analysis key=${active.shortKey}`);
+        active.promise
+            .then(({ statusCode, payload }) => {
+                if (!res.headersSent && !res.writableEnded) {
+                    res.status(statusCode || 200).json(payload);
+                }
+            })
+            .catch(next);
+        return;
+    }
+
+    let resolveAnalysis;
+    let rejectAnalysis;
+    const promise = new Promise((resolve, reject) => {
+        resolveAnalysis = resolve;
+        rejectAnalysis = reject;
+    });
+    const shortKey = crypto.createHash('sha1').update(key).digest('hex').slice(0, 10);
+    funnelAnalysisInFlight.set(key, { promise, shortKey, startedAt: Date.now() });
+
+    const originalJson = res.json.bind(res);
+    let settled = false;
+    res.json = function resolveFunnelAnalysis(payload) {
+        if (!settled) {
+            settled = true;
+            funnelAnalysisInFlight.delete(key);
+            resolveAnalysis({ statusCode: res.statusCode || 200, payload });
+        }
+        return originalJson(payload);
+    };
+
+    res.once('close', () => {
+        if (settled) return;
+        settled = true;
+        funnelAnalysisInFlight.delete(key);
+        rejectAnalysis(new Error('FUNNEL_CLIENT_CONNECTION_CLOSED'));
+    });
+
+    console.log(`[FUNNEL-DEDUPE] Started analysis key=${shortKey}`);
+    return next();
+}
+
 function limitFunnelText(value, max = 3000) {
     if (typeof value !== 'string') return value;
     const clean = value.replace(/\s+/g, ' ').trim();
@@ -915,49 +994,6 @@ function buildFunnelSectionSurgeryModel({
         userContext: safeContext
     };
 }
-function queuedJobMiddleware(type) {
-    return async (req, res, next) => {
-        if (type === 'funnel' && wantsRailwayScraping()) {
-            return next();
-        }
-        if (!supabase || req.queueBypass === true || req.get('x-daka-worker-bypass') === '1') {
-            return next();
-        }
-
-        let jobId;
-        try {
-            jobId = await enqueueJob(type, {
-                ...(req.body || {}),
-                _authUserId: req.user?.id || null
-            });
-        } catch (error) {
-            console.warn(`[Queue] ${type} enqueue failed, using direct processing:`, error.message);
-            return next();
-        }
-
-        if (!jobId) return next();
-
-        if (req.body?.async === true) {
-            return res.json({ success: true, jobId, status: 'queued' });
-        }
-
-        try {
-            const result = await waitForJobResult(jobId, 90000);
-            return res.json(result);
-        } catch (error) {
-            const status = error.code === 'QUEUE_TIMEOUT' ? 504 : 500;
-            return res.status(status).json({
-                success: false,
-                jobId,
-                error: error.code || 'QUEUE_PROCESSING_FAILED',
-                message: error.code === 'QUEUE_TIMEOUT'
-                    ? 'Analyse trop longue - réessayez dans quelques secondes.'
-                    : error.message
-            });
-        }
-    };
-}
-
 // Trust proxy for Render.com
 app.set('trust proxy', 1);
 console.log('🔧 Trust proxy enabled for Render.com');
@@ -11785,7 +11821,7 @@ function normalizeScrapeForFunnel(raw = {}) {
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
 // ============================================================================
-app.post('/api/analyze-funnel', requireAuth, requireReportQuota, persistGeneratedReport('funnel'), analysisLimiter, async (req, res) => {
+app.post('/api/analyze-funnel', requireAuth, requireReportQuota, dedupeFunnelAnalysis, persistGeneratedReport('funnel'), analysisLimiter, async (req, res) => {
     const startTime = Date.now();
     const requestId = `SPY12-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
     
