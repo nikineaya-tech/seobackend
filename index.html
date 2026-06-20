@@ -5798,6 +5798,8 @@ async function shareSavedReport(id) {
 document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
+window.DAKA_FRONTEND_BUILD = '2026-06-20-funnel-pipeline';
+
 async function analyzeWithPolling(endpoint, payload, resultsHandler) {
     const analysisId = window.dakaActiveAnalysisId;
     const assertActive = () => {
@@ -5815,7 +5817,7 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
 
     const initial = await api.post(
         endpoint,
-        { ...(payload || {}), async: true },
+        { ...(payload || {}) },
         CONFIG.TIMEOUTLONG || CONFIG.TIMEOUT_LONG || 120000
     );
     assertActive();
