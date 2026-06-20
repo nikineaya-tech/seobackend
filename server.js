@@ -386,6 +386,96 @@ function cleanFunnelScrapePayload(input, depth = 0) {
     return out;
 }
 
+
+function isObservedFunnelSection(value) {
+    if (value === true) return true;
+    const normalized = String(value || '').trim().toLowerCase();
+    return ['oui', 'yes', 'true', 'present', 'présent', 'نعم'].includes(normalized);
+}
+
+function buildFunnelCompatibilityLayer({
+    funnelSurgery = {},
+    pageArchitecture = null,
+    sectionsDetailed = []
+} = {}) {
+    const matrix = Array.isArray(funnelSurgery?.surgeryMatrix)
+        ? funnelSurgery.surgeryMatrix.filter(Boolean)
+        : [];
+    const detailed = Array.isArray(sectionsDetailed) ? sectionsDetailed.filter(Boolean) : [];
+
+    const sectionsAudit = matrix.map((row, index) => {
+        const present = isObservedFunnelSection(row.present);
+        return {
+            sectionType: row.section || row.sectionType || row.type || `SECTION_${index + 1}`,
+            type: row.type || row.sectionType || row.section || `SECTION_${index + 1}`,
+            label: row.section || row.label || row.sectionType || row.type || `Section ${index + 1}`,
+            present,
+            status: present ? (String(row.decision || '').toLowerCase().includes('amélior') ? 'weak' : 'present') : 'missing',
+            decision: row.decision || null,
+            content: row.evidence || row.detectedText || null,
+            evidence: row.evidence || row.detectedText || null,
+            weakness: row.problem || null,
+            conversionImpact: row.conversionImpact || null,
+            suggestion: row.action || null,
+            action: row.action || null,
+            priority: row.priority || null,
+            confidence: row.confidence || 'MEDIUM',
+            score: Number.isFinite(Number(row.score)) ? Number(row.score) : null
+        };
+    });
+
+    const observedFromMatrix = sectionsAudit.filter(section => section.present);
+    const observedFromDetailed = detailed.map((section, index) => ({
+        sectionType: section.sectionType || section.type || `SECTION_${index + 1}`,
+        type: section.type || section.sectionType || `SECTION_${index + 1}`,
+        label: section.label || section.title || section.type || `Section ${index + 1}`,
+        title: section.title || section.headings?.[0] || null,
+        content: section.detectedText || section.textPreview || section.text || section.content || null,
+        evidence: section.evidence || null,
+        hasCTA: Boolean(section.hasCTA || section.buttons?.length || section.ctas?.length),
+        conversionImpact: section.conversionImpact || null,
+        weakness: section.weakness || section.problems?.[0] || null,
+        suggestion: section.suggestion || section.improvements?.[0] || null,
+        score: Number.isFinite(Number(section.score)) ? Number(section.score) : null,
+        present: section.present !== false
+    }));
+
+    const existing = pageArchitecture && typeof pageArchitecture === 'object'
+        ? pageArchitecture
+        : {};
+    const existingTree = Array.isArray(existing.arborescence)
+        ? existing.arborescence.filter(Boolean)
+        : [];
+    const arborescence = existingTree.length
+        ? existingTree
+        : (observedFromDetailed.length ? observedFromDetailed : observedFromMatrix);
+
+    const missingCriticalSections = Array.isArray(funnelSurgery?.missingSections)
+        ? funnelSurgery.missingSections.map(item => item?.section || item?.sectionType || item?.type).filter(Boolean)
+        : [];
+
+    return {
+        sectionsAudit: sectionsAudit.length ? sectionsAudit : observedFromDetailed,
+        pageArchitecture: {
+            ...existing,
+            arborescence,
+            totalSections: arborescence.length,
+            missingCriticalSections: (
+                Array.isArray(existing.missingCriticalSections) && existing.missingCriticalSections.length
+                    ? existing.missingCriticalSections
+                    : missingCriticalSections
+            ),
+            funnelFlow: existing.funnelFlow || funnelSurgery?.recommendedOrder || null,
+            funnelGaps: (
+                Array.isArray(existing.funnelGaps) && existing.funnelGaps.length
+                    ? existing.funnelGaps
+                    : missingCriticalSections
+            ),
+            sectionDiagnosis: funnelSurgery?.sectionDiagnosis || null
+        }
+    };
+}
+
 function hardenFunnelPriceIntel(priceIntel = {}) {
     const clone = cleanFunnelScrapePayload(priceIntel) || {};
     const candidates = [
@@ -3973,9 +4063,10 @@ async function exploreFunnelCommerce(url, options = {}) {
     return result;
   };
 
+  const cachedDeepScrape = getFunnelShortCache(`deep-scrape:${normalizeFunnelCacheUrl(url)}`);
   const baseScrape = options.baseScrape && typeof options.baseScrape === 'object'
     ? options.baseScrape
-    : null;
+    : (cachedDeepScrape && typeof cachedDeepScrape === 'object' ? cachedDeepScrape : null);
   const baseSectionCount = [
     baseScrape?.sectionRawBlocks,
     baseScrape?.sectionsDetailed,
@@ -11700,7 +11791,9 @@ app.post('/api/analyze-funnel', requireAuth, requireReportQuota, persistGenerate
     const requestId = `SPY12-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
     
     // Sauvegarde des données brutes pour le fallback en cas de crash de l'IA
-    let scrapedRawData = null; 
+    let scrapedRawData = null;
+    let funnelSurgeryFallback = null;
+    let funnelCompatibilityFallback = null;
 
     try {
         const { url, userLang = 'fr', salesAngle = 'aggressive', mode = 'deep' } = req.body;
@@ -12345,6 +12438,7 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
             localScore,
             safeContext
         });
+        funnelSurgeryFallback = funnelSurgery;
 
         // ── 5. SHARED CONTEXT ─────────────────────────────────
         const sharedContext = `
@@ -13256,6 +13350,12 @@ const executiveBrief = buildExecutiveBrief({
     evidenceCount: (auditEvidence.ctas || []).length + (auditEvidence.pricing || []).length + (auditEvidence.trust || []).length
 });
 const dataIntegrity = proofIntegrity(proofModel);
+const funnelCompatibility = buildFunnelCompatibilityLayer({
+    funnelSurgery,
+    pageArchitecture: funnelCompatibility.pageArchitecture,
+    sectionsDetailed
+});
+funnelCompatibilityFallback = funnelCompatibility;
 // ─────────────────────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════
 // 📦 ASSEMBLAGE RÉPONSE FINALE GOD TIER
@@ -13319,6 +13419,7 @@ const finalResponse = {
     auditEvidence,
     concreteActionPlan,
     funnelSurgery,
+    sectionsAudit: funnelCompatibility.sectionsAudit,
     proofModel,
     executiveBrief,
     dataIntegrity,
@@ -13555,19 +13656,110 @@ try {
         // ── Fallback intelligent : si le scrape a réussi mais l'IA a planté ──
         // (Ça évite de cracher une erreur 500 alors qu'on a le HTML et la donnée de base)
         if (scrapedRawData && scrapedRawData.success) {
-            console.log(`[${requestId}] 🔄 Retour données brutes (scrape OK mais traitement IA failed)`);
+            console.log(`[${requestId}] 🔄 Scrape utilisable; retour Funnel déterministe après échec agent`);
+
+            const safePartial = cleanFunnelScrapePayload(scrapedRawData);
+            const partialSections = [
+                safePartial?.sectionRawBlocks,
+                safePartial?.sectionsDetailed,
+                safePartial?.mainPage?.sectionRawBlocks,
+                safePartial?.mainPage?.sectionsDetailed
+            ].find(value => Array.isArray(value) && value.length) || [];
+            const partialCopy = safePartial?.copyIntel || {};
+            const partialHeadlines = partialCopy?.headlines || {};
+            const partialH1 = (
+                Array.isArray(partialHeadlines.h1) ? partialHeadlines.h1[0] : partialHeadlines.h1
+            ) || safePartial?.h1 || safePartial?.mainPage?.h1 || '';
+            const partialH2 = Array.isArray(partialHeadlines.h2)
+                ? partialHeadlines.h2
+                : (safePartial?.headings?.h2 || safePartial?.mainPage?.headings?.h2 || []);
+            const partialH3 = Array.isArray(partialHeadlines.h3)
+                ? partialHeadlines.h3
+                : (safePartial?.headings?.h3 || safePartial?.mainPage?.headings?.h3 || []);
+            const partialCtas = Array.isArray(partialCopy.realCTAs) && partialCopy.realCTAs.length
+                ? partialCopy.realCTAs
+                : (Array.isArray(safePartial?.ctas) ? safePartial.ctas : []);
+            const partialPriceIntel = hardenFunnelPriceIntel(safePartial?.priceIntel || {});
+            const partialSocialProofs = partialSections.filter(section =>
+                ['SOCIAL_PROOF', 'REVIEWS', 'TESTIMONIALS'].includes(
+                    String(section?.type || section?.typeGuess || '').toUpperCase()
+                )
+            );
+            const partialSurgery = funnelSurgeryFallback || buildFunnelSectionSurgeryModel({
+                lang: InputValidator.validateLanguage(req.body?.userLang || req.body?.lang || 'fr'),
+                validUrl: req.body?.url || safePartial?.finalUrl || safePartial?.url || '',
+                scrape: safePartial,
+                h1Main: partialH1,
+                h2List: partialH2,
+                h3List: partialH3,
+                ctaList: partialCtas,
+                sectionsDetailed: partialSections,
+                missingCriticalSections: [],
+                detectedPrice: getConfirmedFunnelPrice(partialPriceIntel),
+                currency: partialPriceIntel.currency || safePartial?.currency || null,
+                priceIntel: partialPriceIntel,
+                commerceExploration: safePartial?.commerceExploration || {},
+                socialProofs: partialSocialProofs,
+                hasSSL: Boolean(safePartial?.trustSignals?.hasSSL || /^https:/i.test(req.body?.url || '')),
+                hasWhatsApp: Boolean(safePartial?.trustSignals?.hasWhatsApp),
+                phones: safePartial?.contacts?.phones || [],
+                emails: safePartial?.contacts?.emails || [],
+                imagesCount: Number(safePartial?.media?.totalImages || safePartial?.images?.length || 0),
+                wordCount: Number(safePartial?.brand?.wordCount || safePartial?.mainPage?.wordCount || 0),
+                localScore: 0,
+                safeContext: safeUserContextFromBody(req.body)
+            });
+            const partialCompatibility = funnelCompatibilityFallback || buildFunnelCompatibilityLayer({
+                funnelSurgery: partialSurgery,
+                pageArchitecture: null,
+                sectionsDetailed: partialSections
+            });
+            const partialRawIntel = {
+                h1: partialH1 || null,
+                h2s: partialH2,
+                h3s: partialH3,
+                ctas: partialCtas,
+                sectionsDetected: partialSections.map(section => section?.type || section?.typeGuess).filter(Boolean),
+                sectionsDetailed: partialSections,
+                sectionsCount: partialSections.length,
+                detectedPrice: getConfirmedFunnelPrice(partialPriceIntel),
+                currency: partialPriceIntel.currency || safePartial?.currency || null,
+                wordCount: Number(safePartial?.brand?.wordCount || safePartial?.mainPage?.wordCount || 0),
+                hasSSL: Boolean(safePartial?.trustSignals?.hasSSL || /^https:/i.test(req.body?.url || '')),
+                hasWhatsApp: Boolean(safePartial?.trustSignals?.hasWhatsApp)
+            };
+
+            console.log(
+                `[FUNNEL-FALLBACK] sections=${partialSections.length} ` +
+                `surgery=${partialSurgery?.surgeryMatrix?.length || 0} body=${String(safePartial?.bodyText || '').length}`
+            );
+
             return res.status(200).json({
+                ...safePartial,
                 success: true,
                 requestId,
-                url: req.body?.url,
+                analyzedUrl: req.body?.url || safePartial?.finalUrl || safePartial?.url || null,
+                url: req.body?.url || safePartial?.finalUrl || safePartial?.url || null,
+                lang: req.body?.userLang || req.body?.lang || 'fr',
                 partial: true,
-                errorContext: error.message,
-                data: cleanFunnelScrapePayload(scrapedRawData),
+                degraded: true,
+                errorContext: 'REPORT_GENERATION_PARTIAL',
+                funnelSurgery: partialSurgery,
+                sectionsAudit: partialCompatibility.sectionsAudit,
+                pageArchitecture: partialCompatibility.pageArchitecture,
+                auditSectionMap: partialCompatibility.sectionsAudit,
+                rawIntel: partialRawIntel,
+                scrapeReliability: {
+                    confidence: partialSections.length > 0 ? 'MEDIUM' : 'LOW',
+                    partial: true,
+                    source: safePartial?.executionLayer || safePartial?.fetchLayer || 'railway'
+                },
+                data: safePartial,
                 summary: {
-                    title: scrapedRawData.meta?.title || '',
-                    cms: scrapedRawData.techStack?.cms || 'Unknown',
-                    primaryColor: scrapedRawData.visualDNA?.dominantColors?.[0] || '#3b82f6',
-                    copyIntel: scrapedRawData.copyIntel || null,
+                    title: safePartial?.title || safePartial?.mainPage?.title || safePartial?.meta?.title || '',
+                    cms: safePartial?.techStack?.cms || 'Unknown',
+                    primaryColor: safePartial?.visualDNA?.dominantColors?.[0] || '#3b82f6',
+                    copyIntel: partialCopy
                 },
                 performance: {
                     totalTime: elapsed,
