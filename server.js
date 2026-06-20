@@ -11556,72 +11556,89 @@ function getFeatureI18n(lang = 'fr') {
 }
 
 function normalizeScrapeForFunnel(raw = {}) {
-  const result = raw.result || raw;
+  const result = raw?.result && typeof raw.result === 'object' ? raw.result : (raw || {});
   const mainPage = result.mainPage || result.scrapeData || result.data || result;
 
-  const sections =
-    result.sectionRawBlocks ||
-    result.sectionsDetailed ||
-    result.sections ||
-    mainPage.sectionRawBlocks ||
-    mainPage.sectionsDetailed ||
-    mainPage.sections ||
-    [];
+  const firstNonEmptyArray = (...values) => {
+    for (const value of values) {
+      if (Array.isArray(value) && value.length > 0) return value;
+    }
+    return [];
+  };
+  const firstNonEmptyText = (...values) => {
+    for (const value of values) {
+      if (typeof value === 'string' && value.trim()) return value.trim();
+    }
+    return '';
+  };
 
-  const bodyText =
-    result.bodyText ||
-    result.text ||
-    result.content ||
-    mainPage.bodyText ||
-    mainPage.text ||
-    mainPage.content ||
-    '';
-const headings = result.headings || mainPage.headings || [];
-const ctas = result.ctas || mainPage.ctas || [];
-const title = result.title || mainPage.title || '';
-const h1 = result.h1 || mainPage.h1 || title || '';
-const finalUrl = result.finalUrl || mainPage.finalUrl || result.url || mainPage.url || '';
-const wordCount = String(bodyText || '').split(/\s+/).filter(Boolean).length;
+  const sections = firstNonEmptyArray(
+    result.sectionRawBlocks,
+    result.sectionsDetailed,
+    result.sections,
+    mainPage.sectionRawBlocks,
+    mainPage.sectionsDetailed,
+    mainPage.sections
+  );
+  const bodyText = firstNonEmptyText(
+    result.bodyText,
+    result.text,
+    result.content,
+    mainPage.bodyText,
+    mainPage.text,
+    mainPage.content,
+    sections.map(section => [
+      section?.title,
+      section?.textPreview,
+      section?.text,
+      ...(Array.isArray(section?.headings) ? section.headings : []),
+      ...(Array.isArray(section?.paragraphs) ? section.paragraphs : [])
+    ].filter(Boolean).join(' ')).join(' ')
+  );
+  const headings = firstNonEmptyArray(result.headings, mainPage.headings);
+  const ctas = firstNonEmptyArray(result.ctas, result.buttons, mainPage.ctas, mainPage.buttons);
+  const title = firstNonEmptyText(result.title, mainPage.title);
+  const h1 = firstNonEmptyText(result.h1, mainPage.h1, title);
+  const finalUrl = firstNonEmptyText(result.finalUrl, mainPage.finalUrl, result.url, mainPage.url);
+  const wordCount = String(bodyText || '').split(/\s+/).filter(Boolean).length;
 
-const rebuiltCopyIntel = {
-  ...(result.copyIntel || {}),
-  headlines: result.copyIntel?.headlines || {
-    h1: h1 ? [h1] : [],
-    h2: headings.slice(0, 8),
-    h3: []
-  },
-  realCTAs: Array.isArray(result.copyIntel?.realCTAs) && result.copyIntel.realCTAs.length
-    ? result.copyIntel.realCTAs
-    : ctas,
-  allButtons: Array.isArray(result.copyIntel?.allButtons) && result.copyIntel.allButtons.length
-    ? result.copyIntel.allButtons
-    : ctas,
-  pageSections: Array.isArray(result.copyIntel?.pageSections) && result.copyIntel.pageSections.length
-    ? result.copyIntel.pageSections
-    : sections,
-  heroText: result.copyIntel?.heroText || String(bodyText || '').slice(0, 1200),
-  bulletBenefits: result.copyIntel?.bulletBenefits || sections
-    .map(s => s?.title || s?.textPreview || '')
-    .filter(Boolean)
-    .slice(0, 8),
-  testimonials: result.copyIntel?.testimonials || [],
-  guarantees: result.copyIntel?.guarantees || [],
-  faq: result.copyIntel?.faq || []
-};
+  const rebuiltCopyIntel = {
+    ...(result.copyIntel || {}),
+    headlines: result.copyIntel?.headlines || {
+      h1: h1 ? [h1] : [],
+      h2: headings.slice(0, 8).map(item => typeof item === 'string' ? item : item?.text || item?.title || '').filter(Boolean),
+      h3: []
+    },
+    realCTAs: firstNonEmptyArray(result.copyIntel?.realCTAs, ctas),
+    allButtons: firstNonEmptyArray(result.copyIntel?.allButtons, ctas),
+    pageSections: firstNonEmptyArray(result.copyIntel?.pageSections, sections),
+    heroText: result.copyIntel?.heroText || String(bodyText || '').slice(0, 1200),
+    bulletBenefits: firstNonEmptyArray(
+      result.copyIntel?.bulletBenefits,
+      sections.map(section => section?.title || section?.textPreview || '').filter(Boolean).slice(0, 8)
+    ),
+    testimonials: firstNonEmptyArray(result.copyIntel?.testimonials),
+    guarantees: firstNonEmptyArray(result.copyIntel?.guarantees),
+    faq: firstNonEmptyArray(result.copyIntel?.faq)
+  };
+  const rebuiltBrand = {
+    ...(result.brand || {}),
+    fullTextSample: result.brand?.fullTextSample || bodyText,
+    wordCount: result.brand?.wordCount || wordCount,
+    hasSSL: result.brand?.hasSSL ?? /^https:/i.test(finalUrl)
+  };
 
-const rebuiltBrand = {
-  ...(result.brand || {}),
-  fullTextSample: result.brand?.fullTextSample || bodyText,
-  wordCount: result.brand?.wordCount || wordCount,
-  hasSSL: result.brand?.hasSSL ?? /^https:/i.test(finalUrl)
-};
+  const { rawHtml: _rawHtml, scripts: _scripts, styles: _styles, ...safeResult } = result;
+  const { rawHtml: _mainRawHtml, html: _mainHtml, scripts: _mainScripts, styles: _mainStyles, ...safeMainPage } = mainPage || {};
+  const compactHtml = typeof result.html === 'string' && result.html.length <= 180000 ? result.html : '';
+
   return {
+    ...safeResult,
     copyIntel: rebuiltCopyIntel,
-brand: rebuiltBrand,
-html: result.html || bodyText,
-    ...result,
+    brand: rebuiltBrand,
+    html: compactHtml,
     mainPage: {
-      ...mainPage,
+      ...safeMainPage,
       bodyText,
       text: bodyText,
       content: bodyText,
@@ -11630,7 +11647,7 @@ html: result.html || bodyText,
       sections
     },
     scrapeData: {
-      ...mainPage,
+      ...safeMainPage,
       bodyText,
       text: bodyText,
       content: bodyText,
@@ -11646,10 +11663,9 @@ html: result.html || bodyText,
     sections,
     pagesExplored: Array.isArray(result.pagesExplored) && result.pagesExplored.length
       ? result.pagesExplored
-      : [mainPage]
+      : [safeMainPage].filter(page => page && Object.keys(page).length)
   };
 }
-
 
 // ============================================================================
 //  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
@@ -17255,65 +17271,42 @@ async function deepScrapeFunnel(url) {
 
     scrapeResult = normalizeScrapeForFunnel(scrapeResult);
 
-    const hasRailwaySections =
-      Array.isArray(scrapeResult?.sectionRawBlocks) &&
-      scrapeResult.sectionRawBlocks.length > 0;
-
+    const railwaySections = Array.isArray(scrapeResult?.sectionRawBlocks) && scrapeResult.sectionRawBlocks.length
+      ? scrapeResult.sectionRawBlocks
+      : Array.isArray(scrapeResult?.sectionsDetailed) && scrapeResult.sectionsDetailed.length
+        ? scrapeResult.sectionsDetailed
+        : [];
+    const hasRailwaySections = railwaySections.length > 0;
     const hasRailwayBody =
       String(scrapeResult?.bodyText || scrapeResult?.text || scrapeResult?.content || '').length > 200;
-
+    const hasRailwayPrice =
+      Boolean(scrapeResult?.priceIntel?.detected || scrapeResult?.priceIntel?.primaryPrice);
+    const hasRailwayCtas =
+      Array.isArray(scrapeResult?.copyIntel?.realCTAs) &&
+      scrapeResult.copyIntel.realCTAs.length > 0;
     const railwayUsable =
-      hasRailwaySections ||
-      hasRailwayBody ||
-      scrapeResult?.priceIntel?.detected;
+      hasRailwaySections || hasRailwayBody || hasRailwayPrice || hasRailwayCtas;
 
     console.log(
-      `[DEEP SCRAPE] Railway normalized before completeness check ` +
-      `sections=${scrapeResult.sectionRawBlocks?.length || 0} ` +
-      `body=${String(scrapeResult.bodyText || '').length} ` +
-      `title=${scrapeResult.title || scrapeResult.mainPage?.title || ''} ` +
-      `priceDetected=${Boolean(scrapeResult?.priceIntel?.detected)}`
+      `[DEEP SCRAPE] Railway normalized before check usable=${railwayUsable} ` +
+      `sections=${railwaySections.length} body=${String(scrapeResult.bodyText || '').length} ` +
+      `ctas=${scrapeResult.copyIntel?.realCTAs?.length || 0} ` +
+      `price=${scrapeResult?.priceIntel?.primaryPrice || 'N/A'}`
     );
 
-    if (detectBotBlocked(scrapeResult) && scrapeResult?.fetchLayer !== 'scrape.do') {
-      if (wantsRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
-        if (railwayUsable) {
-  console.log(
-    `[DEEP SCRAPE] Railway utilisable malgré status partiel pour ${url}. ` +
-    `sections=${scrapeResult.sectionRawBlocks?.length || 0} ` +
-    `body=${String(scrapeResult.bodyText || '').length}`
-  );
-} else {
-  console.warn(
-    `[DEEP SCRAPE] Railway incomplet pour ${url}. ` +
-    `Fallback Render/Scrape.do desactive.`
-  );
-
-  return finalizeError(
-    scrapeResult?.error ||
-      scrapeResult?.message ||
-      'RAILWAY_SCRAPING_PARTIAL_NO_RENDER_FALLBACK',
-    'railway'
-  );
-}
-
+    if (!railwayUsable && detectBotBlocked(scrapeResult) && scrapeResult?.fetchLayer !== 'scrape.do') {
+      if (shouldUseRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
         console.warn(
-          `[DEEP SCRAPE] Railway incomplet pour ${url}. ` +
-          `Fallback Render/Scrape.do desactive.`
+          `[DEEP SCRAPE] Railway incomplet pour ${url}. Fallback Render/Scrape.do désactivé.`
         );
-
         return finalizeError(
-          scrapeResult?.error ||
-            scrapeResult?.message ||
-            'RAILWAY_SCRAPING_PARTIAL_NO_RENDER_FALLBACK',
+          scrapeResult?.error || scrapeResult?.message || 'RAILWAY_SCRAPING_PARTIAL_NO_RENDER_FALLBACK',
           'railway'
         );
       }
 
-      console.warn(`⚠️ [DEEP SCRAPE] Page vide ou bloquée détectée. Activation de SCRAPE.DO...`);
-
+      console.warn('[DEEP SCRAPE] Page vide ou bloquée. Fallback Scrape.do autorisé.');
       const scrapeDoToken = process.env.SCRAPEDOTOKEN || process.env.SCRAPE_DO_TOKEN;
-
       if (!scrapeDoToken) {
         throw new Error('Bloqué par anti-bot, et aucun token Scrape.do disponible.');
       }
@@ -17321,23 +17314,17 @@ async function deepScrapeFunnel(url) {
       try {
         const scrapeDoUrl =
           `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(url)}&render=true`;
-
         const fallbackRes = await RetryManager.executeWithRetry(
           () => axios.get(scrapeDoUrl, { timeout: 45000 }),
           { context: 'ScrapeDo-DeepFallback' }
         );
-
         const fallbackHtml =
           typeof fallbackRes?.data === 'string'
             ? fallbackRes.data
             : (fallbackRes?.data?.html || fallbackRes?.data?.body || '');
-
         if (!fallbackHtml || fallbackHtml.length < 500) {
           throw new Error('Réponse de Scrape.do invalide ou trop courte.');
         }
-
-        console.log(`✅ [DEEP SCRAPE] Sauvetage Scrape.do réussi (${fallbackHtml.length} chars) !`);
-
         scrapeResult = mergeScrapeData(scrapeResult, {
           success: true,
           fetchLayer: 'scrape.do',
@@ -17346,10 +17333,11 @@ async function deepScrapeFunnel(url) {
           duration: Date.now() - startTime
         });
       } catch (fallbackError) {
-        console.error(`❌ [DEEP SCRAPE] Scrape.do a aussi échoué: ${fallbackError.message}`);
+        console.error(`[DEEP SCRAPE] Scrape.do a échoué: ${fallbackError.message}`);
         throw new Error('Anti-bot infranchissable (browser + Scrape.do bloqués).');
       }
     }
+
         // Normalisation finale après éventuel fallback
     scrapeResult = normalizeScrapeForFunnel(scrapeResult);
 
@@ -17380,7 +17368,7 @@ async function deepScrapeFunnel(url) {
 
     let html = String(scrapeResult?.html || '');
 
-    if ((!html || html.length < 200) && compactBodyText.length > 50) {
+    if ((!html || html.length < 200) && railwayUsable && (compactBodyText.length > 0 || compactSections.length > 0)) {
       const syntheticSectionsHtml = compactSections
         .map(section => {
           const title = normText(section?.title || section?.type || '');
@@ -17413,6 +17401,9 @@ async function deepScrapeFunnel(url) {
           </body>
         </html>
       `;
+      console.log(
+        `[DEEP SCRAPE] Synthetic HTML built from Railway compact result sections=${compactSections.length} body=${compactBodyText.length}`
+      );
     }
 
     if (!html || html.length < 200) {
