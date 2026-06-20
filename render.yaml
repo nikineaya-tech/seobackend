@@ -4,4 +4,4 @@ services:
     env: node
     plan: free
     buildCommand: npm install
-    startCommand: node scripts/apply-render-routing-patch.cjs && node server.js
+    startCommand: npm start
