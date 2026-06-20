@@ -20,6 +20,29 @@ Architecture cible:
 8. L agent audite chaque section avec preuves reelles.
 9. Le rapport final garde les anciens details Funnel et ajoute la cartographie sections.
 
+## Pricing et anciens systemes
+
+Le pricing doit rester sur l ancien systeme fiable existant. Ne pas remplacer le pipeline de pricing par le nouveau parser de sections.
+
+A conserver:
+
+- pricing-pipeline-refactored-1
+- buildPriceIntelLocal
+- finalizePriceIntel
+- extractSchemaPricesFromNode
+- extractTextPrices
+- extractDomPrices
+- pushValidatedPrice
+- getCanonicalPrice
+- detectCurrency
+- normalizePriceValue
+- hardenFunnelPriceIntel
+- getConfirmedFunnelPrice
+
+Le nouveau evidenceIndex peut lire priceIntel comme une source de preuve, mais il ne doit pas recalculer le prix principal ni changer la logique de validation du prix.
+
+Regle: le parser de sections audite l affichage du prix dans la page; le moteur pricing valide le prix.
+
 ## Mode lourd / mini scraping
 
 Si une page est lourde ou si le scrape complet depasse le budget, utiliser un mode mini-scraping parallele:
@@ -50,6 +73,7 @@ Regle: mieux vaut plusieurs fragments factuels courts qu un gros scrape vide ou 
 - Integrer la logique directement dans server.js et railway-scraper si necessaire.
 - Ne jamais marquer missing si une preuve textuelle existe dans evidenceIndex.
 - Si scrape partiel ou incertain, utiliser unconfirmed.
+- Ne pas casser ni remplacer le moteur pricing existant.
 
 ## Correction attendue
 
@@ -60,6 +84,7 @@ Regle: mieux vaut plusieurs fragments factuels courts qu un gros scrape vide ou 
 - Ajouter evidenceItems avec text, source, type, selector, confidence.
 - Garder les anciens champs et ajouter les nouveaux champs sans casser le rendu existant.
 - Ajouter une fusion de preuves qui accepte les donnees issues de mini scrapes paralleles.
+- Utiliser priceIntel uniquement comme preuve d affichage prix, pas comme nouveau moteur de pricing.
 
 ## Statuts attendus
 
@@ -95,6 +120,7 @@ Chaque section ou fragment doit garder les preuves, pas seulement un label:
 - les anciennes analyses Funnel restent visibles
 - la cartographie des sections devient additive et fondee sur preuves reelles
 - une section avec preuve reelle ne doit plus etre affichee comme absente
+- le moteur pricing existant reste intact
 
 ## Bilan pour reprise Codex
 
