@@ -238,7 +238,6 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
         'scrape_url',
         'deep-scrape',
         'deep_scrape',
-        'scrape_funnel_deep',
         'product-scrape',
         'product_scrape',
         'page-scrape',
@@ -11872,7 +11871,7 @@ const langInstr = isAr
                 fetchLayer:       'failed',
                 html:             '',
                 visualDNA:        { dominantColors: [] },
-               priceIntel: { detected: false, currency: 'MAD', primaryPrice: null, primaryPrice: null, minPrice: null, maxPrice: null, priceRange: null, pricingModel: 'unknown', confidence: 'LOW', primarySource: null, primaryKind: null, primaryScore: null, all: [], prices: [], schemaPrices: [], textPrices: [], domPrices: [], planPrices: [], struckPrices: [], discountRate: null, priceSourcesSummary: { schema: 0, text: 0, dom: 0 } },
+               priceIntel: { detected: false, currency: null, primaryPrice: null, minPrice: null, maxPrice: null, priceRange: null, pricingModel: 'unknown', confidence: 'LOW', primarySource: null, primaryKind: null, primaryScore: null, all: [], prices: [], schemaPrices: [], textPrices: [], domPrices: [], planPrices: [], struckPrices: [], discountRate: null, priceSourcesSummary: { schema: 0, text: 0, dom: 0 } },
                 copyIntel:        { headlines: { h1: [], h2: [], h3: [] }, realCTAs: [], pageSections: [], heroText: '', testimonials: [], guarantees: [], faq: [], bulletBenefits: [], allButtons: [] },
                 brand:            { fullTextSample: '', wordCount: 0, hasSSL: false },
                 trustSignals:     { hasSSL: false, hasWhatsApp: false, hasPhoneNumber: false },
@@ -13352,7 +13351,7 @@ const executiveBrief = buildExecutiveBrief({
 const dataIntegrity = proofIntegrity(proofModel);
 const funnelCompatibility = buildFunnelCompatibilityLayer({
     funnelSurgery,
-    pageArchitecture: funnelCompatibility.pageArchitecture,
+    pageArchitecture: r1Safe.pageArchitecture || null,
     sectionsDetailed
 });
 funnelCompatibilityFallback = funnelCompatibility;
@@ -13395,7 +13394,7 @@ const finalResponse = {
 },
     projectIdentity:  r1Safe.projectIdentity  || null,
     webCharte:        r1Safe.webCharte        || null,
-    pageArchitecture: r1Safe.pageArchitecture || null,
+    pageArchitecture: funnelCompatibility.pageArchitecture,
     aidaAnalysis:     r1Safe.aidaAnalysis     || null,
     commerceExploration,
 
@@ -18321,10 +18320,11 @@ async function deepScrapeFunnel(url) {
       frameworkData
     });
 
-    const allSections =
-      finalResult.copyIntel?.pageSections ||
-      finalResult.sectionRawBlocks ||
-      [];
+    const allSections = [
+      finalResult.copyIntel?.pageSections,
+      finalResult.sectionRawBlocks,
+      finalResult.sectionsDetailed
+    ].find(value => Array.isArray(value) && value.length > 0) || [];
 
     finalResult.sectionsFound = Array.isArray(allSections)
       ? allSections.length
