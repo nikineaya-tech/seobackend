@@ -588,6 +588,23 @@ function buildFunnelSectionSurgeryModel({
         { name: 'Résultats attendus', present: presentTypes.has('BENEFITS') || presentTypes.has('CASE_STUDIES'), critical: true, evidence: 'BENEFITS/CASE_STUDIES détecté' }
     ];
 
+    const evidenceTypeByName = {
+        'Hero': 'HERO', 'H1': 'HERO', 'Sous-titre': 'HERO',
+        'CTA principal': 'CTA', 'CTA secondaire': 'CTA',
+        'Image produit': 'GALLERY', 'Vidéo produit': 'DEMO', 'Galerie': 'GALLERY',
+        'Bénéfices': 'BENEFITS', 'Caractéristiques': 'FEATURES',
+        'Prix': 'PRICING', 'Offre / bundle / pack': 'OFFER',
+        'Livraison': 'DELIVERY', 'Garantie': 'GUARANTEE', 'Retours': 'RETURNS',
+        'Avis clients': 'SOCIAL_PROOF', 'Témoignages': 'SOCIAL_PROOF',
+        'FAQ': 'FAQ', 'Badges de confiance': 'TRUST', 'Paiement sécurisé': 'TRUST',
+        'WhatsApp / contact': 'CONTACT', 'Formulaire': 'FORM',
+        'Checkout / panier': 'CHECKOUT', 'Comparaison': 'COMPARISON',
+        'Urgence / rareté': 'URGENCY', 'Bonus': 'BONUS',
+        'Footer': 'FOOTER', 'Pages légales': 'LEGAL', 'Réseaux sociaux': 'SOCIAL',
+        'Comment ça marche': 'PROCESS', 'Objections': 'OBJECTIONS',
+        'Résultats attendus': 'BENEFITS'
+    };
+
     const rows = catalog.map(item => {
         const decision = item.present
             ? (['Prix', 'Garantie', 'Avis clients', 'FAQ', 'CTA principal', 'Hero'].includes(item.name) && item.critical ? labels.improve : labels.keep)
@@ -596,7 +613,15 @@ function buildFunnelSectionSurgeryModel({
             section: item.name,
             present: item.present ? yes : no,
             decision,
-            evidence: item.present ? evidence(item.evidence) : (isAr ? 'غير مرصود في الصفحات المتاحة' : isEn ? 'Not detected in accessible pages' : 'Non détecté dans les pages accessibles'),
+            evidence: item.present
+                ? evidence((() => {
+                    const expectedType = evidenceTypeByName[item.name];
+                    const observed = expectedType
+                        ? sectionsDetailed.find(section => section.type === expectedType)
+                        : null;
+                    return observed?.detectedText || observed?.evidence?.[0] || item.evidence;
+                })())
+                : (isAr ? 'غير مرصود في الصفحات المتاحة' : isEn ? 'Not detected in accessible pages' : 'Non détecté dans les pages accessibles'),
             problem: item.present
                 ? (decision === labels.improve ? (isAr ? 'القسم موجود لكن يحتاج إلى إثبات أو وضوح أقوى.' : isEn ? 'Present but needs stronger clarity or proof.' : 'Présent mais doit gagner en clarté ou en preuve.') : '')
                 : (isAr ? 'غيابه يترك سؤالا قبل القرار.' : isEn ? 'Its absence leaves an unanswered question before conversion.' : 'Son absence laisse une question avant la conversion.'),
@@ -11851,7 +11876,34 @@ scrapedRawData = cleanFunnelScrapePayload(scrape);
         const h3List  = copy.headlines?.h3?.slice(0, 8) || [];
        const ctaList     = copy.realCTAs?.slice(0, 10) || [];
  const allSections = (() => {
-    const base = Array.isArray(copy.pageSections) ? copy.pageSections : [];
+    const normalizeSectionType = section => {
+      const raw = String(
+        section?.typeGuess ||
+        section?.sectionType ||
+        section?.type ||
+        section?.label ||
+        'UNKNOWN'
+      ).trim().toUpperCase().replace(/[\s-]+/g, '_');
+      const aliases = {
+        HEADER: 'HERO',
+        BANNER: 'HERO',
+        VALUE_PROPOSITION: 'VALUE_PROP',
+        USP: 'VALUE_PROP',
+        FEATURES_LIST: 'FEATURES',
+        TESTIMONIALS: 'SOCIAL_PROOF',
+        REVIEWS: 'SOCIAL_PROOF',
+        PRICE: 'PRICING',
+        PRICES: 'PRICING',
+        CONTACT: 'CTA',
+        BUTTONS: 'CTA'
+      };
+      return aliases[raw] || raw;
+    };
+    const base = Array.isArray(copy.pageSections)
+      ? copy.pageSections
+          .filter(section => section && typeof section === 'object')
+          .map(section => ({ ...section, type: normalizeSectionType(section) }))
+      : [];
     if (base.length > 0) return base;
 
     // Fallback Cheerio — rawHtml déjà disponible dans le scope
@@ -12063,13 +12115,29 @@ const missingCriticalSections = criticalSectionRules
   .filter(rule => rule.required && !hasSection(rule.type))
   .map(rule => rule.type);
 
-const sectionsDetailed = allSections.map((s, index) => ({
-  index: index + 1,
-  type: s.type || 'UNKNOWN',
-  label: sectionLabels[s.type] || s.type || 'Unknown',
-  present: s.present !== false,
-  score: s.score ?? null
-}));
+const sectionsDetailed = allSections.map((s, index) => {
+  const type = String(s.type || s.typeGuess || 'UNKNOWN').toUpperCase().replace(/[\s-]+/g, '_');
+  const detectedText = String(
+    s.detectedText ||
+    s.textPreview ||
+    s.text ||
+    (Array.isArray(s.paragraphs) ? s.paragraphs.join(' ') : '')
+  ).replace(/\s+/g, ' ').trim().slice(0, 800);
+  return {
+    ...s,
+    index: index + 1,
+    type,
+    label: sectionLabels[type] || s.label || type || 'Unknown',
+    present: s.present !== false,
+    score: s.score ?? s.importanceScore ?? null,
+    detectedText,
+    evidence: [
+      ...(Array.isArray(s.headings) ? s.headings.slice(0, 3) : []),
+      ...(Array.isArray(s.buttons) ? s.buttons.slice(0, 3).map(button => button?.text || button?.label || button) : []),
+      detectedText
+    ].filter(Boolean).slice(0, 6)
+  };
+});
 // ─── CTA Coverage + Images Count ─────────────────────────────────────────────
 const ctaCoverage = allSections.length > 0
     ? Math.min(100, Math.round((ctaList.length / allSections.length) * 100))
