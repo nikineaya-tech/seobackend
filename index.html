@@ -5417,9 +5417,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         console.error(`❌ API Error [${STATE.requestsCount}]:`, error);
                     }
 
-                    // Retry logic for network errors
-                    if (!window.dakaAnalysisCancelled && this.retryCount < CONFIG.MAX_RETRIES &&
-                        (error.name === 'AbortError' || error.message.includes('Failed to fetch'))) {
+                    // Never replay analysis POST requests: the server may still be processing
+                    // after a client timeout, and retrying would create a second Railway job.
+                    const requestMethod = String(mergedOptions.method || 'GET').toUpperCase();
+                    const canRetrySafely = ['GET', 'HEAD'].includes(requestMethod);
+                    const isRetryableNetworkError =
+                        error.name === 'AbortError' || error.message.includes('Failed to fetch');
+
+                    if (!window.dakaAnalysisCancelled &&
+                        canRetrySafely &&
+                        this.retryCount < CONFIG.MAX_RETRIES &&
+                        isRetryableNetworkError) {
 
                         this.retryCount++;
                         console.warn(`⏳ Retry ${this.retryCount}/${CONFIG.MAX_RETRIES} for ${endpoint}`);
