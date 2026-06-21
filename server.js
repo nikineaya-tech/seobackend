@@ -614,6 +614,7 @@ function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
     };
     list(raw.proofUsed).forEach(proof => {
         const text = limitFunnelText(proof?.text || proof, 700);
+        if (!text) return;
         addProof(evidence.evidenceBlocks.find(block =>
             block.text.includes(text.slice(0, 80)) || text.includes(block.text.slice(0, 80))
         ));
@@ -13767,7 +13768,16 @@ const finalResponse = {
     funnelSectionScanner: funnelSurgery,
     funnelEvidence,
     funnelMiniAgents,
+    funnelMiniAgentAnalysis: Object.fromEntries(
+        funnelMiniAgents.map(agent => [agent.agentName, agent])
+    ),
     funnelEvidenceSynthesis,
+    funnelPrimaryAnalysis: funnelEvidenceSynthesis,
+    legacyFunnelAnalysis: {
+        role: 'fallback-additive',
+        funnelSurgery,
+        sectionsAudit: funnelCompatibility.sectionsAudit
+    },
     funnelAnalysisMode: 'evidence-first-additive',
     sectionsAudit: funnelCompatibility.sectionsAudit,
     proofModel,
