@@ -722,8 +722,9 @@ PROTOCOLE OBLIGATOIRE:
 6. Distinguer produit physique, service, SaaS et formation avant de recommander.
 7. Pour un service, parler de livrables, délais, révisions et accompagnement; jamais de livraison colis.
 8. Chaque verdict cite mot pour mot une preuve réelle avec source, URL et position.
-9. Chaque recommandation relie Observation, Impact conversion et Correction concrète.
-10. Si une section est déjà excellente, la déclarer STRONG et recommander de la conserver sans inventer de défaut.
+9. Pour chaque CTA observé, étudier le verbe, l intention, la force, le contexte de section et son rôle principal ou secondaire.
+10. Chaque recommandation relie Observation, Impact conversion et Correction concrète.
+11. Si une section est déjà excellente, la déclarer STRONG et recommander de la conserver sans inventer de défaut.
 11. Si la page ne présente aucune faiblesse critique prouvée, conclure clairement que la page est excellente.
 12. typeGuess est un indice regex faible, jamais une vérité.
 13. offerPricingDisplayAgent décrit seulement l affichage du prix; le moteur pricing reste souverain.
@@ -12508,7 +12509,7 @@ const langInstr = isAr
   : 'Réponds UNIQUEMENT en Français. Aucun mot en anglais ou arabe.';
         // ── 2. CACHE ──────────────────────────────────────────────────
         const contextKey = cleanProofText(JSON.stringify(safeContext || {}), 220) || 'no-context';
-        const cacheKey = `funnelspy_v14_legacy_agents_${validUrl}_${userLang}_${mode}_${contextKey}`;
+        const cacheKey = `funnelspy_v15_cta_legacy_${validUrl}_${userLang}_${mode}_${contextKey}`;
         const cached   = cache.get(cacheKey);
         if (cached && !req.body.skipCache) {
             console.log(`💾 [${requestId}] Cache HIT — ${validUrl}`);
@@ -14061,6 +14062,85 @@ const funnelCompatibility = buildFunnelCompatibilityLayer({
 });
 funnelCompatibilityFallback = funnelCompatibility;
 
+const ctaTexts = (ctaList || []).map(item =>
+    cleanProofText(typeof item === 'string' ? item : item?.text || item?.label || item?.title || '', 160)
+).filter(Boolean);
+const uniqueCtaTexts = [...new Set(ctaTexts.map(text => text.trim()).filter(Boolean))];
+const strongCtaPattern = /acheter|commander|réserver|reserver|devis|commencer|essayer|tester|continuer|entrer|obtenir|contact|whatsapp|buy|order|checkout|book|start|trial|get started|subscribe|ابدأ|اشتر|اطلب|احجز|تواصل/i;
+const genericCtaPattern = /^(voir|plus|en savoir plus|learn more|cliquez ici|click here|découvrir|decouvrir|continuer)$/i;
+const primaryCtaText = uniqueCtaTexts.find(text => strongCtaPattern.test(text)) || uniqueCtaTexts[0] || null;
+const strongCtas = uniqueCtaTexts.filter(text => strongCtaPattern.test(text));
+const genericCtas = uniqueCtaTexts.filter(text => genericCtaPattern.test(text));
+const ctaScore = Math.min(100,
+    (primaryCtaText ? 35 : 0) +
+    (strongCtas.length ? 25 : 0) +
+    (uniqueCtaTexts.length >= 2 ? 20 : uniqueCtaTexts.length ? 10 : 0) +
+    (Number(ctaCoverage || 0) > 0 ? 20 : 0)
+);
+const ctaIntelligence = {
+    observed: uniqueCtaTexts.length > 0,
+    count: uniqueCtaTexts.length,
+    primaryCta: primaryCtaText,
+    detectedCtas: uniqueCtaTexts.slice(0, 16),
+    strongCtas: strongCtas.slice(0, 10),
+    genericCtas: genericCtas.slice(0, 8),
+    coverage: Number(ctaCoverage || 0),
+    score: ctaScore,
+    quality: ctaScore >= 75 ? 'STRONG' : ctaScore >= 45 ? 'MEDIUM' : uniqueCtaTexts.length ? 'WEAK' : 'UNCONFIRMED',
+    verdict: !uniqueCtaTexts.length
+        ? (isAr ? 'لم يتم تأكيد CTA في الصفحات المتاحة.' : isEn ? 'No CTA was confirmed in the accessible pages.' : 'Aucun CTA n’a été confirmé dans les pages accessibles.')
+        : ctaScore >= 75
+            ? (isAr ? 'مسار الإجراء واضح وقوي حسب الأزرار المرصودة.' : isEn ? 'The action path is clear and strong based on observed buttons.' : 'Le parcours d’action est clair et solide selon les boutons observés.')
+            : (isAr ? 'تم رصد CTA لكن يجب تحسين وضوح الإجراء أو تكراره.' : isEn ? 'CTAs were observed, but action clarity or repetition should improve.' : 'Des CTA sont observés, mais leur clarté ou leur répétition doit être renforcée.'),
+    recommendations: [
+        !primaryCtaText ? (isAr ? 'تأكيد CTA رئيسي واحد.' : isEn ? 'Confirm one primary CTA.' : 'Confirmer un CTA principal unique.') : null,
+        genericCtas.length ? (isAr ? 'استبدال الأزرار العامة بفعل محدد.' : isEn ? 'Replace generic buttons with a specific action verb.' : 'Remplacer les boutons génériques par un verbe d’action précis.') : null,
+        uniqueCtaTexts.length === 1 ? (isAr ? 'تكرار CTA الرئيسي بعد الأدلة والعرض.' : isEn ? 'Repeat the primary CTA after proof and offer sections.' : 'Répéter le CTA principal après les preuves et l’offre.') : null
+    ].filter(Boolean)
+};
+
+const copySignals = {
+    h1: h1Main !== ND ? h1Main : null,
+    subheadings: [...h2List, ...h3List].slice(0, 12),
+    ctas: uniqueCtaTexts.slice(0, 16),
+    benefits: (copy.bulletBenefits || []).slice(0, 10),
+    promises: [h1Main, ...(h2List || [])].filter(value => value && value !== ND).slice(0, 6),
+    aida: r1Safe.aidaAnalysis || null,
+    pasAndCopy: r2Safe.copywritingDeep || null,
+    evidenceSource: 'observed-copy-plus-agents'
+};
+
+const funnelExpertAnalysis = {
+    readinessScore: Number(r4Safe.globalScoring?.overall || localScore || 0),
+    pageQuality: funnelSurgery.pageQuality || null,
+    journey: r2Safe.funnelMapping || null,
+    customerPsychology: r4Safe.neuromarketing || null,
+    offerAndValue: r2Safe.pricingPsychology || null,
+    visualIdentity: r1Safe.webCharte || null,
+    technicalSignals: r3Safe.technicalAudit || null,
+    ctaIntelligence,
+    copySignals,
+    pageMetrics: {
+        wordCount,
+        sectionsDetected: sectionsDetailed.length,
+        imagesCount,
+        ctaCount: uniqueCtaTexts.length,
+        ctaCoverage: Number(ctaCoverage || 0),
+        socialProofsCount: socialProofs.length,
+        hasSSL,
+        hasWhatsApp
+    },
+    attackAngles: r3Safe.strategicBlueprint || null,
+    readyToUseCopy: r2Safe.copywritingDeep?.rewriteSuggestions || r2Safe.copywritingDeep || null,
+    prioritizedPlan: concreteActionPlan,
+    additionalAnalyses: {
+        trustAndObjections: funnelSurgery.proofTrust || null,
+        mobileExperience: funnelSurgery.mobileExperience || null,
+        conversionFrictions: funnelSurgery.frictions || auditIssues,
+        evidenceReliability: scrapeReliability
+    }
+};
+
 const legacyFunnel = {
     role: 'legacy-complete-additive',
     version: 'legacy-funnel-v12',
@@ -14088,6 +14168,13 @@ const legacyFunnel = {
     psychTriggers,
     performanceSignals: perfSignals,
     priceIntel,
+    ctaIntelligence,
+    copySignals,
+    funnelExpertAnalysis,
+    pageMetrics: funnelExpertAnalysis.pageMetrics,
+    attackAngles: funnelExpertAnalysis.attackAngles,
+    readyToUseCopy: funnelExpertAnalysis.readyToUseCopy,
+    prioritizedActionPlan: concreteActionPlan,
     sectionsAudit: funnelCompatibility.sectionsAudit,
     megaRedesignPrompt: magicPrompt,
     aiRewritePrompt: magicPrompt
@@ -14165,6 +14252,9 @@ const finalResponse = {
     ),
     funnelEvidenceSynthesis,
     funnelPrimaryAnalysis: funnelEvidenceSynthesis,
+    ctaIntelligence,
+    copySignals,
+    funnelExpertAnalysis,
     legacyFunnel,
     legacyFunnelAnalysis: legacyFunnel,
     funnelAnalysisMode: 'evidence-first-additive',
