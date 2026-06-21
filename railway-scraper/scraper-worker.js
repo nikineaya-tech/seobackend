@@ -247,7 +247,6 @@ function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result')
     typeGuess: clean(section.typeGuess || section.type || section.detectedType || '', 80) || null,
     labelGuess: clean(section.labelGuess || section.label || '', 180) || null,
     classificationSource: clean(section.classificationSource || 'weak-regex-hint', 80),
-    type: clean(section.typeGuess || section.type || section.detectedType || '', 80),
     title: clean(section.title || '', 180),
     text: clean(section.text || section.textPreview || '', 900),
     textPreview: clean(section.textPreview || section.text || '', 350),
@@ -939,16 +938,22 @@ function normalizeSectionBlock(block = {}) {
     }));
 
   return {
+    source: clean(block.source || 'dom-block', 80),
+    pageUrl: clean(block.pageUrl || '', 500),
     position: Number(block.position || block.index || 0) || null,
     tag: clean(block.tag || '', 30),
     selector: clean(block.selector || '', 160),
     id: clean(block.id || '', 100),
     className: clean(block.className || '', 160),
     visible: block.visible !== false,
-    detectedType: clean(block.detectedType || block.type || '', 80),
-    type: clean(block.type || block.detectedType || '', 80),
-    label: clean(block.label || '', 140),
+    typeGuess: clean(block.typeGuess || block.type || block.detectedType || '', 80) || null,
+    labelGuess: clean(block.labelGuess || block.label || '', 140) || null,
+    classificationSource: clean(
+      block.classificationSource || ((block.typeGuess || block.type || block.detectedType) ? 'weak-regex-hint' : ''),
+      80
+    ) || null,
     title: clean(block.title || '', 220),
+    text: clean(block.text || block.textPreview || '', 900),
     headings: arr(block.headings).slice(0, 6).map(v => clean(v, 180)).filter(Boolean),
     paragraphs: arr(block.paragraphs).slice(0, 8).map(v => clean(v, 220)).filter(Boolean),
     textPreview: clean(block.textPreview || block.text || '', 420),
@@ -970,7 +975,9 @@ function normalizeSectionBlock(block = {}) {
     forms: arr(block.forms).slice(0, 2).map(item => ({
       inputCount: Number(item?.inputCount || 0) || 0
     })),
-    trustSignals: normalizeTrustSignals(block.trustSignals),
+    mentionHints: block.mentionHints && typeof block.mentionHints === 'object'
+      ? { ...block.mentionHints, classificationSource: 'weak-regex-hint' }
+      : null,
     rawEvidence: arr(block.rawEvidence || block.evidence)
       .slice(0, 5)
       .map(v => clean(v, 180))
