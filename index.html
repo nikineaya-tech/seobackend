@@ -666,12 +666,24 @@ html, body {
         pointer-events: none;
         transition: opacity 220ms ease, visibility 0s linear 220ms;
     }
-    #daka-global-loader.active {
+    #daka-global-loader.active,
+    #daka-global-loader:popover-open {
         display: grid !important;
         visibility: visible;
         opacity: 1;
         pointer-events: auto;
         transition-delay: 0s;
+    }
+    #daka-global-loader:popover-open {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100dvh !important;
+        max-width: none !important;
+        max-height: none !important;
+        margin: 0 !important;
+        padding: 16px !important;
+        border: 0 !important;
     }
     .daka-global-loader-card {
         width: min(720px, 100%);
@@ -3593,7 +3605,7 @@ table tbody td {
         </div>
     </div>
 
-    <div id="daka-global-loader" class="daka-global-loader" role="dialog" aria-modal="true" aria-live="polite" aria-labelledby="daka-loader-title">
+    <div id="daka-global-loader" class="daka-global-loader" popover="manual" role="dialog" aria-modal="true" aria-live="polite" aria-labelledby="daka-loader-title">
         <div class="daka-global-loader-card">
             <div class="daka-global-loader-video-wrap">
                 <video id="daka-global-loader-video"
@@ -3808,7 +3820,7 @@ table tbody td {
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-cosmic btn-lg" id="analyzeBtn" style="width: 100%; margin-top: 15px; height: 60px; font-size: 1.1rem;">
+            <button type="submit" class="btn btn-cosmic btn-lg" id="analyzeBtn" popovertarget="daka-global-loader" popovertargetaction="show" style="width: 100%; margin-top: 15px; height: 60px; font-size: 1.1rem;">
                 <i class="fas fa-crosshairs"></i>
                 <span data-i18n="btn_analyze">LANCER L'EXTRACTION STRATÉGIQUE</span>
             </button>
@@ -3908,7 +3920,7 @@ table tbody td {
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-success btn-lg" id="funnelBtn" style="width: 100%; margin-top: 1.5rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    <button type="submit" class="btn btn-success btn-lg" id="funnelBtn" popovertarget="daka-global-loader" popovertargetaction="show" style="width: 100%; margin-top: 1.5rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                         <i class="fas fa-radar fa-spin-hover"></i> <span data-i18n="btn_funnel">LANCER L'INFILTRATION</span>
                     </button>
                 </form>
@@ -3991,7 +4003,7 @@ table tbody td {
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-cosmic btn-lg" id="technicalBtn" style="width: 100%; margin-top: 10px;">
+                    <button type="submit" class="btn btn-cosmic btn-lg" id="technicalBtn" popovertarget="daka-global-loader" popovertargetaction="show" style="width: 100%; margin-top: 10px;">
                         <i class="fas fa-magic"></i>
                         <span data-i18n="btn_technical">GÉNÉRER L'AUDIT EXPERT & CODES</span>
                     </button>
@@ -4062,7 +4074,7 @@ table tbody td {
                         <input type="range" id="kwCount" min="5" max="100" step="5" value="20" style="width:100%; margin-top:10px; accent-color:var(--accent-info);">
                     </div>
 
-                    <button type="submit" class="btn btn-cyber btn-lg" id="kwBtn" style="width:100%; margin-top:20px; height:60px; font-size:1.1rem;">
+                    <button type="submit" class="btn btn-cyber btn-lg" id="kwBtn" popovertarget="daka-global-loader" popovertargetaction="show" style="width:100%; margin-top:20px; height:60px; font-size:1.1rem;">
                         <i class="fas fa-magic"></i>
                         <span data-i18n="btn_keywords">TROUVER LES MOTS-CLÉS GAGNANTS</span>
                     </button>
@@ -4279,7 +4291,7 @@ table tbody td {
     </div>
 
     <!-- Submit -->
-    <button type="submit" class="btn btn-cyber btn-lg" id="kwBtn" style="width:100%; margin-top:20px; height:60px; font-size:1.1rem;">
+    <button type="submit" class="btn btn-cyber btn-lg" id="kwBtn" popovertarget="daka-global-loader" popovertargetaction="show" style="width:100%; margin-top:20px; height:60px; font-size:1.1rem;">
         <i class="fas fa-magic"></i>
         <span data-i18n="btn_keywords">TROUVER LES MOTS-CLÉS GAGNANTS</span>
     </button>
@@ -6244,6 +6256,9 @@ function showDakaLoader(type = 'competitors') {
   document.getElementById('daka-loader-hooks').innerHTML = copy.hooks.map(hook => `<span>${escapeHtml(hook)}</span>`).join('');
   enforceMutedLoaderVideos();
   loader.classList.add('active');
+  if (typeof loader.showPopover === 'function' && !loader.matches(':popover-open')) {
+    try { loader.showPopover(); } catch (_) {}
+  }
   document.body.classList.add('loading-active');
   document.getElementById('daka-global-loader-video')?.play().catch(() => {});
   DakaSound.loaderStop();
@@ -6252,7 +6267,11 @@ function showDakaLoader(type = 'competitors') {
 }
 
 function hideDakaLoader() {
-  document.getElementById('daka-global-loader')?.classList.remove('active');
+  const loader = document.getElementById('daka-global-loader');
+  loader?.classList.remove('active');
+  if (loader?.matches?.(':popover-open') && typeof loader.hidePopover === 'function') {
+    try { loader.hidePopover(); } catch (_) {}
+  }
   document.body.classList.remove('loading-active');
   enforceMutedLoaderVideos();
   DakaSound.loaderStop();
