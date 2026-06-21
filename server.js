@@ -754,6 +754,187 @@ function synthesizeFunnelEvidenceAgents(run = {}, evidence = {}) {
 }
 
 
+function reconcileFunnelSurgeryWithEvidence({
+    surgery = {},
+    evidence = {},
+    synthesis = {},
+    lang = 'fr',
+    h1 = '',
+    h2 = [],
+    ctas = [],
+    imagesCount = 0,
+    confirmedPrice = null
+} = {}) {
+    const blocks = Array.isArray(evidence.evidenceBlocks) ? evidence.evidenceBlocks : [];
+    const corpus = blocks.map(block => [
+        block.source, block.selector, block.typeGuess, block.labelGuess, block.text
+    ].filter(Boolean).join(' ')).join(' ');
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const yes = isAr ? 'نعم' : isEn ? 'Yes' : 'Oui';
+    const keep = isAr ? 'إبقاء' : isEn ? 'Keep' : 'Garder';
+    const improve = isAr ? 'تحسين' : isEn ? 'Improve' : 'Améliorer';
+    const add = isAr ? 'إضافة' : isEn ? 'Add' : 'Ajouter';
+    const unconfirmedLabel = isAr ? 'غير مؤكد' : isEn ? 'Unconfirmed' : 'Non confirmé';
+    const clean = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+
+    const typeAliases = {
+        'hero': ['hero'],
+        'h1': ['hero', 'h1'],
+        'sous-titre': ['hero', 'subtitle'],
+        'cta principal': ['cta', 'contact'],
+        'cta secondaire': ['cta', 'contact'],
+        'image produit': ['media', 'image', 'gallery'],
+        'video produit': ['media', 'video'],
+        'galerie': ['media', 'gallery'],
+        'benefices': ['benefits', 'features'],
+        'caracteristiques': ['features'],
+        'prix': ['pricing', 'offer'],
+        'offre / bundle / pack': ['offer', 'pricing'],
+        'livraison': ['delivery'],
+        'garantie': ['guarantee', 'trust'],
+        'retours': ['returns', 'delivery'],
+        'avis clients': ['social_proof', 'reviews', 'trust'],
+        'temoignages': ['social_proof', 'testimonials', 'trust'],
+        'faq': ['faq', 'objections'],
+        'badges de confiance': ['trust'],
+        'paiement securise': ['trust', 'payment'],
+        'whatsapp / contact': ['cta', 'contact'],
+        'formulaire': ['cta', 'form'],
+        'checkout / panier': ['cta', 'checkout'],
+        'footer': ['legal', 'footer'],
+        'pages legales': ['legal'],
+        'reseaux sociaux': ['media', 'social'],
+        'comment ca marche': ['structure', 'process'],
+        'objections': ['faq', 'objections'],
+        'resultats attendus': ['benefits', 'offer']
+    };
+    const synthesisMatch = (items, label) => {
+        const aliases = typeAliases[clean(label)] || [clean(label)];
+        return (Array.isArray(items) ? items : []).find(item => {
+            const value = clean(item?.sectionType || item?.section || item?.name);
+            return aliases.some(alias => value.includes(clean(alias)) || clean(alias).includes(value));
+        }) || null;
+    };
+    const blockProof = (rx, sourceRx = null) => blocks.find(block => {
+        const value = [block.selector, block.typeGuess, block.labelGuess, block.text].filter(Boolean).join(' ');
+        return rx.test(value) && (!sourceRx || sourceRx.test(String(block.source || '')));
+    });
+
+    const proofFor = label => {
+        const key = clean(label);
+        if (key === 'h1') {
+            if (h1 && !/non detecte|not detected|undefined|^na$/i.test(h1)) return { text: h1, source: 'heading' };
+            return blockProof(/\bh1\b|headline/i, /heading|dom-section/);
+        }
+        if (key === 'hero') {
+            if (h1 && ctas.length) return { text: `${h1} | ${typeof ctas[0] === 'string' ? ctas[0] : ctas[0]?.text || ''}`, source: 'hero-facts' };
+            return blockProof(/hero|above.?fold|banner/i);
+        }
+        if (key === 'sous-titre') return h2[0] ? { text: h2[0], source: 'heading' } : null;
+        if (key === 'cta principal') return ctas[0] ? { text: typeof ctas[0] === 'string' ? ctas[0] : ctas[0]?.text || ctas[0]?.label, source: 'button' } : blockProof(/acheter|commander|decouvrir|contact|etsy|buy|order/i, /button|dom-section/);
+        if (key === 'cta secondaire') return ctas[1] ? { text: typeof ctas[1] === 'string' ? ctas[1] : ctas[1]?.text || ctas[1]?.label, source: 'button' } : null;
+        if (key === 'image produit') return imagesCount > 0 ? { text: `${imagesCount} image(s) observée(s)`, source: 'image-alt' } : null;
+        if (key === 'galerie') return imagesCount >= 4 ? { text: `${imagesCount} image(s) observée(s)`, source: 'image-alt' } : null;
+        if (key === 'benefices') return h2.length >= 2 ? { text: h2.slice(0, 3).join(' | '), source: 'heading' } : blockProof(/benefit|benefice|avantage|resultat|respirer|calme|espace/i);
+        if (key === 'offre / bundle / pack') return blockProof(/product-card|catalogue|collection|boutique|acheter sur etsy|offre|bundle|pack/i);
+        if (key === 'prix') return confirmedPrice ? { text: String(confirmedPrice), source: 'pricing-pipeline' } : blockProof(/\b(mad|dh|eur|usd|€|\$)\b/i, /raw-price|product-card|dom-section/);
+        if (key === 'garantie') return blockProof(/garantie|warranty|refund|rembours|satisfaction/i);
+        if (key === 'livraison') return blockProof(/livraison|shipping|delivery|expedition|telechargement instantane/i);
+        if (key === 'retours') return blockProof(/retour|return|refund|rembours|exchange/i);
+        if (key === 'avis clients' || key === 'temoignages') return blockProof(/avis|review|rating|etoile|testimonial|temoignage/i);
+        if (key === 'faq' || key === 'objections') return blockProof(/faq|questions frequentes|question|reponse|objection/i);
+        if (key === 'footer') return blockProof(/footer|copyright|conditions|privacy|mentions legales/i);
+        if (key === 'pages legales') return blockProof(/conditions|privacy|confidentialite|mentions legales|terms/i);
+        if (key === 'reseaux sociaux') return blockProof(/instagram|facebook|tiktok|linkedin|youtube|etsy/i);
+        if (key === 'whatsapp / contact') return blockProof(/whatsapp|contact|message au vendeur|email|telephone/i);
+        return synthesisMatch(synthesis.present, label) || synthesisMatch(synthesis.weak, label);
+    };
+
+    const rows = (Array.isArray(surgery.surgeryMatrix) ? surgery.surgeryMatrix : []).map(row => {
+        const proof = proofFor(row.section);
+        const weakDecision = synthesisMatch(synthesis.weak, row.section);
+        const missingDecision = synthesisMatch(synthesis.missing, row.section);
+        if (proof) {
+            return {
+                ...row,
+                present: yes,
+                decision: weakDecision ? improve : keep,
+                evidence: limitFunnelText(proof.text || proof.detectedText || proof.evidence || String(proof), 700),
+                problem: weakDecision?.problem || (weakDecision ? row.problem : ''),
+                confidence: proof.confidence || (proof.source === 'heading' || proof.source === 'button' ? 'HIGH' : 'MEDIUM')
+            };
+        }
+        if (missingDecision && evidence.scrapeSufficient) {
+            return {
+                ...row,
+                decision: add,
+                evidence: missingDecision.reason || row.evidence,
+                confidence: missingDecision.confidence || synthesis.confidence || 'MEDIUM'
+            };
+        }
+        if (String(row.present || '').toLowerCase() === String(yes).toLowerCase()) return row;
+        return {
+            ...row,
+            decision: unconfirmedLabel,
+            evidence: isAr ? 'لم تتوفر أدلة كافية للحسم.' : isEn ? 'Insufficient evidence to decide.' : 'Preuves insuffisantes pour conclure.',
+            problem: isAr ? 'يتطلب تحققاً يدوياً أو استخراجاً أعمق.' : isEn ? 'Requires manual verification or deeper extraction.' : 'À vérifier manuellement ou avec une extraction plus profonde.',
+            confidence: 'LOW'
+        };
+    });
+
+    const isDecision = (row, value) => clean(row.decision) === clean(value);
+    const keepSections = rows.filter(row => isDecision(row, keep)).slice(0, 10);
+    const improveSections = rows.filter(row => isDecision(row, improve)).slice(0, 10);
+    const missingSections = rows.filter(row => isDecision(row, add)).slice(0, 10);
+    const unconfirmedSections = rows.filter(row => isDecision(row, unconfirmedLabel)).slice(0, 12);
+
+    const observed = label => Boolean(proofFor(label));
+    const contradictsObserved = action => {
+        const value = clean(action?.action || action);
+        return (observed('CTA principal') && /ajouter.*cta|cta.*absent/.test(value))
+            || (observed('Prix') && /clarifier.*prix|prix.*absent/.test(value))
+            || (observed('Avis clients') && /ajouter.*avis|preuve sociale absente/.test(value))
+            || (observed('Garantie') && /ajouter.*garantie|garantie.*absente/.test(value))
+            || (observed('FAQ') && /creer.*faq|ajouter.*faq/.test(value));
+    };
+    const priorityPlan = { ...(surgery.priorityPlan || {}) };
+    ['now', 'sevenDays', 'thirtyDays'].forEach(key => {
+        priorityPlan[key] = (Array.isArray(priorityPlan[key]) ? priorityPlan[key] : [])
+            .filter(action => !contradictsObserved(action));
+    });
+
+    return {
+        ...surgery,
+        surgeryMatrix: rows,
+        keepSections,
+        improveSections,
+        missingSections,
+        unconfirmedSections,
+        sectionDiagnosis: {
+            ...(surgery.sectionDiagnosis || {}),
+            keep: keepSections,
+            improve: improveSections,
+            add: missingSections,
+            unconfirmed: unconfirmedSections
+        },
+        priorityPlan,
+        proofTrust: {
+            ...(surgery.proofTrust || {}),
+            missing: missingSections.map(row => row.section).slice(0, 6),
+            unconfirmed: unconfirmedSections.map(row => row.section).slice(0, 6)
+        },
+        reconciliation: {
+            applied: true,
+            evidenceCount: blocks.length,
+            observedSections: rows.filter(row => String(row.present).toLowerCase() === String(yes).toLowerCase()).length,
+            confirmedMissing: missingSections.length,
+            unconfirmed: unconfirmedSections.length
+        }
+    };
+}
+
+
 function isObservedFunnelSection(value) {
     if (value === true) return true;
     const normalized = String(value || '').trim().toLowerCase();
@@ -1003,8 +1184,16 @@ function buildFunnelSectionSurgeryModel({
             'Avis clients': isAr ? 'أضف cas clients vérifiables et résultats obtenus.' : isEn ? 'Add verifiable case studies and outcomes.' : 'Ajouter cas clients vérifiables et résultats obtenus.',
             'FAQ': isAr ? 'Traite budget, délais, livrables, paiement et objections.' : isEn ? 'Handle budget, timelines, deliverables, payment and objections.' : 'Traiter budget, délais, livrables, paiement et objections.'
         };
+        const concrete = {
+            'Hero': isEn ? 'Build a first screen with one clear promise, one visual and one primary CTA.' : isAr ? 'أنشئ شاشة أولى بوعد واضح وصورة وزر إجراء رئيسي.' : 'Construire un premier écran avec une promesse claire, un visuel et un CTA principal.',
+            'H1': isEn ? 'Write one outcome-led H1 that names the offer and the benefit.' : isAr ? 'اكتب عنوان H1 يوضح العرض والنتيجة للعميل.' : 'Écrire un H1 orienté résultat qui nomme clairement l’offre et le bénéfice.',
+            'Sous-titre': isEn ? 'Add a subtitle explaining for whom, what is included and why it matters.' : isAr ? 'أضف عنواناً فرعياً يشرح الجمهور والمحتوى والفائدة.' : 'Ajouter un sous-titre précisant pour qui, ce qui est inclus et pourquoi cela compte.',
+            'CTA principal': isEn ? 'Add one visible action CTA directly below the main promise.' : isAr ? 'أضف زر إجراء واضحاً مباشرة تحت الوعد الرئيسي.' : 'Placer un CTA d’action visible directement sous la promesse principale.',
+            'Bénéfices': isEn ? 'Turn the three strongest outcomes into short, concrete benefit cards.' : isAr ? 'حوّل أهم ثلاث نتائج إلى بطاقات فوائد قصيرة وواضحة.' : 'Transformer les trois résultats les plus forts en bénéfices courts et concrets.',
+            'Offre / bundle / pack': isEn ? 'Show exactly what is included, the format, price and buying path in one offer block.' : isAr ? 'اعرض المحتوى والشكل والسعر ومسار الشراء في كتلة عرض واحدة.' : 'Afficher dans un même bloc ce qui est inclus, le format, le prix et le parcours d’achat.'
+        };
         const map = productWords ? ecommerce : service;
-        return map[section] || (present
+        return concrete[section] || map[section] || (present
             ? (isAr ? 'حافظ على القسم واجعله أقرب إلى CTA إذا كان يؤثر على القرار.' : isEn ? 'Keep the section and bring it closer to the CTA if it affects the decision.' : 'Garder la section et la rapprocher du CTA si elle influence la décision.')
             : (isAr ? 'أضف هذا القسم avec contenu concret et preuve visible.' : isEn ? 'Add this section with concrete content and visible proof.' : 'Ajouter cette section avec contenu concret et preuve visible.'));
     };
@@ -12839,10 +13028,24 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
         });
         const funnelMiniAgents = funnelMiniAgentRun.agents;
         const funnelEvidenceSynthesis = synthesizeFunnelEvidenceAgents(funnelMiniAgentRun, funnelEvidence);
+        const reconciledFunnelSurgery = reconcileFunnelSurgeryWithEvidence({
+            surgery: funnelSurgery,
+            evidence: funnelEvidence,
+            synthesis: funnelEvidenceSynthesis,
+            lang: validLang,
+            h1: h1Main,
+            h2: h2List,
+            ctas: ctaList,
+            imagesCount,
+            confirmedPrice: getConfirmedFunnelPrice(priceIntel)
+        });
+        Object.assign(funnelSurgery, reconciledFunnelSurgery);
+        funnelSurgeryFallback = funnelSurgery;
         console.log(
             `[${requestId}] [FUNNEL-MINI-AGENTS] detected=${funnelEvidenceSynthesis.present.length} ` +
             `weak=${funnelEvidenceSynthesis.weak.length} missing=${funnelEvidenceSynthesis.missing.length} ` +
-            `unconfirmed=${funnelEvidenceSynthesis.unconfirmed.length}`
+            `unconfirmed=${funnelEvidenceSynthesis.unconfirmed.length} ` +
+            `reconciled=${funnelSurgery.reconciliation?.observedSections || 0}`
         );
 
         // ── 5. SHARED CONTEXT ─────────────────────────────────
