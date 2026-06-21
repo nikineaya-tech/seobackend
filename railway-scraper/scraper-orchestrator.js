@@ -275,51 +275,88 @@ function extractImages($, baseUrl) {
   return images.slice(0, 40);
 }
 
-function extractCtas($) {
+const CTA_ACTION_PATTERN = /acheter|commander|ajouter|panier|devis|contact|whatsapp|réserver|reserver|obtenir|commencer|continuer|entrer|essayer|tester|découvrir|decouvrir|voir|ouvrir|télécharger|telecharger|inscrire|abonner|envoyer|demander|planifier|rendez-vous|rejoindre|accéder|acceder|écouter|ecouter|lire la vidéo|lire la video|download|trial|demo|start|get started|buy|purchase|add to cart|checkout|subscribe|sign up|book|join|order|learn more|discover|view|open|continue|ابدأ|اشتر|اطلب|احجز|تواصل|اكتشف|جرّب|جرب|انضم|سجل|تابع|المزيد/i;
+const CTA_NOISE_PATTERN = /^(accueil|home|blog|à propos|a propos|about|mentions légales|mentions legales|privacy|cookies?|français|english|العربية|mad|usd|eur|menu|fermer|close)$/i;
+
+function inferCtaIntent(signal = '') {
+  if (/acheter|commander|buy|purchase|order|checkout|panier|cart|add to cart|اشتر|اطلب/i.test(signal)) return 'purchase';
+  if (/contact|whatsapp|devis|rendez-vous|book|réserver|reserver|تواصل|احجز/i.test(signal)) return 'contact';
+  if (/essai|trial|demo|tester|essayer|جرّب|جرب/i.test(signal)) return 'trial';
+  if (/inscrire|abonner|subscribe|sign up|join|rejoindre|انضم|سجل/i.test(signal)) return 'signup';
+  if (/download|télécharger|telecharger/i.test(signal)) return 'download';
+  if (/continuer|continue|entrer|start|commencer|ابدأ|تابع/i.test(signal)) return 'progress';
+  return 'discover';
+}
+
+function extractCtas($, baseUrl = '') {
   const ctas = [];
   const seen = new Set();
-
   const selector = [
-    'button',
-    'a',
-    '[role="button"]',
-    'input[type="submit"]',
-    '.btn',
-    '.button',
-    '.cta',
-    '[class*="button"]',
-    '[class*="btn"]'
+    'button', 'a', '[role="button"]', 'input[type="submit"]', 'input[type="button"]',
+    '.btn', '.button', '.cta', '[class*="button"]', '[class*="btn"]', '[class*="cta"]',
+    '[data-cta]', '[data-action]'
   ].join(',');
 
-  $(selector).each((_, el) => {
+  $(selector).each((index, el) => {
+    const $el = $(el);
     const text = compactText(
-      $(el).text() ||
+      $el.text() ||
       safeAttr($, el, 'value') ||
       safeAttr($, el, 'aria-label') ||
       safeAttr($, el, 'title'),
-      120
+      140
     );
+    if (!text || text.length > 140) return;
 
-    if (!text) return;
+    const tag = el.tagName ? el.tagName.toLowerCase() : 'unknown';
+    const className = compactText(safeAttr($, el, 'class'), 180);
+    const rawHref = safeAttr($, el, 'href');
+    const role = safeAttr($, el, 'role');
+    const signal = [text, className, rawHref, role, safeAttr($, el, 'data-action'), safeAttr($, el, 'data-cta')]
+      .filter(Boolean).join(' ').toLowerCase();
+    const semanticButton = tag === 'button' || tag === 'input' || role === 'button';
+    const actionClass = /(^|\s)(cta|btn-primary|button-primary|primary-action|buy-button|add-to-cart)(\s|$)/i.test(className);
+    const actionHref = /checkout|cart|panier|contact|whatsapp|wa\.me|booking|book|order|etsy|shop|pricing|signup|register/i.test(rawHref);
+    const actionText = CTA_ACTION_PATTERN.test(signal);
+    const insideNavigation = $el.closest('nav,[role="navigation"]').length > 0;
 
-    const signal = `${text} ${safeAttr($, el, 'class')} ${safeAttr($, el, 'href')}`.toLowerCase();
+    if (CTA_NOISE_PATTERN.test(text) && !actionClass && !actionHref) return;
+    if (insideNavigation && !actionText && !actionClass && !actionHref) return;
+    if (!actionText && !actionClass && !actionHref && !semanticButton) return;
 
-    const isCta = /acheter|commander|ajouter|panier|devis|contact|whatsapp|réserver|reserver|download|essai|demo|start|get started|buy|add to cart|checkout|subscribe|pricing|tarif|voir|découvrir|decouvrir/i.test(signal);
-    if (!isCta) return;
+    const section = $el.closest('section,article,main,form,header');
+    const contextHeading = compactText(section.find('h1,h2,h3,[class*="title"],[class*="heading"]').first().text(), 180);
+    let strengthScore = 0;
+    if (actionText) strengthScore += 40;
+    if (actionClass) strengthScore += 25;
+    if (semanticButton) strengthScore += 20;
+    if (actionHref) strengthScore += 15;
+    if (contextHeading) strengthScore += 5;
+    strengthScore = Math.min(100, strengthScore);
 
-    const key = `${text}:${safeAttr($, el, 'href')}`;
+    const href = absoluteUrl(rawHref, baseUrl) || rawHref;
+    const key = `${text.toLowerCase()}:${href}`;
     if (seen.has(key)) return;
     seen.add(key);
 
     ctas.push({
       text,
-      href: safeAttr($, el, 'href'),
-      type: el.tagName ? el.tagName.toLowerCase() : 'unknown',
-      className: compactText(safeAttr($, el, 'class'), 140)
+      href,
+      type: tag,
+      role: role || null,
+      className,
+      intent: inferCtaIntent(signal),
+      strengthScore,
+      isPrimarySignal: actionClass || /acheter|commander|buy|purchase|order|checkout|réserver|reserver|devis|start|get started|ابدأ|اشتر|اطلب/i.test(signal),
+      contextHeading: contextHeading || null,
+      position: index + 1,
+      evidenceSource: 'railway-visible-action'
     });
   });
 
-  return ctas.slice(0, 30);
+  return ctas
+    .sort((left, right) => right.strengthScore - left.strengthScore || left.position - right.position)
+    .slice(0, 40);
 }
 
 function extractForms($) {
@@ -804,10 +841,21 @@ function buildFunnelEvidencePayload(pageData = {}) {
       metadata: { level }
     }));
   });
-  (pageData.ctas || []).forEach((item, index) => push('button', item?.text || item, {
-    position: index + 1,
+  (pageData.ctas || []).forEach((item, index) => push('button', [
+    item?.text || item,
+    item?.intent ? `Intent: ${item.intent}` : null,
+    item?.contextHeading ? `Section: ${item.contextHeading}` : null,
+    Number.isFinite(Number(item?.strengthScore)) ? `Force: ${item.strengthScore}/100` : null
+  ].filter(Boolean).join(' | '), {
+    position: item?.position || index + 1,
     url: item?.url || item?.href || null,
-    metadata: { tag: item?.tag || null }
+    metadata: {
+      tag: item?.tag || item?.type || null,
+      intent: item?.intent || null,
+      strengthScore: item?.strengthScore || null,
+      isPrimarySignal: item?.isPrimarySignal === true,
+      contextHeading: item?.contextHeading || null
+    }
   }));
   (pageData.links || []).forEach((item, index) => push('link', item?.text || item?.label || item?.url, {
     position: index + 1,
@@ -1858,7 +1906,7 @@ function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
   const jsonLd = extractJsonLd($);
   const images = extractImages($, url);
   const productCards = extractProductCards($, url);
-  const ctas = extractCtas($);
+  const ctas = extractCtas($, url);
   const forms = extractForms($);
   const faq = extractFaq($);
   const cmsSignals = detectCmsSignals(html, text);
@@ -1985,7 +2033,7 @@ const openGraph = extractOpenGraph($, url);
 const jsonLd = extractJsonLd($);
 const images = extractImages($, url);
 const productCards = extractProductCards($, url);
-const ctas = extractCtas($);
+const ctas = extractCtas($, url);
 const forms = extractForms($);
 const faq = extractFaq($);
 const cmsSignals = detectCmsSignals(html, text);
