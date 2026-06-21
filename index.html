@@ -406,6 +406,26 @@ html, body {
 @media(max-width:900px){.business-verdict-grid,.business-profiles-grid,.business-study-grid{grid-template-columns:1fr}.business-actions-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:560px){.business-intel-shell{margin-inline:0;padding:10px;border-radius:12px}.business-verdict-card,.business-attack-card,.business-plan,.business-profiles,.business-watch{padding:12px}.business-actions-grid,.business-answer-grid,.business-source-groups{grid-template-columns:1fr}.business-profile-card header{align-items:flex-start}.business-intel-evidence a{width:100%}.business-profile-summary{padding-inline:12px}.business-leader{font-size:1.08rem}.business-study-card{padding:12px}.business-intel-shell h2{font-size:1rem}.business-profile-confidence{margin-inline:12px}}
 </style>
+
+<style id="funnel-additive-intelligence-ui">
+.funnel-legacy-data{display:grid;gap:10px}
+.funnel-legacy-row{display:grid;grid-template-columns:minmax(150px,.34fr) minmax(0,1fr);gap:12px;align-items:start;padding:12px;border:1px solid rgba(148,163,184,.12);border-radius:10px;background:rgba(15,23,42,.55)}
+.funnel-legacy-row>small{color:#67e8f9;font-size:.68rem;font-weight:900;line-height:1.45;text-transform:uppercase}
+.funnel-legacy-text{margin:0;color:#dbe4f0;font-size:.84rem;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}
+.funnel-legacy-list{display:grid;gap:7px;margin:0;padding-inline-start:18px;color:#dbe4f0}
+.funnel-legacy-list li{font-size:.82rem;line-height:1.55}
+.funnel-legacy-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px}
+.funnel-legacy-card{position:relative;min-width:0;padding:12px;border:1px solid rgba(139,92,246,.14);border-radius:10px;background:#0b1425}
+.funnel-legacy-card>span{display:inline-grid;place-items:center;min-width:24px;height:24px;margin-bottom:8px;border-radius:7px;color:#c4b5fd;background:rgba(139,92,246,.14);font-size:.64rem;font-weight:900}
+.funnel-mega-prompt{max-height:560px;margin:0;padding:16px;border:1px solid rgba(34,211,238,.16);border-radius:10px;background:#06101d;color:#dbeafe;font:500 .76rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow:auto}
+.funnel-v2-hero-embedded{margin:0}
+@media(max-width:700px){
+ .funnel-legacy-row{grid-template-columns:1fr;gap:6px;padding:10px}
+ .funnel-legacy-cards{grid-template-columns:1fr}
+ .funnel-mega-prompt{max-height:420px;font-size:.7rem}
+}
+</style>
+
 </head>
 <style>
     .decision-proof-panel { border-radius: 18px; }
@@ -16726,6 +16746,211 @@ function renderFunnelV2Cards(items, opts = {}) {
     }).join('')}</div>`;
 }
 
+
+function funnelLegacyHasData(value, depth = 0) {
+    if (value === null || value === undefined) return false;
+    if (typeof value === 'string') {
+        const text = value.trim();
+        return Boolean(text) && !/^(?:null|undefined|n\/a|na|—|-)$/i.test(text);
+    }
+    if (typeof value === 'number') return Number.isFinite(value);
+    if (typeof value === 'boolean') return true;
+    if (Array.isArray(value)) return value.some(item => funnelLegacyHasData(item, depth + 1));
+    if (typeof value === 'object' && depth < 4) {
+        return Object.entries(value).some(([key, item]) =>
+            !/^(?:chainOfThought|rawHtml|html|logs?|debug|scripts?|styles?|svg)$/i.test(key) &&
+            funnelLegacyHasData(item, depth + 1)
+        );
+    }
+    return false;
+}
+
+function funnelLegacyLabel(key, opts = {}) {
+    const isAr = opts.isAr;
+    const isEn = opts.isEn;
+    const labels = {
+        overall: isAr ? 'النتيجة الإجمالية' : isEn ? 'Overall score' : 'Score global',
+        score: isAr ? 'النتيجة' : isEn ? 'Score' : 'Score',
+        verdict: isAr ? 'الخلاصة' : isEn ? 'Verdict' : 'Verdict',
+        strengths: isAr ? 'نقاط القوة' : isEn ? 'Strengths' : 'Forces',
+        weaknesses: isAr ? 'نقاط الضعف' : isEn ? 'Weaknesses' : 'Faiblesses',
+        problems: isAr ? 'المشكلات' : isEn ? 'Problems' : 'Problèmes',
+        recommendations: isAr ? 'التوصيات' : isEn ? 'Recommendations' : 'Recommandations',
+        opportunities: isAr ? 'الفرص' : isEn ? 'Opportunities' : 'Opportunités',
+        action: isAr ? 'الإجراء' : isEn ? 'Action' : 'Action',
+        impact: isAr ? 'الأثر' : isEn ? 'Impact' : 'Impact',
+        effort: isAr ? 'الجهد' : isEn ? 'Effort' : 'Effort',
+        priority: isAr ? 'الأولوية' : isEn ? 'Priority' : 'Priorité',
+        confidence: isAr ? 'الثقة' : isEn ? 'Confidence' : 'Confiance',
+        primaryCta: isAr ? 'CTA الرئيسي' : isEn ? 'Primary CTA' : 'CTA principal',
+        detectedCtas: isAr ? 'CTA المرصودة' : isEn ? 'Detected CTAs' : 'CTA détectés',
+        strongCtas: isAr ? 'CTA القوية' : isEn ? 'Strong CTAs' : 'CTA forts',
+        genericCtas: isAr ? 'CTA العامة' : isEn ? 'Generic CTAs' : 'CTA génériques',
+        coverage: isAr ? 'تغطية CTA' : isEn ? 'CTA coverage' : 'Couverture CTA',
+        wordCount: isAr ? 'عدد الكلمات' : isEn ? 'Word count' : 'Nombre de mots',
+        sectionsDetected: isAr ? 'الأقسام المرصودة' : isEn ? 'Detected sections' : 'Sections détectées',
+        imagesCount: isAr ? 'الصور' : isEn ? 'Images' : 'Images',
+        ctaCount: isAr ? 'عدد CTA' : isEn ? 'CTA count' : 'Nombre de CTA',
+        socialProofsCount: isAr ? 'أدلة الثقة' : isEn ? 'Social proofs' : 'Preuves sociales',
+        hasSSL: 'SSL',
+        hasWhatsApp: 'WhatsApp'
+    };
+    if (labels[key]) return labels[key];
+    return String(key || '')
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+        .replace(/[_-]+/g, ' ')
+        .replace(/^./, char => char.toUpperCase());
+}
+
+function renderFunnelLegacyValue(value, opts = {}, depth = 0) {
+    if (!funnelLegacyHasData(value) || depth > 3) return '';
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : text => String(text || '');
+    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+        const text = typeof value === 'boolean'
+            ? (opts.isAr ? (value ? 'نعم' : 'لا') : opts.isEn ? (value ? 'Yes' : 'No') : (value ? 'Oui' : 'Non'))
+            : String(value);
+        return '<p class="funnel-legacy-text" dir="auto">' + safe(text.slice(0, 2400)) + '</p>';
+    }
+    if (Array.isArray(value)) {
+        const rows = value.filter(item => funnelLegacyHasData(item)).slice(0, 10);
+        if (!rows.length) return '';
+        if (rows.every(item => typeof item !== 'object' || item === null)) {
+            return '<ul class="funnel-legacy-list">' + rows.map(item => '<li dir="auto">' + safe(String(item).slice(0, 700)) + '</li>').join('') + '</ul>';
+        }
+        return '<div class="funnel-legacy-cards">' + rows.map((item, index) => {
+            const body = renderFunnelLegacyValue(item, opts, depth + 1);
+            return body ? '<article class="funnel-legacy-card"><span>' + safe(String(index + 1).padStart(2, '0')) + '</span>' + body + '</article>' : '';
+        }).join('') + '</div>';
+    }
+    const ignored = /^(?:chainOfThought|rawHtml|html|logs?|debug|scripts?|styles?|svg|promptTokens|completionTokens)$/i;
+    const entries = Object.entries(value)
+        .filter(([key, item]) => !ignored.test(key) && funnelLegacyHasData(item))
+        .slice(0, 14);
+    if (!entries.length) return '';
+    return '<div class="funnel-legacy-data">' + entries.map(([key, item]) => {
+        const body = renderFunnelLegacyValue(item, opts, depth + 1);
+        return body ? '<section class="funnel-legacy-row"><small>' + safe(funnelLegacyLabel(key, opts)) + '</small><div>' + body + '</div></section>' : '';
+    }).join('') + '</div>';
+}
+
+function renderFunnelLegacyModules(data = {}, opts = {}) {
+    const isAr = opts.isAr;
+    const isEn = opts.isEn;
+    const legacy = data.legacyFunnel || data.legacyFunnelAnalysis || {};
+    const expert = data.funnelExpertAnalysis || legacy.funnelExpertAnalysis || {};
+    const select = (...values) => values.find(value => funnelLegacyHasData(value));
+    const text = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
+    const finance = {
+        pricing: select(data.pricingPsychology, legacy.pricingPsychology, expert.offerAndValue),
+        financialProjection: select(data.financialProjection, legacy.financialProjection),
+        priceIntel: select(data.priceIntel, legacy.priceIntel),
+        ctaIntelligence: select(data.ctaIntelligence, legacy.ctaIntelligence, expert.ctaIntelligence)
+    };
+    const copyIntel = {
+        signals: select(data.copySignals, legacy.copySignals, expert.copySignals),
+        recommendations: select(data.copywritingDeep, legacy.copywritingDeep),
+        readyToUseCopy: select(data.readyToUseCopy, legacy.readyToUseCopy, expert.readyToUseCopy)
+    };
+    const trustMobile = select(expert.additionalAnalyses, legacy.funnelExpertAnalysis?.additionalAnalyses);
+    const modules = [
+        {
+            key: 'aida-journey', icon: 'fa-route',
+            title: text('Funnel AIDA et parcours de conversion', 'AIDA funnel and conversion journey', 'مسار AIDA والتحويل'),
+            subtitle: text('Attention, intérêt, désir et action confrontés aux preuves de la page.', 'Attention, interest, desire and action mapped to page evidence.', 'تحليل الانتباه والاهتمام والرغبة والإجراء حسب أدلة الصفحة.'),
+            value: select(data.aidaAnalysis, legacy.aidaAnalysis, data.funnelMapping, legacy.funnelMapping, expert.journey)
+        },
+        {
+            key: 'customer-psychology', icon: 'fa-brain',
+            title: text('Psychologie client, objections et freins', 'Customer psychology, objections and blockers', 'سيكولوجية العميل والاعتراضات والعوائق'),
+            subtitle: text('Ce qui rassure, ce qui crée le doute et ce qui retarde la décision.', 'What reassures, creates doubt, or delays the decision.', 'ما يطمئن العميل وما يخلق الشك أو يؤخر القرار.'),
+            value: select(data.neuromarketing, legacy.neuromarketing, expert.customerPsychology, data.psychTriggers, legacy.psychTriggers)
+        },
+        {
+            key: 'funnel-score', icon: 'fa-gauge-high',
+            title: text('Score stratégique Funnel', 'Strategic Funnel score', 'النتيجة الاستراتيجية لمسار التحويل'),
+            subtitle: text('Lecture synthétique de la préparation à convertir, avec ses facteurs.', 'Conversion readiness with the factors behind the score.', 'جاهزية الصفحة للتحويل والعوامل المؤثرة في النتيجة.'),
+            value: select(data.globalScoring, legacy.globalScoring, expert.readinessScore, data.auditScorecard, legacy.auditScorecard)
+        },
+        {
+            key: 'financial-cta', icon: 'fa-coins',
+            title: text('Intelligence financière, offre et CTA', 'Financial, offer and CTA intelligence', 'ذكاء السعر والعرض وCTA'),
+            subtitle: text('Prix observé, valeur perçue, bundles et qualité du chemin d’action.', 'Observed price, perceived value, bundles and action-path quality.', 'السعر المرصود والقيمة والباقات وجودة مسار الإجراء.'),
+            value: finance
+        },
+        {
+            key: 'strategic-blueprint', icon: 'fa-compass-drafting',
+            title: text('Blueprint stratégique', 'Strategic blueprint', 'المخطط الاستراتيجي'),
+            subtitle: text('Quoi garder, améliorer, déplacer, ajouter ou supprimer.', 'What to keep, improve, move, add, or remove.', 'ما يجب الحفاظ عليه أو تحسينه أو نقله أو إضافته أو حذفه.'),
+            value: select(data.strategicBlueprint, legacy.strategicBlueprint, expert.attackAngles, data.pageArchitecture, legacy.pageArchitecture)
+        },
+        {
+            key: 'visual-identity', icon: 'fa-palette',
+            title: text('Identité visuelle et hiérarchie', 'Visual identity and hierarchy', 'الهوية البصرية والتسلسل المرئي'),
+            subtitle: text('Lisibilité, cohérence, couleurs, densité et capacité à guider le regard.', 'Readability, consistency, color, density, and visual guidance.', 'الوضوح والاتساق والألوان وقدرة التصميم على توجيه النظر.'),
+            value: select(data.webCharte, legacy.webCharte, expert.visualIdentity)
+        },
+        {
+            key: 'technical-signals', icon: 'fa-microchip',
+            title: text('Analyse technique orientée conversion', 'Conversion-focused technical analysis', 'التحليل التقني الموجه للتحويل'),
+            subtitle: text('Performance, stabilité, sécurité et obstacles techniques observés.', 'Performance, stability, security, and observed technical blockers.', 'الأداء والاستقرار والأمان والعوائق التقنية المرصودة.'),
+            value: select(data.technicalAudit, legacy.technicalAudit, expert.technicalSignals, data.performanceSignals, legacy.performanceSignals)
+        },
+        {
+            key: 'copy-signals', icon: 'fa-quote-left',
+            title: text('Signaux textuels et copywriting', 'Copy signals and messaging', 'إشارات النص والرسائل'),
+            subtitle: text('CTA, promesse, PAS, AIDA, bénéfices et cohérence du message.', 'CTAs, promise, PAS, AIDA, benefits, and message consistency.', 'CTA والوعد وPAS وAIDA والفوائد واتساق الرسالة.'),
+            value: copyIntel
+        },
+        {
+            key: 'page-metrics', icon: 'fa-chart-column',
+            title: text('Métriques de page', 'Page metrics', 'مقاييس الصفحة'),
+            subtitle: text('Volume de contenu, sections, médias, CTA et preuves mesurés.', 'Measured content, sections, media, CTAs, and proof.', 'قياس المحتوى والأقسام والوسائط وCTA وأدلة الثقة.'),
+            value: select(data.pageMetrics, legacy.pageMetrics, expert.pageMetrics, data.aarrMetrics, legacy.aarrMetrics)
+        },
+        {
+            key: 'attack-opportunities', icon: 'fa-crosshairs',
+            title: text('Angles d’attaque et opportunités', 'Attack angles and opportunities', 'زوايا الهجوم والفرص'),
+            subtitle: text('Les leviers différenciants à tester sans présenter une hypothèse comme un fait.', 'Differentiation levers to test without presenting hypotheses as facts.', 'رافعات التميز التي يجب اختبارها دون تقديم الفرضيات كحقائق.'),
+            value: select(data.attackAngles, legacy.attackAngles, expert.attackAngles, data.quickWins, legacy.quickWins)
+        },
+        {
+            key: 'ready-copy', icon: 'fa-pen-ruler',
+            title: text('Copywriting prêt à utiliser', 'Ready-to-use copywriting', 'نصوص جاهزة للاستخدام'),
+            subtitle: text('Titres, CTA, microcopy et blocs de réassurance directement exploitables.', 'Headlines, CTAs, microcopy, and reassurance blocks ready to use.', 'عناوين وCTA ونصوص طمأنة جاهزة للاستخدام.'),
+            value: copyIntel.readyToUseCopy
+        },
+        {
+            key: 'trust-mobile', icon: 'fa-shield-heart',
+            title: text('Confiance, mobile et risques de décision', 'Trust, mobile, and decision risks', 'الثقة وتجربة الهاتف ومخاطر القرار'),
+            subtitle: text('Preuves, objections, expérience mobile et fiabilité des conclusions.', 'Proof, objections, mobile experience, and conclusion reliability.', 'الأدلة والاعتراضات وتجربة الهاتف وموثوقية الاستنتاجات.'),
+            value: trustMobile
+        },
+        {
+            key: 'prioritized-actions', icon: 'fa-list-check',
+            title: text('Plan d’action priorisé', 'Prioritized action plan', 'خطة العمل حسب الأولوية'),
+            subtitle: text('Actions ordonnées par impact, effort et horizon d’exécution.', 'Actions ordered by impact, effort, and execution horizon.', 'إجراءات مرتبة حسب الأثر والجهد والأفق الزمني.'),
+            value: select(data.concreteActionPlan, legacy.concreteActionPlan, data.prioritizedActionPlan, legacy.prioritizedActionPlan, expert.prioritizedPlan)
+        },
+        {
+            key: 'mega-redesign', icon: 'fa-wand-magic-sparkles',
+            title: text('Mega AI Redesign Prompt', 'Mega AI Redesign Prompt', 'أمر إعادة التصميم الشامل بالذكاء الاصطناعي'),
+            subtitle: text('Brief final structuré pour reconstruire la page sans perdre les preuves.', 'Structured final brief to rebuild the page without losing evidence.', 'موجّه نهائي منظم لإعادة بناء الصفحة دون فقدان الأدلة.'),
+            value: select(data.aiRewritePrompt, legacy.megaRedesignPrompt, legacy.aiRewritePrompt)
+        }
+    ];
+
+    return modules
+        .filter(module => funnelLegacyHasData(module.value))
+        .map(module => {
+            const isPrompt = module.key === 'mega-redesign';
+            const body = isPrompt
+                ? '<pre class="funnel-mega-prompt" dir="auto">' + (typeof escapeHtml === 'function' ? escapeHtml(String(module.value).slice(0, 14000)) : String(module.value).slice(0, 14000)) + '</pre>'
+                : renderFunnelLegacyValue(module.value, { isAr, isEn });
+            return body ? renderReportSection(module.key, module.title, module.subtitle, module.icon, body, { isAr, isEn }) : '';
+        })
+        .join('');
+}
+
 function displayFunnelResults(data = {}) {
     const container = document.getElementById('resultsFunnel');
     if (!container) return;
@@ -16759,32 +16984,6 @@ function displayFunnelResults(data = {}) {
         noData: 'Aucune architecture de sections n’est arrivée dans cette réponse. Relancez après vérification de Railway.', expert: 'Expert Funnel'
     };
 
-    let legacyHtml = '';
-    let previousMarkup = container.innerHTML;
-    try {
-        const legacySource = data.legacyFunnel || data.legacyFunnelAnalysis || null;
-        if (legacySource && typeof displayFunnelResultsLegacy === 'function') {
-            const legacyPayload = {
-                ...data,
-                ...legacySource,
-                legacyFunnel: legacySource,
-                funnelSurgery: null,
-                funnelSectionSurgery: null,
-                funnelSectionScanner: null,
-                sectionSurgery: null
-            };
-            displayFunnelResultsLegacy(legacyPayload);
-            legacyHtml = String(container.innerHTML || '')
-                .replace('id="funnelReport"', 'id="legacyFunnelReport"')
-                .replace(/<div[^>]+class="[^"]*expert-dock[^"]*"[^>]*>[\s\S]*?<\/div>\s*$/i, '');
-        }
-    } catch (legacyError) {
-        console.warn('[FunnelLegacy] Additive render skipped:', legacyError);
-        legacyHtml = '';
-    } finally {
-        container.innerHTML = previousMarkup;
-    }
-
     try {
         const surgerySource = data.funnelSurgery || data.funnelSectionSurgery || data.sectionSurgery || data.funnelSectionScanner || {};
         const surgery = normalizeFunnelSurgeryForRender(data);
@@ -16805,6 +17004,7 @@ function displayFunnelResults(data = {}) {
         const proof = surgerySource.proofTrust || {};
         const plan = surgerySource.priorityPlan || {};
         const limits = surgerySource.observedDataLimits || {};
+        const legacyModulesHtml = renderFunnelLegacyModules(data, { isAr, isEn });
 
         const orderHtml = (currentOrder.length || recommendedOrder.length) ? `<div class="funnel-v2-order">
             ${currentOrder.length ? `<div><span>${safe(copy.current)}</span><ol>${currentOrder.slice(0, 12).map(item => `<li>${safe(funnelV2Text(item))}</li>`).join('')}</ol></div>` : ''}
@@ -16840,26 +17040,22 @@ function displayFunnelResults(data = {}) {
         const detailsHtml = `<div class="funnel-v2-facts">${detailRows.map(([label, value]) => `<div><small>${safe(label)}</small><strong dir="auto">${safe(funnelV2Text(value))}</strong></div>`).join('')}</div>
             ${funnelV2Array(limits.limits, limits.inaccessibleElements).length ? `<ul class="funnel-v2-limit-list">${funnelV2Array(limits.limits, limits.inaccessibleElements).map(item => `<li>${safe(funnelV2Text(item))}</li>`).join('')}</ul>` : ''}`;
 
-        container.innerHTML = `<div id="funnelReport" class="funnel-v2-report" dir="${dir}">
-            <section class="funnel-v2-hero" data-export-feature="summary">
+        const executiveHtml = renderExecutiveSummary(data, 'funnel', { isAr, isEn });
+        const verdictPanel = `<section class="funnel-v2-hero" data-export-feature="summary">
                 <div class="funnel-v2-hero-copy"><span>${safe(copy.kicker)}</span><h2>${safe(copy.title)}</h2><p dir="auto">${safe(verdictText)}</p></div>
                 <div class="funnel-v2-metrics"><div><strong>${sectionTotal}</strong><small>${safe(copy.checked)}</small></div><div><strong>${priorityTotal}</strong><small>${safe(copy.fixes)}</small></div><div><strong>${safe(confidence)}</strong><small>${safe(copy.confidence)}</small></div></div>
-            </section>
-            ${surgeryHtml || `<section class="funnel-v2-missing-architecture" data-export-feature="page"><i class="fas fa-triangle-exclamation"></i><p>${safe(copy.noData)}</p></section>`}
-            ${renderReportSection('page-order', copy.order, copy.orderSub, 'fa-arrow-down-1-9', orderHtml, { isAr, isEn, open: true })}
-            ${renderReportSection('frictions', copy.frictions, copy.frictionsSub, 'fa-triangle-exclamation', renderFunnelV2Cards(frictions, { accent: '#fb7185', limit: 5, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">${safe(copy.partial)}</p>`, { isAr, isEn, open: true })}
+            </section>`;
+        container.innerHTML = `<div id="funnelReport" class="funnel-v2-report" dir="${dir}">
+            ${executiveHtml}
+            ${renderReportSection('funnel-verdict', copy.kicker, copy.title, 'fa-gauge-high', verdictPanel, { isAr, isEn })}
+            ${renderReportSection('architecture', copy.architecture, copy.architectureSub, 'fa-sitemap', surgeryHtml || `<section class="funnel-v2-missing-architecture" data-export-feature="page"><i class="fas fa-triangle-exclamation"></i><p>${safe(copy.noData)}</p></section>`, { isAr, isEn })}
+            ${renderReportSection('page-order', copy.order, copy.orderSub, 'fa-arrow-down-1-9', orderHtml, { isAr, isEn })}
+            ${renderReportSection('frictions', copy.frictions, copy.frictionsSub, 'fa-triangle-exclamation', renderFunnelV2Cards(frictions, { accent: '#fb7185', limit: 5, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">${safe(copy.partial)}</p>`, { isAr, isEn })}
             ${renderReportSection('money', copy.offer, copy.offerSub, 'fa-tags', offerHtml, { isAr, isEn })}
             ${renderReportSection('message', copy.message, copy.messageSub, 'fa-bullseye', messageHtml, { isAr, isEn })}
-            ${renderReportSection('plan', copy.plan, copy.planSub, 'fa-list-check', planHtml, { isAr, isEn, open: true })}
+            ${renderReportSection('plan', copy.plan, copy.planSub, 'fa-list-check', planHtml, { isAr, isEn })}
             ${renderReportSection('details', copy.details, copy.detailsSub, 'fa-database', detailsHtml, { isAr, isEn })}
-            ${legacyHtml ? renderReportSection(
-                'legacy-funnel',
-                isAr ? 'التحليل الكامل الكلاسيكي' : isEn ? 'Complete legacy Funnel intelligence' : 'Funnel historique complet',
-                isAr ? 'AIDA، علم النفس، الهوية البصرية، التقنية، التسعير، المخطط الاستراتيجي والكتابة الجاهزة.' : isEn ? 'AIDA, customer psychology, visual identity, technical signals, value, strategic blueprint and ready-to-use copy.' : 'AIDA, psychologie client, identité visuelle, technique, valeur, blueprint stratégique et copywriting prêt à utiliser.',
-                'fa-layer-group',
-                legacyHtml,
-                { isAr, isEn }
-            ) : ''}
+            ${legacyModulesHtml}
             ${renderExpertDock('funnel', { isAr, isEn })}
         </div>`;
         cleanRenderedOutput(container);
