@@ -1776,14 +1776,16 @@ function isWeakScrapeResult(result = {}) {
   const productsCount = Array.isArray(result.productCards) ? result.productCards.length : 0;
   const linksCount = Array.isArray(result.internalLinks) ? result.internalLinks.length : 0;
 
+  const commerceHints = result.weakTechnicalHints?.commerce || result.ecommerceSignals || {};
+  const cmsHints = result.weakTechnicalHints?.cms || result.cmsSignals || {};
   const hasMeaningfulCommerce =
     pricesCount > 0 ||
     productsCount > 0 ||
-    result.ecommerceSignals?.hasPrice ||
-    result.ecommerceSignals?.hasAddToCart ||
-    result.cmsSignals?.woocommerce ||
-    result.cmsSignals?.shopify ||
-    result.cmsSignals?.prestashop;
+    commerceHints.hasPrice ||
+    commerceHints.hasAddToCart ||
+    cmsHints.woocommerce ||
+    cmsHints.shopify ||
+    cmsHints.prestashop;
 
   if (hasMeaningfulCommerce) return false;
   if (wordCount >= 120 && htmlLength >= 3000 && linksCount >= 2) return false;
@@ -1899,8 +1901,15 @@ function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
     miniScrapers: evidencePayload.miniScrapers,
     sectionBlocks: sectionRawBlocks,
     sectionsDetailed: sectionRawBlocks,
-    cmsSignals,
-    ecommerceSignals,
+    weakTechnicalHints: {
+
+      cms: cmsSignals,
+
+      commerce: ecommerceSignals,
+
+      classificationSource: 'weak-regex-hint'
+
+    },
     socialLinks: socialContact.socialLinks,
     whatsappLinks: socialContact.whatsappLinks,
     contactLinks: socialContact.contactLinks,
@@ -1919,12 +1928,13 @@ function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
     clickExploration: { clickedButtons: [], discoveredAfterClicks: [], totalClicked: 0, totalChanged: 0 },
     clickedButtons: [],
     discoveredAfterClicks: [],
-    trustSignals: {
+    mentionHints: {
       hasWhatsapp: /wa\.me|whatsapp/i.test(html),
       hasReviews: /avis|reviews?|rating|étoile|stars?|testimonial|témoignage/i.test(text),
       hasGuarantee: /garantie|rembours|refund|money back|ضمان/i.test(text),
       hasDelivery: /livraison|delivery|shipping|توصيل/i.test(text),
-      hasContact: /contact|support|email|téléphone|phone|whatsapp/i.test(text)
+      hasContact: /contact|support|email|téléphone|phone|whatsapp/i.test(text),
+      classificationSource: 'weak-regex-hint'
     },
     provider,
     htmlLength: html.length,
@@ -2010,8 +2020,15 @@ const clickExploration = options.clickExplore === false
     miniScrapers: evidencePayload.miniScrapers,
     sectionBlocks: sectionRawBlocks,
     sectionsDetailed: sectionRawBlocks,
-  cmsSignals,
-  ecommerceSignals,
+  weakTechnicalHints: {
+
+    cms: cmsSignals,
+
+    commerce: ecommerceSignals,
+
+    classificationSource: 'weak-regex-hint'
+
+  },
   socialLinks: socialContact.socialLinks,
   whatsappLinks: socialContact.whatsappLinks,
   contactLinks: socialContact.contactLinks,
@@ -2030,12 +2047,13 @@ urlTargets: discoveredTargets.urlTargets,
 clickExploration,
 clickedButtons: clickExploration.clickedButtons,
 discoveredAfterClicks: clickExploration.discoveredAfterClicks,
-trustSignals: {
+mentionHints: {
       hasWhatsapp: /wa\.me|whatsapp/i.test(html),
       hasReviews: /avis|reviews?|rating|étoile|stars?|testimonial|témoignage/i.test(text),
       hasGuarantee: /garantie|rembours|refund|money back|ضمان/i.test(text),
       hasDelivery: /livraison|delivery|shipping|توصيل/i.test(text),
-      hasContact: /contact|support|email|téléphone|phone|whatsapp/i.test(text)
+      hasContact: /contact|support|email|téléphone|phone|whatsapp/i.test(text),
+      classificationSource: 'weak-regex-hint'
     },
     htmlLength: html.length,
     scrapedAt: new Date().toISOString()
@@ -2147,7 +2165,7 @@ async function scrapeUrlWithProvider(rawUrl, options = {}, provider = 'local') {
         buttonsChangedDom: allPages.reduce((sum, page) => sum + Number(page?.clickExploration?.totalChanged || 0), 0),
         afterClickDiscoveries: allPages.reduce((sum, page) => sum + (Array.isArray(page?.discoveredAfterClicks) ? page.discoveredAfterClicks.length : 0), 0),
         errors: (crawlResult.errors || []).length,
-        trustSignals: mainPage?.trustSignals || {}
+        mentionHints: mainPage?.mentionHints || {}
       }
     };
   } finally {
@@ -2288,7 +2306,7 @@ async function scrapeUrl(rawUrl, options = {}) {
             buttonsChangedDom: 0,
             afterClickDiscoveries: 0,
             errors: 0,
-            trustSignals: pageResult.trustSignals || {}
+            mentionHints: pageResult.mentionHints || {}
           }
         };
       }
