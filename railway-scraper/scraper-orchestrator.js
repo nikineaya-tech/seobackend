@@ -591,7 +591,12 @@ function classifyLandingRawBlock(raw = '') {
     { type: 'footer', label: 'Footer', rx: /footer|copyright|mentions légales|conditions générales/ },
     { type: 'social', label: 'Réseaux sociaux', rx: /facebook|instagram|tiktok|linkedin|youtube|social/ }
   ];
-  return rules.find(rule => rule.rx.test(value)) || { type: 'content', label: 'Bloc contenu' };
+  const match = rules.find(rule => rule.rx.test(value));
+  return {
+    typeGuess: match?.type || 'content',
+    labelGuess: match?.label || 'Bloc contenu possible',
+    classificationSource: 'weak-regex-hint'
+  };
 }
 
 function extractLandingSectionRawBlocks($, baseUrl = '') {
@@ -681,16 +686,17 @@ function extractLandingSectionRawBlocks($, baseUrl = '') {
 
     const rawSignal = [tag, id, className, title, text, headings.join(' '), ctas.map(c => c.text).join(' ')].join(' ');
     const classified = classifyLandingRawBlock(rawSignal);
-    const key = (classified.type + '|' + (title || '') + '|' + text.slice(0, 140)).toLowerCase();
+    const key = (classified.typeGuess + '|' + (title || '') + '|' + text.slice(0, 140)).toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
 
-    const trustSignals = {
-      hasReviews: /avis|reviews?|rating|étoile|stars?|testimonial|témoignage/i.test(text),
-      hasGuarantee: /garantie|rembours|refund|money back|warranty|ضمان/i.test(text),
-      hasDelivery: /livraison|delivery|shipping|توصيل|entrega|envio/i.test(text),
-      hasWhatsapp: /wa\.me|whatsapp/i.test(text + ' ' + links.map(l => l.url).join(' ')),
-      hasPaymentSecurity: /ssl|secure|sécurisé|payment|paiement|visa|mastercard|paypal|stripe/i.test(text)
+    const mentionHints = {
+      reviewTerms: /avis|reviews?|rating|étoile|stars?|testimonial|témoignage/i.test(text),
+      guaranteeTerms: /garantie|rembours|refund|money back|warranty|ضمان/i.test(text),
+      deliveryTerms: /livraison|delivery|shipping|توصيل|entrega|envio/i.test(text),
+      whatsappTerms: /wa\.me|whatsapp/i.test(text + ' ' + links.map(l => l.url).join(' ')),
+      paymentTerms: /ssl|secure|sécurisé|payment|paiement|visa|mastercard|paypal|stripe/i.test(text),
+      classificationSource: 'weak-regex-hint'
     };
 
     blocks.push({
@@ -699,11 +705,14 @@ function extractLandingSectionRawBlocks($, baseUrl = '') {
       selector: [tag, id ? '#' + id : '', className ? '.' + String(className).split(/\s+/).slice(0, 2).join('.') : ''].join(''),
       id: id || null,
       className: cleanSectionText(className, 220) || null,
+      source: 'dom-block',
+      pageUrl: baseUrl,
       visible: true,
-      detectedType: classified.type,
-      type: classified.type,
-      label: classified.label,
-      title: title || classified.label,
+      typeGuess: classified.typeGuess,
+      labelGuess: classified.labelGuess,
+      classificationSource: classified.classificationSource,
+      title: title || null,
+      text,
       headings,
       paragraphs,
       textPreview: text.slice(0, 420),
@@ -714,7 +723,7 @@ function extractLandingSectionRawBlocks($, baseUrl = '') {
       images: images.slice(0, 8),
       links: links.slice(0, 10),
       forms: forms.slice(0, 3),
-      trustSignals,
+      mentionHints,
       rawEvidence: [
         title ? 'Titre détecté: ' + title : null,
         headings.length ? headings.length + ' heading(s)' : null,
@@ -730,6 +739,162 @@ function extractLandingSectionRawBlocks($, baseUrl = '') {
   });
 
   return blocks.slice(0, 50);
+}
+
+
+function buildFunnelEvidencePayload(pageData = {}) {
+  const pageUrl = pageData.url || '';
+  const blocks = [];
+  const push = (source, text, extra = {}) => {
+    const cleanText = cleanSectionText(text, extra.max || 1400);
+    if (!cleanText) return;
+    blocks.push({
+      source,
+      pageUrl: extra.pageUrl || pageUrl,
+      selector: extra.selector || null,
+      position: Number(extra.position || blocks.length + 1),
+      text: cleanText,
+      confidence: extra.confidence || 'HIGH',
+      typeGuess: extra.typeGuess || null,
+      labelGuess: extra.labelGuess || null,
+      classificationSource: extra.classificationSource || null,
+      url: extra.url || null,
+      alt: extra.alt || null,
+      metadata: extra.metadata || null
+    });
+  };
+
+  (pageData.sectionRawBlocks || []).forEach((section, index) => {
+    push('dom-section', [
+      ...(section.headings || []),
+      ...(section.paragraphs || []),
+      section.text || section.textPreview || ''
+    ].filter(Boolean).join(' | '), {
+      selector: section.selector,
+      position: section.position || index + 1,
+      typeGuess: section.typeGuess || null,
+      labelGuess: section.labelGuess || null,
+      classificationSource: section.classificationSource || 'weak-regex-hint',
+      metadata: {
+        tag: section.tag || null,
+        buttons: section.ctas || [],
+        links: section.links || [],
+        images: section.images || [],
+        forms: section.forms || [],
+        rawPrices: section.prices || []
+      }
+    });
+  });
+
+  push('page-title', pageData.title, { selector: 'title' });
+  push('meta-description', pageData.metaDescription, { selector: 'meta[name="description"]' });
+  push('heading', pageData.h1, { selector: 'h1' });
+  ['h1', 'h2', 'h3'].forEach(level => {
+    (pageData.headings?.[level] || []).forEach((text, index) => push('heading', text, {
+      selector: level,
+      position: index + 1,
+      metadata: { level }
+    }));
+  });
+  (pageData.ctas || []).forEach((item, index) => push('button', item?.text || item, {
+    position: index + 1,
+    url: item?.url || item?.href || null,
+    metadata: { tag: item?.tag || null }
+  }));
+  (pageData.links || []).forEach((item, index) => push('link', item?.text || item?.label || item?.url, {
+    position: index + 1,
+    url: item?.url || item?.href || null
+  }));
+  (pageData.images || []).forEach((item, index) => push('image-alt', item?.alt, {
+    position: index + 1,
+    url: item?.url || item?.src || null,
+    alt: item?.alt || null
+  }));
+  (pageData.forms || []).forEach((item, index) => push('form', JSON.stringify(item), {
+    position: index + 1,
+    max: 500
+  }));
+  (pageData.prices || []).forEach((item, index) => push('raw-price', JSON.stringify(item), {
+    position: index + 1,
+    max: 300,
+    metadata: { rawCandidateOnly: true }
+  }));
+  (pageData.faq?.detectedBlocks || []).forEach((item, index) => push('faq-visible', item?.text || JSON.stringify(item), {
+    position: index + 1,
+    max: 900
+  }));
+  (pageData.productCards || []).forEach((item, index) => push('product-card', [
+    item?.title, item?.priceText, item?.cta, item?.badge, item?.textPreview
+  ].filter(Boolean).join(' | '), {
+    position: index + 1,
+    url: item?.url || null,
+    max: 900
+  }));
+  (pageData.whatsappLinks || []).forEach((item, index) => push('whatsapp-link', item?.url || item, {
+    position: index + 1,
+    url: item?.url || item
+  }));
+  (pageData.contactLinks || []).forEach((item, index) => push('contact-link', item?.text || item?.url || item, {
+    position: index + 1,
+    url: item?.url || item
+  }));
+  (pageData.socialLinks || []).forEach((item, index) => push('social-link', item?.text || item?.url || item, {
+    position: index + 1,
+    url: item?.url || item
+  }));
+  (pageData.clickExploration?.discoveredAfterClicks || []).forEach((item, index) => push('click-loaded-content', [
+    item?.text, item?.label, item?.title
+  ].filter(Boolean).join(' | '), {
+    position: index + 1,
+    url: item?.url || null,
+    max: 900
+  }));
+
+  const unique = [];
+  const seen = new Set();
+  for (const block of blocks) {
+    const key = [block.source, block.pageUrl, block.selector, block.text].join('|').toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(block);
+    if (unique.length >= 180) break;
+  }
+
+  const groups = [
+    ['corePageScraper', /page-title|meta-description|heading|dom-section|button|link|image-alt|form/],
+    ['commerceEvidenceScraper', /raw-price|product-card|button|link|dom-section/],
+    ['trustEvidenceScraper', /faq-visible|image-alt|dom-section|social-link/],
+    ['deliveryReturnsEvidenceScraper', /dom-section|link/],
+    ['contactEvidenceScraper', /whatsapp-link|contact-link|form|button|link/],
+    ['mediaEvidenceScraper', /image-alt|social-link|click-loaded-content/],
+    ['legalEvidenceScraper', /dom-section|link/],
+    ['interactionEvidenceScraper', /button|form|click-loaded-content|whatsapp-link|contact-link/]
+  ];
+
+  const miniScrapers = groups.map(([scraperName, rx]) => {
+    const evidenceBlocks = unique.filter(block => rx.test(block.source)).slice(0, 55);
+    return {
+      scraperName,
+      success: evidenceBlocks.length > 0,
+      pageUrl,
+      evidenceText: cleanSectionText(evidenceBlocks.map(block => block.text).join(' | '), 8000),
+      evidenceBlocks,
+      limits: evidenceBlocks.length ? [] : ['Aucune preuve exploitable copiée pour cette mission']
+    };
+  });
+
+  return {
+    version: 'funnel-evidence-v1',
+    pageUrl,
+    evidenceText: cleanSectionText(unique.map(block => block.text).join(' | '), 24000),
+    evidenceBlocks: unique,
+    miniScrapers,
+    limits: [
+      'HTML brut exclu du payload',
+      'Indices typeGuess non décisionnels',
+      unique.length >= 180 ? 'Nombre de preuves limité à 180' : null
+    ].filter(Boolean)
+  };
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1694,6 +1859,25 @@ function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
   const socialContact = extractSocialAndContactLinks(externalLinks, html, text);
   const paginationSignals = extractPaginationSignals($, url);
   const sectionRawBlocks = extractLandingSectionRawBlocks($, url);
+  const evidencePayload = buildFunnelEvidencePayload({
+    url,
+    title,
+    metaDescription,
+    h1,
+    headings,
+    ctas,
+    links,
+    images,
+    forms,
+    prices,
+    faq,
+    productCards,
+    sectionRawBlocks,
+    socialLinks: socialContact.socialLinks,
+    whatsappLinks: socialContact.whatsappLinks,
+    contactLinks: socialContact.contactLinks,
+    bodyText: text
+  });
 
   return {
     url,
@@ -1711,6 +1895,8 @@ function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
     forms,
     faq,
     sectionRawBlocks,
+    evidencePayload,
+    miniScrapers: evidencePayload.miniScrapers,
     sectionBlocks: sectionRawBlocks,
     sectionsDetailed: sectionRawBlocks,
     cmsSignals,
@@ -1721,6 +1907,7 @@ function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
     emails: socialContact.emails,
     phones: socialContact.phones,
     paginationSignals,
+    bodyText: cleanSectionText(text, 16000),
     wordCount: text.split(/\s+/).filter(Boolean).length,
     prices,
     links,
@@ -1779,6 +1966,25 @@ const { internalLinks, externalLinks } = extractAllLinks($, url);
 const socialContact = extractSocialAndContactLinks(externalLinks, html, text);
 const paginationSignals = extractPaginationSignals($, url);
   const sectionRawBlocks = extractLandingSectionRawBlocks($, url);
+  const evidencePayload = buildFunnelEvidencePayload({
+    url,
+    title,
+    metaDescription,
+    h1,
+    headings,
+    ctas,
+    links,
+    images,
+    forms,
+    prices,
+    faq,
+    productCards,
+    sectionRawBlocks,
+    socialLinks: socialContact.socialLinks,
+    whatsappLinks: socialContact.whatsappLinks,
+    contactLinks: socialContact.contactLinks,
+    bodyText: text
+  });
 const discoveredTargets = await discoverClickableTargets(page, url, options);
 const clickExploration = options.clickExplore === false
   ? { clickedButtons: [], discoveredAfterClicks: [], totalClicked: 0, totalChanged: 0 }
@@ -1800,6 +2006,8 @@ const clickExploration = options.clickExplore === false
   forms,
   faq,
     sectionRawBlocks,
+    evidencePayload,
+    miniScrapers: evidencePayload.miniScrapers,
     sectionBlocks: sectionRawBlocks,
     sectionsDetailed: sectionRawBlocks,
   cmsSignals,
@@ -1810,6 +2018,7 @@ const clickExploration = options.clickExplore === false
   emails: socialContact.emails,
   phones: socialContact.phones,
   paginationSignals,
+  bodyText: cleanSectionText(text, 16000),
   wordCount: text.split(/\s+/).filter(Boolean).length,
   prices,
    links,
