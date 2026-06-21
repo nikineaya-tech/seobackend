@@ -16753,6 +16753,32 @@ function displayFunnelResults(data = {}) {
         noData: 'Aucune architecture de sections n’est arrivée dans cette réponse. Relancez après vérification de Railway.', expert: 'Expert Funnel'
     };
 
+    let legacyHtml = '';
+    let previousMarkup = container.innerHTML;
+    try {
+        const legacySource = data.legacyFunnel || data.legacyFunnelAnalysis || null;
+        if (legacySource && typeof displayFunnelResultsLegacy === 'function') {
+            const legacyPayload = {
+                ...data,
+                ...legacySource,
+                legacyFunnel: legacySource,
+                funnelSurgery: null,
+                funnelSectionSurgery: null,
+                funnelSectionScanner: null,
+                sectionSurgery: null
+            };
+            displayFunnelResultsLegacy(legacyPayload);
+            legacyHtml = String(container.innerHTML || '')
+                .replace('id="funnelReport"', 'id="legacyFunnelReport"')
+                .replace(/<div[^>]+class="[^"]*expert-dock[^"]*"[^>]*>[\s\S]*?<\/div>\s*$/i, '');
+        }
+    } catch (legacyError) {
+        console.warn('[FunnelLegacy] Additive render skipped:', legacyError);
+        legacyHtml = '';
+    } finally {
+        container.innerHTML = previousMarkup;
+    }
+
     try {
         const surgerySource = data.funnelSurgery || data.funnelSectionSurgery || data.sectionSurgery || data.funnelSectionScanner || {};
         const surgery = normalizeFunnelSurgeryForRender(data);
@@ -16760,7 +16786,8 @@ function displayFunnelResults(data = {}) {
         const sectionTotal = Number(surgery.matrix.length || (surgery.keep.length + surgery.improve.length + surgery.move.length + surgery.remove.length + surgery.add.length) || data.rawIntel?.sectionsDetailed?.length || data.rawIntel?.sectionsDetected?.length || 0);
         const priorityTotal = Number((surgery.improve?.length || 0) + (surgery.remove?.length || 0) + (surgery.add?.length || 0));
         const confidence = funnelV2Text(verdict.confidence || surgerySource.observedDataLimits?.confidence || data.scrapeReliability?.confidence, 'LOW');
-        const verdictText = funnelV2Text(verdict.summary || data.auditSummary?.verdict || data.executiveBrief?.priority, copy.partial);
+        const pageQuality = surgerySource.pageQuality || {};
+        const verdictText = funnelV2Text(pageQuality.message || verdict.summary || data.auditSummary?.verdict || data.executiveBrief?.priority, copy.partial);
         const surgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         const order = surgerySource.recommendedOrder || {};
         const currentOrder = funnelV2Array(order.currentOrder, data.rawIntel?.sectionsDetected);
@@ -16819,6 +16846,14 @@ function displayFunnelResults(data = {}) {
             ${renderReportSection('message', copy.message, copy.messageSub, 'fa-bullseye', messageHtml, { isAr, isEn })}
             ${renderReportSection('plan', copy.plan, copy.planSub, 'fa-list-check', planHtml, { isAr, isEn, open: true })}
             ${renderReportSection('details', copy.details, copy.detailsSub, 'fa-database', detailsHtml, { isAr, isEn })}
+            ${legacyHtml ? renderReportSection(
+                'legacy-funnel',
+                isAr ? 'التحليل الكامل الكلاسيكي' : isEn ? 'Complete legacy Funnel intelligence' : 'Funnel historique complet',
+                isAr ? 'AIDA، علم النفس، الهوية البصرية، التقنية، التسعير، المخطط الاستراتيجي والكتابة الجاهزة.' : isEn ? 'AIDA, customer psychology, visual identity, technical signals, value, strategic blueprint and ready-to-use copy.' : 'AIDA, psychologie client, identité visuelle, technique, valeur, blueprint stratégique et copywriting prêt à utiliser.',
+                'fa-layer-group',
+                legacyHtml,
+                { isAr, isEn }
+            ) : ''}
             ${renderExpertDock('funnel', { isAr, isEn })}
         </div>`;
         cleanRenderedOutput(container);
