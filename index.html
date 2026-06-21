@@ -3452,7 +3452,7 @@ table tbody td {
     </style>
 <body>
  <div class="main-wrapper">
-    <header class="header">
+    <header class="header" data-nav-density="compact">
         <div class="container">
             <div class="header-content">
 
@@ -3489,33 +3489,39 @@ table tbody td {
 </button>
                 </nav>
 
-                <!-- Server Status -->
-                <div id="serverStatus" class="server-status" data-i18n="serverchecking">
-                    <i class="fas fa-circle"></i>
-                    <span>Vérification...</span>
-                </div>
-
                 <!-- Language Selector -->
-                <select id="langSelector" class="lang-selector">
+                <select id="langSelector" class="lang-selector" aria-label="Langue de l’interface">
                     <option value="fr">🇫🇷 Français</option>
                     <option value="ar">🇸🇦 العربية</option>
                     <option value="en">🇬🇧 English</option>
                 </select>
 
-                <div id="dakaClock" class="daka-clock" role="timer" aria-live="off" title="Heure et date">
-                    <span class="daka-clock-dot" aria-hidden="true"></span>
-                    <strong id="dakaClockTime">--:--</strong>
-                    <small id="dakaClockDate">-- ---</small>
-                </div>
-
-                <button id="soundToggle" class="sound-toggle" type="button" aria-label="Activer ou couper les sons">
-                    <i class="fas fa-volume-high"></i>
-                </button>
-
-                <button class="reports-history-trigger" type="button" data-no-collapse="true" onclick="openReportsOrAuth()" title="Mes rapports">
-                    <i class="fas fa-folder-open"></i>
-                    <span>Mes rapports</span>
-                </button>
+                <details class="header-tools">
+                    <summary class="header-tools-trigger" aria-label="Ouvrir les outils">
+                        <i class="fas fa-sliders" aria-hidden="true"></i>
+                        <span class="header-tools-label">Outils</span>
+                    </summary>
+                    <div class="header-tools-menu">
+                        <div id="serverStatus" class="server-status" data-i18n="serverchecking">
+                            <i class="fas fa-circle"></i>
+                            <span>Vérification...</span>
+                        </div>
+                        <div class="header-tools-actions">
+                            <div id="dakaClock" class="daka-clock" role="timer" aria-live="off" title="Heure et date">
+                                <span class="daka-clock-dot" aria-hidden="true"></span>
+                                <strong id="dakaClockTime">--:--</strong>
+                                <small id="dakaClockDate">-- ---</small>
+                            </div>
+                            <button id="soundToggle" class="sound-toggle" type="button" aria-label="Activer ou couper les sons">
+                                <i class="fas fa-volume-high"></i>
+                            </button>
+                        </div>
+                        <button class="reports-history-trigger" type="button" data-no-collapse="true" onclick="openReportsOrAuth()" title="Mes rapports">
+                            <i class="fas fa-folder-open"></i>
+                            <span>Mes rapports</span>
+                        </button>
+                    </div>
+                </details>
 
                 <div class="auth-shell" id="auth-shell">
                     <button id="btn-google-login" class="auth-login-btn" type="button" onclick="openAuthModal()">
@@ -20126,6 +20132,177 @@ body.modal-open {
         animation-duration: .01ms !important;
         animation-iteration-count: 1 !important;
         transition-duration: .01ms !important;
+    }
+}
+
+
+/* Compact navbar authority: product navigation stays visible, utilities stay grouped. */
+.header[data-nav-density="compact"] { margin-bottom: 8px; }
+.header[data-nav-density="compact"] .header-content {
+    display: grid !important;
+    grid-template-columns: auto minmax(420px, 1fr) auto auto auto;
+    align-items: center !important;
+    justify-content: stretch !important;
+    min-height: 64px;
+    gap: 8px !important;
+}
+.header[data-nav-density="compact"] .logo { min-width: 0; }
+.header[data-nav-density="compact"] .logo > div:last-child > div:first-child {
+    max-width: 230px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.header[data-nav-density="compact"] .nav-tabs {
+    width: 100% !important;
+    max-width: none !important;
+    min-width: 0;
+    justify-content: center !important;
+}
+.header[data-nav-density="compact"] .nav-btn {
+    min-width: 0;
+    min-height: 44px;
+    padding-inline: 10px !important;
+}
+.header-tools { position: relative; flex: 0 0 auto; }
+.header-tools > summary { list-style: none; }
+.header-tools > summary::-webkit-details-marker { display: none; }
+.header-tools-trigger {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 10px;
+    border: 1px solid rgba(148,163,184,.14);
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: #dbeafe;
+    background: #0b1222;
+    cursor: pointer;
+    font-size: .72rem;
+    font-weight: 800;
+    transition: border-color .2s ease, background .2s ease, color .2s ease;
+}
+.header-tools-trigger:hover,
+.header-tools-trigger:focus-visible,
+.header-tools[open] .header-tools-trigger {
+    border-color: rgba(34,211,238,.46);
+    background: #12213a;
+    color: #67e8f9;
+    outline: none;
+}
+.header-tools-trigger:focus-visible { box-shadow: 0 0 0 3px rgba(34,211,238,.14); }
+.header-tools-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    inset-inline-end: 0;
+    z-index: 1200;
+    width: min(290px, calc(100vw - 24px));
+    padding: 12px;
+    border: 1px solid rgba(148,163,184,.18);
+    border-radius: 12px;
+    display: grid;
+    gap: 10px;
+    background: #08101f;
+    box-shadow: 0 22px 56px rgba(0,0,0,.46);
+}
+.header-tools-menu .server-status {
+    display: flex !important;
+    width: 100%;
+    min-height: 38px;
+    justify-content: flex-start;
+    border-radius: 8px !important;
+}
+.header-tools-actions { display: flex; align-items: center; gap: 10px; }
+.header-tools-actions .daka-clock {
+    width: 48px !important;
+    height: 48px !important;
+    flex: 0 0 48px;
+    box-shadow: 0 3px 0 #030712, 0 8px 18px rgba(0,0,0,.2) !important;
+}
+.header-tools-actions .sound-toggle {
+    width: 44px;
+    min-width: 44px;
+    min-height: 44px;
+}
+.header-tools-menu .reports-history-trigger {
+    width: 100% !important;
+    min-height: 42px;
+    justify-content: flex-start !important;
+}
+.header-tools-menu .reports-history-trigger span { display: inline !important; }
+.header[data-nav-density="compact"] .auth-shell { min-width: 44px; justify-self: end; }
+
+@media (max-width: 1180px) {
+    .header[data-nav-density="compact"] .header-content {
+        grid-template-columns: auto minmax(360px, 1fr) auto auto auto;
+    }
+    .header[data-nav-density="compact"] .logo > div:last-child > div:first-child { max-width: 150px; }
+    .header-tools-label { display: none; }
+}
+
+@media (max-width: 980px) {
+    .header[data-nav-density="compact"] { top: 4px !important; margin: 0 4px 4px; }
+    .header[data-nav-density="compact"] .header-content {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) auto auto auto;
+        min-height: 96px;
+        padding: 6px 8px !important;
+        gap: 6px 8px !important;
+    }
+    .header[data-nav-density="compact"] .logo { grid-column: 1; grid-row: 1; }
+    .header[data-nav-density="compact"] .lang-selector { grid-column: 2; grid-row: 1; }
+    .header[data-nav-density="compact"] .header-tools { grid-column: 3; grid-row: 1; }
+    .header[data-nav-density="compact"] .auth-shell { grid-column: 4; grid-row: 1; }
+    .header[data-nav-density="compact"] .nav-tabs {
+        grid-column: 1 / -1 !important;
+        grid-row: 2;
+        order: initial !important;
+        width: 100% !important;
+        overflow-x: auto;
+        justify-content: flex-start !important;
+        scroll-snap-type: x proximity;
+        scrollbar-width: none;
+    }
+    .header[data-nav-density="compact"] .nav-tabs::-webkit-scrollbar { display: none; }
+    .header[data-nav-density="compact"] .nav-btn {
+        flex: 0 0 auto;
+        min-height: 44px;
+        scroll-snap-align: start;
+    }
+    .header[data-nav-density="compact"] .nav-btn span {
+        display: inline !important;
+        max-width: none !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .header[data-nav-density="compact"] .header-content { min-height: 94px; }
+    .header[data-nav-density="compact"] .logo > div:last-child { display: none !important; }
+    .header[data-nav-density="compact"] .logo-mark,
+    .header[data-nav-density="compact"] .daka-header-logo-video {
+        width: 40px !important;
+        height: 40px !important;
+    }
+    .header[data-nav-density="compact"] .lang-selector {
+        width: 46px !important;
+        min-width: 46px !important;
+        max-width: 46px !important;
+        min-height: 44px;
+        padding: 7px 4px !important;
+    }
+    .header[data-nav-density="compact"] .auth-login-btn,
+    .header[data-nav-density="compact"] .auth-logout-btn,
+    .header[data-nav-density="compact"] .header-tools-trigger {
+        width: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 8px !important;
+    }
+    .header[data-nav-density="compact"] .nav-btn {
+        padding: 8px 11px !important;
+        font-size: .75rem !important;
     }
 }
 </style>
