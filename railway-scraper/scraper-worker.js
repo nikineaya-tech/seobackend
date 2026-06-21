@@ -146,6 +146,61 @@ async function updateJob(jobId, patch) {
     throw new Error(`Job update failed: HTTP ${response.status} ${responseText.slice(0, 300)}`);
   }
 }
+
+function compactFunnelEvidence(source = {}, maxBlocks = 120) {
+  const candidate = source.evidencePayload
+    || source.mainPage?.evidencePayload
+    || source.scrapeData?.evidencePayload
+    || {};
+  const rawBlocks = arr(candidate.evidenceBlocks)
+    .concat(arr(source.evidenceBlocks))
+    .slice(0, maxBlocks);
+  const blocks = rawBlocks.map((block, index) => ({
+    source: clean(block?.source || 'observed-text', 80),
+    pageUrl: clean(block?.pageUrl || source.url || '', 500),
+    selector: clean(block?.selector || '', 220) || null,
+    position: Number(block?.position || index + 1) || index + 1,
+    text: clean(block?.text || block?.textPreview || '', 1400),
+    confidence: clean(block?.confidence || 'HIGH', 20),
+    typeGuess: clean(block?.typeGuess || '', 80) || null,
+    labelGuess: clean(block?.labelGuess || '', 140) || null,
+    classificationSource: clean(block?.classificationSource || '', 80) || null,
+    url: clean(block?.url || '', 500) || null,
+    alt: clean(block?.alt || '', 180) || null
+  })).filter(block => block.text || block.url);
+
+  const rawMiniScrapers = arr(candidate.miniScrapers).concat(arr(source.miniScrapers));
+  const miniScrapers = rawMiniScrapers.slice(0, 12).map(scraper => {
+    const evidenceBlocks = arr(scraper?.evidenceBlocks)
+      .map(block => blocks.find(item =>
+        item.text === clean(block?.text || block?.textPreview || '', 1400)
+        && item.source === clean(block?.source || 'observed-text', 80)
+      ))
+      .filter(Boolean)
+      .slice(0, 45);
+    return {
+      scraperName: clean(scraper?.scraperName || 'evidenceScraper', 100),
+      success: scraper?.success !== false && evidenceBlocks.length > 0,
+      pageUrl: clean(scraper?.pageUrl || source.url || '', 500),
+      evidenceText: clean(scraper?.evidenceText || evidenceBlocks.map(item => item.text).join(' | '), 8000),
+      evidenceBlocks,
+      limits: arr(scraper?.limits).slice(0, 8).map(item => clean(item, 240)).filter(Boolean)
+    };
+  });
+
+  return {
+    version: clean(candidate.version || 'funnel-evidence-v1', 60),
+    pageUrl: clean(candidate.pageUrl || source.url || '', 500),
+    evidenceText: clean(candidate.evidenceText || blocks.map(item => item.text).join(' | '), 24000),
+    evidenceBlocks: blocks,
+    miniScrapers,
+    limits: collectUnique([
+      ...arr(candidate.limits),
+      'HTML brut exclu du résultat Railway'
+    ], 12, 240)
+  };
+}
+
 function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result') {
   const sections = Array.isArray(source.sectionRawBlocks)
     ? source.sectionRawBlocks
@@ -185,9 +240,16 @@ function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result')
   };
 
   const smallSections = sections.slice(0, 8).map((section, index) => ({
+    source: clean(section.source || 'dom-block', 80),
+    pageUrl: clean(section.pageUrl || source.url || '', 500),
+    selector: clean(section.selector || '', 220) || null,
     position: Number(section.position || index + 1) || index + 1,
-    type: clean(section.type || section.detectedType || '', 80),
-    title: clean(section.title || section.label || '', 180),
+    typeGuess: clean(section.typeGuess || section.type || section.detectedType || '', 80) || null,
+    labelGuess: clean(section.labelGuess || section.label || '', 180) || null,
+    classificationSource: clean(section.classificationSource || 'weak-regex-hint', 80),
+    type: clean(section.typeGuess || section.type || section.detectedType || '', 80),
+    title: clean(section.title || '', 180),
+    text: clean(section.text || section.textPreview || '', 900),
     textPreview: clean(section.textPreview || section.text || '', 350),
     headings: safeTextArray(section.headings, 4, 140),
     paragraphs: safeTextArray(section.paragraphs, 4, 180),
@@ -208,6 +270,7 @@ function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result')
   const images = safeLinkArray(source.images, 6);
   const links = safeLinkArray(source.links, 8);
   const prices = safePriceArray(source.prices, 5);
+  const evidencePayload = compactFunnelEvidence(source, 80);
 const compatPage = {
   url: clean(source.url || '', 500),
   finalUrl: clean(source.finalUrl || source.url || '', 500),
@@ -224,6 +287,8 @@ const compatPage = {
   images,
   links,
   prices,
+  evidencePayload,
+  miniScrapers: evidencePayload.miniScrapers,
 
   sectionRawBlocks: smallSections,
   sectionBlocks: smallSections,
@@ -258,6 +323,8 @@ pagesExplored: [compatPage],
     images,
     links,
     prices,
+    evidencePayload,
+    miniScrapers: evidencePayload.miniScrapers,
 
     price: clean(source.price || '', 80),
     currency: clean(source.currency || '', 20),
@@ -545,6 +612,12 @@ function buildSafeJobResult(result = {}) {
   ], 20);
 
   const bodyText = buildBodyText(result, main, sections);
+  const evidencePayload = compactFunnelEvidence({
+    ...result,
+    evidencePayload: result.evidencePayload || main.evidencePayload,
+    miniScrapers: result.miniScrapers || main.miniScrapers,
+    url: result.url || main.url
+  }, 120);
 
   const safe = {
     success: result.success !== false,
@@ -573,6 +646,8 @@ function buildSafeJobResult(result = {}) {
     images,
     links,
     prices,
+    evidencePayload,
+    miniScrapers: evidencePayload.miniScrapers,
 
     cms: clean(result.cms || main.cms || '', 80),
     colors: arr(result.colors || main.colors).slice(0, 8).map(color => clean(color, 40)),
@@ -607,6 +682,8 @@ function buildSafeJobResult(result = {}) {
       images,
       links,
       prices,
+      evidencePayload,
+      miniScrapers: evidencePayload.miniScrapers,
       sectionRawBlocks: sections,
       sectionBlocks: sections,
       sectionsDetailed: sections
@@ -622,6 +699,8 @@ function buildSafeJobResult(result = {}) {
       images,
       links,
       prices,
+      evidencePayload,
+      miniScrapers: evidencePayload.miniScrapers,
       sectionRawBlocks: sections,
       sectionsDetailed: sections
     },
