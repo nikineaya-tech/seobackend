@@ -465,6 +465,294 @@ function cleanFunnelScrapePayload(input, depth = 0) {
 }
 
 
+const FUNNEL_EVIDENCE_AGENTS = [
+    ['structureConversionAgent', 'Structure, ordre, Hero, AIDA/PAS et frictions de lecture', /heading|dom-section|page-title|button|click-loaded-content/i],
+    ['offerPricingDisplayAgent', 'Clarté de l offre, affichage prix, packs et valeur perçue sans valider le prix final', /raw-price|product-card|dom-section|button|heading/i],
+    ['trustProofAgent', 'Avis, témoignages, preuves sociales et badges de confiance', /faq-visible|social-link|image-alt|dom-section|heading/i],
+    ['deliveryReturnsAgent', 'Livraison, retours, stock, délais et garantie logistique; ou livrables et délais pour un service', /dom-section|link|product-card|raw-price/i],
+    ['faqObjectionAgent', 'FAQ, objections traitées et questions non rassurées', /faq-visible|dom-section|heading|button|link/i],
+    ['ctaContactAgent', 'CTA principal et secondaire, WhatsApp, contact et formulaire', /button|form|whatsapp-link|contact-link|click-loaded-content|dom-section/i],
+    ['mediaUxAgent', 'Images, galerie, vidéo, démonstration et UX mobile', /image-alt|social-link|click-loaded-content|dom-section/i],
+    ['legalRiskAgent', 'Mentions légales, conditions, confidentialité et informations de contact', /link|contact-link|dom-section|page-title/i]
+].map(([agentName, mission, evidencePattern]) => ({ agentName, mission, evidencePattern }));
+
+function normalizeFunnelEvidencePayload(scrape = {}, pageUrl = '') {
+    const list = value => Array.isArray(value) ? value : [];
+    const source = [
+        scrape?.evidencePayload,
+        scrape?.mainPage?.evidencePayload,
+        scrape?.scrapeData?.evidencePayload,
+        scrape?.data?.evidencePayload
+    ].find(value => value && typeof value === 'object') || {};
+    const blocks = [];
+    const seen = new Set();
+    const add = (block = {}, index = 0, fallbackSource = 'observed-text') => {
+        const text = limitFunnelText(
+            block.text || block.textPreview ||
+            [...list(block.headings), ...list(block.paragraphs)].join(' | '),
+            1400
+        );
+        const url = limitFunnelText(block.pageUrl || block.url || pageUrl || scrape?.url || '', 500);
+        if (!text && !url) return;
+        const item = {
+            source: limitFunnelText(block.source || fallbackSource, 80),
+            pageUrl: url,
+            selector: limitFunnelText(block.selector || '', 220) || null,
+            position: Number(block.position || index + 1) || index + 1,
+            text: text || url,
+            confidence: ['HIGH', 'MEDIUM', 'LOW'].includes(String(block.confidence || '').toUpperCase())
+                ? String(block.confidence).toUpperCase() : 'HIGH',
+            typeGuess: limitFunnelText(block.typeGuess || block.type || block.detectedType || '', 80) || null,
+            labelGuess: limitFunnelText(block.labelGuess || block.label || '', 140) || null,
+            classificationSource: limitFunnelText(
+                block.classificationSource ||
+                ((block.typeGuess || block.type || block.detectedType) ? 'weak-regex-hint' : ''), 80
+            ) || null,
+            url: limitFunnelText(block.url || block.href || '', 500) || null,
+            alt: limitFunnelText(block.alt || '', 180) || null
+        };
+        const key = [item.source, item.pageUrl, item.selector, item.text].join('|').toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        blocks.push(item);
+    };
+
+    [
+        ...list(source.evidenceBlocks),
+        ...list(scrape?.evidenceBlocks),
+        ...list(scrape?.mainPage?.evidenceBlocks)
+    ].forEach((block, index) => add(block, index));
+
+    if (!blocks.length) {
+        [
+            ...list(scrape?.sectionRawBlocks),
+            ...list(scrape?.mainPage?.sectionRawBlocks),
+            ...list(scrape?.scrapeData?.sectionRawBlocks)
+        ].forEach((block, index) => add(block, index, 'legacy-dom-section'));
+    }
+    if (!blocks.length) {
+        [
+            ['page-title', scrape?.title || scrape?.mainPage?.title],
+            ['heading', scrape?.h1 || scrape?.mainPage?.h1],
+            ['meta-description', scrape?.metaDescription || scrape?.mainPage?.metaDescription],
+            ['body-text', scrape?.bodyText || scrape?.text || scrape?.content || scrape?.mainPage?.bodyText]
+        ].forEach(([sourceName, text], index) => add({ source: sourceName, text, pageUrl }, index));
+    }
+
+    const evidenceBlocks = blocks.slice(0, 180);
+    const evidenceText = limitFunnelText(
+        source.evidenceText || evidenceBlocks.map(block => block.text).join(' | '), 24000
+    );
+    const miniScrapers = list(source.miniScrapers).length
+        ? list(source.miniScrapers).slice(0, 12).map(scraper => ({
+            scraperName: limitFunnelText(scraper?.scraperName || 'evidenceScraper', 100),
+            success: scraper?.success !== false,
+            pageUrl: limitFunnelText(scraper?.pageUrl || pageUrl || '', 500),
+            evidenceText: limitFunnelText(scraper?.evidenceText || '', 8000),
+            evidenceBlocks: list(scraper?.evidenceBlocks).slice(0, 55).map(raw => {
+                const text = limitFunnelText(raw?.text || raw?.textPreview || '', 1400);
+                return evidenceBlocks.find(item => item.text === text) || null;
+            }).filter(Boolean),
+            limits: list(scraper?.limits).slice(0, 8).map(item => limitFunnelText(item, 240)).filter(Boolean)
+        }))
+        : [{
+            scraperName: 'legacyEvidenceAdapter',
+            success: evidenceBlocks.length > 0,
+            pageUrl: pageUrl || scrape?.url || '',
+            evidenceText,
+            evidenceBlocks,
+            limits: ['Ancien payload adapté en preuves factuelles']
+        }];
+
+    return {
+        version: source.version || 'funnel-evidence-v1',
+        pageUrl: source.pageUrl || pageUrl || scrape?.url || '',
+        evidenceText,
+        evidenceBlocks,
+        miniScrapers,
+        limits: [...list(source.limits), ...miniScrapers.flatMap(x => x.limits || [])]
+            .map(item => limitFunnelText(item, 240)).filter(Boolean).slice(0, 16),
+        scrapeSufficient: evidenceBlocks.length >= 4 || evidenceText.length >= 800
+    };
+}
+
+function findFunnelEvidenceForSection(sectionValue, evidenceBlocks = []) {
+    const section = String(sectionValue?.sectionType || sectionValue?.section || sectionValue?.name || sectionValue || '').toLowerCase();
+    const pairs = [
+        [/hero|structure|aida|pas|headline|h1/, /hero|banner|headline|h1|above.?fold|accueil|intro/i],
+        [/offer|offre|pricing|prix|bundle|pack/, /offre|offer|prix|price|pricing|tarif|bundle|pack|mad|eur|usd|درهم/i],
+        [/trust|proof|preuve|review|avis|testimonial|social/, /avis|review|rating|étoile|testimonial|témoignage|preuve|trust|badge|client/i],
+        [/delivery|livraison|shipping|stock|delay|délai/, /livraison|delivery|shipping|stock|délai|delay|expédition|توصيل/i],
+        [/return|retour|refund|rembours/, /retour|return|refund|rembours|exchange/i],
+        [/guarantee|garantie|warranty/, /garantie|guarantee|warranty|money back|ضمان/i],
+        [/faq|objection|question/, /faq|question|réponse|answer|objection|frequently|أسئلة/i],
+        [/cta|contact|whatsapp|form/, /acheter|commander|buy|contact|whatsapp|devis|réserver|form|submit|checkout|panier/i],
+        [/media|image|gallery|video|ux|mobile/, /image|photo|gallery|galerie|video|youtube|vimeo|mobile|responsive/i],
+        [/legal|privacy|condition|terms|footer/, /privacy|terms|conditions|mentions|legal|cookies|footer|copyright/i]
+    ];
+    const pair = pairs.find(([sectionRx]) => sectionRx.test(section));
+    return pair ? evidenceBlocks.find(block => pair[1].test(
+        [block.typeGuess, block.labelGuess, block.source, block.text, block.url].filter(Boolean).join(' ')
+    )) || null : null;
+}
+
+function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
+    const list = value => Array.isArray(value) ? value : [];
+    const decision = (value, status) => typeof value === 'string'
+        ? { sectionType: limitFunnelText(value, 100), status }
+        : value && typeof value === 'object'
+            ? { ...cleanFunnelScrapePayload(value), sectionType: limitFunnelText(value.sectionType || value.section || value.name || '', 100), status: value.status || status }
+            : null;
+    const detected = list(raw.sectionsDetected).map(item => decision(item, 'present')).filter(Boolean);
+    const weak = list(raw.sectionsWeak).map(item => decision(item, 'weak')).filter(Boolean);
+    const unconfirmed = list(raw.sectionsUnconfirmed).map(item => decision(item, 'unconfirmed')).filter(Boolean);
+    const missing = [];
+    const proofUsed = [];
+    const addProof = block => {
+        if (!block || proofUsed.some(item => item.text === block.text && item.pageUrl === block.pageUrl)) return;
+        proofUsed.push({ text: block.text, source: block.source, pageUrl: block.pageUrl, position: block.position });
+    };
+    list(raw.proofUsed).forEach(proof => {
+        const text = limitFunnelText(proof?.text || proof, 700);
+        addProof(evidence.evidenceBlocks.find(block =>
+            block.text.includes(text.slice(0, 80)) || text.includes(block.text.slice(0, 80))
+        ));
+    });
+    [...detected, ...weak].forEach(item => addProof(findFunnelEvidenceForSection(item, evidence.evidenceBlocks)));
+    list(raw.sectionsMissing).map(item => decision(item, 'missing')).filter(Boolean).forEach(item => {
+        const observed = findFunnelEvidenceForSection(item, evidence.evidenceBlocks);
+        if (observed) {
+            weak.push({ ...item, status: 'weak', reason: 'Une preuve existe; sa qualité reste à confirmer.' });
+            addProof(observed);
+        } else if (evidence.scrapeSufficient) missing.push(item);
+        else unconfirmed.push({ ...item, status: 'unconfirmed', reason: 'Scrape insuffisant pour conclure à une absence.' });
+    });
+    const confidence = ['HIGH', 'MEDIUM', 'LOW'].includes(String(raw.confidence || '').toUpperCase())
+        ? String(raw.confidence).toUpperCase() : (proofUsed.length ? 'MEDIUM' : 'LOW');
+    return {
+        agentName: definition.agentName,
+        verdict: limitFunnelText(raw.verdict || 'Analyse fondée sur les preuves disponibles.', 900),
+        sectionsDetected: detected.slice(0, 8),
+        sectionsWeak: weak.slice(0, 8),
+        sectionsMissing: missing.slice(0, 8),
+        sectionsUnconfirmed: unconfirmed.slice(0, 8),
+        proofUsed: proofUsed.slice(0, 12),
+        recommendations: list(raw.recommendations).slice(0, 8).map(item => typeof item === 'string'
+            ? { type: 'recommendation', text: limitFunnelText(item, 500) }
+            : { type: 'recommendation', ...cleanFunnelScrapePayload(item) }),
+        confidence: proofUsed.length ? confidence : 'LOW'
+    };
+}
+
+function unconfirmedFunnelMiniAgent(definition, evidence, reason) {
+    return {
+        agentName: definition.agentName,
+        verdict: 'Analyse non confirmée: les preuves disponibles ne permettent pas une décision fiable.',
+        sectionsDetected: [], sectionsWeak: [], sectionsMissing: [],
+        sectionsUnconfirmed: [{ sectionType: 'mission', status: 'unconfirmed', reason: limitFunnelText(reason, 300) }],
+        proofUsed: [], recommendations: [], confidence: 'LOW', limits: evidence?.limits || []
+    };
+}
+
+async function runFunnelEvidenceMiniAgents({ evidence, priceIntel = {}, userContext = {}, language = 'fr', pageUrl = '', requestId = '' } = {}) {
+    if (!evidence?.evidenceBlocks?.length) return {
+        agents: FUNNEL_EVIDENCE_AGENTS.map(def => unconfirmedFunnelMiniAgent(def, evidence, 'Aucune preuve exploitable')),
+        execution: 'fallback-unconfirmed', error: 'NO_EVIDENCE'
+    };
+    const missions = FUNNEL_EVIDENCE_AGENTS.map(def => ({
+        agentName: def.agentName,
+        mission: def.mission,
+        evidenceBlocks: evidence.evidenceBlocks.filter(block => def.evidencePattern.test(
+            [block.source, block.typeGuess, block.labelGuess, block.text].filter(Boolean).join(' ')
+        )).slice(0, 35).map(block => ({
+            source: block.source, pageUrl: block.pageUrl, position: block.position,
+            text: limitFunnelText(block.text, 650), confidence: block.confidence,
+            typeGuess: block.typeGuess, classificationSource: block.classificationSource
+        }))
+    }));
+    const prompt = `
+LANGUE: ${language}
+URL: ${pageUrl}
+SCRAPE: ${evidence.scrapeSufficient ? 'SUFFISANT' : 'PARTIEL'}
+LIMITES: ${JSON.stringify(evidence.limits)}
+CONTEXTE UTILISATEUR, JAMAIS UNE PREUVE: ${JSON.stringify(cleanFunnelScrapePayload(userContext)).slice(0, 2200)}
+PRICING PIPELINE SÉPARÉ, INFORMATIF UNIQUEMENT: ${JSON.stringify(cleanFunnelScrapePayload(priceIntel)).slice(0, 1500)}
+MISSIONS ET PREUVES: ${JSON.stringify(missions)}
+
+Tu coordonnes huit mini-agents indépendants. Analyse uniquement les preuves affectées.
+RÈGLES:
+- typeGuess est un faible indice regex, jamais une vérité.
+- Une preuve existante interdit de déclarer l élément absent: present ou weak.
+- Missing seulement si le scrape est suffisant et aucune preuve n existe.
+- Scrape partiel: unconfirmed.
+- Chaque present/weak cite proofUsed avec texte réel, source, pageUrl et position.
+- Recommandations clairement marquées, jamais présentées comme faits.
+- offerPricingDisplayAgent ne valide pas le prix final.
+- Aucun raisonnement interne. JSON strict seulement.
+FORMAT:
+{"agents":[{"agentName":"nom exact","verdict":"...","sectionsDetected":[],"sectionsWeak":[],"sectionsMissing":[],"sectionsUnconfirmed":[],"proofUsed":[{"text":"...","source":"...","pageUrl":"...","position":1}],"recommendations":[],"confidence":"HIGH|MEDIUM|LOW"}]}
+`.trim();
+    try {
+        const result = await callOpenRouterAPI(prompt, {
+            temperature: 0.05, maxTokens: 4200, expectedFormat: 'json',
+            context: `FunnelEvidenceAgents-${requestId || Date.now()}`,
+            systemPrompt: 'Orchestrateur CRO factuel. JSON strict. Aucune absence sans preuve suffisante.'
+        });
+        const parsed = typeof result?.response === 'string' ? extractJSON(result.response) : result?.response;
+        const returned = Array.isArray(parsed?.agents) ? parsed.agents : [];
+        return {
+            agents: FUNNEL_EVIDENCE_AGENTS.map(def => {
+                const candidate = returned.find(agent => agent?.agentName === def.agentName);
+                return candidate ? normalizeFunnelMiniAgent(candidate, def, evidence)
+                    : unconfirmedFunnelMiniAgent(def, evidence, 'Mini-agent non retourné');
+            }),
+            execution: 'batched-eight-mini-agents',
+            model: result?.model || null,
+            error: result?.success === false ? result?.error || 'AI_FAILED' : null
+        };
+    } catch (error) {
+        return {
+            agents: FUNNEL_EVIDENCE_AGENTS.map(def => unconfirmedFunnelMiniAgent(def, evidence, error.message)),
+            execution: 'fallback-unconfirmed', error: limitFunnelText(error.message, 300)
+        };
+    }
+}
+
+function synthesizeFunnelEvidenceAgents(run = {}, evidence = {}) {
+    const agents = Array.isArray(run?.agents) ? run.agents : [];
+    const unique = (values, keyFn) => {
+        const seen = new Set();
+        return values.filter(value => {
+            const key = keyFn(value);
+            if (!key || seen.has(key)) return false;
+            seen.add(key); return true;
+        });
+    };
+    const collect = field => unique(agents.flatMap(agent => (agent?.[field] || []).map(item => ({
+        ...item, agentName: agent.agentName
+    }))), item => String(item.sectionType || item.section || item.text || '').toLowerCase());
+    return {
+        mode: 'evidence-first-additive',
+        evidenceVersion: evidence.version || 'funnel-evidence-v1',
+        scrapeSufficient: !!evidence.scrapeSufficient,
+        evidenceCount: evidence.evidenceBlocks?.length || 0,
+        present: collect('sectionsDetected'),
+        weak: collect('sectionsWeak'),
+        missing: collect('sectionsMissing'),
+        unconfirmed: collect('sectionsUnconfirmed'),
+        proofUsed: unique(agents.flatMap(agent => agent.proofUsed || []),
+            proof => [proof.source, proof.pageUrl, proof.position, proof.text].join('|').toLowerCase()).slice(0, 30),
+        recommendations: unique(agents.flatMap(agent => (agent.recommendations || []).map(item => ({
+            ...item, agentName: agent.agentName
+        }))), item => String(item.text || item.recommendation || '').toLowerCase()).slice(0, 24),
+        confidence: agents.some(agent => agent.confidence === 'HIGH') ? 'HIGH'
+            : agents.some(agent => agent.confidence === 'MEDIUM') ? 'MEDIUM' : 'LOW',
+        execution: run.execution || 'fallback-unconfirmed',
+        error: run.error || null
+    };
+}
+
+
 function isObservedFunnelSection(value) {
     if (value === true) return true;
     const normalized = String(value || '').trim().toLowerCase();
@@ -12475,6 +12763,27 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
         });
         funnelSurgeryFallback = funnelSurgery;
 
+        const funnelEvidence = normalizeFunnelEvidencePayload(scrape, validUrl);
+        console.log(
+            `[${requestId}] [FUNNEL-EVIDENCE] blocks=${funnelEvidence.evidenceBlocks.length} ` +
+            `scrapers=${funnelEvidence.miniScrapers.length} sufficient=${funnelEvidence.scrapeSufficient}`
+        );
+        const funnelMiniAgentRun = await runFunnelEvidenceMiniAgents({
+            evidence: funnelEvidence,
+            priceIntel,
+            userContext: safeContext,
+            language: validLang,
+            pageUrl: validUrl,
+            requestId
+        });
+        const funnelMiniAgents = funnelMiniAgentRun.agents;
+        const funnelEvidenceSynthesis = synthesizeFunnelEvidenceAgents(funnelMiniAgentRun, funnelEvidence);
+        console.log(
+            `[${requestId}] [FUNNEL-MINI-AGENTS] detected=${funnelEvidenceSynthesis.present.length} ` +
+            `weak=${funnelEvidenceSynthesis.weak.length} missing=${funnelEvidenceSynthesis.missing.length} ` +
+            `unconfirmed=${funnelEvidenceSynthesis.unconfirmed.length}`
+        );
+
         // ── 5. SHARED CONTEXT ─────────────────────────────────
         const sharedContext = `
 ═══════════════════════════════════════
@@ -13456,6 +13765,10 @@ const finalResponse = {
     funnelSurgery,
     funnelSectionSurgery: funnelSurgery,
     funnelSectionScanner: funnelSurgery,
+    funnelEvidence,
+    funnelMiniAgents,
+    funnelEvidenceSynthesis,
+    funnelAnalysisMode: 'evidence-first-additive',
     sectionsAudit: funnelCompatibility.sectionsAudit,
     proofModel,
     executiveBrief,
