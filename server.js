@@ -5425,20 +5425,41 @@ const EXTRACTION_NOT_FOUND =
     const buildScrapeStealthFromRailwayResult = (railwayResult = {}) => {
         const mainPage =
             railwayResult.mainPage ||
+            railwayResult.scrapeData ||
+            railwayResult.data ||
             (Array.isArray(railwayResult.pages) ? railwayResult.pages[0] : null) ||
             {};
-
-        const headings = mainPage.headings || {};
-        const h1List = Array.isArray(headings.h1)
-            ? headings.h1
-            : mainPage.h1
-                ? [mainPage.h1]
-                : [];
-
-        const h2List = Array.isArray(headings.h2) ? headings.h2 : [];
-        const h3List = Array.isArray(headings.h3) ? headings.h3 : [];
-
-        const prices = Array.isArray(mainPage.prices) ? mainPage.prices : [];
+        const firstArray = (...values) => values.find(value => Array.isArray(value) && value.length) || [];
+        const headingGroups = [
+            mainPage.headingGroups,
+            !Array.isArray(mainPage.headings) ? mainPage.headings : null,
+            railwayResult.headingGroups,
+            !Array.isArray(railwayResult.headings) ? railwayResult.headings : null
+        ].find(value => value && typeof value === 'object') || {};
+        const h1List = firstArray(
+            headingGroups.h1,
+            mainPage.h1 ? [mainPage.h1] : [],
+            railwayResult.h1 ? [railwayResult.h1] : []
+        );
+        const h2List = firstArray(headingGroups.h2, mainPage.h2, railwayResult.h2);
+        const h3List = firstArray(headingGroups.h3, mainPage.h3, railwayResult.h3);
+        const rawSections = firstArray(
+            mainPage.sectionRawBlocks,
+            mainPage.sectionsDetailed,
+            railwayResult.sectionRawBlocks,
+            railwayResult.sectionsDetailed
+        );
+        const evidencePayload =
+            mainPage.evidencePayload ||
+            railwayResult.evidencePayload ||
+            railwayResult.scrapeData?.evidencePayload ||
+            {};
+        const miniScrapers = firstArray(
+            evidencePayload.miniScrapers,
+            mainPage.miniScrapers,
+            railwayResult.miniScrapers
+        );
+        const prices = firstArray(mainPage.prices, railwayResult.prices);
         const firstPrice = prices.find(p => Number.isFinite(Number(p.value))) || null;
 
         const primaryPrice = firstPrice ? Number(firstPrice.value) : null;
@@ -5447,6 +5468,9 @@ const EXTRACTION_NOT_FOUND =
         const bodyText = normText(
             mainPage.text ||
             mainPage.bodyText ||
+            railwayResult.bodyText ||
+            railwayResult.text ||
+            evidencePayload.evidenceText ||
             mainPage.textPreview ||
             mainPage.title ||
             ''
@@ -5484,9 +5508,25 @@ const EXTRACTION_NOT_FOUND =
             '</body></html>'
         ].join('');
 
-        const cmsSignals = mainPage.cmsSignals || {};
-        const ecommerceSignals = mainPage.ecommerceSignals || {};
-        const trust = mainPage.trustSignals || {};
+        const cmsSignals =
+            mainPage.weakTechnicalHints?.cms ||
+            railwayResult.weakTechnicalHints?.cms ||
+            mainPage.cmsSignals ||
+            {};
+        const ecommerceSignals =
+            mainPage.weakTechnicalHints?.commerce ||
+            railwayResult.weakTechnicalHints?.commerce ||
+            mainPage.ecommerceSignals ||
+            {};
+        const trust =
+            mainPage.mentionHints ||
+            railwayResult.mentionHints ||
+            mainPage.trustSignals ||
+            {};
+        const observedText = [bodyText, evidencePayload.evidenceText]
+            .filter(Boolean).join(' ').toLowerCase();
+        const observedCtas = firstArray(mainPage.ctas, railwayResult.ctas);
+        const observedImages = firstArray(mainPage.images, railwayResult.images);
 
         const priceIntel = hardenFunnelPriceIntel({
             ...emptyPriceIntel(),
@@ -5538,27 +5578,41 @@ const EXTRACTION_NOT_FOUND =
                 out.push({ type, label: label || type, present: true, score, evidence });
             };
 
-            if (Array.isArray(mainPage.sections)) {
-                mainPage.sections.forEach(section => {
-                    if (typeof section === 'string') add(section.toUpperCase(), section);
-                    else add(String(section.type || section.name || '').toUpperCase(), section.label || section.name || section.type, section.score || 70, section.evidence || '');
-                });
-            } else if (mainPage.sections && typeof mainPage.sections === 'object') {
-                Object.entries(mainPage.sections).forEach(([key, value]) => {
-                    if (value) add(String(key).replace(/^has/i, '').toUpperCase(), key, 70, 'railway_section_signal');
-                });
-            }
+            const normalizeHint = value => {
+                const raw = String(value || '').trim().toUpperCase().replace(/[\s-]+/g, '_');
+                const aliases = {
+                    HEADER: 'HERO', BANNER: 'HERO', REVIEWS: 'SOCIAL_PROOF',
+                    TESTIMONIALS: 'SOCIAL_PROOF', PRICE: 'PRICING',
+                    CONTACT: 'CTA', BUTTONS: 'CTA'
+                };
+                return aliases[raw] || raw;
+            };
+            rawSections.forEach(section => {
+                const typeGuess = normalizeHint(
+                    typeof section === 'string' ? section
+                        : section?.typeGuess || section?.sectionType || section?.type || section?.name
+                );
+                if (!typeGuess || typeGuess === 'UNKNOWN' || typeGuess === 'CONTENT') return;
+                add(typeGuess, section?.labelGuess || section?.label || typeGuess,
+                    section?.confidence === 'HIGH' ? 72 : 55,
+                    section?.text || section?.textPreview || section?.headings?.[0] || '');
+            });
 
-            if (h1List.length) add('HERO', 'Hero', 80, h1List[0]);
-            if (h2List.length) add('FEATURES', 'Benefits / sections', 65, h2List.slice(0, 3).join(' | '));
-            if (Array.isArray(mainPage.productCards) && mainPage.productCards.length) add('OFFER', 'Offer / product cards', 85, `${mainPage.productCards.length} product cards`);
-            if (priceIntel.detected || ecommerceSignals.hasPrice) add('PRICING', 'Price / offer', priceIntel.detected ? 85 : 55, priceIntel.priceExtractionReason || '');
-            if (trust.hasReviews) add('SOCIAL_PROOF', 'Social proof', 75, 'reviews signal');
-            if (trust.hasGuarantee || trust.hasDelivery || trust.hasContact || trust.hasWhatsapp) add('TRUST', 'Trust signals', 75, 'trust signal');
-            if (mainPage.faq?.detectedBlocks?.length || mainPage.faq?.jsonLdFaqs?.length) add('FAQ', 'FAQ', 80, 'faq detected');
-            if (Array.isArray(mainPage.ctas) && mainPage.ctas.length) add('CTA', 'CTA', 80, mainPage.ctas.slice(0, 3).map(c => c.text || c.label || '').filter(Boolean).join(' | '));
-            if (Array.isArray(mainPage.forms) && mainPage.forms.length) add('FORM', 'Form', 70, `${mainPage.forms.length} form(s)`);
+            if (h1List.length) add('HERO', 'Hero', 90, h1List[0]);
+            if (h2List.length >= 2) add('BENEFITS', 'Bénéfices / contenu', 70, h2List.slice(0, 3).join(' | '));
+            if (rawSections.some(section => /product-card|catalogue|collection|boutique|acheter sur etsy/i.test(
+                [section?.className, section?.labelGuess, section?.text, section?.textPreview].filter(Boolean).join(' ')
+            ))) add('OFFER', 'Offre / catalogue', 85, 'Cartes produit et offre observées');
+            if (priceIntel.detected || ecommerceSignals.hasPrice || prices.length) add('PRICING', 'Prix / offre', priceIntel.detected ? 85 : 60, prices.slice(0, 3).map(p => [p.value, p.currency].filter(Boolean).join(' ')).join(' | '));
+            if (trust.reviewTerms || /avis|review|rating|témoignage|testimonial/.test(observedText)) add('SOCIAL_PROOF', 'Preuves sociales', 70, 'Texte de preuve sociale observé');
+            if (trust.guaranteeTerms || trust.deliveryTerms || trust.contactTerms || trust.whatsappTerms) add('TRUST', 'Signaux de confiance', 70, 'Mentions de confiance observées');
+            if (mainPage.faq?.detectedBlocks?.length || mainPage.faq?.jsonLdFaqs?.length || /faq|questions fréquentes/.test(observedText)) add('FAQ', 'FAQ', 80, 'Questions/réponses observées');
+            if (observedCtas.length) add('CTA', 'CTA', 85, observedCtas.slice(0, 3).map(c => typeof c === 'string' ? c : c.text || c.label || '').filter(Boolean).join(' | '));
+            if (Array.isArray(mainPage.forms) && mainPage.forms.length) add('FORM', 'Formulaire', 70, `${mainPage.forms.length} form(s)`);
             if (Array.isArray(mainPage.contactLinks) && mainPage.contactLinks.length) add('CONTACT', 'Contact', 70, `${mainPage.contactLinks.length} contact links`);
+            if (rawSections.some(section => /footer|copyright|mentions légales|privacy|conditions/.test(
+                [section?.typeGuess, section?.labelGuess, section?.text, section?.textPreview].filter(Boolean).join(' ').toLowerCase()
+            ))) add('FOOTER', 'Footer / légal', 75, 'Footer ou lien légal observé');
             return out;
         })();
 
@@ -5591,6 +5645,7 @@ const EXTRACTION_NOT_FOUND =
                 cms,
                 hasSSL: validUrl.startsWith('https'),
                 hasWhatsApp: Boolean(
+                    trust.whatsappTerms ||
                     trust.hasWhatsapp ||
                     (Array.isArray(mainPage.whatsappLinks) && mainPage.whatsappLinks.length)
                 ),
@@ -5614,9 +5669,7 @@ const EXTRACTION_NOT_FOUND =
                     h2: h2List.slice(0, 12),
                     h3: h3List.slice(0, 12)
                 },
-                realCTAs: Array.isArray(mainPage.ctas)
-                    ? mainPage.ctas.map(c => c.text || c.label || '').filter(Boolean).slice(0, 20)
-                    : [],
+                realCTAs: observedCtas.map(c => typeof c === 'string' ? c : c.text || c.label || '').filter(Boolean).slice(0, 20),
                 heroText: bodyText.substring(0, 300),
                 testimonials: [],
                 guarantees: [],
@@ -5624,9 +5677,7 @@ const EXTRACTION_NOT_FOUND =
                     ? mainPage.faq.detectedBlocks.slice(0, 5)
                     : [],
                 bulletBenefits: h2List.slice(0, 8),
-                allButtons: Array.isArray(mainPage.ctas)
-                    ? mainPage.ctas.map(c => c.text || c.label || '').filter(Boolean).slice(0, 20)
-                    : [],
+                allButtons: observedCtas.map(c => typeof c === 'string' ? c : c.text || c.label || '').filter(Boolean).slice(0, 20),
                 pageSections
             },
 
@@ -5645,12 +5696,13 @@ const EXTRACTION_NOT_FOUND =
             trustSignals: {
                 hasSSL: validUrl.startsWith('https'),
                 hasWhatsApp: Boolean(
+                    trust.whatsappTerms ||
                     trust.hasWhatsapp ||
                     (Array.isArray(mainPage.whatsappLinks) && mainPage.whatsappLinks.length)
                 ),
                 hasPhoneNumber: Array.isArray(mainPage.phones) && mainPage.phones.length > 0,
-                hasReviews: Boolean(trust.hasReviews),
-                hasMoneyBackGuarantee: Boolean(trust.hasGuarantee),
+                hasReviews: Boolean(trust.reviewTerms || trust.hasReviews),
+                hasMoneyBackGuarantee: Boolean(trust.guaranteeTerms || trust.hasGuarantee),
                 hasPaymentLogos: false,
                 hasLegalPages: false,
                 hasCOD: Boolean(ecommerceSignals.hasCOD),
@@ -5691,8 +5743,16 @@ const EXTRACTION_NOT_FOUND =
                 keywords: ''
             },
 
-            wordCount: Number(mainPage.wordCount || 0),
+            wordCount: Number(mainPage.wordCount || railwayResult.wordCount || bodyText.split(/\s+/).filter(Boolean).length),
             bodyText,
+            h1: h1List[0] || null,
+            headings: { h1: h1List, h2: h2List, h3: h3List },
+            ctas: observedCtas,
+            images: observedImages,
+            sectionRawBlocks: rawSections,
+            sectionsDetailed: rawSections,
+            evidencePayload,
+            miniScrapers,
 
             trackingIntel: {
                 hasGoogleAnalytics: Boolean(cmsSignals.googleTagManager),
@@ -12168,7 +12228,7 @@ const langInstr = isAr
   : 'Réponds UNIQUEMENT en Français. Aucun mot en anglais ou arabe.';
         // ── 2. CACHE ──────────────────────────────────────────────────
         const contextKey = cleanProofText(JSON.stringify(safeContext || {}), 220) || 'no-context';
-        const cacheKey = `funnelspy_v12_${validUrl}_${userLang}_${mode}_${contextKey}`;
+        const cacheKey = `funnelspy_v13_evidence_${validUrl}_${userLang}_${mode}_${contextKey}`;
         const cached   = cache.get(cacheKey);
         if (cached && !req.body.skipCache) {
             console.log(`💾 [${requestId}] Cache HIT — ${validUrl}`);
