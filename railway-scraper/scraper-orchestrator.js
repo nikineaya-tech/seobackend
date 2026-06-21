@@ -11,12 +11,16 @@ const { createCursor } = require('ghost-cursor');
 chromium.use(StealthPlugin());
 
 const DEFAULT_TIMEOUT_MS = Number(process.env.SCRAPER_TIMEOUT_MS || 45000);
-const MAX_EXTRA_PAGES = Math.max(0, Number(process.env.SCRAPER_MAX_EXTRA_PAGES || 12));
+const MAX_EXTRA_PAGES = Math.max(0, Number(process.env.SCRAPER_MAX_EXTRA_PAGES || 3));
 const USER_AGENT = process.env.SCRAPER_USER_AGENT || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
 
 const BROWSERLESS_API_TOKEN = process.env.BROWSERLESS_API_TOKEN || '';
 const BROWSERLESS_URL = process.env.BROWSERLESS_URL || 'https://production-sfo.browserless.io';
-const SCRAPE_DO_TOKEN = process.env.SCRAPE_DO_TOKEN || '';
+const SCRAPE_DO_TOKEN =
+  process.env.SCRAPE_DO_TOKEN ||
+  process.env.SCRAPEDOTOKEN ||
+  process.env.SCRAPEDO_TOKEN ||
+  '';
 
 const ENABLE_BROWSERLESS = ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPER_ENABLE_BROWSERLESS || 'false').toLowerCase());
 const ENABLE_SCRAPEDO = String(process.env.SCRAPER_ENABLE_SCRAPEDO || 'true') !== 'false';
@@ -605,8 +609,11 @@ function extractLandingSectionRawBlocks($, baseUrl = '') {
   const selector = [
     'header',
     'main > section',
+    'main > div',
     'section',
     'article',
+    '[role="region"]',
+    '[data-section]',
     'footer',
     '[role="banner"]',
     '[role="main"]',
@@ -1949,8 +1956,20 @@ async function scrapeSinglePage(page, url, options = {}){
 
   const cursor = createCursor(page);
   await cursor.moveTo({ x: 100 + Math.random() * 400, y: 120 + Math.random() * 300 }).catch(() => {});
-  await page.evaluate(() => window.scrollBy({ top: Math.min(document.body.scrollHeight, 900), behavior: 'smooth' })).catch(() => {});
-  await page.waitForTimeout(600).catch(() => {});
+  await page.evaluate(async () => {
+    const height = Math.max(document.body?.scrollHeight || 0, document.documentElement?.scrollHeight || 0);
+    for (const ratio of [0.25, 0.5, 0.75, 1]) {
+      window.scrollTo(0, Math.floor(height * ratio));
+      await new Promise(resolve => setTimeout(resolve, 180));
+    }
+    window.scrollTo(0, 0);
+  }).catch(() => {});
+  await page.waitForTimeout(350).catch(() => {});
+
+  const discoveredTargets = await discoverClickableTargets(page, url, options);
+  const clickExploration = options.clickExplore === false
+    ? { clickedButtons: [], discoveredAfterClicks: [], totalClicked: 0, totalChanged: 0 }
+    : await clickUsefulButtons(page, url, options);
 
   const html = await page.content();
   const text = await page.evaluate(() => document.body?.innerText || '').catch(() => '');
@@ -1994,12 +2013,9 @@ const paginationSignals = extractPaginationSignals($, url);
     socialLinks: socialContact.socialLinks,
     whatsappLinks: socialContact.whatsappLinks,
     contactLinks: socialContact.contactLinks,
+    clickExploration,
     bodyText: text
   });
-const discoveredTargets = await discoverClickableTargets(page, url, options);
-const clickExploration = options.clickExplore === false
-  ? { clickedButtons: [], discoveredAfterClicks: [], totalClicked: 0, totalChanged: 0 }
-  : await clickUsefulButtons(page, url, options);
 
   return {
   url,
