@@ -264,7 +264,20 @@ function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result')
     4000
   );
 
-  const headings = safeTextArray(source.headings, 15, 160);
+  const sourceHeadingGroups = source.mainPage?.headings && !Array.isArray(source.mainPage.headings)
+    ? source.mainPage.headings
+    : (source.headingGroups && !Array.isArray(source.headingGroups) ? source.headingGroups : {});
+  const headingGroups = {
+    h1: safeTextArray(sourceHeadingGroups.h1 || [source.h1], 8, 180),
+    h2: safeTextArray(sourceHeadingGroups.h2 || source.h2, 12, 180),
+    h3: safeTextArray(sourceHeadingGroups.h3 || source.h3, 12, 180)
+  };
+  const headings = safeTextArray([
+    ...headingGroups.h1,
+    ...headingGroups.h2,
+    ...headingGroups.h3,
+    ...safeTextArray(source.headings, 15, 160)
+  ], 30, 180);
   const ctas = safeLinkArray(source.ctas, 6);
   const images = safeLinkArray(source.images, 6);
   const links = safeLinkArray(source.links, 8);
@@ -281,7 +294,10 @@ const compatPage = {
   text: bodyText,
   content: bodyText,
 
-  headings,
+  headings: headingGroups,
+  headingGroups,
+  h2: headingGroups.h2,
+  h3: headingGroups.h3,
   ctas,
   images,
   links,
@@ -318,6 +334,9 @@ pagesExplored: [compatPage],
     content: bodyText,
 
     headings,
+    headingGroups,
+    h2: headingGroups.h2,
+    h3: headingGroups.h3,
     ctas,
     images,
     links,
@@ -575,14 +594,41 @@ function buildSafeJobResult(result = {}) {
     .map(normalizeSectionBlock)
     .filter(Boolean);
 
+  const headingGroups = {
+    h1: collectUnique([
+      result.h1,
+      main.h1,
+      ...arr(result.headingGroups?.h1),
+      ...arr(main.headingGroups?.h1),
+      ...arr(result.headings?.h1),
+      ...arr(main.headings?.h1)
+    ], 8, 180),
+    h2: collectUnique([
+      ...arr(result.h2),
+      ...arr(main.h2),
+      ...arr(result.headingGroups?.h2),
+      ...arr(main.headingGroups?.h2),
+      ...arr(result.headings?.h2),
+      ...arr(main.headings?.h2)
+    ], 16, 180),
+    h3: collectUnique([
+      ...arr(result.h3),
+      ...arr(main.h3),
+      ...arr(result.headingGroups?.h3),
+      ...arr(main.headingGroups?.h3),
+      ...arr(result.headings?.h3),
+      ...arr(main.headings?.h3)
+    ], 16, 180)
+  };
   const headings = collectUnique([
-    result.h1,
-    main.h1,
+    ...headingGroups.h1,
+    ...headingGroups.h2,
+    ...headingGroups.h3,
     ...arr(result.headings),
     ...arr(main.headings),
     ...sections.flatMap(section => arr(section.headings)),
     ...sections.map(section => section.title)
-  ], 30, 180);
+  ], 40, 180);
 
   const ctas = collectObjects([
     ...arr(result.ctas),
@@ -638,8 +684,9 @@ function buildSafeJobResult(result = {}) {
     content: bodyText,
 
     headings,
-    h2: headings.slice(1, 12),
-    h3: headings.slice(12, 24),
+    headingGroups,
+    h2: headingGroups.h2,
+    h3: headingGroups.h3,
 
     ctas,
     images,
@@ -676,7 +723,10 @@ function buildSafeJobResult(result = {}) {
       metaDescription: clean(main.metaDescription || result.metaDescription || '', 500),
       bodyText,
       text: bodyText,
-      headings,
+      headings: headingGroups,
+      headingGroups,
+      h2: headingGroups.h2,
+      h3: headingGroups.h3,
       ctas,
       images,
       links,
@@ -693,7 +743,10 @@ function buildSafeJobResult(result = {}) {
       title: clean(result.title || main.title || '', 240),
       h1: clean(result.h1 || main.h1 || headings[0] || '', 240),
       bodyText,
-      headings,
+      headings: headingGroups,
+      headingGroups,
+      h2: headingGroups.h2,
+      h3: headingGroups.h3,
       ctas,
       images,
       links,
