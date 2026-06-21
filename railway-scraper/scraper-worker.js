@@ -202,9 +202,12 @@ function compactFunnelEvidence(source = {}, maxBlocks = 120) {
 }
 
 function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result') {
-  const sections = Array.isArray(source.sectionRawBlocks)
-    ? source.sectionRawBlocks
-    : [];
+  const sections = [
+    source.sectionRawBlocks,
+    source.sectionsDetailed,
+    source.mainPage?.sectionRawBlocks,
+    source.scrapeData?.sectionRawBlocks
+  ].find(value => Array.isArray(value) && value.length) || [];
 
   const safeTextArray = (value, limit = 10, max = 180) => {
     return arr(value)
@@ -239,7 +242,7 @@ function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result')
       .filter(item => item.value || item.currency || item.context);
   };
 
-  const smallSections = sections.slice(0, 8).map((section, index) => ({
+  const smallSections = sections.slice(0, 16).map((section, index) => ({
     source: clean(section.source || 'dom-block', 80),
     pageUrl: clean(section.pageUrl || source.url || '', 500),
     selector: clean(section.selector || '', 220) || null,
@@ -260,8 +263,8 @@ function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result')
   }));
 
   const bodyText = clean(
-    source.bodyText || source.text || source.content || '',
-    4000
+    source.bodyText || source.text || source.content || source.mainPage?.bodyText || '',
+    9000
   );
 
   const sourceHeadingGroups = source.mainPage?.headings && !Array.isArray(source.mainPage.headings)
@@ -282,7 +285,7 @@ function buildSmallJobResult(source = {}, strategy = 'hotfix-ultra-safe-result')
   const images = safeLinkArray(source.images, 6);
   const links = safeLinkArray(source.links, 8);
   const prices = safePriceArray(source.prices, 5);
-  const evidencePayload = compactFunnelEvidence(source, 80);
+  const evidencePayload = compactFunnelEvidence(source, 120);
 const compatPage = {
   url: clean(source.url || '', 500),
   finalUrl: clean(source.finalUrl || source.url || '', 500),
@@ -367,8 +370,8 @@ pagesExplored: [compatPage],
       htmlRemoved: true,
       rawObjectsRemoved: true,
       rawResultNotStored: true,
-      maxBodyText: 4000,
-      maxSections: 8
+      maxBodyText: 9000,
+      maxSections: 16
     }
   };
 }
