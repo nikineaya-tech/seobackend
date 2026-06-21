@@ -788,6 +788,7 @@ function buildFunnelEvidencePayload(pageData = {}) {
 
   push('page-title', pageData.title, { selector: 'title' });
   push('meta-description', pageData.metaDescription, { selector: 'meta[name="description"]' });
+  push('body-text', pageData.bodyText, { selector: 'body', max: 16000 });
   push('heading', pageData.h1, { selector: 'h1' });
   ['h1', 'h2', 'h3'].forEach(level => {
     (pageData.headings?.[level] || []).forEach((text, index) => push('heading', text, {
