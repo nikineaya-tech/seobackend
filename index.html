@@ -660,6 +660,19 @@ html, body {
         overflow: hidden;
     }
     .daka-global-loader.active { display: grid; }
+    #daka-global-loader {
+        visibility: hidden;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 220ms ease, visibility 0s linear 220ms;
+    }
+    #daka-global-loader.active {
+        display: grid !important;
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        transition-delay: 0s;
+    }
     .daka-global-loader-card {
         width: min(720px, 100%);
         max-height: calc(100dvh - 32px);
@@ -5798,9 +5811,34 @@ async function shareSavedReport(id) {
 document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-06-20-funnel-pipeline';
+window.DAKA_FRONTEND_BUILD = '2026-06-21-evidence-loaders';
+
+function loaderTypeFromEndpoint(endpoint = '') {
+    const value = String(endpoint || '').toLowerCase();
+    if (value.includes('funnel')) return 'funnel';
+    if (value.includes('technical') || value.includes('audit')) return 'technical';
+    if (value.includes('keyword')) return 'keywords';
+    return 'competitors';
+}
+
+function ensureAnalysisLoader(endpoint) {
+    const loader = document.getElementById('daka-global-loader');
+    const type = loaderTypeFromEndpoint(endpoint);
+    if (!loader?.classList.contains('active')) return showDakaLoader(type);
+
+    const copy = DAKA_LOADER_COPY[type] || DAKA_LOADER_COPY.competitors;
+    document.getElementById('daka-loader-kicker').textContent = copy.kicker;
+    document.getElementById('daka-loader-title').textContent = copy.title;
+    document.getElementById('daka-loader-subtitle').textContent = copy.subtitle;
+    document.getElementById('daka-loader-hooks').innerHTML = copy.hooks
+        .map(hook => `<span>${escapeHtml(hook)}</span>`).join('');
+    enforceMutedLoaderVideos();
+    document.getElementById('daka-global-loader-video')?.play().catch(() => {});
+    return window.dakaActiveAnalysisId;
+}
 
 async function analyzeWithPolling(endpoint, payload, resultsHandler) {
+    ensureAnalysisLoader(endpoint);
     const analysisId = window.dakaActiveAnalysisId;
     const assertActive = () => {
         if (window.dakaAnalysisCancelled || analysisId !== window.dakaActiveAnalysisId) {
@@ -6166,16 +6204,16 @@ const DAKA_LOADER_COPY = {
     hooks: ['Parcours client', 'Friction', 'Conversion']
   },
   technical: {
-    kicker: 'Audit SEO technique',
-    title: 'Daka inspecte les fondations',
-    subtitle: 'Structure, indexabilité, performance et signaux techniques sont passés au crible.',
-    hooks: ['Structure', 'Performance', 'Priorités SEO']
+    kicker: 'Audit de présence digitale',
+    title: 'Daka inspecte les fondations de votre marché',
+    subtitle: 'Structure, performance et signaux de confiance sont classés selon leur impact business.',
+    hooks: ['Fondations', 'Confiance', 'Priorités business']
   },
   keywords: {
-    kicker: 'Recherche de mots-clés',
+    kicker: 'Lecture de la demande marché',
     title: 'Daka fait remonter les demandes rentables',
-    subtitle: 'Nous filtrons les intentions utiles pour trouver les requêtes qui peuvent créer du trafic qualifié.',
-    hooks: ['Intentions', 'Volume utile', 'Opportunités']
+    subtitle: 'Nous filtrons les intentions utiles pour révéler les sujets qui peuvent attirer une audience qualifiée.',
+    hooks: ['Intentions', 'Demande utile', 'Opportunités']
   }
 };
 
