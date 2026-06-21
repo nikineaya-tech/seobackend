@@ -592,8 +592,32 @@ function findFunnelEvidenceForSection(sectionValue, evidenceBlocks = []) {
     ];
     const pair = pairs.find(([sectionRx]) => sectionRx.test(section));
     return pair ? evidenceBlocks.find(block => pair[1].test(
-        [block.typeGuess, block.labelGuess, block.source, block.text, block.url].filter(Boolean).join(' ')
+        [block.typeGuess, block.labelGuess, block.source, block.selector, block.text, block.url].filter(Boolean).join(' ')
     )) || null : null;
+}
+
+function canFunnelAgentConfirmAbsence(definition = {}, evidence = {}) {
+    const blocks = Array.isArray(evidence?.evidenceBlocks) ? evidence.evidenceBlocks : [];
+    const evidenceText = String(evidence?.evidenceText || '');
+    if (!evidence?.scrapeSufficient || blocks.length < 8 || evidenceText.length < 1200) return false;
+
+    const scraperByAgent = {
+        structureConversionAgent: ['corePageScraper'],
+        offerPricingDisplayAgent: ['commerceEvidenceScraper', 'corePageScraper'],
+        trustProofAgent: ['trustEvidenceScraper'],
+        deliveryReturnsAgent: ['deliveryReturnsEvidenceScraper'],
+        faqObjectionAgent: ['trustEvidenceScraper', 'corePageScraper'],
+        ctaContactAgent: ['contactEvidenceScraper', 'interactionEvidenceScraper'],
+        mediaUxAgent: ['mediaEvidenceScraper', 'corePageScraper'],
+        legalRiskAgent: ['legalEvidenceScraper']
+    };
+    const expected = scraperByAgent[definition.agentName] || [];
+    return (evidence.miniScrapers || []).some(scraper =>
+        expected.includes(scraper?.scraperName) &&
+        scraper?.success === true &&
+        Array.isArray(scraper?.evidenceBlocks) &&
+        scraper.evidenceBlocks.length >= 2
+    );
 }
 
 function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
@@ -625,8 +649,15 @@ function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
         if (observed) {
             weak.push({ ...item, status: 'weak', reason: 'Une preuve existe; sa qualité reste à confirmer.' });
             addProof(observed);
-        } else if (evidence.scrapeSufficient) missing.push(item);
-        else unconfirmed.push({ ...item, status: 'unconfirmed', reason: 'Scrape insuffisant pour conclure à une absence.' });
+        } else if (canFunnelAgentConfirmAbsence(definition, evidence)) {
+            missing.push(item);
+        } else {
+            unconfirmed.push({
+                ...item,
+                status: 'unconfirmed',
+                reason: 'Couverture spécialisée insuffisante pour confirmer cette absence.'
+            });
+        }
     });
     const confidence = ['HIGH', 'MEDIUM', 'LOW'].includes(String(raw.confidence || '').toUpperCase())
         ? String(raw.confidence).toUpperCase() : (proofUsed.length ? 'MEDIUM' : 'LOW');
@@ -678,18 +709,25 @@ SCRAPE: ${evidence.scrapeSufficient ? 'SUFFISANT' : 'PARTIEL'}
 LIMITES: ${JSON.stringify(evidence.limits)}
 CONTEXTE UTILISATEUR, JAMAIS UNE PREUVE: ${JSON.stringify(cleanFunnelScrapePayload(userContext)).slice(0, 2200)}
 PRICING PIPELINE SÉPARÉ, INFORMATIF UNIQUEMENT: ${JSON.stringify(cleanFunnelScrapePayload(priceIntel)).slice(0, 1500)}
-MISSIONS ET PREUVES: ${JSON.stringify(missions)}
+TEXTE GLOBAL COPIÉ PAR LES SCRAPERS: ${limitFunnelText(evidence.evidenceText, 12000)}
+MISSIONS ET PREUVES FILTRÉES: ${JSON.stringify(missions)}
 
-Tu coordonnes huit mini-agents indépendants. Analyse uniquement les preuves affectées.
-RÈGLES:
-- typeGuess est un faible indice regex, jamais une vérité.
-- Une preuve existante interdit de déclarer l élément absent: present ou weak.
-- Missing seulement si le scrape est suffisant et aucune preuve n existe.
-- Scrape partiel: unconfirmed.
-- Chaque present/weak cite proofUsed avec texte réel, source, pageUrl et position.
-- Recommandations clairement marquées, jamais présentées comme faits.
-- offerPricingDisplayAgent ne valide pas le prix final.
-- Aucun raisonnement interne. JSON strict seulement.
+Tu coordonnes huit experts CRO spécialisés. Lis et évalue les textes réels avant toute décision.
+PROTOCOLE OBLIGATOIRE:
+1. Chercher d abord toute preuve positive: H1, titre, bouton, texte, lien, image ou formulaire.
+2. Si une preuve existe, étudier sa qualité, sa clarté, sa position et sa force de conversion.
+3. Une section prouvée est PRESENT ou WEAK, jamais MISSING.
+4. MISSING exige un scrape suffisant ET une couverture spécialisée de la zone concernée.
+5. Si la couverture est partielle, classer UNCONFIRMED.
+6. Distinguer produit physique, service, SaaS et formation avant de recommander.
+7. Pour un service, parler de livrables, délais, révisions et accompagnement; jamais de livraison colis.
+8. Chaque verdict cite mot pour mot une preuve réelle avec source, URL et position.
+9. Chaque recommandation relie Observation, Impact conversion et Correction concrète.
+10. Si une section est déjà excellente, la déclarer STRONG et recommander de la conserver sans inventer de défaut.
+11. Si la page ne présente aucune faiblesse critique prouvée, conclure clairement que la page est excellente.
+12. typeGuess est un indice regex faible, jamais une vérité.
+13. offerPricingDisplayAgent décrit seulement l affichage du prix; le moteur pricing reste souverain.
+Aucune invention, aucune absence déduite du silence d une liste filtrée. JSON strict seulement.
 FORMAT:
 {"agents":[{"agentName":"nom exact","verdict":"...","sectionsDetected":[],"sectionsWeak":[],"sectionsMissing":[],"sectionsUnconfirmed":[],"proofUsed":[{"text":"...","source":"...","pageUrl":"...","position":1}],"recommendations":[],"confidence":"HIGH|MEDIUM|LOW"}]}
 `.trim();
@@ -828,7 +866,12 @@ function reconcileFunnelSurgeryWithEvidence({
             return blockProof(/\bh1\b|headline/i, /heading|dom-section/);
         }
         if (key === 'hero') {
-            if (h1 && ctas.length) return { text: `${h1} | ${typeof ctas[0] === 'string' ? ctas[0] : ctas[0]?.text || ''}`, source: 'hero-facts' };
+            if (h1) {
+                const ctaText = ctas.length
+                    ? (typeof ctas[0] === 'string' ? ctas[0] : ctas[0]?.text || ctas[0]?.label || '')
+                    : '';
+                return { text: [h1, ctaText].filter(Boolean).join(' | '), source: 'hero-facts' };
+            }
             return blockProof(/hero|above.?fold|banner/i);
         }
         if (key === 'sous-titre') return h2[0] ? { text: h2[0], source: 'heading' } : null;
@@ -851,21 +894,53 @@ function reconcileFunnelSurgeryWithEvidence({
         return synthesisMatch(synthesis.present, label) || synthesisMatch(synthesis.weak, label);
     };
 
+    const canConfirmSectionAbsence = label => {
+        if (!evidence?.scrapeSufficient || blocks.length < 8 || String(evidence?.evidenceText || '').length < 1200) return false;
+        const key = clean(label);
+        const required = /avis|temoign|garantie|badge|confiance|faq|objection/.test(key)
+            ? ['trustEvidenceScraper']
+            : /livraison|retour|stock|delai/.test(key)
+                ? ['deliveryReturnsEvidenceScraper']
+                : /image|video|galerie|media/.test(key)
+                    ? ['mediaEvidenceScraper']
+                    : /cta|contact|whatsapp|formulaire|checkout|panier/.test(key)
+                        ? ['contactEvidenceScraper', 'interactionEvidenceScraper']
+                        : /prix|offre|bundle|pack/.test(key)
+                            ? ['commerceEvidenceScraper']
+                            : /footer|legal|condition/.test(key)
+                                ? ['legalEvidenceScraper']
+                                : ['corePageScraper'];
+        return (evidence.miniScrapers || []).some(scraper =>
+            required.includes(scraper?.scraperName) &&
+            scraper?.success === true &&
+            Array.isArray(scraper?.evidenceBlocks) &&
+            scraper.evidenceBlocks.length >= 2
+        );
+    };
+
     const rows = (Array.isArray(surgery.surgeryMatrix) ? surgery.surgeryMatrix : []).map(row => {
         const proof = proofFor(row.section);
         const weakDecision = synthesisMatch(synthesis.weak, row.section);
         const missingDecision = synthesisMatch(synthesis.missing, row.section);
         if (proof) {
+            const rowKey = clean(row.section);
+            const deterministicWeak =
+                (rowKey === 'hero' && !ctas.length) ||
+                (rowKey === 'sous-titre' && !h2.length) ||
+                (rowKey === 'cta principal' && !ctas.length) ||
+                (rowKey === 'image produit' && imagesCount < 2);
+            const needsImprovement = Boolean(weakDecision || deterministicWeak);
             return {
                 ...row,
                 present: yes,
-                decision: weakDecision ? improve : keep,
+                decision: needsImprovement ? improve : keep,
+                quality: needsImprovement ? 'WEAK' : 'STRONG',
                 evidence: limitFunnelText(proof.text || proof.detectedText || proof.evidence || String(proof), 700),
                 problem: weakDecision?.problem || (weakDecision ? row.problem : ''),
                 confidence: proof.confidence || (proof.source === 'heading' || proof.source === 'button' ? 'HIGH' : 'MEDIUM')
             };
         }
-        if (missingDecision && evidence.scrapeSufficient) {
+        if (missingDecision && canConfirmSectionAbsence(row.section)) {
             return {
                 ...row,
                 decision: add,
@@ -888,6 +963,19 @@ function reconcileFunnelSurgeryWithEvidence({
     const improveSections = rows.filter(row => isDecision(row, improve)).slice(0, 10);
     const missingSections = rows.filter(row => isDecision(row, add)).slice(0, 10);
     const unconfirmedSections = rows.filter(row => isDecision(row, unconfirmedLabel)).slice(0, 12);
+    const pageQuality = {
+        status: missingSections.length === 0 && improveSections.length === 0 && keepSections.length >= 4
+            ? 'EXCELLENT'
+            : missingSections.length === 0 && improveSections.length <= 2
+                ? 'STRONG'
+                : 'NEEDS_WORK',
+        strongSections: keepSections.map(row => row.section).slice(0, 8),
+        weakSections: improveSections.map(row => row.section).slice(0, 8),
+        confirmedMissingSections: missingSections.map(row => row.section).slice(0, 8),
+        message: missingSections.length === 0 && improveSections.length === 0 && keepSections.length >= 4
+            ? (isAr ? 'الصفحة ممتازة حسب الأدلة المرصودة ولا تحتاج إلى عيوب مصطنعة.' : isEn ? 'The page is excellent based on observed evidence; no defects were invented.' : 'La page est excellente selon les preuves observées; aucun défaut artificiel n’est ajouté.')
+            : null
+    };
 
     const observed = label => Boolean(proofFor(label));
     const contradictsObserved = action => {
@@ -919,6 +1007,7 @@ function reconcileFunnelSurgeryWithEvidence({
             unconfirmed: unconfirmedSections
         },
         priorityPlan,
+        pageQuality,
         proofTrust: {
             ...(surgery.proofTrust || {}),
             missing: missingSections.map(row => row.section).slice(0, 6),
@@ -953,12 +1042,14 @@ function buildFunnelCompatibilityLayer({
 
     const sectionsAudit = matrix.map((row, index) => {
         const present = isObservedFunnelSection(row.present);
+        const decisionText = String(row.decision || '').toLowerCase();
+        const unconfirmed = /non confirm|unconfirmed|غير مؤكد/.test(decisionText);
         return {
             sectionType: row.section || row.sectionType || row.type || `SECTION_${index + 1}`,
             type: row.type || row.sectionType || row.section || `SECTION_${index + 1}`,
             label: row.section || row.label || row.sectionType || row.type || `Section ${index + 1}`,
             present,
-            status: present ? (String(row.decision || '').toLowerCase().includes('amélior') ? 'weak' : 'present') : 'missing',
+            status: present ? (decisionText.includes('amélior') || decisionText.includes('improve') ? 'weak' : 'present') : (unconfirmed ? 'unconfirmed' : 'missing'),
             decision: row.decision || null,
             content: row.evidence || row.detectedText || null,
             evidence: row.evidence || row.detectedText || null,
@@ -12417,7 +12508,7 @@ const langInstr = isAr
   : 'Réponds UNIQUEMENT en Français. Aucun mot en anglais ou arabe.';
         // ── 2. CACHE ──────────────────────────────────────────────────
         const contextKey = cleanProofText(JSON.stringify(safeContext || {}), 220) || 'no-context';
-        const cacheKey = `funnelspy_v13_evidence_${validUrl}_${userLang}_${mode}_${contextKey}`;
+        const cacheKey = `funnelspy_v14_legacy_agents_${validUrl}_${userLang}_${mode}_${contextKey}`;
         const cached   = cache.get(cacheKey);
         if (cached && !req.body.skipCache) {
             console.log(`💾 [${requestId}] Cache HIT — ${validUrl}`);
@@ -13041,6 +13132,11 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
         });
         Object.assign(funnelSurgery, reconciledFunnelSurgery);
         funnelSurgeryFallback = funnelSurgery;
+        console.log(
+            `[${requestId}] [FUNNEL-EVIDENCE-GUARD] h1=${h1Main !== ND} ctas=${ctaList.length} ` +
+            `h2=${h2List.length} blocks=${funnelEvidence.evidenceBlocks.length} ` +
+            `scrapeSufficient=${funnelEvidence.scrapeSufficient}`
+        );
         console.log(
             `[${requestId}] [FUNNEL-MINI-AGENTS] detected=${funnelEvidenceSynthesis.present.length} ` +
             `weak=${funnelEvidenceSynthesis.weak.length} missing=${funnelEvidenceSynthesis.missing.length} ` +
@@ -13964,6 +14060,39 @@ const funnelCompatibility = buildFunnelCompatibilityLayer({
     sectionsDetailed
 });
 funnelCompatibilityFallback = funnelCompatibility;
+
+const legacyFunnel = {
+    role: 'legacy-complete-additive',
+    version: 'legacy-funnel-v12',
+    projectIdentity: r1Safe.projectIdentity || null,
+    webCharte: r1Safe.webCharte || null,
+    pageArchitecture: funnelCompatibility.pageArchitecture,
+    aidaAnalysis: r1Safe.aidaAnalysis || null,
+    funnelMapping: r2Safe.funnelMapping || null,
+    pricingPsychology: r2Safe.pricingPsychology || null,
+    copywritingDeep: r2Safe.copywritingDeep || null,
+    aarrMetrics: r2Safe.aarrMetrics || null,
+    strategicBlueprint: r3Safe.strategicBlueprint || null,
+    quickWins: r3Safe.quickWins || [],
+    financialProjection: r3Safe.financialProjection || null,
+    technicalAudit: r3Safe.technicalAudit || null,
+    neuromarketing: r4Safe.neuromarketing || null,
+    globalScoring: r4Safe.globalScoring || null,
+    auditSummary,
+    auditScorecard,
+    auditSectionMap,
+    auditIssues,
+    auditQuickWins,
+    auditEvidence,
+    concreteActionPlan,
+    psychTriggers,
+    performanceSignals: perfSignals,
+    priceIntel,
+    sectionsAudit: funnelCompatibility.sectionsAudit,
+    megaRedesignPrompt: magicPrompt,
+    aiRewritePrompt: magicPrompt
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════
 // 📦 ASSEMBLAGE RÉPONSE FINALE GOD TIER
@@ -14036,11 +14165,8 @@ const finalResponse = {
     ),
     funnelEvidenceSynthesis,
     funnelPrimaryAnalysis: funnelEvidenceSynthesis,
-    legacyFunnelAnalysis: {
-        role: 'fallback-additive',
-        funnelSurgery,
-        sectionsAudit: funnelCompatibility.sectionsAudit
-    },
+    legacyFunnel,
+    legacyFunnelAnalysis: legacyFunnel,
     funnelAnalysisMode: 'evidence-first-additive',
     sectionsAudit: funnelCompatibility.sectionsAudit,
     proofModel,
