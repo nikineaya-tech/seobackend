@@ -275,6 +275,9 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
 async function scrapeUrlViaRailway(url, options = {}) {
     return runScrapeOnRailway('deep-scrape', {
         url,
+        clientAnalysisId: options.clientAnalysisId || null,
+        requestId: options.requestId || null,
+        purpose: options.purpose || 'deep-scrape',
         explore: options.explore !== false,
         maxExtraPages: options.maxExtraPages ?? 3,
         maxPages: options.maxPages ?? 4,
@@ -311,9 +314,9 @@ function getFunnelShortCache(key) {
     return entry.value;
 }
 
-async function runFunnelScrapeOnce(namespace, url, producer) {
+async function runFunnelScrapeOnce(namespace, url, producer, options = {}) {
     const key = `${namespace}:${normalizeFunnelCacheUrl(url)}`;
-    const cached = getFunnelShortCache(key);
+    const cached = options.skipCache === true ? null : getFunnelShortCache(key);
     if (cached) return { ...cached, fromShortScrapeCache: true };
     if (funnelScrapeInFlight.has(key)) return funnelScrapeInFlight.get(key);
 
@@ -487,15 +490,17 @@ function normalizeFunnelEvidencePayload(scrape = {}, pageUrl = '') {
     const blocks = [];
     const seen = new Set();
     const add = (block = {}, index = 0, fallbackSource = 'observed-text') => {
+        const sourceName = limitFunnelText(block.source || fallbackSource, 80);
         const text = limitFunnelText(
             block.text || block.textPreview ||
             [...list(block.headings), ...list(block.paragraphs)].join(' | '),
-            1400
+            /body-text/i.test(sourceName) ? 6000 : 1400
         );
         const url = limitFunnelText(block.pageUrl || block.url || pageUrl || scrape?.url || '', 500);
         if (!text && !url) return;
         const item = {
-            source: limitFunnelText(block.source || fallbackSource, 80),
+            id: limitFunnelText(block.id || `evidence-${index + 1}`, 80),
+            source: sourceName,
             pageUrl: url,
             selector: limitFunnelText(block.selector || '', 220) || null,
             position: Number(block.position || index + 1) || index + 1,
@@ -540,19 +545,30 @@ function normalizeFunnelEvidencePayload(scrape = {}, pageUrl = '') {
     }
 
     const evidenceBlocks = blocks.slice(0, 180);
+    const evidenceById = new Map(evidenceBlocks.map((block, index) => [
+        String(block.id || `evidence-${index + 1}`), block
+    ]));
     const evidenceText = limitFunnelText(
         source.evidenceText || evidenceBlocks.map(block => block.text).join(' | '), 24000
     );
     const miniScrapers = list(source.miniScrapers).length
         ? list(source.miniScrapers).slice(0, 12).map(scraper => ({
             scraperName: limitFunnelText(scraper?.scraperName || 'evidenceScraper', 100),
-            success: scraper?.success !== false,
+            success: scraper?.success !== false && (
+                list(scraper?.evidenceBlocks).length > 0 ||
+                list(scraper?.evidenceBlockRefs).length > 0 ||
+                Number(scraper?.evidenceCount || 0) > 0
+            ),
             pageUrl: limitFunnelText(scraper?.pageUrl || pageUrl || '', 500),
             evidenceText: limitFunnelText(scraper?.evidenceText || '', 8000),
-            evidenceBlocks: list(scraper?.evidenceBlocks).slice(0, 55).map(raw => {
-                const text = limitFunnelText(raw?.text || raw?.textPreview || '', 1400);
-                return evidenceBlocks.find(item => item.text === text) || null;
-            }).filter(Boolean),
+            evidenceBlocks: [
+                ...list(scraper?.evidenceBlockRefs).map(ref => evidenceById.get(String(ref)) || null),
+                ...list(scraper?.evidenceBlocks).slice(0, 55).map(raw => {
+                    const text = limitFunnelText(raw?.text || raw?.textPreview || '', 1400);
+                    return evidenceBlocks.find(item => item.text === text) || null;
+                })
+            ].filter(Boolean).filter((item, index, values) => values.indexOf(item) === index).slice(0, 55),
+            evidenceCount: Number(scraper?.evidenceCount || list(scraper?.evidenceBlockRefs).length || list(scraper?.evidenceBlocks).length || 0),
             limits: list(scraper?.limits).slice(0, 8).map(item => limitFunnelText(item, 240)).filter(Boolean)
         }))
         : [{
@@ -572,7 +588,15 @@ function normalizeFunnelEvidencePayload(scrape = {}, pageUrl = '') {
         miniScrapers,
         limits: [...list(source.limits), ...miniScrapers.flatMap(x => x.limits || [])]
             .map(item => limitFunnelText(item, 240)).filter(Boolean).slice(0, 16),
-        scrapeSufficient: evidenceBlocks.length >= 4 || evidenceText.length >= 800
+        scrapeSufficient: evidenceBlocks.length >= 10 && evidenceText.length >= 3000,
+        coverage: {
+            fullBody: evidenceBlocks.some(block => block.source === 'body-text' && block.text.length >= 2000),
+            domSections: evidenceBlocks.filter(block => /dom-section|legacy-dom-section/.test(block.source)).length,
+            headings: evidenceBlocks.filter(block => block.source === 'heading').length,
+            links: evidenceBlocks.filter(block => /link/.test(block.source)).length,
+            forms: evidenceBlocks.filter(block => block.source === 'form').length,
+            images: evidenceBlocks.filter(block => block.source === 'image-alt').length
+        }
     };
 }
 
@@ -591,15 +615,23 @@ function findFunnelEvidenceForSection(sectionValue, evidenceBlocks = []) {
         [/legal|privacy|condition|terms|footer/, /privacy|terms|conditions|mentions|legal|cookies|footer|copyright/i]
     ];
     const pair = pairs.find(([sectionRx]) => sectionRx.test(section));
-    return pair ? evidenceBlocks.find(block => pair[1].test(
+    if (!pair) return null;
+    const candidate = evidenceBlocks.find(block => pair[1].test(
         [block.typeGuess, block.labelGuess, block.source, block.selector, block.text, block.url].filter(Boolean).join(' ')
-    )) || null : null;
+    )) || null;
+    if (candidate && /trust|proof|review|avis|testimonial|social/.test(section) &&
+        /aucun avis|pas encore d['â€™ ]avis|no reviews?(?: yet)?|0 reviews?|لا توجد مراجعات|لا توجد تقييمات/i.test(String(candidate.text || ''))) {
+        return null;
+    }
+    return candidate;
 }
 
 function canFunnelAgentConfirmAbsence(definition = {}, evidence = {}) {
     const blocks = Array.isArray(evidence?.evidenceBlocks) ? evidence.evidenceBlocks : [];
     const evidenceText = String(evidence?.evidenceText || '');
-    if (!evidence?.scrapeSufficient || blocks.length < 8 || evidenceText.length < 1200) return false;
+    if (!evidence?.scrapeSufficient || blocks.length < 10 || evidenceText.length < 3000) return false;
+    const coverage = evidence.coverage || {};
+    if (!coverage.fullBody || Number(coverage.domSections || 0) < 5) return false;
 
     const scraperByAgent = {
         structureConversionAgent: ['corePageScraper'],
@@ -615,8 +647,7 @@ function canFunnelAgentConfirmAbsence(definition = {}, evidence = {}) {
     return (evidence.miniScrapers || []).some(scraper =>
         expected.includes(scraper?.scraperName) &&
         scraper?.success === true &&
-        Array.isArray(scraper?.evidenceBlocks) &&
-        scraper.evidenceBlocks.length >= 2
+        Number(scraper?.evidenceCount || scraper?.evidenceBlocks?.length || 0) >= 2
     );
 }
 
@@ -656,6 +687,22 @@ function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
                 ...item,
                 status: 'unconfirmed',
                 reason: 'Couverture spécialisée insuffisante pour confirmer cette absence.'
+            });
+        }
+    });
+    [detected, weak].forEach(items => {
+        for (let index = items.length - 1; index >= 0; index -= 1) {
+            const item = items[index];
+            const proof = findFunnelEvidenceForSection(item, evidence.evidenceBlocks);
+            if (proof) {
+                addProof(proof);
+                continue;
+            }
+            items.splice(index, 1);
+            unconfirmed.push({
+                ...item,
+                status: 'unconfirmed',
+                reason: 'Aucune preuve spécialisée ne confirme cette décision.'
             });
         }
     });
@@ -859,6 +906,9 @@ function reconcileFunnelSurgeryWithEvidence({
         const value = [block.selector, block.typeGuess, block.labelGuess, block.text].filter(Boolean).join(' ');
         return rx.test(value) && (!sourceRx || sourceRx.test(String(block.source || '')));
     });
+    const explicitReviewAbsence = blocks.find(block =>
+        /aucun avis|pas encore d['â€™ ]avis|no reviews?(?: yet)?|0 reviews?|لا توجد مراجعات|لا توجد تقييمات/i.test(String(block?.text || ''))
+    ) || null;
 
     const proofFor = label => {
         const key = clean(label);
@@ -886,7 +936,11 @@ function reconcileFunnelSurgeryWithEvidence({
         if (key === 'garantie') return blockProof(/garantie|warranty|refund|rembours|satisfaction/i);
         if (key === 'livraison') return blockProof(/livraison|shipping|delivery|expedition|telechargement instantane/i);
         if (key === 'retours') return blockProof(/retour|return|refund|rembours|exchange/i);
-        if (key === 'avis clients' || key === 'temoignages') return blockProof(/avis|review|rating|etoile|testimonial|temoignage/i);
+        if (key === 'avis clients' || key === 'temoignages') {
+            const reviewProof = blockProof(/avis|review|rating|etoile|testimonial|temoignage/i);
+            return reviewProof && !/aucun avis|no reviews?|0 reviews?/i.test(String(reviewProof.text || ''))
+                ? reviewProof : null;
+        }
         if (key === 'faq' || key === 'objections') return blockProof(/faq|questions frequentes|question|reponse|objection/i);
         if (key === 'footer') return blockProof(/footer|copyright|conditions|privacy|mentions legales/i);
         if (key === 'pages legales') return blockProof(/conditions|privacy|confidentialite|mentions legales|terms/i);
@@ -923,8 +977,17 @@ function reconcileFunnelSurgeryWithEvidence({
         const proof = proofFor(row.section);
         const weakDecision = synthesisMatch(synthesis.weak, row.section);
         const missingDecision = synthesisMatch(synthesis.missing, row.section);
+        const rowKey = clean(row.section);
+        if (/avis clients|temoignages/.test(rowKey) && explicitReviewAbsence) {
+            return {
+                ...row,
+                decision: add,
+                evidence: limitFunnelText(explicitReviewAbsence.text, 700),
+                problem: isEn ? 'The page explicitly states that no review is available.' : isAr ? 'توضح الصفحة صراحة عدم وجود مراجعات حاليا.' : 'La page indique explicitement qu’aucun avis n’est disponible.',
+                confidence: 'HIGH'
+            };
+        }
         if (proof) {
-            const rowKey = clean(row.section);
             const deterministicWeak =
                 (rowKey === 'hero' && !ctas.length) ||
                 (rowKey === 'sous-titre' && !h2.length) ||
@@ -4561,12 +4624,13 @@ async function exploreFunnelCommerce(url, options = {}) {
       || railwayResult.scrapeData
       || railwayResult.data
       || railwayResult;
-    const pages = exploredPages.filter(page => page && typeof page === 'object').length
-      ? exploredPages.filter(page => page && typeof page === 'object')
-      : [mainPage].filter(Boolean);
+    const pages = [railwayResult, ...exploredPages, mainPage]
+      .filter((page, index, values) => page && typeof page === 'object' && values.indexOf(page) === index);
 
     const products = pages
-      .flatMap(page => Array.isArray(page.productCards) ? page.productCards : [])
+      .flatMap(page => Array.isArray(page.productCards)
+        ? page.productCards
+        : Array.isArray(page.structuredEvidence?.productCards) ? page.structuredEvidence.productCards : [])
       .slice(0, 8)
       .map(p => ({
         name: p.title || p.name || '',
@@ -4593,7 +4657,7 @@ async function exploreFunnelCommerce(url, options = {}) {
       .filter(n => Number.isFinite(n) && n > 0);
 
     const mergedTrust = pages.reduce((acc, page) => {
-      const trust = page.trustSignals || {};
+      const trust = page.trustSignals || page.structuredEvidence?.trustSignals || {};
       for (const [key, value] of Object.entries(trust)) {
         if (Array.isArray(value)) {
           acc[key] = uniqueByKey([...(acc[key] || []), ...value], x => x.url || x);
@@ -4620,7 +4684,7 @@ async function exploreFunnelCommerce(url, options = {}) {
         metaDescription: mainPage.metaDescription || '',
         h1: mainPage.h1 ? [mainPage.h1] : [],
         h2: mainPage.headings?.h2 || [],
-        schemaCount: Array.isArray(mainPage.jsonLd) ? mainPage.jsonLd.length : 0,
+        schemaCount: Array.isArray(railwayResult.jsonLd || mainPage.jsonLd) ? (railwayResult.jsonLd || mainPage.jsonLd).length : 0,
         imageCount: Array.isArray(mainPage.images) ? mainPage.images.length : 0,
         missingAltCount: Array.isArray(mainPage.images) ? mainPage.images.filter(img => !img.alt).length : 0
       },
@@ -4710,7 +4774,10 @@ async function exploreFunnelCommerce(url, options = {}) {
             maxClicks: 6,
             maxButtonsPerPage: 4,
             crawlBudgetMs: 45000,
-            timeout: 120000
+            timeout: 120000,
+            clientAnalysisId: options.clientAnalysisId,
+            requestId: options.requestId,
+            purpose: options.purpose || 'commerce'
           });
 
           return buildCommerceFromRailwayResult(railwayResult);
@@ -5049,7 +5116,7 @@ console.log('\n✅ PARTIE 3/5: Validators + Retry + Utilities loaded successfull
 // 🕷️ MODULE 1: SCRAPING ENGINE (FULL EXTRACTION & HTML DUMP)
 // ═══════════════════════════════════════════════════════════════════
 
-async function scrapeStealth(validUrl) {
+async function scrapeStealth(validUrl, scrapeOptions = {}) {
     const playwrightWrapper = require('./playwright-wrapper.cjs');
     const startTime = Date.now();
     let pw = null;
@@ -5712,10 +5779,10 @@ const EXTRACTION_NOT_FOUND =
             {};
         const firstArray = (...values) => values.find(value => Array.isArray(value) && value.length) || [];
         const headingGroups = [
+            railwayResult.headingGroups,
+            !Array.isArray(railwayResult.headings) ? railwayResult.headings : null,
             mainPage.headingGroups,
             !Array.isArray(mainPage.headings) ? mainPage.headings : null,
-            railwayResult.headingGroups,
-            !Array.isArray(railwayResult.headings) ? railwayResult.headings : null
         ].find(value => value && typeof value === 'object') || {};
         const h1List = firstArray(
             headingGroups.h1,
@@ -5725,14 +5792,14 @@ const EXTRACTION_NOT_FOUND =
         const h2List = firstArray(headingGroups.h2, mainPage.h2, railwayResult.h2);
         const h3List = firstArray(headingGroups.h3, mainPage.h3, railwayResult.h3);
         const rawSections = firstArray(
-            mainPage.sectionRawBlocks,
-            mainPage.sectionsDetailed,
             railwayResult.sectionRawBlocks,
-            railwayResult.sectionsDetailed
+            railwayResult.sectionsDetailed,
+            mainPage.sectionRawBlocks,
+            mainPage.sectionsDetailed
         );
         const evidencePayload =
-            mainPage.evidencePayload ||
             railwayResult.evidencePayload ||
+            mainPage.evidencePayload ||
             railwayResult.scrapeData?.evidencePayload ||
             {};
         const miniScrapers = firstArray(
@@ -5740,23 +5807,36 @@ const EXTRACTION_NOT_FOUND =
             mainPage.miniScrapers,
             railwayResult.miniScrapers
         );
-        const prices = firstArray(mainPage.prices, railwayResult.prices);
+        const prices = firstArray(railwayResult.prices, mainPage.prices);
         const firstPrice = prices.find(p => Number.isFinite(Number(p.value))) || null;
 
         const primaryPrice = firstPrice ? Number(firstPrice.value) : null;
         const currency = firstPrice?.currency || null;
 
         const bodyText = normText(
-            mainPage.text ||
-            mainPage.bodyText ||
             railwayResult.bodyText ||
             railwayResult.text ||
+            mainPage.bodyText ||
+            mainPage.text ||
             evidencePayload.evidenceText ||
             mainPage.textPreview ||
             mainPage.title ||
             ''
         ).slice(0, 15000);
-        const metaDescription = mainPage.metaDescription || '';
+        const metaDescription = railwayResult.metaDescription || mainPage.metaDescription || '';
+        const structuredEvidence = railwayResult.structuredEvidence || mainPage.structuredEvidence || {};
+        const faqData = structuredEvidence.faq || mainPage.faq || railwayResult.faq || {};
+        const observedForms = firstArray(railwayResult.forms, structuredEvidence.forms, mainPage.forms);
+        const observedLegalLinks = firstArray(
+            railwayResult.legalLinks,
+            structuredEvidence.legalLinks,
+            mainPage.legalLinks,
+            firstArray(railwayResult.links, mainPage.links).filter(link =>
+                /privacy|confidentialit[ée]|terms|conditions|mentions|legal|cookies/i.test(
+                    [link?.text, link?.label, link?.url, link?.href].filter(Boolean).join(' ')
+                )
+            )
+        );
 
         const escHtml = (value = '') => String(value ?? '')
             .replace(/&/g, '&amp;')
@@ -5773,14 +5853,21 @@ const EXTRACTION_NOT_FOUND =
             h1List.map(h => `<h1>${escHtml(h)}</h1>`).join(''),
             h2List.map(h => `<h2>${escHtml(h)}</h2>`).join(''),
             h3List.map(h => `<h3>${escHtml(h)}</h3>`).join(''),
-            Array.isArray(mainPage.ctas)
-                ? mainPage.ctas
+            Array.isArray(railwayResult.ctas || mainPage.ctas)
+                ? (railwayResult.ctas || mainPage.ctas)
                     .map(c => `<a href="${escHtml(c.href || '#')}">${escHtml(c.text || c.label || '')}</a>`)
                     .join('')
                 : '',
+            firstArray(railwayResult.images, mainPage.images).slice(0, 12)
+                .map(image => `<img src="${escHtml(image.url || image.src || '')}" alt="${escHtml(image.alt || '')}">`).join(''),
+            observedForms.slice(0, 6).map(() => '<form></form>').join(''),
+            firstArray(faqData.detectedBlocks, faqData.jsonLdFaqs).slice(0, 8)
+                .map(item => `<section class="faq"><p>${escHtml(item.text || item.question || item.name || '')}</p></section>`).join(''),
+            observedLegalLinks.slice(0, 12)
+                .map(link => `<a rel="legal" href="${escHtml(link.url || link.href || '')}">${escHtml(link.text || link.label || '')}</a>`).join(''),
             prices.map(p => `<span class="price">${escHtml([p.value, p.currency].filter(Boolean).join(' '))}</span>`).join(''),
-            Array.isArray(mainPage.productCards)
-                ? mainPage.productCards
+            Array.isArray(structuredEvidence.productCards || mainPage.productCards)
+                ? (structuredEvidence.productCards || mainPage.productCards)
                     .slice(0, 8)
                     .map(p => `<article class="product-card"><h2>${escHtml(p.title || p.name || '')}</h2><p>${escHtml(p.textPreview || p.description || '')}</p><a>${escHtml(p.cta || '')}</a></article>`)
                     .join('')
@@ -5790,24 +5877,48 @@ const EXTRACTION_NOT_FOUND =
         ].join('');
 
         const cmsSignals =
-            mainPage.weakTechnicalHints?.cms ||
             railwayResult.weakTechnicalHints?.cms ||
+            mainPage.weakTechnicalHints?.cms ||
             mainPage.cmsSignals ||
             {};
         const ecommerceSignals =
-            mainPage.weakTechnicalHints?.commerce ||
             railwayResult.weakTechnicalHints?.commerce ||
+            mainPage.weakTechnicalHints?.commerce ||
             mainPage.ecommerceSignals ||
             {};
         const trust =
-            mainPage.mentionHints ||
+            structuredEvidence.mentionHints ||
             railwayResult.mentionHints ||
+            mainPage.mentionHints ||
             mainPage.trustSignals ||
             {};
         const observedText = [bodyText, evidencePayload.evidenceText]
             .filter(Boolean).join(' ').toLowerCase();
-        const observedCtas = firstArray(mainPage.ctas, railwayResult.ctas);
-        const observedImages = firstArray(mainPage.images, railwayResult.images);
+        const observedCtas = firstArray(railwayResult.ctas, mainPage.ctas);
+        const observedImages = firstArray(railwayResult.images, mainPage.images);
+        const reviewAbsenceObserved = /aucun avis|pas encore d['â€™ ]avis|no reviews?(?: yet)?|0 reviews?|لا توجد مراجعات|لا توجد تقييمات/i.test(observedText);
+        const positiveReviewObserved = !reviewAbsenceObserved && /\bavis\b|\breviews?\b|rating|[ée]toile|testimonial|témoignage|preuve sociale/i.test(observedText);
+        const guaranteeObserved = Boolean(
+            trust.guaranteeTerms || trust.hasGuarantee ||
+            /garantie|guarantee|warranty|rembours/i.test(observedText)
+        );
+        const legalObserved = observedLegalLinks.length > 0 ||
+            /mentions légales|privacy|confidentialité|terms|conditions générales/i.test(observedText);
+        const paymentObserved = Boolean(
+            trust.paymentTerms || /visa|mastercard|paypal|stripe|paiement sécurisé/i.test(observedText)
+        );
+        const evidenceBlocks = Array.isArray(evidencePayload.evidenceBlocks)
+            ? evidencePayload.evidenceBlocks : [];
+        const observedTestimonials = positiveReviewObserved
+            ? evidenceBlocks.filter(block => /avis|review|rating|testimonial|témoignage/i.test(
+                [block.source, block.typeGuess, block.labelGuess, block.text].filter(Boolean).join(' ')
+              ) && !/aucun avis|no reviews?|0 reviews?/i.test(String(block.text || '')))
+                .map(block => block.text).filter(Boolean).slice(0, 5)
+            : [];
+        const observedGuarantees = guaranteeObserved
+            ? evidenceBlocks.filter(block => /garantie|guarantee|warranty|rembours/i.test(String(block.text || '')))
+                .map(block => block.text).filter(Boolean).slice(0, 5)
+            : [];
 
         const priceIntel = hardenFunnelPriceIntel({
             ...emptyPriceIntel(),
@@ -5885,11 +5996,11 @@ const EXTRACTION_NOT_FOUND =
                 [section?.className, section?.labelGuess, section?.text, section?.textPreview].filter(Boolean).join(' ')
             ))) add('OFFER', 'Offre / catalogue', 85, 'Cartes produit et offre observées');
             if (priceIntel.detected || ecommerceSignals.hasPrice || prices.length) add('PRICING', 'Prix / offre', priceIntel.detected ? 85 : 60, prices.slice(0, 3).map(p => [p.value, p.currency].filter(Boolean).join(' ')).join(' | '));
-            if (trust.reviewTerms || /avis|review|rating|témoignage|testimonial/.test(observedText)) add('SOCIAL_PROOF', 'Preuves sociales', 70, 'Texte de preuve sociale observé');
+            if (positiveReviewObserved) add('SOCIAL_PROOF', 'Preuves sociales', 70, 'Preuve sociale positive observée');
             if (trust.guaranteeTerms || trust.deliveryTerms || trust.contactTerms || trust.whatsappTerms) add('TRUST', 'Signaux de confiance', 70, 'Mentions de confiance observées');
-            if (mainPage.faq?.detectedBlocks?.length || mainPage.faq?.jsonLdFaqs?.length || /faq|questions fréquentes/.test(observedText)) add('FAQ', 'FAQ', 80, 'Questions/réponses observées');
+            if (faqData.detectedBlocks?.length || faqData.jsonLdFaqs?.length || /faq|questions fréquentes/.test(observedText)) add('FAQ', 'FAQ', 80, 'Questions/réponses observées');
             if (observedCtas.length) add('CTA', 'CTA', 85, observedCtas.slice(0, 3).map(c => typeof c === 'string' ? c : c.text || c.label || '').filter(Boolean).join(' | '));
-            if (Array.isArray(mainPage.forms) && mainPage.forms.length) add('FORM', 'Formulaire', 70, `${mainPage.forms.length} form(s)`);
+            if (observedForms.length) add('FORM', 'Formulaire', 70, `${observedForms.length} form(s)`);
             if (Array.isArray(mainPage.contactLinks) && mainPage.contactLinks.length) add('CONTACT', 'Contact', 70, `${mainPage.contactLinks.length} contact links`);
             if (rawSections.some(section => /footer|copyright|mentions légales|privacy|conditions/.test(
                 [section?.typeGuess, section?.labelGuess, section?.text, section?.textPreview].filter(Boolean).join(' ').toLowerCase()
@@ -5928,9 +6039,9 @@ const EXTRACTION_NOT_FOUND =
                 hasWhatsApp: Boolean(
                     trust.whatsappTerms ||
                     trust.hasWhatsapp ||
-                    (Array.isArray(mainPage.whatsappLinks) && mainPage.whatsappLinks.length)
+                    (Array.isArray(structuredEvidence.whatsappLinks) && structuredEvidence.whatsappLinks.length)
                 ),
-                hasSchema: Array.isArray(mainPage.jsonLd) && mainPage.jsonLd.length > 0,
+                hasSchema: Array.isArray(railwayResult.jsonLd || mainPage.jsonLd) && (railwayResult.jsonLd || mainPage.jsonLd).length > 0,
                 hasGA4: Boolean(cmsSignals.googleTagManager),
                 hasGTM: Boolean(cmsSignals.googleTagManager),
                 hasFBPixel: Boolean(cmsSignals.facebookPixel),
@@ -5952,10 +6063,10 @@ const EXTRACTION_NOT_FOUND =
                 },
                 realCTAs: observedCtas.map(c => typeof c === 'string' ? c : c.text || c.label || '').filter(Boolean).slice(0, 20),
                 heroText: bodyText.substring(0, 300),
-                testimonials: [],
-                guarantees: [],
-                faq: Array.isArray(mainPage.faq?.detectedBlocks)
-                    ? mainPage.faq.detectedBlocks.slice(0, 5)
+                testimonials: observedTestimonials,
+                guarantees: observedGuarantees,
+                faq: Array.isArray(faqData.detectedBlocks)
+                    ? faqData.detectedBlocks.slice(0, 8)
                     : [],
                 bulletBenefits: h2List.slice(0, 8),
                 allButtons: observedCtas.map(c => typeof c === 'string' ? c : c.text || c.label || '').filter(Boolean).slice(0, 20),
@@ -5979,25 +6090,26 @@ const EXTRACTION_NOT_FOUND =
                 hasWhatsApp: Boolean(
                     trust.whatsappTerms ||
                     trust.hasWhatsapp ||
-                    (Array.isArray(mainPage.whatsappLinks) && mainPage.whatsappLinks.length)
+                    (Array.isArray(structuredEvidence.whatsappLinks) && structuredEvidence.whatsappLinks.length)
                 ),
-                hasPhoneNumber: Array.isArray(mainPage.phones) && mainPage.phones.length > 0,
-                hasReviews: Boolean(trust.reviewTerms || trust.hasReviews),
-                hasMoneyBackGuarantee: Boolean(trust.guaranteeTerms || trust.hasGuarantee),
-                hasPaymentLogos: false,
-                hasLegalPages: false,
+                hasPhoneNumber: Array.isArray(railwayResult.phones || mainPage.phones) && (railwayResult.phones || mainPage.phones).length > 0,
+                hasReviews: positiveReviewObserved,
+                reviewsExplicitlyAbsent: reviewAbsenceObserved,
+                hasMoneyBackGuarantee: guaranteeObserved,
+                hasPaymentLogos: paymentObserved,
+                hasLegalPages: legalObserved,
                 hasCOD: Boolean(ecommerceSignals.hasCOD),
                 trustScore: null
             },
 
             contacts: {
-                phones: Array.isArray(mainPage.phones) ? mainPage.phones : [],
-                emails: Array.isArray(mainPage.emails) ? mainPage.emails : []
+                phones: Array.isArray(railwayResult.phones || mainPage.phones) ? (railwayResult.phones || mainPage.phones) : [],
+                emails: Array.isArray(railwayResult.emails || mainPage.emails) ? (railwayResult.emails || mainPage.emails) : []
             },
 
             schemaData: {
-                types: Array.isArray(mainPage.jsonLd) ? mainPage.jsonLd.map(x => x.type).filter(Boolean) : [],
-                count: Array.isArray(mainPage.jsonLd) ? mainPage.jsonLd.length : 0
+                types: Array.isArray(railwayResult.jsonLd || mainPage.jsonLd) ? (railwayResult.jsonLd || mainPage.jsonLd).map(x => x.type).filter(Boolean) : [],
+                count: Array.isArray(railwayResult.jsonLd || mainPage.jsonLd) ? (railwayResult.jsonLd || mainPage.jsonLd).length : 0
             },
 
             sections: {
@@ -6008,19 +6120,19 @@ const EXTRACTION_NOT_FOUND =
                 hasTestim: pageSections.some(s => s.type === 'SOCIAL_PROOF'),
                 hasFAQ: pageSections.some(s => s.type === 'FAQ'),
                 hasCTA: pageSections.some(s => s.type === 'CTA'),
-                hasFooter: false
+                hasFooter: pageSections.some(s => s.type === 'FOOTER') || legalObserved
             },
 
             meta: {
                 title: mainPage.title || '',
                 description: metaDescription,
-                canonical: mainPage.canonical || validUrl,
+                canonical: railwayResult.canonical || mainPage.canonical || validUrl,
                 ogImage: mainPage.openGraph?.['og:image'] || '',
                 ogTitle: mainPage.openGraph?.['og:title'] || '',
                 ogDescription: mainPage.openGraph?.['og:description'] || '',
                 robots: '',
                 hasOG: Boolean(mainPage.openGraph && Object.keys(mainPage.openGraph).length),
-                lang: mainPage.language || '',
+                lang: railwayResult.language || mainPage.language || '',
                 keywords: ''
             },
 
@@ -6034,6 +6146,10 @@ const EXTRACTION_NOT_FOUND =
             sectionsDetailed: rawSections,
             evidencePayload,
             miniScrapers,
+            structuredEvidence,
+            pagesExplored: Array.isArray(railwayResult.pagesExplored) ? railwayResult.pagesExplored : [],
+            pipelineDebug: railwayResult.pipelineDebug || null,
+            jobContext: railwayResult.jobContext || null,
 
             trackingIntel: {
                 hasGoogleAnalytics: Boolean(cmsSignals.googleTagManager),
@@ -6068,16 +6184,16 @@ const EXTRACTION_NOT_FOUND =
                 h1: h1List[0] || '',
                 h2s: h2List,
                 h3s: h3List,
-                canonical: mainPage.canonical || validUrl,
-                hasCanonical: Boolean(mainPage.canonical),
+                canonical: railwayResult.canonical || mainPage.canonical || validUrl,
+                hasCanonical: Boolean(railwayResult.canonical || mainPage.canonical),
                 robots: '',
                 ogTitle: mainPage.openGraph?.['og:title'] || '',
                 ogDescription: mainPage.openGraph?.['og:description'] || '',
                 ogImage: mainPage.openGraph?.['og:image'] || '',
-                lang: mainPage.language || null,
-                schemaTypes: Array.isArray(mainPage.jsonLd) ? mainPage.jsonLd.map(x => x.type).filter(Boolean) : [],
-                schemaCount: Array.isArray(mainPage.jsonLd) ? mainPage.jsonLd.length : 0,
-                hasSchema: Array.isArray(mainPage.jsonLd) && mainPage.jsonLd.length > 0,
+                lang: railwayResult.language || mainPage.language || null,
+                schemaTypes: Array.isArray(railwayResult.jsonLd || mainPage.jsonLd) ? (railwayResult.jsonLd || mainPage.jsonLd).map(x => x.type).filter(Boolean) : [],
+                schemaCount: Array.isArray(railwayResult.jsonLd || mainPage.jsonLd) ? (railwayResult.jsonLd || mainPage.jsonLd).length : 0,
+                hasSchema: Array.isArray(railwayResult.jsonLd || mainPage.jsonLd) && (railwayResult.jsonLd || mainPage.jsonLd).length > 0,
                 wordCount: Number(mainPage.wordCount || 0)
             },
 
@@ -6112,7 +6228,10 @@ const EXTRACTION_NOT_FOUND =
                     maxClicks: 6,
                     maxButtonsPerPage: 4,
                     crawlBudgetMs: 45000,
-                    timeout: 120000
+                    timeout: 120000,
+                    clientAnalysisId: scrapeOptions.clientAnalysisId,
+                    requestId: scrapeOptions.requestId,
+                    purpose: scrapeOptions.purpose || 'deep-scrape'
                 });
 
                 const adapted = buildScrapeStealthFromRailwayResult(railwayResult);
@@ -12454,6 +12573,7 @@ function normalizeScrapeForFunnel(raw = {}) {
 app.post('/api/analyze-funnel', requireAuth, requireReportQuota, dedupeFunnelAnalysis, persistGeneratedReport('funnel'), analysisLimiter, async (req, res) => {
     const startTime = Date.now();
     const requestId = `SPY12-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
+    const clientAnalysisId = String(req.body?.clientAnalysisId || requestId).slice(0, 120);
     
     // Sauvegarde des données brutes pour le fallback en cas de crash de l'IA
     let scrapedRawData = null;
@@ -12523,7 +12643,11 @@ const langInstr = isAr
         // ══════════════════════════════════════════════════════════════
         console.log(`${requestId} Scraping deep...`);
 
-        let scrape = await runFunnelScrapeOnce('deep-scrape', validUrl, () => deepScrapeFunnel(validUrl));
+        let scrape = await runFunnelScrapeOnce('deep-scrape', validUrl, () => deepScrapeFunnel(validUrl, {
+            clientAnalysisId,
+            requestId,
+            purpose: 'deep-scrape'
+        }), { skipCache: req.body.skipCache === true });
         if (scrape?.html) scrape.html = String(scrape.html).slice(0, 180000);
         if (scrape?.bodyText) scrape.bodyText = limitFunnelText(scrape.bodyText, 12000);
         if (scrape?.brand?.fullTextSample) scrape.brand.fullTextSample = limitFunnelText(scrape.brand.fullTextSample, 12000);
@@ -12561,8 +12685,10 @@ scrapedRawData = cleanFunnelScrapePayload(scrape);
             lang: validLang,
             userContext: safeContext,
             baseScrape: scrape,
-            requestId
-        }));
+            requestId,
+            clientAnalysisId,
+            purpose: 'commerce'
+        }), { skipCache: req.body.skipCache === true });
 
         const commercePriceCandidates = Array.isArray(commerceExploration?.observed?.priceCandidates)
             ? commerceExploration.observed.priceCandidates
@@ -12902,6 +13028,15 @@ const ctaCoverage = allSections.length > 0
     : (ctaList.length > 0 ? 100 : 0);
 
 const imageIntel = (() => {
+    const structuredImages = Array.isArray(scrape.images) ? scrape.images : [];
+    if (structuredImages.length) {
+        return {
+            totalImages: structuredImages.length,
+            missingAlt: structuredImages.filter(image => !String(image?.alt || '').trim()).length,
+            webpImages: structuredImages.filter(image => /\.webp(?:$|\?)/i.test(String(image?.url || image?.src || ''))).length,
+            lazyLoadImages: structuredImages.filter(image => image?.loading === 'lazy' || image?.lazy === true).length
+        };
+    }
     if (typeof extractPerfSignals === 'function') {
         const perf = extractPerfSignals(rawHtml) || {};
         return {
@@ -14180,6 +14315,81 @@ const legacyFunnel = {
     aiRewritePrompt: magicPrompt
 };
 
+const funnelEvidenceBlocks = Array.isArray(funnelEvidence?.evidenceBlocks)
+    ? funnelEvidence.evidenceBlocks : [];
+const funnelBodyTextLength = String(scrape?.bodyText || scrape?.text || '').length;
+const funnelSectionRawBlocksCount = Array.isArray(scrape?.sectionRawBlocks)
+    ? scrape.sectionRawBlocks.length : 0;
+const funnelEvidenceBlocksCount = funnelEvidenceBlocks.length;
+const scrapeInsufficient =
+    funnelBodyTextLength < 3000 ||
+    funnelEvidenceBlocksCount < 10 ||
+    funnelSectionRawBlocksCount < 5;
+const evidenceSignalCount = pattern => funnelEvidenceBlocks.filter(block =>
+    pattern.test([block?.source, block?.typeGuess, block?.labelGuess, block?.text].filter(Boolean).join(' '))
+).length;
+const workerPipelineDebug = scrape?.pipelineDebug || {};
+const debugWarnings = [];
+if (funnelBodyTextLength < 3000) debugWarnings.push('bodyTextLength below 3000');
+if (funnelEvidenceBlocksCount < 10) debugWarnings.push('evidenceBlocksCount below 10');
+if (funnelSectionRawBlocksCount < 5) debugWarnings.push('sectionRawBlocksCount below 5');
+if (scrape?.partial) debugWarnings.push('Railway result marked partial');
+const debugFunnelPipeline = {
+    targetUrl: validUrl,
+    clientAnalysisId,
+    requestId,
+    railwayRequested: shouldUseRailwayScraping(),
+    railwayUsed: scrape?.executionLayer === 'railway' || scrape?.fetchLayer === 'railway' || Boolean(scrape?.sourceJobId),
+    railwayJobId: scrape?.sourceJobId || scrape?.jobContext?.railwayJobId || null,
+    railwaySuccess: Boolean(scrape?.success),
+    railwayPartial: Boolean(scrape?.partial),
+    purpose: scrape?.jobContext?.purpose || 'deep-scrape',
+    rawResultBytes: Number(workerPipelineDebug.rawResultBytes || 0) || null,
+    safeResultBytes: Number(workerPipelineDebug.safeResultBytes || 0) || null,
+    smallResultBytes: Number(workerPipelineDebug.smallResultBytes || 0) || null,
+    bodyTextLength: funnelBodyTextLength,
+    evidenceTextLength: String(funnelEvidence?.evidenceText || '').length,
+    evidenceBlocksCount: funnelEvidenceBlocksCount,
+    sectionRawBlocksCount: funnelSectionRawBlocksCount,
+    pagesExploredCount: Array.isArray(scrape?.pagesExplored) ? scrape.pagesExplored.length : 0,
+    ctaCount: Array.isArray(scrape?.copyIntel?.realCTAs) ? scrape.copyIntel.realCTAs.length : 0,
+    priceSignalsCount: Array.isArray(scrape?.priceIntel?.sourceEvidence)
+        ? scrape.priceIntel.sourceEvidence.length
+        : Array.isArray(scrape?.prices) ? scrape.prices.length : 0,
+    reviewSignalsCount: funnelEvidenceBlocks.filter(block =>
+        /avis|review|rating|testimonial|témoignage/i.test(String(block?.text || '')) &&
+        !/aucun avis|no reviews?|0 reviews?/i.test(String(block?.text || ''))
+    ).length,
+    reviewAbsenceSignalsCount: evidenceSignalCount(/aucun avis|no reviews?|0 reviews?/i),
+    guaranteeSignalsCount: evidenceSignalCount(/garantie|guarantee|warranty|rembours/i),
+    faqSignalsCount: evidenceSignalCount(/faq|question fréquente|frequently asked/i),
+    blockedUsefulPages: Array.isArray(scrape?.blockedUsefulPages) ? scrape.blockedUsefulPages : [],
+    miniScrapersCalled: (funnelEvidence?.miniScrapers || []).map(item => item.scraperName),
+    miniAgentsCalled: (funnelMiniAgents || []).map(item => item.agentName),
+    finalAgentUsed: funnelMiniAgentRun?.execution || 'unknown',
+    legacyFallbackUsed: funnelMiniAgentRun?.execution === 'fallback-unconfirmed',
+    finalResponseSource: scrapeInsufficient ? 'factual-evidence-only' : 'evidence-agents-plus-legacy',
+    renderedLayerUsed: scrapeInsufficient ? 'debugFunnelPipeline' : 'funnelPrimaryAnalysis',
+    scrapeInsufficient,
+    failurePoint: scrapeInsufficient ? 'INSUFFICIENT_CANONICAL_EVIDENCE' : null,
+    warnings: debugWarnings
+};
+const funnelPrimaryAnalysis = scrapeInsufficient ? {
+    status: 'insufficient',
+    definitive: false,
+    message: 'Scrape insuffisant : impossible de juger correctement cette page.',
+    observedEvidence: funnelEvidenceBlocks.slice(0, 12),
+    present: funnelEvidenceSynthesis?.present || [],
+    weak: [],
+    missing: [],
+    unconfirmed: funnelEvidenceSynthesis?.unconfirmed || [],
+    recommendations: []
+} : {
+    ...funnelEvidenceSynthesis,
+    status: 'ready',
+    definitive: true
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ══════════════════════════════════════════════════════
 // 📦 ASSEMBLAGE RÉPONSE FINALE GOD TIER
@@ -14251,7 +14461,8 @@ const finalResponse = {
         funnelMiniAgents.map(agent => [agent.agentName, agent])
     ),
     funnelEvidenceSynthesis,
-    funnelPrimaryAnalysis: funnelEvidenceSynthesis,
+    funnelPrimaryAnalysis,
+    debugFunnelPipeline,
     ctaIntelligence,
     copySignals,
     funnelExpertAnalysis,
@@ -14586,6 +14797,37 @@ try {
                 funnelSurgery: partialSurgery,
                 funnelSectionSurgery: partialSurgery,
                 funnelSectionScanner: partialSurgery,
+                funnelPrimaryAnalysis: {
+                    status: 'insufficient',
+                    definitive: false,
+                    message: 'Scrape insuffisant : impossible de juger correctement cette page.',
+                    present: [], weak: [], missing: [], recommendations: [],
+                    unconfirmed: partialSections.slice(0, 12).map(section => ({
+                        sectionType: section?.typeGuess || section?.type || section?.title || 'section',
+                        status: 'unconfirmed'
+                    }))
+                },
+                debugFunnelPipeline: {
+                    targetUrl: req.body?.url || safePartial?.finalUrl || safePartial?.url || null,
+                    clientAnalysisId,
+                    requestId,
+                    railwayRequested: shouldUseRailwayScraping(),
+                    railwayUsed: Boolean(safePartial?.sourceJobId || safePartial?.executionLayer === 'railway'),
+                    railwayJobId: safePartial?.sourceJobId || safePartial?.jobContext?.railwayJobId || null,
+                    railwaySuccess: true,
+                    railwayPartial: true,
+                    bodyTextLength: String(safePartial?.bodyText || '').length,
+                    evidenceTextLength: String(safePartial?.evidencePayload?.evidenceText || '').length,
+                    evidenceBlocksCount: safePartial?.evidencePayload?.evidenceBlocks?.length || 0,
+                    sectionRawBlocksCount: partialSections.length,
+                    pagesExploredCount: safePartial?.pagesExplored?.length || 0,
+                    ctaCount: partialCtas.length,
+                    scrapeInsufficient: true,
+                    finalResponseSource: 'factual-fallback-after-agent-error',
+                    renderedLayerUsed: 'debugFunnelPipeline',
+                    failurePoint: 'REPORT_GENERATION_AGENT_ERROR',
+                    warnings: [String(error?.message || error).slice(0, 300)]
+                },
                 sectionsAudit: partialCompatibility.sectionsAudit,
                 pageArchitecture: partialCompatibility.pageArchitecture,
                 auditSectionMap: partialCompatibility.sectionsAudit,
@@ -14616,6 +14858,17 @@ try {
             error:    'ANALYSIS_FAILED_V12',
             message:  error.message,
             details:  error.stack,
+            debugFunnelPipeline: {
+                targetUrl: req.body?.url || null,
+                clientAnalysisId,
+                requestId,
+                railwayRequested: shouldUseRailwayScraping(),
+                railwayUsed: false,
+                railwaySuccess: false,
+                scrapeInsufficient: true,
+                failurePoint: 'FUNNEL_PIPELINE_FATAL_ERROR',
+                warnings: [String(error?.message || error).slice(0, 300)]
+            },
             performance: {
                 totalTime: elapsed,
                 timestamp: Date.now()
@@ -18061,7 +18314,7 @@ function mergeScrapeData(base = {}, extra = {}) {
 // 🔍 DEEP SCRAPE FUNNEL
 // ═══════════════════════════════════════════════════════════════════
 
-async function deepScrapeFunnel(url) {
+async function deepScrapeFunnel(url, scrapeOptions = {}) {
   const startTime = Date.now();
   console.log(`🔍 [DEEP SCRAPE] Analyse profonde : ${url}`);
 
@@ -18212,7 +18465,7 @@ async function deepScrapeFunnel(url) {
   };
 
   try {
-    let scrapeResult = await scrapeStealth(url);
+    let scrapeResult = await scrapeStealth(url, scrapeOptions);
 
     scrapeResult = normalizeScrapeForFunnel(scrapeResult);
 

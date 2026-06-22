@@ -13201,6 +13201,7 @@ async function analyzeFunnel(e) {
   try {
     const response = await analyzeWithPolling('/api/analyze-funnel', {
       url,
+      clientAnalysisId: runToken,
       userLang:   lang,
       salesAngle: angle,
       context: collectBusinessContext('funnel')
@@ -16951,6 +16952,54 @@ function renderFunnelLegacyModules(data = {}, opts = {}) {
         .join('');
 }
 
+function renderFunnelPrimaryEvidence(data = {}, { isAr = false, isEn = false } = {}) {
+    const primary = data.funnelPrimaryAnalysis || data.funnelEvidenceSynthesis || {};
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+    const groups = [
+        ['present', isAr ? 'أقسام مثبتة' : isEn ? 'Observed sections' : 'Sections observées', '#22c55e'],
+        ['weak', isAr ? 'أقسام تحتاج تحسين' : isEn ? 'Sections to improve' : 'Sections à améliorer', '#f59e0b'],
+        ['missing', isAr ? 'أقسام غائبة مؤكدة' : isEn ? 'Confirmed missing sections' : 'Sections absentes confirmées', '#fb7185'],
+        ['unconfirmed', isAr ? 'عناصر تحتاج تحقق' : isEn ? 'Items to confirm' : 'Éléments à confirmer', '#60a5fa']
+    ];
+    const html = groups.map(([key, title, accent]) => {
+        const items = Array.isArray(primary[key]) ? primary[key].slice(0, 8) : [];
+        if (!items.length) return '';
+        return `<div class="funnel-v2-plan-column" style="--funnel-v2-accent:${accent}">
+            <h4>${safe(title)} <span>${items.length}</span></h4>
+            ${items.map(item => {
+                const label = funnelV2Text(item.sectionType || item.section || item.name || item.title || item.text, 'Section');
+                const detail = funnelV2Text(item.detectedText || item.reason || item.problem || item.verdict || item.status, '');
+                return `<article class="funnel-v2-action-card"><strong dir="auto">${safe(label)}</strong>${detail ? `<p dir="auto">${safe(detail)}</p>` : ''}</article>`;
+            }).join('')}
+        </div>`;
+    }).join('');
+    const proofs = Array.isArray(primary.proofUsed) ? primary.proofUsed.slice(0, 8) : [];
+    return `<div class="funnel-v2-plan">${html}</div>${proofs.length ? `<div class="funnel-v2-proof-row">${proofs.map(proof => `<span dir="auto">${safe(funnelV2Text(proof.text || proof))}</span>`).join('')}</div>` : ''}`;
+}
+
+function renderFunnelPipelineDiagnostic(data = {}, { isAr = false, isEn = false } = {}) {
+    const debug = data.debugFunnelPipeline || {};
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+    const message = isAr
+        ? 'القراءة غير كافية: لا يمكن الحكم على هذه الصفحة بشكل موثوق.'
+        : isEn ? 'Insufficient scrape: this page cannot be judged reliably.'
+        : 'Scrape insuffisant : impossible de juger correctement cette page.';
+    const rows = [
+        ['Body', debug.bodyTextLength],
+        ['Evidence', debug.evidenceBlocksCount],
+        ['Sections', debug.sectionRawBlocksCount],
+        ['Pages', debug.pagesExploredCount],
+        ['CTA', debug.ctaCount],
+        ['Job', debug.railwayJobId],
+        ['Source', debug.finalResponseSource]
+    ].filter(([, value]) => value !== null && value !== undefined && value !== '');
+    return `<section class="funnel-v2-render-error funnel-pipeline-diagnostic" dir="${isAr ? 'rtl' : 'ltr'}">
+        <i class="fas fa-triangle-exclamation"></i><div><strong>${safe(message)}</strong>
+        <div class="funnel-v2-facts">${rows.map(([label, value]) => `<div><small>${safe(label)}</small><strong>${safe(value)}</strong></div>`).join('')}</div>
+        ${(debug.warnings || []).length ? `<ul>${debug.warnings.map(item => `<li>${safe(item)}</li>`).join('')}</ul>` : ''}</div>
+    </section>`;
+}
+
 function displayFunnelResults(data = {}) {
     const container = document.getElementById('resultsFunnel');
     if (!container) return;
@@ -16985,6 +17034,16 @@ function displayFunnelResults(data = {}) {
     };
 
     try {
+        const debugPipeline = data.debugFunnelPipeline || {};
+        const primaryAnalysis = data.funnelPrimaryAnalysis || {};
+        if (debugPipeline.scrapeInsufficient || primaryAnalysis.status === 'insufficient') {
+            container.innerHTML = `<div id="funnelReport" class="funnel-v2-report" dir="${dir}">${renderFunnelPipelineDiagnostic(data, { isAr, isEn })}</div>`;
+            cleanRenderedOutput(container);
+            showResults('resultsFunnel');
+            STATE.lastFunnelResults = data;
+            window.updateExportBadges?.();
+            return;
+        }
         const surgerySource = data.funnelSurgery || data.funnelSectionSurgery || data.sectionSurgery || data.funnelSectionScanner || {};
         const surgery = normalizeFunnelSurgeryForRender(data);
         const verdict = surgerySource.verdict || {};
@@ -17041,6 +17100,7 @@ function displayFunnelResults(data = {}) {
             ${funnelV2Array(limits.limits, limits.inaccessibleElements).length ? `<ul class="funnel-v2-limit-list">${funnelV2Array(limits.limits, limits.inaccessibleElements).map(item => `<li>${safe(funnelV2Text(item))}</li>`).join('')}</ul>` : ''}`;
 
         const executiveHtml = renderExecutiveSummary(data, 'funnel', { isAr, isEn });
+        const primaryEvidenceHtml = renderFunnelPrimaryEvidence(data, { isAr, isEn });
         const verdictPanel = `<section class="funnel-v2-hero" data-export-feature="summary">
                 <div class="funnel-v2-hero-copy"><span>${safe(copy.kicker)}</span><h2>${safe(copy.title)}</h2><p dir="auto">${safe(verdictText)}</p></div>
                 <div class="funnel-v2-metrics"><div><strong>${sectionTotal}</strong><small>${safe(copy.checked)}</small></div><div><strong>${priorityTotal}</strong><small>${safe(copy.fixes)}</small></div><div><strong>${safe(confidence)}</strong><small>${safe(copy.confidence)}</small></div></div>
@@ -17048,6 +17108,7 @@ function displayFunnelResults(data = {}) {
         container.innerHTML = `<div id="funnelReport" class="funnel-v2-report" dir="${dir}">
             ${executiveHtml}
             ${renderReportSection('funnel-verdict', copy.kicker, copy.title, 'fa-gauge-high', verdictPanel, { isAr, isEn })}
+            ${primaryEvidenceHtml ? renderReportSection('funnel-primary-evidence', isAr ? 'التحليل القائم على الأدلة' : isEn ? 'Evidence-first analysis' : 'Analyse fondée sur les preuves', isAr ? 'ما تم رصده فعليا قبل أي توصية.' : isEn ? 'What was actually observed before any recommendation.' : 'Ce qui a réellement été observé avant toute recommandation.', 'fa-magnifying-glass-chart', primaryEvidenceHtml, { isAr, isEn }) : ''}
             ${renderReportSection('architecture', copy.architecture, copy.architectureSub, 'fa-sitemap', surgeryHtml || `<section class="funnel-v2-missing-architecture" data-export-feature="page"><i class="fas fa-triangle-exclamation"></i><p>${safe(copy.noData)}</p></section>`, { isAr, isEn })}
             ${renderReportSection('page-order', copy.order, copy.orderSub, 'fa-arrow-down-1-9', orderHtml, { isAr, isEn })}
             ${renderReportSection('frictions', copy.frictions, copy.frictionsSub, 'fa-triangle-exclamation', renderFunnelV2Cards(frictions, { accent: '#fb7185', limit: 5, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">${safe(copy.partial)}</p>`, { isAr, isEn })}

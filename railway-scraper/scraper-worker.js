@@ -11,7 +11,9 @@ const { scrapeUrl, scrapeMany } = require('./scraper-orchestrator');
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || '';
 const WORKER_ID = process.env.WORKER_ID || `railway-scraper-${Date.now()}`;
-const POLL_MS = Math.max(500, Number(process.env.POLL_MS || 2000));
+const POLL_MS = Math.max(500, Number(
+  process.env.POLL_MS || process.env.WORKER_POLL_INTERVAL || 2000
+));
 const MAX_RETRIES = Math.max(1, Number(process.env.MAX_RETRIES || 3));
 const PORT = Number(process.env.PORT || process.env.HEALTH_PORT || 8080);
 
@@ -73,6 +75,7 @@ const healthServer = http.createServer((req, res) => {
     uptimeSeconds: Math.round((Date.now() - METRICS.startedAt) / 1000),
     allowedJobTypes: [...ALLOWED_JOB_TYPES],
     forbiddenJobTypes: ['competitors', 'funnel', 'technical', 'technical-seo', 'keywords', 'seo-assets', 'generate-seo-assets'],
+    polling: { intervalMs: POLL_MS, source: process.env.POLL_MS ? 'POLL_MS' : process.env.WORKER_POLL_INTERVAL ? 'WORKER_POLL_INTERVAL' : 'default' },
     metrics: METRICS,
     timestamp: new Date().toISOString()
   };
@@ -152,15 +155,27 @@ function compactFunnelEvidence(source = {}, maxBlocks = 120) {
     || source.mainPage?.evidencePayload
     || source.scrapeData?.evidencePayload
     || {};
+  const seenRawBlocks = new Set();
   const rawBlocks = arr(candidate.evidenceBlocks)
     .concat(arr(source.evidenceBlocks))
+    .filter(block => {
+      const key = [block?.source, block?.pageUrl, block?.selector, block?.position, block?.text || block?.textPreview]
+        .join('|').toLowerCase();
+      if (seenRawBlocks.has(key)) return false;
+      seenRawBlocks.add(key);
+      return true;
+    })
     .slice(0, maxBlocks);
   const blocks = rawBlocks.map((block, index) => ({
+    id: `evidence-${index + 1}`,
     source: clean(block?.source || 'observed-text', 80),
     pageUrl: clean(block?.pageUrl || source.url || '', 500),
     selector: clean(block?.selector || '', 220) || null,
     position: Number(block?.position || index + 1) || index + 1,
-    text: clean(block?.text || block?.textPreview || '', 1400),
+    text: clean(
+      block?.text || block?.textPreview || '',
+      /body-text/i.test(String(block?.source || '')) ? 6000 : 1400
+    ),
     confidence: clean(block?.confidence || 'HIGH', 20),
     typeGuess: clean(block?.typeGuess || '', 80) || null,
     labelGuess: clean(block?.labelGuess || '', 140) || null,
@@ -170,20 +185,31 @@ function compactFunnelEvidence(source = {}, maxBlocks = 120) {
   })).filter(block => block.text || block.url);
 
   const rawMiniScrapers = arr(candidate.miniScrapers).concat(arr(source.miniScrapers));
-  const miniScrapers = rawMiniScrapers.slice(0, 12).map(scraper => {
+  const seenScrapers = new Set();
+  const miniScrapers = rawMiniScrapers.filter(scraper => {
+    const name = clean(scraper?.scraperName || 'evidenceScraper', 100);
+    if (seenScrapers.has(name)) return false;
+    seenScrapers.add(name);
+    return true;
+  }).slice(0, 12).map(scraper => {
     const evidenceBlocks = arr(scraper?.evidenceBlocks)
-      .map(block => blocks.find(item =>
-        item.text === clean(block?.text || block?.textPreview || '', 1400)
-        && item.source === clean(block?.source || 'observed-text', 80)
-      ))
+      .map(block => {
+        const sourceName = clean(block?.source || 'observed-text', 80);
+        const rawText = clean(block?.text || block?.textPreview || '',
+          /body-text/i.test(sourceName) ? 6000 : 1400);
+        return blocks.find(item => item.source === sourceName && (
+          item.text === rawText || item.text.startsWith(rawText) || rawText.startsWith(item.text)
+        ));
+      })
       .filter(Boolean)
       .slice(0, 45);
     return {
       scraperName: clean(scraper?.scraperName || 'evidenceScraper', 100),
       success: scraper?.success !== false && evidenceBlocks.length > 0,
       pageUrl: clean(scraper?.pageUrl || source.url || '', 500),
-      evidenceText: clean(scraper?.evidenceText || evidenceBlocks.map(item => item.text).join(' | '), 8000),
-      evidenceBlocks,
+      evidenceText: clean(scraper?.evidenceText || evidenceBlocks.map(item => item.text).join(' | '), 1600),
+      evidenceBlockRefs: evidenceBlocks.map(item => item.id),
+      evidenceCount: evidenceBlocks.length,
       limits: arr(scraper?.limits).slice(0, 8).map(item => clean(item, 240)).filter(Boolean)
     };
   });
@@ -292,32 +318,27 @@ const compatPage = {
   title: clean(source.title || '', 220),
   h1: clean(source.h1 || '', 220),
   metaDescription: clean(source.metaDescription || '', 400),
-
-  bodyText,
-  text: bodyText,
-  content: bodyText,
-
+  bodyTextPreview: clean(bodyText, 1200),
   headings: headingGroups,
-  headingGroups,
-  h2: headingGroups.h2,
-  h3: headingGroups.h3,
-  ctas,
-  images,
-  links,
-  prices,
-  evidencePayload,
-  miniScrapers: evidencePayload.miniScrapers,
-
-  sectionRawBlocks: smallSections,
-  sectionBlocks: smallSections,
-  sectionsDetailed: smallSections,
-  sections: smallSections
+  counts: {
+    sections: smallSections.length,
+    evidence: evidencePayload.evidenceBlocks.length,
+    ctas: ctas.length,
+    images: images.length,
+    links: links.length,
+    prices: prices.length
+  }
 };
   return {
     mainPage: compatPage,
 scrapeData: compatPage,
 data: compatPage,
-pagesExplored: [compatPage],
+pagesExplored: arr(source.pagesExplored).slice(0, 5).map(page => ({
+  url: clean(page?.url || '', 500),
+  title: clean(page?.title || '', 180),
+  bodyTextPreview: clean(page?.bodyTextPreview || page?.bodyText || '', 600),
+  sectionRawBlocksFound: Number(page?.sectionRawBlocksFound || arr(page?.sectionRawBlocks).length || 0)
+})).filter(page => page.url),
     success: source.success !== false,
     partial: true,
     compacted: true,
@@ -345,7 +366,8 @@ pagesExplored: [compatPage],
     links,
     prices,
     evidencePayload,
-    miniScrapers: evidencePayload.miniScrapers,
+    structuredEvidence: cleanStructuredValue(source.structuredEvidence, 16),
+    jobContext: cleanStructuredValue(source.jobContext, 12),
 
     price: clean(source.price || '', 80),
     currency: clean(source.currency || '', 20),
@@ -472,12 +494,26 @@ METRICS.lastJobId = job.id;
 METRICS.lastJobType = job.type;
 METRICS.lastJobAt = new Date().toISOString();
 
-console.log(`[RailwayScraper:${WORKER_ID}] Processing job=${job.id} type=${job.type}`);
+console.log(
+  `[RailwayScraper:${WORKER_ID}] Processing job=${job.id} type=${job.type} ` +
+  `purpose=${job.payload?.purpose || 'deep-scrape'} ` +
+  `clientAnalysisId=${job.payload?.clientAnalysisId || 'N/A'} ` +
+  `requestId=${job.payload?.requestId || 'N/A'}`
+);
 const startedAt = Date.now();
 
 try {
   const rawResult = await processScrapingJob(job);
-  const safeResult = buildSafeJobResult(rawResult);
+  const rawResultBytes = assertJsonSafe(rawResult);
+  const safeResult = buildSafeJobResult({
+    ...rawResult,
+    jobContext: {
+      clientAnalysisId: job.payload?.clientAnalysisId || null,
+      requestId: job.payload?.requestId || null,
+      purpose: job.payload?.purpose || 'deep-scrape',
+      railwayJobId: job.id
+    }
+  });
   const safeResultBytes = assertJsonSafe(safeResult);
 
   console.log(
@@ -486,25 +522,38 @@ try {
     `sections=${countSections(safeResult)}`
   );
 
-  const smallResult = safeResultBytes === -1
-    ? buildEmergencyResult(rawResult, 'safe-result-not-serializable')
-    : buildSmallJobResult(safeResult);
-
-  const smallResultBytes = assertJsonSafe(smallResult);
+  const maxCanonicalBytes = Math.max(300000, Number(process.env.SCRAPER_MAX_RESULT_BYTES || 950000));
+  const needsCompaction = safeResultBytes === -1 || safeResultBytes > maxCanonicalBytes;
+  const smallResult = needsCompaction
+    ? (safeResultBytes === -1
+      ? buildEmergencyResult(rawResult, 'safe-result-not-serializable')
+      : buildSmallJobResult(safeResult, 'worker-size-limited-canonical'))
+    : null;
+  const smallResultBytes = smallResult ? assertJsonSafe(smallResult) : 0;
+  const selectedResult = smallResult || safeResult;
+  selectedResult.pipelineDebug = {
+    rawResultBytes,
+    safeResultBytes,
+    smallResultBytes,
+    selectedResultBytes: smallResult ? smallResultBytes : safeResultBytes,
+    compactedForStorage: Boolean(smallResult),
+    maxCanonicalBytes
+  };
 
   console.log(
-    `[RailwayScraper:${WORKER_ID}] Small result ready job=${job.id} ` +
-    `size=${smallResultBytes === -1 ? 'NON-SERIALIZABLE' : smallResultBytes} bytes ` +
-    `sections=${countSections(smallResult)}`
+    `[RailwayScraper:${WORKER_ID}] Storage result job=${job.id} ` +
+    `mode=${smallResult ? 'compact' : 'canonical'} ` +
+    `raw=${rawResultBytes} safe=${safeResultBytes} small=${smallResultBytes} bytes ` +
+    `sections=${countSections(selectedResult)}`
   );
 
-  if (smallResultBytes === -1) {
-    throw new Error('Small result is not JSON serializable');
+  if (assertJsonSafe(selectedResult) === -1) {
+    throw new Error('Selected result is not JSON serializable');
   }
 
   await updateJob(job.id, {
     status: 'done',
-    result: smallResult,
+    result: selectedResult,
     error: null,
     finished_at: new Date().toISOString()
   });
@@ -513,8 +562,8 @@ try {
 
   console.log(
     `[RailwayScraper:${WORKER_ID}] Done job=${job.id} type=${job.type} ` +
-    `in ${Date.now() - startedAt}ms | sections=${countSections(smallResult)} ` +
-    `strategy=${smallResult.compactStrategy || 'small'}`
+    `in ${Date.now() - startedAt}ms | sections=${countSections(selectedResult)} ` +
+    `strategy=${selectedResult.compactStrategy || 'canonical'}`
   );
 } catch (jobError) {
   const isNonScrapingJob = jobError?.code === 'NON_SCRAPING_JOB';
@@ -584,7 +633,9 @@ processing = false;
 
 
 function buildSafeJobResult(result = {}) {
-  const pages = Array.isArray(result.pages)
+  const pages = Array.isArray(result.pagesExplored)
+    ? result.pagesExplored
+    : Array.isArray(result.pages)
     ? result.pages
     : Array.isArray(result.results)
       ? result.results
@@ -592,7 +643,20 @@ function buildSafeJobResult(result = {}) {
 
   const main = result.mainPage || result.page || pages[0] || result || {};
 
-  const sections = collectSectionBlocks(result)
+  const allSectionBlocks = [];
+  const seenSectionBlocks = new Set();
+  collectSectionBlocks(result).forEach(block => {
+    const key = [
+      clean(block?.pageUrl || result.url || '', 500),
+      clean(block?.selector || '', 180),
+      Number(block?.position || block?.index || 0),
+      clean(block?.text || block?.textPreview || block?.title || '', 260)
+    ].join('|').toLowerCase();
+    if (seenSectionBlocks.has(key)) return;
+    seenSectionBlocks.add(key);
+    allSectionBlocks.push(block);
+  });
+  const sections = allSectionBlocks
     .slice(0, 35)
     .map(normalizeSectionBlock)
     .filter(Boolean);
@@ -666,15 +730,51 @@ function buildSafeJobResult(result = {}) {
     miniScrapers: result.miniScrapers || main.miniScrapers,
     url: result.url || main.url
   }, 120);
+  const structuredEvidence = {
+    forms: collectObjects([...arr(result.forms), ...arr(main.forms)], 12),
+    faq: {
+      detectedBlocks: collectObjects([
+        ...arr(result.faq?.detectedBlocks),
+        ...arr(main.faq?.detectedBlocks)
+      ], 20),
+      jsonLdFaqs: collectObjects([
+        ...arr(result.faq?.jsonLdFaqs),
+        ...arr(main.faq?.jsonLdFaqs)
+      ], 20)
+    },
+    mentionHints: main.mentionHints || result.mentionHints || null,
+    trustSignals: main.trustSignals || result.trustSignals || null,
+    whatsappLinks: collectObjects([...arr(result.whatsappLinks), ...arr(main.whatsappLinks)], 12),
+    contactLinks: collectObjects([...arr(result.contactLinks), ...arr(main.contactLinks)], 20),
+    socialLinks: collectObjects([...arr(result.socialLinks), ...arr(main.socialLinks)], 20),
+    legalLinks: collectObjects([...arr(result.legalLinks), ...arr(main.legalLinks)], 20),
+    productCards: collectObjects([...arr(result.productCards), ...arr(main.productCards)], 16),
+    clickExploration: cleanStructuredValue(main.clickExploration || result.clickExploration, 24),
+    deliveryInfo: cleanStructuredValue(main.deliveryInfo || result.deliveryInfo, 16),
+    guaranteeInfo: cleanStructuredValue(main.guaranteeInfo || result.guaranteeInfo, 16),
+    reviewsInfo: cleanStructuredValue(main.reviewsInfo || result.reviewsInfo, 16),
+    paymentInfo: cleanStructuredValue(main.paymentInfo || result.paymentInfo, 16),
+    socialProofInfo: cleanStructuredValue(main.socialProofInfo || result.socialProofInfo, 16),
+    legalInfo: cleanStructuredValue(main.legalInfo || result.legalInfo, 16)
+  };
+  const meaningfulTruncation = allSectionBlocks.length > sections.length || pages.length > 8;
 
   const safe = {
     success: result.success !== false,
-    compacted: true,
-    compactStrategy: 'worker-direct-safe-result-render-compatible',
+    partial: result.partial === true || meaningfulTruncation,
+    compacted: meaningfulTruncation,
+    compactStrategy: meaningfulTruncation
+      ? 'worker-canonical-with-bounded-arrays'
+      : 'worker-canonical-evidence-result',
 
     provider: clean(result.provider || result.layer || 'railway-playwright', 80),
     layer: clean(result.layer || result.provider || 'railway-playwright', 80),
     source: clean(result.source || result.provider || 'railway-playwright', 80),
+    attempts: cleanStructuredValue(result.attempts, 12),
+    summary: cleanStructuredValue(result.summary, 30),
+    crawlMap: cleanStructuredValue(result.crawlMap, 30),
+    crawlErrors: cleanStructuredValue(result.crawlErrors, 12),
+    blockedUsefulPages: cleanStructuredValue(result.blockedUsefulPages, 20) || [],
 
     url: clean(result.url || result.targetUrl || main.url || '', 500),
     finalUrl: clean(result.finalUrl || main.finalUrl || main.url || result.url || '', 500),
@@ -696,7 +796,15 @@ function buildSafeJobResult(result = {}) {
     links,
     prices,
     evidencePayload,
-    miniScrapers: evidencePayload.miniScrapers,
+    structuredEvidence,
+    jobContext: cleanStructuredValue(result.jobContext, 12),
+    phones: collectUnique([...arr(result.phones), ...arr(main.phones)], 8, 60),
+    emails: collectUnique([...arr(result.emails), ...arr(main.emails)], 8, 120),
+    canonical: clean(result.canonical || main.canonical || '', 500),
+    language: clean(result.language || main.language || '', 30),
+    openGraph: cleanStructuredValue(result.openGraph || main.openGraph, 16),
+    jsonLd: cleanStructuredValue(result.jsonLd || main.jsonLd, 20),
+    weakTechnicalHints: cleanStructuredValue(result.weakTechnicalHints || main.weakTechnicalHints, 20),
 
     cms: clean(result.cms || main.cms || '', 80),
     colors: arr(result.colors || main.colors).slice(0, 8).map(color => clean(color, 40)),
@@ -715,7 +823,11 @@ function buildSafeJobResult(result = {}) {
       .map(page => ({
         url: clean(page?.url || page?.normalizedUrl || '', 500),
         title: clean(page?.title || '', 180),
-        sectionRawBlocksFound: arr(page?.sectionRawBlocks || page?.sectionBlocks || page?.sectionsDetailed).length
+        bodyTextPreview: clean(page?.bodyText || page?.text || '', 900),
+        sectionRawBlocksFound: arr(page?.sectionRawBlocks || page?.sectionBlocks || page?.sectionsDetailed).length,
+        ctaCount: arr(page?.ctas).length,
+        imageCount: arr(page?.images).length,
+        linkCount: arr(page?.links).length
       }))
       .filter(page => page.url),
 
@@ -724,44 +836,34 @@ function buildSafeJobResult(result = {}) {
       title: clean(main.title || result.title || '', 240),
       h1: clean(main.h1 || result.h1 || headings[0] || '', 240),
       metaDescription: clean(main.metaDescription || result.metaDescription || '', 500),
-      bodyText,
-      text: bodyText,
       headings: headingGroups,
-      headingGroups,
-      h2: headingGroups.h2,
-      h3: headingGroups.h3,
-      ctas,
-      images,
-      links,
-      prices,
-      evidencePayload,
-      miniScrapers: evidencePayload.miniScrapers,
-      sectionRawBlocks: sections,
-      sectionBlocks: sections,
-      sectionsDetailed: sections
+      bodyTextPreview: clean(bodyText, 1200),
+      counts: {
+        sections: sections.length,
+        evidence: evidencePayload.evidenceBlocks.length,
+        ctas: ctas.length,
+        images: images.length,
+        links: links.length,
+        prices: prices.length
+      }
     },
 
     scrapeData: {
       url: clean(result.url || main.url || '', 500),
       title: clean(result.title || main.title || '', 240),
       h1: clean(result.h1 || main.h1 || headings[0] || '', 240),
-      bodyText,
-      headings: headingGroups,
-      headingGroups,
-      h2: headingGroups.h2,
-      h3: headingGroups.h3,
-      ctas,
-      images,
-      links,
-      prices,
-      evidencePayload,
-      miniScrapers: evidencePayload.miniScrapers,
-      sectionRawBlocks: sections,
-      sectionsDetailed: sections
+      canonicalPayload: true,
+      counts: {
+        sections: sections.length,
+        evidence: evidencePayload.evidenceBlocks.length
+      }
     },
 
     counts: {
       pages: pages.length,
+      originalSections: allSectionBlocks.length,
+      savedSections: sections.length,
+      evidenceBlocks: evidencePayload.evidenceBlocks.length,
       sectionRawBlocks: sections.length,
       headings: headings.length,
       images: images.length,
@@ -775,7 +877,9 @@ function buildSafeJobResult(result = {}) {
       scriptsRemoved: true,
       stylesRemoved: true,
       rawResultNotStored: true,
-      renderCompatibility: true
+      renderCompatibility: true,
+      canonicalEvidencePayload: true,
+      meaningfulTruncation
     }
   };
 
@@ -931,15 +1035,45 @@ function collectObjects(values, limit = 30) {
   return output;
 }
 
+function cleanStructuredValue(value, maxEntries = 20, depth = 0) {
+  if (value == null || depth > 4) return null;
+  if (typeof value === 'string') return clean(value, 800);
+  if (typeof value === 'number' || typeof value === 'boolean') return value;
+  if (Array.isArray(value)) {
+    return value.slice(0, maxEntries)
+      .map(item => cleanStructuredValue(item, maxEntries, depth + 1))
+      .filter(item => item != null);
+  }
+  if (typeof value !== 'object') return null;
+
+  const out = {};
+  Object.entries(value).slice(0, maxEntries).forEach(([key, item]) => {
+    if (/html|script|style|svg|screenshot|buffer/i.test(key)) return;
+    const cleaned = cleanStructuredValue(item, maxEntries, depth + 1);
+    if (cleaned != null) out[key] = cleaned;
+  });
+  return out;
+}
+
 function normalizeSmallObject(value = {}) {
   return {
     text: clean(value.text || value.label || value.title || value.alt || value.value || '', 180),
     label: clean(value.label || value.text || value.title || '', 180),
+    title: clean(value.title || value.label || value.text || '', 180),
+    alt: clean(value.alt || '', 180),
     url: clean(value.url || value.href || value.src || '', 500),
+    src: clean(value.src || value.url || '', 500),
     href: clean(value.href || value.url || '', 500),
     value: scalar(value.value || value.price || ''),
     currency: clean(value.currency || '', 20),
-    context: clean(value.context || '', 200)
+    context: clean(value.context || '', 200),
+    intent: clean(value.intent || '', 60) || null,
+    strengthScore: Number.isFinite(Number(value.strengthScore)) ? Number(value.strengthScore) : null,
+    contextHeading: clean(value.contextHeading || '', 180) || null,
+    position: Number(value.position || 0) || null,
+    isPrimarySignal: value.isPrimarySignal === true,
+    source: clean(value.source || '', 80) || null,
+    kind: clean(value.kind || '', 60) || null
   };
 }
 function collectSectionBlocks(root) {
@@ -1016,7 +1150,12 @@ function normalizeSectionBlock(block = {}) {
     wordCount: Number(block.wordCount || 0) || 0,
     ctas: arr(block.ctas).slice(0, 6).map(item => ({
       text: clean(item?.text ?? item, 140),
-      href: clean(item?.href || '', 400)
+      href: clean(item?.href || item?.url || '', 400),
+      intent: clean(item?.intent || '', 60) || null,
+      strengthScore: Number.isFinite(Number(item?.strengthScore)) ? Number(item.strengthScore) : null,
+      contextHeading: clean(item?.contextHeading || '', 180) || null,
+      position: Number(item?.position || 0) || null,
+      isPrimarySignal: item?.isPrimarySignal === true
     })),
     prices,
     priceSignals: prices,

@@ -65,10 +65,6 @@ const BLOCKED_CRAWL_PATTERNS = [
   /\/admin\b/i,
   /\/wp-admin\b/i,
   /\/my-account\b/i,
-  /\/privacy\b/i,
-  /\/terms\b/i,
-  /\/conditions\b/i,
-  /\/mentions/i,
   /delete/i,
   /remove/i
 ];
@@ -1020,7 +1016,9 @@ const POSITIVE_BUTTON_PATTERNS = [
   /offres/i,
   /plans/i,
   /demander un devis/i,
-  /contact/i
+  /contact/i,
+  /privacy|confidentialit[eé]|terms|conditions|mentions|legal|cookies/i,
+  /retours?|returns?|refund|remboursement|garantie|warranty/i
 ];
 
 const NEGATIVE_NAVIGATION_PATTERNS = [
@@ -1033,11 +1031,6 @@ const NEGATIVE_NAVIGATION_PATTERNS = [
   /account/i,
   /admin/i,
   /wp-admin/i,
-  /privacy/i,
-  /terms/i,
-  /mentions/i,
-  /conditions/i,
-  /cookies/i,
   /payment/i,
   /paiement/i,
   /delete/i,
