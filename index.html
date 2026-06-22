@@ -9553,6 +9553,7 @@ function isDakaInsufficientExportText(value) {
         .trim()
         .toLowerCase();
     if (!text) return true;
+    if (/^les positions exactes des sections peuvent necessiter une verification visuelle manuelle\.?$/.test(text)) return true;
     const exact = [
         'donnees insuffisantes', 'donnée insuffisante', 'donnee insuffisante',
         'non disponible', 'aucune donnee', 'aucun resultat', 'n/a',
@@ -9563,6 +9564,20 @@ function isDakaInsufficientExportText(value) {
         const normalized = label.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
         return text === normalized || (text.length < 90 && text.includes(normalized));
     });
+}
+
+function dakaPdfPrepareSemanticText(value) {
+    const text = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    if (STATE.currentLang !== 'ar') {
+        const arabicChars = (text.match(/[\u0600-\u06ff]/g) || []).length;
+        if (arabicChars >= 4 && arabicChars / Math.max(text.length, 1) > 0.18) {
+            return STATE.currentLang === 'en'
+                ? 'Arabic source copy detected. Review the original wording in the web report.'
+                : 'Texte source en arabe détecté. Consulter la formulation originale dans le rapport web.';
+        }
+    }
+    return text;
 }
 
 function cloneReportHtmlForExport(el, exportOptions = {}) {
@@ -9985,6 +10000,7 @@ function getDakaPdfCaptureBlocks(root) {
 
 function getDakaPdfSemanticBlocks(root) {
     const seenBlocks = new Set();
+    const seenParagraphs = new Set();
     return getDakaPdfCaptureBlocks(root)
         .filter(function (node) { return !(node.tagName === 'HEADER' && node.parentElement === root); })
         .map(function (node) {
@@ -9997,10 +10013,11 @@ function getDakaPdfSemanticBlocks(root) {
                     item.matches('p, li, a[href]')
                     && item.closest('.daka-pdf-table-field, .business-profile-summary > div, .business-answer-grid article')
                 ) return;
-                const text = getExportableReportText(item);
+                const text = dakaPdfPrepareSemanticText(getExportableReportText(item));
                 const normalized = text.toLowerCase();
-                if (!text || isDakaInsufficientExportText(text) || normalized === title.toLowerCase() || seenText.has(normalized)) return;
+                if (!text || isDakaInsufficientExportText(text) || normalized === title.toLowerCase() || seenText.has(normalized) || seenParagraphs.has(normalized)) return;
                 seenText.add(normalized);
+                seenParagraphs.add(normalized);
                 paragraphs.push({
                     text,
                     bullet: item.tagName === 'LI',
@@ -10008,7 +10025,7 @@ function getDakaPdfSemanticBlocks(root) {
                 });
             });
             if (!paragraphs.length) {
-                const fallback = getExportableReportText(node);
+                const fallback = dakaPdfPrepareSemanticText(getExportableReportText(node));
                 if (fallback && !isDakaInsufficientExportText(fallback) && fallback.toLowerCase() !== title.toLowerCase()) {
                     paragraphs.push({ text: fallback, bullet: false, url: '' });
                 }
@@ -10298,6 +10315,10 @@ function getDakaPdfDecisionModel(selectedModules) {
         .filter(function (value) { return Number.isFinite(Number(value)); })
         .map(Number);
     const actions = [];
+    const meaningfulMeta = function (value) {
+        const text = executiveText(value).trim();
+        return text && !/^(?:—|-|a confirmer|à confirmer|a estimer|à estimer|n\/a)$/i.test(text) ? text : '';
+    };
     moduleModels.forEach(function (entry) {
         (entry.summary.actions || []).forEach(function (action) {
             const title = executiveText(action?.title || action);
@@ -10305,8 +10326,8 @@ function getDakaPdfDecisionModel(selectedModules) {
             if (actions.some(function (item) { return item.title.toLowerCase() === title.toLowerCase(); })) return;
             actions.push({
                 title: title,
-                impact: executiveText(action?.impact) || (isAr ? 'مرتفع' : isEn ? 'High' : 'Élevé'),
-                effort: executiveText(action?.effort) || (isAr ? 'متوسط' : isEn ? 'Medium' : 'Moyen'),
+                impact: meaningfulMeta(action?.impact) || (isAr ? 'مرتفع' : isEn ? 'High' : 'Élevé'),
+                effort: meaningfulMeta(action?.effort) || (isAr ? 'متوسط' : isEn ? 'Medium' : 'Moyen'),
                 priority: executiveText(action?.priority) || String(actions.length + 1)
             });
         });
@@ -10314,8 +10335,8 @@ function getDakaPdfDecisionModel(selectedModules) {
 
     const opportunities = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.opportunities; }), 3);
     const weaknesses = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.weaknesses; }), 3);
-    const quickWins = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.quickWins; }), 4);
-    const plan30 = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.plan30; }), 5);
+    const rawQuickWins = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.quickWins; }), 6);
+    const rawPlan30 = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.plan30; }), 7);
     const verdict = dakaPdfCleanList(moduleModels.map(function (entry) { return entry.summary.verdict; }), 1)[0]
         || actions[0]?.title
         || opportunities[0]
@@ -10326,8 +10347,23 @@ function getDakaPdfDecisionModel(selectedModules) {
             || opportunities[index % Math.max(opportunities.length, 1)]
             || verdict;
     });
-    const priorityDecision = actions[0]?.title || quickWins[0] || verdict;
-    const after30 = dakaPdfCleanList(actions.slice(5).map(function (action) { return action.title; }), 3);
+    const priorityDecision = actions[0]?.title || rawQuickWins[0] || verdict;
+    const phaseKeys = new Set();
+    const phaseKey = function (value) {
+        return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ').trim();
+    };
+    if (priorityDecision) phaseKeys.add(phaseKey(priorityDecision));
+    const uniquePhase = function (items, limit) {
+        return (items || []).filter(function (item) {
+            const key = phaseKey(item);
+            if (!key || phaseKeys.has(key)) return false;
+            phaseKeys.add(key);
+            return true;
+        }).slice(0, limit);
+    };
+    const quickWins = uniquePhase(rawQuickWins, 4);
+    const plan30 = uniquePhase(rawPlan30, 5);
+    const after30 = uniquePhase(dakaPdfCleanList(actions.slice(5).map(function (action) { return action.title; }), 5), 3);
 
     const titleCandidates = [
         STATE.lastTechnicalResults?.extraction?.title,
@@ -10337,10 +10373,14 @@ function getDakaPdfDecisionModel(selectedModules) {
         STATE.lastAnalysisResults?.knowledgeGraph?.title
     ];
     const siteTitle = dakaPdfCleanList(titleCandidates, 1)[0] || domain;
+    const selectedModuleKeys = new Set(selectedModules.map(function (module) { return module.key; }));
     const geo = String(
-        STATE.lastInputs?.country ||
-        STATE.lastKeywords?.geoInput ||
-        STATE.lastAnalysisResults?.geo ||
+        (selectedModuleKeys.has('funnel') && (
+            STATE.lastFunnelResults?.funnelSurgery?.userContext?.cityOrRegion ||
+            STATE.lastFunnelResults?.userContext?.cityOrRegion
+        )) ||
+        (selectedModuleKeys.has('competitors') && (STATE.lastAnalysisResults?.geo || STATE.lastInputs?.country)) ||
+        (selectedModuleKeys.has('keywords') && STATE.lastKeywords?.geoInput) ||
         ''
     ).trim();
     const objective = String(
@@ -10676,7 +10716,7 @@ function drawDakaPdfRoadmapPage(pdf, model, pageW, pageH, margin) {
         margin, 34, pageW - margin * 2, { size: 8, color: [71, 85, 105], maxLines: 2 }
     );
     const startY = 52;
-    const phaseH = Math.min(51, (pageH - startY - 22) / phases.length - 5);
+    const phaseH = Math.min(68, (pageH - startY - 22) / phases.length - 5);
     const lineX = margin + 10;
     pdf.setDrawColor(203, 213, 225);
     pdf.setLineWidth(1);
@@ -10702,8 +10742,8 @@ function drawDakaPdfRoadmapPage(pdf, model, pageW, pageH, margin) {
                 priority: phase.label,
                 justification: model.weaknesses[itemIndex] || model.opportunities[itemIndex] || model.verdict
             };
-            cursor = dakaPdfDrawWrappedText(pdf, (itemIndex + 1) + '. ' + item, margin + 27, cursor, pageW - margin * 2 - 35, {
-                size: 7.7, bold: true, color: [15, 23, 42], maxLines: 2, lineHeight: 4
+            cursor = dakaPdfDrawWrappedText(pdf, (itemIndex + 1) + '. ' + item, margin + 27, cursor, pageW - margin * 2 - 48, {
+                size: 7.3, bold: true, color: [15, 23, 42], maxLines: 3, lineHeight: 3.8
             });
             const meta = (model.isEn ? 'Impact' : 'Impact') + ': ' + matching.impact + ' · ' +
                 (model.isEn ? 'Effort' : 'Effort') + ': ' + matching.effort + ' · ' +
@@ -13942,7 +13982,19 @@ function normalizeFunnelSurgeryForRender(data = {}) {
     const source = data.funnelSurgery || data.funnelSectionSurgery || data.sectionSurgery || data.funnelSectionScanner || data.spyReport?.funnelSurgery || data.spyReport?.funnelSectionSurgery || {};
     const diagnosis = source.sectionDiagnosis || source.scanner || {};
     const matrix = Array.isArray(source.surgeryMatrix) ? source.surgeryMatrix : [];
-    const list = (...values) => values.find(value => Array.isArray(value) && value.length) || [];
+    const itemKey = item => [
+        item?.section || item?.sectionType || item?.name || item?.label || '',
+        item?.action || item?.correction || item?.recommendedPosition || item?.decision || ''
+    ].map(value => repairFunnelSurgeryText(value).toLowerCase().replace(/\s+/g, ' ').trim()).join('|');
+    const list = (...values) => {
+        const seen = new Set();
+        return values.flatMap(value => Array.isArray(value) ? value : []).filter(item => {
+            const key = itemKey(item);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    };
     const rowsFor = pattern => matrix.filter(row => pattern.test(repairFunnelSurgeryText(row?.decision).toLowerCase()));
     return {
         matrix,
@@ -13950,7 +14002,9 @@ function normalizeFunnelSurgeryForRender(data = {}) {
         improve: list(diagnosis.improve, source.improveSections, source.updateSections, source.sectionsToModify, rowsFor(/améliorer|ameliorer|improve|modify|modifier|تحسين/)),
         move: list(diagnosis.move, source.moveSections, rowsFor(/déplacer|deplacer|move|نقل/)),
         remove: list(diagnosis.removeOrMerge, source.removeOrMergeSections, source.sectionsToRemoveOrMerge, source.sectionsToRemove, rowsFor(/supprimer|fusionner|remove|merge|حذف|دمج/)),
-        add: list(diagnosis.add, source.missingSections, source.sectionsToAdd, rowsFor(/ajouter|add|missing|إضافة/))
+        add: list(diagnosis.add, source.missingSections, source.sectionsToAdd, rowsFor(/ajouter|add|missing|إضافة/)),
+        unconfirmed: list(diagnosis.unconfirmed, source.unconfirmedSections, rowsFor(/non confirmé|unconfirmed|غير مؤكد/)),
+        reconciliation: source.reconciliation || {}
     };
 }
 
@@ -13962,15 +14016,15 @@ function renderFunnelSectionSurgery(data, opts = {}) {
     const copy = isAr ? {
         eyebrow: 'تشريح صفحة التحويل', title: 'بنية الصفحة المكتشفة', subtitle: 'ما يجب الحفاظ عليه أو تعديله أو نقله أو حذفه أو إضافته، بناء على العناصر المرصودة.',
         keep: 'أقسام يجب الحفاظ عليها', improve: 'أقسام يجب تعديلها', move: 'أقسام يجب نقلها', remove: 'أقسام يجب حذفها أو دمجها', add: 'أقسام غائبة يجب إضافتها',
-        evidence: 'الدليل المرصود', action: 'الإجراء الدقيق', confidence: 'الثقة', empty: 'لا توجد توصية موثوقة في هذه الفئة.', checked: 'عنصرا تم فحصه'
+        evidence: 'الدليل المرصود', action: 'الإجراء الدقيق', confidence: 'الثقة', problem: 'المشكلة', impact: 'أثر التحويل', source: 'مصدر القرار', empty: 'لا توجد توصية موثوقة في هذه الفئة.', checked: 'عنصرا تم فحصه', coverage: 'تغطية الأدلة', items: 'عناصر'
     } : isEn ? {
         eyebrow: 'Conversion page surgery', title: 'Detected page architecture', subtitle: 'What to keep, modify, move, remove, merge, or add from observed page signals.',
         keep: 'Sections to keep', improve: 'Sections to modify', move: 'Sections to move', remove: 'Sections to remove or merge', add: 'Missing sections to add',
-        evidence: 'Observed evidence', action: 'Exact action', confidence: 'Confidence', empty: 'No reliable recommendation in this category.', checked: 'items checked'
+        evidence: 'Observed evidence', action: 'Exact action', confidence: 'Confidence', problem: 'Problem', impact: 'Conversion impact', source: 'Decision source', empty: 'No reliable recommendation in this category.', checked: 'items checked', coverage: 'Evidence coverage', items: 'items'
     } : {
         eyebrow: 'Chirurgie de la page de vente', title: 'Architecture de page détectée', subtitle: 'Ce qu’il faut garder, modifier, déplacer, supprimer, fusionner ou ajouter à partir des éléments observés.',
         keep: 'Sections présentes à garder', improve: 'Sections présentes à modifier', move: 'Sections à déplacer', remove: 'Sections à supprimer ou fusionner', add: 'Sections absentes à ajouter',
-        evidence: 'Preuve observée', action: 'Action exacte', confidence: 'Confiance', empty: 'Aucune recommandation fiable dans cette catégorie.', checked: 'éléments vérifiés'
+        evidence: 'Preuve observée', action: 'Action exacte', confidence: 'Confiance', problem: 'Problème', impact: 'Impact conversion', source: 'Source de décision', empty: 'Aucune recommandation fiable dans cette catégorie.', checked: 'éléments vérifiés', coverage: 'Couverture des preuves', items: 'éléments'
     };
     const valueFor = (item, keys, fallback = '') => {
         for (const key of keys) {
@@ -13980,23 +14034,36 @@ function renderFunnelSectionSurgery(data, opts = {}) {
         return fallback;
     };
     const definitions = [
-        ['keep', copy.keep, 'fa-circle-check', '#22c55e'], ['improve', copy.improve, 'fa-pen-ruler', '#f59e0b'],
+        ['improve', copy.improve, 'fa-pen-ruler', '#f59e0b'], ['add', copy.add, 'fa-circle-plus', '#a78bfa'],
         ['move', copy.move, 'fa-arrows-up-down-left-right', '#38bdf8'], ['remove', copy.remove, 'fa-code-merge', '#fb7185'],
-        ['add', copy.add, 'fa-circle-plus', '#a78bfa']
+        ['keep', copy.keep, 'fa-circle-check', '#22c55e'], ['unconfirmed', isAr ? 'عناصر غير مؤكدة' : isEn ? 'Unconfirmed items' : 'Éléments non confirmés', 'fa-circle-question', '#60a5fa']
     ];
     const renderItem = (item, index) => {
         const name = valueFor(item, ['section', 'sectionType', 'name', 'label'], `Section ${index + 1}`);
         const evidence = valueFor(item, ['evidence', 'observedEvidence', 'detectedText', 'currentEvidence', 'reason', 'evidenceOfAbsence']);
         const action = valueFor(item, ['action', 'correction', 'improvement', 'newRecommendation', 'recommendedPosition', 'suggestedPlacement', 'currentProblem']);
+        const problem = valueFor(item, ['problem', 'currentProblem']);
+        const impact = valueFor(item, ['conversionImpact', 'impact']);
+        const source = valueFor(item, ['decisionSource', 'evidenceSource']);
         const priority = valueFor(item, ['priority'], 'MEDIUM'), confidence = valueFor(item, ['confidence'], 'MEDIUM');
-        return `<article class="funnel-surgery-item" dir="${dir}"><div class="funnel-surgery-item-head"><strong dir="auto">${safe(name)}</strong><span>${safe(priority)}</span></div>${evidence ? `<p><b>${safe(copy.evidence)}:</b> <span dir="auto">${safe(evidence)}</span></p>` : ''}${action ? `<p><b>${safe(copy.action)}:</b> <span dir="auto">${safe(action)}</span></p>` : ''}<small>${safe(copy.confidence)}: ${safe(confidence)}</small></article>`;
+        return `<article class="funnel-surgery-item" dir="${dir}"><div class="funnel-surgery-item-head"><strong dir="auto">${safe(name)}</strong><div><span>${safe(priority)}</span><span class="confidence">${safe(confidence)}</span></div></div>
+            <div class="funnel-surgery-item-body">
+                ${evidence ? `<p class="evidence"><i class="fas fa-eye"></i><span><b>${safe(copy.evidence)}</b><em dir="auto">${safe(evidence)}</em></span></p>` : ''}
+                ${problem ? `<p><i class="fas fa-circle-exclamation"></i><span><b>${safe(copy.problem)}</b><em dir="auto">${safe(problem)}</em></span></p>` : ''}
+                ${action ? `<p class="action"><i class="fas fa-arrow-right"></i><span><b>${safe(copy.action)}</b><em dir="auto">${safe(action)}</em></span></p>` : ''}
+                ${impact ? `<p><i class="fas fa-chart-line"></i><span><b>${safe(copy.impact)}</b><em dir="auto">${safe(impact)}</em></span></p>` : ''}
+            </div>${source ? `<small class="funnel-surgery-source"><i class="fas fa-database"></i>${safe(copy.source)}: ${safe(source)}</small>` : ''}</article>`;
     };
-    const categories = definitions.map(([key, label, icon, color], categoryIndex) => {
+    const activeDefinitions = definitions.filter(([key]) => (model[key] || []).length);
+    const categories = activeDefinitions.map(([key, label, icon, color], categoryIndex) => {
         const items = model[key] || [];
-        return `<details class="funnel-surgery-category" style="--surgery-accent:${color}" ${categoryIndex < 2 ? 'open' : ''}><summary data-no-collapse="true"><span class="funnel-surgery-category-icon"><i class="fas ${icon}"></i></span><span><strong>${safe(label)}</strong><small>${items.length} section${items.length > 1 ? 's' : ''}</small></span><i class="fas fa-chevron-down funnel-surgery-chevron"></i></summary><div class="funnel-surgery-list">${items.length ? items.slice(0, 10).map(renderItem).join('') : `<p class="funnel-surgery-empty">${safe(copy.empty)}</p>`}</div></details>`;
+        return `<details class="funnel-surgery-category" style="--surgery-accent:${color}" ${categoryIndex === 0 ? 'open' : ''}><summary data-no-collapse="true"><span class="funnel-surgery-category-icon"><i class="fas ${icon}"></i></span><span><strong>${safe(label)}</strong><small>${items.length} ${safe(copy.items)}</small></span><i class="fas fa-chevron-down funnel-surgery-chevron"></i></summary><div class="funnel-surgery-list">${items.slice(0, 12).map(renderItem).join('')}</div></details>`;
     }).join('');
     const total = model.matrix.length || definitions.reduce((sum, def) => sum + (model[def[0]] || []).length, 0);
-    return `<section class="funnel-surgery-shell" data-export-feature="page" dir="${dir}"><header class="funnel-surgery-hero"><div><span>${safe(copy.eyebrow)}</span><h2>${safe(copy.title)}</h2><p>${safe(copy.subtitle)}</p></div><div class="funnel-surgery-total"><strong>${total}</strong><small>${safe(copy.checked)}</small></div></header><div class="funnel-surgery-grid">${categories}</div></section>`;
+    const overview = definitions.slice(0, 5).map(([key, label, icon, color]) => `<div style="--surgery-accent:${color}"><i class="fas ${icon}"></i><span><strong>${(model[key] || []).length}</strong><small>${safe(label)}</small></span></div>`).join('');
+    return `<section class="funnel-surgery-shell" data-export-feature="page" dir="${dir}"><header class="funnel-surgery-hero"><div><span>${safe(copy.eyebrow)}</span><h2>${safe(copy.title)}</h2><p>${safe(copy.subtitle)}</p></div><div class="funnel-surgery-total"><strong>${total}</strong><small>${safe(copy.checked)}</small></div></header>
+        <div class="funnel-surgery-overview">${overview}${model.reconciliation?.evidenceCoverage !== undefined ? `<div class="coverage"><i class="fas fa-shield-halved"></i><span><strong>${safe(model.reconciliation.evidenceCoverage)}%</strong><small>${safe(copy.coverage)}</small></span></div>` : ''}</div>
+        <div class="funnel-surgery-grid">${categories || `<p class="funnel-surgery-empty">${safe(copy.empty)}</p>`}</div></section>`;
 }
 function displayFunnelResultsLegacy(data) {
     const container = document.getElementById('resultsFunnel');
@@ -19103,6 +19170,13 @@ const PDF_EXPORT = {
 .funnel-surgery-total { min-width: 98px; padding: 12px; text-align: center; border-radius: 14px; border: 1px solid rgba(167, 139, 250, .24); background: rgba(139, 92, 246, .1); }
 .funnel-surgery-total strong { display: block; color: #fff; font-size: 1.45rem; }
 .funnel-surgery-total small { color: #c4b5fd; font-size: .62rem; font-weight: 800; }
+.funnel-surgery-overview { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; padding:12px 14px 0; }
+.funnel-surgery-overview>div { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:8px; min-width:0; padding:9px; border:1px solid rgba(148,163,184,.12); border-radius:8px; background:#081321; }
+.funnel-surgery-overview>div>i { color:var(--surgery-accent); }
+.funnel-surgery-overview span { min-width:0; }
+.funnel-surgery-overview strong { display:block; color:#f8fafc; font-size:.84rem; }
+.funnel-surgery-overview small { display:block; color:#94a3b8; font-size:.54rem; line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.funnel-surgery-overview .coverage { --surgery-accent:#22d3ee; }
 .funnel-surgery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px; }
 .funnel-surgery-category { min-width: 0; overflow: hidden; border-radius: 8px; border: 1px solid rgba(148, 163, 184, .16); background: #091426; transition: border-color .2s ease, background .2s ease, box-shadow .2s ease; }
 .funnel-surgery-category:hover,
@@ -19121,20 +19195,32 @@ const PDF_EXPORT = {
 .funnel-surgery-item { min-width: 0; padding: 11px; border-radius: 8px; border-inline-start: 3px solid var(--surgery-accent); background: #07101f; }
 .funnel-surgery-item-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .funnel-surgery-item-head strong { color: #f8fafc; font-size: .79rem; line-height: 1.35; overflow-wrap: anywhere; }
-.funnel-surgery-item-head span { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; color: var(--surgery-accent); background: color-mix(in srgb, var(--surgery-accent) 10%, transparent); font-size: .56rem; font-weight: 900; }
-.funnel-surgery-item p { margin: 4px 0; color: #b7c2d3; font-size: .72rem; line-height: 1.55; overflow-wrap: anywhere; }
-.funnel-surgery-item p b { color: #e2e8f0; }
-.funnel-surgery-item small { display: block; margin-top: 6px; color: #7dd3fc; font-size: .6rem; font-weight: 800; }
+.funnel-surgery-item-head>div { display:flex; gap:5px; flex-wrap:wrap; justify-content:flex-end; }
+.funnel-surgery-item-head span { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; color: var(--surgery-accent); background: rgba(15,23,42,.9); border:1px solid rgba(148,163,184,.12); font-size: .56rem; font-weight: 900; }
+.funnel-surgery-item-head span.confidence { color:#93c5fd; }
+.funnel-surgery-item-body { display:grid; gap:6px; }
+.funnel-surgery-item p { display:grid; grid-template-columns:18px minmax(0,1fr); gap:7px; align-items:start; margin:0; padding:8px; border-radius:7px; color:#b7c2d3; background:#0a1627; font-size:.7rem; line-height:1.5; overflow-wrap:anywhere; }
+.funnel-surgery-item p>i { margin-top:2px; color:#7dd3fc; text-align:center; }
+.funnel-surgery-item p.action>i { color:#86efac; }
+.funnel-surgery-item p.evidence>i { color:#67e8f9; }
+.funnel-surgery-item p span { min-width:0; }
+.funnel-surgery-item p b { display:block; margin-bottom:2px; color:#e2e8f0; font-size:.57rem; text-transform:uppercase; }
+.funnel-surgery-item p em { color:#b7c2d3; font-style:normal; }
+.funnel-surgery-source { display:flex!important; align-items:center; gap:5px; margin-top:7px; color:#64748b!important; font-size:.56rem!important; font-weight:700!important; overflow-wrap:anywhere; }
 .funnel-surgery-empty { margin: 0; padding: 10px; color: #64748b; font-size: .72rem; }
+@media (max-width: 980px) { .funnel-surgery-overview { grid-template-columns:repeat(3,minmax(0,1fr)); } }
 @media (max-width: 700px) {
     .funnel-surgery-shell { border-radius: 14px; }
     .funnel-surgery-hero { grid-template-columns: minmax(0, 1fr) 74px; gap: 10px; padding: 14px; }
     .funnel-surgery-hero p { font-size: .76rem; }
     .funnel-surgery-total { min-width: 0; padding: 9px 6px; }
     .funnel-surgery-total strong { font-size: 1.18rem; }
+    .funnel-surgery-overview { grid-template-columns:repeat(2,minmax(0,1fr)); padding:9px 9px 0; }
+    .funnel-surgery-overview>div { min-height:52px; }
     .funnel-surgery-grid { grid-template-columns: 1fr; padding: 9px; }
     .funnel-surgery-category:last-child { grid-column: auto; }
     .funnel-surgery-category > summary { min-height: 56px; padding: 10px; }
+    .funnel-surgery-item-head { align-items:flex-start; }
 }
 .report-section {
     margin: 18px 0;

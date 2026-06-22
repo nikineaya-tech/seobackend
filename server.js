@@ -599,7 +599,10 @@ function normalizeFunnelEvidencePayload(scrape = {}, pageUrl = '') {
             url: limitFunnelText(block.url || block.href || '', 500) || null,
             alt: limitFunnelText(block.alt || '', 180) || null
         };
-        const key = [item.source, item.pageUrl, item.selector, item.text].join('|').toLowerCase();
+        const textFingerprint = item.text.toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 900);
+        const key = textFingerprint.length >= 40
+            ? [item.pageUrl, textFingerprint].join('|')
+            : [item.source, item.pageUrl, item.selector, textFingerprint].join('|').toLowerCase();
         if (seen.has(key)) return;
         seen.add(key);
         blocks.push(item);
@@ -1088,9 +1091,11 @@ function reconcileFunnelSurgeryWithEvidence({
         if (key === 'livraison') return blockProof(/livraison|shipping|delivery|expedition|telechargement instantane/i);
         if (key === 'retours') return blockProof(/retour|return|refund|rembours|exchange/i);
         if (key === 'avis clients' || key === 'temoignages') {
-            const reviewProof = blockProof(/avis|review|rating|etoile|testimonial|temoignage/i);
-            return reviewProof && !/aucun avis|no reviews?|0 reviews?/i.test(String(reviewProof.text || ''))
-                ? reviewProof : null;
+            return blocks.find(block => {
+                const value = [block.selector, block.typeGuess, block.labelGuess, block.text].filter(Boolean).join(' ');
+                return /avis|review|rating|etoile|testimonial|temoignage|⭐|★|تقييم|آراء|مراجعات|شهادات/i.test(value)
+                    && !/aucun avis|pas encore d['â€™ ]avis|no reviews?(?: yet)?|0 reviews?|لا توجد مراجعات|لا توجد تقييمات/i.test(String(block.text || ''));
+            }) || synthesisMatch(synthesis.present, label) || synthesisMatch(synthesis.weak, label);
         }
         if (key === 'faq' || key === 'objections') return blockProof(/faq|questions frequentes|question|reponse|objection/i);
         if (key === 'footer') return blockProof(/footer|copyright|conditions|privacy|mentions legales/i);
@@ -1129,7 +1134,7 @@ function reconcileFunnelSurgeryWithEvidence({
         const weakDecision = synthesisMatch(synthesis.weak, row.section);
         const missingDecision = synthesisMatch(synthesis.missing, row.section);
         const rowKey = clean(row.section);
-        if (/avis clients|temoignages/.test(rowKey) && explicitReviewAbsence) {
+        if (/avis clients|temoignages/.test(rowKey) && explicitReviewAbsence && !proof && !synthesisMatch(synthesis.present, row.section)) {
             return {
                 ...row,
                 decision: add,
@@ -1152,7 +1157,9 @@ function reconcileFunnelSurgeryWithEvidence({
                 quality: needsImprovement ? 'WEAK' : 'STRONG',
                 evidence: limitFunnelText(proof.text || proof.detectedText || proof.evidence || String(proof), 700),
                 problem: weakDecision?.problem || (weakDecision ? row.problem : ''),
-                confidence: proof.confidence || (proof.source === 'heading' || proof.source === 'button' ? 'HIGH' : 'MEDIUM')
+                confidence: proof.confidence || (proof.source === 'heading' || proof.source === 'button' ? 'HIGH' : 'MEDIUM'),
+                decisionSource: weakDecision ? 'mini-agent-plus-observed-evidence' : 'observed-evidence',
+                evidenceSource: proof.source || proof.evidenceSource || proof.agentName || 'observed-evidence'
             };
         }
         if (missingDecision && canConfirmSectionAbsence(row.section)) {
@@ -1160,7 +1167,9 @@ function reconcileFunnelSurgeryWithEvidence({
                 ...row,
                 decision: add,
                 evidence: missingDecision.reason || row.evidence,
-                confidence: missingDecision.confidence || synthesis.confidence || 'MEDIUM'
+                confidence: missingDecision.confidence || synthesis.confidence || 'MEDIUM',
+                decisionSource: 'mini-agent-confirmed-absence',
+                evidenceSource: missingDecision.agentName || 'specialized-evidence-agent'
             };
         }
         if (String(row.present || '').toLowerCase() === String(yes).toLowerCase()) return row;
@@ -1169,7 +1178,9 @@ function reconcileFunnelSurgeryWithEvidence({
             decision: unconfirmedLabel,
             evidence: isAr ? 'لم تتوفر أدلة كافية للحسم.' : isEn ? 'Insufficient evidence to decide.' : 'Preuves insuffisantes pour conclure.',
             problem: isAr ? 'يتطلب تحققاً يدوياً أو استخراجاً أعمق.' : isEn ? 'Requires manual verification or deeper extraction.' : 'À vérifier manuellement ou avec une extraction plus profonde.',
-            confidence: 'LOW'
+            confidence: 'LOW',
+            decisionSource: 'insufficient-evidence',
+            evidenceSource: null
         };
     });
 
@@ -1233,7 +1244,8 @@ function reconcileFunnelSurgeryWithEvidence({
             evidenceCount: blocks.length,
             observedSections: rows.filter(row => String(row.present).toLowerCase() === String(yes).toLowerCase()).length,
             confirmedMissing: missingSections.length,
-            unconfirmed: unconfirmedSections.length
+            unconfirmed: unconfirmedSections.length,
+            evidenceCoverage: rows.length ? Math.round((rows.filter(row => row.evidenceSource).length / rows.length) * 100) : 0
         }
     };
 }
@@ -1525,7 +1537,7 @@ function buildFunnelSectionSurgeryModel({
         { name: 'Témoignages', present: presentTypes.has('SOCIAL_PROOF'), critical: true, evidence: 'SOCIAL_PROOF détecté' },
         { name: 'FAQ', present: hasFAQ, critical: true, evidence: 'FAQ détectée' },
         { name: 'Badges de confiance', present: presentTypes.has('TRUST') || Boolean(trust.hasPaymentLogos), critical: true, evidence: 'Signal trust détecté' },
-        { name: 'Paiement sécurisé', present: Boolean(trust.hasPaymentLogos || hasSSL), critical: offerType === 'ecommerce', evidence: hasSSL ? 'SSL détecté' : '' },
+        { name: 'Paiement sécurisé', present: Boolean(trust.hasPaymentLogos || presentTypes.has('PAYMENT') || /paiement sécurisé|secure payment|payment methods|visa|mastercard|الدفع الآمن/.test(text)), critical: offerType === 'ecommerce', evidence: trust.hasPaymentLogos ? 'Logos de paiement observés' : 'Signal de paiement observé' },
         { name: 'WhatsApp / contact', present: hasForm, critical: true, evidence: [hasWhatsApp ? 'WhatsApp' : null, phones[0], emails[0]].filter(Boolean).join(' | ') },
         { name: 'Formulaire', present: presentTypes.has('FORM'), critical: offerType !== 'ecommerce', evidence: 'FORM détecté' },
         { name: 'Checkout / panier', present: presentTypes.has('CHECKOUT') || /checkout|panier|cart/.test(text), critical: offerType === 'ecommerce', evidence: 'Signal panier/checkout détecté' },
@@ -1558,9 +1570,7 @@ function buildFunnelSectionSurgeryModel({
     };
 
     const rows = catalog.map(item => {
-        const decision = item.present
-            ? (['Prix', 'Garantie', 'Avis clients', 'FAQ', 'CTA principal', 'Hero'].includes(item.name) && item.critical ? labels.improve : labels.keep)
-            : labels.add;
+        const decision = item.present ? labels.keep : labels.add;
         return {
             section: item.name,
             present: item.present ? yes : no,
@@ -1575,7 +1585,7 @@ function buildFunnelSectionSurgeryModel({
                 })())
                 : (isAr ? 'غير مرصود في الصفحات المتاحة' : isEn ? 'Not detected in accessible pages' : 'Non détecté dans les pages accessibles'),
             problem: item.present
-                ? (decision === labels.improve ? (isAr ? 'القسم موجود لكن يحتاج إلى إثبات أو وضوح أقوى.' : isEn ? 'Present but needs stronger clarity or proof.' : 'Présent mais doit gagner en clarté ou en preuve.') : '')
+                ? ''
                 : (isAr ? 'غيابه يترك سؤالا قبل القرار.' : isEn ? 'Its absence leaves an unanswered question before conversion.' : 'Son absence laisse une question avant la conversion.'),
             conversionImpact: item.critical ? (isAr ? 'تأثير مباشر على القرار' : isEn ? 'Direct decision impact' : 'Impact direct sur la décision') : (isAr ? 'تأثير متوسط على الفهم' : isEn ? 'Medium clarity impact' : 'Impact moyen sur la compréhension'),
             action: actionFor(item.name, item.present),
@@ -1588,10 +1598,24 @@ function buildFunnelSectionSurgeryModel({
     const improveSections = rows.filter(r => r.decision === labels.improve).slice(0, 8);
     const missingSections = rows.filter(r => r.decision === labels.add && /Haute|High|عالية/.test(r.priority)).slice(0, 8);
 
+    const sectionPlacement = type => {
+        const section = (sectionsDetailed || []).find(item => String(item?.type || '').toUpperCase() === type);
+        if (!section) return null;
+        return section.position || section.index || null;
+    };
+    const isLatePlacement = placement => {
+        if (placement === null || placement === undefined || placement === '') return false;
+        if (typeof placement === 'string') return /lower|bottom|footer|bas|fin/i.test(placement);
+        const total = Math.max(1, (sectionsDetailed || []).length);
+        return Number(placement) > Math.max(4, Math.ceil(total * 0.62));
+    };
+    const reviewPlacement = sectionPlacement('SOCIAL_PROOF');
+    const guaranteePlacement = sectionPlacement('GUARANTEE');
+    const faqPlacement = sectionPlacement('FAQ');
     const moveSections = [
-        hasReviews ? { section: 'Avis clients', currentPosition: 'Position exacte à vérifier', recommendedPosition: 'Juste après offre/prix', reason: isEn ? 'Reviews reduce hesitation before the buying decision.' : isAr ? 'الآراء تقلل التردد قبل قرار الشراء.' : 'Les avis réduisent l’hésitation avant la décision.', impact: 'MEDIUM', confidence: 'MEDIUM' } : null,
-        hasGuarantee ? { section: 'Garantie', currentPosition: 'Position exacte à vérifier', recommendedPosition: 'Près du prix et du CTA', reason: isEn ? 'Guarantee lowers perceived risk.' : isAr ? 'الضمان يقلل المخاطرة المتصورة.' : 'La garantie réduit le risque perçu.', impact: 'HIGH', confidence: 'MEDIUM' } : null,
-        hasFAQ ? { section: 'FAQ', currentPosition: 'Position exacte à vérifier', recommendedPosition: 'Avant le CTA final', reason: isEn ? 'FAQ answers objections before action.' : isAr ? 'الأسئلة الشائعة تجيب عن الاعتراضات قبل الإجراء.' : 'La FAQ traite les objections avant l’action.', impact: 'MEDIUM', confidence: 'MEDIUM' } : null
+        hasReviews && isLatePlacement(reviewPlacement) ? { section: 'Avis clients', currentPosition: String(reviewPlacement), recommendedPosition: 'Juste après offre/prix', reason: isEn ? 'Reviews reduce hesitation before the buying decision.' : isAr ? 'الآراء تقلل التردد قبل قرار الشراء.' : 'Les avis réduisent l’hésitation avant la décision.', impact: 'MEDIUM', confidence: 'HIGH', decisionSource: 'observed-section-position' } : null,
+        hasGuarantee && isLatePlacement(guaranteePlacement) ? { section: 'Garantie', currentPosition: String(guaranteePlacement), recommendedPosition: 'Près du prix et du CTA', reason: isEn ? 'Guarantee lowers perceived risk.' : isAr ? 'الضمان يقلل المخاطرة المتصورة.' : 'La garantie réduit le risque perçu.', impact: 'HIGH', confidence: 'HIGH', decisionSource: 'observed-section-position' } : null,
+        hasFAQ && isLatePlacement(faqPlacement) ? { section: 'FAQ', currentPosition: String(faqPlacement), recommendedPosition: 'Avant le CTA final', reason: isEn ? 'FAQ answers objections before action.' : isAr ? 'الأسئلة الشائعة تجيب عن الاعتراضات قبل الإجراء.' : 'La FAQ traite les objections avant l’action.', impact: 'MEDIUM', confidence: 'HIGH', decisionSource: 'observed-section-position' } : null
     ].filter(Boolean);
 
     const removeOrMergeSections = [
@@ -12896,16 +12920,56 @@ scrapedRawData = cleanFunnelScrapePayload(scrape);
         PRICE: 'PRICING',
         PRICES: 'PRICING',
         CONTACT: 'CTA',
-        BUTTONS: 'CTA'
+        BUTTONS: 'CTA',
+        REVIEWS_SECTION: 'SOCIAL_PROOF',
+        TESTIMONIAL: 'SOCIAL_PROOF',
+        CUSTOMER_REVIEWS: 'SOCIAL_PROOF',
+        PRODUCT_GALLERY: 'GALLERY',
+        PRODUCT_IMAGES: 'GALLERY',
+        SHIPPING: 'DELIVERY',
+        DELIVERY_INFO: 'DELIVERY',
+        RETURN_POLICY: 'RETURNS',
+        REFUND_POLICY: 'RETURNS',
+        WARRANTY: 'GUARANTEE',
+        LEGAL_PAGES: 'LEGAL',
+        SECURE_PAYMENT: 'PAYMENT'
       };
       return aliases[raw] || raw;
     };
-    const base = Array.isArray(copy.pageSections)
-      ? copy.pageSections
-          .filter(section => section && typeof section === 'object')
-          .map(section => ({ ...section, type: normalizeSectionType(section) }))
-      : [];
-    if (base.length > 0) return base;
+    const sectionSources = [
+      ...(Array.isArray(scrape.sectionRawBlocks) ? scrape.sectionRawBlocks : []),
+      ...(Array.isArray(scrape.sectionsDetailed) ? scrape.sectionsDetailed : []),
+      ...(Array.isArray(scrape.mainPage?.sectionRawBlocks) ? scrape.mainPage.sectionRawBlocks : []),
+      ...(Array.isArray(copy.pageSections) ? copy.pageSections : [])
+    ].filter(section => section && typeof section === 'object');
+    const mergedByKey = new Map();
+    const richness = section => [
+      section.detectedText, section.text, section.textPreview,
+      ...(Array.isArray(section.headings) ? section.headings : []),
+      ...(Array.isArray(section.paragraphs) ? section.paragraphs : []),
+      ...(Array.isArray(section.buttons) ? section.buttons : []),
+      ...(Array.isArray(section.ctas) ? section.ctas : []),
+      ...(Array.isArray(section.images) ? section.images : [])
+    ].filter(Boolean).join(' ').length;
+    sectionSources.forEach((section, index) => {
+      const normalized = { ...section, type: normalizeSectionType(section) };
+      const text = String(normalized.detectedText || normalized.textPreview || normalized.text || '').replace(/\s+/g, ' ').trim();
+      const position = Number(normalized.position || normalized.index || 0) || 0;
+      const selector = String(normalized.selector || '').trim();
+      const key = selector
+        ? `${normalized.type}|${selector}`
+        : position
+          ? `${normalized.type}|position:${position}`
+          : `${normalized.type}|${text.slice(0, 140).toLowerCase() || index}`;
+      const previous = mergedByKey.get(key);
+      if (!previous || richness(normalized) > richness(previous)) {
+        mergedByKey.set(key, previous ? { ...previous, ...normalized } : normalized);
+      }
+    });
+    const mergedSections = [...mergedByKey.values()].sort((a, b) =>
+      (Number(a.position || a.index || 9999) || 9999) - (Number(b.position || b.index || 9999) || 9999)
+    );
+    if (mergedSections.length > 0) return mergedSections.slice(0, 60);
 
     // Fallback Cheerio — rawHtml déjà disponible dans le scope
     const $s = cheerio.load(rawHtml);
@@ -13088,6 +13152,14 @@ const sectionLabels = {
   FAQ: 'FAQ',
   OBJECTIONS: 'Objections',
   GUARANTEE: 'Guarantee',
+  GALLERY: 'Gallery',
+  DELIVERY: 'Delivery',
+  RETURNS: 'Returns',
+  PAYMENT: 'Payment',
+  LEGAL: 'Legal',
+  SOCIAL: 'Social channels',
+  URGENCY: 'Urgency',
+  BONUS: 'Bonus',
   CTA: 'CTA',
   FORM: 'Form',
   CHECKOUT: 'Checkout',
