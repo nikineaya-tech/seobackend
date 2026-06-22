@@ -436,6 +436,22 @@ html, body {
 .funnel-aida-rows .funnel-legacy-text{font-size:.75rem;line-height:1.52}
 .funnel-aida-rows .funnel-legacy-list{font-size:.74rem}
 .funnel-aida-empty{margin:0;color:#64748b;font-size:.72rem;line-height:1.5}
+.funnel-visual-identity{display:grid;gap:12px}
+.funnel-color-section{overflow:hidden;border:1px solid rgba(34,211,238,.2);border-radius:8px;background:#07111f}
+.funnel-color-section>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px;border-bottom:1px solid rgba(148,163,184,.12);background:#0b1728}
+.funnel-color-section>header small{display:block;color:#67e8f9;font-size:.58rem;font-weight:900;letter-spacing:.08em}
+.funnel-color-section>header h4{margin:3px 0 0;color:#f8fafc;font-size:.9rem}
+.funnel-color-section>header>span{display:grid;place-items:center;width:34px;height:34px;border-radius:8px;background:#0f172a;color:#7dd3fc;font-size:.76rem;font-weight:900}
+.funnel-color-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px;padding:12px}
+.funnel-color-swatch{display:grid;grid-template-columns:48px minmax(0,1fr) 34px;align-items:center;gap:10px;min-width:0;padding:9px;border:1px solid rgba(148,163,184,.13);border-radius:8px;background:#0b1525}
+.funnel-color-preview{width:48px;height:48px;border-radius:7px;border:1px solid rgba(255,255,255,.28);box-shadow:0 0 0 1px rgba(0,0,0,.2) inset}
+.funnel-color-swatch small{display:block;color:#94a3b8;font-size:.58rem;font-weight:800}
+.funnel-color-swatch strong{display:block;margin-top:3px;color:#f8fafc;font:800 .74rem/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
+.funnel-color-swatch button{display:grid;place-items:center;width:34px;height:34px;border:1px solid rgba(148,163,184,.16);border-radius:7px;color:#7dd3fc;background:#101c30;cursor:pointer;transition:background .2s ease,border-color .2s ease}
+.funnel-color-swatch button:hover,.funnel-color-swatch button:focus-visible{border-color:#22d3ee;background:#14253d;outline:none}
+.funnel-color-section>p{display:flex;align-items:center;gap:7px;margin:0;padding:0 12px 12px;color:#94a3b8;font-size:.67rem;line-height:1.45}
+.funnel-visual-details{padding:13px;border:1px solid rgba(148,163,184,.13);border-radius:8px;background:#091426}
+.funnel-visual-details>h4{margin:0 0 10px;color:#e2e8f0;font-size:.8rem}
 .funnel-mega-prompt{max-height:560px;margin:0;padding:16px;border:1px solid rgba(34,211,238,.16);border-radius:10px;background:#06101d;color:#dbeafe;font:500 .76rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow:auto}
 .funnel-v2-hero-embedded{margin:0}
 @media(max-width:700px){
@@ -444,6 +460,7 @@ html, body {
  .funnel-aida-grid,.funnel-aida-columns{grid-template-columns:1fr}
  .funnel-aida-columns>section+section{border-inline-start:0;border-top:1px solid rgba(148,163,184,.12)}
  .funnel-aida-card>header{padding:12px}
+ .funnel-color-grid{grid-template-columns:1fr;padding:9px}
  .funnel-mega-prompt{max-height:420px;font-size:.7rem}
 }
 </style>
@@ -9835,10 +9852,11 @@ function createFixedPdfClone(el, exportOptions = {}) {
         node.style.setProperty('white-space', 'normal', 'important');
     });
     shell.querySelectorAll('div,section,article,aside,main').forEach(function (node) {
+        if (node.classList.contains('funnel-color-preview')) return;
         node.style.setProperty('background-color', 'transparent', 'important');
         node.style.setProperty('background-image', 'none', 'important');
     });
-    shell.querySelectorAll('.result-card,.competitor-card,.card,.executive-summary,.executive-block,.executive-action,.decision-proof-panel').forEach(function (card) {
+    shell.querySelectorAll('.result-card,.competitor-card,.card,.executive-summary,.executive-block,.executive-action,.executive-pulse-grid article,.funnel-color-swatch,.funnel-visual-details,.decision-proof-panel').forEach(function (card) {
         card.style.setProperty('background', '#ffffff', 'important');
         card.style.setProperty('background-image', 'none', 'important');
         card.style.setProperty('color', '#0f172a', 'important');
@@ -12791,6 +12809,22 @@ function renderExecutiveSummary(data, type, opts = {}) {
     };
     const list = (items) => `<ul>${(items.length ? items : [fallback]).map(item => `<li>${safe(executiveText(item))}</li>`).join('')}</ul>`;
     const actions = model.actions.length ? model.actions : [{ title: fallback, impact: '—', effort: '—', priority: '—' }];
+    const pulse = isAr ? {
+        verdict: 'القرار', leverage: 'الرافعة الأقوى', risk: 'الخطر الفوري', move: 'الخطوة التالية',
+        proof: 'خلاصة مبنية على الأدلة المرصودة في الصفحة'
+    } : isEn ? {
+        verdict: 'Decision', leverage: 'Strongest lever', risk: 'Immediate risk', move: 'Next move',
+        proof: 'A synthesis grounded in observed page evidence'
+    } : {
+        verdict: 'Décision', leverage: 'Levier le plus fort', risk: 'Risque immédiat', move: 'Prochaine action',
+        proof: 'Une synthèse fondée sur les preuves réellement observées'
+    };
+    const pulseItems = [
+        ['fa-compass', pulse.verdict, model.verdict || fallback, '#22d3ee'],
+        ['fa-arrow-trend-up', pulse.leverage, model.opportunities[0] || fallback, '#22c55e'],
+        ['fa-triangle-exclamation', pulse.risk, model.weaknesses[0] || fallback, '#fb7185'],
+        ['fa-bolt', pulse.move, actions[0]?.title || fallback, '#a78bfa']
+    ];
 
     return `
     <section class="executive-summary fade-in-up" data-export-feature="summary" dir="${isAr ? 'rtl' : 'ltr'}">
@@ -12801,6 +12835,14 @@ function renderExecutiveSummary(data, type, opts = {}) {
                 <p class="executive-verdict">${safe(model.verdict || fallback)}</p>
             </div>
             <div class="executive-score"><strong>${model.score === null ? '—' : `${model.score}/100`}</strong><small>${safe(t.score)}</small></div>
+        </div>
+        <div class="executive-decision-pulse">
+            <p class="executive-proof-line"><i class="fas fa-circle-check"></i>${safe(pulse.proof)}</p>
+            <div class="executive-pulse-grid">${pulseItems.map(([icon, label, value, accent]) => `
+                <article style="--pulse-accent:${accent}">
+                    <span><i class="fas ${icon}"></i></span>
+                    <div><small>${safe(label)}</small><strong dir="auto">${safe(executiveText(value))}</strong></div>
+                </article>`).join('')}</div>
         </div>
         <nav class="executive-nav no-print" aria-label="${safe(t.kicker)}">
             <button type="button" onclick="navigateReportView(this,'summary')">${safe(t.summary)}</button>
@@ -14263,6 +14305,16 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         if (!data.webCharte.typography) {
             data.webCharte.typography = { primaryFont: null, secondaryFont: null, googleFonts: [] };
         }
+        const observedColors = Array.isArray(data.rawIntel?.colors) ? data.rawIntel.colors.filter(Boolean) : [];
+        data.webCharte.colorPalette = data.webCharte.colorPalette && typeof data.webCharte.colorPalette === 'object'
+            ? data.webCharte.colorPalette
+            : {};
+        data.webCharte.colorPalette.primary = data.webCharte.colorPalette.primary || data.rawIntel?.primaryColor || observedColors[0] || null;
+        data.webCharte.colorPalette.secondary = data.webCharte.colorPalette.secondary || data.rawIntel?.secondColor || observedColors[1] || null;
+        data.webCharte.colorPalette.accent = data.webCharte.colorPalette.accent || data.rawIntel?.accentColor || observedColors[2] || null;
+        data.webCharte.colorPalette.allDetected = observedColors.length
+            ? observedColors
+            : (Array.isArray(data.webCharte.colorPalette.allDetected) ? data.webCharte.colorPalette.allDetected : []);
         // Patch designScore à 0 → essayer de le récupérer depuis globalScoring
         if (!data.webCharte.designScore && data.globalScoring?.breakdown?.design?.score) {
             data.webCharte.designScore = data.globalScoring.breakdown.design.score;
@@ -16896,6 +16948,40 @@ function renderFunnelAidaJourney(value, opts = {}) {
     return cards ? `<div class="funnel-aida-grid">${cards}</div>` : renderFunnelLegacyValue(value, opts);
 }
 
+function renderFunnelVisualIdentity(value, opts = {}) {
+    if (!value || typeof value !== 'object') return renderFunnelLegacyValue(value, opts);
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : text => String(text || '');
+    const text = (fr, en, ar) => opts.isAr ? ar : opts.isEn ? en : fr;
+    const palette = value.colorPalette && typeof value.colorPalette === 'object' ? value.colorPalette : {};
+    const rawColor = item => String(item?.color || item?.hex || item || '').trim();
+    const validColor = item => {
+        const color = rawColor(item);
+        return /^(?:#[0-9a-f]{3,8}|rgba?\([\d\s.,%/]+\)|hsla?\([\d\s.,%/]+\))$/i.test(color) ? color : '';
+    };
+    const candidates = [palette.primary, palette.secondary, palette.accent, palette.background, ...(palette.allDetected || [])]
+        .map(validColor)
+        .filter(Boolean);
+    const colors = [...new Set(candidates.map(color => color.toLowerCase()))].slice(0, 8);
+    const roles = [
+        text('Primaire observée', 'Observed primary', 'اللون الأساسي المرصود'),
+        text('Secondaire observée', 'Observed secondary', 'اللون الثانوي المرصود'),
+        text('Accent observé', 'Observed accent', 'لون الإبراز المرصود'),
+        text('Fond observé', 'Observed background', 'لون الخلفية المرصود')
+    ];
+    const paletteHtml = colors.length ? `<section class="funnel-color-section">
+        <header><div><small>${safe(text('ADN VISUEL RÉEL', 'REAL VISUAL DNA', 'الهوية البصرية الفعلية'))}</small><h4>${safe(text('Couleurs observées sur la page', 'Colors observed on the page', 'الألوان المرصودة في الصفحة'))}</h4></div><span>${colors.length}</span></header>
+        <div class="funnel-color-grid">${colors.map((color, index) => `<article class="funnel-color-swatch">
+            <div class="funnel-color-preview" style="background:${safe(color)}"></div>
+            <div><small>${safe(roles[index] || text(`Couleur observée ${index + 1}`, `Observed color ${index + 1}`, `لون مرصود ${index + 1}`))}</small><strong>${safe(color.toUpperCase())}</strong></div>
+            <button type="button" data-no-collapse="true" title="${safe(text('Copier la couleur', 'Copy color', 'نسخ اللون'))}" aria-label="${safe(text('Copier la couleur', 'Copy color', 'نسخ اللون'))}" onclick="event.stopPropagation();navigator.clipboard?.writeText('${safe(color)}')"><i class="fas fa-copy"></i></button>
+        </article>`).join('')}</div>
+        <p><i class="fas fa-circle-info"></i>${safe(text('Palette extraite des styles réellement rendus, sans couleur inventée.', 'Palette extracted from rendered styles, with no invented color.', 'تم استخراج اللوحة من الأنماط المعروضة فعليا دون اختراع ألوان.'))}</p>
+    </section>` : `<p class="funnel-aida-empty">${safe(text('Aucune couleur fiable observée dans les pages accessibles.', 'No reliable color observed in accessible pages.', 'لم يتم رصد لون موثوق في الصفحات المتاحة.'))}</p>`;
+    const remainder = Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'colorPalette'));
+    const details = funnelLegacyHasData(remainder) ? renderFunnelLegacyValue(remainder, opts) : '';
+    return `<div class="funnel-visual-identity">${paletteHtml}${details ? `<section class="funnel-visual-details"><h4>${safe(text('Lecture de la hiérarchie', 'Hierarchy reading', 'قراءة التسلسل البصري'))}</h4>${details}</section>` : ''}</div>`;
+}
+
 function renderFunnelLegacyModules(data = {}, opts = {}) {
     const isAr = opts.isAr;
     const isEn = opts.isEn;
@@ -17030,7 +17116,9 @@ function renderFunnelLegacyModules(data = {}, opts = {}) {
                 ? '<pre class="funnel-mega-prompt" dir="auto">' + (typeof escapeHtml === 'function' ? escapeHtml(String(module.value).slice(0, 14000)) : String(module.value).slice(0, 14000)) + '</pre>'
                 : module.key === 'aida-journey'
                     ? renderFunnelAidaJourney(module.value, { isAr, isEn })
-                    : renderFunnelLegacyValue(module.value, { isAr, isEn });
+                    : module.key === 'visual-identity'
+                        ? renderFunnelVisualIdentity(module.value, { isAr, isEn })
+                        : renderFunnelLegacyValue(module.value, { isAr, isEn });
             return body ? renderReportSection(module.key, module.title, module.subtitle, module.icon, body, { isAr, isEn }) : '';
         })
         .join('');
@@ -18794,6 +18882,52 @@ const PDF_EXPORT = {
 .executive-score strong { display: block; color: #fff; font-size: 1.65rem; line-height: 1; }
 .executive-score small { display: block; margin-top: 6px; color: #c4b5fd; font-size: .65rem; font-weight: 800; }
 
+.executive-decision-pulse {
+    margin-top: 16px;
+    padding: 13px;
+    border: 1px solid rgba(34, 211, 238, .16);
+    border-radius: 8px;
+    background: #07111f;
+}
+
+.executive-proof-line {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0 0 10px;
+    color: #94a3b8;
+    font-size: .66rem;
+    font-weight: 700;
+}
+
+.executive-proof-line i { color: #22c55e; }
+.executive-pulse-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.executive-pulse-grid article {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 9px;
+    align-items: start;
+    min-width: 0;
+    padding: 11px;
+    border: 1px solid rgba(148, 163, 184, .12);
+    border-top: 2px solid var(--pulse-accent);
+    border-radius: 8px;
+    background: #0b1525;
+}
+
+.executive-pulse-grid article > span {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 7px;
+    color: var(--pulse-accent);
+    background: #101d31;
+}
+
+.executive-pulse-grid small { display: block; color: var(--pulse-accent); font-size: .57rem; font-weight: 900; text-transform: uppercase; }
+.executive-pulse-grid strong { display: -webkit-box; margin-top: 4px; color: #e2e8f0; font-size: .72rem; line-height: 1.45; overflow: hidden; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+
 .executive-nav {
     display: flex;
     flex-wrap: wrap;
@@ -18875,6 +19009,13 @@ const PDF_EXPORT = {
     .executive-actions { grid-template-columns: 1fr; }
     .executive-action strong { min-height: 0; }
     .executive-nav button { flex: 1 1 130px; }
+    .executive-pulse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 520px) {
+    .executive-decision-pulse { padding: 9px; }
+    .executive-pulse-grid { grid-template-columns: 1fr; }
+    .executive-pulse-grid article { min-height: 74px; }
 }
 
 .funnel-v2-report { min-width: 0; width: 100%; }
