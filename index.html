@@ -417,11 +417,33 @@ html, body {
 .funnel-legacy-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:9px}
 .funnel-legacy-card{position:relative;min-width:0;padding:12px;border:1px solid rgba(139,92,246,.14);border-radius:10px;background:#0b1425}
 .funnel-legacy-card>span{display:inline-grid;place-items:center;min-width:24px;height:24px;margin-bottom:8px;border-radius:7px;color:#c4b5fd;background:rgba(139,92,246,.14);font-size:.64rem;font-weight:900}
+.funnel-aida-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.funnel-aida-card{min-width:0;overflow:hidden;border:1px solid rgba(148,163,184,.16);border-radius:8px;background:#081222;box-shadow:0 12px 28px rgba(0,0,0,.14)}
+.funnel-aida-card>header{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:14px;border-bottom:1px solid rgba(148,163,184,.12);background:linear-gradient(135deg,rgba(15,23,42,.98),rgba(8,18,34,.92))}
+.funnel-aida-card>header small{display:block;color:#64748b;font-size:.58rem;font-weight:800;text-transform:uppercase}
+.funnel-aida-card>header h4{margin:2px 0 0;color:#f8fafc;font-size:.94rem}
+.funnel-aida-icon{display:grid;place-items:center;width:36px;height:36px;border-radius:8px;color:var(--aida-accent);background:rgba(15,23,42,.92);border:1px solid var(--aida-accent)}
+.funnel-aida-score{align-self:start;padding:5px 8px;border-radius:7px;color:#94a3b8;background:#020617;font-size:.62rem;font-weight:800}
+.funnel-aida-score b{color:var(--aida-accent);font-size:.82rem}
+.funnel-aida-columns{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.funnel-aida-columns>section{min-width:0;padding:13px}
+.funnel-aida-columns>section+section{border-inline-start:1px solid rgba(148,163,184,.12);background:rgba(34,197,94,.025)}
+.funnel-aida-columns h5{display:flex;align-items:center;gap:7px;margin:0 0 10px;color:#7dd3fc;font-size:.68rem;text-transform:uppercase}
+.funnel-aida-columns .recommended h5{color:#86efac}
+.funnel-aida-rows{display:grid;gap:8px}
+.funnel-aida-rows>div{padding:9px;border-radius:7px;background:#0b1527;border:1px solid rgba(148,163,184,.1)}
+.funnel-aida-rows small{display:block;margin-bottom:4px;color:#7dd3fc;font-size:.58rem;font-weight:900;text-transform:uppercase}
+.funnel-aida-rows .funnel-legacy-text{font-size:.75rem;line-height:1.52}
+.funnel-aida-rows .funnel-legacy-list{font-size:.74rem}
+.funnel-aida-empty{margin:0;color:#64748b;font-size:.72rem;line-height:1.5}
 .funnel-mega-prompt{max-height:560px;margin:0;padding:16px;border:1px solid rgba(34,211,238,.16);border-radius:10px;background:#06101d;color:#dbeafe;font:500 .76rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow:auto}
 .funnel-v2-hero-embedded{margin:0}
 @media(max-width:700px){
  .funnel-legacy-row{grid-template-columns:1fr;gap:6px;padding:10px}
  .funnel-legacy-cards{grid-template-columns:1fr}
+ .funnel-aida-grid,.funnel-aida-columns{grid-template-columns:1fr}
+ .funnel-aida-columns>section+section{border-inline-start:0;border-top:1px solid rgba(148,163,184,.12)}
+ .funnel-aida-card>header{padding:12px}
  .funnel-mega-prompt{max-height:420px;font-size:.7rem}
 }
 </style>
@@ -16839,6 +16861,41 @@ function renderFunnelLegacyValue(value, opts = {}, depth = 0) {
     }).join('') + '</div>';
 }
 
+function renderFunnelAidaJourney(value, opts = {}) {
+    if (!value || typeof value !== 'object') return renderFunnelLegacyValue(value, opts);
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : text => String(text || '');
+    const text = (fr, en, ar) => opts.isAr ? ar : opts.isEn ? en : fr;
+    const phases = [
+        ['attention', text('Attention', 'Attention', 'الانتباه'), 'fa-eye', '#22d3ee'],
+        ['interest', text('Intérêt', 'Interest', 'الاهتمام'), 'fa-lightbulb', '#60a5fa'],
+        ['desire', text('Désir', 'Desire', 'الرغبة'), 'fa-heart', '#a78bfa'],
+        ['action', text('Action', 'Action', 'الإجراء'), 'fa-bolt', '#22c55e']
+    ];
+    const recommendationPattern = /fix|recommend|improv|suggest|correction|action|solution|recommand|am[ée]lior|اقتراح|توصي|إجراء/i;
+    const ignored = /^(?:score|chainOfThought)$/i;
+    const renderRows = entries => entries.length
+        ? `<div class="funnel-aida-rows">${entries.slice(0, 7).map(([key, item]) => `<div><small>${safe(funnelLegacyLabel(key, opts))}</small>${renderFunnelLegacyValue(item, opts, 1)}</div>`).join('')}</div>`
+        : `<p class="funnel-aida-empty">${safe(text('Aucun signal exploitable dans cette réponse.', 'No usable signal in this response.', 'لا توجد إشارة قابلة للاستخدام في هذه الاستجابة.'))}</p>`;
+    const cards = phases.map(([key, label, icon, accent]) => {
+        const phase = value[key];
+        if (!funnelLegacyHasData(phase)) return '';
+        const source = phase && typeof phase === 'object' && !Array.isArray(phase) ? phase : { verdict: phase };
+        const entries = Object.entries(source).filter(([entryKey, item]) => !ignored.test(entryKey) && funnelLegacyHasData(item));
+        const observed = entries.filter(([entryKey]) => !recommendationPattern.test(entryKey));
+        const recommended = entries.filter(([entryKey]) => recommendationPattern.test(entryKey));
+        const score = Number(source.score);
+        const scoreHtml = Number.isFinite(score) ? `<span class="funnel-aida-score"><b>${Math.max(0, Math.min(100, Math.round(score)))}</b>/100</span>` : '';
+        return `<article class="funnel-aida-card" style="--aida-accent:${accent}">
+            <header><span class="funnel-aida-icon"><i class="fas ${icon}"></i></span><div><small>${safe(text('Étape du parcours', 'Journey stage', 'مرحلة المسار'))}</small><h4>${safe(label)}</h4></div>${scoreHtml}</header>
+            <div class="funnel-aida-columns">
+                <section><h5><i class="fas fa-magnifying-glass"></i>${safe(text('Observé', 'Observed', 'مرصود'))}</h5>${renderRows(observed)}</section>
+                <section class="recommended"><h5><i class="fas fa-wand-magic-sparkles"></i>${safe(text('Recommandé', 'Recommended', 'موصى به'))}</h5>${renderRows(recommended)}</section>
+            </div>
+        </article>`;
+    }).join('');
+    return cards ? `<div class="funnel-aida-grid">${cards}</div>` : renderFunnelLegacyValue(value, opts);
+}
+
 function renderFunnelLegacyModules(data = {}, opts = {}) {
     const isAr = opts.isAr;
     const isEn = opts.isEn;
@@ -16858,12 +16915,32 @@ function renderFunnelLegacyModules(data = {}, opts = {}) {
         readyToUseCopy: select(data.readyToUseCopy, legacy.readyToUseCopy, expert.readyToUseCopy)
     };
     const trustMobile = select(expert.additionalAnalyses, legacy.funnelExpertAnalysis?.additionalAnalyses);
+    const observedEvidence = [
+        ...(data.funnelPrimaryAnalysis?.present || []),
+        ...(data.funnelEvidenceSynthesis?.present || [])
+    ];
+    const socialProofObserved = observedEvidence.some(item => /testimonial|review|rating|avis|t[ée]moignage|social.?proof|تقييم|آراء|مراجعات|شهادات/i.test(
+        funnelV2Text(item?.sectionType || item?.section || item?.name || item)
+    ));
+    const reconcileHistoricalSocialProof = value => {
+        if (!socialProofObserved) return value;
+        const replacement = text(
+            'Preuve sociale observée. Recommandation : rapprocher un témoignage vérifiable de l’offre et du CTA.',
+            'Social proof observed. Recommendation: move one verified testimonial closer to the offer and CTA.',
+            'تم رصد دليل اجتماعي. التوصية: تقريب شهادة عميل موثوقة من العرض وCTA.'
+        );
+        const absencePattern = /(?:aucun(?:e)?|absence|absent(?:e)?|sans|non\s+d[ée]tect[ée]e?|no|missing|لا\s*(?:يوجد|توجد|وجود)).{0,55}(?:preuve\s*sociale|avis|t[ée]moignages?|social\s*proof|reviews?|testimonials?|تقييمات|آراء|مراجعات|شهادات)/i;
+        if (typeof value === 'string') return absencePattern.test(value) ? replacement : value;
+        if (Array.isArray(value)) return value.map(reconcileHistoricalSocialProof);
+        if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, reconcileHistoricalSocialProof(item)]));
+        return value;
+    };
     const modules = [
         {
             key: 'aida-journey', icon: 'fa-route',
             title: text('Funnel AIDA et parcours de conversion', 'AIDA funnel and conversion journey', 'مسار AIDA والتحويل'),
             subtitle: text('Attention, intérêt, désir et action confrontés aux preuves de la page.', 'Attention, interest, desire and action mapped to page evidence.', 'تحليل الانتباه والاهتمام والرغبة والإجراء حسب أدلة الصفحة.'),
-            value: select(data.aidaAnalysis, legacy.aidaAnalysis, data.funnelMapping, legacy.funnelMapping, expert.journey)
+            value: reconcileHistoricalSocialProof(select(data.aidaAnalysis, legacy.aidaAnalysis, data.funnelMapping, legacy.funnelMapping, expert.journey))
         },
         {
             key: 'customer-psychology', icon: 'fa-brain',
@@ -16951,7 +17028,9 @@ function renderFunnelLegacyModules(data = {}, opts = {}) {
             const isPrompt = module.key === 'mega-redesign';
             const body = isPrompt
                 ? '<pre class="funnel-mega-prompt" dir="auto">' + (typeof escapeHtml === 'function' ? escapeHtml(String(module.value).slice(0, 14000)) : String(module.value).slice(0, 14000)) + '</pre>'
-                : renderFunnelLegacyValue(module.value, { isAr, isEn });
+                : module.key === 'aida-journey'
+                    ? renderFunnelAidaJourney(module.value, { isAr, isEn })
+                    : renderFunnelLegacyValue(module.value, { isAr, isEn });
             return body ? renderReportSection(module.key, module.title, module.subtitle, module.icon, body, { isAr, isEn }) : '';
         })
         .join('');
@@ -16977,7 +17056,10 @@ function renderFunnelPrimaryEvidence(data = {}, { isAr = false, isEn = false } =
         return `<section class="funnel-primary-evidence-group" style="--funnel-v2-accent:${accent}">
             <h4><i class="fas ${icon}"></i><span>${safe(title)}</span><b>${items.length}</b></h4>
             ${items.map(item => {
-                const label = funnelV2Text(item.sectionType || item.section || item.name || item.title || item.text, 'Section');
+                const rawLabel = funnelV2Text(item.sectionType || item.section || item.name || item.title || item.text, 'Section');
+                const label = /^mission$/i.test(rawLabel)
+                    ? (isAr ? 'تحليل متخصص' : isEn ? 'Specialized analysis' : 'Analyse spécialisée')
+                    : rawLabel;
                 const detail = funnelV2Text(item.detectedText || item.reason || item.problem || item.verdict || item.status, '');
                 return `<article class="funnel-v2-action-card"><div><strong dir="auto">${safe(label)}</strong>${item.evidenceSource === 'global-corpus-fallback' ? `<small>${safe(sourceLabel)}</small>` : ''}</div>${detail ? `<p dir="auto">${safe(detail)}</p>` : ''}</article>`;
             }).join('')}
@@ -17071,7 +17153,15 @@ function displayFunnelResults(data = {}) {
         const order = surgerySource.recommendedOrder || {};
         const currentOrder = funnelV2Array(order.currentOrder, data.rawIntel?.sectionsDetected);
         const recommendedOrder = funnelV2Array(order.recommendedOrder, surgerySource.finalPageBlueprint);
-        const frictions = funnelV2Array(surgerySource.frictions, data.auditIssues, data.conversionFriction?.frictions);
+        const observedSections = [
+            ...(data.funnelPrimaryAnalysis?.present || []),
+            ...(data.funnelEvidenceSynthesis?.present || [])
+        ];
+        const socialProofObserved = observedSections.some(item => /testimonial|review|rating|avis|t[ée]moignage|social.?proof|تقييم|آراء|مراجعات|شهادات/i.test(
+            funnelV2Text(item?.sectionType || item?.section || item?.name || item)
+        ));
+        const frictions = funnelV2Array(surgerySource.frictions, data.auditIssues, data.conversionFriction?.frictions)
+            .filter(item => !(socialProofObserved && /preuve sociale absente|aucune preuve sociale|no social proof|missing social proof|لا توجد أدلة اجتماعية/i.test(funnelV2Text(item))));
         const offer = surgerySource.offerPriceValue || {};
         const offerDetected = surgerySource.offerDetected || {};
         const message = surgerySource.messagePromiseCta || {};
@@ -18873,18 +18963,21 @@ const PDF_EXPORT = {
 .funnel-surgery-total strong { display: block; color: #fff; font-size: 1.45rem; }
 .funnel-surgery-total small { color: #c4b5fd; font-size: .62rem; font-weight: 800; }
 .funnel-surgery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px; }
-.funnel-surgery-category { min-width: 0; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--surgery-accent) 26%, transparent); background: rgba(255, 255, 255, .025); }
+.funnel-surgery-category { min-width: 0; overflow: hidden; border-radius: 8px; border: 1px solid rgba(148, 163, 184, .16); background: #091426; transition: border-color .2s ease, background .2s ease, box-shadow .2s ease; }
+.funnel-surgery-category:hover,
+.funnel-surgery-category[open] { border-color: var(--surgery-accent); background: #0b1729; box-shadow: 0 10px 26px rgba(0, 0, 0, .14); }
 .funnel-surgery-category:last-child { grid-column: 1 / -1; }
-.funnel-surgery-category > summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 62px; padding: 12px; cursor: pointer; list-style: none; }
+.funnel-surgery-category > summary { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 62px; padding: 12px; cursor: pointer; list-style: none; user-select: none; }
+.funnel-surgery-category > summary:focus-visible { outline: 2px solid #22d3ee; outline-offset: -3px; }
 .funnel-surgery-category > summary::-webkit-details-marker { display: none; }
 .funnel-surgery-category > summary > span:nth-child(2) { display: grid; gap: 2px; min-width: 0; }
 .funnel-surgery-category > summary strong { color: #f8fafc; font-size: .82rem; overflow-wrap: anywhere; }
 .funnel-surgery-category > summary small { color: #94a3b8; font-size: .65rem; }
-.funnel-surgery-category-icon { width: 34px; height: 34px; display: grid; place-items: center; border-radius: 10px; color: var(--surgery-accent); background: color-mix(in srgb, var(--surgery-accent) 12%, transparent); }
+.funnel-surgery-category-icon { width: 36px; height: 36px; display: grid; place-items: center; border-radius: 8px; color: var(--surgery-accent); background: #0f1c31; border: 1px solid rgba(148, 163, 184, .14); }
 .funnel-surgery-chevron { color: #64748b; transition: transform .2s ease; }
 .funnel-surgery-category[open] .funnel-surgery-chevron { transform: rotate(180deg); }
-.funnel-surgery-list { display: grid; gap: 8px; padding: 0 10px 10px; }
-.funnel-surgery-item { min-width: 0; padding: 11px; border-radius: 11px; border-inline-start: 3px solid var(--surgery-accent); background: rgba(2, 6, 23, .42); }
+.funnel-surgery-list { display: grid; gap: 8px; padding: 2px 10px 10px; border-top: 1px solid rgba(148, 163, 184, .1); }
+.funnel-surgery-item { min-width: 0; padding: 11px; border-radius: 8px; border-inline-start: 3px solid var(--surgery-accent); background: #07101f; }
 .funnel-surgery-item-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
 .funnel-surgery-item-head strong { color: #f8fafc; font-size: .79rem; line-height: 1.35; overflow-wrap: anywhere; }
 .funnel-surgery-item-head span { flex: 0 0 auto; padding: 3px 7px; border-radius: 999px; color: var(--surgery-accent); background: color-mix(in srgb, var(--surgery-accent) 10%, transparent); font-size: .56rem; font-weight: 900; }
@@ -18946,7 +19039,7 @@ const PDF_EXPORT = {
     min-height: 70px;
 }
 
-.report-section-details summary {
+.report-section-details > summary {
     list-style: none;
     cursor: pointer;
     padding: 0 16px 16px;
@@ -18955,7 +19048,7 @@ const PDF_EXPORT = {
     pointer-events: none;
 }
 
-.report-section-details summary::-webkit-details-marker {
+.report-section-details > summary::-webkit-details-marker {
     display: none;
 }
 
@@ -19167,7 +19260,7 @@ const PDF_EXPORT = {
     padding-inline-end: 10px;
 }
 
-.report-section:not(.report-section-open):not(.report-section-direct) .report-section-details summary {
+.report-section:not(.report-section-open):not(.report-section-direct) .report-section-details > summary {
     padding: 0;
 }
 

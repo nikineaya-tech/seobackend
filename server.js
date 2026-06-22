@@ -13372,6 +13372,15 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
         });
         const funnelMiniAgents = funnelMiniAgentRun.agents;
         const funnelEvidenceSynthesis = synthesizeFunnelEvidenceAgents(funnelMiniAgentRun, funnelEvidence);
+        const socialProofEvidence = [...(funnelEvidenceSynthesis.present || []), ...(funnelEvidenceSynthesis.weak || [])]
+            .find(item => normalizeFunnelSectionKey(item?.sectionType || item?.section || item?.name) === 'social-proof');
+        const socialProofConfirmed = Boolean(socialProofEvidence);
+        if (socialProofConfirmed && socialProofs.length === 0) {
+            socialProofs.push(limitFunnelText(
+                socialProofEvidence.detectedText || socialProofEvidence.reason || socialProofEvidence.verdict || 'Preuve sociale observée dans la page.',
+                700
+            ));
+        }
         const reconciledFunnelSurgery = reconcileFunnelSurgeryWithEvidence({
             surgery: funnelSurgery,
             evidence: funnelEvidence,
@@ -13679,6 +13688,24 @@ ${sharedContext}
         const r2 = typeof aiResult2.response === 'string' ? extractJSON(aiResult2.response) : aiResult2.response;
 
         const r1Safe = r1 || {};
+
+        if (socialProofConfirmed && r1Safe.aidaAnalysis && typeof r1Safe.aidaAnalysis === 'object') {
+            const socialProofPlacement = isAr
+                ? 'تم رصد تقييمات أو شهادات عملاء في الصفحة. التوصية هي تقريب مقتطف موثوق منها من العرض وCTA، وليس إنشاء دليل اجتماعي غير موجود.'
+                : isEn
+                    ? 'Customer reviews or testimonials were observed on the page. Move one verified excerpt closer to the offer and CTA instead of adding invented proof.'
+                    : 'Des avis ou témoignages clients ont été observés sur la page. Rapprocher un extrait vérifiable de l’offre et du CTA, sans inventer une preuve absente.';
+            const absencePattern = /(?:aucun(?:e)?|absence|absent(?:e)?|sans|non\s+d[ée]tect[ée]e?|no|missing|not\s+detected|لا\s*(?:يوجد|توجد|وجود)).{0,55}(?:preuve\s*sociale|avis|t[ée]moignages?|social\s*proof|reviews?|testimonials?|تقييمات|آراء|مراجعات|شهادات)/i;
+            const reconcileAidaSocialProof = value => {
+                if (typeof value === 'string') return absencePattern.test(value) ? socialProofPlacement : value;
+                if (Array.isArray(value)) return value.map(reconcileAidaSocialProof);
+                if (value && typeof value === 'object') {
+                    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, reconcileAidaSocialProof(item)]));
+                }
+                return value;
+            };
+            r1Safe.aidaAnalysis = reconcileAidaSocialProof(r1Safe.aidaAnalysis);
+        }
 
 // ─── Design Score local (fallback si l'IA retourne 0) ────────────────────────
 const computedDesignScore = (() => {
