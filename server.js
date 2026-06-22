@@ -469,15 +469,98 @@ function cleanFunnelScrapePayload(input, depth = 0) {
 
 
 const FUNNEL_EVIDENCE_AGENTS = [
-    ['structureConversionAgent', 'Structure, ordre, Hero, AIDA/PAS et frictions de lecture', /heading|dom-section|page-title|button|click-loaded-content/i],
-    ['offerPricingDisplayAgent', 'Clarté de l offre, affichage prix, packs et valeur perçue sans valider le prix final', /raw-price|product-card|dom-section|button|heading/i],
-    ['trustProofAgent', 'Avis, témoignages, preuves sociales et badges de confiance', /faq-visible|social-link|image-alt|dom-section|heading/i],
-    ['deliveryReturnsAgent', 'Livraison, retours, stock, délais et garantie logistique; ou livrables et délais pour un service', /dom-section|link|product-card|raw-price/i],
-    ['faqObjectionAgent', 'FAQ, objections traitées et questions non rassurées', /faq-visible|dom-section|heading|button|link/i],
+    ['structureConversionAgent', 'Structure, ordre, Hero, AIDA/PAS et frictions de lecture', /heading|page-title|button|click-loaded-content|hero|headline|content|features?|specs?|specification|ip68|battery|remote|sensor|solar panel|مواصفات|الطاقة|البطارية|ريموت|حساس|لوحة شمسية/i],
+    ['offerPricingDisplayAgent', 'Clarté de l offre, affichage prix, packs et valeur perçue sans valider le prix final', /raw-price|product-card|button|heading|pricing|price|prix|offre|offer|packs?|bundles?|product|features?|specs?|specification|ip68|abs|battery|remote|sensor|solar panel|مواصفات|الطاقة|البطارية|ريموت|حساس|مقاوم للماء|لوحة شمسية/i],
+    ['trustProofAgent', 'Avis, témoignages, preuves sociales et badges de confiance', /faq-visible|social-link|image-alt|testimonial|reviews?|ratings?|avis|t[ée]moignage|preuve sociale|customer|client|⭐|★|تقييمات|تقييم|آراء|مراجعات|شهادات|عملاء|طرابلس|بنغازي|مصراتة|الزاوية|trust|badge/i],
+    ['deliveryReturnsAgent', 'Livraison, retours, stock, délais et garantie logistique; ou livrables et délais pour un service', /link|product-card|raw-price|delivery|shipping|livraison|returns?|retours?|refund|stock|delay|d[ée]lai|guarantee|warranty|توصيل|شحن|إرجاع|استبدال|ضمان|مخزون/i],
+    ['faqObjectionAgent', 'FAQ, objections traitées et questions non rassurées', /faq-visible|heading|button|link|faq|questions?|answers?|objections?|frequently asked|أسئلة|الأسئلة الشائعة|سؤال|جواب|استفسار/i],
     ['ctaContactAgent', 'CTA principal et secondaire, WhatsApp, contact et formulaire', /button|form|whatsapp-link|contact-link|click-loaded-content|dom-section/i],
-    ['mediaUxAgent', 'Images, galerie, vidéo, démonstration et UX mobile', /image-alt|social-link|click-loaded-content|dom-section/i],
+    ['mediaUxAgent', 'Images, galerie, vidéo, démonstration et UX mobile', /image-alt|social-link|click-loaded-content|images?|video|gallery|visual|media|demo|product visual|photo|صور|صورة|فيديو|تشغيل|منتج/i],
     ['legalRiskAgent', 'Mentions légales, conditions, confidentialité et informations de contact', /link|contact-link|dom-section|page-title/i]
 ].map(([agentName, mission, evidencePattern]) => ({ agentName, mission, evidencePattern }));
+
+function normalizeFunnelAgentName(value = '') {
+    return String(value || '')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+}
+
+function normalizeFunnelSectionKey(value = '') {
+    const normalized = String(value?.sectionType || value?.section || value?.name || value || '')
+        .normalize('NFKD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ')
+        .trim();
+    if (/product visuals?|visuals?|images?|videos?|gallery|media|صور|صورة|فيديو/.test(normalized)) return 'media';
+    if (/features?|specs?|specification|caracteristiques|مواصفات|بطارية|البطارية|ريموت|حساس|ip68/.test(normalized)) return 'features';
+    if (/content|copy|texte|contenu|محتوى/.test(normalized)) return 'content';
+    if (/testimonials?|reviews?|ratings?|avis|temoignage|social proof|تقييم|آراء|مراجعات|شهادات/.test(normalized)) return 'social-proof';
+    if (/trust badges?|badges?|preuve|confiance|ثقة|ضمان/.test(normalized)) return 'trust';
+    if (/packs?|bundles?|pricing|price|prix|offer|offre/.test(normalized)) return 'offer';
+    if (/delivery|shipping|livraison|توصيل|شحن/.test(normalized)) return 'delivery';
+    return normalized.replace(/\s+/g, '-');
+}
+
+function buildGlobalFunnelEvidenceSignals(evidence = {}) {
+    const blocks = Array.isArray(evidence.evidenceBlocks) ? evidence.evidenceBlocks : [];
+    const corpus = String(evidence.evidenceText || blocks.map(block => block.text).join(' '));
+    const findProof = pattern => blocks.find(block => pattern.test(
+        [block.source, block.typeGuess, block.labelGuess, block.alt, block.text].filter(Boolean).join(' ')
+    )) || null;
+    const excerpt = (proof, pattern) => {
+        const text = String(proof?.text || '');
+        const match = text.match(pattern);
+        const start = Math.max(0, Number(match?.index || 0) - 120);
+        return limitFunnelText(text.slice(start, start + 620), 620);
+    };
+    const present = [];
+    const weak = [];
+    const add = (target, sectionType, proof, pattern, confidence = 'HIGH', reason = '') => {
+        if (!proof) return;
+        target.push({
+            sectionType,
+            status: target === present ? 'present' : 'weak',
+            detectedText: excerpt(proof, pattern),
+            reason: reason || 'Preuve détectée dans le corpus global de la page.',
+            evidenceSource: 'global-corpus-fallback',
+            confidence,
+            proofUsed: [{
+                text: excerpt(proof, pattern),
+                source: proof.source,
+                pageUrl: proof.pageUrl,
+                position: proof.position
+            }]
+        });
+    };
+
+    const contentPattern = /content|contenu|description|paragraph|محتوى|تفاصيل|معلومات/i;
+    const featurePattern = /features?|specs?|specification|ip68|\babs\b|battery|remote|sensor|solar panel|مواصفات|الطاقة|البطارية|ريموت|حساس|مقاوم للماء|لوحة شمسية/i;
+    const mediaPattern = /image-alt|images?|video|gallery|visual|media|demo|product visual|photo|صور|صورة|فيديو|تشغيل|منتج/i;
+    const socialPattern = /testimonial|reviews?|ratings?|avis|t[ée]moignage|preuve sociale|customer|⭐|★|تقييمات|تقييم|آراء|مراجعات|شهادات|عملاء|طرابلس|بنغازي|مصراتة|الزاوية/i;
+    const reviewAbsencePattern = /aucun avis|no reviews?(?: yet)?|0 reviews?|لا توجد مراجعات|لا توجد تقييمات/i;
+
+    const bodyProof = blocks.find(block => block.source === 'body-text' && String(block.text || '').length >= 2000) || null;
+    if (bodyProof && corpus.length >= 3000) add(present, 'Content', bodyProof, contentPattern, 'HIGH', 'Contenu substantiel copié depuis la page.');
+    add(present, 'Features', findProof(featurePattern), featurePattern, 'HIGH', 'Caractéristiques produit explicites détectées.');
+
+    const mediaProof = findProof(mediaPattern);
+    if (mediaProof) {
+        const mediaConfirmed = /image-alt|click-loaded-content/i.test(String(mediaProof.source || '')) || Number(evidence.coverage?.images || 0) > 0;
+        add(mediaConfirmed ? present : weak, 'Product Visuals', mediaProof, mediaPattern,
+            mediaConfirmed ? 'HIGH' : 'MEDIUM',
+            mediaConfirmed ? 'Visuel produit observé.' : 'Mention de visuel détectée; validation visuelle recommandée.');
+    }
+
+    const socialProof = findProof(socialPattern);
+    if (socialProof && !reviewAbsencePattern.test(String(socialProof.text || ''))) {
+        add(present, 'Testimonials', socialProof, socialPattern, 'HIGH', 'Avis, notation ou identité client détecté dans la page.');
+    }
+
+    return { present, weak };
+}
 
 function normalizeFunnelEvidencePayload(scrape = {}, pageUrl = '') {
     const list = value => Array.isArray(value) ? value : [];
@@ -604,14 +687,16 @@ function findFunnelEvidenceForSection(sectionValue, evidenceBlocks = []) {
     const section = String(sectionValue?.sectionType || sectionValue?.section || sectionValue?.name || sectionValue || '').toLowerCase();
     const pairs = [
         [/hero|structure|aida|pas|headline|h1/, /hero|banner|headline|h1|above.?fold|accueil|intro/i],
+        [/content|contenu|copy|text/, /content|contenu|description|paragraph|محتوى|تفاصيل|معلومات/i],
+        [/feature|spec|caract[ée]ristique|مواصفات/, /features?|specs?|specification|ip68|\babs\b|battery|remote|sensor|solar panel|مواصفات|الطاقة|البطارية|ريموت|حساس|مقاوم للماء|لوحة شمسية/i],
         [/offer|offre|pricing|prix|bundle|pack/, /offre|offer|prix|price|pricing|tarif|bundle|pack|mad|eur|usd|درهم/i],
-        [/trust|proof|preuve|review|avis|testimonial|social/, /avis|review|rating|étoile|testimonial|témoignage|preuve|trust|badge|client/i],
+        [/trust|proof|preuve|review|avis|testimonial|social/, /avis|review|rating|[ée]toile|testimonial|t[ée]moignage|preuve|trust|badge|client|customer|⭐|★|تقييمات|تقييم|آراء|مراجعات|شهادات|عملاء|طرابلس|بنغازي|مصراتة|الزاوية/i],
         [/delivery|livraison|shipping|stock|delay|délai/, /livraison|delivery|shipping|stock|délai|delay|expédition|توصيل/i],
         [/return|retour|refund|rembours/, /retour|return|refund|rembours|exchange/i],
         [/guarantee|garantie|warranty/, /garantie|guarantee|warranty|money back|ضمان/i],
         [/faq|objection|question/, /faq|question|réponse|answer|objection|frequently|أسئلة/i],
         [/cta|contact|whatsapp|form/, /acheter|commander|buy|contact|whatsapp|devis|réserver|form|submit|checkout|panier/i],
-        [/media|image|gallery|video|ux|mobile/, /image|photo|gallery|galerie|video|youtube|vimeo|mobile|responsive/i],
+        [/media|image|gallery|video|visual|ux|mobile/, /image|photo|gallery|galerie|video|visual|media|demo|product visual|youtube|vimeo|mobile|responsive|صور|صورة|فيديو|تشغيل|منتج/i],
         [/legal|privacy|condition|terms|footer/, /privacy|terms|conditions|mentions|legal|cookies|footer|copyright/i]
     ];
     const pair = pairs.find(([sectionRx]) => sectionRx.test(section));
@@ -724,11 +809,17 @@ function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
 }
 
 function unconfirmedFunnelMiniAgent(definition, evidence, reason) {
+    const detail = limitFunnelText(reason || `Mini-agent ${definition.agentName} non retourné`, 300);
     return {
         agentName: definition.agentName,
         verdict: 'Analyse non confirmée: les preuves disponibles ne permettent pas une décision fiable.',
         sectionsDetected: [], sectionsWeak: [], sectionsMissing: [],
-        sectionsUnconfirmed: [{ sectionType: 'mission', status: 'unconfirmed', reason: limitFunnelText(reason, 300) }],
+        sectionsUnconfirmed: [{
+            sectionType: definition.agentName,
+            expectedAgentName: definition.agentName,
+            status: 'unconfirmed',
+            reason: detail
+        }],
         proofUsed: [], recommendations: [], confidence: 'LOW', limits: evidence?.limits || []
     };
 }
@@ -738,17 +829,26 @@ async function runFunnelEvidenceMiniAgents({ evidence, priceIntel = {}, userCont
         agents: FUNNEL_EVIDENCE_AGENTS.map(def => unconfirmedFunnelMiniAgent(def, evidence, 'Aucune preuve exploitable')),
         execution: 'fallback-unconfirmed', error: 'NO_EVIDENCE'
     };
-    const missions = FUNNEL_EVIDENCE_AGENTS.map(def => ({
+    const missions = FUNNEL_EVIDENCE_AGENTS.map(def => {
+        const matchedBlocks = evidence.evidenceBlocks.filter(block => def.evidencePattern.test(
+            [block.source, block.typeGuess, block.labelGuess, block.alt, block.text].filter(Boolean).join(' ')
+        ));
+        const evidenceFallbackUsed = matchedBlocks.length === 0;
+        const selectedBlocks = evidenceFallbackUsed
+            ? evidence.evidenceBlocks.slice(0, 35)
+            : matchedBlocks.slice(0, 35);
+        return {
         agentName: def.agentName,
         mission: def.mission,
-        evidenceBlocks: evidence.evidenceBlocks.filter(block => def.evidencePattern.test(
-            [block.source, block.typeGuess, block.labelGuess, block.text].filter(Boolean).join(' ')
-        )).slice(0, 35).map(block => ({
+        evidenceFallbackUsed,
+        matchedEvidenceCount: matchedBlocks.length,
+        evidenceBlocks: selectedBlocks.map(block => ({
             source: block.source, pageUrl: block.pageUrl, position: block.position,
             text: limitFunnelText(block.text, 650), confidence: block.confidence,
             typeGuess: block.typeGuess, classificationSource: block.classificationSource
         }))
-    }));
+    };
+    });
     const prompt = `
 LANGUE: ${language}
 URL: ${pageUrl}
@@ -758,6 +858,7 @@ CONTEXTE UTILISATEUR, JAMAIS UNE PREUVE: ${JSON.stringify(cleanFunnelScrapePaylo
 PRICING PIPELINE SÉPARÉ, INFORMATIF UNIQUEMENT: ${JSON.stringify(cleanFunnelScrapePayload(priceIntel)).slice(0, 1500)}
 TEXTE GLOBAL COPIÉ PAR LES SCRAPERS: ${limitFunnelText(evidence.evidenceText, 12000)}
 MISSIONS ET PREUVES FILTRÉES: ${JSON.stringify(missions)}
+evidenceFallbackUsed=true signifie que l agent a reçu un échantillon global faute de correspondance spécialisée; il doit le lire avant de conclure UNCONFIRMED.
 
 Tu coordonnes huit experts CRO spécialisés. Lis et évalue les textes réels avant toute décision.
 PROTOCOLE OBLIGATOIRE:
@@ -781,17 +882,38 @@ FORMAT:
 `.trim();
     try {
         const result = await callOpenRouterAPI(prompt, {
-            temperature: 0.05, maxTokens: 4200, expectedFormat: 'json',
+            temperature: 0.05, maxTokens: 5200, expectedFormat: 'json',
             context: `FunnelEvidenceAgents-${requestId || Date.now()}`,
             systemPrompt: 'Orchestrateur CRO factuel. JSON strict. Aucune absence sans preuve suffisante.'
         });
         const parsed = typeof result?.response === 'string' ? extractJSON(result.response) : result?.response;
-        const returned = Array.isArray(parsed?.agents) ? parsed.agents : [];
+        const returned = Array.isArray(parsed?.agents)
+            ? parsed.agents
+            : Array.isArray(parsed)
+                ? parsed
+                : Object.entries(parsed || {}).flatMap(([key, value]) => {
+                    if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+                    const candidateName = value.agentName || key;
+                    return FUNNEL_EVIDENCE_AGENTS.some(def =>
+                        normalizeFunnelAgentName(def.agentName) === normalizeFunnelAgentName(candidateName)
+                    ) ? [{ ...value, agentName: candidateName }] : [];
+                });
         return {
             agents: FUNNEL_EVIDENCE_AGENTS.map(def => {
-                const candidate = returned.find(agent => agent?.agentName === def.agentName);
-                return candidate ? normalizeFunnelMiniAgent(candidate, def, evidence)
-                    : unconfirmedFunnelMiniAgent(def, evidence, 'Mini-agent non retourné');
+                const mission = missions.find(item => item.agentName === def.agentName) || {};
+                const expectedName = normalizeFunnelAgentName(def.agentName);
+                const candidate = returned.find(agent =>
+                    normalizeFunnelAgentName(agent?.agentName) === expectedName
+                );
+                const normalized = candidate
+                    ? normalizeFunnelMiniAgent(candidate, def, evidence)
+                    : unconfirmedFunnelMiniAgent(def, evidence, `Mini-agent ${def.agentName} non retourné`);
+                return {
+                    ...normalized,
+                    evidenceFallbackUsed: mission.evidenceFallbackUsed === true,
+                    matchedEvidenceCount: Number(mission.matchedEvidenceCount || 0),
+                    evidenceDeliveredCount: Array.isArray(mission.evidenceBlocks) ? mission.evidenceBlocks.length : 0
+                };
             }),
             execution: 'batched-eight-mini-agents',
             model: result?.model || null,
@@ -817,22 +939,51 @@ function synthesizeFunnelEvidenceAgents(run = {}, evidence = {}) {
     };
     const collect = field => unique(agents.flatMap(agent => (agent?.[field] || []).map(item => ({
         ...item, agentName: agent.agentName
-    }))), item => String(item.sectionType || item.section || item.text || '').toLowerCase());
+    }))), item => normalizeFunnelSectionKey(item));
+    const globalSignals = buildGlobalFunnelEvidenceSignals(evidence);
+    const agentPresent = collect('sectionsDetected');
+    const agentWeak = collect('sectionsWeak');
+    const present = unique([
+        ...agentPresent,
+        ...globalSignals.present
+    ], item => normalizeFunnelSectionKey(item));
+    const presentKeys = new Set(present.map(normalizeFunnelSectionKey));
+    const weak = unique([
+        ...agentWeak,
+        ...globalSignals.weak
+    ], item => normalizeFunnelSectionKey(item)).filter(item => !presentKeys.has(normalizeFunnelSectionKey(item)));
+    const weakKeys = new Set(weak.map(normalizeFunnelSectionKey));
+    const missing = collect('sectionsMissing').filter(item => {
+        const key = normalizeFunnelSectionKey(item);
+        return !presentKeys.has(key) && !weakKeys.has(key);
+    });
+    const missingKeys = new Set(missing.map(normalizeFunnelSectionKey));
+    const unconfirmed = collect('sectionsUnconfirmed').filter(item => {
+        const key = normalizeFunnelSectionKey(item);
+        return !presentKeys.has(key) && !weakKeys.has(key) && !missingKeys.has(key);
+    });
+    const fallbackAgents = agents.filter(agent => agent.evidenceFallbackUsed).map(agent => agent.agentName);
+    const globalProofs = [...globalSignals.present, ...globalSignals.weak]
+        .flatMap(item => Array.isArray(item.proofUsed) ? item.proofUsed : []);
     return {
         mode: 'evidence-first-additive',
         evidenceVersion: evidence.version || 'funnel-evidence-v1',
         scrapeSufficient: !!evidence.scrapeSufficient,
         evidenceCount: evidence.evidenceBlocks?.length || 0,
-        present: collect('sectionsDetected'),
-        weak: collect('sectionsWeak'),
-        missing: collect('sectionsMissing'),
-        unconfirmed: collect('sectionsUnconfirmed'),
-        proofUsed: unique(agents.flatMap(agent => agent.proofUsed || []),
+        present,
+        weak,
+        missing,
+        unconfirmed,
+        globalEvidenceSignals: globalSignals,
+        agentConfirmed: { present: agentPresent, weak: agentWeak },
+        evidenceFallbackUsed: fallbackAgents.length > 0,
+        fallbackAgents,
+        proofUsed: unique([...agents.flatMap(agent => agent.proofUsed || []), ...globalProofs],
             proof => [proof.source, proof.pageUrl, proof.position, proof.text].join('|').toLowerCase()).slice(0, 30),
         recommendations: unique(agents.flatMap(agent => (agent.recommendations || []).map(item => ({
             ...item, agentName: agent.agentName
         }))), item => String(item.text || item.recommendation || '').toLowerCase()).slice(0, 24),
-        confidence: agents.some(agent => agent.confidence === 'HIGH') ? 'HIGH'
+        confidence: globalSignals.present.some(item => item.confidence === 'HIGH') || agents.some(agent => agent.confidence === 'HIGH') ? 'HIGH'
             : agents.some(agent => agent.confidence === 'MEDIUM') ? 'MEDIUM' : 'LOW',
         execution: run.execution || 'fallback-unconfirmed',
         error: run.error || null

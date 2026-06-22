@@ -12830,14 +12830,14 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
             </span>
         </div>
         ${preview ? `<p class="report-section-preview" dir="auto">${safe(preview)}</p>` : ''}
-        <div class="report-section-body">${html}</div>
+        <div class="report-section-body" data-no-collapse="true" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">${html}</div>
     </section>`;
     }
 
     return `
     <section class="report-section report-section-${safe(key)} ${expanded ? 'report-section-open' : ''} fade-in-up"
-        dir="${dir}" data-export-feature="${safe(key)}" data-report-toggle="1" tabindex="0" role="button" aria-expanded="${expanded ? 'true' : 'false'}">
-        <div class="report-section-head">
+        dir="${dir}" data-export-feature="${safe(key)}" data-report-toggle="1" aria-expanded="${expanded ? 'true' : 'false'}">
+        <div class="report-section-head" data-report-header="1" tabindex="0" role="button" aria-expanded="${expanded ? 'true' : 'false'}" aria-controls="report-details-${safe(key)}">
             <span class="report-section-icon"><i class="fas ${safe(icon || 'fa-layer-group')}"></i></span>
             <span class="report-section-copy">
                 <strong>${safe(title)}</strong>
@@ -12845,11 +12845,11 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
             </span>
         </div>
         ${preview ? `<p class="report-section-preview" dir="auto">${safe(preview)}</p>` : ''}
-        <details class="report-section-details" data-report-details="1" ${isOpen}>
+        <details id="report-details-${safe(key)}" class="report-section-details" data-report-details="1" ${isOpen}>
             <summary>
                 <span class="report-section-toggle"><small>${safe(labels.openHint || '')}</small><i class="fas fa-chevron-down"></i></span>
             </summary>
-            <div class="report-section-body">${html}</div>
+            <div class="report-section-body" data-no-collapse="true" onclick="event.stopPropagation()" onmousedown="event.stopPropagation()" ontouchstart="event.stopPropagation()">${html}</div>
         </details>
     </section>`;
 }
@@ -12953,6 +12953,7 @@ function setReportSectionOpen(section, open) {
     details.open = Boolean(open);
     section.classList.toggle('report-section-open', details.open);
     section.setAttribute('aria-expanded', details.open ? 'true' : 'false');
+    section.querySelector(':scope > .report-section-head')?.setAttribute('aria-expanded', details.open ? 'true' : 'false');
 }
 
 function isReportSectionInteractiveTarget(target) {
@@ -12976,6 +12977,9 @@ if (!window.__dakaReportToggleBound) {
             event.stopPropagation();
         }
         if (!section || isReportSectionInteractiveTarget(event.target)) return;
+        const clickedHeader = event.target.closest('.report-section-head');
+        const clickedSummary = event.target.closest('.report-section-details > summary');
+        if (!clickedHeader && !clickedSummary && event.target !== section) return;
 
         const details = section.querySelector(':scope > .report-section-details');
         if (!details) return;
@@ -12986,8 +12990,9 @@ if (!window.__dakaReportToggleBound) {
 
     document.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' && event.key !== ' ') return;
-        const section = event.target.closest?.('.report-section[data-report-toggle="1"]');
-        if (!section || event.target !== section) return;
+        const header = event.target.closest?.('[data-report-header="1"]');
+        const section = header?.closest?.('.report-section[data-report-toggle="1"]');
+        if (!section || event.target !== header) return;
 
         const details = section.querySelector(':scope > .report-section-details');
         if (!details) return;
@@ -16955,26 +16960,36 @@ function renderFunnelLegacyModules(data = {}, opts = {}) {
 function renderFunnelPrimaryEvidence(data = {}, { isAr = false, isEn = false } = {}) {
     const primary = data.funnelPrimaryAnalysis || data.funnelEvidenceSynthesis || {};
     const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+    const sourceLabel = isAr ? 'دليل عام' : isEn ? 'Global evidence' : 'Preuve globale';
+    const fallbackLabel = isAr
+        ? 'تم استخدام الأدلة العامة عندما لم تتوفر مطابقة متخصصة.'
+        : isEn ? 'Global evidence was used when no specialized match was available.'
+        : 'Les preuves globales ont été utilisées lorsqu’aucune correspondance spécialisée n’était disponible.';
     const groups = [
-        ['present', isAr ? 'أقسام مثبتة' : isEn ? 'Observed sections' : 'Sections observées', '#22c55e'],
-        ['weak', isAr ? 'أقسام تحتاج تحسين' : isEn ? 'Sections to improve' : 'Sections à améliorer', '#f59e0b'],
-        ['missing', isAr ? 'أقسام غائبة مؤكدة' : isEn ? 'Confirmed missing sections' : 'Sections absentes confirmées', '#fb7185'],
-        ['unconfirmed', isAr ? 'عناصر تحتاج تحقق' : isEn ? 'Items to confirm' : 'Éléments à confirmer', '#60a5fa']
+        ['present', isAr ? 'أقسام مثبتة' : isEn ? 'Observed sections' : 'Sections observées', '#22c55e', 'fa-circle-check'],
+        ['weak', isAr ? 'أقسام تحتاج تحسين' : isEn ? 'Sections to improve' : 'Sections à améliorer', '#f59e0b', 'fa-wand-magic-sparkles'],
+        ['missing', isAr ? 'أقسام غائبة مؤكدة' : isEn ? 'Confirmed missing sections' : 'Sections absentes confirmées', '#fb7185', 'fa-circle-minus'],
+        ['unconfirmed', isAr ? 'عناصر تحتاج تحقق' : isEn ? 'Items to confirm' : 'Éléments à confirmer', '#60a5fa', 'fa-circle-question']
     ];
-    const html = groups.map(([key, title, accent]) => {
+    const html = groups.map(([key, title, accent, icon]) => {
         const items = Array.isArray(primary[key]) ? primary[key].slice(0, 8) : [];
         if (!items.length) return '';
-        return `<div class="funnel-v2-plan-column" style="--funnel-v2-accent:${accent}">
-            <h4>${safe(title)} <span>${items.length}</span></h4>
+        return `<section class="funnel-primary-evidence-group" style="--funnel-v2-accent:${accent}">
+            <h4><i class="fas ${icon}"></i><span>${safe(title)}</span><b>${items.length}</b></h4>
             ${items.map(item => {
                 const label = funnelV2Text(item.sectionType || item.section || item.name || item.title || item.text, 'Section');
                 const detail = funnelV2Text(item.detectedText || item.reason || item.problem || item.verdict || item.status, '');
-                return `<article class="funnel-v2-action-card"><strong dir="auto">${safe(label)}</strong>${detail ? `<p dir="auto">${safe(detail)}</p>` : ''}</article>`;
+                return `<article class="funnel-v2-action-card"><div><strong dir="auto">${safe(label)}</strong>${item.evidenceSource === 'global-corpus-fallback' ? `<small>${safe(sourceLabel)}</small>` : ''}</div>${detail ? `<p dir="auto">${safe(detail)}</p>` : ''}</article>`;
             }).join('')}
-        </div>`;
+        </section>`;
     }).join('');
     const proofs = Array.isArray(primary.proofUsed) ? primary.proofUsed.slice(0, 8) : [];
-    return `<div class="funnel-v2-plan">${html}</div>${proofs.length ? `<div class="funnel-v2-proof-row">${proofs.map(proof => `<span dir="auto">${safe(funnelV2Text(proof.text || proof))}</span>`).join('')}</div>` : ''}`;
+    const proofTitle = isAr ? 'الأدلة النصية المستخدمة' : isEn ? 'Text evidence used' : 'Preuves textuelles utilisées';
+    return `<div class="funnel-primary-evidence-shell">
+        ${primary.evidenceFallbackUsed ? `<p class="funnel-primary-fallback"><i class="fas fa-layer-group"></i>${safe(fallbackLabel)}</p>` : ''}
+        <div class="funnel-v2-plan funnel-primary-evidence-grid">${html}</div>
+        ${proofs.length ? `<details class="funnel-primary-proofs"><summary data-no-collapse="true"><i class="fas fa-quote-left"></i>${safe(proofTitle)}<span>${proofs.length}</span></summary><div>${proofs.map(proof => `<p dir="auto">${safe(funnelV2Text(proof.text || proof))}</p>`).join('')}</div></details>` : ''}
+    </div>`;
 }
 
 function renderFunnelPipelineDiagnostic(data = {}, { isAr = false, isEn = false } = {}) {
@@ -18809,12 +18824,29 @@ const PDF_EXPORT = {
 .funnel-v2-plan-column { min-width:0; }
 .funnel-v2-plan-column h4 { margin:0 0 9px; padding-bottom:8px; border-bottom:2px solid var(--funnel-v2-accent); color:#f8fafc; font-size:.8rem; }
 .funnel-v2-plan-column .funnel-v2-card-grid { grid-template-columns:1fr; }
+.funnel-primary-evidence-shell { display:grid; gap:14px; }
+.funnel-primary-evidence-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.funnel-primary-evidence-group { min-width:0; padding:13px; border:1px solid rgba(148,163,184,.18); border-radius:8px; background:rgba(15,23,42,.58); box-shadow:inset 3px 0 0 var(--funnel-v2-accent); }
+.funnel-primary-evidence-group h4 { display:grid; grid-template-columns:auto minmax(0,1fr) auto; align-items:center; gap:8px; margin:0 0 11px; color:#f8fafc; font-size:.78rem; }
+.funnel-primary-evidence-group h4 i { color:var(--funnel-v2-accent); }
+.funnel-primary-evidence-group h4 b { display:grid; place-items:center; min-width:25px; height:25px; padding:0 7px; border-radius:999px; color:#f8fafc; background:rgba(148,163,184,.14); font-size:.68rem; }
+.funnel-v2-action-card { display:grid; gap:5px; padding:10px 11px; margin-top:7px; border:1px solid rgba(148,163,184,.13); border-radius:8px; background:rgba(2,6,23,.48); }
+.funnel-v2-action-card > div { display:flex; align-items:center; justify-content:space-between; gap:8px; min-width:0; }
+.funnel-v2-action-card strong { color:#f8fafc; font-size:.78rem; overflow-wrap:anywhere; }
+.funnel-v2-action-card small { flex:none; padding:3px 6px; border-radius:999px; color:#67e8f9; background:rgba(34,211,238,.1); font-size:.58rem; }
+.funnel-v2-action-card p { margin:0; color:#cbd5e1; font-size:.7rem; line-height:1.55; overflow-wrap:anywhere; }
+.funnel-primary-fallback { display:flex; align-items:flex-start; gap:8px; margin:0; padding:10px 12px; border-left:3px solid #22d3ee; border-radius:6px; color:#bae6fd; background:rgba(14,116,144,.12); font-size:.7rem; line-height:1.5; }
+.funnel-primary-proofs { border:1px solid rgba(34,197,94,.2); border-radius:8px; background:rgba(2,6,23,.44); }
+.funnel-primary-proofs summary { display:flex; align-items:center; gap:8px; min-height:44px; padding:9px 12px; color:#bbf7d0; cursor:pointer; font-size:.72rem; }
+.funnel-primary-proofs summary span { margin-inline-start:auto; padding:2px 7px; border-radius:999px; background:rgba(34,197,94,.14); }
+.funnel-primary-proofs > div { display:grid; gap:7px; padding:0 12px 12px; }
+.funnel-primary-proofs p { margin:0; padding:9px 10px; border-radius:6px; color:#cbd5e1; background:rgba(15,23,42,.68); font-size:.68rem; line-height:1.55; overflow-wrap:anywhere; }
 .funnel-v2-empty { margin:0; padding:13px; color:#94a3b8; font-size:.78rem; line-height:1.55; }
 .funnel-v2-limit-list { margin:12px 0 0; padding-inline-start:20px; color:#cbd5e1; font-size:.76rem; line-height:1.55; }
 .funnel-v2-missing-architecture,.funnel-v2-render-error { display:flex; align-items:flex-start; gap:12px; margin:16px 0; padding:15px; border:1px solid rgba(245,158,11,.28); border-radius:10px; color:#fde68a; background:rgba(245,158,11,.07); }
 .funnel-v2-missing-architecture p,.funnel-v2-render-error p { margin:0; font-size:.8rem; line-height:1.55; }
 .funnel-v2-render-error strong { display:block; margin-bottom:5px; color:#fff; }
-@media (max-width:820px) { .funnel-v2-hero { grid-template-columns:1fr; padding:16px; } .funnel-v2-card-grid,.funnel-v2-order,.funnel-v2-facts,.funnel-v2-plan { grid-template-columns:1fr; } }
+@media (max-width:820px) { .funnel-v2-hero { grid-template-columns:1fr; padding:16px; } .funnel-v2-card-grid,.funnel-v2-order,.funnel-v2-facts,.funnel-v2-plan,.funnel-primary-evidence-grid { grid-template-columns:1fr; } .funnel-primary-evidence-group { padding:11px; } }
 @media (max-width:430px) { .funnel-v2-hero { margin:12px 0 16px; padding:14px; border-radius:12px; } .funnel-v2-hero h2 { font-size:1.2rem; } .funnel-v2-hero p { font-size:.8rem; } .funnel-v2-metrics > div { padding:10px 5px; } .funnel-v2-action { padding:11px; } }
 @media (prefers-reduced-motion:reduce) { .funnel-v2-report *,.funnel-v2-report *::before,.funnel-v2-report *::after { animation:none !important; transition:none !important; } }
 .funnel-surgery-shell {
@@ -18885,7 +18917,7 @@ const PDF_EXPORT = {
 }
 
 .report-section[data-report-toggle="1"] {
-    cursor: pointer;
+    cursor: default;
 }
 
 .report-section[data-report-toggle="1"]:hover,
@@ -18895,9 +18927,14 @@ const PDF_EXPORT = {
     box-shadow: 0 22px 52px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(139, 92, 246, 0.1) inset;
 }
 
-.report-section[data-report-toggle="1"]:focus-visible {
+.report-section-head[data-report-header="1"] {
+    cursor: pointer;
+}
+
+.report-section-head[data-report-header="1"]:focus-visible {
     outline: 2px solid rgba(34, 211, 238, 0.62);
-    outline-offset: 3px;
+    outline-offset: -3px;
+    border-radius: 16px;
 }
 
 .report-section-head {
