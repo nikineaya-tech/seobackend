@@ -12135,41 +12135,7 @@ async function discoverVerifiedInboundLinks(targetUrl, options = {}) {
     }
 }
 
-async function buildLinkIntelligence(seoIntel = {}, targetUrl = '') {
-    const internalObserved = Array.isArray(seoIntel.internalLinkObjects) ? seoIntel.internalLinkObjects : [];
-    const outboundObserved = Array.isArray(seoIntel.externalOutboundLinkObjects) ? seoIntel.externalOutboundLinkObjects : [];
-    const [internalLinks, outboundLinks, inboundDiscovery] = await Promise.all([
-        Promise.all(internalObserved.slice(0, 10).map(link => verifyObservedLink(link))),
-        Promise.all(outboundObserved.slice(0, 10).map(link => verifyObservedLink(link))),
-        discoverVerifiedInboundLinks(targetUrl, { maxCandidates: 5 })
-    ]);
 
-    const detectedBroken = [...internalLinks, ...outboundLinks]
-        .filter(link => link.status === 'BROKEN')
-        .map(link => ({ ...link, linkType: 'BROKEN' }));
-    const brokenAnchors = (Array.isArray(seoIntel.brokenLinkObjects) ? seoIntel.brokenLinkObjects : [])
-        .map(link => ({ ...link, sourceUrl: link.sourceUrl || targetUrl, linkType: 'BROKEN' }));
-
-    return {
-        inboundLinks: inboundDiscovery.links || [],
-        internalLinks,
-        outboundLinks,
-        brokenLinks: [...detectedBroken, ...brokenAnchors].slice(0, 30),
-        summary: {
-            inboundVerified: (inboundDiscovery.links || []).length,
-            internalObserved: internalObserved.length,
-            internalChecked: internalLinks.length,
-            outboundObserved: outboundObserved.length,
-            outboundChecked: outboundLinks.length,
-            brokenDetected: detectedBroken.length + brokenAnchors.length
-        },
-        methodology: {
-            inbound: 'External candidate pages are retained only when their HTML contains a link to the audited domain.',
-            internalAndOutbound: 'Links are extracted from the audited page and a limited sample is checked over HTTP.',
-            caveat: 'This is a live, limited audit and not a historical web-wide backlink index.'
-        }
-    };
-}
 
 function extractPerfSignals(html) {
     const $ = cheerio.load(html);
@@ -12629,7 +12595,7 @@ const langInstr = isAr
   : 'Réponds UNIQUEMENT en Français. Aucun mot en anglais ou arabe.';
         // ── 2. CACHE ──────────────────────────────────────────────────
         const contextKey = cleanProofText(JSON.stringify(safeContext || {}), 220) || 'no-context';
-        const cacheKey = `funnelspy_v15_cta_legacy_${validUrl}_${userLang}_${mode}_${contextKey}`;
+        const cacheKey = `funnelspy_v16_cta_legacy_${validUrl}_${userLang}_${mode}_${contextKey}`;
         const cached   = cache.get(cacheKey);
         if (cached && !req.body.skipCache) {
             console.log(`💾 [${requestId}] Cache HIT — ${validUrl}`);
@@ -15991,8 +15957,7 @@ Langue       : ${validLang}. JSON pur uniquement.
  
             techStackIntel:     techStack,
             psychTriggers,
-            seoIntel,
-            performanceSignals: perfSignals,
+            seoIntel: seoIntelDeep,            performanceSignals: perfSignals,
  
             visualDNA,
             priceIntel,
@@ -19237,7 +19202,7 @@ async function deepScrapeFunnel(url, scrapeOptions = {}) {
         hasOG: Boolean(ogTitle)
       },
 
-      seoIntel,
+      seoIntel: seoIntelDeep,
       contentIntel,
 
       trackingIntel:
