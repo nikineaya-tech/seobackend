@@ -17530,6 +17530,66 @@ function renderFunnelPipelineDiagnostic(data = {}, { isAr = false, isEn = false 
     </section>`;
 }
 
+function funnelOrderHumanLabel(raw, { isAr = false, isEn = false } = {}) {
+    const value = funnelV2Text(raw).replace(/[_-]+/g, ' ').trim();
+    const lower = value.toLowerCase();
+    const map = [
+        [/hero|h1|above.?the.?fold|premier/i, ['Premier écran', 'First screen', 'الشاشة الأولى', 'Promesse principale + preuve rapide', 'Main promise + fast proof', 'الوعد الرئيسي + دليل سريع']],
+        [/cta|button|bouton|action/i, ['Bouton d’action', 'Action button', 'زر الإجراء', 'Ce que le visiteur doit faire', 'What the visitor must do', 'ما يجب أن يفعله الزائر']],
+        [/benefit|bénéfice|benefice|avantage/i, ['Bénéfices', 'Benefits', 'الفوائد', 'Pourquoi c’est utile maintenant', 'Why it is useful now', 'لماذا يفيد الآن']],
+        [/feature|fonction|caractéristique|spec|specification/i, ['Fonctionnalités', 'Features', 'الخصائص', 'Ce que le produit/service contient', 'What the product/service includes', 'ما يحتويه المنتج أو الخدمة']],
+        [/pricing|price|prix|tarif|offre|pack|bundle/i, ['Prix et offre', 'Price and offer', 'السعر والعرض', 'Ce que le client reçoit et paie', 'What the customer gets and pays', 'ما يحصل عليه العميل وما يدفعه']],
+        [/trust|proof|preuve|avis|review|testimonial|social/i, ['Preuves de confiance', 'Trust proof', 'أدلة الثقة', 'Ce qui rassure avant décision', 'What reassures before decision', 'ما يطمئن قبل القرار']],
+        [/faq|question|objection/i, ['Questions fréquentes', 'FAQ', 'الأسئلة الشائعة', 'Réponses aux doutes avant achat', 'Answers to doubts before purchase', 'إجابات على الشكوك قبل الشراء']],
+        [/delivery|livraison|shipping|retour|return|garantie|warranty/i, ['Livraison / garantie', 'Delivery / guarantee', 'التسليم / الضمان', 'Conditions qui réduisent le risque', 'Conditions that reduce risk', 'شروط تقلل المخاطر']],
+        [/demo|screenshot|image|visual|media|video|galerie/i, ['Démonstration visuelle', 'Visual demo', 'عرض مرئي', 'Voir le résultat avant de décider', 'See the result before deciding', 'رؤية النتيجة قبل القرار']],
+        [/case|usage|use.?case/i, ['Cas d’usage', 'Use cases', 'حالات الاستخدام', 'À quoi ça sert concrètement', 'What it is used for concretely', 'فيم يستخدم بشكل واضح']],
+        [/footer|legal|contact|whatsapp|form/i, ['Contact et légal', 'Contact and legal', 'الاتصال والقانوني', 'Derniers repères de confiance', 'Final trust markers', 'آخر مؤشرات الثقة']]
+    ];
+    const found = map.find(([pattern]) => pattern.test(lower));
+    if (!found) return {
+        label: value || (isAr ? 'قسم' : isEn ? 'Section' : 'Section'),
+        helper: isAr ? 'دوره في قرار العميل' : isEn ? 'Its role in the customer decision' : 'Son rôle dans la décision client'
+    };
+    return {
+        label: isAr ? found[1][2] : isEn ? found[1][1] : found[1][0],
+        helper: isAr ? found[1][5] : isEn ? found[1][4] : found[1][3],
+        original: value
+    };
+}
+
+function renderFunnelOrderColumn(title, items, { isAr = false, isEn = false, recommended = false } = {}) {
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+    const visible = items.slice(0, 12);
+    const empty = isAr ? 'لا يوجد ترتيب موثوق.' : isEn ? 'No reliable order available.' : 'Aucun ordre fiable disponible.';
+    const caption = recommended
+        ? (isAr ? 'المسار الذي يقلل التردد ويدفع نحو القرار.' : isEn ? 'The path that reduces hesitation and moves toward action.' : 'Le parcours qui réduit l’hésitation et rapproche du passage à l’action.')
+        : (isAr ? 'ما يراه الزائر حاليا، مع نقاط القوة وفراغات القراءة.' : isEn ? 'What visitors currently see, with strengths and reading gaps.' : 'Ce que le visiteur voit aujourd’hui, avec les forces et les trous de lecture.');
+    const itemHtml = visible.map((item, index) => {
+        const label = funnelOrderHumanLabel(item, { isAr, isEn });
+        return `<li style="--order-step:${index + 1}">
+            <span class="funnel-order-step-index">${index + 1}</span>
+            <div>
+                <strong>${safe(label.label)}</strong>
+                <small>${safe(label.helper || '')}</small>
+                ${label.original && label.original.toLowerCase() !== label.label.toLowerCase() ? `<em>${safe(label.original)}</em>` : ''}
+            </div>
+        </li>`;
+    }).join('');
+    return `<article class="funnel-order-board ${recommended ? 'recommended' : 'observed'}">
+        <header><span>${safe(title)}</span><p>${safe(caption)}</p></header>
+        <div class="funnel-order-board-grid">
+            <ol class="funnel-order-readable">${itemHtml || `<li class="empty">${safe(empty)}</li>`}</ol>
+            <div class="funnel-order-wireframe" aria-hidden="true">
+                ${(visible.length ? visible : ['hero', 'proof', 'offer', 'cta']).slice(0, 6).map((item, index) => {
+                    const label = funnelOrderHumanLabel(item, { isAr, isEn });
+                    return `<span style="--wire:${index + 1}"><b>${safe(label.label)}</b></span>`;
+                }).join('')}
+            </div>
+        </div>
+    </article>`;
+}
+
 function displayFunnelResults(data = {}) {
     const container = document.getElementById('resultsFunnel');
     if (!container) return;
@@ -17606,9 +17666,9 @@ function displayFunnelResults(data = {}) {
         const limits = surgerySource.observedDataLimits || {};
         const legacyModulesHtml = renderFunnelLegacyModules(data, { isAr, isEn });
 
-        const orderHtml = (currentOrder.length || recommendedOrder.length) ? `<div class="funnel-v2-order">
-            ${currentOrder.length ? `<div><span>${safe(copy.current)}</span><ol>${currentOrder.slice(0, 12).map(item => `<li>${safe(funnelV2Text(item))}</li>`).join('')}</ol></div>` : ''}
-            ${recommendedOrder.length ? `<div class="recommended"><span>${safe(copy.recommended)}</span><ol>${recommendedOrder.slice(0, 12).map(item => `<li>${safe(funnelV2Text(item))}</li>`).join('')}</ol></div>` : ''}
+        const orderHtml = (currentOrder.length || recommendedOrder.length) ? `<div class="funnel-v2-order funnel-v2-order-visual">
+            ${currentOrder.length ? renderFunnelOrderColumn(copy.current, currentOrder, { isAr, isEn }) : ''}
+            ${recommendedOrder.length ? renderFunnelOrderColumn(copy.recommended, recommendedOrder, { isAr, isEn, recommended: true }) : ''}
         </div>` : `<p class="funnel-v2-empty">${safe(copy.noData)}</p>`;
 
         const offerRows = [
@@ -17647,13 +17707,13 @@ function displayFunnelResults(data = {}) {
             </section>`;
         container.innerHTML = `<div id="funnelReport" class="funnel-v2-report" dir="${dir}">
             ${executiveHtml}
-            ${primaryEvidenceHtml ? renderReportSection('funnel-primary-evidence', isAr ? 'التحليل القائم على الأدلة' : isEn ? 'Evidence-first analysis' : 'Analyse fondée sur les preuves', isAr ? 'ما تم رصده فعليا قبل أي توصية.' : isEn ? 'What was actually observed before any recommendation.' : 'Ce qui a réellement été observé avant toute recommandation.', 'fa-magnifying-glass-chart', primaryEvidenceHtml, { isAr, isEn }) : ''}
+            ${renderReportSection('page-order', copy.order, copy.orderSub, 'fa-arrow-down-1-9', orderHtml, { isAr, isEn, open: true })}
             ${renderReportSection('architecture', copy.architecture, copy.architectureSub, 'fa-sitemap', surgeryHtml || `<section class="funnel-v2-missing-architecture" data-export-feature="page"><i class="fas fa-triangle-exclamation"></i><p>${safe(copy.noData)}</p></section>`, { isAr, isEn })}
-            ${renderReportSection('page-order', copy.order, copy.orderSub, 'fa-arrow-down-1-9', orderHtml, { isAr, isEn })}
-            ${renderReportSection('frictions', copy.frictions, copy.frictionsSub, 'fa-triangle-exclamation', renderFunnelV2Cards(frictions, { accent: '#fb7185', limit: 5, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">${safe(copy.partial)}</p>`, { isAr, isEn })}
-            ${renderReportSection('money', copy.offer, copy.offerSub, 'fa-tags', offerHtml, { isAr, isEn })}
             ${renderReportSection('message', copy.message, copy.messageSub, 'fa-bullseye', messageHtml, { isAr, isEn })}
+            ${renderReportSection('money', copy.offer, copy.offerSub, 'fa-tags', offerHtml, { isAr, isEn })}
+            ${renderReportSection('frictions', copy.frictions, copy.frictionsSub, 'fa-triangle-exclamation', renderFunnelV2Cards(frictions, { accent: '#fb7185', limit: 5, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">${safe(copy.partial)}</p>`, { isAr, isEn })}
             ${renderReportSection('plan', copy.plan, copy.planSub, 'fa-list-check', planHtml, { isAr, isEn })}
+            ${primaryEvidenceHtml ? renderReportSection('funnel-primary-evidence', isAr ? 'التحليل القائم على الأدلة' : isEn ? 'Evidence-first analysis' : 'Analyse fondée sur les preuves', isAr ? 'ما تم رصده فعليا قبل أي توصية.' : isEn ? 'What was actually observed before any recommendation.' : 'Ce qui a réellement été observé avant toute recommandation.', 'fa-magnifying-glass-chart', primaryEvidenceHtml, { isAr, isEn }) : ''}
             ${renderReportSection('details', copy.details, copy.detailsSub, 'fa-database', detailsHtml, { isAr, isEn })}
             ${legacyModulesHtml}
             ${renderExpertDock('funnel', { isAr, isEn })}
@@ -19539,6 +19599,137 @@ const PDF_EXPORT = {
 .funnel-v2-order span { color:#7dd3fc; font-size:.68rem; font-weight:900; text-transform:uppercase; }
 .funnel-v2-order ol { margin:12px 0 0; padding-inline-start:22px; color:#d7e0ec; }
 .funnel-v2-order li { margin:0 0 8px; padding-inline-start:4px; font-size:.79rem; line-height:1.45; }
+.funnel-v2-order-visual { align-items: stretch; }
+.funnel-v2-order-visual > .funnel-order-board {
+    padding: 16px;
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 10% 0%, rgba(34,211,238,.12), transparent 32%),
+        linear-gradient(145deg, rgba(15,23,42,.96), rgba(2,6,23,.78));
+}
+.funnel-order-board.recommended {
+    border-color: rgba(34,197,94,.28);
+    background:
+        radial-gradient(circle at 10% 0%, rgba(34,197,94,.12), transparent 32%),
+        linear-gradient(145deg, rgba(6,24,21,.96), rgba(2,6,23,.78));
+}
+.funnel-order-board header {
+    margin-bottom: 12px;
+}
+.funnel-order-board header span {
+    display: block;
+    color: #7dd3fc;
+    font-size: .72rem;
+    font-weight: 950;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+.funnel-order-board header p {
+    margin: 6px 0 0;
+    color: #94a3b8;
+    font-size: .78rem;
+    line-height: 1.5;
+}
+.funnel-order-board-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(150px, .72fr);
+    gap: 13px;
+    align-items: stretch;
+}
+.funnel-order-readable {
+    list-style: none;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: grid;
+    gap: 8px;
+}
+.funnel-order-readable li {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 9px;
+    margin: 0 !important;
+    padding: 9px !important;
+    border: 1px solid rgba(148,163,184,.12);
+    border-radius: 12px;
+    background: rgba(15,23,42,.58);
+}
+.funnel-order-readable .empty {
+    display: block;
+    color: #94a3b8;
+}
+.funnel-order-step-index {
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 9px;
+    color: #03111c !important;
+    background: linear-gradient(135deg, #67e8f9, #a78bfa);
+    font-size: .72rem !important;
+    font-weight: 950 !important;
+}
+.funnel-order-readable strong {
+    display: block;
+    color: #f8fafc;
+    font-size: .86rem;
+}
+.funnel-order-readable small {
+    display: block;
+    margin-top: 3px;
+    color: #aab8cc;
+    font-size: .7rem;
+    line-height: 1.35;
+}
+.funnel-order-readable em {
+    display: inline-flex;
+    margin-top: 6px;
+    padding: 3px 7px;
+    border-radius: 999px;
+    color: #93c5fd;
+    background: rgba(59,130,246,.08);
+    font-size: .62rem;
+    font-style: normal;
+    font-weight: 800;
+}
+.funnel-order-wireframe {
+    min-height: 100%;
+    padding: 10px;
+    border: 1px solid rgba(125,211,252,.16);
+    border-radius: 16px;
+    background:
+        linear-gradient(180deg, rgba(15,23,42,.88), rgba(2,6,23,.74));
+    display: grid;
+    gap: 8px;
+    align-content: start;
+}
+.funnel-order-wireframe::before {
+    content: "";
+    display: block;
+    height: 12px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, rgba(34,211,238,.6), rgba(139,92,246,.35));
+}
+.funnel-order-wireframe span {
+    display: grid;
+    min-height: 38px;
+    place-items: center;
+    padding: 8px;
+    border-radius: 11px;
+    color: #dbeafe;
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.08);
+    text-transform: none;
+}
+.funnel-order-wireframe span:nth-child(2),
+.funnel-order-wireframe span:nth-child(5) {
+    min-height: 58px;
+    background: rgba(34,211,238,.08);
+}
+.funnel-order-wireframe b {
+    font-size: .66rem;
+    line-height: 1.2;
+    text-align: center;
+}
 .funnel-v2-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
 .funnel-v2-facts > div { min-width:0; padding:12px; border:1px solid rgba(148,163,184,.13); border-radius:9px; background:rgba(2,6,23,.4); }
 .funnel-v2-facts small { display:block; margin-bottom:5px; color:#7dd3fc; font-size:.61rem; font-weight:900; text-transform:uppercase; }
