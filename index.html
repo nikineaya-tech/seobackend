@@ -9652,7 +9652,7 @@ function cloneReportHtmlForExport(el, exportOptions = {}) {
         '.loading-state, .toast-container, .export-bubble-wrapper, ' +
         '.btn-export-pdf, .btn-copy-mini, [data-gen-type], iframe, ' +
         '.daka-global-loader, .auth-modal, .report-feature-nav, ' +
-        '.expert-dock, #magicPromptPlaceholder, .generator-grid'
+        '.expert-dock, .generator-grid'
     ).forEach(function (node) {
         node.remove();
     });
@@ -9746,7 +9746,8 @@ function createFixedPdfClone(el, exportOptions = {}) {
             .daka-pdf-fixed-clone .funnel-v2-order > div,
             .daka-pdf-fixed-clone .funnel-v2-facts > div,
             .daka-pdf-fixed-clone .funnel-v2-copy-stack > div,
-            .daka-pdf-fixed-clone .funnel-v2-missing-architecture {
+            .daka-pdf-fixed-clone .funnel-v2-missing-architecture,
+            .daka-pdf-fixed-clone #magicPromptPlaceholder > .result-card {
                 margin: 0 0 18px !important;
                 padding: 16px 18px !important;
                 border-radius: 8px !important;
@@ -9798,6 +9799,49 @@ function createFixedPdfClone(el, exportOptions = {}) {
                 list-style: none !important;
             }
             .daka-pdf-fixed-clone .funnel-surgery-chevron { display: none !important; }
+            .daka-pdf-fixed-clone #magicPromptPlaceholder {
+                display: block !important;
+                margin: 22px 0 !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+            }
+            .daka-pdf-fixed-clone #magicPromptPlaceholder button,
+            .daka-pdf-fixed-clone #magicPromptPlaceholder .btn-copy-mini,
+            .daka-pdf-fixed-clone #magicPromptPlaceholder .copy-badge {
+                display: none !important;
+            }
+            .daka-pdf-fixed-clone #magicPromptRawText,
+            .daka-pdf-fixed-clone #rawPromptText {
+                display: block !important;
+                max-height: none !important;
+                overflow: visible !important;
+                white-space: pre-wrap !important;
+                word-break: normal !important;
+                overflow-wrap: break-word !important;
+                padding: 14px 16px !important;
+                border: 1px solid #cbd5e1 !important;
+                border-radius: 8px !important;
+                background: #f8fafc !important;
+                color: #0f172a !important;
+                font-family: "Courier New", monospace !important;
+                font-size: 9.4px !important;
+                line-height: 1.48 !important;
+            }
+            .daka-pdf-fixed-clone .funnel-order-insights > div {
+                display: grid !important;
+                grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+                gap: 10px !important;
+            }
+            .daka-pdf-fixed-clone .funnel-order-board-grid {
+                display: grid !important;
+                grid-template-columns: 1fr 150px !important;
+                gap: 12px !important;
+            }
+            .daka-pdf-fixed-clone .funnel-order-wireframe {
+                min-height: 190px !important;
+                border: 1px solid #cbd5e1 !important;
+                background: #f8fafc !important;
+            }
             .daka-pdf-fixed-clone .funnel-surgery-item {
                 margin: 0 0 8px !important;
                 padding: 10px 12px !important;
@@ -9915,6 +9959,16 @@ function createFixedPdfClone(el, exportOptions = {}) {
         node.style.setProperty('overflow-wrap', 'break-word', 'important');
         node.style.setProperty('word-break', 'normal', 'important');
         node.style.setProperty('white-space', 'normal', 'important');
+    });
+    shell.querySelectorAll('#magicPromptRawText,#rawPromptText').forEach(function (node) {
+        node.style.setProperty('white-space', 'pre-wrap', 'important');
+        node.style.setProperty('font-family', '"Courier New", monospace', 'important');
+        node.style.setProperty('font-size', '9.4px', 'important');
+        node.style.setProperty('line-height', '1.48', 'important');
+        node.style.setProperty('background', '#f8fafc', 'important');
+        node.style.setProperty('color', '#0f172a', 'important');
+        node.style.setProperty('max-height', 'none', 'important');
+        node.style.setProperty('overflow', 'visible', 'important');
     });
     shell.querySelectorAll('div,section,article,aside,main').forEach(function (node) {
         if (node.classList.contains('funnel-color-preview')) return;
@@ -11006,7 +11060,10 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 '.loading-orb, .toast-container, iframe,', /* ⚠️ Le mot "canvas" a été retiré d'ici pour afficher le Radar */
                 '.copy-badge, .btn-copy-mini, .btn-cosmic, .btn-cyber, .btn-system,',
                 '.generator-grid, #tech-gen-output, .kw-filter-btn, #kwFilterBar,',
-                '[data-gen-type], .btn-export-pdf, .expert-dock, #magicPromptPlaceholder, .report-feature-nav { display:none !important; }',
+                '[data-gen-type], .btn-export-pdf, .expert-dock, .report-feature-nav { display:none !important; }',
+                '#magicPromptPlaceholder button, #magicPromptPlaceholder .btn-copy-mini, #magicPromptPlaceholder .copy-badge { display:none !important; }',
+                '#magicPromptPlaceholder { display:block !important; margin:22px 0 !important; page-break-inside:avoid; }',
+                '#magicPromptRawText, #rawPromptText { display:block !important; max-height:none !important; overflow:visible !important; white-space:pre-wrap !important; background:#f8fafc !important; color:#0f172a !important; border:1px solid #cbd5e1 !important; border-radius:8px !important; padding:14px !important; font-family:"Courier New", monospace !important; font-size:9.4px !important; line-height:1.5 !important; direction:ltr !important; text-align:left !important; }',
                 '.report-section { border:0 !important; padding:0 !important; margin:0 0 24px !important; background:#fff !important; }',
                 '.report-section-head { padding:13px 16px !important; margin-bottom:13px !important; border:0 !important; border-right:5px solid #0369a1 !important; border-radius:5px !important; background:#f1f5f9 !important; }',
                 '.report-section-body { display:block !important; padding:0 !important; }',
@@ -17568,6 +17625,73 @@ function funnelOrderHumanLabel(raw, { isAr = false, isEn = false } = {}) {
     };
 }
 
+function funnelOrderRank(raw) {
+    const value = funnelV2Text(raw).toLowerCase();
+    const rules = [
+        [/hero|h1|above.?the.?fold|premier/, 10],
+        [/problem|probl[eè]me|désir|desir|pain|need|besoin|objection/, 18],
+        [/case|usage|use.?case|audience|cible/, 24],
+        [/trust|proof|preuve|avis|review|testimonial|rating|social/, 30],
+        [/benefit|bénéfice|benefice|avantage|result|résultat/, 38],
+        [/demo|screenshot|image|visual|media|video|galerie/, 44],
+        [/feature|fonction|caract[ée]ristique|spec|specification/, 52],
+        [/pricing|price|prix|tarif|offre|pack|bundle|value|valeur/, 62],
+        [/delivery|livraison|shipping|retour|return|garantie|warranty|payment|paiement|security|sécurité/, 72],
+        [/faq|question|objection/, 82],
+        [/cta|button|bouton|action|whatsapp|contact|form/, 92],
+        [/footer|legal|privacy|terms|mentions/, 98]
+    ];
+    return rules.find(([pattern]) => pattern.test(value))?.[1] || 70;
+}
+
+function prioritizeFunnelRecommendedOrder(items = []) {
+    const seen = new Set();
+    return items
+        .map((item, index) => ({ item, index, rank: funnelOrderRank(item) }))
+        .filter(entry => {
+            const key = executiveFingerprint(funnelV2Text(entry.item));
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        })
+        .sort((a, b) => (a.rank - b.rank) || (a.index - b.index))
+        .map(entry => entry.item);
+}
+
+function renderFunnelOrderInsights(surgery = {}, { isAr = false, isEn = false } = {}) {
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+    const labels = isAr ? {
+        title: 'الملاحظات التي تغير ترتيب الصفحة',
+        add: 'أضف',
+        move: 'انقل',
+        improve: 'قوّ',
+        remove: 'اختصر'
+    } : isEn ? {
+        title: 'Observations that change the page order',
+        add: 'Add',
+        move: 'Move',
+        improve: 'Strengthen',
+        remove: 'Simplify'
+    } : {
+        title: 'Observations qui changent l’ordre de la page',
+        add: 'Ajouter',
+        move: 'Déplacer',
+        improve: 'Renforcer',
+        remove: 'Simplifier'
+    };
+    const rows = [
+        ...funnelV2Array(surgery.add).slice(0, 2).map(item => [labels.add, item, '#22c55e']),
+        ...funnelV2Array(surgery.move).slice(0, 2).map(item => [labels.move, item, '#38bdf8']),
+        ...funnelV2Array(surgery.improve).slice(0, 2).map(item => [labels.improve, item, '#f59e0b']),
+        ...funnelV2Array(surgery.remove).slice(0, 2).map(item => [labels.remove, item, '#fb7185'])
+    ].filter(([, item]) => executiveIsUsefulText(funnelV2Text(item)));
+    if (!rows.length) return '';
+    return `<aside class="funnel-order-insights">
+        <strong>${safe(labels.title)}</strong>
+        <div>${rows.slice(0, 6).map(([label, item, color]) => `<span style="--insight:${color}"><b>${safe(label)}</b>${safe(funnelV2Text(item.section || item.sectionType || item.action || item.problem || item))}</span>`).join('')}</div>
+    </aside>`;
+}
+
 function renderFunnelOrderColumn(title, items, { isAr = false, isEn = false, recommended = false } = {}) {
     const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
     const visible = items.slice(0, 12);
@@ -17658,7 +17782,7 @@ function displayFunnelResults(data = {}) {
         const surgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         const order = surgerySource.recommendedOrder || {};
         const currentOrder = funnelV2Array(order.currentOrder, data.rawIntel?.sectionsDetected);
-        const recommendedOrder = funnelV2Array(order.recommendedOrder, surgerySource.finalPageBlueprint);
+        const recommendedOrder = prioritizeFunnelRecommendedOrder(funnelV2Array(order.recommendedOrder, surgerySource.finalPageBlueprint));
         const observedSections = [
             ...(data.funnelPrimaryAnalysis?.present || []),
             ...(data.funnelEvidenceSynthesis?.present || [])
@@ -17676,10 +17800,12 @@ function displayFunnelResults(data = {}) {
         const limits = surgerySource.observedDataLimits || {};
         const legacyModulesHtml = renderFunnelLegacyModules(data, { isAr, isEn });
 
-        const orderHtml = (currentOrder.length || recommendedOrder.length) ? `<div class="funnel-v2-order funnel-v2-order-visual">
-            ${currentOrder.length ? renderFunnelOrderColumn(copy.current, currentOrder, { isAr, isEn }) : ''}
-            ${recommendedOrder.length ? renderFunnelOrderColumn(copy.recommended, recommendedOrder, { isAr, isEn, recommended: true }) : ''}
-        </div>` : `<p class="funnel-v2-empty">${safe(copy.noData)}</p>`;
+        const orderHtml = (currentOrder.length || recommendedOrder.length) ? `
+            ${renderFunnelOrderInsights(surgery, { isAr, isEn })}
+            <div class="funnel-v2-order funnel-v2-order-visual">
+                ${currentOrder.length ? renderFunnelOrderColumn(copy.current, currentOrder, { isAr, isEn }) : ''}
+                ${recommendedOrder.length ? renderFunnelOrderColumn(copy.recommended, recommendedOrder, { isAr, isEn, recommended: true }) : ''}
+            </div>` : `<p class="funnel-v2-empty">${safe(copy.noData)}</p>`;
 
         const offerRows = [
             [isAr ? 'نوع العرض' : isEn ? 'Offer type' : 'Type d’offre', offerDetected.offerType],
@@ -17910,24 +18036,33 @@ function buildUpscaledMegaRedesignPrompt(rawPrompt) {
     const basePrompt = String(rawPrompt || '').trim();
 
     const intro = isAr
-        ? `أنت Senior UI/UX Designer و Growth Engineer و Front-End Engineer و Conversion Strategist.`
+        ? `أنت Senior UI/UX Designer و Growth Engineer و Front-End Engineer و Conversion Strategist متخصص في Market Intelligence Spyer.`
         : isEn
-            ? `You are a Senior UI/UX Designer, Growth Engineer, Front-End Engineer and Conversion Strategist.`
-            : `Tu es un Senior UI/UX Designer, Growth Engineer, Front-End Engineer et Conversion Strategist.`;
+            ? `You are a Senior UI/UX Designer, Growth Engineer, Front-End Engineer and Conversion Strategist specialized in Market Intelligence Spyer.`
+            : `Tu es un Senior UI/UX Designer, Growth Engineer, Front-End Engineer et Conversion Strategist spécialisé Market Intelligence Spyer.`;
 
     const langInstruction = isAr
-        ? `اكتب الصفحة باللغة المناسبة للسوق المستهدف، مع الحفاظ على وضوح تجاري قوي.`
+        ? `اكتب الصفحة بلغة السوق المستهدف فقط. إذا كانت الصفحة عربية فكل العناوين والشرح بالعربية، مع الحفاظ على أسماء المنتجات أو المصطلحات الأصلية عند الضرورة.`
         : isEn
-            ? `Write the page in the target market language with clear conversion-focused copy.`
-            : `Rédige la page dans la langue du marché cible avec un copywriting clair et orienté conversion.`;
+            ? `Write the page strictly in the target market language. Keep product names or original terms only when necessary.`
+            : `Rédige la page strictement dans la langue du marché cible. Garde les noms de produits ou termes originaux seulement quand c'est utile.`;
 
     return `
-MEGA REDESIGN PROMPT — URL + IMAGE JOINTE + RAPPORT DAKA + CODE HTML/CSS/JS
+MEGA AI REDESIGN PROMPT — MARKET INTELLIGENCE SPYER
+URL + IMAGE JOINTE + RAPPORT DAKA + CODE HTML/CSS/JS PRÊT À HÉBERGER
 
 ${intro}
 
 MISSION :
-Refondre totalement la page fournie pour créer une landing page premium, moderne, crédible et orientée conversion.
+Reconstruire la page fournie comme une vraie page de vente premium, moderne, crédible et orientée conversion.
+Tu peux travailler sur :
+- mon site actuel ;
+- une page concurrente ou adverse ;
+- une capture d'écran jointe ;
+- une page inspirationnelle.
+
+IMPORTANT :
+Si la page est celle d'un concurrent, ne copie jamais sa marque, ses textes protégés ni ses assets privés. Utilise uniquement sa structure comme inspiration stratégique.
 
 SOURCES OBLIGATOIRES :
 1. URL de la page à analyser :
@@ -17945,12 +18080,21 @@ La capture montre l’état réel de la page, le design actuel, la hiérarchie v
 ${basePrompt || 'Donnée non confirmée'}
 
 OBJECTIF BUSINESS :
-Créer une page qui vend mieux, rassure plus vite, explique clairement l’offre, réduit les objections et pousse vers l’action.
+Créer une page qui donne envie, rassure vite, explique clairement l'offre, rend le risque faible, fait monter le désir et pousse vers l'action.
+La page doit donner une impression de produit bien vendu : esthétique, copywriting tendu, preuve visible, CTA clair, objections traitées.
 
 IMPORTANT :
 Ne te base pas uniquement sur l’URL.
 Compare l’URL, l’image jointe et les informations du rapport Daka.
 Si l’URL et l’image montrent des informations différentes, considère l’image comme preuve visuelle importante.
+
+RÈGLES DE VÉRITÉ :
+- Ne pas inventer de témoignages, notes, clients, logos, garanties, prix ou résultats.
+- Si une preuve manque, créer un emplacement propre marqué "À remplacer par une preuve réelle".
+- Si un prix est non confirmé, écrire "Prix à confirmer" et ne pas l'utiliser comme preuve.
+- Si une garantie est recommandée mais non observée, écrire clairement "Recommandation : ajouter une garantie".
+- Garder les preuves observées : CTA, prix, bénéfices, avis, villes, livraison, specs, images, FAQ, conditions.
+- Ne jamais transformer une hypothèse en fait.
 
 LIVRABLE ATTENDU :
 Fournis du code front-end directement exploitable en :
@@ -17978,6 +18122,8 @@ Contraintes techniques :
 - Boutons larges et cliquables.
 - CTA visible rapidement.
 - Design premium, crédible et non générique.
+- Score Lighthouse visé : rapide, propre, accessible.
+- Aucun texte caché derrière un composant non utilisable sur mobile.
 
 SI UNE SEULE RÉPONSE NE SUFFIT PAS :
 Si le code est trop long pour une seule réponse, découpe-le en plusieurs parties.
@@ -18014,18 +18160,27 @@ Avant de coder, fais un mini diagnostic :
 9. Le nouvel ordre recommandé de la page.
 10. Le positionnement de conversion.
 
-STRUCTURE DE PAGE À PRODUIRE :
-1. Header premium simple.
-2. Hero avec H1 orienté bénéfice + sous-titre + CTA + visuel.
-3. Preuves rapides : livraison, garantie, paiement sécurisé, avis ou contact.
-4. Bloc problème / désir client.
-5. Bénéfices principaux en 3 à 5 points.
-6. Démonstration / usage / visuels.
-7. Offre + prix + valeur perçue.
-8. Preuves de confiance.
-9. FAQ avant achat.
-10. CTA final.
-11. Footer propre.
+ARCHITECTURE OBLIGATOIRE À PRODUIRE :
+1. Header simple, lisible, non envahissant.
+2. Hero : résultat promis + produit/service + preuve rapide + CTA principal.
+3. Ligne de réassurance : livraison, garantie, paiement, contact, avis ou preuve disponible.
+4. Problème / désir client : ce que l'utilisateur veut éviter ou obtenir.
+5. Bénéfices principaux : 3 à 5 bénéfices concrets, pas des slogans.
+6. Démonstration visuelle : images, vidéo, galerie ou simulation.
+7. Caractéristiques / livrables : specs produit ou livrables service.
+8. Offre : pack, prix, ce que l'utilisateur reçoit, bonus éventuels.
+9. Preuves de confiance : avis, cas clients, badges, villes, photos, conditions.
+10. Objections / FAQ : questions avant achat ou prise de contact.
+11. CTA final : rappel de la promesse + action simple.
+12. Footer propre : contact, légal, réseaux, conditions.
+
+ORDRE PSYCHOLOGIQUE À RESPECTER :
+- D'abord faire comprendre.
+- Ensuite faire ressentir le problème ou le désir.
+- Ensuite montrer la preuve.
+- Ensuite rendre l'offre concrète.
+- Ensuite enlever le risque.
+- Enfin demander l'action.
 
 EXIGENCES DESIGN :
 - Mobile-first.
@@ -18040,6 +18195,10 @@ EXIGENCES DESIGN :
 - Pas de rendu “fait par IA”.
 - Pas de surcharge visuelle.
 - Pas de faux témoignages trompeurs.
+- Interface 360px, 390px, 430px impeccable.
+- Cards stables : aucun texte ne doit déborder.
+- Éviter les gros blocs fatigants : utiliser cartes, bandeaux, tableaux courts, étapes, preuves et schémas simples.
+- Utiliser un style premium adapté au marché : SaaS, e-commerce, service, formation ou produit physique.
 
 EXIGENCES COPYWRITING :
 - H1 orienté bénéfice.
@@ -18051,6 +18210,11 @@ EXIGENCES COPYWRITING :
 - Promesses réalistes.
 - Langage adapté au pays cible.
 - Éviter les phrases vagues comme “améliorer votre expérience”.
+- Chaque section doit avoir un but commercial.
+- Chaque CTA doit être spécifique : acheter, commander, réserver, demander un devis, lancer l'audit, discuter sur WhatsApp.
+- Pour un produit physique : parler prix, stock, livraison, retour, garantie, paiement, avis, photos réelles.
+- Pour un service : parler livrables, délai, résultat attendu, accompagnement, révisions, preuve client, appel découverte.
+- Pour SaaS : parler démonstration, cas d'usage, onboarding, intégrations, sécurité, pricing.
 
 ${langInstruction}
 
@@ -18069,6 +18233,22 @@ Si elle contient le produit, reprends son esprit dans le design.
 Si une image produit doit être remplacée plus tard, utilise un chemin clair comme :
 assets/product-main.jpg
 
+SCHÉMAS / SECTIONS VISUELLES À INCLURE :
+- Une section "Pourquoi cette page doit convertir" avec 3 cartes : désir, preuve, action.
+- Une mini roadmap visuelle du parcours utilisateur.
+- Une section "Avant / Après" si la page actuelle est confuse.
+- Une section FAQ en accordéon.
+- Un sticky CTA mobile discret si pertinent.
+
+ACCESSIBILITÉ ET QUALITÉ :
+- Balises sémantiques.
+- Boutons accessibles au clavier.
+- Focus visible.
+- Alt text sur les images.
+- Pas de scroll horizontal.
+- Pas de popup agressive.
+- Pas d'animations lourdes.
+
 SORTIE ATTENDUE :
 Répondre dans cet ordre :
 1. Mini diagnostic URL + image.
@@ -18076,7 +18256,7 @@ Répondre dans cet ordre :
 3. Code complet HTML/CSS/JS.
 
 PHRASE DIRECTRICE :
-Redesign = URL + image jointe + rapport Daka + stratégie conversion + code HTML/CSS/JS prêt à héberger.
+Redesign = Market Intelligence + preuve réelle + psychologie commerciale + UI/UX premium + code HTML/CSS/JS prêt à héberger.
 `.trim();
 }
 
@@ -19611,11 +19791,16 @@ const PDF_EXPORT = {
 .funnel-v2-order li { margin:0 0 8px; padding-inline-start:4px; font-size:.79rem; line-height:1.45; }
 .funnel-v2-order-visual { align-items: stretch; }
 .funnel-v2-order-visual > .funnel-order-board {
+    min-width: 0;
     padding: 16px;
-    border-radius: 16px;
+    border-radius: 18px;
     background:
         radial-gradient(circle at 10% 0%, rgba(34,211,238,.12), transparent 32%),
         linear-gradient(145deg, rgba(15,23,42,.96), rgba(2,6,23,.78));
+    box-shadow:
+        0 1px 0 rgba(255,255,255,.08) inset,
+        0 12px 0 rgba(2,6,23,.72),
+        0 24px 42px rgba(0,0,0,.22);
 }
 .funnel-order-board.recommended {
     border-color: rgba(34,197,94,.28);
@@ -19642,7 +19827,7 @@ const PDF_EXPORT = {
 }
 .funnel-order-board-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(150px, .72fr);
+    grid-template-columns: minmax(0, 1fr) minmax(140px, .58fr);
     gap: 13px;
     align-items: stretch;
 }
@@ -19711,6 +19896,8 @@ const PDF_EXPORT = {
     display: grid;
     gap: 8px;
     align-content: start;
+    transform: perspective(600px) rotateY(-2deg);
+    transform-origin: center;
 }
 .funnel-order-wireframe::before {
     content: "";
@@ -19739,6 +19926,50 @@ const PDF_EXPORT = {
     font-size: .66rem;
     line-height: 1.2;
     text-align: center;
+}
+
+.funnel-order-insights {
+    margin-bottom: 12px;
+    padding: 13px;
+    border: 1px solid rgba(125,211,252,.18);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at 8% 0%, rgba(34,211,238,.1), transparent 34%),
+        rgba(2,6,23,.48);
+}
+
+.funnel-order-insights > strong {
+    display: block;
+    color: #e0f2fe;
+    font-size: .82rem;
+    margin-bottom: 9px;
+}
+
+.funnel-order-insights > div {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.funnel-order-insights span {
+    min-width: 0;
+    display: grid;
+    gap: 4px;
+    padding: 10px;
+    border: 1px solid rgba(148,163,184,.12);
+    border-inline-start: 3px solid var(--insight);
+    border-radius: 12px;
+    color: #cbd5e1;
+    background: rgba(15,23,42,.62);
+    font-size: .72rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.funnel-order-insights b {
+    color: var(--insight);
+    font-size: .62rem;
+    text-transform: uppercase;
 }
 .funnel-v2-facts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:9px; }
 .funnel-v2-facts > div { min-width:0; padding:12px; border:1px solid rgba(148,163,184,.13); border-radius:9px; background:rgba(2,6,23,.4); }
@@ -19777,6 +20008,16 @@ const PDF_EXPORT = {
 .funnel-v2-missing-architecture p,.funnel-v2-render-error p { margin:0; font-size:.8rem; line-height:1.55; }
 .funnel-v2-render-error strong { display:block; margin-bottom:5px; color:#fff; }
 @media (max-width:820px) { .funnel-v2-hero { grid-template-columns:1fr; padding:16px; } .funnel-v2-card-grid,.funnel-v2-order,.funnel-v2-facts,.funnel-v2-plan,.funnel-primary-evidence-grid { grid-template-columns:1fr; } .funnel-primary-evidence-group { padding:11px; } }
+@media (max-width:820px) {
+    .funnel-order-board-grid,
+    .funnel-order-insights > div {
+        grid-template-columns: 1fr;
+    }
+    .funnel-order-wireframe {
+        transform: none;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
 @media (max-width:430px) { .funnel-v2-hero { margin:12px 0 16px; padding:14px; border-radius:12px; } .funnel-v2-hero h2 { font-size:1.2rem; } .funnel-v2-hero p { font-size:.8rem; } .funnel-v2-metrics > div { padding:10px 5px; } .funnel-v2-action { padding:11px; } }
 @media (prefers-reduced-motion:reduce) { .funnel-v2-report *,.funnel-v2-report *::before,.funnel-v2-report *::after { animation:none !important; transition:none !important; } }
 .funnel-surgery-shell {

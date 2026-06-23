@@ -173,6 +173,70 @@ ${details.length ? `<section class="full"><h2>${escapeHtml(labels.details)}</h2>
 </main></body></html>`;
 }
 
+function buildSharedReportGateHtml({ token = '', title = '' } = {}) {
+    const supabaseUrl = process.env.SUPABASE_URL || '';
+    const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+    const safeTitle = safeText(title || 'Daka shared report', 180);
+    return `<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(safeTitle)} - Daka</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:#020617;color:#f8fafc;font-family:Inter,Arial,sans-serif}
+main{width:min(760px,calc(100% - 32px));padding:28px;border:1px solid rgba(125,211,252,.22);border-radius:22px;background:radial-gradient(circle at 10% 0%,rgba(34,211,238,.15),transparent 32%),linear-gradient(145deg,#0f172a,#050816);box-shadow:0 24px 70px rgba(0,0,0,.36)}
+.kicker{color:#7dd3fc;font-size:.75rem;font-weight:950;letter-spacing:.1em;text-transform:uppercase}h1{font-size:clamp(1.8rem,5vw,3.2rem);line-height:1.05;margin:12px 0}p{color:#cbd5e1;line-height:1.65}.actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}a{min-height:44px;padding:10px 15px;border-radius:999px;border:1px solid rgba(125,211,252,.24);background:#10213a;color:#e0f2fe;text-decoration:none;font-weight:900;display:inline-flex;align-items:center}.primary{background:linear-gradient(135deg,#22c55e,#06b6d4);color:#03111c;border:0}.error{color:#fecaca}
+</style>
+</head>
+<body>
+<main>
+<div class="kicker">Daka Market Intelligence Spyer</div>
+<h1 id="title">Rapport partagé</h1>
+<p id="status">Vérification de votre accès au rapport...</p>
+<div class="actions" id="actions"></div>
+</main>
+<script>
+const SHARED_TOKEN = ${JSON.stringify(String(token || ''))};
+const SUPABASE_URL = ${JSON.stringify(String(supabaseUrl || ''))};
+const SUPABASE_ANON_KEY = ${JSON.stringify(String(supabaseAnonKey || ''))};
+const title = document.getElementById('title');
+const status = document.getElementById('status');
+const actions = document.getElementById('actions');
+function showSubscribe(message){
+  title.textContent = 'Ce rapport est réservé aux abonnés Daka';
+  status.textContent = message || 'Connectez-vous avec un compte abonné pour consulter ce rapport partagé.';
+  actions.innerHTML = '<a class="primary" href="/#pricing">S\\'abonner</a><a href="/">Se connecter</a>';
+}
+async function boot(){
+  try {
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !window.supabase) return showSubscribe('Connexion requise pour vérifier votre abonnement.');
+    const client = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sessionResult = await client.auth.getSession();
+    const accessToken = sessionResult && sessionResult.data && sessionResult.data.session && sessionResult.data.session.access_token;
+    if (!accessToken) return showSubscribe('Connectez-vous avec votre compte abonné pour ouvrir ce rapport.');
+    const response = await fetch('/api/public/reports/' + encodeURIComponent(SHARED_TOKEN), {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (response.status === 402) return showSubscribe(payload.message || 'Votre compte doit être abonné pour consulter ce rapport.');
+    if (!response.ok || !payload.html) throw new Error(payload.message || 'Rapport indisponible.');
+    document.open();
+    document.write(payload.html);
+    document.close();
+  } catch (error) {
+    title.textContent = 'Rapport indisponible';
+    status.textContent = error.message || 'Impossible de charger ce rapport.';
+    status.className = 'error';
+    actions.innerHTML = '<a href="/">Retour à Daka</a>';
+  }
+}
+boot();
+</script>
+</body>
+</html>`;
+}
+
 function extractPriceSnapshot(type, result) {
     if (type !== 'funnel' || !result || typeof result !== 'object') return null;
     const commerce = result.commerceExploration || {};
@@ -260,6 +324,24 @@ function getQuotaPolicy(email = '') {
             message: 'Supabase service key is required for report storage.'
         });
         return false;
+    }
+
+    async function getViewerFromRequest(req) {
+        const authHeader = String(req.headers.authorization || '');
+        const match = authHeader.match(/^Bearer\s+(.+)$/i);
+        if (!match) return null;
+        const { data, error } = await supabase.auth.getUser(match[1]);
+        if (error || !data?.user) return null;
+        return {
+            id: data.user.id,
+            email: data.user.email || data.user.user_metadata?.email || ''
+        };
+    }
+
+    function canViewSharedReport(viewer) {
+        if (!viewer) return false;
+        const policy = getQuotaPolicy(viewer.email);
+        return policy.unlimited || policy.plan !== 'free';
     }
 
     async function getQuota(userId, email = '') {
@@ -494,13 +576,28 @@ return {
         if (!ensureReportsConfigured(res)) return;
         const { data, error } = await supabase
             .from('user_reports')
-            .select('id,type,title,target_url,query,result,price_snapshot,created_at')
+            .select('id,user_id,type,title,target_url,query,result,price_snapshot,created_at')
             .eq('share_token', req.params.token)
             .eq('is_public', true)
             .single();
 
         if (error || !data) return res.status(404).json({ success: false, error: 'REPORT_NOT_FOUND' });
-        return res.json({ success: true, report: data });
+        const viewer = await getViewerFromRequest(req);
+        if (!viewer) {
+            return res.status(401).json({
+                success: false,
+                error: 'LOGIN_REQUIRED',
+                message: 'Connectez-vous avec un compte abonné pour consulter ce rapport.'
+            });
+        }
+        if (!canViewSharedReport(viewer)) {
+            return res.status(402).json({
+                success: false,
+                error: 'SUBSCRIPTION_REQUIRED',
+                message: 'Ce rapport partagé est réservé aux comptes abonnés Daka.'
+            });
+        }
+        return res.json({ success: true, report: data, html: buildReadableSharedReportHtml(data) });
     });
 
     app.get('/shared-report/:token', async (req, res) => {
@@ -513,7 +610,7 @@ return {
             .single();
 
         if (error || !data) return res.status(404).send('Rapport introuvable ou non partage.');
-        return res.type('html').send(buildReadableSharedReportHtml(data));
+        return res.type('html').send(buildSharedReportGateHtml({ token: req.params.token, title: data.title }));
     });
 
     return { requireReportQuota, persistGeneratedReport, getQuota };
