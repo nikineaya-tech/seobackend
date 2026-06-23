@@ -297,9 +297,20 @@ return {
     app.patch('/api/reports/:id/share', requireAuth, async (req, res) => {
         if (!ensureReportsConfigured(res)) return;
         const isPublic = req.body?.isPublic !== false;
+        const { data: existing, error: readError } = await supabase
+            .from('user_reports')
+            .select('share_token')
+            .eq('id', req.params.id)
+            .eq('user_id', req.user.id)
+            .single();
+        if (readError || !existing) return res.status(404).json({ success: false, error: 'REPORT_NOT_FOUND' });
+        const shareToken = existing.share_token || crypto.randomUUID();
         const { data, error } = await supabase
             .from('user_reports')
-            .update({ is_public: isPublic })
+            .update({
+                is_public: isPublic,
+                ...(isPublic ? { share_token: shareToken } : {})
+            })
             .eq('id', req.params.id)
             .eq('user_id', req.user.id)
             .select('id,is_public,share_token')

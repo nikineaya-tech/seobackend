@@ -666,14 +666,23 @@ html, body {
     .report-history-item small { color: #94a3b8; font-size: .66rem; }
     .report-history-actions { display: flex; gap: 6px; }
     .report-history-actions button {
-        width: 34px;
+        min-width: 34px;
         height: 34px;
+        padding: 0 10px;
         border: 1px solid rgba(255,255,255,.1);
         border-radius: 8px;
         background: rgba(139,92,246,.12);
         color: #c4b5fd;
         cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        font-size: .72rem;
+        font-weight: 850;
     }
+    .report-history-actions button:not(.report-share-button) { width: 34px; padding: 0; }
+    .report-history-actions button span { white-space: nowrap; }
     .report-history-actions button:hover { background: rgba(139,92,246,.24); color: #fff; }
     .reports-history-trigger {
         min-height: 40px;
@@ -5582,6 +5591,8 @@ function authCopy() {
         view: 'عرض التقرير',
         pdf: 'تنزيل PDF',
         share: 'مشاركة',
+        shareCopied: 'تم نسخ رابط المشاركة.',
+        shareUnavailable: 'تعذر إنشاء رابط المشاركة.',
         loadingReport: 'جارٍ فتح التقرير...'
     };
     if (lang === 'en') return {
@@ -5600,6 +5611,8 @@ function authCopy() {
         view: 'View report',
         pdf: 'Download PDF',
         share: 'Share',
+        shareCopied: 'Share link copied.',
+        shareUnavailable: 'Unable to create the share link.',
         loadingReport: 'Opening report...'
     };
     return {
@@ -5618,6 +5631,8 @@ function authCopy() {
         view: 'Voir le rapport',
         pdf: 'Télécharger le PDF',
         share: 'Partager',
+        shareCopied: 'Lien de partage copié.',
+        shareUnavailable: 'Impossible de créer le lien de partage.',
         loadingReport: 'Ouverture du rapport...'
     };
 }
@@ -5795,7 +5810,7 @@ async function openReportDashboard() {
                 <div class="report-history-actions">
                     <button type="button" onclick="event.stopPropagation();displaySavedReport('${report.id}')" title="${escapeHtml(copy.view)}" aria-label="${escapeHtml(copy.view)}"><i class="fas fa-eye"></i></button>
                     <button type="button" onclick="event.stopPropagation();downloadSavedReport('${report.id}')" title="${escapeHtml(copy.pdf)}" aria-label="${escapeHtml(copy.pdf)}"><i class="fas fa-file-pdf"></i></button>
-                    <button type="button" onclick="event.stopPropagation();shareSavedReport('${report.id}')" title="${escapeHtml(copy.share)}" aria-label="${escapeHtml(copy.share)}"><i class="fas fa-share-nodes"></i></button>
+                    <button type="button" class="report-share-button" onclick="event.stopPropagation();shareSavedReport('${report.id}')" title="${escapeHtml(copy.share)}" aria-label="${escapeHtml(copy.share)}"><i class="fas fa-share-nodes"></i><span>${escapeHtml(copy.share)}</span></button>
                 </div>
             </article>`).join('') : `<div style="color:#94a3b8;padding:16px">${authCopy().empty}</div>`;
     } catch (error) {
@@ -5874,14 +5889,25 @@ async function downloadSavedReport(id) {
 }
 
 async function shareSavedReport(id) {
-    const response = await api.request(`/api/reports/${encodeURIComponent(id)}/share`, {
-        method: 'PATCH',
-        body: JSON.stringify({ isPublic: true }),
-        timeout: 20000
-    });
-    if (response.shareUrl) {
-        await navigator.clipboard.writeText(response.shareUrl);
-        toast.success('Lien public copié.');
+    const copy = authCopy();
+    try {
+        const response = await api.request(`/api/reports/${encodeURIComponent(id)}/share`, {
+            method: 'PATCH',
+            body: JSON.stringify({ isPublic: true }),
+            timeout: 20000
+        });
+        if (!response?.shareUrl) throw new Error(copy.shareUnavailable);
+        try {
+            await navigator.clipboard.writeText(response.shareUrl);
+        } catch (_) {
+            window.prompt(copy.share, response.shareUrl);
+        }
+        toast.success(copy.shareCopied);
+        return response.shareUrl;
+    } catch (error) {
+        console.error('[Reports] share failed:', error);
+        toast.error(error.message || copy.shareUnavailable);
+        return null;
     }
 }
 
@@ -12599,22 +12625,6 @@ function setLoaderPhase(elementId, index) {
 }
 
 
-// ── Helpers résultats ──────────────────────────────────────────
-function showResults(id) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.style.display = 'block';
-    requestAnimationFrame(() => enhanceReportNavigation(el));
-  }
-}
-
-function hideResults(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'none';
-}
-
-
-
 function getReportLabels(opts = {}) {
     const isAr = opts.isAr ?? STATE.currentLang === 'ar';
     const isEn = opts.isEn ?? STATE.currentLang === 'en';
@@ -12720,16 +12730,41 @@ function executiveText(value) {
     return '';
 }
 
-function executiveList(sources, limit = 5) {
+function executiveFingerprint(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .trim();
+}
+
+function executiveIsUsefulText(value) {
+    const text = executiveText(value);
+    if (!text) return false;
+    if (/^(?:—|-|_|n\/a|null|undefined|non trouvé|not found|غير مؤكد)$/i.test(text.trim())) return false;
+    if (/\b(?:html|css|script|class=|onclick|undefined|null)\b/i.test(text)) return false;
+    return text.trim().length > 2;
+}
+
+function executiveDedupList(values, limit = 5) {
     const items = [];
+    const seen = new Set();
     const visit = (value) => {
         if (items.length >= limit || value === null || value === undefined) return;
         if (Array.isArray(value)) return value.forEach(visit);
-        const text = executiveText(value);
-        if (text && !items.includes(text)) items.push(text);
+        const text = executiveText(value).replace(/\s+/g, ' ').trim();
+        const key = executiveFingerprint(text);
+        if (!executiveIsUsefulText(text) || seen.has(key)) return;
+        seen.add(key);
+        items.push(text);
     };
-    visit(sources);
+    visit(values);
     return items.slice(0, limit);
+}
+
+function executiveList(sources, limit = 5) {
+    return executiveDedupList(sources, limit);
 }
 
 function executiveActions(data) {
@@ -12748,12 +12783,18 @@ function executiveActions(data) {
         data.clusters
     ].flatMap(value => Array.isArray(value) ? value : value ? [value] : []);
 
+    const seen = new Set();
     return raw.map((item, index) => ({
         title: executiveText(item),
-        impact: executiveText(item?.impact || item?.expectedGain) || '—',
-        effort: executiveText(item?.effort || item?.timeline || item?.delay) || '—',
+        impact: executiveText(item?.impact || item?.expectedGain),
+        effort: executiveText(item?.effort || item?.timeline || item?.delay),
         priority: executiveText(item?.priority || item?.rank) || String(index + 1)
-    })).filter(item => item.title).slice(0, 7);
+    })).filter(item => {
+        const key = executiveFingerprint(item.title);
+        if (!executiveIsUsefulText(item.title) || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    }).slice(0, 7);
 }
 
 function executiveScore(data, type) {
@@ -12775,7 +12816,134 @@ function executiveScore(data, type) {
     return null;
 }
 
+function buildFunnelExecutiveSummaryModel(data) {
+    const lang = STATE.currentLang || 'fr';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const t = isAr ? {
+        fallback: 'الصفحة قابلة للتحويل، لكن القرار يحتاج وضوحا أقوى في الوعد والدليل والإجراء.',
+        verdictStrong: 'الصفحة تملك إشارات بيع حقيقية، والفرصة الآن هي تحويلها إلى مسار قرار أسرع وأكثر ثقة.',
+        verdictMedium: 'الصفحة تبيع جزئيا، لكن بعض الإشارات الحاسمة ما زالت تحتاج ترتيبا أو دليلا أو وضوحا قبل الزر.',
+        verdictRisk: 'القراءة غير كافية للحكم النهائي. يجب تقوية الأدلة المرصودة قبل إصدار قرار استراتيجي.',
+        observed: 'ما تم إثباته',
+        missing: 'ما يهدد القرار',
+        action: 'الحركة التالية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        rewrite: 'حوّل الشاشة الأولى إلى وعد واضح + دليل سريع + زر قرار واحد.',
+        proof: 'ضع أقوى دليل اجتماعي أو ضمان قبل أول زر قرار.',
+        cta: 'وحّد فعل CTA في الأعلى والسعر والنهاية حتى لا يتردد الزائر.',
+        order: 'أعد ترتيب الصفحة: وعد، دليل، عرض، سعر، اعتراضات، ثم CTA نهائي.',
+        verify: 'ثبّت كل ادعاء بدليل مرئي: تقييم، صورة، ضمان، سعر أو شرط واضح.'
+    } : isEn ? {
+        fallback: 'The page can convert, but the decision path needs stronger promise, proof, and action clarity.',
+        verdictStrong: 'The page already has real selling signals. The opportunity is to turn them into a faster, more trusted decision path.',
+        verdictMedium: 'The page sells partially, but key decision signals still need better order, proof, or clarity before the CTA.',
+        verdictRisk: 'The read is not strong enough for a final strategic judgment. Evidence must be strengthened first.',
+        observed: 'What is proven',
+        missing: 'What threatens the decision',
+        action: 'Next move',
+        high: 'High',
+        medium: 'Medium',
+        low: 'Low',
+        rewrite: 'Turn the first screen into one clear promise + fast proof + one decision CTA.',
+        proof: 'Place the strongest social proof or guarantee before the first decision button.',
+        cta: 'Use the same CTA verb in the hero, pricing block, and final section.',
+        order: 'Rebuild the sequence: promise, proof, offer, price, objections, final CTA.',
+        verify: 'Attach each claim to visible proof: review, image, guarantee, price, or clear condition.'
+    } : {
+        fallback: 'La page peut convertir, mais le chemin de décision doit rendre la promesse, la preuve et l’action plus évidentes.',
+        verdictStrong: 'La page possède déjà de vrais signaux de vente. L’opportunité est de les transformer en parcours de décision plus rapide et plus rassurant.',
+        verdictMedium: 'La page vend partiellement, mais les signaux décisifs doivent être mieux ordonnés, prouvés ou clarifiés avant le CTA.',
+        verdictRisk: 'La lecture n’est pas assez solide pour un verdict stratégique définitif. Les preuves doivent être renforcées avant de trancher.',
+        observed: 'Ce qui est prouvé',
+        missing: 'Ce qui menace la décision',
+        action: 'Mouvement suivant',
+        high: 'Élevé',
+        medium: 'Moyen',
+        low: 'Faible',
+        rewrite: 'Transformer le premier écran en promesse claire + preuve rapide + un seul CTA de décision.',
+        proof: 'Placer la preuve sociale ou la garantie la plus forte avant le premier bouton de décision.',
+        cta: 'Utiliser le même verbe CTA dans le hero, le prix et la fin de page.',
+        order: 'Reconstruire la séquence : promesse, preuve, offre, prix, objections, CTA final.',
+        verify: 'Attacher chaque promesse à une preuve visible : avis, image, garantie, prix ou condition claire.'
+    };
+    const score = executiveScore(data, 'funnel');
+    const source = data.funnelSurgery || data.funnelSectionSurgery || {};
+    const primary = data.funnelPrimaryAnalysis || data.funnelEvidenceSynthesis || {};
+    const normalized = normalizeFunnelSurgeryForRender(data);
+    const present = executiveDedupList([
+        primary.present?.map(item => item.sectionType || item.section || item.name || item.title || item),
+        data.auditSummary?.topStrengths,
+        normalized.keep.map(item => item.section || item.sectionType || item.name),
+        source.proofTrust?.present
+    ], 6);
+    const weak = executiveDedupList([
+        primary.weak?.map(item => item.sectionType || item.section || item.problem || item.reason || item),
+        normalized.improve.map(item => item.problem || item.action || item.section || item.sectionType),
+        data.auditSummary?.topWeaknesses,
+        source.frictions
+    ], 6);
+    const missing = executiveDedupList([
+        primary.missing?.map(item => item.sectionType || item.section || item.reason || item),
+        normalized.add.map(item => item.section || item.sectionType || item.action),
+        normalized.unconfirmed.map(item => item.section || item.sectionType || item.reason)
+    ], 6);
+    const socialPresent = present.some(item => /testimonial|review|rating|avis|t[ée]moignage|preuve sociale|social proof|تقييم|آراء|مراجعات|شهادات/i.test(item));
+    const filteredWeak = weak.filter(item => !(socialPresent && /aucune preuve sociale|absence de preuve sociale|no social proof|missing social proof|لا توجد أدلة اجتماعية/i.test(item)));
+    const filteredMissing = missing.filter(item => !(socialPresent && /testimonial|review|avis|preuve sociale|social proof|تقييم|آراء|مراجعات|شهادات/i.test(item)));
+    const actions = executiveDedupList([
+        normalized.improve.map(item => item.action || item.correction || item.improvement),
+        normalized.add.map(item => item.action || item.recommendedSection?.title || item.suggestedContent?.title),
+        source.priorityPlan?.now,
+        source.priorityPlan?.sevenDays,
+        data.concreteActionPlan?.map(item => item.changeNow),
+        data.auditQuickWins?.map(item => item.title || item.howTo)
+    ], 5);
+    const actionTitles = executiveDedupList([actions, [t.rewrite, t.proof, t.cta, t.order, t.verify]], 5);
+    const verdict = source.pageQuality?.message || source.verdict?.summary ||
+        (score !== null && score >= 70 ? t.verdictStrong : score !== null && score < 45 ? t.verdictRisk : t.verdictMedium);
+    const opportunities = executiveDedupList([
+        present.map(item => `${t.observed}: ${item}`),
+        source.sectionsToKeep?.map(item => item.section || item.sectionType),
+        data.auditSummary?.topStrengths
+    ], 3);
+    const weaknesses = executiveDedupList([
+        filteredWeak,
+        filteredMissing.map(item => `${t.missing}: ${item}`)
+    ], 3);
+    return {
+        score,
+        verdict: executiveText(verdict) || t.fallback,
+        opportunities: opportunities.length ? opportunities : present.slice(0, 3),
+        weaknesses: weaknesses.length ? weaknesses : filteredMissing.slice(0, 3),
+        actions: actionTitles.map((title, index) => ({
+            title,
+            impact: index < 2 ? t.high : t.medium,
+            effort: index === 0 ? t.medium : index < 3 ? t.low : t.medium,
+            priority: String(index + 1)
+        })),
+        quickWins: executiveDedupList([source.priorityPlan?.sevenDays, data.auditQuickWins?.map(item => item.title || item.howTo), actionTitles.slice(0, 3)], 3),
+        plan30: executiveDedupList([source.priorityPlan?.thirtyDays, data.actionRoadmap, actionTitles], 5),
+        pulse: {
+            decision: actionTitles[0] || t.rewrite,
+            leverage: opportunities[0] || present[0] || t.observed,
+            risk: weaknesses[0] || filteredMissing[0] || t.missing,
+            move: actionTitles[0] || t.rewrite
+        },
+        dashboard: {
+            present: present.length,
+            weak: filteredWeak.length,
+            missing: filteredMissing.length,
+            actions: actionTitles.length,
+            confidence: source.verdict?.confidence || source.observedDataLimits?.confidence || data.scrapeReliability?.confidence || 'MEDIUM'
+        }
+    };
+}
+
 function buildExecutiveSummaryModel(data, type) {
+    if (type === 'funnel') return buildFunnelExecutiveSummaryModel(data || {});
     const actions = executiveActions(data);
     const opportunities = executiveList([
         data.swot?.opportunities,
@@ -12848,23 +13016,49 @@ function renderExecutiveSummary(data, type, opts = {}) {
         impact: 'Impact', effort: 'Effort', priority: 'Priorité'
     };
     const list = (items) => `<ul>${(items.length ? items : [fallback]).map(item => `<li>${safe(executiveText(item))}</li>`).join('')}</ul>`;
-    const actions = model.actions.length ? model.actions : [{ title: fallback, impact: '—', effort: '—', priority: '—' }];
+    const defaultImpact = isAr ? 'متوسط' : isEn ? 'Medium' : 'Moyen';
+    const defaultEffort = isAr ? 'منخفض' : isEn ? 'Low' : 'Faible';
+    const actions = (model.actions.length ? model.actions : [{ title: fallback, impact: defaultImpact, effort: defaultEffort, priority: '1' }])
+        .map((action, index) => ({
+            ...action,
+            impact: executiveIsUsefulText(action.impact) ? action.impact : defaultImpact,
+            effort: executiveIsUsefulText(action.effort) ? action.effort : defaultEffort,
+            priority: executiveIsUsefulText(action.priority) ? action.priority : String(index + 1)
+        }));
     const pulse = isAr ? {
         verdict: 'القرار', leverage: 'الرافعة الأقوى', risk: 'الخطر الفوري', move: 'الخطوة التالية',
-        proof: 'خلاصة مبنية على الأدلة المرصودة في الصفحة'
+        proof: 'خلاصة مبنية على الأدلة المرصودة في الصفحة',
+        chart: 'لوحة القرار', mind: 'خريطة التفكير'
     } : isEn ? {
         verdict: 'Decision', leverage: 'Strongest lever', risk: 'Immediate risk', move: 'Next move',
-        proof: 'A synthesis grounded in observed page evidence'
+        proof: 'A synthesis grounded in observed page evidence',
+        chart: 'Decision dashboard', mind: 'Thinking map'
     } : {
         verdict: 'Décision', leverage: 'Levier le plus fort', risk: 'Risque immédiat', move: 'Prochaine action',
-        proof: 'Une synthèse fondée sur les preuves réellement observées'
+        proof: 'Une synthèse fondée sur les preuves réellement observées',
+        chart: 'Dashboard décisionnel', mind: 'Carte mentale'
     };
+    const pulseData = model.pulse || {};
     const pulseItems = [
-        ['fa-compass', pulse.verdict, model.verdict || fallback, '#22d3ee'],
-        ['fa-arrow-trend-up', pulse.leverage, model.opportunities[0] || fallback, '#22c55e'],
-        ['fa-triangle-exclamation', pulse.risk, model.weaknesses[0] || fallback, '#fb7185'],
-        ['fa-bolt', pulse.move, actions[0]?.title || fallback, '#a78bfa']
+        ['fa-compass', pulse.verdict, pulseData.decision || model.verdict || fallback, '#22d3ee'],
+        ['fa-arrow-trend-up', pulse.leverage, pulseData.leverage || model.opportunities[0] || fallback, '#22c55e'],
+        ['fa-triangle-exclamation', pulse.risk, pulseData.risk || model.weaknesses[0] || fallback, '#fb7185'],
+        ['fa-bolt', pulse.move, pulseData.move || actions[0]?.title || fallback, '#a78bfa']
     ];
+    const dashboard = model.dashboard || {};
+    const dashboardItems = [
+        ['fa-eye', isAr ? 'مرصود' : isEn ? 'Observed' : 'Observé', dashboard.present],
+        ['fa-wand-magic-sparkles', isAr ? 'للتقوية' : isEn ? 'To strengthen' : 'À renforcer', dashboard.weak],
+        ['fa-circle-question', isAr ? 'للتحقق' : isEn ? 'To verify' : 'À vérifier', dashboard.missing],
+        ['fa-list-check', isAr ? 'إجراءات' : isEn ? 'Actions' : 'Actions', dashboard.actions],
+        ['fa-shield-halved', isAr ? 'الثقة' : isEn ? 'Confidence' : 'Confiance', dashboard.confidence]
+    ].filter(([, , value]) => value !== null && value !== undefined && value !== '');
+    const mindItems = [
+        [pulse.verdict, pulseData.decision || model.verdict],
+        [pulse.leverage, pulseData.leverage || model.opportunities[0]],
+        [pulse.risk, pulseData.risk || model.weaknesses[0]],
+        [pulse.move, pulseData.move || actions[0]?.title]
+    ].filter(([, value]) => executiveIsUsefulText(value));
 
     return `
     <section class="executive-summary fade-in-up" data-export-feature="summary" dir="${isAr ? 'rtl' : 'ltr'}">
@@ -12884,6 +13078,14 @@ function renderExecutiveSummary(data, type, opts = {}) {
                     <div><small>${safe(label)}</small><strong dir="auto">${safe(executiveText(value))}</strong></div>
                 </article>`).join('')}</div>
         </div>
+        ${dashboardItems.length ? `<div class="executive-insight-board" aria-label="${safe(pulse.chart)}">
+            ${dashboardItems.map(([icon, label, value]) => `<article><i class="fas ${icon}"></i><strong>${safe(value)}</strong><small>${safe(label)}</small></article>`).join('')}
+        </div>` : ''}
+        ${mindItems.length ? `<div class="executive-mindmap" aria-label="${safe(pulse.mind)}">
+            <div class="executive-mindmap-core"><small>${safe(pulse.mind)}</small><strong>Daka</strong></div>
+            <div class="executive-mindmap-branches">${mindItems.map(([label, value], index) => `
+                <article style="--branch:${index + 1}"><small>${safe(label)}</small><span dir="auto">${safe(executiveText(value))}</span></article>`).join('')}</div>
+        </div>` : ''}
         <nav class="executive-nav no-print" aria-label="${safe(t.kicker)}">
             <button type="button" onclick="navigateReportView(this,'summary')">${safe(t.summary)}</button>
             <button type="button" onclick="navigateReportView(this,'analysis')">${safe(t.analysis)}</button>
@@ -13002,7 +13204,7 @@ function getReportFeatureCopy() {
 
 function enhanceReportNavigation(container) {
     if (!container) return;
-    container.querySelector(':scope > .report-feature-nav')?.remove();
+    container.querySelectorAll('.report-feature-nav').forEach(nav => nav.remove());
     const sections = [...container.querySelectorAll(':scope > .report-section, :scope > #funnelReport > .report-section')];
     const summary = container.querySelector(':scope > .executive-summary, :scope > #funnelReport > .executive-summary');
     if (!summary && !sections.length) return;
@@ -13048,6 +13250,7 @@ function enhanceReportNavigation(container) {
     });
 
     const host = container.querySelector(':scope > #funnelReport') || container;
+    host.querySelectorAll(':scope > .report-feature-nav').forEach(oldNav => oldNav.remove());
     host.insertBefore(nav, host.firstChild);
 }
 
@@ -13880,7 +14083,7 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
     const concrete = Array.isArray(data.concreteActionPlan) ? data.concreteActionPlan : [];
 
     const title = brief.title || (isAr ? 'ما يجب فعله الآن' : isEn ? 'What to do now' : 'Ce qu il faut faire maintenant');
-    const proofTitle = proof.title || (isAr ? 'مصادر القرار' : isEn ? 'Decision sources' : 'Sources de decision');
+    const proofTitle = proof.title || (isAr ? 'أدلة القرار' : isEn ? 'Decision evidence' : 'Preuves de décision');
     const observedLabel = labels.observed || (isAr ? 'مرصود' : isEn ? 'Observed' : 'Observe');
     const deducedLabel = labels.deduced || (isAr ? 'مستنتج' : isEn ? 'Deduced' : 'Deduit');
     const recommendedLabel = labels.recommended || (isAr ? 'موصى به' : isEn ? 'Recommended' : 'Recommande');
@@ -13952,7 +14155,6 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
                     <span style="color:#c4b5fd;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.24);padding:5px 10px;border-radius:999px;font-size:.72rem;font-weight:800;">${esc(clean(brief.confidence, 'MEDIUM'))}</span>
                     <span style="color:#93c5fd;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.22);padding:5px 10px;border-radius:999px;font-size:.72rem;font-weight:800;">${Number(brief.evidenceCount || 0)} ${isAr ? 'دليل' : isEn ? 'proofs' : 'preuves'}</span>
-                    ${reliable.confidence ? `<span style="color:#86efac;background:rgba(16,185,129,.1);border:1px solid rgba(16,185,129,.22);padding:5px 10px;border-radius:999px;font-size:.72rem;font-weight:800;">${isAr ? 'استخراج' : isEn ? 'scrape' : 'lecture'}: ${esc(reliable.confidence)}</span>` : ''}
                 </div>
             </div>
             <div style="display:grid;gap:9px;">
@@ -17233,17 +17435,15 @@ function renderFunnelPipelineDiagnostic(data = {}, { isAr = false, isEn = false 
     const debug = data.debugFunnelPipeline || {};
     const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
     const message = isAr
-        ? 'القراءة غير كافية: لا يمكن الحكم على هذه الصفحة بشكل موثوق.'
-        : isEn ? 'Insufficient scrape: this page cannot be judged reliably.'
-        : 'Scrape insuffisant : impossible de juger correctement cette page.';
+        ? 'الأدلة غير كافية: لا يمكن الحكم على هذه الصفحة بشكل موثوق.'
+        : isEn ? 'Insufficient evidence: this page cannot be judged reliably.'
+        : 'Preuves insuffisantes : impossible de juger correctement cette page.';
     const rows = [
-        ['Body', debug.bodyTextLength],
-        ['Evidence', debug.evidenceBlocksCount],
-        ['Sections', debug.sectionRawBlocksCount],
-        ['Pages', debug.pagesExploredCount],
-        ['CTA', debug.ctaCount],
-        ['Job', debug.railwayJobId],
-        ['Source', debug.finalResponseSource]
+        [isAr ? 'النص المقروء' : isEn ? 'Readable text' : 'Texte exploitable', debug.bodyTextLength],
+        [isAr ? 'الأدلة' : isEn ? 'Evidence' : 'Preuves', debug.evidenceBlocksCount],
+        [isAr ? 'الأقسام' : isEn ? 'Sections' : 'Sections', debug.sectionRawBlocksCount],
+        [isAr ? 'الصفحات' : isEn ? 'Pages' : 'Pages', debug.pagesExploredCount],
+        ['CTA', debug.ctaCount]
     ].filter(([, value]) => value !== null && value !== undefined && value !== '');
     return `<section class="funnel-v2-render-error funnel-pipeline-diagnostic" dir="${isAr ? 'rtl' : 'ltr'}">
         <i class="fas fa-triangle-exclamation"></i><div><strong>${safe(message)}</strong>
@@ -17265,24 +17465,24 @@ function displayFunnelResults(data = {}) {
         order: 'الترتيب الجديد للصفحة', orderSub: 'تسلسل يقلل التردد قبل الإجراء الرئيسي.', current: 'الترتيب المرصود', recommended: 'الترتيب المقترح',
         frictions: 'العوائق التي تمنع التحويل', frictionsSub: 'مشكلات مثبتة وتأثيرها والإصلاح الدقيق.', offer: 'العرض والسعر والثقة', offerSub: 'وضوح القيمة والسعر والأدلة التي تقلل المخاطر.',
         message: 'الرسالة والوعد وCTA', messageSub: 'النصوص الحاسمة التي يجب عرضها قبل القرار.', plan: 'خطة إعادة البناء', planSub: 'الآن، خلال 7 أيام، وخلال 30 يوما.',
-        now: 'الآن', seven: 'خلال 7 أيام', thirty: 'خلال 30 يوما', observed: 'الملاحظة', action: 'الإجراء', details: 'البيانات المرصودة والحدود', detailsSub: 'مصدر القراءة ومستوى الثقة وما يجب التحقق منه.',
-        noData: 'لم تصل بنية الأقسام في هذه الاستجابة. أعد التحليل بعد التحقق من Railway.', expert: 'خبير Funnel'
+        now: 'الآن', seven: 'خلال 7 أيام', thirty: 'خلال 30 يوما', observed: 'الملاحظة', action: 'الإجراء', details: 'البيانات المرصودة والحدود', detailsSub: 'جودة التشخيص ومستوى الثقة وما يجب التحقق منه.',
+        noData: 'لم تصل بنية أقسام كافية في هذه الاستجابة. أعد التحليل بعد فتح الصفحة بالكامل.', expert: 'خبير Funnel'
     } : isEn ? {
         kicker: 'Conversion decision', title: 'What prevents this page from selling now?', partial: 'Partial data received. Daka shows only verifiable signals.',
         checked: 'sections checked', fixes: 'priority fixes', confidence: 'Confidence', architecture: 'Page architecture', architectureSub: 'What exists, what is missing, and what must change.',
         order: 'Recommended page order', orderSub: 'A sequence that reduces hesitation before the primary action.', current: 'Observed order', recommended: 'Recommended order',
         frictions: 'Conversion blockers', frictionsSub: 'Observed problems, impact, and exact correction.', offer: 'Offer, price and trust', offerSub: 'Value clarity, pricing, and proof that lowers risk.',
         message: 'Message, promise and CTA', messageSub: 'Decision copy to place before the action.', plan: 'Reconstruction plan', planSub: 'Now, within 7 days, and within 30 days.',
-        now: 'Now', seven: 'Within 7 days', thirty: 'Within 30 days', observed: 'Observation', action: 'Action', details: 'Observed data and limits', detailsSub: 'Reading source, confidence, and manual checks.',
-        noData: 'No section architecture arrived in this response. Run the analysis again after checking Railway.', expert: 'Funnel expert'
+        now: 'Now', seven: 'Within 7 days', thirty: 'Within 30 days', observed: 'Observation', action: 'Action', details: 'Observed data and limits', detailsSub: 'Diagnosis quality, confidence, and useful checks.',
+        noData: 'No reliable section architecture arrived in this response. Run the analysis again after opening the page fully.', expert: 'Funnel expert'
     } : {
         kicker: 'Décision conversion', title: 'Ce qui empêche cette page de vendre maintenant', partial: 'Données partielles reçues. Daka affiche uniquement les signaux vérifiables.',
         checked: 'sections vérifiées', fixes: 'corrections prioritaires', confidence: 'Confiance', architecture: 'Architecture de la page', architectureSub: 'Ce qui existe, ce qui manque et ce qu’il faut changer.',
         order: 'Nouvel ordre recommandé', orderSub: 'Un parcours qui réduit l’hésitation avant l’action principale.', current: 'Ordre observé', recommended: 'Ordre recommandé',
         frictions: 'Frictions qui bloquent la conversion', frictionsSub: 'Problèmes observés, impact et correction exacte.', offer: 'Offre, prix et confiance', offerSub: 'Clarté de la valeur, prix et preuves qui réduisent le risque.',
         message: 'Message, promesse et CTA', messageSub: 'Les textes décisifs à placer avant l’action.', plan: 'Plan de reconstruction', planSub: 'Maintenant, sous 7 jours et sous 30 jours.',
-        now: 'Maintenant', seven: 'Sous 7 jours', thirty: 'Sous 30 jours', observed: 'Observation', action: 'Action', details: 'Données observées et limites', detailsSub: 'Source de lecture, confiance et vérifications manuelles.',
-        noData: 'Aucune architecture de sections n’est arrivée dans cette réponse. Relancez après vérification de Railway.', expert: 'Expert Funnel'
+        now: 'Maintenant', seven: 'Sous 7 jours', thirty: 'Sous 30 jours', observed: 'Observation', action: 'Action', details: 'Données observées et limites', detailsSub: 'Qualité du diagnostic, confiance et vérifications utiles.',
+        noData: 'Aucune architecture fiable de sections n’est arrivée dans cette réponse. Relancez après ouverture complète de la page.', expert: 'Expert Funnel'
     };
 
     try {
@@ -17352,7 +17552,6 @@ function displayFunnelResults(data = {}) {
         const planHtml = `<div class="funnel-v2-plan">${planColumn(copy.now, funnelV2Array(plan.now), '#fb7185')}${planColumn(copy.seven, funnelV2Array(plan.sevenDays), '#f59e0b')}${planColumn(copy.thirty, funnelV2Array(plan.thirtyDays), '#22c55e')}</div>`;
         const detailRows = [
             [isAr ? 'الصفحات المحللة' : isEn ? 'Pages analyzed' : 'Pages analysées', limits.pagesAnalyzed],
-            [isAr ? 'مصدر القراءة' : isEn ? 'Reading source' : 'Source de lecture', limits.sourceScraping || data.scrapeReliability?.executionLayer],
             [copy.confidence, limits.confidence || confidence],
             [isAr ? 'السعر مؤكد' : isEn ? 'Price confirmed' : 'Prix confirmé', limits.priceConfirmed === true ? (isAr ? 'نعم' : isEn ? 'Yes' : 'Oui') : (isAr ? 'لا' : isEn ? 'No' : 'Non')]
         ].filter(([, value]) => value !== null && value !== undefined && value !== '');
@@ -18899,9 +19098,13 @@ const PDF_EXPORT = {
     padding: 20px;
     border: 1px solid rgba(34, 211, 238, 0.2);
     border-radius: 8px;
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.98), rgba(8, 15, 30, 0.96));
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    background:
+        radial-gradient(circle at 14% 0%, rgba(34, 211, 238, .14), transparent 30%),
+        radial-gradient(circle at 92% 12%, rgba(139, 92, 246, .16), transparent 32%),
+        linear-gradient(135deg, rgba(15, 23, 42, 0.99), rgba(8, 15, 30, 0.97));
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,.06);
     scroll-margin-top: 104px;
+    overflow: hidden;
 }
 
 .executive-summary-head {
@@ -18954,7 +19157,7 @@ const PDF_EXPORT = {
     padding: 13px;
     border: 1px solid rgba(34, 211, 238, .16);
     border-radius: 8px;
-    background: #07111f;
+    background: rgba(7, 17, 31, .82);
 }
 
 .executive-proof-line {
@@ -18979,7 +19182,8 @@ const PDF_EXPORT = {
     border: 1px solid rgba(148, 163, 184, .12);
     border-top: 2px solid var(--pulse-accent);
     border-radius: 8px;
-    background: #0b1525;
+    background: linear-gradient(145deg, rgba(11, 21, 37, .94), rgba(5, 12, 24, .9));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
 }
 
 .executive-pulse-grid article > span {
@@ -18994,6 +19198,69 @@ const PDF_EXPORT = {
 
 .executive-pulse-grid small { display: block; color: var(--pulse-accent); font-size: .57rem; font-weight: 900; text-transform: uppercase; }
 .executive-pulse-grid strong { display: -webkit-box; margin-top: 4px; color: #e2e8f0; font-size: .72rem; line-height: 1.45; overflow: hidden; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+
+.executive-insight-board {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.executive-insight-board article {
+    min-width: 0;
+    padding: 12px 10px;
+    border: 1px solid rgba(148, 163, 184, .13);
+    border-radius: 8px;
+    text-align: center;
+    background: rgba(2, 6, 23, .46);
+}
+
+.executive-insight-board i { display: block; margin-bottom: 6px; color: #67e8f9; }
+.executive-insight-board strong { display: block; color: #f8fafc; font-size: 1.05rem; line-height: 1.1; overflow-wrap: anywhere; }
+.executive-insight-board small { display: block; margin-top: 5px; color: #94a3b8; font-size: .58rem; font-weight: 850; line-height: 1.25; }
+
+.executive-mindmap {
+    display: grid;
+    grid-template-columns: minmax(112px, .28fr) minmax(0, 1fr);
+    gap: 10px;
+    align-items: stretch;
+    margin-top: 12px;
+}
+
+.executive-mindmap-core {
+    display: grid;
+    place-items: center;
+    min-height: 112px;
+    padding: 12px;
+    border: 1px solid rgba(34, 211, 238, .22);
+    border-radius: 10px;
+    text-align: center;
+    background: radial-gradient(circle, rgba(34, 211, 238, .15), rgba(15, 23, 42, .82));
+}
+
+.executive-mindmap-core small { color: #7dd3fc; font-size: .58rem; font-weight: 900; text-transform: uppercase; }
+.executive-mindmap-core strong { display: block; margin-top: 4px; color: #fff; font-size: 1.15rem; letter-spacing: .02em; }
+
+.executive-mindmap-branches {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.executive-mindmap-branches article {
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid rgba(148, 163, 184, .12);
+    border-inline-start: 3px solid #22d3ee;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, .62);
+}
+
+.executive-mindmap-branches article:nth-child(2) { border-inline-start-color: #22c55e; }
+.executive-mindmap-branches article:nth-child(3) { border-inline-start-color: #fb7185; }
+.executive-mindmap-branches article:nth-child(4) { border-inline-start-color: #a78bfa; }
+.executive-mindmap-branches small { display: block; color: #7dd3fc; font-size: .58rem; font-weight: 900; text-transform: uppercase; }
+.executive-mindmap-branches span { display: -webkit-box; margin-top: 5px; color: #dbeafe; font-size: .73rem; line-height: 1.45; overflow: hidden; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
 
 .executive-nav {
     display: flex;
@@ -19077,12 +19344,16 @@ const PDF_EXPORT = {
     .executive-action strong { min-height: 0; }
     .executive-nav button { flex: 1 1 130px; }
     .executive-pulse-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .executive-insight-board { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .executive-mindmap { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px) {
     .executive-decision-pulse { padding: 9px; }
     .executive-pulse-grid { grid-template-columns: 1fr; }
     .executive-pulse-grid article { min-height: 74px; }
+    .executive-insight-board,
+    .executive-mindmap-branches { grid-template-columns: 1fr; }
 }
 
 .funnel-v2-report { min-width: 0; width: 100%; }
