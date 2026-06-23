@@ -8,6 +8,171 @@ function safeText(value, max = 240) {
     return String(value || '').trim().slice(0, max);
 }
 
+function escapeHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function reportText(value) {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string' || typeof value === 'number') return String(value).trim();
+    if (Array.isArray(value)) return reportText(value[0]);
+    if (typeof value === 'object') {
+        return reportText(
+            value.action || value.changeNow || value.recommendation || value.howTo ||
+            value.title || value.name || value.opportunity || value.issue ||
+            value.problem || value.weakness || value.value || value.description ||
+            value.summary || value.verdict
+        );
+    }
+    return '';
+}
+
+function reportList(values, limit = 5) {
+    const out = [];
+    const seen = new Set();
+    const visit = value => {
+        if (out.length >= limit || value === null || value === undefined) return;
+        if (Array.isArray(value)) return value.forEach(visit);
+        const text = reportText(value).replace(/\s+/g, ' ').trim();
+        const key = text.toLowerCase();
+        if (!text || seen.has(key) || /^(—|-|null|undefined)$/i.test(text)) return;
+        seen.add(key);
+        out.push(text);
+    };
+    visit(values);
+    return out.slice(0, limit);
+}
+
+function sharedReportLang(result = {}) {
+    const raw = String(result.analysisLang || result.userLang || result.lang || result.language || 'fr')
+        .toLowerCase()
+        .slice(0, 2);
+    return ['fr', 'en', 'ar'].includes(raw) ? raw : 'fr';
+}
+
+function buildReadableSharedReportHtml(data = {}) {
+    const result = data.result && typeof data.result === 'object' ? data.result : {};
+    const lang = sharedReportLang(result);
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const dir = isAr ? 'rtl' : 'ltr';
+    const labels = isAr ? {
+        prepared: '\u062a\u0642\u0631\u064a\u0631 Daka \u0642\u0627\u0628\u0644 \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629',
+        open: '\u0647\u0630\u0627 \u0627\u0644\u062a\u0642\u0631\u064a\u0631 \u0645\u062a\u0627\u062d \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0628\u062f\u0648\u0646 \u062d\u0633\u0627\u0628.',
+        score: '\u0627\u0644\u0646\u062a\u064a\u062c\u0629',
+        verdict: '\u0627\u0644\u062e\u0644\u0627\u0635\u0629',
+        opportunities: '\u0623\u0641\u0636\u0644 \u0627\u0644\u0641\u0631\u0635',
+        weaknesses: '\u0646\u0642\u0627\u0637 \u0627\u0644\u0627\u0646\u062a\u0628\u0627\u0647',
+        actions: '\u0627\u0644\u0625\u062c\u0631\u0627\u0621\u0627\u062a \u0627\u0644\u0645\u0642\u062a\u0631\u062d\u0629',
+        details: '\u062a\u0641\u0627\u0635\u064a\u0644 \u0645\u062e\u062a\u0627\u0631\u0629',
+        empty: '\u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u0641\u064a \u0647\u0630\u0627 \u0627\u0644\u062a\u0642\u0631\u064a\u0631.'
+    } : isEn ? {
+        prepared: 'Shareable Daka report',
+        open: 'This report is readable without an account.',
+        score: 'Score',
+        verdict: 'Verdict',
+        opportunities: 'Top opportunities',
+        weaknesses: 'Watch points',
+        actions: 'Recommended actions',
+        details: 'Selected details',
+        empty: 'Not available in this report.'
+    } : {
+        prepared: 'Rapport Daka partageable',
+        open: 'Ce rapport est consultable sans compte.',
+        score: 'Score',
+        verdict: 'Verdict',
+        opportunities: 'Top opportunit\u00e9s',
+        weaknesses: 'Points d\u2019attention',
+        actions: 'Actions recommand\u00e9es',
+        details: 'D\u00e9tails s\u00e9lectionn\u00e9s',
+        empty: 'Non disponible dans ce rapport.'
+    };
+    const title = safeText(data.title || result.title || result.query || result.url || `${data.type || 'Daka'} report`, 180);
+    const score = [
+        result.auditSummary?.overallScore,
+        result.globalScoring?.overall,
+        result.globalReport?.score,
+        result.score,
+        result.overallScore
+    ].find(value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)));
+    const verdict = reportText(
+        result.funnelSurgery?.pageQuality?.message ||
+        result.funnelSurgery?.verdict?.summary ||
+        result.executiveBrief?.priority ||
+        result.auditSummary?.verdict ||
+        result.globalReport?.verdict ||
+        title
+    );
+    const opportunities = reportList([
+        result.funnelPrimaryAnalysis?.present?.map(x => x.sectionType || x.section || x.name || x.title),
+        result.auditSummary?.topStrengths,
+        result.swot?.opportunities,
+        result.quickWins
+    ], 5);
+    const weaknesses = reportList([
+        result.funnelPrimaryAnalysis?.weak?.map(x => x.problem || x.sectionType || x.section || x.reason),
+        result.auditSummary?.topWeaknesses,
+        result.criticalIssues,
+        result.auditIssues,
+        result.swot?.weaknesses
+    ], 5);
+    const actions = reportList([
+        result.funnelSurgery?.priorityPlan?.now,
+        result.funnelSurgery?.priorityPlan?.sevenDays,
+        result.concreteActionPlan?.map(x => x.changeNow || x.action),
+        result.auditQuickWins?.map(x => x.title || x.howTo),
+        result.recommendations
+    ], 7);
+    const details = reportList([
+        result.funnelSurgery?.messagePromiseCta?.proposedH1,
+        result.funnelSurgery?.messagePromiseCta?.proposedCta,
+        result.funnelSurgery?.offerDetected?.offerType,
+        result.target_url || data.target_url || data.query
+    ], 8);
+    const listHtml = items => items.length
+        ? `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`
+        : `<p class="muted">${escapeHtml(labels.empty)}</p>`;
+    const date = data.created_at ? new Date(data.created_at).toLocaleDateString(isAr ? 'ar' : isEn ? 'en-US' : 'fr-FR') : '';
+    return `<!doctype html>
+<html lang="${lang}" dir="${dir}">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escapeHtml(title)} - Daka</title>
+<style>
+body{margin:0;background:#f8fafc;color:#020617;font-family:Inter,Arial,sans-serif;line-height:1.55}
+main{width:min(1040px,calc(100% - 32px));margin:28px auto 46px}
+.hero{padding:28px;border-radius:18px;background:linear-gradient(135deg,#0f172a,#1e293b);color:#f8fafc;box-shadow:0 18px 46px rgba(15,23,42,.2)}
+.kicker{color:#7dd3fc;font-size:.78rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase}
+h1{font-size:clamp(1.65rem,4vw,3rem);line-height:1.08;margin:10px 0 10px}
+.meta{color:#cbd5e1}.score{display:inline-flex;align-items:center;gap:8px;margin-top:16px;padding:8px 12px;border:1px solid rgba(125,211,252,.32);border-radius:999px;background:rgba(14,165,233,.12);font-weight:900}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:18px}
+section{padding:20px;border:1px solid #e2e8f0;border-radius:16px;background:#fff;box-shadow:0 10px 28px rgba(15,23,42,.06)}
+section.full{grid-column:1/-1}h2{margin:0 0 10px;font-size:1.05rem;color:#0f172a}ul{margin:0;padding-inline-start:22px}li+li{margin-top:7px}.muted{color:#64748b}.details{display:grid;gap:8px}.details span{padding:10px 12px;border-radius:12px;background:#f1f5f9;color:#334155;overflow-wrap:anywhere}
+@media(max-width:760px){main{width:min(100% - 18px,1040px);margin-top:12px}.hero{padding:20px}.grid{grid-template-columns:1fr}section{padding:16px}}
+</style>
+</head>
+<body><main>
+<article class="hero">
+<div class="kicker">${escapeHtml(labels.prepared)}</div>
+<h1>${escapeHtml(title)}</h1>
+<p class="meta">${escapeHtml(labels.open)} ${date ? `· ${escapeHtml(date)}` : ''}</p>
+${score !== undefined ? `<div class="score">${escapeHtml(labels.score)} ${Math.round(Number(score))}/100</div>` : ''}
+</article>
+<div class="grid">
+<section class="full"><h2>${escapeHtml(labels.verdict)}</h2><p>${escapeHtml(verdict || title)}</p></section>
+<section><h2>${escapeHtml(labels.opportunities)}</h2>${listHtml(opportunities)}</section>
+<section><h2>${escapeHtml(labels.weaknesses)}</h2>${listHtml(weaknesses)}</section>
+<section class="full"><h2>${escapeHtml(labels.actions)}</h2>${listHtml(actions)}</section>
+${details.length ? `<section class="full"><h2>${escapeHtml(labels.details)}</h2><div class="details">${details.map(item => `<span>${escapeHtml(item)}</span>`).join('')}</div></section>` : ''}
+</div>
+</main></body></html>`;
+}
+
 function extractPriceSnapshot(type, result) {
     if (type !== 'funnel' || !result || typeof result !== 'object') return null;
     const commerce = result.commerceExploration || {};
@@ -347,20 +512,8 @@ return {
             .eq('is_public', true)
             .single();
 
-        if (error || !data) return res.status(404).send('Rapport introuvable ou non partagé.');
-        const escaped = JSON.stringify(data.result, null, 2)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-        const title = safeText(data.title, 180).replace(/[<>&"]/g, '');
-        return res.type('html').send(`<!doctype html>
-<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title} - Daka</title><style>
-body{margin:0;background:#090d1d;color:#e5e7eb;font-family:Inter,Arial,sans-serif}
-main{width:min(1100px,calc(100% - 32px));margin:32px auto}
-h1{font-size:clamp(1.5rem,4vw,2.6rem);margin:0 0 8px}.meta{color:#94a3b8;margin-bottom:22px}
-pre{white-space:pre-wrap;word-break:break-word;background:#12182d;border:1px solid #26304f;border-radius:8px;padding:18px;line-height:1.55}
-</style></head><body><main><h1>${title}</h1><div class="meta">${data.type} · ${new Date(data.created_at).toLocaleDateString('fr-FR')}</div><pre>${escaped}</pre></main></body></html>`);
+        if (error || !data) return res.status(404).send('Rapport introuvable ou non partage.');
+        return res.type('html').send(buildReadableSharedReportHtml(data));
     });
 
     return { requireReportQuota, persistGeneratedReport, getQuota };
