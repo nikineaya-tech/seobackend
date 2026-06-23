@@ -5894,8 +5894,18 @@ async function shareSavedReport(id) {
     try {
         shareWindow = window.open('', '_blank');
         if (shareWindow) {
-            shareWindow.document.write(`<!doctype html><title>Daka</title><body style="margin:0;background:#0f172a;color:#f8fafc;font-family:Inter,Arial,sans-serif;display:grid;place-items:center;min-height:100vh"><main style="text-align:center;padding:24px"><h1 style="font-size:22px;margin:0 0 8px">Daka</h1><p style="color:#c4b5fd;margin:0">${escapeHtml(copy.share)}...</p></main></body>`);
-            shareWindow.document.close();
+            shareWindow.document.title = 'Daka';
+            shareWindow.document.body.style.cssText = 'margin:0;background:#0f172a;color:#f8fafc;font-family:Inter,Arial,sans-serif;display:grid;place-items:center;min-height:100vh';
+            const main = shareWindow.document.createElement('main');
+            main.style.cssText = 'text-align:center;padding:24px';
+            const title = shareWindow.document.createElement('h1');
+            title.textContent = 'Daka';
+            title.style.cssText = 'font-size:22px;margin:0 0 8px';
+            const paragraph = shareWindow.document.createElement('p');
+            paragraph.textContent = `${copy.share}...`;
+            paragraph.style.cssText = 'color:#c4b5fd;margin:0';
+            main.append(title, paragraph);
+            shareWindow.document.body.replaceChildren(main);
         }
     } catch (_) {
         shareWindow = null;
