@@ -31,6 +31,7 @@ const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { registerAuthRoutes } = require('./supabase-auth-routes');
 const { registerReportRoutes } = require('./supabase-report-routes');
+const { registerUserApiKeyRoutes } = require('./user-api-key-routes');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -1962,6 +1963,7 @@ app.use(express.json({ limit: CONFIG.JSON_LIMIT }));
 app.use(express.urlencoded({ extended: true, limit: CONFIG.JSON_LIMIT }));
 const authRuntime = registerAuthRoutes(app);
 const requireAuth = authRuntime.requireAuth;
+registerUserApiKeyRoutes(app, { supabase, requireAuth });
 
 // ═══════════════════════════════════════════════════════════════════
 // STATIC FILES

@@ -459,6 +459,26 @@ html, body {
 .funnel-mega-redesign header strong{display:block;margin-top:4px;color:#f8fafc;font-size:.88rem;line-height:1.45}
 .funnel-mega-redesign button{flex:0 0 auto;min-height:40px;padding:8px 13px;border:1px solid rgba(196,181,253,.28);border-radius:999px;background:rgba(139,92,246,.16);color:#ddd6fe;font-size:.72rem;font-weight:950;display:inline-flex;align-items:center;gap:7px;cursor:pointer}
 .funnel-mega-redesign button:hover{border-color:rgba(34,211,238,.5);color:#67e8f9;background:rgba(34,211,238,.1)}
+.funnel-mega-redesign .mega-copy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
+.funnel-mega-redesign .mega-copy-grid button{justify-content:center;border-radius:12px;background:linear-gradient(135deg,rgba(139,92,246,.18),rgba(34,211,238,.08))}
+.funnel-mega-redesign .mega-prompt-shell{border:1px solid rgba(34,211,238,.16);border-radius:14px;overflow:hidden;background:linear-gradient(145deg,rgba(6,16,29,.96),rgba(2,6,23,.9));box-shadow:0 18px 42px rgba(0,0,0,.2)}
+.funnel-mega-redesign .mega-prompt-shell summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;color:#e0f2fe;font-size:.78rem;font-weight:950;cursor:pointer;list-style:none;background:rgba(15,23,42,.72)}
+.funnel-mega-redesign .mega-prompt-shell summary::-webkit-details-marker{display:none}
+.funnel-mega-redesign .mega-prompt-shell summary i{transition:transform .2s ease}
+.funnel-mega-redesign .mega-prompt-shell[open] summary i{transform:rotate(180deg)}
+.funnel-mega-redesign textarea.mega-copy-source{position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;pointer-events:none}
+.groq-key-panel{display:grid;gap:14px}
+.groq-status-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;border:1px solid rgba(34,211,238,.18);border-radius:14px;background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(139,92,246,.08))}
+.groq-status-card strong{display:block;color:#f8fafc;font-size:.92rem}
+.groq-status-card small{display:block;margin-top:3px;color:#94a3b8;font-size:.72rem}
+.groq-key-form{display:grid;gap:10px}
+.groq-key-form label{display:grid;gap:7px;color:#cbd5e1;font-size:.78rem;font-weight:850}
+.groq-key-form input{width:100%;min-height:46px;padding:10px 13px;border:1px solid rgba(148,163,184,.2);border-radius:12px;background:#081225;color:#f8fafc;font:700 .86rem/1.2 ui-monospace,SFMono-Regular,Consolas,monospace}
+.groq-key-form input:focus{outline:2px solid rgba(34,211,238,.35);border-color:#22d3ee}
+.groq-actions{display:flex;flex-wrap:wrap;gap:9px}
+.groq-actions button{min-height:42px;padding:9px 13px;border:1px solid rgba(148,163,184,.18);border-radius:999px;background:#101b31;color:#e0f2fe;font-weight:900;cursor:pointer}
+.groq-actions button:first-child{border-color:rgba(34,197,94,.3);background:linear-gradient(135deg,#22c55e,#06b6d4);color:#03111c}
+.groq-note{margin:0;color:#94a3b8;font-size:.74rem;line-height:1.55}
 .funnel-priority-actions{display:grid;grid-template-columns:1fr;gap:12px}
 .funnel-priority-lead{padding:14px;border:1px solid rgba(34,211,238,.18);border-radius:14px;background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(139,92,246,.08))}
 .funnel-priority-lead small{display:block;color:#67e8f9;font-size:.64rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
@@ -482,6 +502,7 @@ html, body {
  .funnel-color-grid{grid-template-columns:1fr;padding:9px}
  .funnel-mega-prompt{max-height:420px;font-size:.7rem}
  .funnel-mega-redesign header{display:grid}
+ .funnel-mega-redesign .mega-copy-grid{grid-template-columns:1fr}
  .funnel-priority-card{grid-template-columns:1fr}
  .funnel-priority-index{width:36px;height:36px}
 }
@@ -3627,6 +3648,9 @@ table tbody td {
                         <button class="auth-logout-btn" type="button" onclick="openReportDashboard()" title="Rapports">
                             <i class="fas fa-clock-rotate-left"></i>
                         </button>
+                        <button id="btn-groq-key" class="auth-logout-btn" type="button" onclick="openGroqKeyModal()" title="Clé Groq">
+                            <i class="fas fa-key"></i>
+                        </button>
                         <button id="btn-logout" class="auth-logout-btn" type="button" onclick="logout()" title="Déconnexion">
                             <i class="fas fa-right-from-bracket"></i>
                         </button>
@@ -3670,6 +3694,38 @@ table tbody td {
                 <button class="auth-close-btn" type="button" onclick="closeReportDashboard()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
             </div>
             <div id="report-history-list" class="report-history-list"></div>
+        </div>
+    </div>
+
+    <div id="groq-key-modal" class="auth-modal" role="dialog" aria-modal="true" aria-labelledby="groq-key-title">
+        <div class="auth-modal-panel">
+            <div class="auth-modal-head">
+                <div>
+                    <h3 id="groq-key-title">Connecter Groq</h3>
+                    <p id="groq-key-subtitle">Ajoutez votre clé Groq pour utiliser le générateur prompt-to-code avec votre propre quota.</p>
+                </div>
+                <button class="auth-close-btn" type="button" onclick="closeGroqKeyModal()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
+            </div>
+            <div class="groq-key-panel">
+                <div class="groq-status-card">
+                    <div>
+                        <strong id="groq-key-status">Non connecté</strong>
+                        <small id="groq-key-mask">Votre clé reste chiffrée côté serveur.</small>
+                    </div>
+                    <i class="fas fa-shield-halved" style="color:#67e8f9"></i>
+                </div>
+                <div class="groq-key-form">
+                    <label>
+                        <span id="groq-key-label">Clé API Groq</span>
+                        <input id="groq-api-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="gsk_...">
+                    </label>
+                    <div class="groq-actions">
+                        <button type="button" onclick="saveGroqKey()"><i class="fas fa-lock"></i> <span id="groq-save-label">Enregistrer chiffré</span></button>
+                        <button type="button" onclick="deleteGroqKey()"><i class="fas fa-trash"></i> <span id="groq-delete-label">Supprimer</span></button>
+                    </div>
+                    <p id="groq-key-note" class="groq-note">Daka n’affiche jamais votre clé. Elle sert uniquement aux appels Groq que vous déclenchez.</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -5615,7 +5671,19 @@ function authCopy() {
         share: 'مشاركة',
         shareCopied: 'تم نسخ رابط المشاركة.',
         shareUnavailable: 'تعذر إنشاء رابط المشاركة.',
-        loadingReport: 'جارٍ فتح التقرير...'
+        loadingReport: 'جارٍ فتح التقرير...',
+        groqTitle: 'ربط Groq',
+        groqSubtitle: 'أضف مفتاح Groq لاستخدام مولد code prompt عبر حصتك الخاصة.',
+        groqConnected: 'Groq متصل',
+        groqDisconnected: 'Groq غير متصل',
+        groqMask: 'يبقى المفتاح مشفرا على الخادم.',
+        groqLabel: 'مفتاح Groq API',
+        groqSave: 'حفظ مشفر',
+        groqDelete: 'حذف',
+        groqNote: 'لا يعرض Daka مفتاحك أبدا. يستخدم فقط في طلبات Groq التي تطلقها.',
+        groqSaved: 'تم حفظ مفتاح Groq بشكل مشفر.',
+        groqDeleted: 'تم حذف مفتاح Groq.',
+        groqInvalid: 'مفتاح Groq غير صالح.'
     };
     if (lang === 'en') return {
         login: 'Sign in',
@@ -5635,7 +5703,19 @@ function authCopy() {
         share: 'Share',
         shareCopied: 'Share link copied.',
         shareUnavailable: 'Unable to create the share link.',
-        loadingReport: 'Opening report...'
+        loadingReport: 'Opening report...',
+        groqTitle: 'Connect Groq',
+        groqSubtitle: 'Add your Groq key to use prompt-to-code with your own quota.',
+        groqConnected: 'Groq connected',
+        groqDisconnected: 'Groq not connected',
+        groqMask: 'Your key stays encrypted on the server.',
+        groqLabel: 'Groq API key',
+        groqSave: 'Save encrypted',
+        groqDelete: 'Delete',
+        groqNote: 'Daka never displays your key. It is only used for Groq calls you trigger.',
+        groqSaved: 'Groq key saved encrypted.',
+        groqDeleted: 'Groq key deleted.',
+        groqInvalid: 'Invalid Groq key.'
     };
     return {
         login: 'Connexion',
@@ -5655,7 +5735,19 @@ function authCopy() {
         share: 'Partager',
         shareCopied: 'Lien de partage copié.',
         shareUnavailable: 'Impossible de créer le lien de partage.',
-        loadingReport: 'Ouverture du rapport...'
+        loadingReport: 'Ouverture du rapport...',
+        groqTitle: 'Connecter Groq',
+        groqSubtitle: 'Ajoutez votre clé Groq pour utiliser le prompt-to-code avec votre propre quota.',
+        groqConnected: 'Groq connecté',
+        groqDisconnected: 'Groq non connecté',
+        groqMask: 'Votre clé reste chiffrée côté serveur.',
+        groqLabel: 'Clé API Groq',
+        groqSave: 'Enregistrer chiffré',
+        groqDelete: 'Supprimer',
+        groqNote: 'Daka n’affiche jamais votre clé. Elle sert uniquement aux appels Groq que vous déclenchez.',
+        groqSaved: 'Clé Groq enregistrée et chiffrée.',
+        groqDeleted: 'Clé Groq supprimée.',
+        groqInvalid: 'Clé Groq invalide.'
     };
 }
 
@@ -5676,6 +5768,12 @@ function refreshAuthCopy() {
     document.getElementById('auth-email-label') && (document.getElementById('auth-email-label').textContent = copy.email);
     document.getElementById('reports-modal-title') && (document.getElementById('reports-modal-title').textContent = copy.reports);
     document.getElementById('reports-modal-subtitle') && (document.getElementById('reports-modal-subtitle').textContent = copy.reportsSub);
+    document.getElementById('groq-key-title') && (document.getElementById('groq-key-title').textContent = copy.groqTitle);
+    document.getElementById('groq-key-subtitle') && (document.getElementById('groq-key-subtitle').textContent = copy.groqSubtitle);
+    document.getElementById('groq-key-label') && (document.getElementById('groq-key-label').textContent = copy.groqLabel);
+    document.getElementById('groq-save-label') && (document.getElementById('groq-save-label').textContent = copy.groqSave);
+    document.getElementById('groq-delete-label') && (document.getElementById('groq-delete-label').textContent = copy.groqDelete);
+    document.getElementById('groq-key-note') && (document.getElementById('groq-key-note').textContent = copy.groqNote);
 }
 
 async function updateAuthUI(user, disabled = false) {
@@ -5699,7 +5797,12 @@ async function updateAuthUI(user, disabled = false) {
             'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="64" height="64"%3E%3Crect width="64" height="64" rx="32" fill="%238b5cf6"/%3E%3Ctext x="32" y="40" text-anchor="middle" font-size="28" fill="white"%3ED%3C/text%3E%3C/svg%3E';
     }
 
-    if (user) await refreshQuotaBadge();
+    if (user) {
+        await refreshQuotaBadge();
+        refreshGroqKeyStatus().catch(() => {});
+    } else {
+        updateGroqKeyUI({ connected: false });
+    }
 }
 
 async function initSupabaseAuth() {
@@ -5794,6 +5897,76 @@ async function refreshQuotaBadge(quotaOverride = null) {
         if (badge && quota) badge.textContent = `${quota.used}/${quota.unlimited ? '∞' : quota.limit}`;
     } catch (error) {
         console.warn('[Reports] quota unavailable:', error.message);
+    }
+}
+
+function updateGroqKeyUI(status = {}) {
+    const copy = authCopy();
+    const statusNode = document.getElementById('groq-key-status');
+    const maskNode = document.getElementById('groq-key-mask');
+    if (statusNode) statusNode.textContent = status.connected ? copy.groqConnected : copy.groqDisconnected;
+    if (maskNode) maskNode.textContent = status.maskedKey || copy.groqMask;
+}
+
+async function refreshGroqKeyStatus() {
+    if (!currentAuthUser) return updateGroqKeyUI({ connected: false });
+    try {
+        const status = await api.get('/api/user-api-keys/groq/status', 15000);
+        updateGroqKeyUI(status);
+        return status;
+    } catch (error) {
+        console.warn('[Groq] status unavailable:', error.message);
+        updateGroqKeyUI({ connected: false });
+        return null;
+    }
+}
+
+function openGroqKeyModal() {
+    if (!currentAuthUser) return openAuthModal();
+    refreshAuthCopy();
+    document.getElementById('groq-key-modal')?.classList.add('active');
+    document.body.classList.add('modal-open');
+    refreshGroqKeyStatus();
+    setTimeout(() => document.getElementById('groq-api-key-input')?.focus(), 80);
+}
+
+function closeGroqKeyModal() {
+    document.getElementById('groq-key-modal')?.classList.remove('active');
+    document.body.classList.remove('modal-open');
+    const input = document.getElementById('groq-api-key-input');
+    if (input) input.value = '';
+}
+
+async function saveGroqKey() {
+    const copy = authCopy();
+    const input = document.getElementById('groq-api-key-input');
+    const apiKey = String(input?.value || '').trim();
+    if (!/^gsk_[A-Za-z0-9_-]{20,}$/.test(apiKey)) return toast.warning(copy.groqInvalid);
+    try {
+        const status = await api.request('/api/user-api-keys/groq', {
+            method: 'POST',
+            body: JSON.stringify({ apiKey }),
+            timeout: 20000
+        });
+        if (input) input.value = '';
+        updateGroqKeyUI(status);
+        toast.success(copy.groqSaved);
+    } catch (error) {
+        toast.error(error.message || copy.groqInvalid);
+    }
+}
+
+async function deleteGroqKey() {
+    const copy = authCopy();
+    try {
+        const status = await api.request('/api/user-api-keys/groq', {
+            method: 'DELETE',
+            timeout: 20000
+        });
+        updateGroqKeyUI(status);
+        toast.success(copy.groqDeleted);
+    } catch (error) {
+        toast.error(error.message || copy.shareUnavailable);
     }
 }
 
@@ -17575,28 +17748,363 @@ function renderFunnelPrioritizedActions(value, opts = {}) {
     </div>`;
 }
 
+function buildDakaMegaPromptPackage(rawPrompt, opts = {}) {
+    const isAr = opts.isAr;
+    const isEn = opts.isEn;
+    const data = STATE.lastFunnelResults || {};
+    const text = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
+    const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
+    const toText = value => typeof funnelV2Text === 'function' ? funnelV2Text(value) : String(value || '');
+    const clip = (value, max = 900) => {
+        const out = clean(value);
+        return out.length > max ? `${out.slice(0, max).trim()}...` : out;
+    };
+    const arr = (...values) => values.flatMap(value => Array.isArray(value) ? value : (value ? [value] : []))
+        .map(item => clean(toText(item?.title || item?.action || item?.sectionType || item?.section || item?.text || item)))
+        .filter(Boolean);
+    const url = data.url || data.targetUrl || data.analyzedUrl || STATE.lastInputs?.funnelUrl || 'URL A COLLER';
+    const surgery = data.funnelSectionSurgery || data.sectionSurgery || {};
+    const primary = data.funnelPrimaryAnalysis || data.funnelEvidenceSynthesis || {};
+    const legacy = data.legacyFunnel || {};
+    const offer = surgery.offerDetected || data.offerDetected || {};
+    const h1 = offer.h1 || data.h1 || data.siteData?.h1 || 'A confirmer';
+    const price = offer.price || data.priceIntel?.primaryPrice || data.detectedPrice || 'Prix a confirmer';
+    const ctas = arr(data.ctaIntelligence?.detectedCtas, data.copySignals?.ctas, legacy.ctaIntelligence?.detectedCtas).slice(0, 8);
+    const present = arr(primary.present, surgery.keep, surgery.presentSections).slice(0, 10);
+    const weak = arr(primary.weak, surgery.improve, surgery.weakSections).slice(0, 10);
+    const missing = arr(primary.missing, surgery.add, surgery.missingSections).slice(0, 10);
+    const actions = arr(data.concreteActionPlan, data.prioritizedActionPlan, legacy.concreteActionPlan, legacy.quickWins).slice(0, 10);
+    const proof = arr(primary.proofUsed, data.proofModel?.observed, data.funnelEvidenceSynthesis?.proofUsed).slice(0, 8);
+    const originalPrompt = clip(rawPrompt, 2200);
+    const bullet = list => list.length ? list.map(item => `- ${item}`).join('\n') : '- A confirmer';
+    const commonData = `
+URL / PAGE :
+- ${url}
+
+CONTEXTE DISPONIBLE :
+- Objectif : ameliorer ou reconstruire une page HTML/CSS/JS orientee conversion.
+- Type d'offre detecte : ${clean(offer.offerType || legacy.auditSummary?.title || 'A confirmer')}
+- H1 actuel : ${clean(h1)}
+- Prix detecte : ${clean(price)}
+- CTA detectes :
+${bullet(ctas)}
+- Sections presentes a conserver :
+${bullet(present)}
+- Sections faibles a ameliorer :
+${bullet(weak)}
+- Sections manquantes a ajouter :
+${bullet(missing)}
+- Actions prioritaires Daka :
+${bullet(actions)}
+- Preuves textuelles disponibles :
+${bullet(proof)}
+- Notes du rapport Daka :
+${originalPrompt || '- A confirmer'}
+`.trim();
+
+    const full = `${text(
+`Tu es un expert X10 en UI/UX, CRO, copywriting et frontend HTML/CSS/JS. Ta mission est de m'aider a ameliorer ou reconstruire ma page a partir des preuves Funnel fournies.
+
+CONTEXTE
+Je veux une page claire, responsive, credible et orientee conversion. L'utilisateur final n'est pas technique. Tu dois m'aider et me guider par etapes.
+
+DONNEES DISPONIBLES
+${commonData}
+
+QUESTIONS DE CLARIFICATION
+Avant de coder, analyse les donnees. Si une information manque ou semble contradictoire, pose 3 a 7 questions maximum. Si tout est suffisant, dis "Les donnees sont suffisantes" et passe au plan.
+
+PLAN D'EXECUTION
+1. Analyse les preuves fournies.
+2. Resume ce qu'il faut garder, ameliorer, ajouter, supprimer ou fusionner.
+3. Propose l'ordre ideal de la page.
+4. Genere le code par blocs : HTML, puis CSS, puis JS.
+5. Si le contexte est limite, ne genere pas tout en une seule reponse. Termine par "Tape GO pour recevoir la suite."
+6. Demande confirmation avant un gros changement de structure.
+
+REGLES ANTI-HALLUCINATION
+- N'invente pas d'avis clients, notes, resultats, logos, certifications, prix, livraison, garantie ou stock.
+- Si une preuve manque, marque clairement "A confirmer".
+- Utilise seulement les preuves fournies dans le rapport.
+- Si la page est deja forte sur un point, dis-le et garde l'element.
+- Ne transforme jamais une recommandation en fait observe.
+
+SI JE VEUX M'INSPIRER D'UNE PAGE CONCURRENTE
+- Ne copie pas la marque, les textes exacts, les images privees, le logo ou le code proprietaire.
+- Reproduis uniquement la structure UX, la logique des sections et les patterns de conversion.
+- Cree une version originale adaptee a mon produit/service.
+
+REGLES DE CODE
+- HTML/CSS/JS simple, sans framework sauf demande explicite.
+- Mobile-first, aucun scroll horizontal, boutons faciles a cliquer.
+- CSS lisible avec classes claires.
+- JS minimal : menu mobile, FAQ accordéon, sticky CTA si utile, micro-interactions.
+- Pas de dependances lourdes.
+- Code facile a coller dans un hebergeur simple.
+- Commente les sections importantes.
+
+SECTIONS A GENERER
+Hero clair, benefices, preuve sociale, offre/prix, garanties, FAQ, comparaison si utile, urgence/scarcity seulement si prouvee, CTA final, sticky CTA mobile si utile.
+
+METHODE DE LIVRAISON
+Reponds en etapes :
+1. Diagnostic court.
+2. Questions si necessaire.
+3. Plan de page.
+4. HTML.
+5. CSS.
+6. JS.
+7. Checklist de test mobile.
+
+FORMAT ATTENDU
+Donne du code propre et directement exploitable. Si la reponse est trop longue, coupe en parties et attends mon GO.`,
+`You are an X10 expert in UI/UX, CRO, direct-response copywriting, and frontend HTML/CSS/JS. Your mission is to help me improve or rebuild my page from the Funnel evidence provided.
+
+CONTEXT
+I need a clear, responsive, credible conversion page. The end user is non-technical, so guide me step by step.
+
+AVAILABLE DATA
+${commonData}
+
+CLARIFICATION QUESTIONS
+First analyze the data. If anything is missing or contradictory, ask 3 to 7 questions maximum. If enough data is available, say "The data is sufficient" and move to the plan.
+
+EXECUTION PLAN
+1. Analyze the evidence.
+2. Summarize what to keep, improve, add, remove, or merge.
+3. Propose the ideal page order.
+4. Generate code in blocks: HTML, then CSS, then JS.
+5. If context is limited, do not generate everything in one answer. End with "Type GO to receive the next part."
+6. Ask for confirmation before large structural changes.
+
+ANTI-HALLUCINATION RULES
+- Do not invent reviews, ratings, results, logos, certifications, prices, delivery, guarantees, or stock.
+- If proof is missing, mark it as "To confirm".
+- Use only the evidence provided.
+- If the page is strong on a point, say so and keep it.
+- Never present a recommendation as an observed fact.
+
+COMPETITOR INSPIRATION RULES
+- Do not copy brand, exact protected text, private images, logo, or proprietary code.
+- Recreate only the UX structure, section logic, and conversion patterns.
+- Build an original version adapted to my product/service.
+
+CODE RULES
+- Simple HTML/CSS/JS, no framework unless requested.
+- Mobile-first, no horizontal scroll, easy-to-click buttons.
+- Clear CSS classes.
+- Minimal JS: mobile menu, FAQ accordion, sticky CTA if useful, micro-interactions.
+- No heavy dependencies.
+- Easy to paste into basic hosting.
+- Comment important sections.
+
+SECTIONS TO GENERATE
+Clear hero, benefits, social proof, offer/price, guarantees, FAQ, comparison if useful, urgency/scarcity only if proven, final CTA, mobile sticky CTA if useful.
+
+DELIVERY METHOD
+Answer in steps:
+1. Short diagnosis.
+2. Questions if needed.
+3. Page plan.
+4. HTML.
+5. CSS.
+6. JS.
+7. Mobile test checklist.
+
+EXPECTED OUTPUT
+Give clean usable code. If the answer is too long, split into parts and wait for my GO.`,
+`أنت خبير X10 في UI/UX وCRO وكتابة الإقناع وHTML/CSS/JS. مهمتك مساعدتي على تحسين أو إعادة بناء صفحتي اعتمادا على أدلة Funnel المقدمة.
+
+السياق
+أحتاج صفحة واضحة، متجاوبة، موثوقة وموجهة للتحويل. المستخدم غير تقني، لذلك أرشدني خطوة بخطوة.
+
+البيانات المتاحة
+${commonData}
+
+أسئلة التوضيح
+حلل البيانات أولا. إذا كانت معلومة ناقصة أو متناقضة، اطرح من 3 إلى 7 أسئلة فقط. إذا كانت البيانات كافية، قل "البيانات كافية" ثم انتقل إلى الخطة.
+
+خطة التنفيذ
+1. حلل الأدلة.
+2. لخص ما يجب الحفاظ عليه أو تحسينه أو إضافته أو حذفه أو دمجه.
+3. اقترح الترتيب المثالي للصفحة.
+4. أنشئ الكود على دفعات: HTML ثم CSS ثم JS.
+5. إذا كان السياق محدودا، لا تولد كل شيء في رد واحد. اختم بعبارة "اكتب GO للحصول على الجزء التالي."
+6. اطلب التأكيد قبل تغيير كبير في الهيكل.
+
+قواعد منع الهلوسة
+- لا تخترع آراء أو تقييمات أو نتائج أو شعارات أو شهادات أو أسعارا أو توصيلا أو ضمانات أو مخزونا.
+- إذا كان الدليل ناقصا اكتب "يجب التأكيد".
+- استخدم الأدلة المقدمة فقط.
+- إذا كانت الصفحة قوية في نقطة ما فاذكر ذلك وحافظ عليها.
+- لا تقدم التوصية كحقيقة مرصودة.
+
+قواعد الاستلهام من منافس
+- لا تنسخ العلامة أو النصوص المحمية أو الصور الخاصة أو الشعار أو الكود المملوك.
+- استلهم فقط بنية UX ومنطق الأقسام وأنماط التحويل.
+- أنشئ نسخة أصلية مناسبة لمنتجي أو خدمتي.
+
+قواعد الكود
+- HTML/CSS/JS بسيط دون إطار عمل إلا إذا طلبت ذلك.
+- Mobile-first، دون تمرير أفقي، وأزرار سهلة النقر.
+- أسماء CSS واضحة.
+- JS قليل ومفيد: قائمة الهاتف، FAQ، CTA ثابت عند الحاجة، تفاعلات خفيفة.
+- لا تعتمد على مكتبات ثقيلة.
+- سهل اللصق في استضافة بسيطة.
+
+الأقسام المطلوبة
+Hero واضح، فوائد، دليل اجتماعي، عرض/سعر، ضمانات، FAQ، مقارنة عند الحاجة، ندرة فقط إذا كانت مثبتة، CTA نهائي، CTA ثابت للهاتف عند الحاجة.
+
+طريقة التسليم
+أجب بالترتيب:
+1. تشخيص قصير.
+2. أسئلة عند الحاجة.
+3. خطة الصفحة.
+4. HTML.
+5. CSS.
+6. JS.
+7. قائمة اختبار للهاتف.
+
+المخرجات
+قدم كودا نظيفا قابلا للاستخدام. إذا كان الرد طويلا، قسمه وانتظر GO.`
+)}`.trim();
+
+    const short = `${text(
+`Tu es un expert X10 UI/UX + CRO + HTML/CSS/JS. Ameliore ou reconstruis ma page avec les preuves ci-dessous. Commence par verifier les donnees, puis pose 3 a 7 questions si quelque chose manque. Si c'est suffisant, propose un plan puis code par blocs.
+
+DONNEES
+${commonData}
+
+REGLES
+- Ne pas inventer avis, prix, garanties, livraison, resultats, logos ou certifications.
+- Marquer "A confirmer" si une preuve manque.
+- Garder uniquement ce qui est prouve.
+- Si modele limite : donne HTML puis attends GO, ensuite CSS, ensuite JS.
+- Code simple, responsive mobile-first, sans framework, sans dependance lourde.
+- Si inspiration concurrente : ne copie ni marque, ni texte exact, ni image privee, ni code proprietaire.
+
+SORTIE
+1. Diagnostic court.
+2. Questions si necessaire.
+3. Ordre des sections.
+4. HTML.
+5. CSS.
+6. JS.
+7. Tests mobile.`,
+`You are an X10 UI/UX + CRO + HTML/CSS/JS expert. Improve or rebuild my page using the evidence below. First check the data, then ask 3 to 7 questions if anything is missing. If enough, propose a plan and code in blocks.
+
+DATA
+${commonData}
+
+RULES
+- Do not invent reviews, prices, guarantees, delivery, results, logos, or certifications.
+- Mark missing proof as "To confirm".
+- Keep only proven elements.
+- If the model is limited: give HTML, wait for GO, then CSS, then JS.
+- Simple mobile-first responsive code, no framework, no heavy dependency.
+- If inspired by a competitor: copy no brand, exact text, private image, or proprietary code.
+
+OUTPUT
+1. Short diagnosis.
+2. Questions if needed.
+3. Section order.
+4. HTML.
+5. CSS.
+6. JS.
+7. Mobile tests.`,
+`أنت خبير X10 في UI/UX وCRO وHTML/CSS/JS. حسّن أو أعد بناء الصفحة اعتمادا على الأدلة أدناه. افحص البيانات أولا ثم اطرح 3 إلى 7 أسئلة إذا نقص شيء. إذا كانت كافية، قدم خطة ثم الكود على دفعات.
+
+البيانات
+${commonData}
+
+القواعد
+- لا تخترع آراء أو أسعارا أو ضمانات أو توصيلا أو نتائج أو شعارات أو شهادات.
+- اكتب "يجب التأكيد" عند نقص الدليل.
+- حافظ فقط على العناصر المثبتة.
+- إذا كان النموذج محدودا: أعط HTML ثم انتظر GO ثم CSS ثم JS.
+- كود بسيط متجاوب، دون إطار عمل أو تبعيات ثقيلة.
+- عند الاستلهام من منافس: لا تنسخ العلامة أو النص أو الصور أو الكود.
+
+المخرجات
+1. تشخيص قصير.
+2. أسئلة عند الحاجة.
+3. ترتيب الأقسام.
+4. HTML.
+5. CSS.
+6. JS.
+7. اختبار الهاتف.`
+)}`.trim();
+
+    const htmlOnly = `${text('Genere uniquement le HTML semantique mobile-first pour cette page. Ne donne pas le CSS ni le JS maintenant. Utilise les preuves suivantes et marque les donnees manquantes "A confirmer".', 'Generate only the mobile-first semantic HTML for this page. Do not output CSS or JS yet. Use the following evidence and mark missing data as "To confirm".', 'أنشئ HTML فقط للصفحة بشكل semantic وmobile-first. لا تكتب CSS أو JS الآن. استخدم الأدلة التالية واكتب "يجب التأكيد" عند نقص البيانات.')}\n\n${commonData}`;
+    const cssOnly = `${text('Genere uniquement le CSS premium mobile-first pour le HTML de cette page. Aucun framework, aucune dependance lourde, aucun scroll horizontal. Structure les styles par section.', 'Generate only premium mobile-first CSS for this page HTML. No framework, no heavy dependency, no horizontal scroll. Organize styles by section.', 'أنشئ CSS فقط بتصميم premium وmobile-first. دون إطار عمل أو تبعيات ثقيلة أو تمرير أفقي. نظم الأنماط حسب الأقسام.')}\n\n${commonData}`;
+    const jsOnly = `${text('Genere uniquement le JavaScript utile pour cette page : menu mobile, FAQ accordéon, sticky CTA mobile si pertinent, micro-interactions. Pas de tracking agressif, aucune erreur console.', 'Generate only useful JavaScript: mobile menu, FAQ accordion, mobile sticky CTA if relevant, micro-interactions. No aggressive tracking, no console errors.', 'أنشئ JavaScript المفيد فقط: قائمة الهاتف، FAQ، CTA ثابت للهاتف عند الحاجة، وتفاعلات خفيفة. دون تتبع مزعج ودون أخطاء console.')}\n\n${commonData}`;
+    const questions = `${text('Avant de coder, pose ces questions si les reponses ne sont pas dans les donnees :', 'Before coding, ask these questions if answers are not in the data:', 'قبل كتابة الكود، اطرح هذه الأسئلة إذا لم تكن الإجابات موجودة في البيانات:')}
+1. ${text('Quel est l’objectif principal : achat, lead, appel, WhatsApp, demo ?', 'What is the main goal: purchase, lead, call, WhatsApp, demo?', 'ما الهدف الرئيسي: شراء، عميل محتمل، مكالمة، واتساب، تجربة؟')}
+2. ${text('Quelle langue exacte doit utiliser la page ?', 'What exact language should the page use?', 'ما اللغة الدقيقة للصفحة؟')}
+3. ${text('Quel prix ou pack est confirme ?', 'Which price or package is confirmed?', 'ما السعر أو الباقة المؤكدة؟')}
+4. ${text('Quelles preuves sont reelles : avis, photos, garanties, livraison, resultats ?', 'Which proof is real: reviews, photos, guarantees, delivery, results?', 'ما الأدلة الحقيقية: آراء، صور، ضمانات، تسليم، نتائج؟')}
+5. ${text('Quelles contraintes design ou marque faut-il respecter ?', 'What design or brand constraints must be respected?', 'ما قيود التصميم أو العلامة التي يجب احترامها؟')}`;
+    return { full, short, htmlOnly, cssOnly, jsOnly, questions };
+}
+
 function renderMegaRedesignPromptBlock(value, opts = {}) {
     const safe = typeof escapeHtml === 'function' ? escapeHtml : text => String(text || '');
     const isAr = opts.isAr;
     const isEn = opts.isEn;
-    const label = isAr ? 'نسخ البرومبت' : isEn ? 'Copy prompt' : 'Copier le prompt';
+    const labels = {
+        full: isAr ? 'نسخ البرومبت الكامل' : isEn ? 'Copy full Mega Prompt' : 'Copier Mega Prompt complet',
+        short: isAr ? 'نسخ النسخة القصيرة' : isEn ? 'Copy free trial short prompt' : 'Copier version courte free trial',
+        html: isAr ? 'نسخ HTML فقط' : isEn ? 'Copy HTML only' : 'Copier prompt HTML seulement',
+        css: isAr ? 'نسخ CSS فقط' : isEn ? 'Copy CSS only' : 'Copier prompt CSS seulement',
+        js: isAr ? 'نسخ JS فقط' : isEn ? 'Copy JS only' : 'Copier prompt JS seulement',
+        q: isAr ? 'نسخ الأسئلة' : isEn ? 'Copy clarification questions' : 'Copier questions de clarification',
+        toggle: isAr ? 'Déplier / replier le prompt' : isEn ? 'Expand / collapse prompt' : 'Déplier / replier le prompt'
+    };
     const help = isAr
-        ? 'انسخه في أداة التصميم أو الذكاء الاصطناعي لإعادة بناء الصفحة مع الحفاظ على الأدلة.'
-        : isEn ? 'Copy it into your design or AI tool to rebuild the page while preserving evidence.'
-        : 'Copiez-le dans votre outil design ou IA pour reconstruire la page sans perdre les preuves.';
+        ? 'برومبت عملي قابل للنسخ لنماذج الكود والتصميم، مع قواعد تمنع اختراع الأدلة.'
+        : isEn ? 'A practical prompt for external code/design AIs, structured to avoid hallucinated proof.'
+        : 'Un vrai prompt de travail pour IA de code/design, structuré pour éviter les preuves inventées.';
     const raw = String(value || '');
-    const promptText = typeof buildUpscaledMegaRedesignPrompt === 'function'
-        ? buildUpscaledMegaRedesignPrompt(raw)
-        : raw;
-    const id = 'funnelMegaPromptText';
+    const pack = buildDakaMegaPromptPackage(raw, opts);
+    const suffix = Math.random().toString(36).slice(2, 8);
+    const ids = {
+        full: `funnelMegaPromptFull_${suffix}`,
+        short: `funnelMegaPromptShort_${suffix}`,
+        html: `funnelMegaPromptHtml_${suffix}`,
+        css: `funnelMegaPromptCss_${suffix}`,
+        js: `funnelMegaPromptJs_${suffix}`,
+        q: `funnelMegaPromptQuestions_${suffix}`
+    };
+    const promptByKey = {
+        full: pack.full,
+        short: pack.short,
+        html: pack.htmlOnly,
+        css: pack.cssOnly,
+        js: pack.jsOnly,
+        q: pack.questions
+    };
+    const hiddenSources = Object.entries(ids).map(([key, id]) =>
+        `<textarea id="${id}" class="mega-copy-source">${safe(promptByKey[key] || '')}</textarea>`
+    ).join('');
     return `<div class="funnel-mega-redesign">
         <header>
             <div><small>Mega AI Redesign Prompt</small><strong>${safe(help)}</strong></div>
-            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${id}', this)">
-                <i class="fas fa-copy"></i><span>${safe(label)}</span>
+            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.full}', this)">
+                <i class="fas fa-copy"></i><span>${safe(labels.full)}</span>
             </button>
         </header>
-        <pre id="${id}" class="funnel-mega-prompt" dir="auto">${safe(promptText.slice(0, 22000))}</pre>
+        <div class="mega-copy-grid" data-no-collapse="true" onclick="event.stopPropagation()">
+            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.short}', this)"><i class="fas fa-bolt"></i>${safe(labels.short)}</button>
+            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.html}', this)"><i class="fab fa-html5"></i>${safe(labels.html)}</button>
+            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.css}', this)"><i class="fab fa-css3-alt"></i>${safe(labels.css)}</button>
+            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.js}', this)"><i class="fab fa-js"></i>${safe(labels.js)}</button>
+            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.q}', this)"><i class="fas fa-circle-question"></i>${safe(labels.q)}</button>
+        </div>
+        <details class="mega-prompt-shell" open data-no-collapse="true">
+            <summary data-no-collapse="true" onclick="event.stopPropagation()"><span>${safe(labels.toggle)}</span><i class="fas fa-chevron-down"></i></summary>
+            <pre class="funnel-mega-prompt" dir="auto">${safe(pack.full.slice(0, 26000))}</pre>
+        </details>
+        ${hiddenSources}
     </div>`;
 }
 
@@ -18109,6 +18617,8 @@ function escapeHtml(str) {
 // HELPER : Copy to clipboard universel
 // ─────────────────────────────────────────────────────
 function copyToClipboard(text, btn) {
+    const sourceNode = typeof text === 'string' ? document.getElementById(text) : null;
+    if (sourceNode) text = 'value' in sourceNode ? sourceNode.value : sourceNode.innerText || sourceNode.textContent || '';
     const original = btn?.innerHTML;
     const success = () => {
         if (btn) { btn.innerHTML = '<i class="fas fa-check"></i> Copié !'; btn.style.background='#10b981'; }
@@ -18202,6 +18712,9 @@ function buildUpscaledMegaRedesignPrompt(rawPrompt) {
     const lang = STATE.currentLang || 'fr';
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
+    if (typeof buildDakaMegaPromptPackage === 'function') {
+        return buildDakaMegaPromptPackage(rawPrompt, { isAr, isEn }).full;
+    }
 
     const lastData = STATE.lastFunnelResults || {};
     const url =
