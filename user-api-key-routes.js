@@ -5,6 +5,23 @@ const crypto = require('crypto');
 const PROVIDER_GROQ = 'groq';
 const DEFAULT_GROQ_MODEL = process.env.GROQ_PROMPT_TO_CODE_MODEL || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
 
+function groqHeader(headers, name) {
+  return headers?.get?.(name) || null;
+}
+
+function groqRateLimitFromHeaders(headers) {
+  const rateLimit = {
+    limitRequests: groqHeader(headers, 'x-ratelimit-limit-requests'),
+    remainingRequests: groqHeader(headers, 'x-ratelimit-remaining-requests'),
+    resetRequests: groqHeader(headers, 'x-ratelimit-reset-requests'),
+    limitTokens: groqHeader(headers, 'x-ratelimit-limit-tokens'),
+    remainingTokens: groqHeader(headers, 'x-ratelimit-remaining-tokens'),
+    resetTokens: groqHeader(headers, 'x-ratelimit-reset-tokens'),
+    retryAfter: groqHeader(headers, 'retry-after')
+  };
+  return Object.fromEntries(Object.entries(rateLimit).filter(([, value]) => value !== null && value !== undefined && value !== ''));
+}
+
 function getEncryptionKey() {
   const secret = process.env.USER_SECRET_ENCRYPTION_KEY || process.env.API_KEY_ENCRYPTION_SECRET || '';
   if (!secret || secret.length < 24) {
@@ -207,10 +224,12 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
         })
       });
       const payload = await response.json().catch(() => ({}));
+      const rateLimit = groqRateLimitFromHeaders(response.headers);
       if (!response.ok) {
         return res.status(response.status).json({
           success: false,
-          error: payload?.error?.message || 'GROQ_REQUEST_FAILED'
+          error: payload?.error?.message || 'GROQ_REQUEST_FAILED',
+          rateLimit
         });
       }
       res.json({
@@ -218,7 +237,8 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
         provider: PROVIDER_GROQ,
         model,
         content: payload?.choices?.[0]?.message?.content || '',
-        usage: payload?.usage || null
+        usage: payload?.usage || null,
+        rateLimit
       });
     } catch (error) {
       console.error('[Groq] prompt-to-code failed:', error.message);

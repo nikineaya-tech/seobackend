@@ -467,19 +467,35 @@ html, body {
 .funnel-mega-redesign .mega-prompt-shell summary i{transition:transform .2s ease}
 .funnel-mega-redesign .mega-prompt-shell[open] summary i{transform:rotate(180deg)}
 .funnel-mega-redesign textarea.mega-copy-source{position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;pointer-events:none}
-.groq-code-builder{display:grid;gap:12px;padding:14px;border:1px solid rgba(34,197,94,.22);border-radius:16px;background:radial-gradient(circle at 12% 0%,rgba(34,197,94,.14),transparent 34%),linear-gradient(145deg,rgba(6,16,29,.94),rgba(2,6,23,.92));box-shadow:0 18px 48px rgba(0,0,0,.22)}
+.groq-code-builder{position:relative;display:grid;gap:14px;padding:16px;border:1px solid rgba(34,211,238,.26);border-radius:20px;background:radial-gradient(circle at 9% -10%,rgba(34,211,238,.24),transparent 30%),radial-gradient(circle at 92% 8%,rgba(168,85,247,.22),transparent 28%),linear-gradient(145deg,rgba(6,16,29,.97),rgba(2,6,23,.95));box-shadow:0 22px 70px rgba(0,0,0,.34),inset 0 1px 0 rgba(255,255,255,.05);overflow:hidden}
+.groq-code-builder:before{content:"";position:absolute;inset:-2px;background:linear-gradient(115deg,transparent 0 25%,rgba(34,211,238,.16),transparent 55% 100%);opacity:.55;pointer-events:none}
+.groq-code-builder>*{position:relative;z-index:1}
 .groq-code-builder header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:0;border:0;background:transparent}
-.groq-code-builder header small{color:#86efac}
-.groq-code-builder header strong{font-size:.98rem}
+.groq-code-builder header small{display:inline-flex;align-items:center;gap:7px;color:#86efac;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+.groq-code-builder header small:before{content:"";width:8px;height:8px;border-radius:999px;background:#22c55e;box-shadow:0 0 16px rgba(34,197,94,.9)}
+.groq-code-builder header strong{display:block;margin-top:5px;font-size:1rem;line-height:1.45;color:#e0f2fe;text-shadow:0 0 18px rgba(34,211,238,.22)}
 .groq-builder-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
-.groq-builder-actions button{justify-content:center;border-color:rgba(34,197,94,.25);background:linear-gradient(135deg,rgba(34,197,94,.18),rgba(34,211,238,.08));color:#dcfce7}
-.groq-builder-actions button.primary{background:linear-gradient(135deg,#22c55e,#06b6d4);color:#03111c;border-color:transparent}
+.groq-builder-actions button{justify-content:center;border-color:rgba(34,211,238,.25);background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(34,211,238,.1));color:#dcfce7;box-shadow:inset 0 1px 0 rgba(255,255,255,.04)}
+.groq-builder-actions button:hover{border-color:rgba(34,211,238,.55);background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(34,211,238,.16))}
+.groq-builder-actions button.primary{background:linear-gradient(135deg,#22c55e,#06b6d4);color:#03111c;border-color:transparent;box-shadow:0 12px 34px rgba(34,197,94,.22)}
 .groq-builder-note{width:100%;min-height:76px;padding:12px 13px;border:1px solid rgba(148,163,184,.18);border-radius:13px;background:#071120;color:#e2e8f0;resize:vertical;font:600 .78rem/1.55 Inter,Arial,sans-serif}
 .groq-builder-note:focus{outline:2px solid rgba(34,211,238,.35);border-color:#22d3ee}
-.groq-builder-output-wrap{border:1px solid rgba(148,163,184,.14);border-radius:14px;overflow:hidden;background:#020817}
+.groq-quota-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:10px;border:1px solid rgba(34,211,238,.16);border-radius:16px;background:linear-gradient(135deg,rgba(15,23,42,.72),rgba(2,6,23,.55))}
+.groq-quota-strip div{min-width:0;padding:10px 11px;border:1px solid rgba(148,163,184,.12);border-radius:13px;background:rgba(2,6,23,.4)}
+.groq-quota-strip small{display:block;color:#7dd3fc;font-size:.62rem;font-weight:950;letter-spacing:.06em;text-transform:uppercase}
+.groq-quota-strip strong{display:block;margin-top:4px;color:#f8fafc;font:800 .95rem/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere}
+.groq-builder-output-wrap,.groq-chat-panel{border:1px solid rgba(148,163,184,.14);border-radius:16px;overflow:hidden;background:#020817;box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
 .groq-builder-output-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(15,23,42,.88);border-bottom:1px solid rgba(148,163,184,.12)}
 .groq-builder-output-head span{color:#cbd5e1;font-size:.72rem;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
 .groq-builder-output{min-height:170px;max-height:520px;margin:0;padding:16px;color:#dbeafe;background:#020817;overflow:auto;white-space:pre-wrap;font:500 .76rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace}
+.groq-chat-log{display:grid;gap:9px;max-height:260px;overflow:auto;padding:12px;background:linear-gradient(180deg,rgba(2,6,23,.84),rgba(8,13,28,.92))}
+.groq-chat-message{max-width:88%;padding:10px 12px;border:1px solid rgba(148,163,184,.13);border-radius:14px;color:#dbeafe;background:rgba(15,23,42,.72);font-size:.78rem;line-height:1.55;white-space:pre-wrap}
+.groq-chat-message.user{justify-self:end;border-color:rgba(34,197,94,.26);background:linear-gradient(135deg,rgba(34,197,94,.16),rgba(34,211,238,.08))}
+.groq-chat-message.assistant{justify-self:start;border-color:rgba(139,92,246,.24);background:linear-gradient(135deg,rgba(139,92,246,.14),rgba(14,165,233,.06))}
+.groq-chat-input-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;padding:12px;border-top:1px solid rgba(148,163,184,.12);background:rgba(15,23,42,.72)}
+.groq-chat-input-row textarea{width:100%;min-height:50px;max-height:150px;padding:11px 12px;border:1px solid rgba(148,163,184,.18);border-radius:13px;background:#071120;color:#f8fafc;resize:vertical;font:600 .78rem/1.5 Inter,Arial,sans-serif}
+.groq-chat-input-row textarea:focus{outline:2px solid rgba(34,211,238,.35);border-color:#22d3ee}
+.groq-chat-input-row button{min-height:50px;padding:10px 15px;border:1px solid transparent;border-radius:13px;background:linear-gradient(135deg,#22c55e,#06b6d4);color:#03111c;font-weight:950;cursor:pointer}
 .groq-key-panel{display:grid;gap:14px}
 .groq-status-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;border:1px solid rgba(34,211,238,.18);border-radius:14px;background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(139,92,246,.08))}
 .groq-status-card strong{display:block;color:#f8fafc;font-size:.92rem}
@@ -517,7 +533,10 @@ html, body {
  .funnel-mega-redesign header{display:grid}
  .funnel-mega-redesign .mega-copy-grid{grid-template-columns:1fr}
  .groq-code-builder header{display:grid}
+ .groq-quota-strip{grid-template-columns:1fr}
  .groq-builder-actions{grid-template-columns:1fr}
+ .groq-chat-input-row{grid-template-columns:1fr}
+ .groq-chat-message{max-width:100%}
  .funnel-priority-card{grid-template-columns:1fr}
  .funnel-priority-index{width:36px;height:36px}
 }
@@ -18093,7 +18112,10 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
     };
     const builderIds = {
         custom: `groqCodeBuilderCustom_${suffix}`,
-        output: `groqCodeBuilderOutput_${suffix}`
+        output: `groqCodeBuilderOutput_${suffix}`,
+        quota: `groqCodeBuilderQuota_${suffix}`,
+        chat: `groqCodeBuilderChat_${suffix}`,
+        chatInput: `groqCodeBuilderChatInput_${suffix}`
     };
     const promptByKey = {
         full: pack.full,
@@ -18107,7 +18129,7 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         `<textarea id="${id}" class="mega-copy-source">${safe(promptByKey[key] || '')}</textarea>`
     ).join('');
     const builderLabels = {
-        title: isAr ? 'Daka Code Builder Light' : isEn ? 'Daka Code Builder Light' : 'Daka Code Builder Light',
+        title: isAr ? 'Daka AI Code Machine' : isEn ? 'Daka AI Code Machine' : 'Daka AI Code Machine',
         sub: isAr ? 'استخدم مفتاح Groq المتصل لتوليد كود داخل Daka.' : isEn ? 'Use your connected Groq key to generate code inside Daka.' : 'Utilise ta clé Groq connectée pour générer du code directement dans Daka.',
         note: isAr ? 'تعليمات اختيارية: لون، ستايل، قسم معين، أو تعديل محدد...' : isEn ? 'Optional instruction: color, style, specific section, or exact change...' : 'Instruction optionnelle : couleur, style, section précise, changement exact...',
         full: isAr ? 'توليد صفحة كاملة' : isEn ? 'Generate full page' : 'Générer page HTML complète',
@@ -18116,7 +18138,15 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         js: isAr ? 'توليد JS' : isEn ? 'Generate JS' : 'Générer JS seul',
         result: isAr ? 'نتيجة Groq' : isEn ? 'Groq result' : 'Résultat Groq',
         copy: isAr ? 'نسخ النتيجة' : isEn ? 'Copy result' : 'Copier le résultat',
-        waiting: isAr ? 'اختر نوع الكود ثم اضغط على توليد.' : isEn ? 'Choose a code type, then generate.' : 'Choisis un type de code, puis lance la génération.'
+        waiting: isAr ? 'اختر نوع الكود ثم اضغط على توليد.' : isEn ? 'Choose a code type, then generate.' : 'Choisis un type de code, puis lance la génération.',
+        quotaReq: isAr ? 'الطلبات المتبقية' : isEn ? 'Requests left' : 'Requêtes restantes',
+        quotaTokens: isAr ? 'التوكنات المتبقية' : isEn ? 'Tokens left' : 'Tokens restants',
+        quotaReset: isAr ? 'إعادة الضبط' : isEn ? 'Reset' : 'Reset',
+        quotaWaiting: isAr ? 'يظهر بعد أول توليد' : isEn ? 'Shown after first generation' : 'Visible après la première génération',
+        chat: isAr ? 'محادثة Groq' : isEn ? 'Groq chat' : 'Chat Groq',
+        chatIntro: isAr ? 'اسأل عن تعديل، قسم أقوى، أو تبسيط الكود الناتج.' : isEn ? 'Ask for a change, a stronger section, or simpler generated code.' : 'Pose une question, demande une variante ou fais modifier le code généré.',
+        chatPlaceholder: isAr ? 'مثال: اجعل الهيرو أقوى وأعطني HTML/CSS فقط...' : isEn ? 'Example: make the hero stronger and return only HTML/CSS...' : 'Exemple : rends le hero plus premium et donne seulement HTML/CSS...',
+        send: isAr ? 'إرسال' : isEn ? 'Send' : 'Envoyer'
     };
     return `<div class="funnel-mega-redesign">
         <header>
@@ -18139,12 +18169,17 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                     <i class="fas fa-key"></i><span>Groq</span>
                 </button>
             </header>
+            <div id="${builderIds.quota}" class="groq-quota-strip" data-no-collapse="true">
+                <div><small>${safe(builderLabels.quotaReq)}</small><strong>—</strong></div>
+                <div><small>${safe(builderLabels.quotaTokens)}</small><strong>—</strong></div>
+                <div><small>${safe(builderLabels.quotaReset)}</small><strong>${safe(builderLabels.quotaWaiting)}</strong></div>
+            </div>
             <textarea id="${builderIds.custom}" class="groq-builder-note" data-no-collapse="true" placeholder="${safe(builderLabels.note)}"></textarea>
             <div class="groq-builder-actions">
-                <button type="button" class="primary" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('full','${ids.full}','${builderIds.output}','${builderIds.custom}',this)"><i class="fas fa-wand-magic-sparkles"></i>${safe(builderLabels.full)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('html','${ids.html}','${builderIds.output}','${builderIds.custom}',this)"><i class="fab fa-html5"></i>${safe(builderLabels.html)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('css','${ids.css}','${builderIds.output}','${builderIds.custom}',this)"><i class="fab fa-css3-alt"></i>${safe(builderLabels.css)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('js','${ids.js}','${builderIds.output}','${builderIds.custom}',this)"><i class="fab fa-js"></i>${safe(builderLabels.js)}</button>
+                <button type="button" class="primary" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('full','${ids.full}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}',this)"><i class="fas fa-wand-magic-sparkles"></i>${safe(builderLabels.full)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('html','${ids.html}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}',this)"><i class="fab fa-html5"></i>${safe(builderLabels.html)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('css','${ids.css}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}',this)"><i class="fab fa-css3-alt"></i>${safe(builderLabels.css)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('js','${ids.js}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}',this)"><i class="fab fa-js"></i>${safe(builderLabels.js)}</button>
             </div>
             <div class="groq-builder-output-wrap">
                 <div class="groq-builder-output-head">
@@ -18152,6 +18187,18 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                     <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${builderIds.output}', this)"><i class="fas fa-copy"></i>${safe(builderLabels.copy)}</button>
                 </div>
                 <pre id="${builderIds.output}" class="groq-builder-output" dir="ltr">${safe(builderLabels.waiting)}</pre>
+            </div>
+            <div class="groq-chat-panel" data-no-collapse="true" onclick="event.stopPropagation()">
+                <div class="groq-builder-output-head">
+                    <span>${safe(builderLabels.chat)}</span>
+                </div>
+                <div id="${builderIds.chat}" class="groq-chat-log">
+                    <div class="groq-chat-message assistant">${safe(builderLabels.chatIntro)}</div>
+                </div>
+                <div class="groq-chat-input-row">
+                    <textarea id="${builderIds.chatInput}" data-no-collapse="true" placeholder="${safe(builderLabels.chatPlaceholder)}"></textarea>
+                    <button type="button" data-no-collapse="true" onclick="event.stopPropagation();sendGroqCodeBuilderMessage('${ids.short}','${builderIds.output}','${builderIds.chat}','${builderIds.chatInput}','${builderIds.quota}',this)"><i class="fas fa-paper-plane"></i>${safe(builderLabels.send)}</button>
+                </div>
             </div>
         </section>
         <details class="mega-prompt-shell" open data-no-collapse="true">
@@ -18691,7 +18738,39 @@ function fallbackCopy(text, cb) {
     document.body.removeChild(ta);
 }
 
-async function runGroqCodeBuilder(kind, promptId, outputId, customId, btn) {
+function updateGroqQuotaUI(quotaId, payload = {}) {
+    const node = document.getElementById(quotaId);
+    if (!node) return;
+    const lang = STATE.currentLang || 'fr';
+    const rate = payload?.rateLimit || payload || {};
+    const usage = payload?.usage || {};
+    const labels = lang === 'ar'
+        ? { req: 'الطلبات المتبقية', tokens: 'التوكنات المتبقية', reset: 'إعادة الضبط', unknown: 'غير متاح', used: 'مستخدمة' }
+        : lang === 'en'
+            ? { req: 'Requests left', tokens: 'Tokens left', reset: 'Reset', unknown: 'Not exposed', used: 'used' }
+            : { req: 'Requêtes restantes', tokens: 'Tokens restants', reset: 'Reset', unknown: 'Non exposé', used: 'utilisés' };
+    const clean = value => (value !== null && value !== undefined && String(value).trim() !== '') ? String(value).trim() : '—';
+    const requestValue = clean(rate.remainingRequests || rate.requestsRemaining);
+    const tokenValue = clean(rate.remainingTokens || rate.tokensRemaining || (usage.total_tokens ? `${usage.total_tokens} ${labels.used}` : null));
+    const resetValue = clean(rate.resetRequests || rate.resetTokens || rate.retryAfter || labels.unknown);
+    node.innerHTML = `
+        <div><small>${escapeHtml(labels.req)}</small><strong>${escapeHtml(requestValue)}</strong></div>
+        <div><small>${escapeHtml(labels.tokens)}</small><strong>${escapeHtml(tokenValue)}</strong></div>
+        <div><small>${escapeHtml(labels.reset)}</small><strong>${escapeHtml(resetValue)}</strong></div>
+    `;
+}
+
+function appendGroqChatMessage(chatId, role, text) {
+    const node = document.getElementById(chatId);
+    if (!node) return;
+    const message = document.createElement('div');
+    message.className = `groq-chat-message ${role === 'user' ? 'user' : 'assistant'}`;
+    message.textContent = String(text || '').trim();
+    node.appendChild(message);
+    node.scrollTop = node.scrollHeight;
+}
+
+async function runGroqCodeBuilder(kind, promptId, outputId, customId, quotaId, btn) {
     const original = btn?.innerHTML;
     const output = document.getElementById(outputId);
     const promptNode = document.getElementById(promptId);
@@ -18756,8 +18835,10 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
             timeout: 90000
         });
         if (output) output.textContent = response?.content || '';
+        updateGroqQuotaUI(quotaId, response);
         toast.success(labels.ready);
     } catch (error) {
+        updateGroqQuotaUI(quotaId, error?.data || {});
         if (/GROQ_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
             toast.warning(error.data?.message || labels.connect);
             openGroqKeyModal();
@@ -18765,6 +18846,79 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
             toast.error(error.message || 'Groq error');
         }
         if (output) output.textContent = error.data?.message || error.message || 'Groq error';
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
+}
+
+async function sendGroqCodeBuilderMessage(promptId, outputId, chatId, inputId, quotaId, btn) {
+    const original = btn?.innerHTML;
+    const input = document.getElementById(inputId);
+    const output = document.getElementById(outputId);
+    const promptNode = document.getElementById(promptId);
+    const basePrompt = String(promptNode?.value || promptNode?.textContent || '').trim();
+    const message = String(input?.value || '').trim();
+    const currentCode = String(output?.textContent || '').trim();
+    const lang = STATE.currentLang || 'fr';
+    const labels = lang === 'ar'
+        ? { login: 'سجل الدخول أولا.', empty: 'اكتب رسالتك أولا.', running: 'Groq يفكر...', connect: 'اربط مفتاح Groq أولا.' }
+        : lang === 'en'
+            ? { login: 'Sign in first.', empty: 'Write your message first.', running: 'Groq is thinking...', connect: 'Connect your Groq key first.' }
+            : { login: 'Connecte-toi d’abord.', empty: 'Écris ton message d’abord.', running: 'Groq réfléchit...', connect: 'Connecte ta clé Groq d’abord.' };
+    if (!currentAuthUser) {
+        toast.warning(labels.login);
+        return openAuthModal();
+    }
+    if (!message) return toast.warning(labels.empty);
+    appendGroqChatMessage(chatId, 'user', message);
+    if (input) input.value = '';
+    const prompt = `${basePrompt}
+
+DAKA CODE BUILDER - CHAT DE TRAVAIL :
+L'utilisateur veut continuer à travailler le code dans l'interface Daka.
+
+DEMANDE UTILISATEUR :
+${message}
+
+CODE OU REPONSE ACTUELLE A AMELIORER :
+${currentCode.slice(0, 14000)}
+
+Réponds en ${lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'}.
+Si tu fournis du code, donne des blocs clairs HTML/CSS/JS.
+Si une information manque, pose les questions nécessaires avant d'inventer.`;
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+        }
+        appendGroqChatMessage(chatId, 'assistant', labels.running);
+        const response = await api.request('/api/prompt-to-code/groq', {
+            method: 'POST',
+            body: JSON.stringify({
+                prompt,
+                maxTokens: 3200,
+                temperature: 0.22
+            }),
+            timeout: 90000
+        });
+        const chat = document.getElementById(chatId);
+        const last = chat?.querySelector('.groq-chat-message.assistant:last-child');
+        if (last && last.textContent === labels.running) last.textContent = response?.content || '';
+        else appendGroqChatMessage(chatId, 'assistant', response?.content || '');
+        if (output && response?.content) output.textContent = response.content;
+        updateGroqQuotaUI(quotaId, response);
+    } catch (error) {
+        updateGroqQuotaUI(quotaId, error?.data || {});
+        if (/GROQ_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
+            toast.warning(error.data?.message || labels.connect);
+            openGroqKeyModal();
+        } else {
+            toast.error(error.message || 'Groq error');
+        }
+        appendGroqChatMessage(chatId, 'assistant', error.data?.message || error.message || 'Groq error');
     } finally {
         if (btn) {
             btn.disabled = false;
