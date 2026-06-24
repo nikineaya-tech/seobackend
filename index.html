@@ -488,6 +488,17 @@ html, body {
 .groq-builder-output-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(15,23,42,.88);border-bottom:1px solid rgba(148,163,184,.12)}
 .groq-builder-output-head span{color:#cbd5e1;font-size:.72rem;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
 .groq-builder-output{min-height:170px;max-height:520px;margin:0;padding:16px;color:#dbeafe;background:#020817;overflow:auto;white-space:pre-wrap;font:500 .76rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace}
+.groq-machine-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.groq-machine-steps span{display:flex;align-items:center;gap:7px;min-width:0;padding:9px 10px;border:1px solid rgba(34,211,238,.14);border-radius:13px;background:rgba(2,6,23,.34);color:#cbd5e1;font-size:.68rem;font-weight:900}
+.groq-machine-steps span:before{content:"";width:7px;height:7px;flex:0 0 auto;border-radius:999px;background:#22d3ee;box-shadow:0 0 13px rgba(34,211,238,.7)}
+.groq-builder-quick{display:flex;flex-wrap:wrap;gap:8px}
+.groq-builder-quick button{min-height:34px;padding:7px 10px;border:1px solid rgba(34,211,238,.18);border-radius:999px;background:rgba(15,23,42,.72);color:#bae6fd;font-size:.69rem;font-weight:900;cursor:pointer}
+.groq-builder-quick button:hover{border-color:rgba(34,197,94,.45);color:#dcfce7;background:rgba(34,197,94,.1)}
+.groq-workbench-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.95fr);gap:12px;align-items:stretch}
+.groq-preview-frame{width:100%;height:520px;border:0;background:#fff;border-radius:0}
+.groq-preview-empty{display:grid;place-items:center;min-height:240px;padding:22px;color:#94a3b8;text-align:center;font-size:.8rem;line-height:1.6}
+.groq-builder-output-head button{min-height:32px;padding:7px 10px;border:1px solid rgba(148,163,184,.15);border-radius:999px;background:rgba(15,23,42,.92);color:#e0f2fe;font-weight:900;cursor:pointer}
+.groq-builder-output-head button:hover{border-color:rgba(34,211,238,.45);background:rgba(34,211,238,.1)}
 .groq-chat-log{display:grid;gap:9px;max-height:260px;overflow:auto;padding:12px;background:linear-gradient(180deg,rgba(2,6,23,.84),rgba(8,13,28,.92))}
 .groq-chat-message{max-width:88%;padding:10px 12px;border:1px solid rgba(148,163,184,.13);border-radius:14px;color:#dbeafe;background:rgba(15,23,42,.72);font-size:.78rem;line-height:1.55;white-space:pre-wrap}
 .groq-chat-message.user{justify-self:end;border-color:rgba(34,197,94,.26);background:linear-gradient(135deg,rgba(34,197,94,.16),rgba(34,211,238,.08))}
@@ -535,6 +546,9 @@ html, body {
  .groq-code-builder header{display:grid}
  .groq-quota-strip{grid-template-columns:1fr}
  .groq-builder-actions{grid-template-columns:1fr}
+ .groq-machine-steps{grid-template-columns:1fr 1fr}
+ .groq-workbench-grid{grid-template-columns:1fr}
+ .groq-preview-frame{height:420px}
  .groq-chat-input-row{grid-template-columns:1fr}
  .groq-chat-message{max-width:100%}
  .funnel-priority-card{grid-template-columns:1fr}
@@ -18113,6 +18127,8 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
     const builderIds = {
         custom: `groqCodeBuilderCustom_${suffix}`,
         output: `groqCodeBuilderOutput_${suffix}`,
+        preview: `groqCodeBuilderPreview_${suffix}`,
+        previewEmpty: `groqCodeBuilderPreviewEmpty_${suffix}`,
         quota: `groqCodeBuilderQuota_${suffix}`,
         chat: `groqCodeBuilderChat_${suffix}`,
         chatInput: `groqCodeBuilderChatInput_${suffix}`
@@ -18137,8 +18153,11 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         css: isAr ? 'توليد CSS' : isEn ? 'Generate CSS' : 'Générer CSS seul',
         js: isAr ? 'توليد JS' : isEn ? 'Generate JS' : 'Générer JS seul',
         result: isAr ? 'نتيجة Groq' : isEn ? 'Groq result' : 'Résultat Groq',
+        preview: isAr ? 'معاينة مباشرة' : isEn ? 'Live preview' : 'Aperçu live',
+        refreshPreview: isAr ? 'تحديث المعاينة' : isEn ? 'Refresh preview' : 'Actualiser aperçu',
         copy: isAr ? 'نسخ النتيجة' : isEn ? 'Copy result' : 'Copier le résultat',
         waiting: isAr ? 'اختر نوع الكود ثم اضغط على توليد.' : isEn ? 'Choose a code type, then generate.' : 'Choisis un type de code, puis lance la génération.',
+        previewWaiting: isAr ? 'ولّد صفحة HTML كاملة لرؤية المعاينة هنا.' : isEn ? 'Generate a full HTML page to see the preview here.' : 'Génère une page HTML complète pour voir l’aperçu ici.',
         quotaReq: isAr ? 'الطلبات المتبقية' : isEn ? 'Requests left' : 'Requêtes restantes',
         quotaTokens: isAr ? 'التوكنات المتبقية' : isEn ? 'Tokens left' : 'Tokens restants',
         quotaReset: isAr ? 'إعادة الضبط' : isEn ? 'Reset' : 'Reset',
@@ -18146,7 +18165,15 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         chat: isAr ? 'محادثة Groq' : isEn ? 'Groq chat' : 'Chat Groq',
         chatIntro: isAr ? 'اسأل عن تعديل، قسم أقوى، أو تبسيط الكود الناتج.' : isEn ? 'Ask for a change, a stronger section, or simpler generated code.' : 'Pose une question, demande une variante ou fais modifier le code généré.',
         chatPlaceholder: isAr ? 'مثال: اجعل الهيرو أقوى وأعطني HTML/CSS فقط...' : isEn ? 'Example: make the hero stronger and return only HTML/CSS...' : 'Exemple : rends le hero plus premium et donne seulement HTML/CSS...',
-        send: isAr ? 'إرسال' : isEn ? 'Send' : 'Envoyer'
+        send: isAr ? 'إرسال' : isEn ? 'Send' : 'Envoyer',
+        step1: isAr ? '1. Prompt' : isEn ? '1. Prompt' : '1. Prompt',
+        step2: isAr ? '2. Build' : isEn ? '2. Build' : '2. Build',
+        step3: isAr ? '3. Preview' : isEn ? '3. Preview' : '3. Aperçu',
+        step4: isAr ? '4. Iterate' : isEn ? '4. Iterate' : '4. Itérer',
+        quickHero: isAr ? 'Hero أقوى' : isEn ? 'Stronger hero' : 'Hero plus fort',
+        quickMobile: isAr ? 'Mobile premium' : isEn ? 'Premium mobile' : 'Mobile premium',
+        quickTrust: isAr ? 'إضافة الثقة' : isEn ? 'Add trust' : 'Ajouter confiance',
+        quickShort: isAr ? 'اختصر الكود' : isEn ? 'Shorten code' : 'Raccourcir le code'
     };
     return `<div class="funnel-mega-redesign">
         <header>
@@ -18174,19 +18201,41 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                 <div><small>${safe(builderLabels.quotaTokens)}</small><strong>—</strong></div>
                 <div><small>${safe(builderLabels.quotaReset)}</small><strong>${safe(builderLabels.quotaWaiting)}</strong></div>
             </div>
+            <div class="groq-machine-steps" data-no-collapse="true">
+                <span>${safe(builderLabels.step1)}</span>
+                <span>${safe(builderLabels.step2)}</span>
+                <span>${safe(builderLabels.step3)}</span>
+                <span>${safe(builderLabels.step4)}</span>
+            </div>
+            <div class="groq-builder-quick" data-no-collapse="true">
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setGroqBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickHero)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setGroqBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickMobile)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setGroqBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickTrust)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setGroqBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickShort)}</button>
+            </div>
             <textarea id="${builderIds.custom}" class="groq-builder-note" data-no-collapse="true" placeholder="${safe(builderLabels.note)}"></textarea>
             <div class="groq-builder-actions">
-                <button type="button" class="primary" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('full','${ids.full}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}',this)"><i class="fas fa-wand-magic-sparkles"></i>${safe(builderLabels.full)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('html','${ids.html}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}',this)"><i class="fab fa-html5"></i>${safe(builderLabels.html)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('css','${ids.css}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}',this)"><i class="fab fa-css3-alt"></i>${safe(builderLabels.css)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('js','${ids.js}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}',this)"><i class="fab fa-js"></i>${safe(builderLabels.js)}</button>
+                <button type="button" class="primary" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('full','${ids.full}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this)"><i class="fas fa-wand-magic-sparkles"></i>${safe(builderLabels.full)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('html','${ids.html}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this)"><i class="fab fa-html5"></i>${safe(builderLabels.html)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('css','${ids.css}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this)"><i class="fab fa-css3-alt"></i>${safe(builderLabels.css)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('js','${ids.js}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this)"><i class="fab fa-js"></i>${safe(builderLabels.js)}</button>
             </div>
-            <div class="groq-builder-output-wrap">
-                <div class="groq-builder-output-head">
-                    <span>${safe(builderLabels.result)}</span>
-                    <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${builderIds.output}', this)"><i class="fas fa-copy"></i>${safe(builderLabels.copy)}</button>
+            <div class="groq-workbench-grid">
+                <div class="groq-builder-output-wrap">
+                    <div class="groq-builder-output-head">
+                        <span>${safe(builderLabels.result)}</span>
+                        <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${builderIds.output}', this)"><i class="fas fa-copy"></i>${safe(builderLabels.copy)}</button>
+                    </div>
+                    <pre id="${builderIds.output}" class="groq-builder-output" dir="ltr">${safe(builderLabels.waiting)}</pre>
                 </div>
-                <pre id="${builderIds.output}" class="groq-builder-output" dir="ltr">${safe(builderLabels.waiting)}</pre>
+                <div class="groq-builder-output-wrap">
+                    <div class="groq-builder-output-head">
+                        <span>${safe(builderLabels.preview)}</span>
+                        <button type="button" data-no-collapse="true" onclick="event.stopPropagation();renderGroqCodePreview('${builderIds.output}','${builderIds.preview}','${builderIds.previewEmpty}')"><i class="fas fa-eye"></i>${safe(builderLabels.refreshPreview)}</button>
+                    </div>
+                    <div id="${builderIds.previewEmpty}" class="groq-preview-empty">${safe(builderLabels.previewWaiting)}</div>
+                    <iframe id="${builderIds.preview}" class="groq-preview-frame" title="Daka AI preview" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" style="display:none"></iframe>
+                </div>
             </div>
             <div class="groq-chat-panel" data-no-collapse="true" onclick="event.stopPropagation()">
                 <div class="groq-builder-output-head">
@@ -18197,7 +18246,7 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                 </div>
                 <div class="groq-chat-input-row">
                     <textarea id="${builderIds.chatInput}" data-no-collapse="true" placeholder="${safe(builderLabels.chatPlaceholder)}"></textarea>
-                    <button type="button" data-no-collapse="true" onclick="event.stopPropagation();sendGroqCodeBuilderMessage('${ids.short}','${builderIds.output}','${builderIds.chat}','${builderIds.chatInput}','${builderIds.quota}',this)"><i class="fas fa-paper-plane"></i>${safe(builderLabels.send)}</button>
+                    <button type="button" data-no-collapse="true" onclick="event.stopPropagation();sendGroqCodeBuilderMessage('${ids.short}','${builderIds.output}','${builderIds.chat}','${builderIds.chatInput}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this)"><i class="fas fa-paper-plane"></i>${safe(builderLabels.send)}</button>
                 </div>
             </div>
         </section>
@@ -18770,7 +18819,71 @@ function appendGroqChatMessage(chatId, role, text) {
     node.scrollTop = node.scrollHeight;
 }
 
-async function runGroqCodeBuilder(kind, promptId, outputId, customId, quotaId, btn) {
+function setGroqBuilderInstruction(customId, text) {
+    const node = document.getElementById(customId);
+    if (!node) return;
+    const lang = STATE.currentLang || 'fr';
+    const instruction = String(text || '').trim();
+    const map = {
+        fr: {
+            'Hero plus fort': 'Rends le hero plus premium, plus clair et plus orienté conversion. Ne repose pas de questions si les données sont suffisantes.',
+            'Mobile premium': 'Optimise la version mobile : sections courtes, CTA visible, textes lisibles, aucune largeur qui déborde.',
+            'Ajouter confiance': 'Ajoute une couche confiance : preuves visibles, garantie si elle est fournie, FAQ objections, sans inventer d’avis.',
+            'Raccourcir le code': 'Rends le code plus court, propre, commenté par sections, sans framework lourd.'
+        },
+        en: {
+            'Stronger hero': 'Make the hero more premium, clearer, and more conversion-focused. Do not ask more questions if the data is sufficient.',
+            'Premium mobile': 'Optimize mobile: short sections, visible CTA, readable text, no horizontal overflow.',
+            'Add trust': 'Add a trust layer: visible proof, guarantee only if provided, objection FAQ, without inventing reviews.',
+            'Shorten code': 'Make the code shorter, clean, section-commented, without heavy frameworks.'
+        },
+        ar: {
+            'Hero أقوى': 'اجعل قسم Hero أقوى وأكثر وضوحا وموجها للتحويل. لا تعيد طرح الأسئلة إذا كانت البيانات كافية.',
+            'Mobile premium': 'حسن تجربة الهاتف: أقسام قصيرة، CTA واضح، نصوص مقروءة، بدون تجاوز عرض الشاشة.',
+            'إضافة الثقة': 'أضف طبقة ثقة: أدلة واضحة، ضمان فقط إذا كان مذكورا، FAQ للاعتراضات، بدون اختراع تقييمات.',
+            'اختصر الكود': 'اختصر الكود واجعله نظيفا ومقسما بتعليقات، بدون frameworks ثقيلة.'
+        }
+    };
+    const resolved = map[lang]?.[instruction] || instruction;
+    node.value = node.value ? `${node.value}\n${resolved}` : resolved;
+    node.focus();
+}
+
+function extractHtmlForPreview(text) {
+    const raw = String(text || '').trim();
+    const fenced = raw.match(/```html\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/);
+    const candidate = (fenced?.[1] || raw).trim();
+    if (/<!doctype html|<html[\s>]/i.test(candidate)) return candidate;
+    if (/<(section|main|header|div|style|script|body)[\s>]/i.test(candidate)) {
+        return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Inter,Arial,sans-serif;background:#0f172a;color:#f8fafc}</style></head><body>${candidate}</body></html>`;
+    }
+    return '';
+}
+
+function renderGroqCodePreview(outputId, previewId, emptyId) {
+    const output = document.getElementById(outputId);
+    const iframe = document.getElementById(previewId);
+    const empty = document.getElementById(emptyId);
+    if (!iframe) return;
+    const html = extractHtmlForPreview(output?.textContent || '');
+    if (!html) {
+        if (empty) {
+            empty.style.display = 'grid';
+            empty.textContent = STATE.currentLang === 'ar'
+                ? 'لا توجد صفحة HTML كاملة للمعاينة بعد.'
+                : STATE.currentLang === 'en'
+                    ? 'No complete HTML page available for preview yet.'
+                    : 'Aucune page HTML complète disponible pour l’aperçu.';
+        }
+        iframe.style.display = 'none';
+        return;
+    }
+    iframe.srcdoc = html;
+    iframe.style.display = 'block';
+    if (empty) empty.style.display = 'none';
+}
+
+async function runGroqCodeBuilder(kind, promptId, outputId, customId, quotaId, previewId, emptyId, btn) {
     const original = btn?.innerHTML;
     const output = document.getElementById(outputId);
     const promptNode = document.getElementById(promptId);
@@ -18836,6 +18949,7 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
         });
         if (output) output.textContent = response?.content || '';
         updateGroqQuotaUI(quotaId, response);
+        if (kind === 'full') renderGroqCodePreview(outputId, previewId, emptyId);
         toast.success(labels.ready);
     } catch (error) {
         updateGroqQuotaUI(quotaId, error?.data || {});
@@ -18854,7 +18968,7 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
     }
 }
 
-async function sendGroqCodeBuilderMessage(promptId, outputId, chatId, inputId, quotaId, btn) {
+async function sendGroqCodeBuilderMessage(promptId, outputId, chatId, inputId, quotaId, previewId, emptyId, btn) {
     const original = btn?.innerHTML;
     const input = document.getElementById(inputId);
     const output = document.getElementById(outputId);
@@ -18862,6 +18976,12 @@ async function sendGroqCodeBuilderMessage(promptId, outputId, chatId, inputId, q
     const basePrompt = String(promptNode?.value || promptNode?.textContent || '').trim();
     const message = String(input?.value || '').trim();
     const currentCode = String(output?.textContent || '').trim();
+    const chatNode = document.getElementById(chatId);
+    const chatHistory = [...(chatNode?.querySelectorAll('.groq-chat-message') || [])]
+        .slice(-10)
+        .map(node => `${node.classList.contains('user') ? 'USER' : 'ASSISTANT'}: ${String(node.textContent || '').trim()}`)
+        .filter(Boolean)
+        .join('\n\n');
     const lang = STATE.currentLang || 'fr';
     const labels = lang === 'ar'
         ? { login: 'سجل الدخول أولا.', empty: 'اكتب رسالتك أولا.', running: 'Groq يفكر...', connect: 'اربط مفتاح Groq أولا.' }
@@ -18880,11 +19000,21 @@ async function sendGroqCodeBuilderMessage(promptId, outputId, chatId, inputId, q
 DAKA CODE BUILDER - CHAT DE TRAVAIL :
 L'utilisateur veut continuer à travailler le code dans l'interface Daka.
 
+HISTORIQUE RECENT DU CHAT :
+${chatHistory}
+
 DEMANDE UTILISATEUR :
 ${message}
 
 CODE OU REPONSE ACTUELLE A AMELIORER :
 ${currentCode.slice(0, 14000)}
+
+REGLES SPECIALES IMPORTANTES :
+- Si le message utilisateur contient des réponses à tes questions précédentes, considère ces réponses comme les données manquantes.
+- Ne repose pas les mêmes questions si l'utilisateur vient d'y répondre.
+- Si les réponses sont suffisantes, passe directement au plan ou au code demandé.
+- Si une réponse est courte comme "Libye, 48h, logo trust, COD", transforme-la en contraintes de projet exploitables.
+- Si tu dois encore poser des questions, pose uniquement les questions réellement bloquantes, maximum 3.
 
 Réponds en ${lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'}.
 Si tu fournis du code, donne des blocs clairs HTML/CSS/JS.
@@ -18909,6 +19039,7 @@ Si une information manque, pose les questions nécessaires avant d'inventer.`;
         if (last && last.textContent === labels.running) last.textContent = response?.content || '';
         else appendGroqChatMessage(chatId, 'assistant', response?.content || '');
         if (output && response?.content) output.textContent = response.content;
+        renderGroqCodePreview(outputId, previewId, emptyId);
         updateGroqQuotaUI(quotaId, response);
     } catch (error) {
         updateGroqQuotaUI(quotaId, error?.data || {});
