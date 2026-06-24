@@ -5904,8 +5904,8 @@ function updateGroqKeyUI(status = {}) {
     const copy = authCopy();
     const statusNode = document.getElementById('groq-key-status');
     const maskNode = document.getElementById('groq-key-mask');
-    if (statusNode) statusNode.textContent = status.connected ? copy.groqConnected : copy.groqDisconnected;
-    if (maskNode) maskNode.textContent = status.maskedKey || copy.groqMask;
+    if (statusNode) statusNode.textContent = status.connected ? copy.groqConnected : status.setupRequired ? 'Configuration requise' : copy.groqDisconnected;
+    if (maskNode) maskNode.textContent = status.message || status.maskedKey || copy.groqMask;
 }
 
 async function refreshGroqKeyStatus() {
@@ -5953,6 +5953,7 @@ async function saveGroqKey() {
         toast.success(copy.groqSaved);
     } catch (error) {
         toast.error(error.message || copy.groqInvalid);
+        updateGroqKeyUI(error.data || { connected: false, message: error.message });
     }
 }
 

@@ -54,6 +54,29 @@ function validateGroqKey(apiKey) {
   return value;
 }
 
+function isMissingTableError(error) {
+  const text = `${error?.code || ''} ${error?.message || ''} ${error?.details || ''}`;
+  return /42P01|PGRST\d+|user_api_keys|relation .* does not exist|schema cache/i.test(text);
+}
+
+function userKeySetupError(error, fallback = 'USER_KEY_OPERATION_FAILED') {
+  if (isMissingTableError(error)) return {
+    status: 503,
+    error: 'USER_API_KEYS_TABLE_MISSING',
+    message: 'La table Supabase user_api_keys n’est pas encore créée.'
+  };
+  if (error?.message === 'USER_SECRET_ENCRYPTION_KEY_MISSING') return {
+    status: 503,
+    error: 'USER_SECRET_ENCRYPTION_KEY_MISSING',
+    message: 'La variable Render USER_SECRET_ENCRYPTION_KEY manque ou est trop courte.'
+  };
+  return {
+    status: error?.status || 500,
+    error: error?.message || fallback,
+    message: null
+  };
+}
+
 async function getUserProviderKey(supabase, userId, provider = PROVIDER_GROQ) {
   const { data, error } = await supabase
     .from('user_api_keys')
@@ -88,7 +111,19 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
       });
     } catch (error) {
       console.error('[UserKeys] status failed:', error.message);
-      res.status(500).json({ success: false, error: 'USER_KEY_STATUS_FAILED' });
+      const setup = userKeySetupError(error, 'USER_KEY_STATUS_FAILED');
+      if (setup.error === 'USER_API_KEYS_TABLE_MISSING') {
+        return res.json({
+          success: true,
+          connected: false,
+          provider: PROVIDER_GROQ,
+          setupRequired: true,
+          error: setup.error,
+          message: setup.message,
+          model: DEFAULT_GROQ_MODEL
+        });
+      }
+      res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
     }
   });
 
@@ -120,7 +155,8 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
       });
     } catch (error) {
       console.error('[UserKeys] save failed:', error.message);
-      res.status(error.status || 500).json({ success: false, error: error.message || 'USER_KEY_SAVE_FAILED' });
+      const setup = userKeySetupError(error, 'USER_KEY_SAVE_FAILED');
+      res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
     }
   });
 
@@ -136,7 +172,8 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
       res.json({ success: true, connected: false, provider: PROVIDER_GROQ });
     } catch (error) {
       console.error('[UserKeys] delete failed:', error.message);
-      res.status(500).json({ success: false, error: 'USER_KEY_DELETE_FAILED' });
+      const setup = userKeySetupError(error, 'USER_KEY_DELETE_FAILED');
+      res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
     }
   });
 
@@ -185,7 +222,8 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
       });
     } catch (error) {
       console.error('[Groq] prompt-to-code failed:', error.message);
-      res.status(error.status || 500).json({ success: false, error: error.message || 'GROQ_PROMPT_FAILED' });
+      const setup = userKeySetupError(error, 'GROQ_PROMPT_FAILED');
+      res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
     }
   });
 }
