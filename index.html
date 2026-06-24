@@ -13110,9 +13110,11 @@ function getAnalysisDisplayLang(data = {}, fallback = STATE.currentLang || 'fr')
 }
 
 function summarizeReportHtml(html, fallback = '') {
+    const scriptTagPattern = new RegExp('<' + 'script[\\s\\S]*?<\\/' + 'script>', 'gi');
+    const styleTagPattern = new RegExp('<' + 'style[\\s\\S]*?<\\/' + 'style>', 'gi');
     const raw = String(html || '')
-        .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-        .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+        .replace(scriptTagPattern, ' ')
+        .replace(styleTagPattern, ' ')
         .replace(/<[^>]+>/g, ' ')
         .replace(/&nbsp;/g, ' ')
         .replace(/&amp;/g, '&')
