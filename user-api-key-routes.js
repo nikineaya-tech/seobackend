@@ -22,6 +22,147 @@ function groqRateLimitFromHeaders(headers) {
   return Object.fromEntries(Object.entries(rateLimit).filter(([, value]) => value !== null && value !== undefined && value !== ''));
 }
 
+function clampText(value, max = 32000) {
+  const text = String(value || '');
+  if (text.length <= max) return text;
+  const head = text.slice(0, Math.floor(max * 0.72));
+  const tail = text.slice(-Math.floor(max * 0.24));
+  return `${head}\n\n[...CONTENU REDUIT PAR DAKA POUR TENIR LE CONTEXTE...]\n\n${tail}`;
+}
+
+function purifyGroqUserInput(value) {
+  return clampText(String(value || '')
+    .replace(/\u0000/g, '')
+    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
+    .replace(/\r\n/g, '\n')
+    .replace(/[ \t]{3,}/g, '  ')
+    .replace(/\n{5,}/g, '\n\n\n')
+    .trim(), 32000);
+}
+
+function detectPromptLanguage(text) {
+  const value = String(text || '');
+  const arCount = (value.match(/[\u0600-\u06FF]/g) || []).length;
+  if (arCount > 12) return 'ar';
+  if (/\b(francais|français|en français|langue\s*fr|reponds?\s+en\s+francais|réponds?\s+en\s+français)\b/i.test(value)) return 'fr';
+  if (/\b(english|anglais|respond\s+in\s+english|reply\s+in\s+english)\b/i.test(value)) return 'en';
+  return 'fr';
+}
+
+function extractLabeledBlock(text, labels) {
+  const value = String(text || '');
+  for (const label of labels) {
+    const pattern = new RegExp(`${label}\\s*:\\s*([\\s\\S]{0,2400}?)(?:\\n[A-ZÀ-Ü _-]{4,}\\s*:|$)`, 'i');
+    const match = value.match(pattern);
+    if (match?.[1]) return match[1].trim();
+  }
+  return '';
+}
+
+function compactList(items, max = 12) {
+  return [...new Set(items.map(item => String(item || '').trim()).filter(Boolean))].slice(0, max);
+}
+
+function parseGroqUserSignals(prompt) {
+  const text = String(prompt || '');
+  const lower = text.toLowerCase();
+  const latestUserAsk = extractLabeledBlock(text, ['DEMANDE UTILISATEUR', 'USER REQUEST', 'QUESTION UTILISATEUR', 'INSTRUCTION UTILISATEUR SUPPLEMENTAIRE']);
+  const terseAnswers = latestUserAsk
+    .split(/[,;|•\n]+/)
+    .map(part => part.trim())
+    .filter(part => part.length >= 2 && part.length <= 80);
+  const countries = compactList([
+    ...(text.match(/\b(?:maroc|morocco|libye|libya|france|global english|uae|emirats|émirats|saudi|arabie saoudite)\b/gi) || []),
+    ...(text.match(/(?:المغرب|ليبيا|فرنسا|الإمارات|السعودية)/g) || [])
+  ], 6);
+  const constraints = compactList([
+    /cod|cash\s*on\s*delivery|paiement\s+à\s+la\s+livraison|الدفع\s+عند\s+الاستلام/i.test(text) ? 'paiement COD / paiement à la livraison' : '',
+    /\b(?:24\s*[-/]?\s*48\s*h|48\s*h|24h|48h|delivery|livraison|توصيل)\b/i.test(text) ? 'délai de livraison à afficher clairement' : '',
+    /\b(?:logo\s*trust|trust|confiance|preuve|avis|review|testimonial|témoignage|ضمان|ثقة|تقييم)\b/i.test(text) ? 'preuves de confiance visibles' : '',
+    /\b(?:mobile|responsive|android|iphone|هاتف)\b/i.test(text) ? 'mobile-first' : '',
+    /\b(?:galaxy|3d|premium|wow|lovable|machine\s*ia)\b/i.test(text) ? 'design premium immersif' : ''
+  ]);
+  const codeTargets = compactList([
+    /\bhtml\b/i.test(text) ? 'HTML' : '',
+    /\bcss\b/i.test(text) ? 'CSS' : '',
+    /\b(?:js|javascript)\b/i.test(text) ? 'JavaScript' : '',
+    /\b(?:page complète|full page|single file|fichier unique)\b/i.test(text) ? 'page complète en fichier unique' : ''
+  ]);
+  const task = /\b(?:corrige|fix|bug|erreur|ne fonctionne pas|does not work)\b/i.test(lower)
+    ? 'debug_fix'
+    : /\b(?:genere|génère|build|code|html|css|javascript|reconstruire|refaire)\b/i.test(lower)
+      ? 'code_generation'
+      : /\b(?:ameliore|améliore|optimise|rends|make|improve)\b/i.test(lower)
+        ? 'improvement'
+        : 'guided_iteration';
+  return {
+    language: detectPromptLanguage(text),
+    task,
+    latestUserAsk: latestUserAsk || terseAnswers.join(', '),
+    isAnswerToPreviousQuestions: /\b(?:voici|reponses?|réponses?|mes réponses|answers?|libye|libya|maroc|morocco|cod|48\s*h|logo)\b/i.test(latestUserAsk || text),
+    countries,
+    constraints,
+    codeTargets,
+    terseAnswers: compactList(terseAnswers, 10),
+    hasExistingCode: /```|<html|<section|<style|function\s+\w+|const\s+\w+|class=/i.test(text),
+    wantsPreviewReadyHtml: /\b(?:preview|aperçu|lovable|page complète|single file|fichier unique|html css js)\b/i.test(text)
+  };
+}
+
+function buildGroqSystemPrompt(signals) {
+  const languageName = signals.language === 'ar' ? 'Arabic' : signals.language === 'en' ? 'English' : 'French';
+  return `You are Daka AI Code Machine, an elite X10 senior product builder: UI/UX designer, CRO strategist, direct-response copywriter, and frontend HTML/CSS/JS engineer.
+
+Operate in ${languageName}. Be decisive, practical, and implementation-focused.
+
+Core rules:
+- Treat short user answers as real project constraints. If the user answers previous questions, do not ask those questions again.
+- Ask clarification questions only when a missing detail blocks the work. Maximum 3 questions.
+- If enough information exists, produce the plan or code immediately.
+- Never invent reviews, prices, guarantees, certifications, stock, delivery, or legal claims. Mark missing proof as "à confirmer" / "to confirm" / "للتأكيد".
+- Convert vague inputs into clean builder requirements: market, audience, offer, CTA, trust, delivery, design, mobile, code output.
+- For code: prefer a complete, paste-ready, responsive HTML/CSS/JS solution when requested. Keep dependencies light.
+- For redesign: preserve proven facts from the source analysis, improve layout, hierarchy, copy, trust, CTA, and mobile UX.
+- Return structured sections with clear headings. Avoid generic advice. Avoid repeating questions.
+- When the user asks for a Lovable-like result, behave like a focused code builder: brief plan, then code or exact patch.
+
+Quality bar:
+- Premium SaaS/e-commerce aesthetics.
+- Mobile-first.
+- Accessible contrast and focus.
+- Clean class names.
+- No hidden backend URLs, secrets, internal logs, or technical infrastructure details.`;
+}
+
+function buildGroqPersonalizedPrompt(rawPrompt, signals) {
+  const extracted = JSON.stringify({
+    task: signals.task,
+    language: signals.language,
+    latestUserAsk: signals.latestUserAsk,
+    isAnswerToPreviousQuestions: signals.isAnswerToPreviousQuestions,
+    countries: signals.countries,
+    constraints: signals.constraints,
+    codeTargets: signals.codeTargets,
+    terseAnswers: signals.terseAnswers,
+    hasExistingCode: signals.hasExistingCode,
+    wantsPreviewReadyHtml: signals.wantsPreviewReadyHtml
+  }, null, 2);
+  return clampText(`DAKA PROMPT PROCESSOR - INPUT PURIFIE ET PERSONNALISE
+
+Signaux extraits automatiquement:
+${extracted}
+
+Instructions de décision:
+- Si latestUserAsk contient des réponses concrètes, exploite-les comme réponses aux questions précédentes.
+- Si isAnswerToPreviousQuestions=true, ne remercie pas longuement et ne redemande pas les mêmes informations.
+- Si codeTargets contient HTML/CSS/JavaScript ou page complète, livre du code exploitable.
+- Si constraints contient livraison/COD/trust/mobile/design, intègre ces contraintes dans la solution.
+- Si le prompt contient du code existant, améliore ce code au lieu de repartir en théorie.
+
+Prompt utilisateur nettoyé:
+${rawPrompt}`, 30000);
+}
+
 function getEncryptionKey() {
   const secret = process.env.USER_SECRET_ENCRYPTION_KEY || process.env.API_KEY_ENCRYPTION_SECRET || '';
   if (!secret || secret.length < 24) {
@@ -197,8 +338,11 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
   app.post('/api/prompt-to-code/groq', requireAuth, async (req, res) => {
     if (!ensureStore(res)) return;
     try {
-      const prompt = String(req.body?.prompt || '').trim();
+      const prompt = purifyGroqUserInput(req.body?.prompt || '');
       if (prompt.length < 80) return res.status(400).json({ success: false, error: 'PROMPT_TOO_SHORT' });
+      const promptSignals = parseGroqUserSignals(prompt);
+      const systemPrompt = buildGroqSystemPrompt(promptSignals);
+      const personalizedPrompt = buildGroqPersonalizedPrompt(prompt, promptSignals);
       const row = await getUserProviderKey(supabase, req.user.id);
       if (!row || row.status !== 'active') return res.status(400).json({ success: false, error: 'GROQ_KEY_NOT_CONNECTED' });
       const apiKey = decryptSecret(row);
@@ -217,9 +361,9 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
           messages: [
             {
               role: 'system',
-              content: 'You are a concise senior UI/UX, CRO and frontend HTML/CSS/JS assistant. Ask clarification questions when evidence is missing. Never invent proof, prices, reviews or guarantees.'
+              content: systemPrompt
             },
-            { role: 'user', content: prompt }
+            { role: 'user', content: personalizedPrompt }
           ]
         })
       });
@@ -237,6 +381,13 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
         provider: PROVIDER_GROQ,
         model,
         content: payload?.choices?.[0]?.message?.content || '',
+        promptMeta: {
+          task: promptSignals.task,
+          language: promptSignals.language,
+          constraints: promptSignals.constraints,
+          codeTargets: promptSignals.codeTargets,
+          isAnswerToPreviousQuestions: promptSignals.isAnswerToPreviousQuestions
+        },
         usage: payload?.usage || null,
         rateLimit
       });
