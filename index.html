@@ -467,6 +467,19 @@ html, body {
 .funnel-mega-redesign .mega-prompt-shell summary i{transition:transform .2s ease}
 .funnel-mega-redesign .mega-prompt-shell[open] summary i{transform:rotate(180deg)}
 .funnel-mega-redesign textarea.mega-copy-source{position:absolute;left:-9999px;top:auto;width:1px;height:1px;opacity:0;pointer-events:none}
+.groq-code-builder{display:grid;gap:12px;padding:14px;border:1px solid rgba(34,197,94,.22);border-radius:16px;background:radial-gradient(circle at 12% 0%,rgba(34,197,94,.14),transparent 34%),linear-gradient(145deg,rgba(6,16,29,.94),rgba(2,6,23,.92));box-shadow:0 18px 48px rgba(0,0,0,.22)}
+.groq-code-builder header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:0;border:0;background:transparent}
+.groq-code-builder header small{color:#86efac}
+.groq-code-builder header strong{font-size:.98rem}
+.groq-builder-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px}
+.groq-builder-actions button{justify-content:center;border-color:rgba(34,197,94,.25);background:linear-gradient(135deg,rgba(34,197,94,.18),rgba(34,211,238,.08));color:#dcfce7}
+.groq-builder-actions button.primary{background:linear-gradient(135deg,#22c55e,#06b6d4);color:#03111c;border-color:transparent}
+.groq-builder-note{width:100%;min-height:76px;padding:12px 13px;border:1px solid rgba(148,163,184,.18);border-radius:13px;background:#071120;color:#e2e8f0;resize:vertical;font:600 .78rem/1.55 Inter,Arial,sans-serif}
+.groq-builder-note:focus{outline:2px solid rgba(34,211,238,.35);border-color:#22d3ee}
+.groq-builder-output-wrap{border:1px solid rgba(148,163,184,.14);border-radius:14px;overflow:hidden;background:#020817}
+.groq-builder-output-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:rgba(15,23,42,.88);border-bottom:1px solid rgba(148,163,184,.12)}
+.groq-builder-output-head span{color:#cbd5e1;font-size:.72rem;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
+.groq-builder-output{min-height:170px;max-height:520px;margin:0;padding:16px;color:#dbeafe;background:#020817;overflow:auto;white-space:pre-wrap;font:500 .76rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace}
 .groq-key-panel{display:grid;gap:14px}
 .groq-status-card{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px;border:1px solid rgba(34,211,238,.18);border-radius:14px;background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(139,92,246,.08))}
 .groq-status-card strong{display:block;color:#f8fafc;font-size:.92rem}
@@ -503,6 +516,8 @@ html, body {
  .funnel-mega-prompt{max-height:420px;font-size:.7rem}
  .funnel-mega-redesign header{display:grid}
  .funnel-mega-redesign .mega-copy-grid{grid-template-columns:1fr}
+ .groq-code-builder header{display:grid}
+ .groq-builder-actions{grid-template-columns:1fr}
  .funnel-priority-card{grid-template-columns:1fr}
  .funnel-priority-index{width:36px;height:36px}
 }
@@ -18076,6 +18091,10 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         js: `funnelMegaPromptJs_${suffix}`,
         q: `funnelMegaPromptQuestions_${suffix}`
     };
+    const builderIds = {
+        custom: `groqCodeBuilderCustom_${suffix}`,
+        output: `groqCodeBuilderOutput_${suffix}`
+    };
     const promptByKey = {
         full: pack.full,
         short: pack.short,
@@ -18087,6 +18106,18 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
     const hiddenSources = Object.entries(ids).map(([key, id]) =>
         `<textarea id="${id}" class="mega-copy-source">${safe(promptByKey[key] || '')}</textarea>`
     ).join('');
+    const builderLabels = {
+        title: isAr ? 'Daka Code Builder Light' : isEn ? 'Daka Code Builder Light' : 'Daka Code Builder Light',
+        sub: isAr ? 'استخدم مفتاح Groq المتصل لتوليد كود داخل Daka.' : isEn ? 'Use your connected Groq key to generate code inside Daka.' : 'Utilise ta clé Groq connectée pour générer du code directement dans Daka.',
+        note: isAr ? 'تعليمات اختيارية: لون، ستايل، قسم معين، أو تعديل محدد...' : isEn ? 'Optional instruction: color, style, specific section, or exact change...' : 'Instruction optionnelle : couleur, style, section précise, changement exact...',
+        full: isAr ? 'توليد صفحة كاملة' : isEn ? 'Generate full page' : 'Générer page HTML complète',
+        html: isAr ? 'توليد HTML' : isEn ? 'Generate HTML' : 'Générer HTML seul',
+        css: isAr ? 'توليد CSS' : isEn ? 'Generate CSS' : 'Générer CSS seul',
+        js: isAr ? 'توليد JS' : isEn ? 'Generate JS' : 'Générer JS seul',
+        result: isAr ? 'نتيجة Groq' : isEn ? 'Groq result' : 'Résultat Groq',
+        copy: isAr ? 'نسخ النتيجة' : isEn ? 'Copy result' : 'Copier le résultat',
+        waiting: isAr ? 'اختر نوع الكود ثم اضغط على توليد.' : isEn ? 'Choose a code type, then generate.' : 'Choisis un type de code, puis lance la génération.'
+    };
     return `<div class="funnel-mega-redesign">
         <header>
             <div><small>Mega AI Redesign Prompt</small><strong>${safe(help)}</strong></div>
@@ -18101,6 +18132,28 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
             <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.js}', this)"><i class="fab fa-js"></i>${safe(labels.js)}</button>
             <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.q}', this)"><i class="fas fa-circle-question"></i>${safe(labels.q)}</button>
         </div>
+        <section class="groq-code-builder" data-no-collapse="true" onclick="event.stopPropagation()">
+            <header>
+                <div><small>${safe(builderLabels.title)}</small><strong>${safe(builderLabels.sub)}</strong></div>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();openGroqKeyModal()">
+                    <i class="fas fa-key"></i><span>Groq</span>
+                </button>
+            </header>
+            <textarea id="${builderIds.custom}" class="groq-builder-note" data-no-collapse="true" placeholder="${safe(builderLabels.note)}"></textarea>
+            <div class="groq-builder-actions">
+                <button type="button" class="primary" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('full','${ids.full}','${builderIds.output}','${builderIds.custom}',this)"><i class="fas fa-wand-magic-sparkles"></i>${safe(builderLabels.full)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('html','${ids.html}','${builderIds.output}','${builderIds.custom}',this)"><i class="fab fa-html5"></i>${safe(builderLabels.html)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('css','${ids.css}','${builderIds.output}','${builderIds.custom}',this)"><i class="fab fa-css3-alt"></i>${safe(builderLabels.css)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('js','${ids.js}','${builderIds.output}','${builderIds.custom}',this)"><i class="fab fa-js"></i>${safe(builderLabels.js)}</button>
+            </div>
+            <div class="groq-builder-output-wrap">
+                <div class="groq-builder-output-head">
+                    <span>${safe(builderLabels.result)}</span>
+                    <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${builderIds.output}', this)"><i class="fas fa-copy"></i>${safe(builderLabels.copy)}</button>
+                </div>
+                <pre id="${builderIds.output}" class="groq-builder-output" dir="ltr">${safe(builderLabels.waiting)}</pre>
+            </div>
+        </section>
         <details class="mega-prompt-shell" open data-no-collapse="true">
             <summary data-no-collapse="true" onclick="event.stopPropagation()"><span>${safe(labels.toggle)}</span><i class="fas fa-chevron-down"></i></summary>
             <pre class="funnel-mega-prompt" dir="auto">${safe(pack.full.slice(0, 26000))}</pre>
@@ -18636,6 +18689,88 @@ function fallbackCopy(text, cb) {
     document.body.appendChild(ta); ta.focus(); ta.select();
     try { document.execCommand('copy'); cb?.(); } catch(e) { toast.error('Erreur copie'); }
     document.body.removeChild(ta);
+}
+
+async function runGroqCodeBuilder(kind, promptId, outputId, customId, btn) {
+    const original = btn?.innerHTML;
+    const output = document.getElementById(outputId);
+    const promptNode = document.getElementById(promptId);
+    const custom = document.getElementById(customId);
+    const basePrompt = String(promptNode?.value || promptNode?.textContent || '').trim();
+    const extra = String(custom?.value || '').trim();
+    const lang = STATE.currentLang || 'fr';
+    const labels = lang === 'ar'
+        ? {
+            login: 'سجل الدخول أولا.',
+            running: 'Groq يكتب الكود...',
+            ready: 'تم توليد الكود.',
+            connect: 'اربط مفتاح Groq أولا.',
+            empty: 'لا يوجد prompt كاف للتوليد.'
+        }
+        : lang === 'en'
+            ? {
+                login: 'Sign in first.',
+                running: 'Groq is writing the code...',
+                ready: 'Code generated.',
+                connect: 'Connect your Groq key first.',
+                empty: 'No prompt available for generation.'
+            }
+            : {
+                login: 'Connecte-toi d’abord.',
+                running: 'Groq écrit le code...',
+                ready: 'Code généré.',
+                connect: 'Connecte ta clé Groq d’abord.',
+                empty: 'Aucun prompt suffisant pour générer.'
+            };
+    if (!currentAuthUser) {
+        toast.warning(labels.login);
+        return openAuthModal();
+    }
+    if (basePrompt.length < 80) return toast.warning(labels.empty);
+    const taskLine = {
+        full: 'Genere une premiere version exploitable en un seul fichier HTML avec CSS et JS integres. Si c’est trop long, donne la Partie 1 et termine par GO.',
+        html: 'Genere uniquement le HTML semantique. Ne donne pas le CSS ni le JS.',
+        css: 'Genere uniquement le CSS premium mobile-first. Ne donne pas le HTML complet ni le JS.',
+        js: 'Genere uniquement le JavaScript utile. Ne donne pas le HTML complet ni le CSS.'
+    }[kind] || '';
+    const prompt = `${basePrompt}
+
+MODE DAKA CODE BUILDER LIGHT :
+${taskLine}
+${extra ? `\nINSTRUCTION UTILISATEUR SUPPLEMENTAIRE :\n${extra}` : ''}
+
+Réponds directement avec le livrable demandé, sans blabla inutile.`;
+    try {
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Groq...';
+        }
+        if (output) output.textContent = labels.running;
+        const response = await api.request('/api/prompt-to-code/groq', {
+            method: 'POST',
+            body: JSON.stringify({
+                prompt,
+                maxTokens: kind === 'full' ? 4096 : 3000,
+                temperature: 0.22
+            }),
+            timeout: 90000
+        });
+        if (output) output.textContent = response?.content || '';
+        toast.success(labels.ready);
+    } catch (error) {
+        if (/GROQ_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
+            toast.warning(error.data?.message || labels.connect);
+            openGroqKeyModal();
+        } else {
+            toast.error(error.message || 'Groq error');
+        }
+        if (output) output.textContent = error.data?.message || error.message || 'Groq error';
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    }
 }
 
 
