@@ -3,6 +3,7 @@
 const crypto = require('crypto');
 
 const REPORT_TYPES = new Set(['competitors', 'funnel', 'technical', 'keywords']);
+const PUBLIC_REPORT_FRONTEND_URL = 'https://seo.mktnstrategix.com';
 
 function safeText(value, max = 240) {
     return String(value || '').trim().slice(0, max);
@@ -564,11 +565,12 @@ return {
             .single();
 
         if (error || !data) return res.status(404).json({ success: false, error: 'REPORT_NOT_FOUND' });
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const sharePath = data.is_public ? `/shared-report/${data.share_token}` : null;
         return res.json({
             success: true,
             isPublic: data.is_public,
-            shareUrl: data.is_public ? `${baseUrl}/shared-report/${data.share_token}` : null
+            sharePath,
+            shareUrl: sharePath ? `${PUBLIC_REPORT_FRONTEND_URL}${sharePath}` : null
         });
     });
 

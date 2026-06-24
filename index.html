@@ -453,6 +453,25 @@ html, body {
 .funnel-visual-details{padding:13px;border:1px solid rgba(148,163,184,.13);border-radius:8px;background:#091426}
 .funnel-visual-details>h4{margin:0 0 10px;color:#e2e8f0;font-size:.8rem}
 .funnel-mega-prompt{max-height:560px;margin:0;padding:16px;border:1px solid rgba(34,211,238,.16);border-radius:10px;background:#06101d;color:#dbeafe;font:500 .76rem/1.65 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow:auto}
+.funnel-mega-redesign{display:grid;gap:12px}
+.funnel-mega-redesign header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding:14px;border:1px solid rgba(139,92,246,.2);border-radius:14px;background:linear-gradient(135deg,rgba(139,92,246,.12),rgba(34,211,238,.08))}
+.funnel-mega-redesign header small{display:block;color:#c4b5fd;font-size:.65rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+.funnel-mega-redesign header strong{display:block;margin-top:4px;color:#f8fafc;font-size:.88rem;line-height:1.45}
+.funnel-mega-redesign button{flex:0 0 auto;min-height:40px;padding:8px 13px;border:1px solid rgba(196,181,253,.28);border-radius:999px;background:rgba(139,92,246,.16);color:#ddd6fe;font-size:.72rem;font-weight:950;display:inline-flex;align-items:center;gap:7px;cursor:pointer}
+.funnel-mega-redesign button:hover{border-color:rgba(34,211,238,.5);color:#67e8f9;background:rgba(34,211,238,.1)}
+.funnel-priority-actions{display:grid;grid-template-columns:1fr;gap:12px}
+.funnel-priority-lead{padding:14px;border:1px solid rgba(34,211,238,.18);border-radius:14px;background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(139,92,246,.08))}
+.funnel-priority-lead small{display:block;color:#67e8f9;font-size:.64rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+.funnel-priority-lead strong{display:block;margin-top:4px;color:#f8fafc;font-size:.92rem;line-height:1.45}
+.funnel-priority-card{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;padding:14px;border:1px solid rgba(148,163,184,.16);border-radius:16px;background:linear-gradient(145deg,rgba(15,23,42,.92),rgba(2,6,23,.72));box-shadow:0 10px 24px rgba(0,0,0,.16)}
+.funnel-priority-index{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;color:#03111c;background:linear-gradient(135deg,#67e8f9,#a78bfa);font-weight:950}
+.funnel-priority-main{min-width:0;display:grid;gap:9px}
+.funnel-priority-main>span{color:#7dd3fc;font-size:.68rem;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
+.funnel-priority-main p{margin:0;padding:10px 12px;border:1px solid rgba(148,163,184,.12);border-radius:11px;background:rgba(2,6,23,.35);color:#dbeafe;font-size:.8rem;line-height:1.6;overflow-wrap:anywhere}
+.funnel-priority-main p b{display:block;margin-bottom:3px;color:#f8fafc;font-size:.62rem;text-transform:uppercase;letter-spacing:.05em}
+.funnel-priority-fix{border-color:rgba(34,197,94,.18)!important;background:rgba(34,197,94,.055)!important}
+.funnel-priority-meta{display:flex;flex-wrap:wrap;gap:7px}
+.funnel-priority-meta em{padding:5px 8px;border:1px solid rgba(139,92,246,.2);border-radius:999px;color:#c4b5fd;background:rgba(139,92,246,.08);font-style:normal;font-size:.65rem;font-weight:850}
 .funnel-v2-hero-embedded{margin:0}
 @media(max-width:700px){
  .funnel-legacy-row{grid-template-columns:1fr;gap:6px;padding:10px}
@@ -462,6 +481,9 @@ html, body {
  .funnel-aida-card>header{padding:12px}
  .funnel-color-grid{grid-template-columns:1fr;padding:9px}
  .funnel-mega-prompt{max-height:420px;font-size:.7rem}
+ .funnel-mega-redesign header{display:grid}
+ .funnel-priority-card{grid-template-columns:1fr}
+ .funnel-priority-index{width:36px;height:36px}
 }
 </style>
 
@@ -5916,17 +5938,21 @@ async function shareSavedReport(id) {
             body: JSON.stringify({ isPublic: true }),
             timeout: 20000
         });
-        if (!response?.shareUrl) throw new Error(copy.shareUnavailable);
+        const sharePath = response?.sharePath || response?.shareUrl;
+        if (!sharePath) throw new Error(copy.shareUnavailable);
+        const shareUrl = /^https?:\/\//i.test(String(sharePath))
+            ? String(sharePath)
+            : new URL(sharePath, window.location.origin).href;
         if (shareWindow && !shareWindow.closed) {
-            shareWindow.location.href = response.shareUrl;
+            shareWindow.location.href = shareUrl;
         }
         try {
-            await navigator.clipboard.writeText(response.shareUrl);
+            await navigator.clipboard.writeText(shareUrl);
         } catch (_) {
-            if (!shareWindow || shareWindow.closed) window.prompt(copy.share, response.shareUrl);
+            if (!shareWindow || shareWindow.closed) window.prompt(copy.share, shareUrl);
         }
         toast.success(copy.shareCopied);
-        return response.shareUrl;
+        return shareUrl;
     } catch (error) {
         if (shareWindow && !shareWindow.closed) shareWindow.close();
         console.error('[Reports] share failed:', error);
@@ -5935,7 +5961,60 @@ async function shareSavedReport(id) {
     }
 }
 
+function getSharedReportTokenFromLocation() {
+    const pathMatch = window.location.pathname.match(/\/shared-report\/([^/?#]+)/i);
+    if (pathMatch) return decodeURIComponent(pathMatch[1]);
+    const params = new URLSearchParams(window.location.search);
+    return params.get('sharedReport') || params.get('reportToken') || '';
+}
+
+function renderSharedReportGate(message, mode = 'login') {
+    const copy = authCopy();
+    document.body.classList.add('modal-open');
+    document.body.innerHTML = `
+    <main class="shared-report-gate" style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#020617;color:#f8fafc;font-family:Inter,Arial,sans-serif">
+        <section style="width:min(760px,100%);padding:28px;border:1px solid rgba(125,211,252,.24);border-radius:24px;background:radial-gradient(circle at 8% 0%,rgba(34,211,238,.16),transparent 34%),linear-gradient(145deg,#0f172a,#050816);box-shadow:0 24px 72px rgba(0,0,0,.35)">
+            <span style="display:block;color:#7dd3fc;font-size:.75rem;font-weight:950;letter-spacing:.1em;text-transform:uppercase">Daka Market Intelligence Spyer</span>
+            <h1 style="margin:12px 0 8px;font-size:clamp(1.7rem,4vw,3rem);line-height:1.08">${mode === 'subscribe' ? 'Rapport réservé aux abonnés' : 'Connexion requise'}</h1>
+            <p style="margin:0;color:#cbd5e1;line-height:1.7">${escapeHtml(message || 'Connectez-vous avec un compte abonné pour consulter ce rapport partagé.')}</p>
+            <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:20px">
+                <button type="button" onclick="location.href='/'" style="min-height:44px;padding:10px 16px;border:0;border-radius:999px;background:linear-gradient(135deg,#22c55e,#06b6d4);color:#03111c;font-weight:950;cursor:pointer">${mode === 'subscribe' ? 'Voir les offres' : escapeHtml(copy.login)}</button>
+                <button type="button" onclick="location.href='/'" style="min-height:44px;padding:10px 16px;border:1px solid rgba(125,211,252,.24);border-radius:999px;background:#10213a;color:#e0f2fe;font-weight:900;cursor:pointer">Retour à Daka</button>
+            </div>
+        </section>
+    </main>`;
+}
+
+async function initSharedReportRoute() {
+    const token = getSharedReportTokenFromLocation();
+    if (!token) return;
+    await Promise.race([authReady, new Promise(resolve => setTimeout(resolve, 3500))]);
+    const accessToken = await getAuthAccessToken();
+    if (!accessToken) {
+        renderSharedReportGate('Connectez-vous avec un compte abonné pour ouvrir ce rapport partagé.', 'login');
+        return;
+    }
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/public/reports/${encodeURIComponent(token)}`, {
+            headers: { Authorization: 'Bearer ' + accessToken, Accept: 'application/json' },
+            cache: 'no-store'
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (response.status === 402) {
+            renderSharedReportGate(payload.message || 'Ce rapport partagé est réservé aux comptes abonnés Daka.', 'subscribe');
+            return;
+        }
+        if (!response.ok || !payload.html) throw new Error(payload.message || 'Rapport indisponible.');
+        document.open();
+        document.write(payload.html);
+        document.close();
+    } catch (error) {
+        renderSharedReportGate(error.message || 'Impossible de charger ce rapport partagé.', 'login');
+    }
+}
+
 document.addEventListener('DOMContentLoaded', initSupabaseAuth);
+document.addEventListener('DOMContentLoaded', initSharedReportRoute);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
 window.DAKA_FRONTEND_BUILD = '2026-06-21-evidence-loaders';
@@ -10214,7 +10293,21 @@ function getDakaExportModules() {
                 feature('money', 'fa-hand-holding-dollar', 'Offre, prix et confiance', 'Offer, price and trust', 'العرض والسعر والثقة'),
                 feature('message', 'fa-bullseye', 'Message, promesse et CTA', 'Message, promise and CTA', 'الرسالة والوعد وCTA'),
                 feature('plan', 'fa-list-check', 'Plan de reconstruction', 'Reconstruction plan', 'خطة إعادة البناء'),
-                feature('details', 'fa-database', 'Données observées et limites', 'Observed data and limits', 'البيانات المرصودة والحدود')
+                feature('details', 'fa-database', 'Données observées et limites', 'Observed data and limits', 'البيانات المرصودة والحدود'),
+                feature('aida-journey', 'fa-route', 'Parcours AIDA', 'AIDA journey', 'مسار AIDA'),
+                feature('customer-psychology', 'fa-brain', 'Psychologie client', 'Customer psychology', 'سيكولوجية العميل'),
+                feature('funnel-score', 'fa-gauge-high', 'Score stratégique', 'Strategic score', 'النتيجة الاستراتيجية'),
+                feature('financial-cta', 'fa-coins', 'Prix, offre et CTA', 'Price, offer and CTA', 'السعر والعرض وCTA'),
+                feature('strategic-blueprint', 'fa-compass-drafting', 'Blueprint stratégique', 'Strategic blueprint', 'المخطط الاستراتيجي'),
+                feature('visual-identity', 'fa-palette', 'Identité visuelle', 'Visual identity', 'الهوية البصرية'),
+                feature('technical-signals', 'fa-microchip', 'Signaux techniques', 'Technical signals', 'الإشارات التقنية'),
+                feature('copy-signals', 'fa-quote-left', 'Signaux copywriting', 'Copywriting signals', 'إشارات النص'),
+                feature('page-metrics', 'fa-chart-column', 'Métriques de page', 'Page metrics', 'مقاييس الصفحة'),
+                feature('attack-opportunities', 'fa-crosshairs', 'Angles d’attaque', 'Attack angles', 'زوايا الهجوم'),
+                feature('ready-copy', 'fa-pen-ruler', 'Textes prêts à utiliser', 'Ready-to-use copy', 'نصوص جاهزة'),
+                feature('trust-mobile', 'fa-shield-heart', 'Confiance et mobile', 'Trust and mobile', 'الثقة والهاتف'),
+                feature('prioritized-actions', 'fa-list-check', 'Plan d’action priorisé', 'Prioritized action plan', 'خطة العمل'),
+                feature('mega-redesign', 'fa-wand-magic-sparkles', 'Mega AI Redesign Prompt', 'Mega AI Redesign Prompt', 'أمر إعادة التصميم')
             ]
         },
         {
@@ -17220,17 +17313,61 @@ function funnelV2Array(...values) {
     });
 }
 
+function funnelClientLabel(raw, opts = {}) {
+    const isAr = opts.isAr;
+    const isEn = opts.isEn;
+    const source = funnelV2Text(raw, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!source) return isAr ? 'قسم' : isEn ? 'Section' : 'Section';
+    const key = source.toLowerCase();
+    const label = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
+    const rules = [
+        [/^(hero|h1|above the fold|first screen)$/i, label('Premier écran', 'First screen', 'الشاشة الأولى')],
+        [/primary cta|cta principal|main cta/i, label('Bouton principal', 'Primary action button', 'زر القرار الرئيسي')],
+        [/^(cta|button|call to action)$/i, label('Appel à l’action', 'Call to action', 'دعوة لاتخاذ إجراء')],
+        [/pricing|price|prix|tarif/i, label('Prix et offre', 'Price and offer', 'السعر والعرض')],
+        [/offer|bundle|pack/i, label('Offre et pack', 'Offer and package', 'العرض والباقة')],
+        [/social proof|testimonial|review|avis|t[ée]moignage|rating/i, label('Preuve sociale', 'Social proof', 'الدليل الاجتماعي')],
+        [/features?|specs?|specification|caract[ée]ristique/i, label('Caractéristiques utiles', 'Useful features', 'الخصائص المهمة')],
+        [/product visuals?|media|images?|video|gallery/i, label('Visuels produit', 'Product visuals', 'صور المنتج')],
+        [/product|produit/i, label('Produit ou service', 'Product or service', 'المنتج أو الخدمة')],
+        [/returns?|refund|retours?|remboursement/i, label('Retours et réassurance', 'Returns and reassurance', 'الإرجاع والطمأنة')],
+        [/delivery|shipping|livraison/i, label('Livraison', 'Delivery', 'التوصيل')],
+        [/trust|guarantee|warranty|garantie|preuve/i, label('Confiance et garanties', 'Trust and guarantees', 'الثقة والضمانات')],
+        [/faq|questions?/i, label('Questions avant décision', 'Pre-purchase questions', 'أسئلة قبل القرار')],
+        [/content|copy|message|texte/i, label('Contenu de vente', 'Sales copy', 'محتوى البيع')],
+        [/payment|paiement/i, label('Paiement', 'Payment', 'الدفع')],
+        [/mission/i, label('Analyse spécialisée', 'Specialized analysis', 'تحليل متخصص')],
+        [/zone/i, label('Zone de page', 'Page area', 'منطقة الصفحة')]
+    ];
+    const found = rules.find(([pattern]) => pattern.test(key));
+    if (found) return found[1];
+    return source
+        .replace(/\bcta\b/ig, 'CTA')
+        .replace(/\bseo\b/ig, isEn ? 'SEO' : 'audit site')
+        .replace(/^./, char => char.toUpperCase());
+}
+
+function funnelPriorityLabel(value, opts = {}) {
+    const isAr = opts.isAr;
+    const isEn = opts.isEn;
+    const raw = funnelV2Text(value, '').toUpperCase();
+    if (/CRITICAL|URGENT|HIGH|HAUTE|ELEV|ÉLEV/.test(raw)) return isAr ? 'Haute' : isEn ? 'High' : 'Haute';
+    if (/LOW|BASSE|FAIBLE/.test(raw)) return isAr ? 'منخفضة' : isEn ? 'Low' : 'Faible';
+    if (/MEDIUM|MOYEN|MOYENNE|متوسط/.test(raw)) return isAr ? 'متوسطة' : isEn ? 'Medium' : 'Moyenne';
+    return funnelV2Text(value, isAr ? 'متوسطة' : isEn ? 'Medium' : 'Moyenne');
+}
+
 function renderFunnelV2Cards(items, opts = {}) {
     const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
     const list = Array.isArray(items) ? items : [];
     if (!list.length) return '';
     return `<div class="funnel-v2-card-grid">${list.slice(0, opts.limit || 6).map((item, index) => {
         const object = item && typeof item === 'object' ? item : { title: item };
-        const title = funnelV2Text(object.section || object.sectionType || object.friction || object.title || object.action || object.name, `${opts.itemLabel || 'Action'} ${index + 1}`);
+        const title = funnelClientLabel(object.section || object.sectionType || object.friction || object.title || object.action || object.name, opts) || `${opts.itemLabel || 'Action'} ${index + 1}`;
         const observation = funnelV2Text(object.observedEvidence || object.evidence || object.detectedText || object.currentEvidence || object.problem || object.reason || object.why);
         const action = funnelV2Text(object.correction || object.action || object.improvement || object.newRecommendation || object.recommendedPosition || object.howTo);
-        const priority = funnelV2Text(object.priority || object.impact, 'MEDIUM');
-        const confidence = funnelV2Text(object.confidence, 'MEDIUM');
+        const priority = funnelPriorityLabel(object.priority || object.impact, opts);
+        const confidence = funnelPriorityLabel(object.confidence, opts);
         return `<article class="funnel-v2-action" style="--funnel-v2-accent:${safe(opts.accent || '#22d3ee')}">
             <div class="funnel-v2-action-head"><strong dir="auto">${safe(title)}</strong><span>${safe(priority)}</span></div>
             ${observation ? `<p dir="auto"><b>${safe(opts.observationLabel || 'Observation')}:</b> ${safe(observation)}</p>` : ''}
@@ -17290,10 +17427,7 @@ function funnelLegacyLabel(key, opts = {}) {
         hasWhatsApp: 'WhatsApp'
     };
     if (labels[key]) return labels[key];
-    return String(key || '')
-        .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-        .replace(/[_-]+/g, ' ')
-        .replace(/^./, char => char.toUpperCase());
+    return funnelClientLabel(String(key || '').replace(/([a-z0-9])([A-Z])/g, '$1 $2'), opts);
 }
 
 function renderFunnelLegacyValue(value, opts = {}, depth = 0) {
@@ -17394,6 +17528,76 @@ function renderFunnelVisualIdentity(value, opts = {}) {
     const remainder = Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'colorPalette'));
     const details = funnelLegacyHasData(remainder) ? renderFunnelLegacyValue(remainder, opts) : '';
     return `<div class="funnel-visual-identity">${paletteHtml}${details ? `<section class="funnel-visual-details"><h4>${safe(text('Lecture de la hiérarchie', 'Hierarchy reading', 'قراءة التسلسل البصري'))}</h4>${details}</section>` : ''}</div>`;
+}
+
+function renderFunnelPrioritizedActions(value, opts = {}) {
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : text => String(text || '');
+    const isAr = opts.isAr;
+    const isEn = opts.isEn;
+    const text = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
+    const source = Array.isArray(value) ? value : (value && typeof value === 'object' ? Object.values(value).flat() : [value]);
+    const actions = source
+        .filter(item => funnelLegacyHasData(item))
+        .map((item, index) => {
+            const object = item && typeof item === 'object' ? item : { action: item };
+            return {
+                index: index + 1,
+                zone: funnelClientLabel(object.zone || object.section || object.sectionType || object.area || object.title || text('Action', 'Action', 'إجراء'), opts),
+                problem: funnelV2Text(object.problemObserved || object.problem || object.issue || object.why || object.observation || object.reason),
+                action: funnelV2Text(object.changeNow || object.action || object.fix || object.howTo || object.recommendation || object.task || object.title),
+                impact: funnelPriorityLabel(object.impact || object.expectedGain || object.roi, opts),
+                effort: funnelPriorityLabel(object.effort || object.timeline || object.delay, opts),
+                priority: funnelV2Text(object.priority || object.rank || index + 1, String(index + 1)),
+                confidence: funnelPriorityLabel(object.confidence || 'MEDIUM', opts)
+            };
+        })
+        .filter(item => item.action || item.problem)
+        .slice(0, 9);
+    if (!actions.length) return renderFunnelLegacyValue(value, opts);
+    return `<div class="funnel-priority-actions">
+        <div class="funnel-priority-lead">
+            <small>${safe(text('Plan lisible', 'Readable plan', 'خطة واضحة'))}</small>
+            <strong>${safe(text('Chaque carte dit quoi changer, pourquoi et avec quel effort.', 'Each card states what to change, why, and with what effort.', 'كل بطاقة توضح ما يجب تغييره ولماذا وبأي جهد.'))}</strong>
+        </div>
+        ${actions.map(item => `<article class="funnel-priority-card">
+            <div class="funnel-priority-index">${safe(String(item.priority).padStart(2, '0'))}</div>
+            <div class="funnel-priority-main">
+                <span>${safe(item.zone)}</span>
+                ${item.problem ? `<p class="funnel-priority-problem" dir="auto"><b>${safe(text('Constat', 'Observation', 'الملاحظة'))}</b>${safe(item.problem)}</p>` : ''}
+                ${item.action ? `<p class="funnel-priority-fix" dir="auto"><b>${safe(text('À faire', 'Change now', 'ما يجب فعله'))}</b>${safe(item.action)}</p>` : ''}
+                <div class="funnel-priority-meta">
+                    <em>${safe(text('Impact', 'Impact', 'الأثر'))}: ${safe(item.impact)}</em>
+                    <em>${safe(text('Effort', 'Effort', 'الجهد'))}: ${safe(item.effort)}</em>
+                    <em>${safe(text('Confiance', 'Confidence', 'الثقة'))}: ${safe(item.confidence)}</em>
+                </div>
+            </div>
+        </article>`).join('')}
+    </div>`;
+}
+
+function renderMegaRedesignPromptBlock(value, opts = {}) {
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : text => String(text || '');
+    const isAr = opts.isAr;
+    const isEn = opts.isEn;
+    const label = isAr ? 'نسخ البرومبت' : isEn ? 'Copy prompt' : 'Copier le prompt';
+    const help = isAr
+        ? 'انسخه في أداة التصميم أو الذكاء الاصطناعي لإعادة بناء الصفحة مع الحفاظ على الأدلة.'
+        : isEn ? 'Copy it into your design or AI tool to rebuild the page while preserving evidence.'
+        : 'Copiez-le dans votre outil design ou IA pour reconstruire la page sans perdre les preuves.';
+    const raw = String(value || '');
+    const promptText = typeof buildUpscaledMegaRedesignPrompt === 'function'
+        ? buildUpscaledMegaRedesignPrompt(raw)
+        : raw;
+    const id = 'funnelMegaPromptText';
+    return `<div class="funnel-mega-redesign">
+        <header>
+            <div><small>Mega AI Redesign Prompt</small><strong>${safe(help)}</strong></div>
+            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${id}', this)">
+                <i class="fas fa-copy"></i><span>${safe(label)}</span>
+            </button>
+        </header>
+        <pre id="${id}" class="funnel-mega-prompt" dir="auto">${safe(promptText.slice(0, 22000))}</pre>
+    </div>`;
 }
 
 function renderFunnelLegacyModules(data = {}, opts = {}) {
@@ -17527,7 +17731,9 @@ function renderFunnelLegacyModules(data = {}, opts = {}) {
         .map(module => {
             const isPrompt = module.key === 'mega-redesign';
             const body = isPrompt
-                ? '<pre class="funnel-mega-prompt" dir="auto">' + (typeof escapeHtml === 'function' ? escapeHtml(String(module.value).slice(0, 14000)) : String(module.value).slice(0, 14000)) + '</pre>'
+                ? renderMegaRedesignPromptBlock(module.value, { isAr, isEn })
+                : module.key === 'prioritized-actions'
+                    ? renderFunnelPrioritizedActions(module.value, { isAr, isEn })
                 : module.key === 'aida-journey'
                     ? renderFunnelAidaJourney(module.value, { isAr, isEn })
                     : module.key === 'visual-identity'
@@ -17561,7 +17767,7 @@ function renderFunnelPrimaryEvidence(data = {}, { isAr = false, isEn = false } =
                 const rawLabel = funnelV2Text(item.sectionType || item.section || item.name || item.title || item.text, 'Section');
                 const label = /^mission$/i.test(rawLabel)
                     ? (isAr ? 'تحليل متخصص' : isEn ? 'Specialized analysis' : 'Analyse spécialisée')
-                    : rawLabel;
+                    : funnelClientLabel(rawLabel, { isAr, isEn });
                 const detail = funnelV2Text(item.detectedText || item.reason || item.problem || item.verdict || item.status, '');
                 return `<article class="funnel-v2-action-card"><div><strong dir="auto">${safe(label)}</strong>${item.evidenceSource === 'global-corpus-fallback' ? `<small>${safe(sourceLabel)}</small>` : ''}</div>${detail ? `<p dir="auto">${safe(detail)}</p>` : ''}</article>`;
             }).join('')}
