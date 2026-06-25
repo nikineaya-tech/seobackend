@@ -2,22 +2,38 @@
 
 const crypto = require('crypto');
 
-const PROVIDER_GROQ = 'groq';
-const DEFAULT_GROQ_MODEL = process.env.GROQ_PROMPT_TO_CODE_MODEL || process.env.GROQ_MODEL || 'llama-3.3-70b-versatile';
+const PROVIDER_OPENROUTER = 'openrouter';
+const DEFAULT_OPENROUTER_MODEL = process.env.OPENROUTER_PROMPT_TO_CODE_MODEL || process.env.OPENROUTER_MODEL || 'cohere/north-mini-code';
+const OPENROUTER_CODE_MODELS = new Set([
+  'cohere/north-mini-code',
+  'z-ai/glm-5.2',
+  'nvidia/nemotron-3-ultra:free',
+  'moonshotai/kimi-k2.7-code',
+  'qwen/qwen3.7-plus',
+  'qwen/qwen3.7-max',
+  'minimax/minimax-m3',
+  'stepfun/step-3.7-flash'
+]);
+const OPENROUTER_FALLBACK_MODELS = [
+  DEFAULT_OPENROUTER_MODEL,
+  'cohere/north-mini-code',
+  'z-ai/glm-5.2',
+  'nvidia/nemotron-3-ultra:free'
+];
 
-function groqHeader(headers, name) {
+function responseHeader(headers, name) {
   return headers?.get?.(name) || null;
 }
 
-function groqRateLimitFromHeaders(headers) {
+function openRouterRateLimitFromHeaders(headers) {
   const rateLimit = {
-    limitRequests: groqHeader(headers, 'x-ratelimit-limit-requests'),
-    remainingRequests: groqHeader(headers, 'x-ratelimit-remaining-requests'),
-    resetRequests: groqHeader(headers, 'x-ratelimit-reset-requests'),
-    limitTokens: groqHeader(headers, 'x-ratelimit-limit-tokens'),
-    remainingTokens: groqHeader(headers, 'x-ratelimit-remaining-tokens'),
-    resetTokens: groqHeader(headers, 'x-ratelimit-reset-tokens'),
-    retryAfter: groqHeader(headers, 'retry-after')
+    limitRequests: responseHeader(headers, 'x-ratelimit-limit-requests') || responseHeader(headers, 'x-ratelimit-limit'),
+    remainingRequests: responseHeader(headers, 'x-ratelimit-remaining-requests') || responseHeader(headers, 'x-ratelimit-remaining'),
+    resetRequests: responseHeader(headers, 'x-ratelimit-reset-requests') || responseHeader(headers, 'x-ratelimit-reset'),
+    limitTokens: responseHeader(headers, 'x-ratelimit-limit-tokens'),
+    remainingTokens: responseHeader(headers, 'x-ratelimit-remaining-tokens'),
+    resetTokens: responseHeader(headers, 'x-ratelimit-reset-tokens'),
+    retryAfter: responseHeader(headers, 'retry-after')
   };
   return Object.fromEntries(Object.entries(rateLimit).filter(([, value]) => value !== null && value !== undefined && value !== ''));
 }
@@ -30,7 +46,7 @@ function clampText(value, max = 32000) {
   return `${head}\n\n[...CONTENU REDUIT PAR DAKA POUR TENIR LE CONTEXTE...]\n\n${tail}`;
 }
 
-function purifyGroqUserInput(value) {
+function purifyCodeUserInput(value) {
   return clampText(String(value || '')
     .replace(/\u0000/g, '')
     .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
@@ -63,7 +79,7 @@ function compactList(items, max = 12) {
   return [...new Set(items.map(item => String(item || '').trim()).filter(Boolean))].slice(0, max);
 }
 
-function parseGroqUserSignals(prompt) {
+function parseCodeUserSignals(prompt) {
   const text = String(prompt || '');
   const lower = text.toLowerCase();
   const latestUserAsk = extractLabeledBlock(text, ['DEMANDE UTILISATEUR', 'USER REQUEST', 'QUESTION UTILISATEUR', 'INSTRUCTION UTILISATEUR SUPPLEMENTAIRE']);
@@ -109,7 +125,7 @@ function parseGroqUserSignals(prompt) {
   };
 }
 
-function buildGroqSystemPrompt(signals) {
+function buildOpenRouterSystemPrompt(signals) {
   const languageName = signals.language === 'ar' ? 'Arabic' : signals.language === 'en' ? 'English' : 'French';
   return `You are Daka AI Code Machine, an elite X10 senior product builder: UI/UX designer, CRO strategist, direct-response copywriter, and frontend HTML/CSS/JS engineer.
 
@@ -126,6 +142,13 @@ Core rules:
 - Return structured sections with clear headings. Avoid generic advice. Avoid repeating questions.
 - When the user asks for a Lovable-like result, behave like a focused code builder: brief plan, then code or exact patch.
 
+Output contract for code generation:
+- Return Markdown, not loose prose.
+- For complete pages, put the deliverable inside one fenced \`\`\`html block when possible.
+- For split output, use fenced \`\`\`html, \`\`\`css, and \`\`\`javascript blocks.
+- Keep commentary to a maximum of 3 short bullets before the code, only when useful.
+- Never return raw unformatted code without Markdown fences.
+
 Quality bar:
 - Premium SaaS/e-commerce aesthetics.
 - Mobile-first.
@@ -134,7 +157,7 @@ Quality bar:
 - No hidden backend URLs, secrets, internal logs, or technical infrastructure details.`;
 }
 
-function buildGroqPersonalizedPrompt(rawPrompt, signals) {
+function buildOpenRouterPersonalizedPrompt(rawPrompt, signals) {
   const extracted = JSON.stringify({
     task: signals.task,
     language: signals.language,
@@ -202,14 +225,76 @@ function maskKey(last4) {
   return last4 ? `gsk_****${last4}` : null;
 }
 
-function validateGroqKey(apiKey) {
+function maskOpenRouterKey(last4) {
+  return last4 ? `sk-or-v1-****${last4}` : null;
+}
+
+function validateOpenRouterKey(apiKey) {
   const value = String(apiKey || '').trim();
-  if (!/^gsk_[A-Za-z0-9_-]{20,}$/.test(value)) {
-    const error = new Error('INVALID_GROQ_API_KEY');
+  if (!/^(sk-or-v1-|sk-)[A-Za-z0-9_-]{20,}$/.test(value)) {
+    const error = new Error('INVALID_OPENROUTER_API_KEY');
     error.status = 400;
     throw error;
   }
   return value;
+}
+
+function resolveOpenRouterModel(input) {
+  const requested = String(input || '').trim();
+  if (!requested) return DEFAULT_OPENROUTER_MODEL;
+  return OPENROUTER_CODE_MODELS.has(requested) ? requested : DEFAULT_OPENROUTER_MODEL;
+}
+
+function buildOpenRouterModelChain(primary) {
+  return [...new Set([resolveOpenRouterModel(primary), ...OPENROUTER_FALLBACK_MODELS].filter(Boolean))];
+}
+
+async function callOpenRouterWithFallback({ apiKey, models, messages, maxTokens, temperature }) {
+  const failures = [];
+  let lastRateLimit = {};
+  for (const model of models) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Number(process.env.OPENROUTER_MODEL_TIMEOUT_MS || 45000));
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        signal: controller.signal,
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': process.env.PUBLIC_APP_URL || 'https://seo.mktnstrategix.com',
+          'X-Title': 'Daka Market Intelligence Spyer'
+        },
+        body: JSON.stringify({
+          model,
+          temperature,
+          max_tokens: maxTokens,
+          messages
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      lastRateLimit = openRouterRateLimitFromHeaders(response.headers);
+      if (!response.ok) {
+        failures.push({ model, error: payload?.error?.message || `HTTP_${response.status}` });
+        continue;
+      }
+      const content = payload?.choices?.[0]?.message?.content || '';
+      if (!String(content).trim()) {
+        failures.push({ model, error: 'EMPTY_MODEL_RESPONSE' });
+        continue;
+      }
+      return { payload, model, rateLimit: lastRateLimit, fallbacksTried: failures };
+    } catch (error) {
+      failures.push({ model, error: error?.name === 'AbortError' ? 'MODEL_TIMEOUT_ABORTED' : (error?.message || 'MODEL_REQUEST_FAILED') });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  const error = new Error('OPENROUTER_ALL_MODELS_FAILED');
+  error.status = 502;
+  error.failures = failures;
+  error.rateLimit = lastRateLimit;
+  throw error;
 }
 
 function isMissingTableError(error) {
@@ -235,7 +320,7 @@ function userKeySetupError(error, fallback = 'USER_KEY_OPERATION_FAILED') {
   };
 }
 
-async function getUserProviderKey(supabase, userId, provider = PROVIDER_GROQ) {
+async function getUserProviderKey(supabase, userId, provider = PROVIDER_OPENROUTER) {
   const { data, error } = await supabase
     .from('user_api_keys')
     .select('id,provider,encrypted_key,key_iv,key_tag,key_last4,status,updated_at')
@@ -255,44 +340,46 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
     return true;
   };
 
-  app.get('/api/user-api-keys/groq/status', requireAuth, async (req, res) => {
+  app.get('/api/user-api-keys/openrouter/status', requireAuth, async (req, res) => {
     if (!ensureStore(res)) return;
     try {
-      const row = await getUserProviderKey(supabase, req.user.id);
+      const row = await getUserProviderKey(supabase, req.user.id, PROVIDER_OPENROUTER);
       res.json({
         success: true,
         connected: Boolean(row && row.status === 'active'),
-        provider: PROVIDER_GROQ,
-        maskedKey: row ? maskKey(row.key_last4) : null,
+        provider: PROVIDER_OPENROUTER,
+        maskedKey: row ? maskOpenRouterKey(row.key_last4) : null,
         updatedAt: row?.updated_at || null,
-        model: DEFAULT_GROQ_MODEL
+        model: DEFAULT_OPENROUTER_MODEL,
+        models: [...OPENROUTER_CODE_MODELS]
       });
     } catch (error) {
-      console.error('[UserKeys] status failed:', error.message);
+      console.error('[OpenRouterKeys] status failed:', error.message);
       const setup = userKeySetupError(error, 'USER_KEY_STATUS_FAILED');
       if (setup.error === 'USER_API_KEYS_TABLE_MISSING') {
         return res.json({
           success: true,
           connected: false,
-          provider: PROVIDER_GROQ,
+          provider: PROVIDER_OPENROUTER,
           setupRequired: true,
           error: setup.error,
           message: setup.message,
-          model: DEFAULT_GROQ_MODEL
+          model: DEFAULT_OPENROUTER_MODEL,
+          models: [...OPENROUTER_CODE_MODELS]
         });
       }
       res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
     }
   });
 
-  app.post('/api/user-api-keys/groq', requireAuth, async (req, res) => {
+  app.post('/api/user-api-keys/openrouter', requireAuth, async (req, res) => {
     if (!ensureStore(res)) return;
     try {
-      const apiKey = validateGroqKey(req.body?.apiKey);
+      const apiKey = validateOpenRouterKey(req.body?.apiKey);
       const encrypted = encryptSecret(apiKey);
       const record = {
         user_id: req.user.id,
-        provider: PROVIDER_GROQ,
+        provider: PROVIDER_OPENROUTER,
         ...encrypted,
         key_last4: apiKey.slice(-4),
         status: 'active',
@@ -307,80 +394,67 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
       res.json({
         success: true,
         connected: true,
-        provider: PROVIDER_GROQ,
-        maskedKey: maskKey(data.key_last4),
-        updatedAt: data.updated_at
+        provider: PROVIDER_OPENROUTER,
+        maskedKey: maskOpenRouterKey(data.key_last4),
+        updatedAt: data.updated_at,
+        model: DEFAULT_OPENROUTER_MODEL,
+        models: [...OPENROUTER_CODE_MODELS]
       });
     } catch (error) {
-      console.error('[UserKeys] save failed:', error.message);
+      console.error('[OpenRouterKeys] save failed:', error.message);
       const setup = userKeySetupError(error, 'USER_KEY_SAVE_FAILED');
       res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
     }
   });
 
-  app.delete('/api/user-api-keys/groq', requireAuth, async (req, res) => {
+  app.delete('/api/user-api-keys/openrouter', requireAuth, async (req, res) => {
     if (!ensureStore(res)) return;
     try {
       const { error } = await supabase
         .from('user_api_keys')
         .delete()
         .eq('user_id', req.user.id)
-        .eq('provider', PROVIDER_GROQ);
+        .eq('provider', PROVIDER_OPENROUTER);
       if (error) throw error;
-      res.json({ success: true, connected: false, provider: PROVIDER_GROQ });
+      res.json({ success: true, connected: false, provider: PROVIDER_OPENROUTER });
     } catch (error) {
-      console.error('[UserKeys] delete failed:', error.message);
+      console.error('[OpenRouterKeys] delete failed:', error.message);
       const setup = userKeySetupError(error, 'USER_KEY_DELETE_FAILED');
       res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
     }
   });
 
-  app.post('/api/prompt-to-code/groq', requireAuth, async (req, res) => {
+  app.post('/api/prompt-to-code/openrouter', requireAuth, async (req, res) => {
     if (!ensureStore(res)) return;
     try {
-      const prompt = purifyGroqUserInput(req.body?.prompt || '');
+      const prompt = purifyCodeUserInput(req.body?.prompt || '');
       if (prompt.length < 80) return res.status(400).json({ success: false, error: 'PROMPT_TOO_SHORT' });
-      const promptSignals = parseGroqUserSignals(prompt);
-      const systemPrompt = buildGroqSystemPrompt(promptSignals);
-      const personalizedPrompt = buildGroqPersonalizedPrompt(prompt, promptSignals);
-      const row = await getUserProviderKey(supabase, req.user.id);
-      if (!row || row.status !== 'active') return res.status(400).json({ success: false, error: 'GROQ_KEY_NOT_CONNECTED' });
+      const promptSignals = parseCodeUserSignals(prompt);
+      const systemPrompt = buildOpenRouterSystemPrompt(promptSignals);
+      const personalizedPrompt = buildOpenRouterPersonalizedPrompt(prompt, promptSignals);
+      const row = await getUserProviderKey(supabase, req.user.id, PROVIDER_OPENROUTER);
+      if (!row || row.status !== 'active') return res.status(400).json({ success: false, error: 'OPENROUTER_KEY_NOT_CONNECTED' });
       const apiKey = decryptSecret(row);
-      const model = String(req.body?.model || DEFAULT_GROQ_MODEL).trim();
-      const maxTokens = Math.min(4096, Math.max(512, Number(req.body?.maxTokens || 2200)));
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          model,
-          temperature: Number.isFinite(Number(req.body?.temperature)) ? Number(req.body.temperature) : 0.25,
-          max_tokens: maxTokens,
-          messages: [
-            {
-              role: 'system',
-              content: systemPrompt
-            },
-            { role: 'user', content: personalizedPrompt }
-          ]
-        })
+      const models = buildOpenRouterModelChain(req.body?.model);
+      const maxTokens = Math.min(64000, Math.max(512, Number(req.body?.maxTokens || 4096)));
+      const temperature = Number.isFinite(Number(req.body?.temperature)) ? Number(req.body.temperature) : 0.22;
+      const result = await callOpenRouterWithFallback({
+        apiKey,
+        models,
+        maxTokens,
+        temperature,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: personalizedPrompt }
+        ]
       });
-      const payload = await response.json().catch(() => ({}));
-      const rateLimit = groqRateLimitFromHeaders(response.headers);
-      if (!response.ok) {
-        return res.status(response.status).json({
-          success: false,
-          error: payload?.error?.message || 'GROQ_REQUEST_FAILED',
-          rateLimit
-        });
-      }
       res.json({
         success: true,
-        provider: PROVIDER_GROQ,
-        model,
-        content: payload?.choices?.[0]?.message?.content || '',
+        provider: PROVIDER_OPENROUTER,
+        model: result.model,
+        attemptedModels: models,
+        fallbacksTried: result.fallbacksTried,
+        content: result.payload?.choices?.[0]?.message?.content || '',
         promptMeta: {
           task: promptSignals.task,
           language: promptSignals.language,
@@ -388,15 +462,22 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
           codeTargets: promptSignals.codeTargets,
           isAnswerToPreviousQuestions: promptSignals.isAnswerToPreviousQuestions
         },
-        usage: payload?.usage || null,
-        rateLimit
+        usage: result.payload?.usage || null,
+        rateLimit: result.rateLimit
       });
     } catch (error) {
-      console.error('[Groq] prompt-to-code failed:', error.message);
-      const setup = userKeySetupError(error, 'GROQ_PROMPT_FAILED');
-      res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
+      console.error('[OpenRouter] prompt-to-code failed:', error.message);
+      const setup = userKeySetupError(error, 'OPENROUTER_PROMPT_FAILED');
+      res.status(setup.status).json({
+        success: false,
+        error: setup.error,
+        message: setup.message,
+        failures: error.failures || null,
+        rateLimit: error.rateLimit || null
+      });
     }
   });
+
 }
 
 module.exports = { registerUserApiKeyRoutes };

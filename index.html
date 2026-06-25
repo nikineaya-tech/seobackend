@@ -519,6 +519,21 @@ html, body {
 .groq-actions button{min-height:42px;padding:9px 13px;border:1px solid rgba(148,163,184,.18);border-radius:999px;background:#101b31;color:#e0f2fe;font-weight:900;cursor:pointer}
 .groq-actions button:first-child{border-color:rgba(34,197,94,.3);background:linear-gradient(135deg,#22c55e,#06b6d4);color:#03111c}
 .groq-note{margin:0;color:#94a3b8;font-size:.74rem;line-height:1.55}
+
+.groq-model-row{display:grid;grid-template-columns:auto minmax(220px,1fr);align-items:center;gap:12px;padding:11px 12px;border:1px solid rgba(34,211,238,.2);border-radius:16px;background:linear-gradient(135deg,rgba(15,23,42,.82),rgba(6,18,34,.72));color:#dbeafe;font-size:.74rem;font-weight:950;letter-spacing:.04em;text-transform:uppercase}
+.groq-model-row select{width:100%;min-height:42px;border:1px solid rgba(34,211,238,.22);border-radius:13px;background:#061120;color:#f8fafc;padding:0 12px;font:800 .78rem/1 Inter,Arial,sans-serif;cursor:pointer}
+.groq-model-row select:focus{outline:2px solid rgba(34,211,238,.35);border-color:#22d3ee}
+.groq-code-builder{padding:22px;border-radius:26px;background:radial-gradient(circle at 14% -8%,rgba(34,211,238,.28),transparent 33%),radial-gradient(circle at 88% 0%,rgba(168,85,247,.28),transparent 30%),radial-gradient(circle at 50% 110%,rgba(34,197,94,.16),transparent 42%),linear-gradient(145deg,rgba(8,17,32,.98),rgba(2,6,23,.98))}
+.groq-code-builder header{align-items:center}
+.groq-code-builder header strong{font-size:1.05rem;max-width:760px}
+.groq-builder-note{min-height:132px;border-radius:24px;padding:18px 20px;font-size:.92rem;line-height:1.65;background:linear-gradient(180deg,#f8fafc,#e0f2fe);color:#0f172a;border-color:rgba(255,255,255,.72);box-shadow:0 20px 55px rgba(34,211,238,.1)}
+.groq-builder-note::placeholder{color:#64748b}
+.groq-builder-actions button{min-height:48px;border-radius:16px;font-size:.76rem}
+.groq-builder-actions button.primary{font-size:.82rem;background:linear-gradient(135deg,#22c55e,#22d3ee,#8b5cf6);box-shadow:0 16px 45px rgba(34,211,238,.22)}
+.groq-builder-output-wrap,.groq-chat-panel{border-radius:20px;background:linear-gradient(180deg,rgba(4,10,22,.96),rgba(8,17,34,.96));box-shadow:0 18px 55px rgba(2,6,23,.3),inset 0 1px 0 rgba(255,255,255,.04)}
+.groq-builder-output{font-size:.79rem;line-height:1.72;tab-size:2}
+@media(max-width:680px){.groq-model-row{grid-template-columns:1fr}.groq-code-builder{padding:15px;border-radius:20px}.groq-builder-note{min-height:116px;border-radius:18px;font-size:.84rem}.groq-builder-actions button{min-height:44px}.groq-quota-strip{grid-template-columns:1fr}.groq-machine-steps{grid-template-columns:1fr 1fr}}
+
 .funnel-priority-actions{display:grid;grid-template-columns:1fr;gap:12px}
 .funnel-priority-lead{padding:14px;border:1px solid rgba(34,211,238,.18);border-radius:14px;background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(139,92,246,.08))}
 .funnel-priority-lead small{display:block;color:#67e8f9;font-size:.64rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
@@ -3696,7 +3711,7 @@ table tbody td {
                         <button class="auth-logout-btn" type="button" onclick="openReportDashboard()" title="Rapports">
                             <i class="fas fa-clock-rotate-left"></i>
                         </button>
-                        <button id="btn-groq-key" class="auth-logout-btn" type="button" onclick="openGroqKeyModal()" title="Clé Groq">
+                        <button id="btn-groq-key" class="auth-logout-btn" type="button" onclick="openOpenRouterKeyModal()" title="Clé OpenRouter">
                             <i class="fas fa-key"></i>
                         </button>
                         <button id="btn-logout" class="auth-logout-btn" type="button" onclick="logout()" title="Déconnexion">
@@ -3749,10 +3764,10 @@ table tbody td {
         <div class="auth-modal-panel">
             <div class="auth-modal-head">
                 <div>
-                    <h3 id="groq-key-title">Connecter Groq</h3>
-                    <p id="groq-key-subtitle">Ajoutez votre clé Groq pour utiliser le générateur prompt-to-code avec votre propre quota.</p>
+                    <h3 id="groq-key-title">Connecter OpenRouter</h3>
+                    <p id="groq-key-subtitle">Ajoutez votre clé OpenRouter pour utiliser le générateur prompt-to-code avec votre propre quota.</p>
                 </div>
-                <button class="auth-close-btn" type="button" onclick="closeGroqKeyModal()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
+                <button class="auth-close-btn" type="button" onclick="closeOpenRouterKeyModal()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
             </div>
             <div class="groq-key-panel">
                 <div class="groq-status-card">
@@ -3764,14 +3779,14 @@ table tbody td {
                 </div>
                 <div class="groq-key-form">
                     <label>
-                        <span id="groq-key-label">Clé API Groq</span>
-                        <input id="groq-api-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="gsk_...">
+                        <span id="groq-key-label">Clé API OpenRouter</span>
+                        <input id="groq-api-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-...">
                     </label>
                     <div class="groq-actions">
-                        <button type="button" onclick="saveGroqKey()"><i class="fas fa-lock"></i> <span id="groq-save-label">Enregistrer chiffré</span></button>
-                        <button type="button" onclick="deleteGroqKey()"><i class="fas fa-trash"></i> <span id="groq-delete-label">Supprimer</span></button>
+                        <button type="button" onclick="saveOpenRouterKey()"><i class="fas fa-lock"></i> <span id="groq-save-label">Enregistrer chiffré</span></button>
+                        <button type="button" onclick="deleteOpenRouterKey()"><i class="fas fa-trash"></i> <span id="groq-delete-label">Supprimer</span></button>
                     </div>
-                    <p id="groq-key-note" class="groq-note">Daka n’affiche jamais votre clé. Elle sert uniquement aux appels Groq que vous déclenchez.</p>
+                    <p id="groq-key-note" class="groq-note">Daka n’affiche jamais votre clé. Elle sert uniquement aux appels OpenRouter que vous déclenchez.</p>
                 </div>
             </div>
         </div>
@@ -5720,18 +5735,18 @@ function authCopy() {
         shareCopied: 'تم نسخ رابط المشاركة.',
         shareUnavailable: 'تعذر إنشاء رابط المشاركة.',
         loadingReport: 'جارٍ فتح التقرير...',
-        groqTitle: 'ربط Groq',
-        groqSubtitle: 'أضف مفتاح Groq لاستخدام مولد code prompt عبر حصتك الخاصة.',
-        groqConnected: 'Groq متصل',
-        groqDisconnected: 'Groq غير متصل',
+        groqTitle: 'ربط OpenRouter',
+        groqSubtitle: 'أضف مفتاح OpenRouter لاستخدام مولد code prompt عبر حصتك الخاصة.',
+        groqConnected: 'OpenRouter متصل',
+        groqDisconnected: 'OpenRouter غير متصل',
         groqMask: 'يبقى المفتاح مشفرا على الخادم.',
-        groqLabel: 'مفتاح Groq API',
+        groqLabel: 'مفتاح OpenRouter API',
         groqSave: 'حفظ مشفر',
         groqDelete: 'حذف',
-        groqNote: 'لا يعرض Daka مفتاحك أبدا. يستخدم فقط في طلبات Groq التي تطلقها.',
-        groqSaved: 'تم حفظ مفتاح Groq بشكل مشفر.',
-        groqDeleted: 'تم حذف مفتاح Groq.',
-        groqInvalid: 'مفتاح Groq غير صالح.'
+        groqNote: 'لا يعرض Daka مفتاحك أبدا. يستخدم فقط في طلبات OpenRouter التي تطلقها.',
+        groqSaved: 'تم حفظ مفتاح OpenRouter بشكل مشفر.',
+        groqDeleted: 'تم حذف مفتاح OpenRouter.',
+        groqInvalid: 'مفتاح OpenRouter غير صالح.'
     };
     if (lang === 'en') return {
         login: 'Sign in',
@@ -5752,18 +5767,18 @@ function authCopy() {
         shareCopied: 'Share link copied.',
         shareUnavailable: 'Unable to create the share link.',
         loadingReport: 'Opening report...',
-        groqTitle: 'Connect Groq',
-        groqSubtitle: 'Add your Groq key to use prompt-to-code with your own quota.',
-        groqConnected: 'Groq connected',
-        groqDisconnected: 'Groq not connected',
+        groqTitle: 'Connect OpenRouter',
+        groqSubtitle: 'Add your OpenRouter key to use the Daka prompt-to-code machine with your own quota.',
+        groqConnected: 'OpenRouter connected',
+        groqDisconnected: 'OpenRouter not connected',
         groqMask: 'Your key stays encrypted on the server.',
-        groqLabel: 'Groq API key',
+        groqLabel: 'OpenRouter API key',
         groqSave: 'Save encrypted',
         groqDelete: 'Delete',
-        groqNote: 'Daka never displays your key. It is only used for Groq calls you trigger.',
-        groqSaved: 'Groq key saved encrypted.',
-        groqDeleted: 'Groq key deleted.',
-        groqInvalid: 'Invalid Groq key.'
+        groqNote: 'Daka never displays your key. It is only used for OpenRouter calls you trigger.',
+        groqSaved: 'OpenRouter key saved encrypted.',
+        groqDeleted: 'OpenRouter key deleted.',
+        groqInvalid: 'Invalid OpenRouter key.'
     };
     return {
         login: 'Connexion',
@@ -5784,18 +5799,18 @@ function authCopy() {
         shareCopied: 'Lien de partage copié.',
         shareUnavailable: 'Impossible de créer le lien de partage.',
         loadingReport: 'Ouverture du rapport...',
-        groqTitle: 'Connecter Groq',
-        groqSubtitle: 'Ajoutez votre clé Groq pour utiliser le prompt-to-code avec votre propre quota.',
-        groqConnected: 'Groq connecté',
-        groqDisconnected: 'Groq non connecté',
+        groqTitle: 'Connecter OpenRouter',
+        groqSubtitle: 'Ajoutez votre clé OpenRouter pour utiliser le prompt-to-code avec votre propre quota.',
+        groqConnected: 'OpenRouter connecté',
+        groqDisconnected: 'OpenRouter non connecté',
         groqMask: 'Votre clé reste chiffrée côté serveur.',
-        groqLabel: 'Clé API Groq',
+        groqLabel: 'Clé API OpenRouter',
         groqSave: 'Enregistrer chiffré',
         groqDelete: 'Supprimer',
-        groqNote: 'Daka n’affiche jamais votre clé. Elle sert uniquement aux appels Groq que vous déclenchez.',
-        groqSaved: 'Clé Groq enregistrée et chiffrée.',
-        groqDeleted: 'Clé Groq supprimée.',
-        groqInvalid: 'Clé Groq invalide.'
+        groqNote: 'Daka n’affiche jamais votre clé. Elle sert uniquement aux appels OpenRouter que vous déclenchez.',
+        groqSaved: 'Clé OpenRouter enregistrée et chiffrée.',
+        groqDeleted: 'Clé OpenRouter supprimée.',
+        groqInvalid: 'Clé OpenRouter invalide.'
     };
 }
 
@@ -5847,9 +5862,9 @@ async function updateAuthUI(user, disabled = false) {
 
     if (user) {
         await refreshQuotaBadge();
-        refreshGroqKeyStatus().catch(() => {});
+        refreshOpenRouterKeyStatus().catch(() => {});
     } else {
-        updateGroqKeyUI({ connected: false });
+        updateOpenRouterKeyUI({ connected: false });
     }
 }
 
@@ -5948,7 +5963,7 @@ async function refreshQuotaBadge(quotaOverride = null) {
     }
 }
 
-function updateGroqKeyUI(status = {}) {
+function updateOpenRouterKeyUI(status = {}) {
     const copy = authCopy();
     const statusNode = document.getElementById('groq-key-status');
     const maskNode = document.getElementById('groq-key-mask');
@@ -5956,63 +5971,63 @@ function updateGroqKeyUI(status = {}) {
     if (maskNode) maskNode.textContent = status.message || status.maskedKey || copy.groqMask;
 }
 
-async function refreshGroqKeyStatus() {
-    if (!currentAuthUser) return updateGroqKeyUI({ connected: false });
+async function refreshOpenRouterKeyStatus() {
+    if (!currentAuthUser) return updateOpenRouterKeyUI({ connected: false });
     try {
-        const status = await api.get('/api/user-api-keys/groq/status', 15000);
-        updateGroqKeyUI(status);
+        const status = await api.get('/api/user-api-keys/openrouter/status', 15000);
+        updateOpenRouterKeyUI(status);
         return status;
     } catch (error) {
-        console.warn('[Groq] status unavailable:', error.message);
-        updateGroqKeyUI({ connected: false });
+        console.warn('[OpenRouter] status unavailable:', error.message);
+        updateOpenRouterKeyUI({ connected: false });
         return null;
     }
 }
 
-function openGroqKeyModal() {
+function openOpenRouterKeyModal() {
     if (!currentAuthUser) return openAuthModal();
     refreshAuthCopy();
     document.getElementById('groq-key-modal')?.classList.add('active');
     document.body.classList.add('modal-open');
-    refreshGroqKeyStatus();
+    refreshOpenRouterKeyStatus();
     setTimeout(() => document.getElementById('groq-api-key-input')?.focus(), 80);
 }
 
-function closeGroqKeyModal() {
+function closeOpenRouterKeyModal() {
     document.getElementById('groq-key-modal')?.classList.remove('active');
     document.body.classList.remove('modal-open');
     const input = document.getElementById('groq-api-key-input');
     if (input) input.value = '';
 }
 
-async function saveGroqKey() {
+async function saveOpenRouterKey() {
     const copy = authCopy();
     const input = document.getElementById('groq-api-key-input');
     const apiKey = String(input?.value || '').trim();
-    if (!/^gsk_[A-Za-z0-9_-]{20,}$/.test(apiKey)) return toast.warning(copy.groqInvalid);
+    if (!/^(sk-or-v1-|sk-)[A-Za-z0-9_-]{20,}$/.test(apiKey)) return toast.warning(copy.groqInvalid);
     try {
-        const status = await api.request('/api/user-api-keys/groq', {
+        const status = await api.request('/api/user-api-keys/openrouter', {
             method: 'POST',
             body: JSON.stringify({ apiKey }),
             timeout: 20000
         });
         if (input) input.value = '';
-        updateGroqKeyUI(status);
+        updateOpenRouterKeyUI(status);
         toast.success(copy.groqSaved);
     } catch (error) {
         toast.error(error.message || copy.groqInvalid);
-        updateGroqKeyUI(error.data || { connected: false, message: error.message });
+        updateOpenRouterKeyUI(error.data || { connected: false, message: error.message });
     }
 }
 
-async function deleteGroqKey() {
+async function deleteOpenRouterKey() {
     const copy = authCopy();
     try {
-        const status = await api.request('/api/user-api-keys/groq', {
+        const status = await api.request('/api/user-api-keys/openrouter', {
             method: 'DELETE',
             timeout: 20000
         });
-        updateGroqKeyUI(status);
+        updateOpenRouterKeyUI(status);
         toast.success(copy.groqDeleted);
     } catch (error) {
         toast.error(error.message || copy.shareUnavailable);
@@ -13790,7 +13805,7 @@ function renderExpertDock(section, opts = {}) {
         funnel: {
             icon: 'fa-route',
             title: isAr ? 'حوّل التشخيص إلى صفحة تبيع' : isEn ? 'Turn the diagnosis into a page that sells' : 'Transformer le diagnostic en page qui vend',
-            sub: isAr ? 'خبراء للمسار، النصوص، والاعتراضات.' : isEn ? 'Experts for journey, copy, and objections.' : 'Experts pour le parcours, les textes et les objections.',
+            sub: isAr ? 'OpenRouter code builder' : isEn ? 'Describe the idea, choose an OpenRouter model, and watch Daka build the code step by step.' : 'D?cris ton id?e, choisis un mod?le OpenRouter, puis regarde Daka construire le code ?tape par ?tape.',
             experts: [
                 { name: isAr ? 'Blaze - المسار' : isEn ? 'Blaze - Funnel' : 'Blaze - Parcours', desc: isAr ? 'يبني ترتيب الصفحة من الانتباه إلى القرار.' : isEn ? 'Structures the page from attention to decision.' : 'Structure la page de l attention a la decision.', url: 'https://chatgpt.com/g/g-9UB7GVwba-blaze-sales-funnel-bot' },
                 { name: isAr ? 'Theo - الصفحة' : isEn ? 'Theo - Landing Page' : 'Theo - Page', desc: isAr ? 'يعيد صياغة العناوين، الأدلة، الضمانات والأزرار.' : isEn ? 'Rewrites headlines, proof, guarantees, and buttons.' : 'Reecrit titres, preuves, garanties et boutons.', url: 'https://chatgpt.com/g/g-M8kw9PpCt-phoebe-logo-generator-gpt' },
@@ -18133,7 +18148,8 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         previewEmpty: `groqCodeBuilderPreviewEmpty_${suffix}`,
         quota: `groqCodeBuilderQuota_${suffix}`,
         chat: `groqCodeBuilderChat_${suffix}`,
-        chatInput: `groqCodeBuilderChatInput_${suffix}`
+        chatInput: `groqCodeBuilderChatInput_${suffix}`,
+        model: `openRouterModel_${suffix}`
     };
     const promptByKey = {
         full: pack.full,
@@ -18148,13 +18164,13 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
     ).join('');
     const builderLabels = {
         title: isAr ? 'Daka AI Code Machine' : isEn ? 'Daka AI Code Machine' : 'Daka AI Code Machine',
-        sub: isAr ? 'استخدم مفتاح Groq المتصل لتوليد كود داخل Daka.' : isEn ? 'Use your connected Groq key to generate code inside Daka.' : 'Utilise ta clé Groq connectée pour générer du code directement dans Daka.',
-        note: isAr ? 'تعليمات اختيارية: لون، ستايل، قسم معين، أو تعديل محدد...' : isEn ? 'Optional instruction: color, style, specific section, or exact change...' : 'Instruction optionnelle : couleur, style, section précise, changement exact...',
+        sub: isAr ? 'استخدم مفتاح OpenRouter المتصل لتوليد كود داخل Daka.' : isEn ? 'Use your connected OpenRouter key to generate code inside Daka.' : 'Utilise ta clé OpenRouter connectée pour générer du code directement dans Daka.',
+        note: isAr ? 'Describe the app, market, offer, CTA, trust, colors...' : isEn ? 'Describe what to build: market, offer, CTA, trust, colors, constraints...' : 'D?cris ce que tu veux construire : march?, offre, CTA, confiance, couleurs, contraintes...',
         full: isAr ? 'توليد صفحة كاملة' : isEn ? 'Generate full page' : 'Générer page HTML complète',
         html: isAr ? 'توليد HTML' : isEn ? 'Generate HTML' : 'Générer HTML seul',
         css: isAr ? 'توليد CSS' : isEn ? 'Generate CSS' : 'Générer CSS seul',
         js: isAr ? 'توليد JS' : isEn ? 'Generate JS' : 'Générer JS seul',
-        result: isAr ? 'نتيجة Groq' : isEn ? 'Groq result' : 'Résultat Groq',
+        result: isAr ? 'Generated code' : isEn ? 'Generated code' : 'Code g?n?r?',
         preview: isAr ? 'معاينة مباشرة' : isEn ? 'Live preview' : 'Aperçu live',
         refreshPreview: isAr ? 'تحديث المعاينة' : isEn ? 'Refresh preview' : 'Actualiser aperçu',
         copy: isAr ? 'نسخ النتيجة' : isEn ? 'Copy result' : 'Copier le résultat',
@@ -18164,7 +18180,7 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         quotaTokens: isAr ? 'التوكنات المتبقية' : isEn ? 'Tokens left' : 'Tokens restants',
         quotaReset: isAr ? 'إعادة الضبط' : isEn ? 'Reset' : 'Reset',
         quotaWaiting: isAr ? 'يظهر بعد أول توليد' : isEn ? 'Shown after first generation' : 'Visible après la première génération',
-        chat: isAr ? 'محادثة Groq' : isEn ? 'Groq chat' : 'Chat Groq',
+        chat: isAr ? 'Builder chat' : isEn ? 'Builder chat' : 'Chat de construction',
         chatIntro: isAr ? 'اسأل عن تعديل، قسم أقوى، أو تبسيط الكود الناتج.' : isEn ? 'Ask for a change, a stronger section, or simpler generated code.' : 'Pose une question, demande une variante ou fais modifier le code généré.',
         chatPlaceholder: isAr ? 'مثال: اجعل الهيرو أقوى وأعطني HTML/CSS فقط...' : isEn ? 'Example: make the hero stronger and return only HTML/CSS...' : 'Exemple : rends le hero plus premium et donne seulement HTML/CSS...',
         send: isAr ? 'إرسال' : isEn ? 'Send' : 'Envoyer',
@@ -18194,8 +18210,8 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         <section class="groq-code-builder" data-no-collapse="true" onclick="event.stopPropagation()">
             <header>
                 <div><small>${safe(builderLabels.title)}</small><strong>${safe(builderLabels.sub)}</strong></div>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();openGroqKeyModal()">
-                    <i class="fas fa-key"></i><span>Groq</span>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();openOpenRouterKeyModal()">
+                    <i class="fas fa-key"></i><span>OpenRouter</span>
                 </button>
             </header>
             <div id="${builderIds.quota}" class="groq-quota-strip" data-no-collapse="true">
@@ -18209,18 +18225,29 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                 <span>${safe(builderLabels.step3)}</span>
                 <span>${safe(builderLabels.step4)}</span>
             </div>
+
+            <label class="groq-model-row" data-no-collapse="true" onclick="event.stopPropagation()">
+                <span>${safe(isAr ? 'OpenRouter model' : isEn ? 'OpenRouter model' : 'Modele OpenRouter')}</span>
+                <select id="${builderIds.model}" data-no-collapse="true">
+                    <option value="cohere/north-mini-code">Cohere North Mini Code (free)</option>
+                    <option value="z-ai/glm-5.2">Z.ai GLM 5.2 (free)</option>
+                    <option value="nvidia/nemotron-3-ultra:free">NVIDIA Nemotron 3 Ultra (free)</option>
+                    <option value="moonshotai/kimi-k2.7-code">Kimi K2.7 Code</option>
+                    <option value="qwen/qwen3.7-plus">Qwen3.7 Plus</option>
+                </select>
+            </label>
             <div class="groq-builder-quick" data-no-collapse="true">
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setGroqBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickHero)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setGroqBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickMobile)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setGroqBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickTrust)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setGroqBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickShort)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setOpenRouterBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickHero)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setOpenRouterBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickMobile)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setOpenRouterBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickTrust)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setOpenRouterBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickShort)}</button>
             </div>
             <textarea id="${builderIds.custom}" class="groq-builder-note" data-no-collapse="true" placeholder="${safe(builderLabels.note)}"></textarea>
             <div class="groq-builder-actions">
-                <button type="button" class="primary" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('full','${ids.full}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this)"><i class="fas fa-wand-magic-sparkles"></i>${safe(builderLabels.full)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('html','${ids.html}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this)"><i class="fab fa-html5"></i>${safe(builderLabels.html)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('css','${ids.css}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this)"><i class="fab fa-css3-alt"></i>${safe(builderLabels.css)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runGroqCodeBuilder('js','${ids.js}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this)"><i class="fab fa-js"></i>${safe(builderLabels.js)}</button>
+                <button type="button" class="primary" data-no-collapse="true" onclick="event.stopPropagation();runOpenRouterCodeBuilder('full','${ids.full}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this,'${builderIds.model}')"><i class="fas fa-wand-magic-sparkles"></i>${safe(builderLabels.full)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runOpenRouterCodeBuilder('html','${ids.html}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this,'${builderIds.model}')"><i class="fab fa-html5"></i>${safe(builderLabels.html)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runOpenRouterCodeBuilder('css','${ids.css}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this,'${builderIds.model}')"><i class="fab fa-css3-alt"></i>${safe(builderLabels.css)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runOpenRouterCodeBuilder('js','${ids.js}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this,'${builderIds.model}')"><i class="fab fa-js"></i>${safe(builderLabels.js)}</button>
             </div>
             <div class="groq-workbench-grid">
                 <div class="groq-builder-output-wrap">
@@ -18233,7 +18260,7 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                 <div class="groq-builder-output-wrap">
                     <div class="groq-builder-output-head">
                         <span>${safe(builderLabels.preview)}</span>
-                        <button type="button" data-no-collapse="true" onclick="event.stopPropagation();renderGroqCodePreview('${builderIds.output}','${builderIds.preview}','${builderIds.previewEmpty}')"><i class="fas fa-eye"></i>${safe(builderLabels.refreshPreview)}</button>
+                        <button type="button" data-no-collapse="true" onclick="event.stopPropagation();renderOpenRouterCodePreview('${builderIds.output}','${builderIds.preview}','${builderIds.previewEmpty}')"><i class="fas fa-eye"></i>${safe(builderLabels.refreshPreview)}</button>
                     </div>
                     <div id="${builderIds.previewEmpty}" class="groq-preview-empty">${safe(builderLabels.previewWaiting)}</div>
                     <iframe id="${builderIds.preview}" class="groq-preview-frame" title="Daka AI preview" sandbox="allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox" style="display:none"></iframe>
@@ -18248,7 +18275,7 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                 </div>
                 <div class="groq-chat-input-row">
                     <textarea id="${builderIds.chatInput}" data-no-collapse="true" placeholder="${safe(builderLabels.chatPlaceholder)}"></textarea>
-                    <button type="button" data-no-collapse="true" onclick="event.stopPropagation();sendGroqCodeBuilderMessage('${ids.short}','${builderIds.output}','${builderIds.chat}','${builderIds.chatInput}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this)"><i class="fas fa-paper-plane"></i>${safe(builderLabels.send)}</button>
+                    <button type="button" data-no-collapse="true" onclick="event.stopPropagation();sendOpenRouterCodeBuilderMessage('${ids.short}','${builderIds.output}','${builderIds.chat}','${builderIds.chatInput}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this,'${builderIds.model}')"><i class="fas fa-paper-plane"></i>${safe(builderLabels.send)}</button>
                 </div>
             </div>
         </section>
@@ -18789,7 +18816,7 @@ function fallbackCopy(text, cb) {
     document.body.removeChild(ta);
 }
 
-function updateGroqQuotaUI(quotaId, payload = {}) {
+function updateOpenRouterQuotaUI(quotaId, payload = {}) {
     const node = document.getElementById(quotaId);
     if (!node) return;
     const lang = STATE.currentLang || 'fr';
@@ -18811,7 +18838,7 @@ function updateGroqQuotaUI(quotaId, payload = {}) {
     `;
 }
 
-function appendGroqChatMessage(chatId, role, text) {
+function appendOpenRouterChatMessage(chatId, role, text) {
     const node = document.getElementById(chatId);
     if (!node) return;
     const message = document.createElement('div');
@@ -18821,7 +18848,7 @@ function appendGroqChatMessage(chatId, role, text) {
     node.scrollTop = node.scrollHeight;
 }
 
-function setGroqBuilderInstruction(customId, text) {
+function setOpenRouterBuilderInstruction(customId, text) {
     const node = document.getElementById(customId);
     if (!node) return;
     const lang = STATE.currentLang || 'fr';
@@ -18855,14 +18882,23 @@ function extractHtmlForPreview(text) {
     const raw = String(text || '').trim();
     const fenced = raw.match(/```html\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/);
     const candidate = (fenced?.[1] || raw).trim();
-    if (/<!doctype html|<html[\s>]/i.test(candidate)) return candidate;
-    if (/<(section|main|header|div|style|script|body)[\s>]/i.test(candidate)) {
-        return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;font-family:Inter,Arial,sans-serif;background:#0f172a;color:#f8fafc}</style></head><body>${candidate}</body></html>`;
+    const lt = String.fromCharCode(60);
+    const gt = String.fromCharCode(62);
+    const fullDocPattern = new RegExp(lt + '!doctype\\s+html|' + lt + 'html[\\s' + gt + ']', 'i');
+    const partialHtmlPattern = new RegExp(lt + '(section|main|header|div|style|script|body)[\\s' + gt + ']', 'i');
+    if (fullDocPattern.test(candidate)) return candidate;
+    if (partialHtmlPattern.test(candidate)) {
+        const open = name => lt + name + gt;
+        const close = name => lt + '/' + name + gt;
+        const metaCharset = lt + 'meta charset="utf-8"' + gt;
+        const metaViewport = lt + 'meta name="viewport" content="width=device-width,initial-scale=1"' + gt;
+        const style = lt + 'style' + gt + 'body{margin:0;font-family:Inter,Arial,sans-serif;background:#0f172a;color:#f8fafc}' + close('style');
+        return lt + '!doctype html' + gt + open('html') + open('head') + metaCharset + metaViewport + style + close('head') + open('body') + candidate + close('body') + close('html');
     }
     return '';
 }
 
-function renderGroqCodePreview(outputId, previewId, emptyId) {
+function renderOpenRouterCodePreview(outputId, previewId, emptyId) {
     const output = document.getElementById(outputId);
     const iframe = document.getElementById(previewId);
     const empty = document.getElementById(emptyId);
@@ -18885,7 +18921,7 @@ function renderGroqCodePreview(outputId, previewId, emptyId) {
     if (empty) empty.style.display = 'none';
 }
 
-async function runGroqCodeBuilder(kind, promptId, outputId, customId, quotaId, previewId, emptyId, btn) {
+async function runOpenRouterCodeBuilder(kind, promptId, outputId, customId, quotaId, previewId, emptyId, btn, modelId) {
     const original = btn?.innerHTML;
     const output = document.getElementById(outputId);
     const promptNode = document.getElementById(promptId);
@@ -18896,24 +18932,24 @@ async function runGroqCodeBuilder(kind, promptId, outputId, customId, quotaId, p
     const labels = lang === 'ar'
         ? {
             login: 'سجل الدخول أولا.',
-            running: 'Groq يكتب الكود...',
+            running: 'OpenRouter يكتب الكود...',
             ready: 'تم توليد الكود.',
-            connect: 'اربط مفتاح Groq أولا.',
+            connect: 'اربط مفتاح OpenRouter أولا.',
             empty: 'لا يوجد prompt كاف للتوليد.'
         }
         : lang === 'en'
             ? {
                 login: 'Sign in first.',
-                running: 'Groq is writing the code...',
+                running: 'OpenRouter is writing the code...',
                 ready: 'Code generated.',
-                connect: 'Connect your Groq key first.',
+                connect: 'Connect your OpenRouter key first.',
                 empty: 'No prompt available for generation.'
             }
             : {
                 login: 'Connecte-toi d’abord.',
-                running: 'Groq écrit le code...',
+                running: 'OpenRouter écrit le code...',
                 ready: 'Code généré.',
-                connect: 'Connecte ta clé Groq d’abord.',
+                connect: 'Connecte ta clé OpenRouter d’abord.',
                 empty: 'Aucun prompt suffisant pour générer.'
             };
     if (!currentAuthUser) {
@@ -18922,10 +18958,10 @@ async function runGroqCodeBuilder(kind, promptId, outputId, customId, quotaId, p
     }
     if (basePrompt.length < 80) return toast.warning(labels.empty);
     const taskLine = {
-        full: 'Genere une premiere version exploitable en un seul fichier HTML avec CSS et JS integres. Si c’est trop long, donne la Partie 1 et termine par GO.',
-        html: 'Genere uniquement le HTML semantique. Ne donne pas le CSS ni le JS.',
-        css: 'Genere uniquement le CSS premium mobile-first. Ne donne pas le HTML complet ni le JS.',
-        js: 'Genere uniquement le JavaScript utile. Ne donne pas le HTML complet ni le CSS.'
+        full: 'Genere une premiere version exploitable en un seul fichier HTML avec CSS et JS integres. Reponds en Markdown avec un seul bloc Markdown html complet. Si c?est trop long, donne Partie 1 et termine par GO.',
+        html: 'Genere uniquement le HTML semantique dans un bloc Markdown html. Ne donne pas le CSS ni le JS.',
+        css: 'Genere uniquement le CSS premium mobile-first dans un bloc Markdown css. Ne donne pas le HTML complet ni le JS.',
+        js: 'Genere uniquement le JavaScript utile dans un bloc Markdown javascript. Ne donne pas le HTML complet ni le CSS.'
     }[kind] || '';
     const prompt = `${basePrompt}
 
@@ -18937,31 +18973,32 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
     try {
         if (btn) {
             btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Groq...';
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> IA...';
         }
         if (output) output.textContent = labels.running;
-        const response = await api.request('/api/prompt-to-code/groq', {
+        const response = await api.request('/api/prompt-to-code/openrouter', {
             method: 'POST',
             body: JSON.stringify({
                 prompt,
                 maxTokens: kind === 'full' ? 4096 : 3000,
-                temperature: 0.22
+                temperature: 0.22,
+                model: document.getElementById(modelId)?.value || undefined
             }),
             timeout: 90000
         });
         if (output) output.textContent = response?.content || '';
-        updateGroqQuotaUI(quotaId, response);
-        if (kind === 'full') renderGroqCodePreview(outputId, previewId, emptyId);
+        updateOpenRouterQuotaUI(quotaId, response);
+        if (kind === 'full') renderOpenRouterCodePreview(outputId, previewId, emptyId);
         toast.success(labels.ready);
     } catch (error) {
-        updateGroqQuotaUI(quotaId, error?.data || {});
-        if (/GROQ_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
+        updateOpenRouterQuotaUI(quotaId, error?.data || {});
+        if (/OPENROUTER_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
             toast.warning(error.data?.message || labels.connect);
-            openGroqKeyModal();
+            openOpenRouterKeyModal();
         } else {
-            toast.error(error.message || 'Groq error');
+            toast.error(error.message || 'OpenRouter error');
         }
-        if (output) output.textContent = error.data?.message || error.message || 'Groq error';
+        if (output) output.textContent = error.data?.message || error.message || 'OpenRouter error';
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -18970,7 +19007,7 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
     }
 }
 
-async function sendGroqCodeBuilderMessage(promptId, outputId, chatId, inputId, quotaId, previewId, emptyId, btn) {
+async function sendOpenRouterCodeBuilderMessage(promptId, outputId, chatId, inputId, quotaId, previewId, emptyId, btn, modelId) {
     const original = btn?.innerHTML;
     const input = document.getElementById(inputId);
     const output = document.getElementById(outputId);
@@ -18986,16 +19023,16 @@ async function sendGroqCodeBuilderMessage(promptId, outputId, chatId, inputId, q
         .join('\n\n');
     const lang = STATE.currentLang || 'fr';
     const labels = lang === 'ar'
-        ? { login: 'سجل الدخول أولا.', empty: 'اكتب رسالتك أولا.', running: 'Groq يفكر...', connect: 'اربط مفتاح Groq أولا.' }
+        ? { login: 'سجل الدخول أولا.', empty: 'اكتب رسالتك أولا.', running: 'OpenRouter يفكر...', connect: 'اربط مفتاح OpenRouter أولا.' }
         : lang === 'en'
-            ? { login: 'Sign in first.', empty: 'Write your message first.', running: 'Groq is thinking...', connect: 'Connect your Groq key first.' }
-            : { login: 'Connecte-toi d’abord.', empty: 'Écris ton message d’abord.', running: 'Groq réfléchit...', connect: 'Connecte ta clé Groq d’abord.' };
+            ? { login: 'Sign in first.', empty: 'Write your message first.', running: 'OpenRouter is thinking...', connect: 'Connect your OpenRouter key first.' }
+            : { login: 'Connecte-toi d’abord.', empty: 'Écris ton message d’abord.', running: 'OpenRouter réfléchit...', connect: 'Connecte ta clé OpenRouter d’abord.' };
     if (!currentAuthUser) {
         toast.warning(labels.login);
         return openAuthModal();
     }
     if (!message) return toast.warning(labels.empty);
-    appendGroqChatMessage(chatId, 'user', message);
+    appendOpenRouterChatMessage(chatId, 'user', message);
     if (input) input.value = '';
     const prompt = `${basePrompt}
 
@@ -19019,39 +19056,40 @@ REGLES SPECIALES IMPORTANTES :
 - Si tu dois encore poser des questions, pose uniquement les questions réellement bloquantes, maximum 3.
 
 Réponds en ${lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'}.
-Si tu fournis du code, donne des blocs clairs HTML/CSS/JS.
+Si tu fournis du code, utilise uniquement des blocs Markdown nomm?s html, css ou javascript.
 Si une information manque, pose les questions nécessaires avant d'inventer.`;
     try {
         if (btn) {
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
         }
-        appendGroqChatMessage(chatId, 'assistant', labels.running);
-        const response = await api.request('/api/prompt-to-code/groq', {
+        appendOpenRouterChatMessage(chatId, 'assistant', labels.running);
+        const response = await api.request('/api/prompt-to-code/openrouter', {
             method: 'POST',
             body: JSON.stringify({
                 prompt,
                 maxTokens: 3200,
-                temperature: 0.22
+                temperature: 0.22,
+                model: document.getElementById(modelId)?.value || undefined
             }),
             timeout: 90000
         });
         const chat = document.getElementById(chatId);
         const last = chat?.querySelector('.groq-chat-message.assistant:last-child');
         if (last && last.textContent === labels.running) last.textContent = response?.content || '';
-        else appendGroqChatMessage(chatId, 'assistant', response?.content || '');
+        else appendOpenRouterChatMessage(chatId, 'assistant', response?.content || '');
         if (output && response?.content) output.textContent = response.content;
-        renderGroqCodePreview(outputId, previewId, emptyId);
-        updateGroqQuotaUI(quotaId, response);
+        renderOpenRouterCodePreview(outputId, previewId, emptyId);
+        updateOpenRouterQuotaUI(quotaId, response);
     } catch (error) {
-        updateGroqQuotaUI(quotaId, error?.data || {});
-        if (/GROQ_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
+        updateOpenRouterQuotaUI(quotaId, error?.data || {});
+        if (/OPENROUTER_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
             toast.warning(error.data?.message || labels.connect);
-            openGroqKeyModal();
+            openOpenRouterKeyModal();
         } else {
-            toast.error(error.message || 'Groq error');
+            toast.error(error.message || 'OpenRouter error');
         }
-        appendGroqChatMessage(chatId, 'assistant', error.data?.message || error.message || 'Groq error');
+        appendOpenRouterChatMessage(chatId, 'assistant', error.data?.message || error.message || 'OpenRouter error');
     } finally {
         if (btn) {
             btn.disabled = false;
