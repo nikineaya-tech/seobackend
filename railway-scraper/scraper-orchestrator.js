@@ -156,9 +156,14 @@ function extractPrices(text = '') {
     const currency = String(match[2] || '').toUpperCase().replace('DHS', 'MAD').replace('DH', 'MAD').replace('درهم', 'MAD').replace('د.م', 'MAD');
     const key = `${value}-${currency}`;
     const context = text.slice(Math.max(0, match.index - 90), match.index + 130).replace(/\s+/g, ' ').trim();
-    const suspiciousContext = /taille|size|chest|waist|hips|mesure|measure|point|fid[eé]lit[eé]|reward|r[eé]f[eé]rence|reference|sku|ml|mg|gramme|voltage|volt|watt|mah|qty|quantit[eé]|stock\s*:\s*\d/i.test(context);
+    const normalizedContext = context
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase();
+    const suspiciousContext = /taille|size|chest|waist|hips|mesure|measure|point|fidelite|reward|reference|sku|ml|mg|gramme|voltage|volt|watt|mah|qty|quantite|stock\s*:\s*\d/i.test(normalizedContext);
+    const suspiciousLowMadPrice = currency === 'MAD' && value > 0 && value < 20;
 
-    if (Number.isFinite(value) && value > 0 && !seen.has(key) && !suspiciousContext) {
+    if (Number.isFinite(value) && value > 0 && !seen.has(key) && !suspiciousContext && !suspiciousLowMadPrice) {
       seen.add(key);
       prices.push({ value, currency, context, source: 'visible-text' });
     }
