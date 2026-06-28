@@ -155,10 +155,12 @@ function extractPrices(text = '') {
     const value = Number(String(match[1]).replace(/\s/g, '').replace(',', '.'));
     const currency = String(match[2] || '').toUpperCase().replace('DHS', 'MAD').replace('DH', 'MAD').replace('درهم', 'MAD').replace('د.م', 'MAD');
     const key = `${value}-${currency}`;
+    const context = text.slice(Math.max(0, match.index - 90), match.index + 130).replace(/\s+/g, ' ').trim();
+    const suspiciousContext = /taille|size|chest|waist|hips|mesure|measure|point|fid[eé]lit[eé]|reward|r[eé]f[eé]rence|reference|sku|ml|mg|gramme|voltage|volt|watt|mah|qty|quantit[eé]|stock\s*:\s*\d/i.test(context);
 
-    if (Number.isFinite(value) && value > 0 && !seen.has(key)) {
+    if (Number.isFinite(value) && value > 0 && !seen.has(key) && !suspiciousContext) {
       seen.add(key);
-      prices.push({ value, currency, context: text.slice(Math.max(0, match.index - 60), match.index + 90).replace(/\s+/g, ' ').trim() });
+      prices.push({ value, currency, context, source: 'visible-text' });
     }
   }
 
@@ -1847,6 +1849,46 @@ function isBlockedHtml(html = '', text = '') {
 
   return /captcha|cloudflare|access denied|forbidden|verify you are human|are you human|robot check|blocked|checking your browser/i.test(value);
 }
+
+function pruneNonVisibleExtractionNodes($) {
+  if (!$ || typeof $ !== 'function') return $;
+
+  const hiddenSelector = [
+    'script',
+    'style',
+    'noscript',
+    'template',
+    'svg',
+    '[hidden]',
+    '[aria-hidden="true"]',
+    '[type="application/json"]',
+    '[type="application/ld+json"]'
+  ].join(',');
+
+  $(hiddenSelector).remove();
+
+  $('[style],[class],[id]').each((_, el) => {
+    const $el = $(el);
+    const style = String($el.attr('style') || '').toLowerCase();
+    const className = String($el.attr('class') || '').toLowerCase();
+    const id = String($el.attr('id') || '').toLowerCase();
+    const marker = `${className} ${id}`;
+    const text = cleanSectionText($el.text(), 420).toLowerCase();
+
+    const styleHidden =
+      /display\s*:\s*none|visibility\s*:\s*hidden|opacity\s*:\s*0(?:[;\s]|$)|max-height\s*:\s*0|height\s*:\s*0/.test(style);
+    const utilityHidden =
+      /\b(d-none|hidden|hide|is-hidden|sr-only|visually-hidden|screen-reader-text|modal|drawer|offcanvas|popup)\b/.test(marker);
+    const ghostCommerceGuide =
+      /(size|taille|measurement|measure|guide|chart|tableau).*?(guide|chart|taille|size)/.test(marker) &&
+      /(chest|waist|hips|arms relaxed|fullest part|measure around|tour de poitrine|tour de taille)/.test(text);
+
+    if (styleHidden || utilityHidden || ghostCommerceGuide) $el.remove();
+  });
+
+  return $;
+}
+
 async function fetchViaScrapeDo(rawUrl) {
   if (!ENABLE_SCRAPEDO || !SCRAPE_DO_TOKEN) {
     throw new Error('Scrape.do not configured');
@@ -1888,6 +1930,7 @@ async function fetchViaScrapeDo(rawUrl) {
 
 function buildPageResultFromHtml(html = '', url = '', provider = 'scrape.do') {
   const $ = cheerio.load(html);
+  pruneNonVisibleExtractionNodes($);
   const text = $('body').text().replace(/\s+/g, ' ').trim();
   const title = $('title').first().text().replace(/\s+/g, ' ').trim();
   const headings = extractHeadings($);
@@ -2016,6 +2059,7 @@ async function scrapeSinglePage(page, url, options = {}){
   const text = await page.evaluate(() => document.body?.innerText || '').catch(() => '');
   const title = await page.title().catch(() => '');
   const $ = cheerio.load(html);
+  pruneNonVisibleExtractionNodes($);
 
  const headings = extractHeadings($);
 const h1 = headings.h1[0] || '';

@@ -462,6 +462,8 @@ html, body {
 .funnel-mega-redesign button:hover{border-color:rgba(34,211,238,.5);color:#67e8f9;background:rgba(34,211,238,.1)}
 .funnel-mega-redesign .mega-copy-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px}
 .funnel-mega-redesign .mega-copy-grid button{justify-content:center;border-radius:12px;background:linear-gradient(135deg,rgba(139,92,246,.18),rgba(34,211,238,.08))}
+.funnel-mega-redesign .mega-copy-grid-single span{display:flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:9px 12px;border:1px solid rgba(34,211,238,.18);border-radius:14px;background:linear-gradient(135deg,rgba(15,23,42,.88),rgba(6,16,29,.72));color:#cbd5e1;font-size:.72rem;font-weight:900}
+.funnel-mega-redesign .mega-copy-grid-single i{color:#67e8f9;text-shadow:0 0 14px rgba(34,211,238,.45)}
 .funnel-mega-redesign .mega-prompt-shell{border:1px solid rgba(34,211,238,.16);border-radius:14px;overflow:hidden;background:linear-gradient(145deg,rgba(6,16,29,.96),rgba(2,6,23,.9));box-shadow:0 18px 42px rgba(0,0,0,.2)}
 .funnel-mega-redesign .mega-prompt-shell summary{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 15px;color:#e0f2fe;font-size:.78rem;font-weight:950;cursor:pointer;list-style:none;background:rgba(15,23,42,.72)}
 .funnel-mega-redesign .mega-prompt-shell summary::-webkit-details-marker{display:none}
@@ -5691,11 +5693,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            async post(endpoint, data, timeout = CONFIG.TIMEOUT_MEDIUM) {
+            async post(endpoint, data, timeout = CONFIG.TIMEOUT_MEDIUM, extraOptions = {}) {
                 return this.request(endpoint, {
                     method: 'POST',
                     body: JSON.stringify(data),
-                    timeout
+                    timeout,
+                    ...extraOptions
                 });
             }
 
@@ -6282,6 +6285,33 @@ function ensureAnalysisLoader(endpoint) {
 }
 
 async function analyzeWithPolling(endpoint, payload, resultsHandler) {
+    const stableStringify = (value) => {
+        if (value === null || typeof value !== 'object') return JSON.stringify(value);
+        if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`;
+        return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${stableStringify(value[key])}`).join(',')}}`;
+    };
+    const stablePayload = (() => {
+        try {
+            return stableStringify(payload || {});
+        } catch (_) {
+            return String(Date.now());
+        }
+    })();
+    const lockKey = `${endpoint}:${stablePayload}`;
+    const existing = window.dakaAnalysisInFlight?.get(lockKey);
+    if (existing && !window.dakaAnalysisCancelled) {
+        toast.info(STATE.currentLang === 'ar'
+            ? 'التحليل قيد التنفيذ بالفعل.'
+            : STATE.currentLang === 'en'
+                ? 'This analysis is already running.'
+                : 'Cette analyse est déjà en cours.');
+        return existing.then(data => {
+            if (typeof resultsHandler === 'function' && data) resultsHandler(data);
+            return data;
+        });
+    }
+
+    const runPromise = (async () => {
     ensureAnalysisLoader(endpoint);
     const analysisId = window.dakaActiveAnalysisId;
     const assertActive = () => {
@@ -6300,7 +6330,8 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
     const initial = await api.post(
         endpoint,
         { ...(payload || {}) },
-        CONFIG.TIMEOUTLONG || CONFIG.TIMEOUT_LONG || 120000
+        CONFIG.TIMEOUTLONG || CONFIG.TIMEOUT_LONG || 120000,
+        { signal: window.dakaCurrentAbortController?.signal }
     );
     assertActive();
 
@@ -6350,6 +6381,16 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
                 ? 'Timeout — try again in a few seconds.'
                 : 'Timeout — réessaie dans quelques secondes.'
     );
+    })();
+
+    window.dakaAnalysisInFlight?.set(lockKey, runPromise);
+    try {
+        return await runPromise;
+    } finally {
+        if (window.dakaAnalysisInFlight?.get(lockKey) === runPromise) {
+            window.dakaAnalysisInFlight.delete(lockKey);
+        }
+    }
 }
 
 const DakaSound = (() => {
@@ -6633,6 +6674,7 @@ window.dakaCurrentAbortController = null;
 window.dakaAnalysisCancelled = false;
 window.dakaActiveAnalysisId = 0;
 window.dakaFunnelAnalysisInFlight = null;
+window.dakaAnalysisInFlight = new Map();
 
 const DAKA_LOADER_COPY = {
   competitors: {
@@ -6714,6 +6756,7 @@ function cancelDakaAnalysis() {
   window.dakaActiveAnalysisId += 1;
   window.dakaCurrentAbortController?.abort();
   window.dakaFunnelAnalysisInFlight = null;
+  window.dakaAnalysisInFlight?.clear();
   hideDakaLoader();
   toast.info(STATE.currentLang === 'ar' ? 'تم إلغاء التحليل.' : STATE.currentLang === 'en' ? 'Analysis cancelled.' : 'Analyse annulée.');
 }
@@ -9969,7 +10012,10 @@ function cloneReportHtmlForExport(el, exportOptions = {}) {
         '.loading-state, .toast-container, .export-bubble-wrapper, ' +
         '.btn-export-pdf, .btn-copy-mini, [data-gen-type], iframe, ' +
         '.daka-global-loader, .auth-modal, .report-feature-nav, ' +
-        '.expert-dock, .generator-grid'
+        '.expert-dock, .generator-grid, .global-expert-bubble, ' +
+        '.groq-code-builder, .mega-copy-grid, .mega-copy-source, ' +
+        '.report-section-toggle, .report-section-close-row, ' +
+        '.mega-prompt-shell > summary, input, select, textarea'
     ).forEach(function (node) {
         node.remove();
     });
@@ -13582,7 +13628,7 @@ function renderReportSection(key, title, subtitle, icon, html, opts = {}) {
     const isOpen = expanded ? 'open' : '';
     const dir = opts.isAr ? 'rtl' : 'ltr';
     const noCollapse = opts.noCollapse === true;
-    const preview = summarizeReportHtml(opts.summary || '', subtitle || labels.openHint);
+    const preview = opts.summary ? summarizeReportHtml(opts.summary, labels.openHint) : '';
     const safe = typeof escapeHtml === 'function'
         ? escapeHtml
         : (s) => String(s || '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
@@ -17822,6 +17868,13 @@ function buildDakaMegaPromptPackage(rawPrompt, opts = {}) {
     const text = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
     const clean = value => String(value || '').replace(/\s+/g, ' ').trim();
     const toText = value => typeof funnelV2Text === 'function' ? funnelV2Text(value) : String(value || '');
+    const stripConflictingRoles = value => String(value || '')
+        .replace(/tu es un expert growth engineer[\s\S]{0,260}?(?=(mission|sources|objectif|contexte|$))/ig, '')
+        .replace(/you are an expert growth engineer[\s\S]{0,260}?(?=(mission|sources|objective|context|$))/ig, '')
+        .replace(/expert growth engineer/ig, 'expert UI/UX, CRO et frontend')
+        .replace(/\bSEO\b/g, 'visibilité marché')
+        .replace(/articles?\s+SEO/ig, 'pages d’acquisition')
+        .replace(/mots-cl[eé]s/ig, 'signaux de demande');
     const clip = (value, max = 900) => {
         const out = clean(value);
         return out.length > max ? `${out.slice(0, max).trim()}...` : out;
@@ -17835,14 +17888,37 @@ function buildDakaMegaPromptPackage(rawPrompt, opts = {}) {
     const legacy = data.legacyFunnel || {};
     const offer = surgery.offerDetected || data.offerDetected || {};
     const h1 = offer.h1 || data.h1 || data.siteData?.h1 || 'A confirmer';
-    const price = offer.price || data.priceIntel?.primaryPrice || data.detectedPrice || 'Prix a confirmer';
+    const priceConfidence = String(data.priceIntel?.priceConfidence || data.priceIntel?.confidenceBand || data.priceIntel?.confidence || '').toUpperCase();
+    const confirmedPrice = data.priceIntel?.primaryPrice && ['HIGH', 'MEDIUM'].includes(priceConfidence) ? data.priceIntel.primaryPrice : null;
+    const price = offer.price || confirmedPrice || 'Prix a confirmer';
     const ctas = arr(data.ctaIntelligence?.detectedCtas, data.copySignals?.ctas, legacy.ctaIntelligence?.detectedCtas).slice(0, 8);
     const present = arr(primary.present, surgery.keep, surgery.presentSections).slice(0, 10);
     const weak = arr(primary.weak, surgery.improve, surgery.weakSections).slice(0, 10);
     const missing = arr(primary.missing, surgery.add, surgery.missingSections).slice(0, 10);
     const actions = arr(data.concreteActionPlan, data.prioritizedActionPlan, legacy.concreteActionPlan, legacy.quickWins).slice(0, 10);
     const proof = arr(primary.proofUsed, data.proofModel?.observed, data.funnelEvidenceSynthesis?.proofUsed).slice(0, 8);
-    const originalPrompt = clip(rawPrompt, 2200);
+    const offerType = clean(offer.offerType || data.offerType || data.projectIdentity?.offerType || data.projectIdentity?.businessModel || legacy.offerType || '');
+    const offerContextText = `${offerType} ${url} ${h1} ${present.join(' ')} ${ctas.join(' ')}`.toLowerCase();
+    const isPhysicalProduct = /e-?commerce|shop|boutique|produit|product|panier|cart|checkout|livraison|stock|retour|serum|s[ée]rum|lotion|huile|parapharmacie|cosm[eé]tique/.test(offerContextText);
+    const isServiceOffer = !isPhysicalProduct && /service|agence|consulting|formation|saas|software|logiciel|audit|devis|rdv|appointment|livrable|accompagnement/.test(offerContextText);
+    const originalPrompt = clip(stripConflictingRoles(rawPrompt), 1800);
+    const vocabularyRules = isPhysicalProduct
+        ? text(
+            '- Vocabulaire adapté : produit, bénéfices, ingrédients/composition, usage, prix, stock, livraison, retour, garantie, avis, preuve produit, sécurité paiement.\n- Interdit ici sauf preuve : livrables, révisions, accompagnement, diagnostic, prestation.',
+            '- Use product vocabulary: product, benefits, ingredients/composition, usage, price, stock, delivery, returns, guarantee, reviews, product proof, secure payment.\n- Do not use service vocabulary unless proven: deliverables, revisions, support package, diagnostic, consulting.',
+            '- استعمل مفردات المنتج: المنتج، الفوائد، التركيبة، طريقة الاستخدام، السعر، المخزون، التوصيل، الإرجاع، الضمان، الآراء، دليل المنتج، أمان الدفع.\n- لا تستعمل مفردات الخدمات إلا بدليل: مخرجات، مراجعات، مرافقة، تشخيص، استشارة.'
+        )
+        : isServiceOffer
+            ? text(
+                '- Vocabulaire adapté : livrables, délais, révisions, conditions de paiement, preuve résultat, cas clients, accompagnement, support.\n- N’utilise pas livraison/retours/stock sauf si la page vend un produit physique.',
+                '- Use service vocabulary: deliverables, timeline, revisions, payment terms, result proof, case studies, support.\n- Do not use delivery/returns/stock unless the page sells a physical product.',
+                '- استعمل مفردات الخدمة: المخرجات، المدة، المراجعات، شروط الدفع، إثبات النتائج، حالات العملاء، الدعم.\n- لا تستعمل التوصيل والإرجاع والمخزون إلا إذا كانت الصفحة تبيع منتجا ماديا.'
+            )
+            : text(
+                '- Adapte le vocabulaire au modèle réellement observé. Si tu n’es pas sûr, marque “à confirmer”.',
+                '- Adapt vocabulary to the actually observed business model. If unsure, mark “to confirm”.',
+                '- كيّف المفردات حسب نموذج العمل المرصود فعلا. إذا لم تكن متأكدا، اكتب “يجب التأكيد”.'
+            );
     const bullet = list => list.length ? list.map(item => `- ${item}`).join('\n') : '- A confirmer';
     const commonData = `
 URL / PAGE :
@@ -17867,6 +17943,9 @@ ${bullet(actions)}
 ${bullet(proof)}
 - Notes du rapport Daka :
 ${originalPrompt || '- A confirmer'}
+
+REGLES DE VOCABULAIRE MARCHE :
+${vocabularyRules}
 `.trim();
 
     const full = `${text(
@@ -18201,12 +18280,10 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                 <i class="fas fa-copy"></i><span>${safe(labels.full)}</span>
             </button>
         </header>
-        <div class="mega-copy-grid" data-no-collapse="true" onclick="event.stopPropagation()">
-            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.short}', this)"><i class="fas fa-bolt"></i>${safe(labels.short)}</button>
-            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.html}', this)"><i class="fab fa-html5"></i>${safe(labels.html)}</button>
-            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.css}', this)"><i class="fab fa-css3-alt"></i>${safe(labels.css)}</button>
-            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.js}', this)"><i class="fab fa-js"></i>${safe(labels.js)}</button>
-            <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${ids.q}', this)"><i class="fas fa-circle-question"></i>${safe(labels.q)}</button>
+        <div class="mega-copy-grid mega-copy-grid-single" data-no-collapse="true" onclick="event.stopPropagation()">
+            <span><i class="fas fa-shield-halved"></i>${safe(isAr ? 'نسخة واحدة نظيفة، بلا تكرار' : isEn ? 'One clean prompt, no duplicates' : 'Un seul prompt propre, sans doublons')}</span>
+            <span><i class="fas fa-code"></i>${safe(isAr ? 'جاهز للكود HTML/CSS/JS' : isEn ? 'Ready for HTML/CSS/JS code' : 'Prêt pour coder HTML/CSS/JS')}</span>
+            <span><i class="fas fa-eye"></i>${safe(isAr ? 'يعتمد فقط على الأدلة' : isEn ? 'Evidence-based only' : 'Basé uniquement sur les preuves')}</span>
         </div>
         <section class="groq-code-builder" data-no-collapse="true" onclick="event.stopPropagation()">
             <header>
