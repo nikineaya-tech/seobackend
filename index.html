@@ -10174,7 +10174,8 @@ function createFixedPdfClone(el, exportOptions = {}) {
                 display: none !important;
             }
             .daka-pdf-fixed-clone #magicPromptRawText,
-            .daka-pdf-fixed-clone #rawPromptText {
+            .daka-pdf-fixed-clone #rawPromptText,
+            .daka-pdf-fixed-clone .funnel-mega-prompt {
                 display: block !important;
                 max-height: none !important;
                 overflow: visible !important;
@@ -10323,7 +10324,7 @@ function createFixedPdfClone(el, exportOptions = {}) {
         node.style.setProperty('word-break', 'normal', 'important');
         node.style.setProperty('white-space', 'normal', 'important');
     });
-    shell.querySelectorAll('#magicPromptRawText,#rawPromptText').forEach(function (node) {
+    shell.querySelectorAll('#magicPromptRawText,#rawPromptText,.funnel-mega-prompt').forEach(function (node) {
         node.style.setProperty('white-space', 'pre-wrap', 'important');
         node.style.setProperty('font-family', '"Courier New", monospace', 'important');
         node.style.setProperty('font-size', '9.4px', 'important');
