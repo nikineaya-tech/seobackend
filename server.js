@@ -8024,22 +8024,22 @@ function archetypeBusinessCopy(archetype, query, geo, lang = 'fr') {
         },
         service: {
             fr: {
-                sell: `Service spécialisé en « ${cleanQuery} » avec conseil, exécution et accompagnement.`,
-                proof: ['Cas clients et résultats vérifiables', 'Livrables, délais, révisions et conditions de paiement', 'Support, accompagnement et conditions de remboursement'],
-                position: `Devenir l’offre la plus claire et la plus vérifiable ${market}, avec livrables, délais, prix, résultats et accompagnement explicités.`,
-                promise: `Un diagnostic clair, des livrables précis, des délais annoncés et des résultats vérifiables.`
+                sell: `Service autour de « ${cleanQuery} », à comparer sur la preuve, le périmètre et la facilité de décision.`,
+                proof: [`Preuves client liées directement à « ${cleanQuery} »`, 'Périmètre, prix ou méthode de tarification visibles avant le contact', 'Étapes de travail, conditions et niveau de suivi formulés sans promesse non prouvée'],
+                position: `Se positionner ${market} comme la solution la plus facile à comprendre et à vérifier pour « ${cleanQuery} », avec preuves visibles et conditions explicites.`,
+                promise: `Une réponse claire à « ${cleanQuery} »: périmètre, méthode, prix ou cadrage, preuve et prochaine action visibles avant le CTA.`
             },
             en: {
-                sell: `Specialist “${cleanQuery}” service combining advice, execution, and support.`,
-                proof: ['Verifiable client cases and outcomes', 'Deliverables, timelines, revisions, and payment terms', 'Support, follow-up, and refund conditions'],
-                position: `Become the clearest and easiest-to-verify offer ${market}, with explicit deliverables, timelines, pricing, outcomes, and support.`,
-                promise: 'A clear diagnosis, precise deliverables, stated timelines, and verifiable outcomes.'
+                sell: `Service around “${cleanQuery}”, to compare on proof, scope, and decision clarity.`,
+                proof: [`Client proof directly related to “${cleanQuery}”`, 'Scope, pricing, or pricing method visible before contact', 'Work steps, conditions, and follow-up level stated without unsupported promises'],
+                position: `Position ${market} as the easiest-to-understand and easiest-to-verify solution for “${cleanQuery}”, with visible proof and explicit conditions.`,
+                promise: `A clear answer to “${cleanQuery}”: scope, method, pricing or framing, proof, and next action visible before the CTA.`
             },
             ar: {
-                sell: `خدمة متخصصة في «${cleanQuery}» تجمع بين الاستشارة والتنفيذ والمواكبة.`,
-                proof: ['حالات عملاء ونتائج قابلة للتحقق', 'مخرجات وآجال ومراجعات وشروط دفع واضحة', 'دعم ومواكبة وشروط استرجاع واضحة'],
-                position: `بناء العرض الأكثر وضوحا وقابلية للتحقق ${market} مع توضيح المخرجات والآجال والأسعار والنتائج والمواكبة.`,
-                promise: 'تشخيص واضح ومخرجات دقيقة وآجال معلنة ونتائج قابلة للتحقق.'
+                sell: `خدمة حول «${cleanQuery}» يجب مقارنتها على أساس الدليل ونطاق العمل وسهولة اتخاذ القرار.`,
+                proof: [`أدلة عملاء مرتبطة مباشرة بـ «${cleanQuery}»`, 'نطاق الخدمة أو السعر أو طريقة التسعير ظاهرة قبل التواصل', 'خطوات العمل والشروط ومستوى المتابعة مكتوبة دون وعود غير مثبتة'],
+                position: `التموضع ${market} كحل أسهل فهما وتحققا لـ «${cleanQuery}» مع أدلة مرئية وشروط صريحة.`,
+                promise: `إجابة واضحة على «${cleanQuery}»: نطاق العمل، الطريقة، السعر أو التأطير، الدليل والخطوة التالية قبل زر القرار.`
             }
         },
         physical_product: {

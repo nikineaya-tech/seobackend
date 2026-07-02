@@ -4038,7 +4038,7 @@ table tbody td {
                 </div>
             </div>
 
-            <button type="submit" class="btn btn-cosmic btn-lg" id="analyzeBtn" popovertarget="daka-global-loader" popovertargetaction="show" style="width: 100%; margin-top: 15px; height: 60px; font-size: 1.1rem;">
+            <button type="submit" class="btn btn-cosmic btn-lg" id="analyzeBtn" style="width: 100%; margin-top: 15px; height: 60px; font-size: 1.1rem;">
                 <i class="fas fa-crosshairs"></i>
                 <span data-i18n="btn_analyze">LANCER L'EXTRACTION STRATÉGIQUE</span>
             </button>
@@ -4138,7 +4138,7 @@ table tbody td {
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-success btn-lg" id="funnelBtn" popovertarget="daka-global-loader" popovertargetaction="show" style="width: 100%; margin-top: 1.5rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                    <button type="submit" class="btn btn-success btn-lg" id="funnelBtn" style="width: 100%; margin-top: 1.5rem; background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
                         <i class="fas fa-radar fa-spin-hover"></i> <span data-i18n="btn_funnel">LANCER L'INFILTRATION</span>
                     </button>
                 </form>
@@ -4221,7 +4221,7 @@ table tbody td {
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-cosmic btn-lg" id="technicalBtn" popovertarget="daka-global-loader" popovertargetaction="show" style="width: 100%; margin-top: 10px;">
+                    <button type="submit" class="btn btn-cosmic btn-lg" id="technicalBtn" style="width: 100%; margin-top: 10px;">
                         <i class="fas fa-magic"></i>
                         <span data-i18n="btn_technical">GÉNÉRER L'AUDIT EXPERT & CODES</span>
                     </button>
@@ -4292,7 +4292,7 @@ table tbody td {
                         <input type="range" id="kwCount" min="5" max="100" step="5" value="20" style="width:100%; margin-top:10px; accent-color:var(--accent-info);">
                     </div>
 
-                    <button type="submit" class="btn btn-cyber btn-lg" id="kwBtn" popovertarget="daka-global-loader" popovertargetaction="show" style="width:100%; margin-top:20px; height:60px; font-size:1.1rem;">
+                    <button type="submit" class="btn btn-cyber btn-lg" id="kwBtn" style="width:100%; margin-top:20px; height:60px; font-size:1.1rem;">
                         <i class="fas fa-magic"></i>
                         <span data-i18n="btn_keywords">TROUVER LES MOTS-CLÉS GAGNANTS</span>
                     </button>
@@ -6300,14 +6300,28 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
     const lockKey = `${endpoint}:${stablePayload}`;
     const existing = window.dakaAnalysisInFlight?.get(lockKey);
     if (existing && !window.dakaAnalysisCancelled) {
+        ensureAnalysisLoader(endpoint);
         toast.info(STATE.currentLang === 'ar'
             ? 'التحليل قيد التنفيذ بالفعل.'
             : STATE.currentLang === 'en'
                 ? 'This analysis is already running.'
                 : 'Cette analyse est déjà en cours.');
-        return existing.then(data => {
+        return Promise.race([
+            existing,
+            new Promise((_, reject) => setTimeout(() => reject(new Error(
+                STATE.currentLang === 'ar'
+                    ? 'التحليل السابق لا يجيب. أعد المحاولة الآن.'
+                    : STATE.currentLang === 'en'
+                        ? 'The previous analysis stopped responding. Please try again now.'
+                        : 'L’analyse précédente ne répond plus. Relancez maintenant.'
+            )), 125000))
+        ]).then(data => {
             if (typeof resultsHandler === 'function' && data) resultsHandler(data);
             return data;
+        }).catch(error => {
+            window.dakaAnalysisInFlight?.delete(lockKey);
+            hideDakaLoader();
+            throw error;
         });
     }
 
