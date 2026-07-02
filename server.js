@@ -7706,8 +7706,8 @@ function competitorGeoMismatchNote(query = '', geo = '', lang = 'fr') {
 function detectCompetitorBusinessArchetype(query = '', competitors = []) {
     const blob = `${query} ${competitors.map(x => `${x.title || ''} ${x.snippet || ''} ${x.competitorType || ''}`).join(' ')}`.toLowerCase();
     if (/compl[eé]ment|vitamin|caf[eé]ine|caffeine|ginseng|mineraux|min[eé]raux|effervescent|fatigue|concentration|energy|[ée]nergie|nutrition|sant[eé]/i.test(blob)) return 'supplement';
-    if (/agence|agency|service|consulting|conseil|saas|software|logiciel|formation|marketing|intelligence artificielle|\bia\b|\bai\b|b2b|prestation|accompagnement/i.test(blob)) return 'service';
-    if (/e-?commerce|boutique|shop|store|produit|product|retail|livraison|delivery|marketplace|acheter|buy/i.test(blob)) return 'physical_product';
+    if (/e-?commerce|boutique|shop|store|produit|product|retail|livraison|delivery|marketplace|acheter|buy|commande|panier|stock|prix|price|mad|dh|cosm[eé]tique|serum|s[eé]rum|shampo|huile|cr[eè]me|lampe|led|ordinateur|pc gamer|fruit|l[eé]gume|vetement|vêtement|accessoire/i.test(blob)) return 'physical_product';
+    if (/agence|agency|service|consulting|conseil|saas|software|logiciel|formation|marketing|intelligence artificielle|\bia\b|\bai\b|b2b|prestation|accompagnement|audit|diagnostic|devis|rendez[-\s]?vous/i.test(blob)) return 'service';
     return 'generic';
 }
 
@@ -8061,9 +8061,29 @@ function archetypeBusinessCopy(archetype, query, geo, lang = 'fr') {
                 position: `بناء العرض الأسهل مقارنة والأكثر طمأنينة ${market} مع إظهار السعر والمخزون والتوصيل والإرجاع والأدلة.`,
                 promise: 'السعر الإجمالي والمخزون والتوصيل والضمان والأدلة ظاهرة قبل الطلب.'
             }
+        },
+        generic: {
+            fr: {
+                sell: `Offre observée autour de « ${cleanQuery} », à qualifier avec les preuves réellement visibles.`,
+                proof: ['Clarifier ce qui est vendu et à qui', 'Afficher prix, conditions et preuves seulement s’ils sont vérifiables', 'Transformer les signaux marché en actions concrètes sans supposer le modèle économique'],
+                position: `Se positionner ${market} avec une offre vérifiable: promesse claire, preuves visibles, conditions explicites et CTA cohérent.`,
+                promise: 'Une offre plus lisible, plus vérifiable et plus simple à comparer, sans affirmation non prouvée.'
+            },
+            en: {
+                sell: `Observed offer around “${cleanQuery}”, to be qualified only with visible evidence.`,
+                proof: ['Clarify what is sold and for whom', 'Show pricing, conditions, and proof only when verified', 'Turn market signals into concrete actions without assuming the business model'],
+                position: `Position ${market} with a verifiable offer: clear promise, visible proof, explicit conditions, and consistent CTA.`,
+                promise: 'A clearer, more verifiable, easier-to-compare offer without unsupported claims.'
+            },
+            ar: {
+                sell: `عرض مرصود حول «${cleanQuery}» يجب تأهيله فقط بالأدلة الظاهرة فعلا.`,
+                proof: ['توضيح ما الذي يباع ولمن', 'إظهار السعر والشروط والأدلة فقط عند التحقق منها', 'تحويل إشارات السوق إلى خطوات عملية دون افتراض نموذج العمل'],
+                position: `التموضع ${market} بعرض قابل للتحقق: وعد واضح، أدلة مرئية، شروط صريحة ودعوة فعل متناسقة.`,
+                promise: 'عرض أوضح وأسهل مقارنة وأكثر قابلية للتحقق دون ادعاءات غير مثبتة.'
+            }
         }
     };
-    return copy[archetype]?.[lang] || copy.service[lang] || copy.service.en;
+    return copy[archetype]?.[lang] || copy.generic[lang] || copy.generic.en;
 }
 
 async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', query = '', geo = '', userContext = {} } = {}) {
@@ -8113,7 +8133,7 @@ async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', q
 }
 
 function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = '', lang = 'fr', archetype = 'generic', missingProofs = [] } = {}) {
-    const generic = archetypeBusinessCopy(archetype === 'generic' ? 'service' : archetype, query, geo, lang);
+    const generic = archetypeBusinessCopy(archetype, query, geo, lang);
     const leaderName = leader.domain || (lang === 'ar' ? 'المتصدر' : lang === 'en' ? 'the leader' : 'le leader');
     const pageComparison = lang === 'ar' ? `أنشئ صفحة مقارنة واضحة مع ${leaderName} تشرح الفروق في العرض والسعر والأدلة.`
         : lang === 'en' ? `Publish a clear comparison page against ${leaderName}, covering offer, pricing, and proof.`
@@ -8131,7 +8151,7 @@ function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = ''
 function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources = [], mergedData = {}, lang = 'fr', query = '', geo = '', userContext = {} } = {}) {
     const archetypeContext = [query, userContext?.offer, userContext?.audience].filter(Boolean).join(' ');
     const archetype = detectCompetitorBusinessArchetype(archetypeContext, competitors);
-    const generic = archetypeBusinessCopy(archetype === 'generic' ? 'service' : archetype, query, geo, lang);
+    const generic = archetypeBusinessCopy(archetype, query, geo, lang);
     const profiles = competitors.slice(0, 5).map(c => {
         const profile = c.businessProfile || {};
         return {
@@ -10807,6 +10827,8 @@ function buildCompetitorsRequestKey({ query = '', geo = '', lang = 'fr', url = '
 app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedReport('competitors'), warRoomLimiter, async (req, res) => {
     const startTime = Date.now();
     const isProd    = process.env.NODE_ENV === 'production';
+    let inFlightKey = '';
+    let requestLang = 'fr';
 
     try {
     let {
@@ -10838,6 +10860,7 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
     // ── PATCH 2 : Validation lang + résolution geo réelle ─
     const ALLOWED_LANGS = ['fr', 'ar', 'en'];
     if (!ALLOWED_LANGS.includes(lang)) lang = 'fr';
+    requestLang = lang;
 
     const rawGeo = String(geo || '').trim();
     const geoData = resolveSerpGeo(rawGeo || 'Morocco');
@@ -10883,8 +10906,8 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
         }
 
         // 2. Appel du moteur d'analyse stratégique
-        // ── PATCH 5 : Timeout global 55s (marge Render Free 60s) ─
-        const ROUTE_TIMEOUT  = 55000;  // ← MODIFIÉ : 28000 → 55000
+        // Timeout court: la route ne doit jamais laisser l'utilisateur attendre indéfiniment.
+        const ROUTE_TIMEOUT  = 45000;
         const timeoutPromise = new Promise((_, reject) =>
             setTimeout(
                 () => reject(new Error('ROUTE_TIMEOUT')),
@@ -10892,7 +10915,7 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
             )
         );
 
-        const inFlightKey = buildCompetitorsRequestKey({
+        inFlightKey = buildCompetitorsRequestKey({
             query: query.trim(),
             geo: safeGeo,
             lang,
@@ -10941,13 +10964,20 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
         // ── PATCH 6 : Timeout → 504 propre ───────────────────
         if (error.message === 'ROUTE_TIMEOUT') {
             console.warn(`⏱️ [/api/competitors] TIMEOUT après ${elapsed}ms`);
+            if (typeof inFlightKey === 'string') {
+                competitorsInFlight.delete(inFlightKey);
+            }
             if (typeof updateMetrics === 'function') {
                 updateMetrics(req.method, req.path, 504, elapsed);
             }
             return res.status(504).json({
                 success: false,
                 error:   'TIMEOUT',
-                message: 'Analyse trop longue — réessayez dans quelques secondes.'
+                message: requestLang === 'ar'
+                    ? 'استغرق تحليل السوق وقتا طويلا. أعد المحاولة مع كلمات أكثر تحديدا أو موقع واحد للمقارنة.'
+                    : requestLang === 'en'
+                        ? 'Market analysis took too long. Try again with a more specific query or one benchmark URL.'
+                        : 'Analyse marché trop longue. Réessayez avec une demande plus précise ou une seule URL de benchmark.'
             });
         }
 

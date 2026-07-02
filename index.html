@@ -6729,6 +6729,8 @@ function showDakaLoader(type = 'competitors') {
   document.getElementById('daka-loader-subtitle').textContent = copy.subtitle;
   document.getElementById('daka-loader-hooks').innerHTML = copy.hooks.map(hook => `<span>${escapeHtml(hook)}</span>`).join('');
   enforceMutedLoaderVideos();
+  loader.hidden = false;
+  loader.style.display = 'grid';
   loader.classList.add('active');
   if (typeof loader.showPopover === 'function' && !loader.matches(':popover-open')) {
     try { loader.showPopover(); } catch (_) {}
@@ -6746,6 +6748,10 @@ function hideDakaLoader() {
   if (loader?.matches?.(':popover-open') && typeof loader.hidePopover === 'function') {
     try { loader.hidePopover(); } catch (_) {}
   }
+  if (loader) {
+    loader.style.display = '';
+    loader.hidden = true;
+  }
   document.body.classList.remove('loading-active');
   enforceMutedLoaderVideos();
   DakaSound.loaderStop();
@@ -6760,6 +6766,27 @@ function cancelDakaAnalysis() {
   hideDakaLoader();
   toast.info(STATE.currentLang === 'ar' ? 'تم إلغاء التحليل.' : STATE.currentLang === 'en' ? 'Analysis cancelled.' : 'Analyse annulée.');
 }
+
+function dakaHasRequiredAnalysisInput(buttonId = '') {
+  if (buttonId === 'funnelBtn') return Boolean(document.getElementById('funnelUrl')?.value?.trim());
+  if (buttonId === 'technicalBtn') return Boolean(document.getElementById('techUrl')?.value?.trim());
+  if (buttonId === 'kwBtn') return Boolean(document.getElementById('seedKeyword')?.value?.trim());
+  if (buttonId === 'analyzeBtn') {
+    return Boolean(document.getElementById('keyword')?.value?.trim() || document.getElementById('url')?.value?.trim());
+  }
+  return true;
+}
+
+document.addEventListener('click', (event) => {
+  const trigger = event.target.closest?.('#analyzeBtn, #funnelBtn, #technicalBtn, #kwBtn, [data-analysis-loader]');
+  if (!trigger || trigger.disabled || trigger.getAttribute('aria-disabled') === 'true') return;
+  if (!dakaHasRequiredAnalysisInput(trigger.id)) return;
+  const type = trigger.id === 'funnelBtn' ? 'funnel'
+    : trigger.id === 'technicalBtn' ? 'technical'
+    : trigger.id === 'kwBtn' ? 'keywords'
+    : trigger.dataset.analysisLoader || 'competitors';
+  showDakaLoader(type);
+}, true);
 
 function loaderTypeFromId(elementId) {
   return elementId === 'loadingFunnel' ? 'funnel'
@@ -6845,7 +6872,17 @@ function getLoaderTips(elementId) {
 window._loaderTimers = {};
 
 function showLoading(elementId) {
-  showDakaLoader(loaderTypeFromId(elementId));
+  const endpointType = loaderTypeFromId(elementId);
+  const loader = document.getElementById('daka-global-loader');
+  if (loader?.classList.contains('active')) {
+    const copy = DAKA_LOADER_COPY[endpointType] || DAKA_LOADER_COPY.competitors;
+    document.getElementById('daka-loader-kicker').textContent = copy.kicker;
+    document.getElementById('daka-loader-title').textContent = copy.title;
+    document.getElementById('daka-loader-subtitle').textContent = copy.subtitle;
+    document.getElementById('daka-loader-hooks').innerHTML = copy.hooks.map(hook => `<span>${escapeHtml(hook)}</span>`).join('');
+    return window.dakaActiveAnalysisId;
+  }
+  return showDakaLoader(endpointType);
 }
 
 function hideLoading(elementId) {
@@ -8803,7 +8840,7 @@ async function analyzeCompetitors(e) {
                 strategicBlueprint: response.strategicBlueprint || {},
                 winningMove: response.winningMove || '',
                 actionRoadmap: Array.isArray(response.actionRoadmap) ? response.actionRoadmap : []
-            }, CONFIG.TIMEOUTMEDIUM || 45000);
+            }, 8000);
 
             if (dlResp?.success && dlResp.decisionLayer) {
                 response.decisionLayer = dlResp.decisionLayer;
