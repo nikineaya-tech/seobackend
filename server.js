@@ -21722,6 +21722,107 @@ app.post('/api/prepare-global-report', async (req, res) => {
     }
 });
 
+function escapeWordExportHtml(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function sanitizeWordExportFragment(html) {
+    return String(html || '')
+        .slice(0, 4_500_000)
+        .replace(/<script\b[\s\S]*?<\/script>/gi, '')
+        .replace(/<style\b[\s\S]*?<\/style>/gi, '')
+        .replace(/<iframe\b[\s\S]*?<\/iframe>/gi, '')
+        .replace(/<object\b[\s\S]*?<\/object>/gi, '')
+        .replace(/<embed\b[\s\S]*?>/gi, '')
+        .replace(/\son[a-z]+\s*=\s*(['"])[\s\S]*?\1/gi, '')
+        .replace(/\s(href|src)\s*=\s*(['"])\s*javascript:[\s\S]*?\2/gi, ' $1="#"');
+}
+
+function normalizeWordExportList(values, limit = 4) {
+    const list = [];
+    const visit = value => {
+        if (list.length >= limit || value === null || value === undefined) return;
+        if (Array.isArray(value)) return value.forEach(visit);
+        const text = String(typeof value === 'object' ? (value.title || value.text || value.label || '') : value)
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!text || /^(?:—|-|n\/a|null|undefined)$/i.test(text)) return;
+        if (!list.some(item => item.toLowerCase() === text.toLowerCase())) list.push(text);
+    };
+    visit(values);
+    return list.slice(0, limit);
+}
+
+function buildDakaWordDocument(payload = {}) {
+    const lang = ['fr', 'en', 'ar'].includes(payload.lang) ? payload.lang : 'fr';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const dir = isAr ? 'rtl' : 'ltr';
+    const model = payload.model && typeof payload.model === 'object' ? payload.model : {};
+    const title = String(payload.title || (isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport exécutif Daka')).slice(0, 140);
+    const sectionHtml = sanitizeWordExportFragment(payload.sectionHtml);
+    const opportunities = normalizeWordExportList(model.opportunities, 4);
+    const weaknesses = normalizeWordExportList(model.weaknesses, 4);
+    const listHtml = items => items.length ? `<ul>${items.map(item => `<li>${escapeWordExportHtml(item)}</li>`).join('')}</ul>` : '';
+    const css = [
+        'body{font-family:Arial,"Helvetica Neue",sans-serif;color:#0f172a;background:#fff;line-height:1.55;margin:32px;direction:' + dir + ';}',
+        'h1{font-size:28px;margin:0 0 10px;color:#0f172a;}',
+        'h2{font-size:21px;margin:26px 0 12px;color:#0f172a;border-bottom:2px solid #0ea5e9;padding-bottom:7px;}',
+        'h3{font-size:16px;margin:18px 0 8px;color:#0f172a;}',
+        'p,li,td,th{font-size:12px;} a{color:#0369a1;}',
+        '.word-cover{border-top:8px solid #0ea5e9;background:#f8fafc;padding:24px;margin-bottom:28px;border-radius:10px;}',
+        '.word-brand{display:flex;align-items:center;gap:14px;margin-bottom:18px}.word-brand img{width:58px;height:58px;object-fit:contain;border-radius:14px;border:1px solid #dbe4ef;background:#fff}.word-brand a{color:#0369a1;text-decoration:none;font-weight:700}',
+        '.word-score{display:inline-block;padding:7px 12px;border-radius:999px;background:#0f172a;color:#fff;font-weight:700;margin-top:8px;}',
+        '.word-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.word-card{border:1px solid #dbe4ef;border-left:4px solid #0ea5e9;border-radius:8px;padding:14px;background:#fff;}',
+        '.word-chapter{page-break-before:always;margin-top:28px}.report-section-body,.funnel-surgery-list{display:block!important}.no-print,button,.btn,.expert-dock,.global-expert-bubble,.export-bubble-wrapper,video,audio,script,style{display:none!important;}'
+    ].join('\n');
+    const appUrl = 'https://seo.mktnstrategix.com/seodaka4444';
+    const logoUrl = 'https://seo.mktnstrategix.com/assets/daka-loader-logo.jpg';
+    const cover = [
+        '<section class="word-cover">',
+        '<div class="word-brand">',
+        `<a href="${appUrl}"><img src="${logoUrl}" alt="Daka"></a>`,
+        `<div><strong>Daka Market Intelligence Spyer</strong><br><a href="${appUrl}">seo.mktnstrategix.com/seodaka4444</a></div>`,
+        '</div>',
+        `<h1>${escapeWordExportHtml(title)}</h1>`,
+        `<p><strong>${escapeWordExportHtml(model.siteTitle || model.domain || '')}</strong><br>${escapeWordExportHtml(model.reportUrl || model.domain || '')}<br>${escapeWordExportHtml(model.date || '')}</p>`,
+        Number.isFinite(Number(model.score)) ? `<span class="word-score">${Number(model.score)}/100</span>` : '',
+        `<h2>${escapeWordExportHtml(isAr ? 'الخلاصة التنفيذية' : isEn ? 'Executive summary' : 'Synthèse exécutive')}</h2>`,
+        `<p>${escapeWordExportHtml(model.verdict || model.priorityDecision || '')}</p>`,
+        '<div class="word-grid">',
+        `<article class="word-card"><h3>${escapeWordExportHtml(isAr ? 'الفرص' : isEn ? 'Opportunities' : 'Opportunités')}</h3>${listHtml(opportunities)}</article>`,
+        `<article class="word-card"><h3>${escapeWordExportHtml(isAr ? 'المخاطر' : isEn ? 'Risks' : 'Risques')}</h3>${listHtml(weaknesses)}</article>`,
+        '</div>',
+        '</section>'
+    ].join('');
+    return '<!doctype html><html lang="' + lang + '" dir="' + dir + '"><head><meta charset="utf-8"><title>' +
+        escapeWordExportHtml(title) + '</title><style>' + css + '</style></head><body>' + cover + sectionHtml + '</body></html>';
+}
+
+app.post('/api/export/word', (req, res) => {
+    try {
+        const html = buildDakaWordDocument(req.body || {});
+        const rawName = String(req.body?.filename || 'Daka-Editable-Report.doc')
+            .replace(/[^\w.\-]+/g, '-')
+            .replace(/-+/g, '-')
+            .slice(0, 120);
+        const filename = rawName.toLowerCase().endsWith('.doc') ? rawName : `${rawName || 'Daka-Editable-Report'}.doc`;
+        const buffer = Buffer.from('\ufeff' + html, 'utf8');
+        res.setHeader('Content-Type', 'application/msword; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Cache-Control', 'no-store');
+        res.send(buffer);
+    } catch (error) {
+        console.error('❌ /api/export/word:', error);
+        res.status(500).json({ success: false, error: 'WORD_EXPORT_FAILED' });
+    }
+});
+
 // 404 Handler
 app.use((req, res) => {
     res.status(404).json({

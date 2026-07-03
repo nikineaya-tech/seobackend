@@ -10660,45 +10660,36 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
     if (!sectionHtml) {
         return toast.warning(isAr ? 'المحتوى غير جاهز للتصدير.' : isEn ? 'Content is not ready to export.' : 'Le contenu n’est pas prêt pour l’export.');
     }
-    const dir = isAr ? 'rtl' : 'ltr';
     const title = isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport exécutif Daka';
-    const css = `
-        body{font-family:Arial,"Helvetica Neue",sans-serif;color:#0f172a;background:#fff;line-height:1.55;margin:32px;direction:${dir};}
-        h1{font-size:28px;margin:0 0 10px;color:#0f172a;} h2{font-size:21px;margin:26px 0 12px;color:#0f172a;border-bottom:2px solid #0ea5e9;padding-bottom:7px;}
-        h3{font-size:16px;margin:18px 0 8px;color:#0f172a;} p,li,td,th{font-size:12px;} a{color:#0369a1;}
-        .word-cover{border-top:8px solid #0ea5e9;background:#f8fafc;padding:24px;margin-bottom:28px;border-radius:10px;}
-        .word-brand{display:flex;align-items:center;gap:14px;margin-bottom:18px}.word-brand img{width:58px;height:58px;object-fit:contain;border-radius:14px;border:1px solid #dbe4ef;background:#fff}.word-brand a{color:#0369a1;text-decoration:none;font-weight:700}
-        .word-score{display:inline-block;padding:7px 12px;border-radius:999px;background:#0f172a;color:#fff;font-weight:700;margin-top:8px;}
-        .word-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.word-card{border:1px solid #dbe4ef;border-left:4px solid #0ea5e9;border-radius:8px;padding:14px;background:#fff;}
-        .word-chapter{page-break-before:always;margin-top:28px}.report-section-body,.funnel-surgery-list{display:block!important}.no-print,button,.btn,.expert-dock,.global-expert-bubble,.export-bubble-wrapper,video,audio,script,style{display:none!important;}
-    `;
-    const list = function (items) {
-        const clean = dakaPdfCleanList(items, 4);
-        return clean.length ? '<ul>' + clean.map(function (item) { return '<li>' + escapeHtml(dakaPdfSanitizeClientText(item, lang)) + '</li>'; }).join('') + '</ul>' : '';
-    };
-    const cover = `
-        <section class="word-cover">
-            <div class="word-brand">
-                <a href="${DAKA_PUBLIC_APP_URL}"><img src="${DAKA_PUBLIC_LOGO_URL}" alt="Daka"></a>
-                <div><strong>Daka Market Intelligence Spyer</strong><br><a href="${DAKA_PUBLIC_APP_URL}">${DAKA_PUBLIC_APP_URL.replace(/^https?:\/\//, '')}</a></div>
-            </div>
-            <h1>${escapeHtml(title)}</h1>
-            <p><strong>${escapeHtml(model.siteTitle || model.domain)}</strong><br>${escapeHtml(model.reportUrl || model.domain)}<br>${escapeHtml(model.date)}</p>
-            ${model.score !== null ? `<span class="word-score">${model.score}/100</span>` : ''}
-            <h2>${escapeHtml(isAr ? 'الخلاصة التنفيذية' : isEn ? 'Executive summary' : 'Synthèse exécutive')}</h2>
-            <p>${escapeHtml(dakaPdfSanitizeClientText(model.verdict || model.priorityDecision, lang))}</p>
-            <div class="word-grid">
-                <article class="word-card"><h3>${escapeHtml(isAr ? 'الفرص' : isEn ? 'Opportunities' : 'Opportunités')}</h3>${list(model.opportunities)}</article>
-                <article class="word-card"><h3>${escapeHtml(isAr ? 'المخاطر' : isEn ? 'Risks' : 'Risques')}</h3>${list(model.weaknesses)}</article>
-            </div>
-        </section>`;
-    const html = '<!doctype html><html lang="' + escapeHtml(lang) + '" dir="' + dir + '"><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title><style>' + css + '</style></head><body>' + cover + sectionHtml + '</body></html>';
-    const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
     const slug = (model.domain || 'report').replace(/[^a-zA-Z0-9]/g, '-').substring(0, 34);
+    const filename = 'Daka-Editable-Report-' + slug + '-' + Date.now() + '.doc';
+    const response = await fetch(`${CONFIG.API_BASE_URL}/api/export/word`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            lang,
+            title,
+            filename,
+            model: {
+                siteTitle: model.siteTitle || model.domain || '',
+                domain: model.domain || '',
+                reportUrl: model.reportUrl || '',
+                date: model.date || '',
+                score: model.score,
+                verdict: model.verdict || '',
+                priorityDecision: model.priorityDecision || '',
+                opportunities: model.opportunities || [],
+                weaknesses: model.weaknesses || []
+            },
+            sectionHtml
+        })
+    });
+    if (!response.ok) throw new Error(isAr ? 'تعذر إنشاء ملف Word.' : isEn ? 'Word export failed.' : 'Export Word impossible.');
+    const fileData = await response.blob();
+    const url = URL.createObjectURL(fileData);
+    const a = document.createElement('a');
     a.href = url;
-    a.download = 'Daka-Editable-Report-' + slug + '-' + Date.now() + '.doc';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     a.remove();
