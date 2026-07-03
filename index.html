@@ -10669,6 +10669,7 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
         h1{font-size:28px;margin:0 0 10px;color:#0f172a;} h2{font-size:21px;margin:26px 0 12px;color:#0f172a;border-bottom:2px solid #0ea5e9;padding-bottom:7px;}
         h3{font-size:16px;margin:18px 0 8px;color:#0f172a;} p,li,td,th{font-size:12px;} a{color:#0369a1;}
         .word-cover{border-top:8px solid #0ea5e9;background:#f8fafc;padding:24px;margin-bottom:28px;border-radius:10px;}
+        .word-brand{display:flex;align-items:center;gap:14px;margin-bottom:18px}.word-brand img{width:58px;height:58px;object-fit:contain;border-radius:14px;border:1px solid #dbe4ef;background:#fff}.word-brand a{color:#0369a1;text-decoration:none;font-weight:700}
         .word-score{display:inline-block;padding:7px 12px;border-radius:999px;background:#0f172a;color:#fff;font-weight:700;margin-top:8px;}
         .word-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.word-card{border:1px solid #dbe4ef;border-left:4px solid #0ea5e9;border-radius:8px;padding:14px;background:#fff;}
         .word-chapter{page-break-before:always;margin-top:28px}.report-section-body,.funnel-surgery-list{display:block!important}.no-print,button,.btn,.expert-dock,.global-expert-bubble,.export-bubble-wrapper,video,audio,script,style{display:none!important;}
@@ -10679,6 +10680,10 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
     };
     const cover = `
         <section class="word-cover">
+            <div class="word-brand">
+                <a href="${DAKA_PUBLIC_APP_URL}"><img src="${DAKA_PUBLIC_LOGO_URL}" alt="Daka"></a>
+                <div><strong>Daka Market Intelligence Spyer</strong><br><a href="${DAKA_PUBLIC_APP_URL}">${DAKA_PUBLIC_APP_URL.replace(/^https?:\/\//, '')}</a></div>
+            </div>
             <h1>${escapeHtml(title)}</h1>
             <p><strong>${escapeHtml(model.siteTitle || model.domain)}</strong><br>${escapeHtml(model.reportUrl || model.domain)}<br>${escapeHtml(model.date)}</p>
             ${model.score !== null ? `<span class="word-score">${model.score}/100</span>` : ''}
@@ -10909,6 +10914,8 @@ async function confirmDakaExportStudio(format = 'pdf') {
 }
 
 var dakaPdfLogoDataUrlCache = '';
+const DAKA_PUBLIC_APP_URL = 'https://seo.mktnstrategix.com/seodaka4444';
+const DAKA_PUBLIC_LOGO_URL = 'https://seo.mktnstrategix.com/assets/daka-loader-logo.jpg';
 
 function dakaPdfCleanList(values, limit = 5) {
     const result = [];
@@ -11133,8 +11140,12 @@ function getDakaPdfDecisionModel(selectedModules) {
 async function loadDakaPdfLogoDataUrl() {
     if (dakaPdfLogoDataUrlCache) return dakaPdfLogoDataUrlCache;
     try {
-        const response = await fetch('assets/daka-loader-logo.jpg', { cache: 'force-cache' });
-        if (!response.ok) return '';
+        let response = await fetch('assets/daka-loader-logo.jpg', { cache: 'force-cache' })
+            .catch(function () { return null; });
+        if (!response || !response.ok) {
+            response = await fetch(DAKA_PUBLIC_LOGO_URL, { cache: 'force-cache' }).catch(function () { return null; });
+        }
+        if (!response || !response.ok) return '';
         const blob = await response.blob();
         dakaPdfLogoDataUrlCache = await new Promise(function (resolve) {
             const reader = new FileReader();
@@ -11223,6 +11234,9 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
         pdf.setTextColor(255, 255, 255);
         pdf.text('DAKA', margin + 12.5, 32, { align: 'center' });
     }
+    if (typeof pdf.link === 'function') {
+        try { pdf.link(margin, 17, 25, 25, { url: DAKA_PUBLIC_APP_URL }); } catch (_) {}
+    }
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(15, 23, 42);
@@ -11234,9 +11248,14 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
         model.isAr ? 'تقرير أعدته فرق Daka المتخصصة' : model.isEn ? 'Report prepared by Daka specialist teams' : 'Rapport préparé par les équipes Daka',
         margin + 32, 31
     );
+    pdf.setFontSize(6.3);
+    pdf.setTextColor(3, 105, 161);
+    pdf.textWithLink
+        ? pdf.textWithLink(DAKA_PUBLIC_APP_URL.replace(/^https?:\/\//, ''), margin + 32, 36.3, { url: DAKA_PUBLIC_APP_URL })
+        : pdf.text(DAKA_PUBLIC_APP_URL.replace(/^https?:\/\//, ''), margin + 32, 36.3);
     pdf.setFontSize(6.5);
     pdf.setTextColor(100, 116, 139);
-    pdf.text(model.date, margin + 32, 37);
+    pdf.text(model.date, margin + 32, 41);
 
     pdf.setFillColor(255, 255, 255);
     pdf.setDrawColor(203, 213, 225);
