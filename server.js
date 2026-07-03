@@ -8086,6 +8086,34 @@ function archetypeBusinessCopy(archetype, query, geo, lang = 'fr') {
     return copy[archetype]?.[lang] || copy.generic[lang] || copy.generic.en;
 }
 
+function buildContextualBusinessPosition({ archetype = 'generic', query = '', geo = '', lang = 'fr', leader = {}, missingProofs = [] } = {}) {
+    const market = competitorMarketPhrase(geo, lang);
+    const cleanQuery = cleanCompetitorBusinessText(query, 110) || (lang === 'ar' ? 'هذا العرض' : lang === 'en' ? 'this offer' : 'cette offre');
+    const leaderName = cleanCompetitorBusinessText(leader.domain || leader.title || '', 70);
+    const firstGap = cleanCompetitorBusinessText((missingProofs || [])[0], 110);
+    const versus = leaderName
+        ? (lang === 'ar' ? `مقارنة بـ ${leaderName}` : lang === 'en' ? `against ${leaderName}` : `face à ${leaderName}`)
+        : (lang === 'ar' ? 'مقارنة بالسوق المرصود' : lang === 'en' ? 'against the observed market' : 'face au marché observé');
+    if (archetype === 'service') {
+        if (lang === 'ar') return `حوّل «${cleanQuery}» إلى قرار خدمة مفهوم ${market}: ابدأ بنطاق العمل والنتيجة المتوقعة ${versus}، ثم اعرض الدليل، الآجال، طريقة التسعير والخطوة التالية في نفس المسار.`;
+        if (lang === 'en') return `Turn “${cleanQuery}” into an easy service decision ${market}: lead with scope and expected outcome ${versus}, then show proof, timeline, pricing method, and next step in the same path.`;
+        return `Transformer « ${cleanQuery} » en décision de service lisible ${market} : ouvrir sur le périmètre et le résultat attendu ${versus}, puis afficher preuve, délais, méthode de prix et prochaine action dans le même parcours.`;
+    }
+    if (archetype === 'supplement') {
+        if (lang === 'ar') return `اجعل «${cleanQuery}» عرضا صحيا قابلا للثقة ${market}: قدّم التركيبة والجرعة والاحتياطات قبل السعر، ثم اربطها بآراء موثقة وتوفر محلي ${versus}.`;
+        if (lang === 'en') return `Make “${cleanQuery}” a trustable health offer ${market}: show composition, dosage, and precautions before price, then connect them to verified reviews and local availability ${versus}.`;
+        return `Faire de « ${cleanQuery} » une offre santé vérifiable ${market} : montrer composition, dosage et précautions avant le prix, puis les relier aux avis vérifiables et à la disponibilité locale ${versus}.`;
+    }
+    if (archetype === 'physical_product') {
+        if (lang === 'ar') return `بدلا من عرض عام، اجعل «${cleanQuery}» قرار شراء سريع ${market}: وضّح الفرق ${versus}، ثم اجمع السعر، المخزون، التوصيل، الإرجاع والدليل الأقوى في شاشة قرار واحدة.${firstGap ? ` الثغرة الأولى التي يجب إغلاقها: ${firstGap}.` : ''}`;
+        if (lang === 'en') return `Do not present “${cleanQuery}” as a generic product; make it a fast buying decision ${market}: clarify the difference ${versus}, then group price, stock, delivery, returns, and strongest proof in one decision screen.${firstGap ? ` First gap to close: ${firstGap}.` : ''}`;
+        return `Ne pas présenter « ${cleanQuery} » comme un produit générique ; en faire une décision d’achat rapide ${market} : clarifier l’écart ${versus}, puis réunir prix, stock, livraison, retours et preuve forte dans un seul écran de décision.${firstGap ? ` Première faille à fermer : ${firstGap}.` : ''}`;
+    }
+    if (lang === 'ar') return `Positionne «${cleanQuery}» avec une preuve claire ${market}: expliquer ce qui est vendu, pourquoi c’est différent ${versus}, et quels éléments restent à confirmer avant de promettre plus.`;
+    if (lang === 'en') return `Position “${cleanQuery}” with clear proof ${market}: explain what is sold, why it differs ${versus}, and what still needs confirmation before making stronger claims.`;
+    return `Positionner « ${cleanQuery} » avec une preuve claire ${market} : expliquer ce qui est vendu, pourquoi c’est différent ${versus}, et ce qui reste à confirmer avant toute promesse forte.`;
+}
+
 async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', query = '', geo = '', userContext = {} } = {}) {
     const archetypeContext = [query, userContext?.offer, userContext?.audience].filter(Boolean).join(' ');
     const archetype = detectCompetitorBusinessArchetype(archetypeContext, competitors);
@@ -8133,7 +8161,11 @@ async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', q
 }
 
 function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = '', lang = 'fr', archetype = 'generic', missingProofs = [] } = {}) {
-    const generic = archetypeBusinessCopy(archetype, query, geo, lang);
+    const baseGeneric = archetypeBusinessCopy(archetype, query, geo, lang);
+    const generic = {
+        ...baseGeneric,
+        position: buildContextualBusinessPosition({ archetype, query, geo, lang, leader, missingProofs })
+    };
     const leaderName = leader.domain || (lang === 'ar' ? 'المتصدر' : lang === 'en' ? 'the leader' : 'le leader');
     const pageComparison = lang === 'ar' ? `أنشئ صفحة مقارنة واضحة مع ${leaderName} تشرح الفروق في العرض والسعر والأدلة.`
         : lang === 'en' ? `Publish a clear comparison page against ${leaderName}, covering offer, pricing, and proof.`
@@ -8176,6 +8208,7 @@ function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources
     const allEvidence = [...new Set(profiles.flatMap(x => (x.evidenceLinks || []).map(link => link?.url || link)).filter(Boolean))].slice(0, 12);
     const weaknesses = dedupeBusinessInsights(profiles.flatMap(x => x.deducedWeaknesses || []), 3);
     const missingProofs = dedupeBusinessInsights(profiles.flatMap(x => x.missingProofs || []), 3);
+    const contextualPosition = buildContextualBusinessPosition({ archetype, query, geo, lang, leader, missingProofs });
     const reasons = dedupeBusinessInsights([
         ...(leader.observedStrengths || []),
         leader.geoMatched ? (lang === 'ar' ? 'حضور واضح وملائم للسوق المستهدف.' : lang === 'en' ? 'Clear relevance and presence in the target market.' : 'Présence claire et pertinente sur le marché ciblé.') : null,
@@ -8244,14 +8277,14 @@ function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources
         recommendedAttackAngle: {
             whatCompetitorsSell: dedupeBusinessInsights(profiles.map(x => x.whatTheySell), 4),
             whatTheyDoNotProve: missingProofs, promiseToMake: generic.promise,
-            positioningStatement: generic.position, proofsToAdd: missingProofs.length ? missingProofs : generic.proof,
+            positioningStatement: contextualPosition, proofsToAdd: missingProofs.length ? missingProofs : generic.proof,
             type: 'recommended', confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW', evidenceLinks: allEvidence
         },
         priorityActions: actions,
         surveillance: grouped,
         finalAnswers: {
             whoWins: leader.domain || noDirectCompetitor, whyTheyWin: reasons, weaknesses,
-            positionToTake: generic.position,
+            positionToTake: contextualPosition,
             thisWeek: actions.filter(x => x.horizon === '7_DAYS').slice(0, 3),
             next30Days: actions.filter(x => x.horizon === '30_DAYS').slice(0, 3),
             missingProofs: missingProofs.length ? missingProofs : generic.proof.slice(0, 3)

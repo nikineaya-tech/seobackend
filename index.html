@@ -3816,7 +3816,10 @@ table tbody td {
                     <i class="fas fa-user-shield"></i>
                     <span id="export-studio-proof-text">Rapport préparé et signé par les équipes expertes Daka.</span>
                 </div>
-                <button id="export-studio-confirm" class="btn btn-primary" type="button" data-no-collapse="true" onclick="confirmDakaExportStudio()">
+                <button id="export-studio-word" class="btn btn-secondary" type="button" data-no-collapse="true" onclick="confirmDakaExportStudio('word')">
+                    <i class="fas fa-file-word"></i><span id="export-word-label">Exporter Word</span>
+                </button>
+                <button id="export-studio-confirm" class="btn btn-primary" type="button" data-no-collapse="true" onclick="confirmDakaExportStudio('pdf')">
                     <i class="fas fa-file-arrow-down"></i><span id="export-confirm-label">Valider et exporter</span>
                 </button>
             </div>
@@ -10027,6 +10030,50 @@ function isDakaInsufficientExportText(value) {
     });
 }
 
+function dakaPdfHumanLabel(value, lang = STATE.currentLang || 'fr') {
+    const raw = String(value || '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const key = raw.toLowerCase();
+    const labels = {
+        ar: {
+            hero: 'الشاشة الأولى', pricing: 'السعر والعرض', price: 'السعر', primary_cta: 'زر القرار الرئيسي',
+            cta: 'زر القرار', product: 'المنتج', features: 'الخصائص', returns: 'الإرجاع', delivery: 'التوصيل',
+            trust: 'الثقة', social_proof: 'الدليل الاجتماعي', testimonials: 'آراء العملاء', reviews: 'آراء العملاء',
+            faq: 'الأسئلة الشائعة', guarantee: 'الضمان', content: 'المحتوى', product_visuals: 'صور المنتج',
+            offer: 'العرض', benefits: 'الفوائد', footer: 'التذييل', legal: 'الصفحات القانونية'
+        },
+        en: {
+            hero: 'First screen', pricing: 'Price and offer', price: 'Price', primary_cta: 'Primary action button',
+            cta: 'Action button', product: 'Product', features: 'Product features', returns: 'Returns', delivery: 'Delivery',
+            trust: 'Trust proof', social_proof: 'Social proof', testimonials: 'Customer testimonials', reviews: 'Customer reviews',
+            faq: 'FAQ', guarantee: 'Guarantee', content: 'Content', product_visuals: 'Product visuals',
+            offer: 'Offer', benefits: 'Benefits', footer: 'Footer', legal: 'Legal pages'
+        },
+        fr: {
+            hero: 'Premier écran', pricing: 'Prix et offre', price: 'Prix', primary_cta: 'Bouton d’action principal',
+            cta: 'Bouton d’action', product: 'Produit', features: 'Caractéristiques produit', returns: 'Retours', delivery: 'Livraison',
+            trust: 'Preuves de confiance', social_proof: 'Preuve sociale', testimonials: 'Témoignages clients', reviews: 'Avis clients',
+            faq: 'FAQ', guarantee: 'Garantie', content: 'Contenu', product_visuals: 'Visuels produit',
+            offer: 'Offre', benefits: 'Bénéfices', footer: 'Pied de page', legal: 'Pages légales'
+        }
+    };
+    return labels[lang]?.[key] || labels.fr[key] || raw;
+}
+
+function dakaPdfSanitizeClientText(value, lang = STATE.currentLang || 'fr') {
+    let text = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!text) return '';
+    text = text
+        .replace(/\b(?:click|cliquez|cliquer|voir les détails|view details|open section|onclick|data-export-feature)\b/gi, ' ')
+        .replace(/\b(?:primary_cta|social_proof|product_visuals)\b/gi, function (match) { return dakaPdfHumanLabel(match, lang); })
+        .replace(/\b(?:hero|pricing|features|returns|delivery|trust|testimonials|reviews|faq|guarantee|product)\b/gi, function (match) {
+            const human = dakaPdfHumanLabel(match, lang);
+            return human || match;
+        })
+        .replace(/\s+/g, ' ')
+        .trim();
+    return text;
+}
+
 function dakaPdfPrepareSemanticText(value) {
     const text = String(value || '').replace(/\s+/g, ' ').trim();
     if (!text) return '';
@@ -10038,7 +10085,7 @@ function dakaPdfPrepareSemanticText(value) {
                 : 'Texte source en arabe détecté. Consulter la formulation originale dans le rapport web.';
         }
     }
-    return text;
+    return dakaPdfSanitizeClientText(text, STATE.currentLang || 'fr');
 }
 
 function cloneReportHtmlForExport(el, exportOptions = {}) {
@@ -10585,6 +10632,77 @@ function saveDakaPdfFile(pdf, filename, downloadWindow = null) {
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
 }
 
+window.exportFullAnalysisToWord = async function (exportOptions = null) {
+    const lang = STATE.currentLang || 'fr';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    if (!exportOptions?.prepared) {
+        openDakaExportStudio();
+        return;
+    }
+    const selectedSectionKeys = new Set(exportOptions.sections || []);
+    const selectedFeatures = exportOptions.features || {};
+    const selectedModules = getDakaExportModules().filter(module => module.available && selectedSectionKeys.has(module.key));
+    if (!selectedModules.length) {
+        return toast.warning(isAr ? 'لا يوجد تقرير جاهز للتصدير.' : isEn ? 'No report is ready to export.' : 'Aucun rapport prêt à exporter.');
+    }
+    const model = getDakaPdfDecisionModel(selectedModules);
+    const sectionHtml = selectedModules.map(function (module) {
+        const el = document.getElementById(module.id);
+        if (!el || getExportableReportText(el).length < 40) return '';
+        return '<section class="word-chapter"><h2>' + escapeHtml(module.title) + '</h2>' +
+            cloneReportHtmlForExport(el, {
+                includeDetails: exportOptions.includeDetails !== false,
+                featureKeys: selectedFeatures[module.key] || [],
+                featureTitles: (module.features || [])
+                    .filter(function (feature) { return (selectedFeatures[module.key] || []).includes(feature.key); })
+                    .map(function (feature) { return feature.title; })
+            }) + '</section>';
+    }).filter(Boolean).join('');
+    if (!sectionHtml) {
+        return toast.warning(isAr ? 'المحتوى غير جاهز للتصدير.' : isEn ? 'Content is not ready to export.' : 'Le contenu n’est pas prêt pour l’export.');
+    }
+    const dir = isAr ? 'rtl' : 'ltr';
+    const title = isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport exécutif Daka';
+    const css = `
+        body{font-family:Arial,"Helvetica Neue",sans-serif;color:#0f172a;background:#fff;line-height:1.55;margin:32px;direction:${dir};}
+        h1{font-size:28px;margin:0 0 10px;color:#0f172a;} h2{font-size:21px;margin:26px 0 12px;color:#0f172a;border-bottom:2px solid #0ea5e9;padding-bottom:7px;}
+        h3{font-size:16px;margin:18px 0 8px;color:#0f172a;} p,li,td,th{font-size:12px;} a{color:#0369a1;}
+        .word-cover{border-top:8px solid #0ea5e9;background:#f8fafc;padding:24px;margin-bottom:28px;border-radius:10px;}
+        .word-score{display:inline-block;padding:7px 12px;border-radius:999px;background:#0f172a;color:#fff;font-weight:700;margin-top:8px;}
+        .word-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.word-card{border:1px solid #dbe4ef;border-left:4px solid #0ea5e9;border-radius:8px;padding:14px;background:#fff;}
+        .word-chapter{page-break-before:always;margin-top:28px}.report-section-body,.funnel-surgery-list{display:block!important}.no-print,button,.btn,.expert-dock,.global-expert-bubble,.export-bubble-wrapper,video,audio,script,style{display:none!important;}
+    `;
+    const list = function (items) {
+        const clean = dakaPdfCleanList(items, 4);
+        return clean.length ? '<ul>' + clean.map(function (item) { return '<li>' + escapeHtml(dakaPdfSanitizeClientText(item, lang)) + '</li>'; }).join('') + '</ul>' : '';
+    };
+    const cover = `
+        <section class="word-cover">
+            <h1>${escapeHtml(title)}</h1>
+            <p><strong>${escapeHtml(model.siteTitle || model.domain)}</strong><br>${escapeHtml(model.reportUrl || model.domain)}<br>${escapeHtml(model.date)}</p>
+            ${model.score !== null ? `<span class="word-score">${model.score}/100</span>` : ''}
+            <h2>${escapeHtml(isAr ? 'الخلاصة التنفيذية' : isEn ? 'Executive summary' : 'Synthèse exécutive')}</h2>
+            <p>${escapeHtml(dakaPdfSanitizeClientText(model.verdict || model.priorityDecision, lang))}</p>
+            <div class="word-grid">
+                <article class="word-card"><h3>${escapeHtml(isAr ? 'الفرص' : isEn ? 'Opportunities' : 'Opportunités')}</h3>${list(model.opportunities)}</article>
+                <article class="word-card"><h3>${escapeHtml(isAr ? 'المخاطر' : isEn ? 'Risks' : 'Risques')}</h3>${list(model.weaknesses)}</article>
+            </div>
+        </section>`;
+    const html = '<!doctype html><html lang="' + escapeHtml(lang) + '" dir="' + dir + '"><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title><style>' + css + '</style></head><body>' + cover + sectionHtml + '</body></html>';
+    const blob = new Blob(['\ufeff', html], { type: 'application/msword;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const slug = (model.domain || 'report').replace(/[^a-zA-Z0-9]/g, '-').substring(0, 34);
+    a.href = url;
+    a.download = 'Daka-Editable-Report-' + slug + '-' + Date.now() + '.doc';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+    toast.success(isAr ? 'تم تحميل ملف Word.' : isEn ? 'Word file downloaded.' : 'Fichier Word téléchargé.');
+};
+
 function restorePdfExportDom(hiddenEls, openedDetails) {
     (hiddenEls || []).forEach(function (item) {
         if (item && item.el) item.el.style.display = item.orig;
@@ -10744,11 +10862,13 @@ function openDakaExportStudio(preselect = null) {
         : isEn ? 'Select only useful chapters. The PDF will be built around your selection.'
             : 'Cochez uniquement les chapitres utiles. Le PDF sera construit autour de votre sélection.';
     document.getElementById('export-confirm-label').textContent = isAr ? 'تأكيد وتصدير' : isEn ? 'Confirm and export' : 'Valider et exporter';
+    const wordLabel = document.getElementById('export-word-label');
+    if (wordLabel) wordLabel.textContent = isAr ? 'تصدير Word' : isEn ? 'Export Word' : 'Exporter Word';
     modal.classList.add('active');
     document.body.classList.add('modal-open');
 }
 
-async function confirmDakaExportStudio() {
+async function confirmDakaExportStudio(format = 'pdf') {
     const sections = [...document.querySelectorAll('#export-studio-sections input[data-export-section]:checked')].map(input => input.value);
     if (!sections.length) {
         return toast.warning(STATE.currentLang === 'ar' ? 'اختر قسماً واحداً على الأقل.' : STATE.currentLang === 'en' ? 'Select at least one section.' : 'Sélectionnez au moins une section.');
@@ -10777,7 +10897,11 @@ async function confirmDakaExportStudio() {
     }
     closeDakaExportStudio();
     try {
-        await window.exportFullAnalysisToPDF({ prepared: true, sections, features, includeDetails: true, downloadWindow });
+        if (format === 'word' && typeof window.exportFullAnalysisToWord === 'function') {
+            await window.exportFullAnalysisToWord({ prepared: true, sections, features, includeDetails: true });
+        } else {
+            await window.exportFullAnalysisToPDF({ prepared: true, sections, features, includeDetails: true, downloadWindow });
+        }
     } finally {
         if (confirmButton) confirmButton.disabled = false;
         if (confirmLabel) confirmLabel.textContent = originalLabel;
@@ -11034,7 +11158,7 @@ function dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, pageLabel) {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(6.5);
     pdf.setTextColor(3, 105, 161);
-    pdf.text('DAKA · DECISION REPORT', margin, 11);
+    pdf.text(model.isAr ? 'DAKA · تقرير قرار' : model.isEn ? 'DAKA · DECISION REPORT' : 'DAKA · RAPPORT DÉCISIONNEL', margin, 11);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(100, 116, 139);
     pdf.text(String(model.domain || '').substring(0, 55), pageW - margin, 11, { align: 'right' });
@@ -11044,14 +11168,17 @@ function dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, pageLabel) {
     pdf.setTextColor(100, 116, 139);
     pdf.text(pageLabel || '', margin, pageH - 6);
     pdf.text(
-        'Made by Daka · ' + String(pdf.internal.getCurrentPageInfo().pageNumber),
+        (model.isAr ? 'Made by Daka · ' : 'Made by Daka · ') + String(pdf.internal.getCurrentPageInfo().pageNumber),
         pageW - margin, pageH - 6, { align: 'right' }
     );
 }
 
 function dakaPdfDrawWrappedText(pdf, text, x, y, width, options = {}) {
-    const safeText = String(text || '').replace(/\s+/g, ' ').trim();
+    let safeText = String(text || '').replace(/\s+/g, ' ').trim();
     if (!safeText) return y;
+    if (STATE.currentLang === 'ar' && typeof pdf.processArabic === 'function' && /[\u0600-\u06ff]/.test(safeText)) {
+        try { safeText = pdf.processArabic(safeText); } catch (_) {}
+    }
     const maxLines = options.maxLines || 4;
     let lines = pdf.splitTextToSize(safeText, width);
     if (lines.length > maxLines) {
@@ -11085,7 +11212,7 @@ function dakaPdfDrawListCard(pdf, title, items, x, y, width, height, accent) {
 }
 
 function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW, pageH, margin) {
-    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isEn ? 'Executive brief' : 'Fiche sommaire exécutive');
+    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isAr ? 'الملخص التنفيذي' : model.isEn ? 'Executive brief' : 'Fiche sommaire exécutive');
     if (logoDataUrl) {
         try { pdf.addImage(logoDataUrl, 'JPEG', margin, 17, 25, 25, undefined, 'FAST'); } catch (_) {}
     } else {
@@ -11099,12 +11226,12 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(model.isEn ? 'Executive Decision Brief' : 'Fiche sommaire décisionnelle', margin + 32, 25);
+    pdf.text(model.isAr ? 'ملف القرار التنفيذي' : model.isEn ? 'Executive Decision Brief' : 'Fiche sommaire décisionnelle', margin + 32, 25);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(7.2);
     pdf.setTextColor(71, 85, 105);
     pdf.text(
-        model.isEn ? 'Report prepared by Daka specialist teams' : 'Rapport préparé par les équipes Daka',
+        model.isAr ? 'تقرير أعدته فرق Daka المتخصصة' : model.isEn ? 'Report prepared by Daka specialist teams' : 'Rapport préparé par les équipes Daka',
         margin + 32, 31
     );
     pdf.setFontSize(6.5);
@@ -11125,7 +11252,7 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(6);
     pdf.setTextColor(100, 116, 139);
-    pdf.text(model.isEn ? 'MARKET / LANGUAGE' : 'MARCHÉ / LANGUE', pageW - margin - 48, 58);
+    pdf.text(model.isAr ? 'السوق / اللغة' : model.isEn ? 'MARKET / LANGUAGE' : 'MARCHÉ / LANGUE', pageW - margin - 48, 58);
     dakaPdfDrawWrappedText(pdf, [model.geo, model.lang.toUpperCase()].filter(Boolean).join(' · '), pageW - margin - 48, 66, 43, {
         size: 8, bold: true, color: [15, 23, 42], maxLines: 2
     });
@@ -11135,7 +11262,7 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(6.5);
     pdf.setTextColor(125, 211, 252);
-    pdf.text(model.isEn ? 'GLOBAL VERDICT' : 'VERDICT GLOBAL', margin + 8, 96);
+    pdf.text(model.isAr ? 'الخلاصة العامة' : model.isEn ? 'GLOBAL VERDICT' : 'VERDICT GLOBAL', margin + 8, 96);
     dakaPdfDrawWrappedText(pdf, model.verdict || model.priorityDecision, margin + 8, 105, pageW - margin * 2 - 48, {
         size: 10, bold: true, color: [255, 255, 255], maxLines: 3, lineHeight: 5
     });
@@ -11157,13 +11284,13 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     if (model.opportunities.length && model.weaknesses.length) {
         dakaPdfDrawListCard(
             pdf,
-            model.isEn ? 'Top opportunities' : 'Top 3 opportunités',
+            model.isAr ? 'أهم الفرص' : model.isEn ? 'Top opportunities' : 'Top 3 opportunités',
             model.opportunities,
             margin, 130, cardW, 55, [5, 150, 105]
         );
         dakaPdfDrawListCard(
             pdf,
-            model.isEn ? 'Critical weaknesses' : 'Faiblesses critiques',
+            model.isAr ? 'نقاط الخطر' : model.isEn ? 'Critical weaknesses' : 'Faiblesses critiques',
             model.weaknesses,
             margin + cardW + gap, 130, cardW, 55, [220, 38, 38]
         );
@@ -11171,7 +11298,7 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
         const hasOpportunities = model.opportunities.length > 0;
         dakaPdfDrawListCard(
             pdf,
-            hasOpportunities ? (model.isEn ? 'Top opportunities' : 'Top opportunités') : (model.isEn ? 'Critical weaknesses' : 'Faiblesses critiques'),
+            hasOpportunities ? (model.isAr ? 'أهم الفرص' : model.isEn ? 'Top opportunities' : 'Top opportunités') : (model.isAr ? 'نقاط الخطر' : model.isEn ? 'Critical weaknesses' : 'Faiblesses critiques'),
             hasOpportunities ? model.opportunities : model.weaknesses,
             margin, 130, pageW - margin * 2, 55, hasOpportunities ? [5, 150, 105] : [220, 38, 38]
         );
@@ -11185,7 +11312,7 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(7);
     pdf.setTextColor(146, 64, 14);
-    pdf.text(model.isEn ? 'PRIORITY DECISION' : 'DÉCISION PRIORITAIRE', margin + 9, 202);
+    pdf.text(model.isAr ? 'القرار ذو الأولوية' : model.isEn ? 'PRIORITY DECISION' : 'DÉCISION PRIORITAIRE', margin + 9, 202);
     dakaPdfDrawWrappedText(pdf, model.priorityDecision, margin + 9, 211, pageW - margin * 2 - 18, {
         size: 9.2, bold: true, color: [15, 23, 42], maxLines: 3, lineHeight: 4.8
     });
@@ -11193,7 +11320,7 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(7);
     pdf.setTextColor(71, 85, 105);
-    pdf.text(model.isEn ? 'INCLUDED EXPERTISES · CLICK TO OPEN' : 'EXPERTISES INCLUSES · CLIQUEZ POUR OUVRIR', margin, 238);
+    pdf.text(model.isAr ? 'الفصول المدرجة في التقرير' : model.isEn ? 'INCLUDED EXPERTISES' : 'EXPERTISES INCLUSES', margin, 238);
     const links = [];
     validSections.slice(0, 4).forEach(function (section, index) {
         const col = index % 2;
@@ -11216,36 +11343,36 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
 function drawDakaPdfRoadmapPage(pdf, model, pageW, pageH, margin) {
     const phases = [
         {
-            label: model.isEn ? 'Now' : 'Maintenant',
+            label: model.isAr ? 'الآن' : model.isEn ? 'Now' : 'Maintenant',
             items: dakaPdfCleanList([model.priorityDecision], 1),
             accent: [202, 138, 4]
         },
         {
-            label: model.isEn ? '7 days' : '7 jours',
+            label: model.isAr ? '7 أيام' : model.isEn ? '7 days' : '7 jours',
             items: model.quickWins.slice(0, 2),
             accent: [5, 150, 105]
         },
         {
-            label: model.isEn ? '30 days' : '30 jours',
+            label: model.isAr ? '30 يوما' : model.isEn ? '30 days' : '30 jours',
             items: model.plan30.slice(0, 2),
             accent: [3, 105, 161]
         },
         {
-            label: model.isEn ? 'After 30 days' : 'Après 30 jours',
+            label: model.isAr ? 'بعد 30 يوما' : model.isEn ? 'After 30 days' : 'Après 30 jours',
             items: model.after30.slice(0, 2),
             accent: [71, 85, 105]
         }
     ].filter(function (phase) { return phase.items.length; });
     if (!phases.length) return false;
     pdf.addPage();
-    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isEn ? 'Action plan and roadmap' : 'Plan d’action et roadmap');
+    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isAr ? 'خطة العمل' : model.isEn ? 'Action plan and roadmap' : 'Plan d’action et roadmap');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(model.isEn ? 'Action plan and roadmap' : 'Plan d’action et roadmap', margin, 25);
+    pdf.text(model.isAr ? 'خطة العمل والجدول الزمني' : model.isEn ? 'Action plan and roadmap' : 'Plan d’action et roadmap', margin, 25);
     dakaPdfDrawWrappedText(
         pdf,
-        model.isEn ? 'A sequenced plan built only from usable findings.' : 'Un plan séquencé construit uniquement à partir des constats exploitables.',
+        model.isAr ? 'خطة مرتبة مبنية فقط على الملاحظات القابلة للاستعمال.' : model.isEn ? 'A sequenced plan built only from usable findings.' : 'Un plan séquencé construit uniquement à partir des constats exploitables.',
         margin, 34, pageW - margin * 2, { size: 8, color: [71, 85, 105], maxLines: 2 }
     );
     const startY = 52;
@@ -11270,24 +11397,24 @@ function drawDakaPdfRoadmapPage(pdf, model, pageW, pageH, margin) {
         let cursor = y + 18;
         phase.items.forEach(function (item, itemIndex) {
             const matching = model.actions.find(function (action) { return action.title === item; }) || {
-                impact: model.isEn ? 'To confirm' : 'À confirmer',
-                effort: model.isEn ? 'To estimate' : 'À estimer',
+                impact: model.isAr ? 'قابل للتأكيد' : model.isEn ? 'To confirm' : 'À confirmer',
+                effort: model.isAr ? 'قابل للتقدير' : model.isEn ? 'To estimate' : 'À estimer',
                 priority: phase.label,
                 justification: model.weaknesses[itemIndex] || model.opportunities[itemIndex] || model.verdict
             };
             cursor = dakaPdfDrawWrappedText(pdf, (itemIndex + 1) + '. ' + item, margin + 27, cursor, pageW - margin * 2 - 48, {
                 size: 7.3, bold: true, color: [15, 23, 42], maxLines: 3, lineHeight: 3.8
             });
-            const meta = (model.isEn ? 'Impact' : 'Impact') + ': ' + matching.impact + ' · ' +
-                (model.isEn ? 'Effort' : 'Effort') + ': ' + matching.effort + ' · ' +
-                (model.isEn ? 'Priority' : 'Priorité') + ': ' + matching.priority;
+            const meta = (model.isAr ? 'الأثر' : model.isEn ? 'Impact' : 'Impact') + ': ' + matching.impact + ' · ' +
+                (model.isAr ? 'الجهد' : model.isEn ? 'Effort' : 'Effort') + ': ' + matching.effort + ' · ' +
+                (model.isAr ? 'الأولوية' : model.isEn ? 'Priority' : 'Priorité') + ': ' + matching.priority;
             cursor = dakaPdfDrawWrappedText(pdf, meta, margin + 31, cursor, pageW - margin * 2 - 39, {
                 size: 6.1, color: [100, 116, 139], maxLines: 1, lineHeight: 3.4
             }) + 2;
             if (matching?.justification) {
                 cursor = dakaPdfDrawWrappedText(
                     pdf,
-                    (model.isEn ? 'Why: ' : 'Pourquoi : ') + matching.justification,
+                    (model.isAr ? 'السبب: ' : model.isEn ? 'Why: ' : 'Pourquoi : ') + matching.justification,
                     margin + 31,
                     cursor,
                     pageW - margin * 2 - 39,
@@ -11302,14 +11429,14 @@ function drawDakaPdfRoadmapPage(pdf, model, pageW, pageH, margin) {
 function drawDakaPdfMindMapPage(pdf, model, pageW, pageH, margin) {
     if (!model.branches.length) return false;
     pdf.addPage();
-    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isEn ? 'Strategic mind map' : 'Carte mentale stratégique');
+    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isAr ? 'الخريطة الذهنية' : model.isEn ? 'Strategic mind map' : 'Carte mentale stratégique');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(model.isEn ? 'Strategic decision tree' : 'Carte mentale stratégique', margin, 25);
+    pdf.text(model.isAr ? 'خريطة القرار الاستراتيجي' : model.isEn ? 'Strategic decision tree' : 'Carte mentale stratégique', margin, 25);
     dakaPdfDrawWrappedText(
         pdf,
-        model.isEn ? 'One objective, five decision branches.' : 'Un objectif central, cinq branches de décision.',
+        model.isAr ? 'هدف مركزي واحد وخمسة محاور قرار.' : model.isEn ? 'One objective, five decision branches.' : 'Un objectif central, cinq branches de décision.',
         margin, 34, pageW - margin * 2, { size: 8, color: [71, 85, 105], maxLines: 1 }
     );
     const rootX = margin;
@@ -11441,7 +11568,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
     // ══════════════════════════════════════════════════════════════
     // CAS ARABE — window.print() dans popup (PATCH THEME DARK)
     // ══════════════════════════════════════════════════════════════
-    if (STATE.currentLang === 'ar') {
+    if (false && STATE.currentLang === 'ar') {
         try {
             var arSections = selectedModules
                 .map(function (module) {
@@ -11628,7 +11755,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         return;
     }
 
-    toast.info(isEn ? 'Building PDF — please wait...' : 'Construction du PDF — patientez...');
+    toast.info(isAr ? 'يتم بناء ملف PDF...' : isEn ? 'Building PDF — please wait...' : 'Construction du PDF — patientez...');
     await new Promise(function (r) { setTimeout(r, 120); });
 
     let hiddenEls = [];
@@ -11639,10 +11766,10 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
         // ── Sections à exporter ───────────────────────────────────
         const sectionDefs = [
-            { key: 'competitors', id: 'resultsCompetitors', label: isEn ? 'Competitor Report' : 'Concurrence', has: hasComp },
-            { key: 'funnel', id: 'resultsFunnel', label: isEn ? 'Conversion Path' : 'Parcours de conversion', has: hasFunnel },
-            { key: 'technical', id: 'resultsTechnical', label: isEn ? 'Site Audit' : 'Audit site', has: hasSeo },
-            { key: 'keywords', id: 'resultsKeywords', label: isEn ? 'Keywords' : 'Mots-clés', has: hasKw },
+            { key: 'competitors', id: 'resultsCompetitors', label: isAr ? 'المنافسة والسوق' : isEn ? 'Competitor Report' : 'Concurrence', has: hasComp },
+            { key: 'funnel', id: 'resultsFunnel', label: isAr ? 'مسار التحويل' : isEn ? 'Conversion Path' : 'Parcours de conversion', has: hasFunnel },
+            { key: 'technical', id: 'resultsTechnical', label: isAr ? 'تدقيق الموقع' : isEn ? 'Site Audit' : 'Audit site', has: hasSeo },
+            { key: 'keywords', id: 'resultsKeywords', label: isAr ? 'إشارات الطلب' : isEn ? 'Demand signals' : 'Signaux de demande', has: hasKw },
         ];
 
         const validSections = sectionDefs
@@ -12082,7 +12209,9 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         saveDakaPdfFile(pdf, filename, exportOptions?.downloadWindow || null);
 
         toast.success(
-            isEn
+            isAr
+                ? '\u2705 تم تحميل PDF بنجاح!'
+                : isEn
                 ? '\u2705 PDF downloaded successfully!'
                 : '\u2705 PDF téléchargé avec succès !'
         );
@@ -12098,7 +12227,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         openedDetails = [];
 
         toast.error(
-            (isEn ? 'PDF export failed: ' : 'Export PDF échoué : ')
+            (isAr ? 'فشل تصدير PDF: ' : isEn ? 'PDF export failed: ' : 'Export PDF échoué : ')
             + (err.message || 'Erreur inconnue')
         );
 
