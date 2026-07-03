@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════
-// SEO GEN PRO API v3.0.0 - PRODUCTION ULTRA-GRADE
+// Daka Market Intelligence Spyer API v5.2.1 - PRODUCTION ULTRA-GRADE
 // DevOps Level: LEGENDARY | Bttle-tested | Scale: 100K+ req/day
 // Architecture: Microservices-ready | Event-driven | Zero-downtime
 // ═══════════════════════════════════════════════════════════════════
@@ -1971,6 +1971,12 @@ registerUserApiKeyRoutes(app, { supabase, requireAuth });
 
 app.use(express.static('public', {
     maxAge: '1d',
+    etag: true,
+    lastModified: true
+}));
+
+app.use('/assets', express.static('assets', {
+    maxAge: '7d',
     etag: true,
     lastModified: true
 }));
@@ -7706,8 +7712,18 @@ function competitorGeoMismatchNote(query = '', geo = '', lang = 'fr') {
 function detectCompetitorBusinessArchetype(query = '', competitors = []) {
     const blob = `${query} ${competitors.map(x => `${x.title || ''} ${x.snippet || ''} ${x.competitorType || ''}`).join(' ')}`.toLowerCase();
     if (/compl[eé]ment|vitamin|caf[eé]ine|caffeine|ginseng|mineraux|min[eé]raux|effervescent|fatigue|concentration|energy|[ée]nergie|nutrition|sant[eé]/i.test(blob)) return 'supplement';
-    if (/e-?commerce|boutique|shop|store|produit|product|retail|livraison|delivery|marketplace|acheter|buy|commande|panier|stock|prix|price|mad|dh|cosm[eé]tique|serum|s[eé]rum|shampo|huile|cr[eè]me|lampe|led|ordinateur|pc gamer|fruit|l[eé]gume|vetement|vêtement|accessoire/i.test(blob)) return 'physical_product';
-    if (/agence|agency|service|consulting|conseil|saas|software|logiciel|formation|marketing|intelligence artificielle|\bia\b|\bai\b|b2b|prestation|accompagnement|audit|diagnostic|devis|rendez[-\s]?vous/i.test(blob)) return 'service';
+    const serviceScore = [
+        /agence|agency|service|consulting|conseil|saas|software|logiciel|formation|marketing|intelligence artificielle|\bia\b|\bai\b|b2b|prestation|accompagnement|audit|diagnostic|devis|rendez[-\s]?vous|livrable|révision|revision|support|coaching|course|cours|cabinet|studio/.test(blob),
+        /client|cas client|portfolio|projet|stratégie|strategie|campagne|automatisation|création|creation|design|développement|developpement/.test(blob),
+        !/panier|checkout|add to cart|ajouter au panier|stock|expédition|shipping|delivery|livraison produit/.test(blob)
+    ].filter(Boolean).length;
+    const productScore = [
+        /e-?commerce|boutique|shop|store|produit|product|retail|marketplace|acheter|buy|commande|panier|cart|checkout|stock|mad|dh|cosm[eé]tique|serum|s[eé]rum|shampo|huile|cr[eè]me|lampe|led|ordinateur|pc gamer|fruit|l[eé]gume|vetement|vêtement|accessoire/.test(blob),
+        /livraison|delivery|shipping|retour|returns|garantie produit|photo produit|fiche produit/.test(blob),
+        /prix|price/.test(blob) && /acheter|commande|panier|stock|livraison|produit|product/.test(blob)
+    ].filter(Boolean).length;
+    if (serviceScore >= 2 && serviceScore >= productScore) return 'service';
+    if (productScore >= 1) return 'physical_product';
     return 'generic';
 }
 
@@ -21758,6 +21774,42 @@ function normalizeWordExportList(values, limit = 4) {
     return list.slice(0, limit);
 }
 
+function inferWordExportBusinessContext(model = {}, sectionHtml = '') {
+    const corpus = [
+        model.domain,
+        model.siteTitle,
+        model.verdict,
+        model.priorityDecision,
+        model.objective,
+        JSON.stringify(model.opportunities || []),
+        JSON.stringify(model.weaknesses || []),
+        String(sectionHtml || '').slice(0, 12000)
+    ].join(' ').toLowerCase();
+    const serviceSignals = /(agence|agency|service|consulting|consultant|formation|training|saas|software|logiciel|plateforme|platform|audit|diagnostic|accompagnement|prestation|livrable|livrables|révision|revision|support|coach|coaching|marketing|automation|automatisation|lead|crm|b2b|portfolio|case study|cas client|خدمة|وكالة|استشارة|تكوين|تدريب|منصة|برنامج|دعم|مرافقة|تسليمات|مشروع)/i;
+    const productSignals = /(boutique|shop|store|produit|product|cart|panier|checkout|stock|livraison|delivery|shipping|retour|returns|garantie produit|sku|cod|cash on delivery|e-commerce|marketplace|commande|acheter|buy|منتج|متجر|مخزون|توصيل|شحن|إرجاع|طلب|شراء)/i;
+    const serviceScore = (corpus.match(serviceSignals) || []).length;
+    const productScore = (corpus.match(productSignals) || []).length;
+    return serviceScore >= 2 && serviceScore >= productScore ? 'service' : 'product';
+}
+
+function sanitizeWordBusinessVocabulary(text, offerType = 'product') {
+    if (offerType !== 'service') return String(text || '');
+    return String(text || '')
+        .replace(/\b(stock|stocks|inventaire|inventory)\b/gi, 'disponibilités')
+        .replace(/\b(livraison|expédition|shipping|delivery)\b/gi, 'délais de réalisation')
+        .replace(/\b(retours?|returns?)\b/gi, 'conditions de révision')
+        .replace(/\b(garantie produit|product warranty)\b/gi, 'garantie de prestation')
+        .replace(/\b(produits?|products?)\b/gi, 'offres')
+        .replace(/المخزون/g, 'توفر الفريق')
+        .replace(/التوصيل|الشحن/g, 'آجال التنفيذ')
+        .replace(/الإرجاع|المرتجعات/g, 'شروط المراجعة')
+        .replace(/المنتجات/g, 'العروض')
+        .replace(/المنتج/g, 'العرض')
+        .replace(/stock/gi, 'availability')
+        .replace(/shipping|delivery/gi, 'delivery timeline')
+        .replace(/returns/gi, 'revision terms');
+}
+
 function buildDakaWordDocument(payload = {}) {
     const lang = ['fr', 'en', 'ar'].includes(payload.lang) ? payload.lang : 'fr';
     const isAr = lang === 'ar';
@@ -21766,38 +21818,52 @@ function buildDakaWordDocument(payload = {}) {
     const model = payload.model && typeof payload.model === 'object' ? payload.model : {};
     const title = String(payload.title || (isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport exécutif Daka')).slice(0, 140);
     const sectionHtml = sanitizeWordExportFragment(payload.sectionHtml);
-    const opportunities = normalizeWordExportList(model.opportunities, 4);
-    const weaknesses = normalizeWordExportList(model.weaknesses, 4);
+    const offerType = inferWordExportBusinessContext(model, sectionHtml);
+    const cleanWord = value => sanitizeWordBusinessVocabulary(value, offerType);
+    const opportunities = normalizeWordExportList(model.opportunities, 4).map(cleanWord);
+    const weaknesses = normalizeWordExportList(model.weaknesses, 4).map(cleanWord);
     const listHtml = items => items.length ? `<ul>${items.map(item => `<li>${escapeWordExportHtml(item)}</li>`).join('')}</ul>` : '';
     const css = [
-        'body{font-family:Arial,"Helvetica Neue",sans-serif;color:#0f172a;background:#fff;line-height:1.55;margin:32px;direction:' + dir + ';}',
-        'h1{font-size:28px;margin:0 0 10px;color:#0f172a;}',
-        'h2{font-size:21px;margin:26px 0 12px;color:#0f172a;border-bottom:2px solid #0ea5e9;padding-bottom:7px;}',
-        'h3{font-size:16px;margin:18px 0 8px;color:#0f172a;}',
-        'p,li,td,th{font-size:12px;} a{color:#0369a1;}',
-        '.word-cover{border-top:8px solid #0ea5e9;background:#f8fafc;padding:24px;margin-bottom:28px;border-radius:10px;}',
-        '.word-brand{display:flex;align-items:center;gap:14px;margin-bottom:18px}.word-brand img{width:58px;height:58px;object-fit:contain;border-radius:14px;border:1px solid #dbe4ef;background:#fff}.word-brand a{color:#0369a1;text-decoration:none;font-weight:700}',
-        '.word-score{display:inline-block;padding:7px 12px;border-radius:999px;background:#0f172a;color:#fff;font-weight:700;margin-top:8px;}',
-        '.word-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}.word-card{border:1px solid #dbe4ef;border-left:4px solid #0ea5e9;border-radius:8px;padding:14px;background:#fff;}',
-        '.word-chapter{page-break-before:always;margin-top:28px}.report-section-body,.funnel-surgery-list{display:block!important}.no-print,button,.btn,.expert-dock,.global-expert-bubble,.export-bubble-wrapper,video,audio,script,style{display:none!important;}'
+        '@page{size:A4;margin:2cm 2.5cm 2cm 2.5cm;}',
+        'body{font-family:Arial,Calibri,"Helvetica Neue",sans-serif;color:#111827;background:#fff;line-height:1.45;margin:0;direction:' + dir + ';text-align:justify;}',
+        'h1{font-size:22pt;line-height:1.18;margin:0 0 12pt;color:#0f172a;font-weight:800;text-align:' + (isAr ? 'right' : 'left') + ';}',
+        'h2{font-size:16pt;line-height:1.25;margin:22pt 0 10pt;color:#0f172a;border-bottom:2px solid #0ea5e9;padding-bottom:6pt;text-align:' + (isAr ? 'right' : 'left') + ';}',
+        'h3{font-size:13pt;margin:15pt 0 7pt;color:#0f172a;font-weight:800;text-align:' + (isAr ? 'right' : 'left') + ';}',
+        'p,li,td,th{font-size:11.5pt;} p{margin:0 0 6pt;} ul,ol{margin:6pt 0 10pt;padding-' + (isAr ? 'right' : 'left') + ':18pt;} a{color:#0369a1;text-decoration:none;font-weight:700;}',
+        'table{width:100%;border-collapse:collapse;table-layout:fixed;}td,th{border:1px solid #dbe4ef;padding:7pt;vertical-align:top;overflow-wrap:break-word;}',
+        '.word-cover{page-break-after:always;border-top:8pt solid #0ea5e9;background:#f8fafc;padding:26pt 24pt 24pt;margin:0 0 24pt;border-radius:6pt;}',
+        '.word-brand{display:flex;align-items:center;gap:12pt;margin-bottom:22pt}.word-brand img{width:72pt;height:72pt;object-fit:contain;border-radius:12pt;border:1px solid #dbe4ef;background:#020617}.word-brand a{color:#0369a1;text-decoration:none;font-weight:700}.word-brand strong{font-size:15pt;}',
+        '.word-kicker{font-size:9pt;letter-spacing:1pt;text-transform:uppercase;color:#0369a1;font-weight:800;margin-bottom:7pt;text-align:' + (isAr ? 'right' : 'left') + ';}',
+        '.word-meta{border:1px solid #dbe4ef;background:#fff;border-radius:6pt;padding:11pt;margin:12pt 0 14pt;text-align:' + (isAr ? 'right' : 'left') + ';}',
+        '.word-score{display:inline-block;padding:6pt 11pt;border-radius:999pt;background:#0f172a;color:#fff;font-weight:800;margin:7pt 0 10pt;font-size:12pt;}',
+        '.word-grid{display:grid;grid-template-columns:1fr 1fr;gap:12pt;margin-top:14pt}.word-card{border:1px solid #dbe4ef;border-left:4pt solid #0ea5e9;border-radius:6pt;padding:12pt;background:#fff;break-inside:avoid;}',
+        '.word-note{font-size:9pt;color:#64748b;border-top:1px solid #dbe4ef;padding-top:9pt;margin-top:16pt;text-align:' + (isAr ? 'right' : 'left') + ';}',
+        '.word-chapter{page-break-before:always;margin-top:24pt}.report-section-body,.funnel-surgery-list{display:block!important}.no-print,button,.btn,.expert-dock,.global-expert-bubble,.export-bubble-wrapper,.report-section-toggle,.report-section-close-row,video,audio,script,style{display:none!important;}'
     ].join('\n');
     const appUrl = 'https://seo.mktnstrategix.com/seodaka4444';
-    const logoUrl = 'https://seo.mktnstrategix.com/assets/daka-loader-logo.jpg';
+    const logoUrl = 'https://seo.mktnstrategix.com/assets/daka-report-logo.png';
+    const documentNote = isAr
+        ? 'تنسيق A4 احترافي: هوامش معيارية، تسلسل واضح، نص قابل للتحرير، ومحتوى مبني على الأدلة المتاحة.'
+        : isEn
+            ? 'Professional A4 format: standard margins, clear hierarchy, editable text, and evidence-based content.'
+            : 'Format A4 professionnel : marges standard, hiérarchie claire, texte éditable et contenu fondé sur les preuves disponibles.';
     const cover = [
         '<section class="word-cover">',
         '<div class="word-brand">',
         `<a href="${appUrl}"><img src="${logoUrl}" alt="Daka"></a>`,
         `<div><strong>Daka Market Intelligence Spyer</strong><br><a href="${appUrl}">seo.mktnstrategix.com/seodaka4444</a></div>`,
         '</div>',
+        `<div class="word-kicker">${escapeWordExportHtml(isAr ? 'ملف قرار تنفيذي' : isEn ? 'Executive decision file' : 'Dossier décisionnel exécutif')}</div>`,
         `<h1>${escapeWordExportHtml(title)}</h1>`,
-        `<p><strong>${escapeWordExportHtml(model.siteTitle || model.domain || '')}</strong><br>${escapeWordExportHtml(model.reportUrl || model.domain || '')}<br>${escapeWordExportHtml(model.date || '')}</p>`,
+        `<p class="word-meta"><strong>${escapeWordExportHtml(model.siteTitle || model.domain || '')}</strong><br>${escapeWordExportHtml(model.reportUrl || model.domain || '')}<br>${escapeWordExportHtml(model.date || '')}</p>`,
         Number.isFinite(Number(model.score)) ? `<span class="word-score">${Number(model.score)}/100</span>` : '',
         `<h2>${escapeWordExportHtml(isAr ? 'الخلاصة التنفيذية' : isEn ? 'Executive summary' : 'Synthèse exécutive')}</h2>`,
-        `<p>${escapeWordExportHtml(model.verdict || model.priorityDecision || '')}</p>`,
+        `<p>${escapeWordExportHtml(cleanWord(model.verdict || model.priorityDecision || ''))}</p>`,
         '<div class="word-grid">',
         `<article class="word-card"><h3>${escapeWordExportHtml(isAr ? 'الفرص' : isEn ? 'Opportunities' : 'Opportunités')}</h3>${listHtml(opportunities)}</article>`,
         `<article class="word-card"><h3>${escapeWordExportHtml(isAr ? 'المخاطر' : isEn ? 'Risks' : 'Risques')}</h3>${listHtml(weaknesses)}</article>`,
         '</div>',
+        `<p class="word-note">${escapeWordExportHtml(documentNote)}</p>`,
         '</section>'
     ].join('');
     return '<!doctype html><html lang="' + lang + '" dir="' + dir + '"><head><meta charset="utf-8"><title>' +

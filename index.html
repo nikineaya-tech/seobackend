@@ -3674,9 +3674,9 @@ table tbody td {
 
                 <!-- Language Selector -->
                 <select id="langSelector" class="lang-selector" aria-label="Langue de l’interface">
-                    <option value="fr">🇫🇷 Français</option>
-                    <option value="ar">🇸🇦 العربية</option>
-                    <option value="en">🇬🇧 English</option>
+                    <option value="fr">FR Français</option>
+                    <option value="ar">AR العربية</option>
+                    <option value="en">EN English</option>
                 </select>
 
                 <details class="header-tools">
@@ -10129,6 +10129,14 @@ function cloneReportHtmlForExport(el, exportOptions = {}) {
             node.remove();
         }
     });
+    if (typeof sanitizeDakaBusinessVocabularyForContext === 'function') {
+        const walker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+        const nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach(function (node) {
+            node.nodeValue = sanitizeDakaBusinessVocabularyForContext(node.nodeValue);
+        });
+    }
     return clone.innerHTML;
 }
 
@@ -10139,7 +10147,7 @@ function createFixedPdfClone(el, exportOptions = {}) {
     shell.setAttribute('dir', STATE.currentLang === 'ar' ? 'rtl' : 'ltr');
     shell.style.cssText = [
         'position:fixed', 'left:-12000px', 'top:0', 'width:794px',
-        'min-height:1123px', 'padding:32px', 'box-sizing:border-box',
+        'min-height:1123px', 'padding:64px 56px', 'box-sizing:border-box',
         'overflow:visible', 'background:#ffffff', 'color:#0f172a',
         'font-family:Inter,Cairo,Arial,sans-serif', 'line-height:1.55',
         'z-index:-1'
@@ -10168,8 +10176,8 @@ function createFixedPdfClone(el, exportOptions = {}) {
                 font-size: 14px !important;
                 line-height: 1.62 !important;
             }
-            .daka-pdf-fixed-clone h1 { font-size: 28px !important; line-height: 1.22 !important; margin: 0 0 12px !important; }
-            .daka-pdf-fixed-clone h2 { font-size: 21px !important; line-height: 1.3 !important; margin: 0 0 10px !important; }
+            .daka-pdf-fixed-clone h1 { font-size: 25px !important; line-height: 1.22 !important; margin: 0 0 12px !important; }
+            .daka-pdf-fixed-clone h2 { font-size: 19px !important; line-height: 1.3 !important; margin: 0 0 10px !important; }
             .daka-pdf-fixed-clone h3 { font-size: 16px !important; line-height: 1.4 !important; margin: 0 0 8px !important; }
             .daka-pdf-fixed-clone h4,
             .daka-pdf-fixed-clone h5,
@@ -10177,7 +10185,7 @@ function createFixedPdfClone(el, exportOptions = {}) {
             .daka-pdf-fixed-clone p,
             .daka-pdf-fixed-clone li,
             .daka-pdf-fixed-clone td,
-            .daka-pdf-fixed-clone th { font-size: 12px !important; line-height: 1.62 !important; }
+            .daka-pdf-fixed-clone th { font-size: 11.6px !important; line-height: 1.58 !important; }
             .daka-pdf-fixed-clone p { margin: 0 0 9px !important; }
             .daka-pdf-fixed-clone ul,
             .daka-pdf-fixed-clone ol { margin: 8px 0 10px !important; padding-inline-start: 22px !important; }
@@ -10904,7 +10912,58 @@ async function confirmDakaExportStudio(format = 'pdf') {
 
 var dakaPdfLogoDataUrlCache = '';
 const DAKA_PUBLIC_APP_URL = 'https://seo.mktnstrategix.com/seodaka4444';
-const DAKA_PUBLIC_LOGO_URL = 'https://seo.mktnstrategix.com/assets/daka-loader-logo.jpg';
+const DAKA_PUBLIC_LOGO_URL = 'https://seo.mktnstrategix.com/assets/daka-report-logo.png';
+
+function inferDakaReportOfferType() {
+    const source = [
+        STATE.lastInputs?.objective,
+        STATE.lastInputs?.keyword,
+        document.getElementById('compObjective')?.value,
+        document.getElementById('funnelObjective')?.value,
+        STATE.lastFunnelResults?.funnelSurgery?.userContext?.offerType,
+        STATE.lastFunnelResults?.commerceExploration?.deduced?.offerType,
+        STATE.lastFunnelResults?.productServiceAudit?.offerType,
+        STATE.lastAnalysisResults?.competitorIntelligence?.businessArchetype
+    ].filter(Boolean).join(' ').toLowerCase();
+    const serviceScore = [
+        /agence|agency|service|consulting|conseil|saas|software|logiciel|formation|marketing|ia|ai|b2b|prestation|accompagnement|audit|diagnostic|devis|rendez|livrable|révision|revision|support|coaching/.test(source),
+        /portfolio|projet|client|campagne|automatisation|création|creation|design|développement|developpement/.test(source),
+        !/panier|checkout|stock|livraison produit|shipping|delivery|retour colis|fiche produit/.test(source)
+    ].filter(Boolean).length;
+    const productScore = [
+        /produit|product|e-?commerce|boutique|shop|store|retail|acheter|commande|panier|stock|livraison|delivery|retour|returns|cosmétique|serum|lampe|led|ordinateur|pc gamer|accessoire/.test(source),
+        /prix|price/.test(source) && /acheter|commande|panier|stock|livraison|produit|product/.test(source)
+    ].filter(Boolean).length;
+    if (serviceScore >= 2 && serviceScore >= productScore) return 'service';
+    if (productScore > serviceScore) return 'product';
+    return 'unknown';
+}
+
+function sanitizeDakaBusinessVocabularyForContext(text) {
+    let value = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!value || inferDakaReportOfferType() !== 'service') return value;
+    value = value
+        .replace(/prix,\s*stock,\s*livraison,\s*retours?\s*et\s*preuve forte/gi, 'méthode de prix, périmètre, délais, preuves client et prochaine action')
+        .replace(/prix,\s*stock,\s*livraison,\s*retours?\s*et\s*preuves?/gi, 'méthode de prix, périmètre, délais et preuves client')
+        .replace(/stock,\s*livraison,\s*retours?/gi, 'périmètre, délais et conditions de collaboration')
+        .replace(/livraison\s*\/\s*retours?/gi, 'livrables / délais')
+        .replace(/\bstock\b/gi, 'capacité disponible')
+        .replace(/\blivraison\b/gi, 'délai de réalisation')
+        .replace(/\bretours?\b/gi, 'révisions')
+        .replace(/المخزون والتوصيل والإرجاع والأدلة/g, 'نطاق العمل والآجال وطريقة التسعير والأدلة')
+        .replace(/السعر والمخزون والتوصيل والإرجاع والأدلة/g, 'طريقة التسعير ونطاق العمل والآجال والأدلة')
+        .replace(/المخزون والتوصيل والضمان/g, 'نطاق العمل والآجال وشروط المتابعة')
+        .replace(/التوصيل والإرجاع/g, 'الآجال والمراجعات')
+        .replace(/المخزون/g, 'القدرة المتاحة')
+        .replace(/التوصيل/g, 'مدة الإنجاز')
+        .replace(/الإرجاع/g, 'المراجعات')
+        .replace(/stock, delivery, returns?,? and proof/gi, 'scope, timeline, client proof, and next step')
+        .replace(/price, stock, delivery, returns?/gi, 'pricing method, scope, timeline')
+        .replace(/\bstock\b/gi, 'available capacity')
+        .replace(/\bdelivery\b/gi, 'delivery timeline')
+        .replace(/\breturns?\b/gi, 'revisions');
+    return value;
+}
 
 function dakaPdfCleanList(values, limit = 5) {
     const result = [];
@@ -10914,7 +10973,7 @@ function dakaPdfCleanList(values, limit = 5) {
             value.forEach(visit);
             return;
         }
-        const text = executiveText(value).replace(/\s+/g, ' ').trim();
+        const text = sanitizeDakaBusinessVocabularyForContext(executiveText(value)).replace(/\s+/g, ' ').trim();
         const normalized = text.toLowerCase();
         if (!text || isDakaInsufficientExportText(text)) return;
         if (result.some(function (item) { return item.toLowerCase() === normalized; })) return;
@@ -11129,7 +11188,7 @@ function getDakaPdfDecisionModel(selectedModules) {
 async function loadDakaPdfLogoDataUrl() {
     if (dakaPdfLogoDataUrlCache) return dakaPdfLogoDataUrlCache;
     try {
-        let response = await fetch('assets/daka-loader-logo.jpg', { cache: 'force-cache' })
+        let response = await fetch('assets/daka-report-logo.png', { cache: 'force-cache' })
             .catch(function () { return null; });
         if (!response || !response.ok) {
             response = await fetch(DAKA_PUBLIC_LOGO_URL, { cache: 'force-cache' }).catch(function () { return null; });
@@ -11214,7 +11273,7 @@ function dakaPdfDrawListCard(pdf, title, items, x, y, width, height, accent) {
 function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW, pageH, margin) {
     dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isAr ? 'الملخص التنفيذي' : model.isEn ? 'Executive brief' : 'Fiche sommaire exécutive');
     if (logoDataUrl) {
-        try { pdf.addImage(logoDataUrl, 'JPEG', margin, 17, 25, 25, undefined, 'FAST'); } catch (_) {}
+        try { pdf.addImage(logoDataUrl, logoDataUrl.includes('image/png') ? 'PNG' : 'JPEG', margin, 17, 25, 25, undefined, 'FAST'); } catch (_) {}
     } else {
         pdf.setFillColor(15, 23, 42);
         pdf.roundedRect(margin, 17, 25, 25, 5, 5, 'F');
@@ -11837,8 +11896,8 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const pageW   = pdf.internal.pageSize.getWidth();   // 210
         const pageH   = pdf.internal.pageSize.getHeight();  // 297
-        const margin  = 12;
-        const contentW = pageW - margin * 2;                // 186
+        const margin  = 18;
+        const contentW = pageW - margin * 2;
 
         // Three decision-first pages precede the selected detailed chapters.
         var reportUrl = pdfDecisionModel.reportUrl;
@@ -13418,7 +13477,7 @@ function executiveDedupList(values, limit = 5) {
     const visit = (value) => {
         if (items.length >= limit || value === null || value === undefined) return;
         if (Array.isArray(value)) return value.forEach(visit);
-        const text = executiveText(value).replace(/\s+/g, ' ').trim();
+        const text = sanitizeDakaBusinessVocabularyForContext(executiveText(value)).replace(/\s+/g, ' ').trim();
         const key = executiveFingerprint(text);
         if (!executiveIsUsefulText(text) || seen.has(key)) return;
         seen.add(key);
@@ -13450,7 +13509,7 @@ function executiveActions(data) {
 
     const seen = new Set();
     return raw.map((item, index) => ({
-        title: executiveText(item),
+        title: sanitizeDakaBusinessVocabularyForContext(executiveText(item)),
         impact: executiveText(item?.impact || item?.expectedGain),
         effort: executiveText(item?.effort || item?.timeline || item?.delay),
         priority: executiveText(item?.priority || item?.rank) || String(index + 1)
@@ -13609,7 +13668,7 @@ function buildFunnelExecutiveSummaryModel(data, lang = STATE.currentLang || 'fr'
     ], 3);
     return {
         score,
-        verdict: executiveText(verdict) || t.fallback,
+        verdict: sanitizeDakaBusinessVocabularyForContext(executiveText(verdict)) || t.fallback,
         opportunities: opportunities.length ? opportunities : present.slice(0, 3),
         weaknesses: weaknesses.length ? weaknesses : filteredMissing.slice(0, 3),
         actions: actionTitles.map((title, index) => ({
@@ -23249,6 +23308,322 @@ body.modal-open {
     .header[data-nav-density="compact"] .nav-btn {
         padding: 8px 11px !important;
         font-size: .75rem !important;
+    }
+}
+
+/* Daka Command Bar refresh: compact, premium, readable in LTR/RTL. */
+.header[data-nav-density="compact"] {
+    position: sticky !important;
+    top: 10px !important;
+    margin: 10px clamp(8px, 1.2vw, 18px) 14px !important;
+    border: 1px solid rgba(125, 211, 252, .14);
+    border-radius: 18px;
+    background:
+        radial-gradient(circle at 14% 0%, rgba(34, 211, 238, .16), transparent 28%),
+        radial-gradient(circle at 86% 0%, rgba(139, 92, 246, .14), transparent 32%),
+        linear-gradient(135deg, rgba(2, 6, 23, .96), rgba(15, 23, 42, .9) 52%, rgba(3, 7, 18, .96));
+    box-shadow: 0 22px 70px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .07);
+    overflow: visible;
+}
+.header[data-nav-density="compact"]::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgba(34, 211, 238, .42), rgba(139, 92, 246, .16), rgba(16, 185, 129, .28));
+    opacity: .38;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    padding: 1px;
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+.header[data-nav-density="compact"] .container {
+    max-width: 1760px;
+    padding-inline: clamp(8px, 1vw, 16px);
+}
+.header[data-nav-density="compact"] .header-content {
+    grid-template-columns: minmax(150px, .72fr) minmax(360px, 1.55fr) 70px minmax(16px, .2fr) minmax(112px, auto) minmax(48px, auto) minmax(48px, auto) !important;
+    min-height: 76px !important;
+    gap: clamp(8px, .9vw, 14px) !important;
+    padding: 8px 10px !important;
+}
+.header[data-nav-density="compact"] .logo {
+    align-self: center;
+    min-height: 58px;
+    padding: 5px 8px;
+    border: 1px solid rgba(148, 163, 184, .14);
+    border-radius: 16px;
+    background: rgba(15, 23, 42, .56);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06);
+    transition: border-color .22s ease, background .22s ease, box-shadow .22s ease;
+}
+.header[data-nav-density="compact"] .logo:hover {
+    transform: none;
+    border-color: rgba(34, 211, 238, .36);
+    background: rgba(15, 23, 42, .74);
+    box-shadow: 0 12px 34px rgba(8, 145, 178, .14), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+.header[data-nav-density="compact"] .logo-mark,
+.header[data-nav-density="compact"] .daka-header-logo-video {
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: 12px;
+}
+.header[data-nav-density="compact"] .logo > div:last-child > div:first-child {
+    font-size: 1.06rem;
+    line-height: 1.05;
+    max-width: 176px;
+}
+.header[data-nav-density="compact"] .logo-badge {
+    width: max-content;
+    margin-top: 4px;
+    padding: 3px 9px;
+    border: 1px solid rgba(45, 212, 191, .28);
+    background: rgba(20, 184, 166, .14);
+    color: #67e8f9;
+    box-shadow: none;
+    letter-spacing: .03em;
+}
+.header[data-nav-density="compact"] .nav-tabs {
+    height: 58px;
+    margin: 0 !important;
+    padding: 6px !important;
+    border-radius: 16px !important;
+    gap: 5px;
+    background: rgba(2, 6, 23, .62);
+    border: 1px solid rgba(148, 163, 184, .14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+    overflow: hidden;
+}
+.header[data-nav-density="compact"] .nav-btn {
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 46px !important;
+    padding: 9px 12px !important;
+    border-radius: 12px !important;
+    border: 1px solid transparent;
+    background: transparent;
+    color: rgba(226, 232, 240, .72);
+    font-size: .84rem !important;
+    font-weight: 800;
+    letter-spacing: 0;
+    box-shadow: none;
+}
+.header[data-nav-density="compact"] .nav-btn i {
+    color: #8bdcf7;
+    font-size: .98rem;
+    opacity: .9;
+}
+.header[data-nav-density="compact"] .nav-btn:hover {
+    transform: none;
+    color: #f8fafc;
+    border-color: rgba(34, 211, 238, .22);
+    background: rgba(15, 23, 42, .74);
+}
+.header[data-nav-density="compact"] .nav-btn.active {
+    color: #fff;
+    border-color: rgba(103, 232, 249, .42);
+    background: linear-gradient(135deg, rgba(14, 165, 233, .78), rgba(99, 102, 241, .82));
+    box-shadow: 0 12px 28px rgba(37, 99, 235, .24), inset 0 1px 0 rgba(255, 255, 255, .2);
+}
+.header[data-nav-density="compact"] .nav-btn.active i { color: #fff; opacity: 1; }
+.header[data-nav-density="compact"] .header-clock-center {
+    width: 66px !important;
+    height: 66px !important;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    justify-self: center;
+    border-radius: 50%;
+    border: 1px solid rgba(103, 232, 249, .42);
+    background:
+        radial-gradient(circle at 50% 38%, rgba(34, 211, 238, .2), transparent 42%),
+        linear-gradient(145deg, rgba(15, 23, 42, .94), rgba(8, 13, 28, .98));
+    box-shadow: 0 0 0 5px rgba(34, 211, 238, .06), 0 14px 32px rgba(8, 145, 178, .2);
+}
+.header[data-nav-density="compact"] .header-clock-center strong {
+    font-size: .74rem;
+    line-height: 1;
+    color: #f8fafc;
+}
+.header[data-nav-density="compact"] .header-clock-center small {
+    margin-top: 2px;
+    max-width: 52px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #67e8f9;
+    font-size: .48rem;
+    line-height: 1;
+    white-space: nowrap;
+}
+.header[data-nav-density="compact"] .daka-clock-dot { display: none; }
+.header[data-nav-density="compact"] .lang-selector,
+.header[data-nav-density="compact"] .header-tools-trigger,
+.header[data-nav-density="compact"] .auth-login-btn,
+.header[data-nav-density="compact"] .auth-logout-btn {
+    min-height: 48px;
+    border-radius: 12px;
+    border-color: rgba(148, 163, 184, .16);
+    background: rgba(15, 23, 42, .72);
+    color: #e2e8f0;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+.header[data-nav-density="compact"] .lang-selector {
+    width: 132px;
+    min-width: 112px;
+    padding-inline: 14px !important;
+    text-align: center;
+}
+.header[data-nav-density="compact"] .header-tools-trigger {
+    width: auto;
+    min-width: 48px;
+    padding-inline: 13px;
+}
+.header[data-nav-density="compact"] .auth-login-btn {
+    min-width: 48px;
+    padding-inline: 14px;
+}
+.header[data-nav-density="compact"] .auth-user-info {
+    min-height: 50px;
+    padding: 5px 7px;
+    border: 1px solid rgba(148, 163, 184, .16);
+    border-radius: 14px;
+    background: rgba(15, 23, 42, .72);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+}
+.header[data-nav-density="compact"] .auth-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+}
+.header[data-nav-density="compact"] .auth-user-copy {
+    max-width: 92px;
+    overflow: hidden;
+}
+.header[data-nav-density="compact"] .auth-user-copy strong,
+.header[data-nav-density="compact"] .auth-quota {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.header[data-nav-density="compact"] .header-tools-menu {
+    border-radius: 16px;
+    border-color: rgba(125, 211, 252, .2);
+    background: rgba(2, 6, 23, .96);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(255, 255, 255, .06);
+}
+.header[data-nav-density="compact"] .export-bubble-wrapper,
+.export-bubble-wrapper {
+    top: 108px;
+}
+.export-bubble-label { display: none !important; }
+#btn-export-global {
+    width: 44px !important;
+    height: 44px !important;
+    border-radius: 14px !important;
+    animation: none !important;
+    background: linear-gradient(135deg, #2563eb, #7c3aed) !important;
+    box-shadow: 0 14px 32px rgba(37, 99, 235, .24), inset 0 1px 0 rgba(255, 255, 255, .22) !important;
+}
+#btn-export-global:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 16px 38px rgba(124, 58, 237, .3), inset 0 1px 0 rgba(255, 255, 255, .24) !important;
+}
+
+@media (max-width: 1380px) {
+    .header[data-nav-density="compact"] .header-content {
+        grid-template-columns: minmax(124px, .62fr) minmax(320px, 1.45fr) 64px 0 auto auto auto !important;
+        gap: 8px !important;
+    }
+    .header[data-nav-density="compact"] .logo > div:last-child > div:first-child { max-width: 132px; }
+    .header[data-nav-density="compact"] .nav-btn { padding-inline: 9px !important; }
+    .header[data-nav-density="compact"] .header-tools-label,
+    .header[data-nav-density="compact"] .auth-login-label {
+        display: none;
+    }
+    .header[data-nav-density="compact"] .lang-selector {
+        width: 104px;
+        min-width: 98px;
+    }
+}
+
+@media (max-width: 980px) {
+    .header[data-nav-density="compact"] {
+        top: 6px !important;
+        margin: 6px 6px 10px !important;
+        border-radius: 16px;
+    }
+    .header[data-nav-density="compact"] .header-content {
+        grid-template-columns: minmax(0, 1fr) 54px 78px 48px 48px !important;
+        min-height: 112px !important;
+        padding: 7px !important;
+        gap: 7px !important;
+    }
+    .header[data-nav-density="compact"] .logo {
+        min-height: 52px;
+        padding: 4px 6px;
+    }
+    .header[data-nav-density="compact"] .logo > div:last-child > div:first-child {
+        max-width: 150px;
+    }
+    .header[data-nav-density="compact"] .nav-tabs {
+        height: 52px;
+        padding: 5px !important;
+        overflow-x: auto;
+        overflow-y: hidden;
+        justify-content: flex-start !important;
+    }
+    .header[data-nav-density="compact"] .nav-btn {
+        flex: 0 0 auto;
+        min-width: 118px;
+        min-height: 42px !important;
+        font-size: .78rem !important;
+    }
+    .header[data-nav-density="compact"] .header-clock-center {
+        width: 52px !important;
+        height: 52px !important;
+    }
+    .header[data-nav-density="compact"] .lang-selector {
+        width: 78px !important;
+        min-width: 78px !important;
+        max-width: 78px !important;
+        font-size: .7rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .header[data-nav-density="compact"] .header-content {
+        grid-template-columns: minmax(0, 1fr) 48px 62px 44px 44px !important;
+        min-height: 104px !important;
+    }
+    .header[data-nav-density="compact"] .logo {
+        width: 48px;
+        justify-content: center;
+    }
+    .header[data-nav-density="compact"] .logo > div:last-child { display: none !important; }
+    .header[data-nav-density="compact"] .logo-mark,
+    .header[data-nav-density="compact"] .daka-header-logo-video {
+        width: 40px !important;
+        height: 40px !important;
+    }
+    .header[data-nav-density="compact"] .header-clock-center {
+        width: 48px !important;
+        height: 48px !important;
+    }
+    .header[data-nav-density="compact"] .lang-selector {
+        width: 62px !important;
+        min-width: 62px !important;
+        max-width: 62px !important;
+        padding-inline: 5px !important;
+    }
+    .header[data-nav-density="compact"] .nav-btn {
+        min-width: 108px;
+        padding-inline: 10px !important;
+    }
+    .export-bubble-wrapper {
+        top: auto !important;
     }
 }
 </style>
