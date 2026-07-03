@@ -3666,6 +3666,12 @@ table tbody td {
 </button>
                 </nav>
 
+                <div id="dakaClock" class="daka-clock header-clock-center" role="timer" aria-live="off" title="Heure et date">
+                    <span class="daka-clock-dot" aria-hidden="true"></span>
+                    <strong id="dakaClockTime">--:--</strong>
+                    <small id="dakaClockDate">-- ---</small>
+                </div>
+
                 <!-- Language Selector -->
                 <select id="langSelector" class="lang-selector" aria-label="Langue de l’interface">
                     <option value="fr">🇫🇷 Français</option>
@@ -3684,11 +3690,6 @@ table tbody td {
                             <span>Vérification...</span>
                         </div>
                         <div class="header-tools-actions">
-                            <div id="dakaClock" class="daka-clock" role="timer" aria-live="off" title="Heure et date">
-                                <span class="daka-clock-dot" aria-hidden="true"></span>
-                                <strong id="dakaClockTime">--:--</strong>
-                                <small id="dakaClockDate">-- ---</small>
-                            </div>
                             <button id="soundToggle" class="sound-toggle" type="button" aria-label="Activer ou couper les sons">
                                 <i class="fas fa-volume-high"></i>
                             </button>
@@ -3711,9 +3712,6 @@ table tbody td {
                             <small id="auth-quota" class="auth-quota">0/5</small>
                             <strong id="user-name"></strong>
                         </span>
-                        <button class="auth-logout-btn" type="button" onclick="openReportDashboard()" title="Rapports">
-                            <i class="fas fa-clock-rotate-left"></i>
-                        </button>
                         <button id="btn-groq-key" class="auth-logout-btn" type="button" onclick="openOpenRouterKeyModal()" title="Clé OpenRouter">
                             <i class="fas fa-key"></i>
                         </button>
@@ -23085,13 +23083,14 @@ body.modal-open {
 .header[data-nav-density="compact"] { margin-bottom: 8px; }
 .header[data-nav-density="compact"] .header-content {
     display: grid !important;
-    grid-template-columns: auto minmax(420px, 1fr) auto auto auto;
+    grid-template-columns: auto minmax(300px, 1fr) auto minmax(40px, .55fr) auto auto auto;
     align-items: center !important;
     justify-content: stretch !important;
     min-height: 64px;
-    gap: 8px !important;
+    gap: 10px !important;
 }
 .header[data-nav-density="compact"] .logo { min-width: 0; }
+.header[data-nav-density="compact"] .logo { grid-column: 1; }
 .header[data-nav-density="compact"] .logo > div:last-child > div:first-child {
     max-width: 230px;
     overflow: hidden;
@@ -23099,11 +23098,20 @@ body.modal-open {
     white-space: nowrap;
 }
 .header[data-nav-density="compact"] .nav-tabs {
+    grid-column: 2;
     width: 100% !important;
     max-width: none !important;
     min-width: 0;
     justify-content: center !important;
 }
+.header-clock-center {
+    grid-column: 3;
+    justify-self: center;
+    z-index: 2;
+}
+.header[data-nav-density="compact"] .lang-selector { grid-column: 5; }
+.header[data-nav-density="compact"] .header-tools { grid-column: 6; }
+.header[data-nav-density="compact"] .auth-shell { grid-column: 7; }
 .header[data-nav-density="compact"] .nav-btn {
     min-width: 0;
     min-height: 44px;
@@ -23160,12 +23168,6 @@ body.modal-open {
     border-radius: 8px !important;
 }
 .header-tools-actions { display: flex; align-items: center; gap: 10px; }
-.header-tools-actions .daka-clock {
-    width: 48px !important;
-    height: 48px !important;
-    flex: 0 0 48px;
-    box-shadow: 0 3px 0 #030712, 0 8px 18px rgba(0,0,0,.2) !important;
-}
 .header-tools-actions .sound-toggle {
     width: 44px;
     min-width: 44px;
@@ -23181,7 +23183,7 @@ body.modal-open {
 
 @media (max-width: 1180px) {
     .header[data-nav-density="compact"] .header-content {
-        grid-template-columns: auto minmax(360px, 1fr) auto auto auto;
+        grid-template-columns: auto minmax(260px, 1fr) auto minmax(20px, .35fr) auto auto auto;
     }
     .header[data-nav-density="compact"] .logo > div:last-child > div:first-child { max-width: 150px; }
     .header-tools-label { display: none; }
@@ -23191,15 +23193,16 @@ body.modal-open {
     .header[data-nav-density="compact"] { top: 4px !important; margin: 0 4px 4px; }
     .header[data-nav-density="compact"] .header-content {
         display: grid !important;
-        grid-template-columns: minmax(0, 1fr) auto auto auto;
-        min-height: 96px;
+        grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+        min-height: 104px;
         padding: 6px 8px !important;
         gap: 6px 8px !important;
     }
     .header[data-nav-density="compact"] .logo { grid-column: 1; grid-row: 1; }
-    .header[data-nav-density="compact"] .lang-selector { grid-column: 2; grid-row: 1; }
-    .header[data-nav-density="compact"] .header-tools { grid-column: 3; grid-row: 1; }
-    .header[data-nav-density="compact"] .auth-shell { grid-column: 4; grid-row: 1; }
+    .header[data-nav-density="compact"] .header-clock-center { grid-column: 2; grid-row: 1; }
+    .header[data-nav-density="compact"] .lang-selector { grid-column: 3; grid-row: 1; }
+    .header[data-nav-density="compact"] .header-tools { grid-column: 4; grid-row: 1; }
+    .header[data-nav-density="compact"] .auth-shell { grid-column: 5; grid-row: 1; }
     .header[data-nav-density="compact"] .nav-tabs {
         grid-column: 1 / -1 !important;
         grid-row: 2;
@@ -23223,7 +23226,7 @@ body.modal-open {
 }
 
 @media (max-width: 600px) {
-    .header[data-nav-density="compact"] .header-content { min-height: 94px; }
+    .header[data-nav-density="compact"] .header-content { min-height: 98px; }
     .header[data-nav-density="compact"] .logo > div:last-child { display: none !important; }
     .header[data-nav-density="compact"] .logo-mark,
     .header[data-nav-density="compact"] .daka-header-logo-video {
@@ -23237,6 +23240,13 @@ body.modal-open {
         min-height: 44px;
         padding: 7px 4px !important;
     }
+    .header[data-nav-density="compact"] .header-clock-center {
+        width: 46px !important;
+        height: 46px !important;
+        flex-basis: 46px;
+    }
+    .header[data-nav-density="compact"] .header-clock-center strong { font-size: .61rem; }
+    .header[data-nav-density="compact"] .header-clock-center small { font-size: .4rem; }
     .header[data-nav-density="compact"] .auth-login-btn,
     .header[data-nav-density="compact"] .auth-logout-btn,
     .header[data-nav-density="compact"] .header-tools-trigger {
@@ -23436,7 +23446,24 @@ body.modal-open {
         clock.setAttribute('dir', lang === 'ar' ? 'rtl' : 'ltr');
     }
 
+    function cleanupLeakedInlineCodeText() {
+        const leakPattern = /(const\s+blob\s*=\s*new\s+Blob|function\s+getDakaExportModules|function\s+renderOpenRouterCodePreview|MODE\s+DAKA\s+CODE\s+BUILDER|window\.exportFullAnalysisToPDF|restorePdfExportDom)/i;
+        const safeParents = /^(SCRIPT|STYLE|PRE|CODE|TEXTAREA)$/;
+        const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+        const leakedNodes = [];
+        while (walker.nextNode()) {
+            const node = walker.currentNode;
+            const parent = node.parentElement;
+            if (!parent || safeParents.test(parent.tagName)) continue;
+            const text = String(node.nodeValue || '');
+            if (text.length > 120 && leakPattern.test(text)) leakedNodes.push(node);
+        }
+        leakedNodes.forEach(node => node.remove());
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
+        cleanupLeakedInlineCodeText();
+        window.setTimeout(cleanupLeakedInlineCodeText, 500);
         updateDakaClock();
         window.setInterval(updateDakaClock, 30000);
         document.getElementById('langSelector')?.addEventListener('change', updateDakaClock);
