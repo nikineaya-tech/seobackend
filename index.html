@@ -3961,7 +3961,7 @@ table tbody td {
                         onmouseout="this.style.transform='translateY(0)';this.style.boxShadow='0 4px 15px rgba(139,92,246,0.3)'"
                     >
                         <i class="fas fa-file-export"></i>
-                        <span>Export PDF</span>
+                        <span>Export DOCX</span>
                     </button>
                 </div>
 
@@ -4060,8 +4060,8 @@ table tbody td {
         class="btn-pdf no-print"
         onclick="PDF_EXPORT.competitors()"
         style="display:none">
-    <i class="fas fa-file-pdf"></i>
-    <span data-i18n="exportpdf">Export PDF</span>
+    <i class="fas fa-file-word"></i>
+    <span data-i18n="exportword">Export DOCX</span>
 </button>
     </div>
 </div>
@@ -4161,8 +4161,8 @@ table tbody td {
         class="btn-pdf no-print"
         onclick="PDF_EXPORT.funnel()"
         style="display:none">
-    <i class="fas fa-file-pdf"></i>
-    <span data-i18n="exportpdf">Export PDF</span>
+    <i class="fas fa-file-word"></i>
+    <span data-i18n="exportword">Export DOCX</span>
 </button>
             </div>
         </div>
@@ -4243,8 +4243,8 @@ table tbody td {
         class="btn-pdf no-print"
         onclick="PDF_EXPORT.technical()"
         style="display:none">
-    <i class="fas fa-file-pdf"></i>
-    <span data-i18n="exportpdf">Export PDF</span>
+    <i class="fas fa-file-word"></i>
+    <span data-i18n="exportword">Export DOCX</span>
 </button>
             </div>
         </div>
@@ -4310,12 +4310,12 @@ table tbody td {
                 </form>
 
                 <div id="resultsKeywords" class="results-container"></div>
-                <button id="btn-export-keywords-pdf"
+<button id="btn-export-keywords-pdf"
         class="btn-pdf no-print"
-        onclick="PDF_EXPORT.keywords()"
+        onclick="window.exportKeywordsToExcel()"
         style="display:none">
-    <i class="fas fa-file-pdf"></i>
-    <span data-i18n="exportpdf">Export PDF</span>
+    <i class="fas fa-file-excel"></i>
+    <span data-i18n="exportexcel">Export Excel</span>
 </button>
             </div>
         </div>
@@ -5745,7 +5745,7 @@ function authCopy() {
         saved: 'تم حفظ التقرير في حسابك.',
         saveError: 'تعذر حفظ التقرير.',
         view: 'عرض التقرير',
-        pdf: 'تنزيل PDF',
+        pdf: 'تنزيل DOCX',
         share: 'مشاركة',
         shareCopied: 'تم نسخ رابط المشاركة.',
         shareUnavailable: 'تعذر إنشاء رابط المشاركة.',
@@ -5777,7 +5777,7 @@ function authCopy() {
         saved: 'Report saved to your account.',
         saveError: 'The report could not be saved.',
         view: 'View report',
-        pdf: 'Download PDF',
+        pdf: 'Download DOCX',
         share: 'Share',
         shareCopied: 'Share link copied.',
         shareUnavailable: 'Unable to create the share link.',
@@ -5809,7 +5809,7 @@ function authCopy() {
         saved: 'Rapport enregistré dans votre compte.',
         saveError: 'Le rapport n’a pas pu être enregistré.',
         view: 'Voir le rapport',
-        pdf: 'Télécharger le PDF',
+        pdf: 'Télécharger le DOCX',
         share: 'Partager',
         shareCopied: 'Lien de partage copié.',
         shareUnavailable: 'Impossible de créer le lien de partage.',
@@ -6083,7 +6083,7 @@ async function openReportDashboard() {
                 </div>
                 <div class="report-history-actions">
                     <button type="button" onclick="event.stopPropagation();displaySavedReport('${report.id}')" title="${escapeHtml(copy.view)}" aria-label="${escapeHtml(copy.view)}"><i class="fas fa-eye"></i></button>
-                    <button type="button" onclick="event.stopPropagation();downloadSavedReport('${report.id}')" title="${escapeHtml(copy.pdf)}" aria-label="${escapeHtml(copy.pdf)}"><i class="fas fa-file-pdf"></i></button>
+                    <button type="button" onclick="event.stopPropagation();downloadSavedReport('${report.id}')" title="${escapeHtml(copy.pdf)}" aria-label="${escapeHtml(copy.pdf)}"><i class="fas fa-file-word"></i></button>
                     <button type="button" class="report-share-button" onclick="event.stopPropagation();shareSavedReport('${report.id}')" title="${escapeHtml(copy.share)}" aria-label="${escapeHtml(copy.share)}"><i class="fas fa-share-nodes"></i><span>${escapeHtml(copy.share)}</span></button>
                 </div>
             </article>`).join('') : `<div style="color:#94a3b8;padding:16px">${authCopy().empty}</div>`;
@@ -6114,7 +6114,7 @@ async function displaySavedReport(id, options = {}) {
         const data = report.result;
         const tab = type === 'technical' ? 'technical' : type;
 
-        if (options.exportPdf) {
+        if (options.exportDoc || options.exportPdf) {
             STATE.lastAnalysisResults = null;
             STATE.lastFunnelResults = null;
             STATE.lastTechnicalResults = null;
@@ -6147,8 +6147,14 @@ async function displaySavedReport(id, options = {}) {
         const target = document.getElementById(`results${type === 'competitors' ? 'Competitors' : type === 'funnel' ? 'Funnel' : type === 'technical' ? 'Technical' : 'Keywords'}`);
         requestAnimationFrame(() => target?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
 
-        if (options.exportPdf) {
-            setTimeout(() => window.exportFullAnalysisToPDF?.(), 650);
+        if (options.exportDoc || options.exportPdf) {
+            setTimeout(() => {
+                if (typeof window.exportFullAnalysisToWord === 'function') {
+                    window.exportFullAnalysisToWord();
+                } else {
+                    window.exportFullAnalysisToPDF?.();
+                }
+            }, 650);
         }
         return report;
     } catch (error) {
@@ -6159,7 +6165,7 @@ async function displaySavedReport(id, options = {}) {
 }
 
 async function downloadSavedReport(id) {
-    await displaySavedReport(id, { exportPdf: true });
+    await displaySavedReport(id, { exportDoc: true });
 }
 
 async function shareSavedReport(id) {
@@ -10953,7 +10959,7 @@ async function confirmDakaExportStudio(format = 'word') {
     }
     closeDakaExportStudio();
     try {
-        if (format === 'word' && typeof window.exportFullAnalysisToWord === 'function') {
+        if (typeof window.exportFullAnalysisToWord === 'function') {
             await window.exportFullAnalysisToWord({ prepared: true, sections, features, includeDetails: true });
         } else {
             await window.exportFullAnalysisToPDF({ prepared: true, sections, features, includeDetails: true, downloadWindow });
@@ -11643,6 +11649,10 @@ function buildDakaArabicDecisionPages(model) {
 
 
 window.exportFullAnalysisToPDF = async function (exportOptions = null) {
+    if (typeof window.exportFullAnalysisToWord === 'function') {
+        return window.exportFullAnalysisToWord(exportOptions);
+    }
+    const isAr = STATE.currentLang === 'ar';
 
     // ══════════════════════════════════════════════════════════════
     // GARDE-FOUS
@@ -12333,8 +12343,8 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             isAr
                 ? '\u2705 تم تحميل PDF بنجاح!'
                 : isEn
-                ? '\u2705 PDF downloaded successfully!'
-                : '\u2705 PDF téléchargé avec succès !'
+                ? '\u2705 DOCX downloaded successfully!'
+                : '\u2705 DOCX téléchargé avec succès !'
         );
 
     } catch (err) {
@@ -12348,7 +12358,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         openedDetails = [];
 
         toast.error(
-            (isAr ? 'فشل تصدير PDF: ' : isEn ? 'PDF export failed: ' : 'Export PDF échoué : ')
+            (isAr ? 'فشل تصدير DOCX: ' : isEn ? 'DOCX export failed: ' : 'Export DOCX échoué : ')
             + (err.message || 'Erreur inconnue')
         );
 
@@ -12502,7 +12512,7 @@ window.exportTechToPDF = async function() {
         toast.success("Rapport exporté !");
 
     } catch (err) {
-        console.error("Erreur Export PDF:", err);
+        console.error("Erreur export legacy:", err);
         toast.error("Erreur lors de la génération.");
     } finally {
         btn.disabled = false;
@@ -12615,10 +12625,10 @@ window.exportCompetitorsPDF = async function () {
         // ✅ FIX 3 : Libération mémoire
         setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 
-        toast.success("✅ Rapport PDF téléchargé !");
+        toast.success("✅ Rapport DOCX téléchargé !");
 
     } catch (err) {
-        console.error("Export PDF error:", err);
+        console.error("Legacy export error:", err);
         toast.error(`Export échoué: ${err.message}`);
     } finally {
         // ✅ FIX 4 : Toujours restaurer le bouton
@@ -13076,9 +13086,14 @@ function displayKeywordsResults(data) {
                     </h3>
                     ${STATE.lastKeywords.seed ? `<div style="font-size:0.72rem;color:#64748b;margin-top:4px;">Seed : <strong style="color:#a78bfa;">${STATE.lastKeywords.seed}</strong> · ${STATE.lastKeywords.languages?.join(', ')} · ${STATE.lastKeywords.geoInput}</div>` : ''}
                 </div>
-                <button class="btn btn-secondary" onclick="window.copyKwsSafely()" style="padding:7px 14px;font-size:0.75rem;border-radius:8px;flex-shrink:0;">
-                    <i class="fas fa-copy"></i> ${t.copy}
-                </button>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                    <button class="btn btn-secondary" type="button" data-no-collapse="true" onclick="event.stopPropagation();window.copyKwsSafely()" style="padding:7px 14px;font-size:0.75rem;border-radius:8px;flex-shrink:0;">
+                        <i class="fas fa-copy"></i> ${t.copy}
+                    </button>
+                    <button class="btn btn-secondary" type="button" data-no-collapse="true" onclick="event.stopPropagation();window.exportKeywordsToExcel()" style="padding:7px 14px;font-size:0.75rem;border-radius:8px;flex-shrink:0;background:rgba(16,185,129,.14);border-color:rgba(16,185,129,.35);color:#bbf7d0;">
+                        <i class="fas fa-file-excel"></i> ${isAr ? 'Excel' : isEn ? 'Export Excel' : 'Exporter Excel'}
+                    </button>
+                </div>
             </div>
 
             ${statsBadges}
@@ -13269,6 +13284,130 @@ window.copyKwsSafely = function() {
         const errorMsg = isAr ? 'خطأ في النسخ' : 'Erreur lors de la copie';
         if (typeof toast !== 'undefined') toast.error(errorMsg);
     });
+};
+
+function getDakaKeywordExportRows() {
+    const raw = STATE.lastKeywords || {};
+    const data = Array.isArray(raw) ? { keywords: raw } : raw;
+    const keywords = Array.isArray(data.keywords) ? data.keywords : [];
+    return keywords.map((kw, index) => ({
+        rank: index + 1,
+        keyword: String(kw.keyword || kw.query || '').trim(),
+        language: String(kw.language || kw.lang || '').trim(),
+        intent: String(kw.intent || '').trim(),
+        volume: kw.volume ?? '',
+        kd: kw.kd ?? kw.difficulty ?? '',
+        cpc: kw.cpc ?? '',
+        trend: String(kw.trend || '').trim(),
+        trendScore: kw.trendScore ?? '',
+        quickWin: kw.quickWin ? 'YES' : 'NO',
+        source: kw.fromSerpRelated ? 'Terrain' : (kw.source || 'Synthese'),
+        geo: data.geoResolved || data.geo || data.geoInput || '',
+        cluster: String(kw.cluster || kw.clusterName || '').trim(),
+        painPoint: String(kw.painPoint || '').trim(),
+        seasonality: String(kw.seasonality || '').trim()
+    })).filter(row => row.keyword);
+}
+
+function escapeExcelCell(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+window.exportKeywordsToExcel = function () {
+    const lang = STATE.currentLang || 'fr';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const rows = getDakaKeywordExportRows();
+    if (!rows.length) {
+        return toast.warning(isAr ? 'لا توجد كلمات للتصدير.' : isEn ? 'No keywords to export.' : 'Aucun mot-clé à exporter.');
+    }
+    const headers = [
+        'Rank', 'Keyword', 'Language', 'Intent', 'Volume', 'KD', 'CPC',
+        'Trend', 'Trend Score', 'Quick Win', 'Source', 'Geo', 'Cluster',
+        'Pain Point', 'Seasonality'
+    ];
+    const htmlRows = rows.map(row => `
+        <tr>
+            <td>${escapeExcelCell(row.rank)}</td>
+            <td>${escapeExcelCell(row.keyword)}</td>
+            <td>${escapeExcelCell(row.language)}</td>
+            <td>${escapeExcelCell(row.intent)}</td>
+            <td>${escapeExcelCell(row.volume)}</td>
+            <td>${escapeExcelCell(row.kd)}</td>
+            <td>${escapeExcelCell(row.cpc)}</td>
+            <td>${escapeExcelCell(row.trend)}</td>
+            <td>${escapeExcelCell(row.trendScore)}</td>
+            <td>${escapeExcelCell(row.quickWin)}</td>
+            <td>${escapeExcelCell(row.source)}</td>
+            <td>${escapeExcelCell(row.geo)}</td>
+            <td>${escapeExcelCell(row.cluster)}</td>
+            <td>${escapeExcelCell(row.painPoint)}</td>
+            <td>${escapeExcelCell(row.seasonality)}</td>
+        </tr>`).join('');
+    const workbook = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body{font-family:Calibri,Arial,sans-serif}
+table{border-collapse:collapse;width:100%}
+th{background:#0f172a;color:#fff;font-weight:700}
+td,th{border:1px solid #d9e2ef;padding:8px;mso-number-format:"\\@";}
+tr:nth-child(even) td{background:#f8fafc}
+.yes{color:#047857;font-weight:700}
+</style>
+</head>
+<body>
+<h1>Daka Keywords Intelligence</h1>
+<p>${escapeExcelCell(isAr ? 'جدول الكلمات المفتاحية قابل للفرز والتحليل.' : isEn ? 'Keyword table ready for sorting and analysis.' : 'Tableau mots-clés prêt pour tri et analyse.')}</p>
+<table>
+<thead><tr>${headers.map(h => `<th>${escapeExcelCell(h)}</th>`).join('')}</tr></thead>
+<tbody>${htmlRows}</tbody>
+</table>
+</body>
+</html>`;
+    const blob = new Blob(['\ufeff', workbook], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const slug = String(STATE.lastKeywords?.seed || STATE.lastInputs?.seedKeyword || 'keywords')
+        .replace(/[^a-zA-Z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 34) || 'keywords';
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Daka-Keywords-${slug}-${Date.now()}.xls`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    toast.success(isAr ? 'تم تحميل ملف Excel.' : isEn ? 'Excel file downloaded.' : 'Fichier Excel téléchargé.');
+};
+
+window.copyKwsSafely = function() {
+    const rows = getDakaKeywordExportRows();
+    if (!rows.length) return toast?.warning?.('Aucun mot-clé à copier') || alert('Aucun mot-clé à copier');
+    const text = rows.map(row => `${row.keyword}\t${row.intent}\t${row.volume}\t${row.kd}\t${row.cpc}`).join('\n');
+    const successMsg = STATE.currentLang === 'ar'
+        ? `تم نسخ ${rows.length} كلمة.`
+        : STATE.currentLang === 'en'
+            ? `${rows.length} keywords copied.`
+            : `${rows.length} mots-clés copiés.`;
+    const done = () => toast?.success?.(successMsg);
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0;';
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+            done();
+        });
+    }
 };
 function getScoreColor(score) {
     if (score >= 80) return '#10B981';
@@ -20225,7 +20364,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 // ═══════════════════════════════════════════════════════════════
-// PDF EXPORT ENGINE V2 — Gotenberg
+// EXPORT COMPATIBILITY — legacy PDF buttons now route to DOCX/Excel
 // Utilise STATE existant — zéro conflit avec le code actuel
 // ═══════════════════════════════════════════════════════════════
 const PDF_EXPORT = {
@@ -20266,12 +20405,12 @@ const PDF_EXPORT = {
     _lock(btn) {
         if (!btn) return;
         btn._orig     = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> PDF...';
+        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> DOCX...';
         btn.disabled  = true;
     },
     _unlock(btn) {
         if (!btn) return;
-        btn.innerHTML = btn._orig || '<i class="fas fa-file-pdf"></i> Export PDF';
+        btn.innerHTML = btn._orig || '<i class="fas fa-file-word"></i> Export DOCX';
         btn.disabled  = false;
     },
 
@@ -20300,9 +20439,9 @@ const PDF_EXPORT = {
         const btn = document.getElementById('btn-export-technical-pdf');
         this._lock(btn);
         this._notify('info',
-            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء PDF...' :
-            STATE.currentLang === 'en' ? '⏳ Generating PDF...' :
-            '⏳ Génération PDF en cours...');
+            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء DOCX...' :
+            STATE.currentLang === 'en' ? '⏳ Generating DOCX...' :
+            '⏳ Génération DOCX en cours...');
         try {
             const host = (() => {
                 try { return new URL(data.analyzedUrl || data.extraction?.url || '').hostname; }
@@ -20311,15 +20450,15 @@ const PDF_EXPORT = {
             await this._send(
                 '/api/export/technical-v2',
                 data,
-                `TechSEO-${host}-${Date.now()}.pdf`
+                `TechSEO-${host}-${Date.now()}.docx`
             );
             this._notify('success',
-                STATE.currentLang === 'ar' ? '✅ تم تحميل PDF!' :
-                STATE.currentLang === 'en' ? '✅ PDF downloaded!' :
-                '✅ PDF téléchargé !');
+                STATE.currentLang === 'ar' ? '✅ تم تحميل DOCX!' :
+                STATE.currentLang === 'en' ? '✅ DOCX downloaded!' :
+                '✅ DOCX téléchargé !');
         } catch(e) {
-            console.error('[PDF Technical]', e);
-            this._notify('error', 'Export PDF échoué: ' + e.message);
+            console.error('[DOCX Technical]', e);
+            this._notify('error', 'Export DOCX échoué: ' + e.message);
         } finally {
             this._unlock(btn);
         }
@@ -20341,9 +20480,9 @@ const PDF_EXPORT = {
         const btn = document.getElementById('btn-export-competitors-pdf');
         this._lock(btn);
         this._notify('info',
-            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء PDF...' :
-            STATE.currentLang === 'en' ? '⏳ Generating PDF...' :
-            '⏳ Génération PDF en cours...');
+            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء DOCX...' :
+            STATE.currentLang === 'en' ? '⏳ Generating DOCX...' :
+            '⏳ Génération DOCX en cours...');
         try {
             const q = (
                 data.query ||
@@ -20353,15 +20492,15 @@ const PDF_EXPORT = {
             await this._send(
                 '/api/export/competitors-v2',
                 data,
-                `Concurrents-${q}-${Date.now()}.pdf`
+                `Concurrents-${q}-${Date.now()}.docx`
             );
             this._notify('success',
-                STATE.currentLang === 'ar' ? '✅ تم تحميل PDF!' :
-                STATE.currentLang === 'en' ? '✅ PDF downloaded!' :
-                '✅ PDF téléchargé !');
+                STATE.currentLang === 'ar' ? '✅ تم تحميل DOCX!' :
+                STATE.currentLang === 'en' ? '✅ DOCX downloaded!' :
+                '✅ DOCX téléchargé !');
         } catch(e) {
-            console.error('[PDF Competitors]', e);
-            this._notify('error', 'Export PDF échoué: ' + e.message);
+            console.error('[DOCX Competitors]', e);
+            this._notify('error', 'Export DOCX échoué: ' + e.message);
         } finally {
             this._unlock(btn);
         }
@@ -20389,28 +20528,14 @@ const PDF_EXPORT = {
         const btn = document.getElementById('btn-export-keywords-pdf');
         this._lock(btn);
         this._notify('info',
-            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء PDF...' :
-            STATE.currentLang === 'en' ? '⏳ Generating PDF...' :
-            '⏳ Génération PDF en cours...');
+            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء Excel...' :
+            STATE.currentLang === 'en' ? '⏳ Generating Excel...' :
+            '⏳ Génération Excel en cours...');
         try {
-            const q = (
-                data.query ||
-                data.keyword ||
-                STATE.lastInputs?.seedKeyword ||
-                'keywords'
-            ).replace(/\s+/g, '-').substring(0, 30);
-            await this._send(
-                '/api/export/keywords-v2',
-                data,
-                `Keywords-${q}-${Date.now()}.pdf`
-            );
-            this._notify('success',
-                STATE.currentLang === 'ar' ? '✅ تم تحميل PDF!' :
-                STATE.currentLang === 'en' ? '✅ PDF downloaded!' :
-                '✅ PDF téléchargé !');
+            window.exportKeywordsToExcel();
         } catch(e) {
-            console.error('[PDF Keywords]', e);
-            this._notify('error', 'Export PDF échoué: ' + e.message);
+            console.error('[Excel Keywords]', e);
+            this._notify('error', 'Export Excel échoué: ' + e.message);
         } finally {
             this._unlock(btn);
         }
@@ -20432,9 +20557,9 @@ const PDF_EXPORT = {
         const btn = document.getElementById('btn-export-funnel-pdf');
         this._lock(btn);
         this._notify('info',
-            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء PDF...' :
-            STATE.currentLang === 'en' ? '⏳ Generating PDF...' :
-            '⏳ Génération PDF en cours...');
+            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء DOCX...' :
+            STATE.currentLang === 'en' ? '⏳ Generating DOCX...' :
+            '⏳ Génération DOCX en cours...');
         try {
             const host = (() => {
                 try {
@@ -20448,15 +20573,15 @@ const PDF_EXPORT = {
             await this._send(
                 '/api/export/funnel-v2',
                 data,
-                `Funnel-AIDA-${host}-${Date.now()}.pdf`
+                `Funnel-AIDA-${host}-${Date.now()}.docx`
             );
             this._notify('success',
-                STATE.currentLang === 'ar' ? '✅ تم تحميل PDF!' :
-                STATE.currentLang === 'en' ? '✅ PDF downloaded!' :
-                '✅ PDF téléchargé !');
+                STATE.currentLang === 'ar' ? '✅ تم تحميل DOCX!' :
+                STATE.currentLang === 'en' ? '✅ DOCX downloaded!' :
+                '✅ DOCX téléchargé !');
         } catch(e) {
-            console.error('[PDF Funnel]', e);
-            this._notify('error', 'Export PDF échoué: ' + e.message);
+            console.error('[DOCX Funnel]', e);
+            this._notify('error', 'Export DOCX échoué: ' + e.message);
         } finally {
             this._unlock(btn);
         }
