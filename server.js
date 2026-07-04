@@ -21971,8 +21971,169 @@ function createDocxListBlock(title, items, lang, offerType = 'product') {
         .forEach(item => {
             const paragraph = createDocxParagraph(item, lang, { bullet: true, size: 22, offerType });
             if (paragraph) children.push(paragraph);
-        });
+    });
     return children;
+}
+
+function normalizeDocxActionItems(model = {}, lang = 'fr', offerType = 'product') {
+    const rows = [];
+    const push = (item, horizon, index) => {
+        if (!item || rows.length >= 9) return;
+        const action = typeof item === 'object' ? item : { title: item };
+        const title = cleanDocxText(action.title || action.text || action.label || action.action || '', lang, offerType);
+        if (!title) return;
+        if (rows.some(row => row.title.toLowerCase() === title.toLowerCase())) return;
+        rows.push({
+            horizon,
+            title,
+            impact: cleanDocxText(action.impact || action.justification || '', lang, offerType) || (lang === 'ar' ? 'أثر قابل للتحقق' : lang === 'en' ? 'Measurable impact' : 'Impact mesurable'),
+            effort: cleanDocxText(action.effort || action.priority || '', lang, offerType) || String(index + 1),
+        });
+    };
+    (model.actions || []).forEach((item, index) => push(item, lang === 'ar' ? 'الأولوية' : lang === 'en' ? 'Priority' : 'Priorité', index));
+    (model.quickWins || []).forEach((item, index) => push(item, lang === 'ar' ? '7 أيام' : lang === 'en' ? '7 days' : '7 jours', index));
+    (model.plan30 || []).forEach((item, index) => push(item, lang === 'ar' ? '30 يوما' : lang === 'en' ? '30 days' : '30 jours', index));
+    (model.after30 || []).forEach((item, index) => push(item, lang === 'ar' ? 'بعد 30 يوما' : lang === 'en' ? 'After 30 days' : 'Après 30 jours', index));
+    return rows.slice(0, 9);
+}
+
+function createDocxCardCell(title, value, lang, offerType, fill, accent = '0369A1') {
+    const paragraphs = [
+        createDocxParagraph(title, lang, {
+            bold: true,
+            size: 18,
+            color: accent,
+            alignment: lang === 'ar' ? AlignmentType.RIGHT : AlignmentType.LEFT,
+            after: 45,
+            offerType,
+        }),
+        createDocxParagraph(value || '—', lang, {
+            bold: true,
+            size: 22,
+            color: '0F172A',
+            alignment: lang === 'ar' ? AlignmentType.RIGHT : AlignmentType.LEFT,
+            after: 20,
+            offerType,
+        }),
+    ].filter(Boolean);
+    return new TableCell({
+        width: { size: 25, type: WidthType.PERCENTAGE },
+        shading: { fill },
+        margins: { top: 150, bottom: 150, left: 150, right: 150 },
+        borders: {
+            top: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+            left: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+            right: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+        },
+        children: paragraphs.length ? paragraphs : [new Paragraph('')],
+    });
+}
+
+function createDocxExecutiveDashboard(model, lang, offerType) {
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const score = Number.isFinite(Number(model.score)) ? `${Number(model.score)}/100` : (isAr ? 'غير محسوب' : isEn ? 'Not scored' : 'Non noté');
+    const decision = model.priorityDecision || model.verdict || '';
+    const opportunity = normalizeWordExportList(model.opportunities, 1)[0] || '';
+    const risk = normalizeWordExportList(model.weaknesses, 1)[0] || '';
+    const table = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [
+            new TableRow({
+                children: [
+                    createDocxCardCell(isAr ? 'النتيجة' : isEn ? 'Score' : 'Score', score, lang, offerType, 'EFF6FF', '2563EB'),
+                    createDocxCardCell(isAr ? 'القرار' : isEn ? 'Decision' : 'Décision', decision, lang, offerType, 'ECFEFF', '0891B2'),
+                ],
+            }),
+            new TableRow({
+                children: [
+                    createDocxCardCell(isAr ? 'فرصة واضحة' : isEn ? 'Clear opportunity' : 'Opportunité claire', opportunity, lang, offerType, 'F0FDF4', '16A34A'),
+                    createDocxCardCell(isAr ? 'نقطة خطر' : isEn ? 'Risk point' : 'Point de risque', risk, lang, offerType, 'FFF7ED', 'C2410C'),
+                ],
+            }),
+        ],
+    });
+    return [
+        createDocxHeading(isAr ? 'لوحة القرار السريعة' : isEn ? 'Decision dashboard' : 'Tableau de décision', lang, 2, offerType),
+        table,
+    ].filter(Boolean);
+}
+
+function createDocxBranchSchema(model, lang, offerType) {
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const sourceBranches = Array.isArray(model.branches) && model.branches.length ? model.branches : [
+        { title: isAr ? 'السوق' : isEn ? 'Market' : 'Marché', items: model.opportunities || [] },
+        { title: isAr ? 'العرض' : isEn ? 'Offer' : 'Offre', items: [model.priorityDecision || model.verdict].filter(Boolean) },
+        { title: isAr ? 'الثقة' : isEn ? 'Trust' : 'Confiance', items: model.weaknesses || [] },
+    ];
+    const branches = sourceBranches.slice(0, 5).map(branch => ({
+        title: cleanDocxText(branch.title || branch.key || '', lang, offerType),
+        item: cleanDocxText(normalizeWordExportList(branch.items, 1)[0] || '', lang, offerType),
+    })).filter(branch => branch.title || branch.item);
+    if (!branches.length) return [];
+    const fills = ['EFF6FF', 'ECFEFF', 'F0FDF4', 'FEFCE8', 'FDF2F8'];
+    const cells = branches.map((branch, index) => createDocxCardCell(branch.title, branch.item, lang, offerType, fills[index % fills.length], ['2563EB', '0891B2', '16A34A', 'CA8A04', 'BE185D'][index % 5]));
+    const table = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [new TableRow({ children: cells })],
+    });
+    return [
+        createDocxHeading(isAr ? 'خريطة القرار' : isEn ? 'Decision map' : 'Carte de décision', lang, 2, offerType),
+        createDocxParagraph(isAr ? 'مخطط خفيف يربط السوق والعرض والثقة وخطوة التنفيذ.' : isEn ? 'A light schema connecting market, offer, trust and execution.' : 'Schéma léger reliant marché, offre, confiance et exécution.', lang, { size: 20, color: '475569', offerType }),
+        table,
+    ].filter(Boolean);
+}
+
+function createDocxActionMatrix(model, lang, offerType) {
+    const rows = normalizeDocxActionItems(model, lang, offerType);
+    if (!rows.length) return [];
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const headers = isAr
+        ? ['الأفق', 'الإجراء', 'الأثر', 'الجهد / الرتبة']
+        : isEn
+            ? ['Horizon', 'Action', 'Impact', 'Effort / rank']
+            : ['Horizon', 'Action', 'Impact', 'Effort / rang'];
+    const tableRows = [
+        new TableRow({
+            children: headers.map(label => new TableCell({
+                shading: { fill: 'E0F2FE' },
+                children: [createDocxParagraph(label, lang, { bold: true, size: 20, color: '075985', alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT, offerType })].filter(Boolean),
+            })),
+        }),
+        ...rows.map((row, index) => new TableRow({
+            children: [
+                [row.horizon, row.title, row.impact, row.effort].map((value, cellIndex) => new TableCell({
+                    shading: { fill: index % 2 === 0 ? 'FFFFFF' : 'F8FAFC' },
+                    children: [createDocxParagraph(value, lang, {
+                        bold: cellIndex === 0,
+                        size: cellIndex === 1 ? 21 : 20,
+                        color: cellIndex === 0 ? '0369A1' : '111827',
+                        alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
+                        offerType,
+                    })].filter(Boolean),
+                })),
+            ].flat(),
+        })),
+    ];
+    const table = new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: tableRows,
+        borders: {
+            top: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+            left: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+            right: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+            insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+            insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+        },
+    });
+    return [
+        createDocxHeading(isAr ? 'مصفوفة العمل' : isEn ? 'Action matrix' : 'Matrice d’action', lang, 2, offerType),
+        table,
+    ].filter(Boolean);
 }
 
 function parseHtmlTableToDocx($, table, lang, offerType) {
@@ -22093,10 +22254,13 @@ async function buildDakaDocxDocument(payload = {}) {
         [isAr ? 'النتيجة' : isEn ? 'Score' : 'Score', Number.isFinite(Number(model.score)) ? `${Number(model.score)}/100` : ''],
     ], lang);
     if (metaTable) children.push(metaTable);
+    children.push(...createDocxExecutiveDashboard(model, lang, offerType));
     children.push(createDocxHeading(isAr ? 'الملخص التنفيذي' : isEn ? 'Executive summary' : 'Synthese executive', lang, 2, offerType));
     children.push(createDocxParagraph(model.verdict || model.priorityDecision || '', lang, { bold: true, size: 24, color: '0F172A', offerType }));
     children.push(...createDocxListBlock(isAr ? 'أهم الفرص' : isEn ? 'Top opportunities' : 'Principales opportunites', model.opportunities, lang, offerType));
     children.push(...createDocxListBlock(isAr ? 'أهم المخاطر' : isEn ? 'Top risks' : 'Principaux risques', model.weaknesses, lang, offerType));
+    children.push(...createDocxBranchSchema(model, lang, offerType));
+    children.push(...createDocxActionMatrix(model, lang, offerType));
     children.push(createDocxParagraph(
         isAr ? 'هذا الملف قابل للتعديل في Word. راجع الأرقام والوعود التجارية قبل إرساله للعميل النهائي.' :
             isEn ? 'This file is editable in Word. Review figures and commercial claims before sending it to the final client.' :

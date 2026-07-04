@@ -10698,7 +10698,15 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
                 verdict: model.verdict || '',
                 priorityDecision: model.priorityDecision || '',
                 opportunities: model.opportunities || [],
-                weaknesses: model.weaknesses || []
+                weaknesses: model.weaknesses || [],
+                actions: model.actions || [],
+                quickWins: model.quickWins || [],
+                plan30: model.plan30 || [],
+                after30: model.after30 || [],
+                branches: model.branches || [],
+                modules: model.modules || [],
+                geo: model.geo || '',
+                objective: model.objective || ''
             },
             sectionHtml
         })
