@@ -3807,18 +3807,28 @@ table tbody td {
                 <button type="button" data-no-collapse="true" onclick="setAllDakaExportSections(true)"><i class="fas fa-check-double"></i><span id="export-select-all">Tout sélectionner</span></button>
                 <button type="button" data-no-collapse="true" onclick="setAllDakaExportSections(false)"><i class="fas fa-eraser"></i><span id="export-clear-all">Effacer</span></button>
             </div>
+            <div class="export-logo-upload">
+                <div class="export-logo-preview" id="export-logo-preview">
+                    <img src="assets/daka-report-logo.png" alt="Logo du rapport">
+                </div>
+                <label class="export-logo-field">
+                    <span id="export-logo-title">Logo du rapport</span>
+                    <small id="export-logo-help">Ajoutez un logo PNG/JPG pour le fichier DOCX. Sinon Daka utilise son logo officiel.</small>
+                    <input id="export-logo-input" type="file" accept="image/png,image/jpeg" data-no-collapse="true" onchange="handleDakaExportLogoUpload(event)">
+                </label>
+                <button class="export-logo-reset" type="button" data-no-collapse="true" onclick="resetDakaExportLogo()">
+                    <i class="fas fa-rotate-left"></i><span id="export-logo-reset-label">Logo Daka</span>
+                </button>
+            </div>
             <div id="export-studio-sections" class="export-studio-sections"></div>
-            <p id="export-feature-help" class="export-feature-help">Cochez uniquement les chapitres utiles. Le PDF sera construit autour de votre sélection.</p>
+            <p id="export-feature-help" class="export-feature-help">Cochez uniquement les chapitres utiles. Le DOCX sera construit autour de votre sélection.</p>
             <div class="export-studio-footer">
                 <div class="export-studio-proof">
                     <i class="fas fa-user-shield"></i>
                     <span id="export-studio-proof-text">Rapport préparé et signé par les équipes expertes Daka.</span>
                 </div>
-                <button id="export-studio-word" class="btn btn-secondary" type="button" data-no-collapse="true" onclick="confirmDakaExportStudio('word')">
-                    <i class="fas fa-file-word"></i><span id="export-word-label">Exporter Word</span>
-                </button>
-                <button id="export-studio-confirm" class="btn btn-primary" type="button" data-no-collapse="true" onclick="confirmDakaExportStudio('pdf')">
-                    <i class="fas fa-file-arrow-down"></i><span id="export-confirm-label">Valider et exporter</span>
+                <button id="export-studio-confirm" class="btn btn-primary" type="button" data-no-collapse="true" onclick="confirmDakaExportStudio('word')">
+                    <i class="fas fa-file-word"></i><span id="export-confirm-label">Valider et exporter DOCX</span>
                 </button>
             </div>
         </div>
@@ -3841,7 +3851,7 @@ table tbody td {
         </div>
     </div>
 
-    <!-- 💜 BULLE EXPORT PDF — Fixed haut droite -->
+    <!-- Bulle export DOCX -->
     <div style="position:fixed;
                 top:80px; right:20px;
                 z-index:9999;
@@ -3856,13 +3866,13 @@ table tbody td {
                      padding:4px 10px; border-radius:20px;
                      white-space:nowrap; letter-spacing:0.5px;
                      animation:fadeUpDown 2.5s ease-in-out infinite;">
-            ⬇ Exporter PDF
+            ⬇ Exporter DOCX
         </span>
 
         <!-- Bulle -->
         <button id="btn-export-global"
-            onclick="window.exportFullAnalysisToPDF()"
-            title="Exporter le rapport PDF"
+            onclick="window.exportFullAnalysisToWord()"
+            title="Exporter le rapport DOCX"
             style="width:50px; height:50px;
                    border-radius:50%;
                    background:linear-gradient(135deg,#6366f1,#8b5cf6,#f093fb);
@@ -10670,7 +10680,7 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
     }
     const title = isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport exécutif Daka';
     const slug = (model.domain || 'report').replace(/[^a-zA-Z0-9]/g, '-').substring(0, 34);
-    const filename = 'Daka-Editable-Report-' + slug + '-' + Date.now() + '.doc';
+    const filename = 'Daka-Editable-Report-' + slug + '-' + Date.now() + '.docx';
     const response = await fetch(`${CONFIG.API_BASE_URL}/api/export/word`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -10678,6 +10688,7 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
             lang,
             title,
             filename,
+            logoDataUrl: window.dakaExportLogoDataUrl || '',
             model: {
                 siteTitle: model.siteTitle || model.domain || '',
                 domain: model.domain || '',
@@ -10692,7 +10703,7 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
             sectionHtml
         })
     });
-    if (!response.ok) throw new Error(isAr ? 'تعذر إنشاء ملف Word.' : isEn ? 'Word export failed.' : 'Export Word impossible.');
+    if (!response.ok) throw new Error(isAr ? 'تعذر إنشاء ملف DOCX.' : isEn ? 'DOCX export failed.' : 'Export DOCX impossible.');
     const fileData = await response.blob();
     const url = URL.createObjectURL(fileData);
     const a = document.createElement('a');
@@ -10702,7 +10713,7 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
     a.click();
     a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
-    toast.success(isAr ? 'تم تحميل ملف Word.' : isEn ? 'Word file downloaded.' : 'Fichier Word téléchargé.');
+    toast.success(isAr ? 'تم تحميل ملف DOCX.' : isEn ? 'DOCX file downloaded.' : 'Fichier DOCX téléchargé.');
 };
 
 function restorePdfExportDom(hiddenEls, openedDetails) {
@@ -10799,6 +10810,37 @@ function closeDakaExportStudio() {
     document.body.classList.remove('modal-open');
 }
 
+window.dakaExportLogoDataUrl = window.dakaExportLogoDataUrl || '';
+
+function handleDakaExportLogoUpload(event) {
+    const file = event?.target?.files?.[0];
+    const lang = STATE.currentLang || 'fr';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    if (!file) return;
+    if (!/^image\/(png|jpeg)$/.test(file.type) || file.size > 2_000_000) {
+        event.target.value = '';
+        toast.warning(isAr ? 'استخدم صورة PNG أو JPG أقل من 2 ميغابايت.' : isEn ? 'Use a PNG or JPG image under 2 MB.' : 'Utilisez une image PNG ou JPG de moins de 2 Mo.');
+        return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+        window.dakaExportLogoDataUrl = String(reader.result || '');
+        const preview = document.querySelector('#export-logo-preview img');
+        if (preview && window.dakaExportLogoDataUrl) preview.src = window.dakaExportLogoDataUrl;
+        toast.success(isAr ? 'تم تحديث شعار التقرير.' : isEn ? 'Report logo updated.' : 'Logo du rapport mis à jour.');
+    };
+    reader.readAsDataURL(file);
+}
+
+function resetDakaExportLogo() {
+    window.dakaExportLogoDataUrl = '';
+    const input = document.getElementById('export-logo-input');
+    const preview = document.querySelector('#export-logo-preview img');
+    if (input) input.value = '';
+    if (preview) preview.src = 'assets/daka-report-logo.png';
+}
+
 function setAllDakaExportSections(value) {
     document.querySelectorAll('#export-studio-sections input:not(:disabled)').forEach(input => {
         input.checked = !!value;
@@ -10858,19 +10900,23 @@ function openDakaExportStudio(preselect = null) {
         });
     });
     document.getElementById('export-studio-title').textContent = isAr ? 'كوّن تقريرك التنفيذي' : isEn ? 'Build your decision report' : 'Composez votre dossier décisionnel';
-    document.getElementById('export-studio-subtitle').textContent = isAr ? 'اختر الوحدات والعمق قبل التصدير.' : isEn ? 'Choose the modules and depth before export.' : 'Choisissez les expertises et la profondeur avant l’export.';
+    document.getElementById('export-studio-subtitle').textContent = isAr ? 'اختر الوحدات والشعار قبل إنشاء ملف DOCX قابل للتحرير.' : isEn ? 'Choose modules and logo before generating the editable DOCX.' : 'Choisissez les modules et le logo avant de générer le DOCX éditable.';
     document.getElementById('export-feature-help').textContent = isAr
-        ? 'اختر الفصول المفيدة فقط. سيتم إنشاء ملف PDF حسب اختيارك.'
-        : isEn ? 'Select only useful chapters. The PDF will be built around your selection.'
-            : 'Cochez uniquement les chapitres utiles. Le PDF sera construit autour de votre sélection.';
-    document.getElementById('export-confirm-label').textContent = isAr ? 'تأكيد وتصدير' : isEn ? 'Confirm and export' : 'Valider et exporter';
-    const wordLabel = document.getElementById('export-word-label');
-    if (wordLabel) wordLabel.textContent = isAr ? 'تصدير Word' : isEn ? 'Export Word' : 'Exporter Word';
+        ? 'اختر الفصول المفيدة فقط. سيتم إنشاء ملف Word حديث بصيغة DOCX.'
+        : isEn ? 'Select only useful chapters. A modern DOCX file will be generated.'
+            : 'Cochez uniquement les chapitres utiles. Un vrai fichier Word DOCX sera généré.';
+    document.getElementById('export-confirm-label').textContent = isAr ? 'تأكيد وتصدير DOCX' : isEn ? 'Confirm and export DOCX' : 'Valider et exporter DOCX';
+    const logoTitle = document.getElementById('export-logo-title');
+    const logoHelp = document.getElementById('export-logo-help');
+    const logoReset = document.getElementById('export-logo-reset-label');
+    if (logoTitle) logoTitle.textContent = isAr ? 'شعار التقرير' : isEn ? 'Report logo' : 'Logo du rapport';
+    if (logoHelp) logoHelp.textContent = isAr ? 'ارفع PNG/JPG ليظهر في ملف Word. إذا لم ترفع شيئا سنستخدم شعار Daka.' : isEn ? 'Upload a PNG/JPG for the Word file. If empty, Daka uses its official logo.' : 'Ajoutez un PNG/JPG pour le fichier Word. Sans image, Daka utilise son logo officiel.';
+    if (logoReset) logoReset.textContent = isAr ? 'شعار Daka' : isEn ? 'Daka logo' : 'Logo Daka';
     modal.classList.add('active');
     document.body.classList.add('modal-open');
 }
 
-async function confirmDakaExportStudio(format = 'pdf') {
+async function confirmDakaExportStudio(format = 'word') {
     const sections = [...document.querySelectorAll('#export-studio-sections input[data-export-section]:checked')].map(input => input.value);
     if (!sections.length) {
         return toast.warning(STATE.currentLang === 'ar' ? 'اختر قسماً واحداً على الأقل.' : STATE.currentLang === 'en' ? 'Select at least one section.' : 'Sélectionnez au moins une section.');
@@ -22810,6 +22856,75 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     cursor: pointer;
 }
 
+.export-logo-upload {
+    display: grid;
+    grid-template-columns: auto minmax(0,1fr) auto;
+    gap: 12px;
+    align-items: center;
+    margin: 0 0 14px;
+    padding: 12px;
+    border: 1px solid rgba(34,211,238,.18);
+    border-radius: 14px;
+    background: radial-gradient(circle at 0 0, rgba(34,211,238,.12), transparent 34%), linear-gradient(135deg, rgba(15,23,42,.94), rgba(8,15,29,.9));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 12px 24px rgba(0,0,0,.18);
+}
+.export-logo-preview {
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid rgba(103,232,249,.22);
+    background: #020617;
+}
+.export-logo-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.export-logo-field {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+    cursor: pointer;
+}
+.export-logo-field span {
+    color: #f8fafc;
+    font-size: .78rem;
+    font-weight: 900;
+}
+.export-logo-field small {
+    color: #94a3b8;
+    font-size: .64rem;
+    line-height: 1.45;
+}
+.export-logo-field input {
+    width: 100%;
+    min-height: 36px;
+    padding: 7px;
+    border: 1px solid rgba(148,163,184,.14);
+    border-radius: 9px;
+    color: #cbd5e1;
+    background: rgba(2,6,23,.48);
+}
+.export-logo-reset {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 8px 11px;
+    border: 1px solid rgba(168,85,247,.24);
+    border-radius: 999px;
+    color: #ddd6fe;
+    background: rgba(88,28,135,.22);
+    font: inherit;
+    font-size: .66rem;
+    font-weight: 900;
+    cursor: pointer;
+}
+
 .export-studio-sections {
     display: grid;
     grid-template-columns: 1fr;
@@ -23022,6 +23137,8 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     #btn-export-global { width: 44px !important; height: 44px !important; }
     .export-studio-sections,
     .export-depth-fieldset { grid-template-columns: 1fr; }
+    .export-logo-upload { grid-template-columns: 1fr; }
+    .export-logo-preview { width: 64px; height: 64px; }
     .export-studio-footer { align-items: stretch; flex-direction: column; }
     .export-studio-footer .btn { width: 100%; }
     .export-pack-card { min-height: 68px; }

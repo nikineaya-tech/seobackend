@@ -28,6 +28,26 @@ const axios = require('axios');
 const cors = require('cors');
 const cheerio = require('cheerio');
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
+const {
+  AlignmentType,
+  BorderStyle,
+  Document,
+  ExternalHyperlink,
+  Footer,
+  Header,
+  HeadingLevel,
+  ImageRun,
+  Packer,
+  PageNumber,
+  Paragraph,
+  Table,
+  TableCell,
+  TableRow,
+  TextRun,
+  WidthType,
+} = require('docx');
 const { createClient } = require('@supabase/supabase-js');
 const { registerAuthRoutes } = require('./supabase-auth-routes');
 const { registerReportRoutes } = require('./supabase-report-routes');
@@ -21809,6 +21829,345 @@ function sanitizeWordBusinessVocabulary(text, offerType = 'product') {
         .replace(/shipping|delivery/gi, 'delivery timeline')
         .replace(/returns/gi, 'revision terms');
 }
+
+function wordExportLabel(key, lang = 'fr') {
+    const labels = {
+        hero: ['Ecran d’accueil', 'Opening screen', 'الشاشة الأولى'],
+        pricing: ['Offre et prix', 'Offer and pricing', 'العرض والسعر'],
+        primary_cta: ['Bouton principal', 'Main action button', 'زر الإجراء الرئيسي'],
+        cta: ['Appel a l’action', 'Call to action', 'دعوة لاتخاذ إجراء'],
+        product: ['Offre analysee', 'Analyzed offer', 'العرض محل التحليل'],
+        features: ['Caracteristiques utiles', 'Useful features', 'الخصائص المفيدة'],
+        returns: ['Conditions de retour', 'Return terms', 'شروط الإرجاع'],
+        social_proof: ['Preuves sociales', 'Social proof', 'الإثبات الاجتماعي'],
+        testimonials: ['Temoignages clients', 'Customer testimonials', 'شهادات العملاء'],
+        trust: ['Confiance', 'Trust', 'الثقة'],
+        faq: ['Questions frequentes', 'FAQ', 'الأسئلة الشائعة'],
+        delivery: ['Livraison et delais', 'Delivery and timing', 'التسليم والآجال'],
+        guarantee: ['Garantie', 'Guarantee', 'الضمان'],
+        content: ['Contenu', 'Content', 'المحتوى'],
+        high: ['Elevee', 'High', 'عالية'],
+        medium: ['Moyenne', 'Medium', 'متوسطة'],
+        low: ['Faible', 'Low', 'ضعيفة'],
+    };
+    const value = labels[String(key || '').toLowerCase()];
+    if (!value) return null;
+    return lang === 'ar' ? value[2] : lang === 'en' ? value[1] : value[0];
+}
+
+function cleanDocxText(value, lang = 'fr', offerType = 'product') {
+    let text = sanitizeWordBusinessVocabulary(String(value || ''), offerType)
+        .replace(/\s+/g, ' ')
+        .replace(/\s+([,.;:!?])/g, '$1')
+        .trim();
+    if (!text) return '';
+    [
+        [/\bprimary_cta\b/gi, wordExportLabel('primary_cta', lang)],
+        [/\bsocial[_\s-]*proof\b/gi, wordExportLabel('social_proof', lang)],
+        [/\bhero\b/gi, wordExportLabel('hero', lang)],
+        [/\bpricing\b/gi, wordExportLabel('pricing', lang)],
+        [/\bfeatures\b/gi, wordExportLabel('features', lang)],
+        [/\breturns\b/gi, wordExportLabel('returns', lang)],
+        [/\btestimonials?\b/gi, wordExportLabel('testimonials', lang)],
+        [/\btrust\b/gi, wordExportLabel('trust', lang)],
+        [/\bdelivery\b/gi, wordExportLabel('delivery', lang)],
+        [/\bfaq\b/gi, wordExportLabel('faq', lang)],
+        [/\bHIGH\b/g, wordExportLabel('high', lang)],
+        [/\bMEDIUM\b/g, wordExportLabel('medium', lang)],
+        [/\bLOW\b/g, wordExportLabel('low', lang)],
+    ].forEach(([pattern, label]) => {
+        if (label) text = text.replace(pattern, label);
+    });
+    return text.replace(/\s+/g, ' ').trim();
+}
+
+function loadDakaDocxLogoBuffer(uploadedLogoDataUrl = '') {
+    const dataUrl = String(uploadedLogoDataUrl || '');
+    const match = dataUrl.match(/^data:image\/(png|jpe?g);base64,([a-z0-9+/=\s]+)$/i);
+    if (match) {
+        const buffer = Buffer.from(match[2].replace(/\s+/g, ''), 'base64');
+        if (buffer.length > 0 && buffer.length <= 2_000_000) return buffer;
+    }
+    const logoPath = path.join(__dirname, 'assets', 'daka-report-logo.png');
+    if (fs.existsSync(logoPath)) return fs.readFileSync(logoPath);
+    return null;
+}
+
+function createDocxTextRun(text, lang, options = {}) {
+    return new TextRun({
+        text: String(text || ''),
+        font: options.font || 'Arial',
+        size: options.size || 23,
+        bold: !!options.bold,
+        italics: !!options.italics,
+        color: options.color || '111827',
+        rightToLeft: lang === 'ar',
+        break: options.break || 0,
+    });
+}
+
+function createDocxParagraph(text, lang, options = {}) {
+    const cleaned = cleanDocxText(text, lang, options.offerType || 'product');
+    if (!cleaned && !options.allowEmpty) return null;
+    return new Paragraph({
+        heading: options.heading,
+        bidirectional: lang === 'ar',
+        alignment: options.alignment || (lang === 'ar' ? AlignmentType.RIGHT : (options.center ? AlignmentType.CENTER : AlignmentType.JUSTIFIED)),
+        spacing: { before: options.before || 0, after: options.after ?? 120, line: options.line || 276 },
+        bullet: options.bullet ? { level: 0 } : undefined,
+        children: [createDocxTextRun(cleaned, lang, {
+            bold: options.bold,
+            italics: options.italics,
+            size: options.size || (options.heading ? 28 : 23),
+            color: options.color,
+        })],
+    });
+}
+
+function createDocxHeading(text, lang, level = 1, offerType = 'product') {
+    const heading = level <= 1 ? HeadingLevel.HEADING_1 : level === 2 ? HeadingLevel.HEADING_2 : HeadingLevel.HEADING_3;
+    const size = level <= 1 ? 32 : level === 2 ? 27 : 24;
+    return createDocxParagraph(text, lang, {
+        heading,
+        bold: true,
+        size,
+        color: level <= 1 ? '0F172A' : '075985',
+        before: level <= 1 ? 220 : 170,
+        after: 110,
+        alignment: lang === 'ar' ? AlignmentType.RIGHT : AlignmentType.LEFT,
+        offerType,
+    });
+}
+
+function createDocxMetaTable(rows, lang) {
+    const safeRows = rows.filter(row => row && row[1] !== undefined && String(row[1]).trim());
+    if (!safeRows.length) return null;
+    return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        margins: { top: 110, bottom: 110, left: 140, right: 140 },
+        rows: safeRows.map(([label, value]) => new TableRow({
+            children: [
+                new TableCell({
+                    width: { size: 32, type: WidthType.PERCENTAGE },
+                    shading: { fill: 'F1F5F9' },
+                    children: [createDocxParagraph(label, lang, { bold: true, size: 21, alignment: lang === 'ar' ? AlignmentType.RIGHT : AlignmentType.LEFT })].filter(Boolean),
+                }),
+                new TableCell({
+                    width: { size: 68, type: WidthType.PERCENTAGE },
+                    children: [createDocxParagraph(value, lang, { size: 21, alignment: lang === 'ar' ? AlignmentType.RIGHT : AlignmentType.LEFT })].filter(Boolean),
+                }),
+            ],
+        })),
+    });
+}
+
+function createDocxListBlock(title, items, lang, offerType = 'product') {
+    const children = [];
+    const heading = createDocxHeading(title, lang, 3, offerType);
+    if (heading) children.push(heading);
+    normalizeWordExportList(items, 5)
+        .map(item => cleanDocxText(item, lang, offerType))
+        .filter(Boolean)
+        .forEach(item => {
+            const paragraph = createDocxParagraph(item, lang, { bullet: true, size: 22, offerType });
+            if (paragraph) children.push(paragraph);
+        });
+    return children;
+}
+
+function parseHtmlTableToDocx($, table, lang, offerType) {
+    const rows = [];
+    $(table).find('tr').slice(0, 18).each((_, tr) => {
+        const cellCount = Math.max(1, $(tr).children('th,td').length);
+        const cells = [];
+        $(tr).children('th,td').slice(0, 6).each((__, cell) => {
+            const text = cleanDocxText($(cell).text(), lang, offerType).slice(0, 650);
+            cells.push(new TableCell({
+                width: { size: Math.floor(100 / cellCount), type: WidthType.PERCENTAGE },
+                shading: $(cell).is('th') ? { fill: 'E0F2FE' } : undefined,
+                children: [createDocxParagraph(text || ' ', lang, {
+                    bold: $(cell).is('th'),
+                    size: 20,
+                    alignment: lang === 'ar' ? AlignmentType.RIGHT : AlignmentType.LEFT,
+                    offerType,
+                    allowEmpty: true,
+                })].filter(Boolean),
+            }));
+        });
+        if (cells.length) rows.push(new TableRow({ children: cells }));
+    });
+    if (!rows.length) return null;
+    return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows,
+        borders: {
+            top: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+            bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+            left: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+            right: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+            insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+            insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+        },
+    });
+}
+
+function convertReportHtmlToDocxBlocks(sectionHtml, lang, offerType = 'product') {
+    const $ = cheerio.load(`<main>${sanitizeWordExportFragment(sectionHtml)}</main>`, { decodeEntities: true });
+    $('script,style,iframe,object,embed,video,audio,svg,canvas,button,input,select,textarea,noscript').remove();
+    $('.no-print,.expert-dock,.global-expert-bubble,.export-bubble-wrapper,.report-section-toggle,.report-section-close-row,.auth-modal,.daka-global-loader').remove();
+    $('[aria-hidden="true"]').remove();
+    const blocks = [];
+    const pushedText = new Set();
+    const pushParagraph = (text, options = {}) => {
+        const cleaned = cleanDocxText(text, lang, offerType);
+        if (!cleaned || cleaned.length < 2) return;
+        const key = cleaned.toLowerCase().slice(0, 220);
+        if (pushedText.has(key)) return;
+        pushedText.add(key);
+        const paragraph = options.heading
+            ? createDocxHeading(cleaned, lang, options.level || 2, offerType)
+            : createDocxParagraph(cleaned.slice(0, options.max || 1400), lang, { ...options, offerType });
+        if (paragraph) blocks.push(paragraph);
+    };
+    $('main').find('h1,h2,h3,h4,p,li,blockquote,pre,table,.report-section-card,.funnel-section-card,.action-card,.executive-card,.exportable-card').each((_, el) => {
+        if (blocks.length >= 260) return false;
+        const tag = (el.tagName || '').toLowerCase();
+        if (tag === 'table') {
+            const table = parseHtmlTableToDocx($, el, lang, offerType);
+            if (table) blocks.push(table);
+            return;
+        }
+        const text = $(el).text().replace(/\s+/g, ' ').trim();
+        if (!text) return;
+        if (/^(voir les details|voir détails|fermer|copier|ouvrir|exporter|share|download)$/i.test(text)) return;
+        if (/^h[1-6]$/.test(tag)) {
+            pushParagraph(text, { heading: true, level: Number(tag[1]) <= 2 ? 2 : 3 });
+        } else if (tag === 'li') {
+            pushParagraph(text, { bullet: true, max: 700, size: 22 });
+        } else if (tag === 'blockquote') {
+            pushParagraph(text, { italics: true, max: 900, size: 22, color: '334155' });
+        } else if (tag === 'pre') {
+            pushParagraph(text, { max: 1600, size: 19, color: '0F172A' });
+        } else if ($(el).find('p,li,h1,h2,h3,h4,table').length === 0 || tag === 'p') {
+            pushParagraph(text, { max: 1200, size: 22 });
+        }
+    });
+    if (!blocks.length) {
+        const fallback = cleanDocxText($('main').text(), lang, offerType).slice(0, 2200);
+        if (fallback) blocks.push(createDocxParagraph(fallback, lang, { offerType }));
+    }
+    return blocks.filter(Boolean);
+}
+
+async function buildDakaDocxDocument(payload = {}) {
+    const lang = ['fr', 'en', 'ar'].includes(payload.lang) ? payload.lang : 'fr';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const model = payload.model && typeof payload.model === 'object' ? payload.model : {};
+    const sectionHtml = sanitizeWordExportFragment(payload.sectionHtml);
+    const offerType = inferWordExportBusinessContext(model, sectionHtml);
+    const title = cleanDocxText(payload.title || (isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport executif Daka'), lang, offerType).slice(0, 140);
+    const logoBuffer = loadDakaDocxLogoBuffer(payload.logoDataUrl);
+    const children = [];
+    if (logoBuffer) {
+        children.push(new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 180 },
+            children: [new ImageRun({ data: logoBuffer, transformation: { width: 104, height: 104 } })],
+        }));
+    }
+    children.push(createDocxParagraph('Daka Market Intelligence Spyer', lang, { center: true, bold: true, size: 23, color: '0369A1', after: 70, offerType }));
+    children.push(createDocxHeading(title, lang, 1, offerType));
+    children.push(createDocxParagraph(
+        isAr ? 'ملف تنفيذي قابل للتحرير، مبني على الأدلة المتاحة، ومهيكل للقرار.' :
+            isEn ? 'Editable executive file, evidence-based and structured for decisions.' :
+                'Dossier executif editable, fonde sur les preuves disponibles et structure pour la decision.',
+        lang,
+        { center: true, size: 22, color: '475569', after: 220, offerType }
+    ));
+    const metaTable = createDocxMetaTable([
+        [isAr ? 'الموقع' : isEn ? 'Website' : 'Site', model.siteTitle || model.domain || ''],
+        ['URL', model.reportUrl || model.domain || ''],
+        [isAr ? 'تاريخ التقرير' : isEn ? 'Report date' : 'Date du rapport', model.date || new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR')],
+        [isAr ? 'نوع العرض' : isEn ? 'Offer type' : 'Type d’offre', offerType === 'service' ? (isAr ? 'خدمة' : isEn ? 'Service' : 'Service') : (isAr ? 'منتج / تجارة' : isEn ? 'Product / commerce' : 'Produit / commerce')],
+        [isAr ? 'النتيجة' : isEn ? 'Score' : 'Score', Number.isFinite(Number(model.score)) ? `${Number(model.score)}/100` : ''],
+    ], lang);
+    if (metaTable) children.push(metaTable);
+    children.push(createDocxHeading(isAr ? 'الملخص التنفيذي' : isEn ? 'Executive summary' : 'Synthese executive', lang, 2, offerType));
+    children.push(createDocxParagraph(model.verdict || model.priorityDecision || '', lang, { bold: true, size: 24, color: '0F172A', offerType }));
+    children.push(...createDocxListBlock(isAr ? 'أهم الفرص' : isEn ? 'Top opportunities' : 'Principales opportunites', model.opportunities, lang, offerType));
+    children.push(...createDocxListBlock(isAr ? 'أهم المخاطر' : isEn ? 'Top risks' : 'Principaux risques', model.weaknesses, lang, offerType));
+    children.push(createDocxParagraph(
+        isAr ? 'هذا الملف قابل للتعديل في Word. راجع الأرقام والوعود التجارية قبل إرساله للعميل النهائي.' :
+            isEn ? 'This file is editable in Word. Review figures and commercial claims before sending it to the final client.' :
+                'Ce fichier est editable dans Word. Relisez les chiffres et promesses commerciales avant envoi au client final.',
+        lang,
+        { italics: true, size: 20, color: '64748B', before: 180, offerType }
+    ));
+    const reportBlocks = convertReportHtmlToDocxBlocks(sectionHtml, lang, offerType);
+    if (reportBlocks.length) {
+        children.push(createDocxHeading(isAr ? 'تفاصيل التقرير' : isEn ? 'Report details' : 'Details du rapport', lang, 1, offerType));
+        children.push(...reportBlocks);
+    }
+    const headerText = isAr ? 'Daka - ملف ذكاء السوق' : isEn ? 'Daka - Market intelligence file' : 'Daka - Dossier intelligence marche';
+    const footerText = isAr ? 'تم إعداده بواسطة فرق Daka' : isEn ? 'Prepared by Daka teams' : 'Prepare par les equipes Daka';
+    const doc = new Document({
+        creator: 'Daka Market Intelligence Spyer',
+        title,
+        description: 'Editable Daka Market Intelligence report',
+        styles: {
+            default: {
+                document: {
+                    run: { font: 'Arial', size: 23, color: '111827', rightToLeft: isAr },
+                    paragraph: { spacing: { after: 120, line: 276 } },
+                },
+            },
+        },
+        sections: [{
+            properties: { page: { margin: { top: 1134, right: 1417, bottom: 1134, left: 1417 } } },
+            headers: {
+                default: new Header({
+                    children: [createDocxParagraph(headerText, lang, { size: 18, color: '64748B', alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT, offerType })].filter(Boolean),
+                }),
+            },
+            footers: {
+                default: new Footer({
+                    children: [
+                        new Paragraph({
+                            alignment: isAr ? AlignmentType.LEFT : AlignmentType.RIGHT,
+                            bidirectional: isAr,
+                            children: [
+                                createDocxTextRun(`${footerText} | `, lang, { size: 18, color: '64748B' }),
+                                PageNumber.CURRENT,
+                            ],
+                        }),
+                    ],
+                }),
+            },
+            children: children.filter(Boolean),
+        }],
+    });
+    return Packer.toBuffer(doc);
+}
+
+app.post('/api/export/word', async (req, res) => {
+    try {
+        const rawName = String(req.body?.filename || 'Daka-Editable-Report.docx')
+            .replace(/[^\w.\-]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/\.doc$/i, '.docx')
+            .slice(0, 120);
+        const filename = rawName.toLowerCase().endsWith('.docx') ? rawName : `${rawName || 'Daka-Editable-Report'}.docx`;
+        const buffer = await buildDakaDocxDocument(req.body || {});
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Cache-Control', 'no-store');
+        res.send(buffer);
+    } catch (error) {
+        console.error('❌ /api/export/word docx:', error);
+        res.status(500).json({ success: false, error: 'DOCX_EXPORT_FAILED' });
+    }
+});
 
 function buildDakaWordDocument(payload = {}) {
     const lang = ['fr', 'en', 'ar'].includes(payload.lang) ? payload.lang : 'fr';
