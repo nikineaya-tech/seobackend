@@ -12411,6 +12411,132 @@ async function discoverVerifiedInboundLinks(targetUrl, options = {}) {
     }
 }
 
+async function buildLinkIntelligence(seoIntel = {}, targetUrl = '') {
+    const normalizeLinkItem = (item = {}, fallbackType = 'OUTBOUND') => {
+        const rawUrl = typeof item === 'string'
+            ? item
+            : (item.url || item.normalized || item.targetUrl || item.href || item.link || item.sourceUrl || '');
+        if (!rawUrl) return null;
+
+        let resolved = '';
+        try {
+            resolved = new URL(String(rawUrl), targetUrl || undefined).href;
+        } catch {
+            return null;
+        }
+        if (!isPublicHttpUrl(resolved)) return null;
+
+        const rel = Array.isArray(item.rel)
+            ? item.rel.filter(Boolean)
+            : String(item.rel || '').toLowerCase().split(/\s+/).filter(Boolean);
+
+        return {
+            url: resolved,
+            normalized: resolved,
+            href: typeof item === 'object' ? (item.href || resolved) : resolved,
+            sourceUrl: item.sourceUrl || targetUrl || null,
+            targetUrl: item.targetUrl || resolved,
+            anchor: item.anchor || item.anchorText || item.text || item.title || null,
+            text: item.text || item.anchor || item.anchorText || null,
+            context: item.context || item.sourceSnippet || null,
+            linkType: item.linkType || fallbackType,
+            rel,
+            nofollow: item.nofollow ?? rel.includes('nofollow'),
+            sponsored: item.sponsored ?? rel.includes('sponsored'),
+            ugc: item.ugc ?? rel.includes('ugc'),
+            status: item.status || 'NOT_CHECKED',
+            statusCode: item.statusCode || item.httpStatus || null,
+            source: item.source || null
+        };
+    };
+
+    const uniqueLinks = (items = [], fallbackType = 'OUTBOUND', limit = 60) => {
+        const seen = new Set();
+        return (Array.isArray(items) ? items : [])
+            .map(item => normalizeLinkItem(item, fallbackType))
+            .filter(item => {
+                const key = item?.url?.toLowerCase();
+                if (!key || seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            })
+            .slice(0, limit);
+    };
+
+    const internalLinks = uniqueLinks(
+        seoIntel.internalLinkObjects || seoIntel.internalLinks || [],
+        'INTERNAL',
+        80
+    );
+    const outboundCandidates = uniqueLinks(
+        seoIntel.externalOutboundLinkObjects || seoIntel.externalOutboundLinks || seoIntel.externalLinks || [],
+        'OUTBOUND',
+        80
+    );
+    const anchorBroken = (Array.isArray(seoIntel.brokenLinkObjects) ? seoIntel.brokenLinkObjects : [])
+        .map(item => ({
+            ...item,
+            url: item.url || item.sourceUrl || targetUrl,
+            targetUrl: isPublicHttpUrl(item.targetUrl || '') ? item.targetUrl : (item.url || item.sourceUrl || targetUrl),
+            status: item.status || 'BROKEN_ANCHOR'
+        }));
+
+    const checkedOutbound = await Promise.allSettled(
+        outboundCandidates.slice(0, 12).map(link => verifyObservedLink(link, 2200))
+    );
+    const verifiedOutbound = outboundCandidates.map((link, index) => {
+        const checked = checkedOutbound[index];
+        return checked?.status === 'fulfilled' ? checked.value : link;
+    });
+
+    const brokenFromChecks = verifiedOutbound
+        .filter(link => link.status === 'BROKEN' || Number(link.statusCode) >= 400)
+        .map(link => ({
+            ...link,
+            linkType: 'BROKEN',
+            status: link.status || 'BROKEN'
+        }));
+
+    const inboundDiscovery = await discoverVerifiedInboundLinks(targetUrl, { maxCandidates: 5 });
+    const inboundLinks = uniqueLinks(inboundDiscovery.links || [], 'INBOUND', 30);
+    const brokenLinks = uniqueLinks([...anchorBroken, ...brokenFromChecks], 'BROKEN', 60);
+
+    const summary = {
+        totalAnchors: seoIntel.linkSummary?.totalAnchors ?? (internalLinks.length + outboundCandidates.length),
+        internalCount: internalLinks.length,
+        outboundCount: verifiedOutbound.length,
+        inboundVerifiedCount: inboundLinks.length,
+        brokenCount: brokenLinks.length,
+        nofollowOutboundCount: verifiedOutbound.filter(link => link.nofollow).length,
+        sponsoredOutboundCount: verifiedOutbound.filter(link => link.sponsored).length,
+        checkedOutboundCount: Math.min(outboundCandidates.length, 12),
+        inboundSource: inboundDiscovery.source || 'unavailable',
+        candidatesChecked: inboundDiscovery.candidatesChecked || 0
+    };
+
+    return {
+        summary,
+        inboundLinks,
+        internalLinks,
+        outboundLinks: verifiedOutbound,
+        brokenLinks,
+        linkAudit: {
+            status: brokenLinks.length ? 'ACTION_REQUIRED' : 'OK',
+            observations: [
+                `${summary.internalCount} internal links mapped`,
+                `${summary.outboundCount} outbound links mapped`,
+                `${summary.inboundVerifiedCount} verified inbound links observed`,
+                `${summary.brokenCount} broken or unsafe anchors detected`
+            ],
+            recommendations: [
+                ...(brokenLinks.length ? ['Fix, redirect or remove broken links before publishing the report.'] : []),
+                ...(inboundLinks.length ? ['Preserve verified inbound sources and monitor their quality.'] : ['No verified inbound link was observed automatically; confirm backlinks manually with your preferred authority tool.']),
+                ...(summary.nofollowOutboundCount ? ['Review nofollow/sponsored attributes on outbound links for business relevance.'] : [])
+            ].slice(0, 4)
+        }
+    };
+}
+
 
 
 function extractPerfSignals(html) {
