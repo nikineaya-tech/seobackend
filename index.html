@@ -14546,175 +14546,6 @@ async function analyzeFunnel(e) {
   }
 }
 
-function displayMagicPrompt(prompt) {
-    const container = document.getElementById('magicPromptPlaceholder');
-    if (!container || !prompt) return;
-
-    const isAr = STATE.currentLang === 'ar';
-    const isEn = STATE.currentLang === 'en';
-
-    const title   = 'Mega Redesign Prompt';
-    const copyBtn = isAr ? 'نسخ' : 'COPIER';
-    const copiedT = isAr ? '✓ تم النسخ' : '✓ COPIÉ';
-    const subText = isAr
-        ? 'انسخ هذا البرومبت واستخدمه لتعديل كودك الحالي.'
-        : isEn
-        ? 'Copy this prompt and paste it with your code into your editing tool to refactor your page.'
-        : 'Copiez ce prompt, collez votre code dedans, puis utilisez votre outil de generation.';
-
-    // ── Stats dynamiques du prompt ────────────────────────────────
-    const lineCount  = (prompt.match(/\n/g) || []).length + 1;
-    const wordCount  = prompt.trim().split(/\s+/).length;
-    const charCount  = prompt.length;
-
-    container.innerHTML = `
-    <div class="result-card fade-in-up" style="margin-top:30px;border:2px solid #8b5cf6;
-        background:#05071a;border-radius:20px;padding:25px;position:relative;overflow:hidden">
-
-        <!-- Glow déco -->
-        <div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;
-            background:radial-gradient(circle,rgba(139,92,246,0.12),transparent 70%);
-            pointer-events:none"></div>
-
-        <!-- ── HEADER ── -->
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;
-            margin-bottom:18px;flex-wrap:wrap;gap:12px">
-
-            <!-- Titre + sous-titre -->
-            <div>
-                <h3 style="color:white;margin:0 0 5px;font-size:1.05rem;font-weight:900;
-                    display:flex;align-items:center;gap:8px">
-                    <i class="fas fa-wand-magic-sparkles" style="color:#8b5cf6"></i>
-                    ${title}
-                    <span style="background:rgba(139,92,246,0.2);color:#c4b5fd;
-                        border:1px solid rgba(139,92,246,0.3);padding:2px 8px;
-                        border-radius:6px;font-size:0.6rem;font-weight:800;
-                        letter-spacing:0.05em">GÉNÉRÉ</span>
-                </h3>
-                <p style="color:#64748b;font-size:0.72rem;margin:0;line-height:1.5">
-                    ${subText}
-                </p>
-            </div>
-
-            <!-- Badges + bouton -->
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;flex-shrink:0">
-
-                <!-- Badge GEMINI 2.0 -->
-                <span style="background:rgba(59,130,246,0.15);color:#93c5fd;
-                    border:1px solid rgba(59,130,246,0.35);padding:4px 12px;
-                    border-radius:999px;font-size:0.65rem;font-weight:800;
-                    letter-spacing:0.05em;text-transform:uppercase;
-                    display:flex;align-items:center;gap:5px">
-                    <i class="fas fa-robot" style="font-size:0.6rem"></i>
-                    GEMINI 2.0
-                </span>
-
-                <!-- Bouton COPIER -->
-                <button id="magicPromptCopyBtn"
-                    onclick="(() => {
-                        const el  = document.getElementById('magicPromptRawText');
-                        const btn = document.getElementById('magicPromptCopyBtn');
-                        const txt = el.innerText;
-                        navigator.clipboard.writeText(txt).then(() => {
-                            btn.innerHTML = '<i class=\\'fas fa-check\\'></i> ${copiedT}';
-                            btn.style.background    = 'rgba(16,185,129,0.2)';
-                            btn.style.color         = '#34d399';
-                            btn.style.borderColor   = 'rgba(16,185,129,0.4)';
-                            btn.style.transform     = 'scale(1.05)';
-                            setTimeout(() => {
-                                btn.innerHTML = '<i class=\\'fas fa-copy\\'></i> ${copyBtn}';
-                                btn.style.background  = 'rgba(139,92,246,0.2)';
-                                btn.style.color       = '#c4b5fd';
-                                btn.style.borderColor = 'rgba(139,92,246,0.3)';
-                                btn.style.transform   = 'scale(1)';
-                            }, 2200);
-                        }).catch(() => {
-                            const range = document.createRange();
-                            range.selectNode(el);
-                            window.getSelection().removeAllRanges();
-                            window.getSelection().addRange(range);
-                            document.execCommand('copy');
-                            window.getSelection().removeAllRanges();
-                            btn.innerHTML = '<i class=\\'fas fa-check\\'></i> ${copiedT}';
-                            setTimeout(() => {
-                                btn.innerHTML = '<i class=\\'fas fa-copy\\'></i> ${copyBtn}';
-                            }, 2200);
-                        });
-                    })()"
-                    style="background:rgba(139,92,246,0.2);color:#c4b5fd;
-                        border:1px solid rgba(139,92,246,0.3);padding:9px 18px;
-                        border-radius:8px;font-size:0.78rem;cursor:pointer;font-weight:800;
-                        display:flex;align-items:center;gap:7px;white-space:nowrap;
-                        transition:all 0.2s;outline:none">
-                    <i class="fas fa-copy"></i> ${copyBtn}
-                </button>
-            </div>
-        </div>
-
-        <!-- ── STATS BAR ── -->
-        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:15px">
-            ${[
-                ['fa-align-left',   `${lineCount} lignes`,          '#8b5cf6'],
-                ['fa-font',         `${wordCount.toLocaleString()} mots`, '#3b82f6'],
-                ['fa-text-width',   `${charCount.toLocaleString()} chars`, '#06b6d4'],
-                ['fa-screwdriver-wrench', '7 blocs DevOps',          '#10b981'],
-                ['fa-code',         'HTML · CSS · JS',               '#f59e0b'],
-                ['fa-shield-halved','Règles strictes',               '#ec4899'],
-            ].map(([icon, label, c]) => `
-            <span style="background:${c}12;color:${c};border:1px solid ${c}25;
-                padding:3px 10px;border-radius:20px;font-size:0.65rem;font-weight:800;
-                display:flex;align-items:center;gap:5px">
-                <i class="fas ${icon}" style="font-size:0.55rem"></i>${label}
-            </span>`).join('')}
-        </div>
-
-        <!-- ── PROMPT BOX ── -->
-        <div style="position:relative;background:#000510;border:1px solid #1e293b;
-            border-radius:12px;overflow:hidden">
-
-            <!-- Gradient bar top -->
-            <div style="background:linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899,#f59e0b);
-                height:2px;width:100%"></div>
-
-            <!-- Label flottant -->
-            <div style="position:absolute;top:10px;right:12px;z-index:2;
-                background:rgba(99,102,241,0.15);color:#818cf8;
-                border:1px solid rgba(99,102,241,0.25);padding:2px 8px;
-                border-radius:6px;font-size:0.6rem;font-weight:800;letter-spacing:0.05em">
-                PROMPT
-            </div>
-
-            <!-- Texte du prompt -->
-            <pre id="magicPromptRawText"
-                style="direction:ltr;text-align:left;
-                    font-family:'Monaco','Menlo','Consolas',monospace;
-                    font-size:0.78rem;color:#a5b4fc;white-space:pre-wrap;
-                    line-height:1.75;max-height:480px;overflow-y:auto;
-                    padding:20px;margin:0;
-                    scrollbar-width:thin;scrollbar-color:#334155 transparent">${escapeHtml(prompt)}</pre>
-
-            <!-- Fade bottom -->
-            <div style="position:absolute;bottom:0;left:0;right:0;height:45px;
-                background:linear-gradient(transparent,#000510);pointer-events:none"></div>
-        </div>
-
-        <!-- ── FOOTER INSTRUCTIONS ── -->
-        <div style="margin-top:14px;background:rgba(99,102,241,0.06);
-            border:1px solid rgba(99,102,241,0.15);border-radius:10px;
-            padding:12px 15px;display:flex;align-items:flex-start;gap:10px">
-            <i class="fas fa-circle-info" style="color:#6366f1;margin-top:2px;flex-shrink:0"></i>
-            <p style="color:#64748b;font-size:0.72rem;margin:0;line-height:1.6">
-                ${isAr
-                    ? '<strong style="color:#a5b4fc">كيف تستخدم هذا البرومبت :</strong> 1) انسخ البرومبت · 2) الصق كودك في المنطقة المخصصة · 3) استخدم أداة التحرير · 4) طبّق التعديلات على كودك الحالي'
-                    : isEn
-                    ? '<strong style="color:#a5b4fc">How to use :</strong> 1) Copy the prompt · 2) Paste YOUR code in the designated zone · 3) Use your editing tool · 4) Apply the surgical diffs to your existing code'
-                    : '<strong style="color:#a5b4fc">Comment utiliser :</strong> 1) Copier le prompt · 2) Coller votre code dans la zone prevue · 3) Utiliser votre outil de generation · 4) Appliquer les diffs sur votre code existant'}
-            </p>
-        </div>
-    </div>`;
-}
-
-
 function renderBundleSuggested(bundleSuggested) {
   if (!bundleSuggested) return '<div style="opacity:.6">—</div>';
 
@@ -19627,19 +19458,6 @@ Si une information manque, pose les questions nécessaires avant d'inventer.`;
 // 2. Le Graphique "Funnel Chart" manquant
 
 
-function copyMagicPrompt(btn) {
-    const text = document.getElementById('rawPromptText').innerText;
-    navigator.clipboard.writeText(text).then(() => {
-        const original = btn.innerHTML;
-        btn.innerHTML = "✅ PROMPT COPIÉ !";
-        btn.style.background = "var(--accent-success)";
-        toast.success("Prêt à être collé dans ChatGPT !");
-        setTimeout(() => {
-            btn.innerHTML = original;
-            btn.style.background = "var(--accent-secondary)";
-        }, 3000);
-    });
-}
 async function initApp() {
     try {
         console.log('Daka Market Intelligence Spyer v5.0.0 - Initializing...');
@@ -20132,29 +19950,6 @@ function renderPhaseBlock(label, phase, icon) {
             </div>
         </div>
     `;
-}
-
-function displayMagicPrompt(prompt) {
-    const ph = document.getElementById('magicPromptPlaceholder');
-    if (!ph || !prompt) return;
-    ph.innerHTML = `
-    <div class="magic-box fade-in-up" style="margin-top:25px">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:15px">
-            <div style="background:var(--accent-secondary);width:38px;height:38px;
-                border-radius:10px;display:flex;align-items:center;justify-content:center">
-                <i class="fas fa-magic" style="color:white"></i>
-            </div>
-            <h3 style="margin:0;font-family:Cairo;color:white;font-size:1.2rem">
-                ✨ Magic Redesign Prompt
-            </h3>
-        </div>
-        <div style="position:relative">
-            <div id="rawPromptText" class="prompt-code-area">${prompt}</div>
-            <button class="copy-badge" onclick="copyMagicPrompt(this)">
-                <i class="fas fa-copy"></i> COPY
-            </button>
-        </div>
-    </div>`;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -24063,7 +23858,7 @@ body.modal-open {
     }
 
     function cleanupLeakedInlineCodeText() {
-        const leakPattern = /(const\s+blob\s*=\s*new\s+Blob|function\s+getDakaExportModules|function\s+renderOpenRouterCodePreview|MODE\s+DAKA\s+CODE\s+BUILDER|window\.exportFullAnalysisToPDF|restorePdfExportDom)/i;
+        const leakPattern = /(const\s+blob\s*=\s*new\s+Blob|function\s+getDakaExportModules|function\s+buildDakaMegaPromptPackage|function\s+renderOpenRouterCodePreview|function\s+renderGroqCodePreview|MODE\s+DAKA\s+CODE\s+BUILDER|window\.exportFullAnalysisToPDF|window\.displayMagicPrompt|restorePdfExportDom|const\s+PDF_EXPORT\s*=)/i;
         const safeParents = /^(SCRIPT|STYLE|PRE|CODE|TEXTAREA)$/;
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
         const leakedNodes = [];
@@ -24077,9 +23872,23 @@ body.modal-open {
         leakedNodes.forEach(node => node.remove());
     }
 
+    let leakCleanupTimer = null;
+    function scheduleLeakCleanup() {
+        window.clearTimeout(leakCleanupTimer);
+        leakCleanupTimer = window.setTimeout(cleanupLeakedInlineCodeText, 80);
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         cleanupLeakedInlineCodeText();
         window.setTimeout(cleanupLeakedInlineCodeText, 500);
+        window.setTimeout(cleanupLeakedInlineCodeText, 1500);
+        try {
+            new MutationObserver(scheduleLeakCleanup).observe(document.body, {
+                childList: true,
+                subtree: true,
+                characterData: true
+            });
+        } catch (_) {}
         updateDakaClock();
         window.setInterval(updateDakaClock, 30000);
         document.getElementById('langSelector')?.addEventListener('change', updateDakaClock);
