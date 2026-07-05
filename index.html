@@ -4058,7 +4058,7 @@ table tbody td {
         <div id="resultsCompetitors" class="results-container"></div>
         <button id="btn-export-competitors-pdf"
         class="btn-pdf no-print"
-        onclick="PDF_EXPORT.competitors()"
+        onclick="window.exportFullAnalysisToWord()"
         style="display:none">
     <i class="fas fa-file-word"></i>
     <span data-i18n="exportword">Export DOCX</span>
@@ -4159,7 +4159,7 @@ table tbody td {
                 </div>
                 <button id="btn-export-funnel-pdf"
         class="btn-pdf no-print"
-        onclick="PDF_EXPORT.funnel()"
+        onclick="window.exportFullAnalysisToWord()"
         style="display:none">
     <i class="fas fa-file-word"></i>
     <span data-i18n="exportword">Export DOCX</span>
@@ -4241,7 +4241,7 @@ table tbody td {
                 <div id="resultsTechnical" class="results-container"></div>
                 <button id="btn-export-technical-pdf"
         class="btn-pdf no-print"
-        onclick="PDF_EXPORT.technical()"
+        onclick="window.exportFullAnalysisToWord()"
         style="display:none">
     <i class="fas fa-file-word"></i>
     <span data-i18n="exportword">Export DOCX</span>
@@ -20157,231 +20157,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("📱 Mobile Patch UI/UX Injecté avec succès !");
 });
 
-
-// ═══════════════════════════════════════════════════════════════
-// EXPORT COMPATIBILITY — legacy PDF buttons now route to DOCX/Excel
-// Utilise STATE existant — zéro conflit avec le code actuel
-// ═══════════════════════════════════════════════════════════════
-const PDF_EXPORT = {
-
-    // ── Utilitaire HTTP commun ────────────────────────────────
-    async _send(endpoint, payload, filename) {
-        if (typeof window.exportFullAnalysisToPDF === 'function') {
-            await window.exportFullAnalysisToPDF();
-            return;
-        }
-
-        const response = await fetch(
-            `${CONFIG.API_BASE_URL}${endpoint}`,
-            {
-                method : 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body   : JSON.stringify({ data: payload })
-            }
-        );
-
-        if (!response.ok) {
-            let msg = `HTTP ${response.status}`;
-            try { const j = await response.json(); msg = j.error || msg; } catch {}
-            throw new Error(msg);
-        }
-
-        const blob = await response.blob();
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href = url; a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1500);
-    },
-
-    // ── Gestion bouton ────────────────────────────────────────
-    _lock(btn) {
-        if (!btn) return;
-        btn._orig     = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> DOCX...';
-        btn.disabled  = true;
-    },
-    _unlock(btn) {
-        if (!btn) return;
-        btn.innerHTML = btn._orig || '<i class="fas fa-file-word"></i> Export DOCX';
-        btn.disabled  = false;
-    },
-
-    // ── Toast helper (utilise ton système toast existant) ─────
-    _notify(type, msg) {
-        if (typeof toast !== 'undefined') {
-            toast[type]?.(msg);
-        } else {
-            alert(msg);
-        }
-    },
-
-    // ────────────────────────────────────────────────────────
-    // 1. TECHNICAL SEO
-    // Utilise : STATE.lastTechnicalResults
-    // ────────────────────────────────────────────────────────
-    async technical() {
-        const data = STATE.lastTechnicalResults;
-        if (!data) {
-            this._notify('warning',
-                STATE.currentLang === 'ar' ? 'قم بتشغيل تحليل SEO أولاً.' :
-                STATE.currentLang === 'en' ? 'Run a Technical SEO analysis first.' :
-                'Lancez d\'abord une analyse SEO Technique.');
-            return;
-        }
-        const btn = document.getElementById('btn-export-technical-pdf');
-        this._lock(btn);
-        this._notify('info',
-            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء DOCX...' :
-            STATE.currentLang === 'en' ? '⏳ Generating DOCX...' :
-            '⏳ Génération DOCX en cours...');
-        try {
-            const host = (() => {
-                try { return new URL(data.analyzedUrl || data.extraction?.url || '').hostname; }
-                catch { return 'site'; }
-            })();
-            await this._send(
-                '/api/export/technical-v2',
-                data,
-                `TechSEO-${host}-${Date.now()}.docx`
-            );
-            this._notify('success',
-                STATE.currentLang === 'ar' ? '✅ تم تحميل DOCX!' :
-                STATE.currentLang === 'en' ? '✅ DOCX downloaded!' :
-                '✅ DOCX téléchargé !');
-        } catch(e) {
-            console.error('[DOCX Technical]', e);
-            this._notify('error', 'Export DOCX échoué: ' + e.message);
-        } finally {
-            this._unlock(btn);
-        }
-    },
-
-    // ────────────────────────────────────────────────────────
-    // 2. CONCURRENTS
-    // Utilise : STATE.lastAnalysisResults
-    // ────────────────────────────────────────────────────────
-    async competitors() {
-        const data = STATE.lastAnalysisResults;
-        if (!data) {
-            this._notify('warning',
-                STATE.currentLang === 'ar' ? 'قم بتشغيل تحليل المنافسين أولاً.' :
-                STATE.currentLang === 'en' ? 'Run a Competitors analysis first.' :
-                'Lancez d\'abord une analyse Concurrents.');
-            return;
-        }
-        const btn = document.getElementById('btn-export-competitors-pdf');
-        this._lock(btn);
-        this._notify('info',
-            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء DOCX...' :
-            STATE.currentLang === 'en' ? '⏳ Generating DOCX...' :
-            '⏳ Génération DOCX en cours...');
-        try {
-            const q = (
-                data.query ||
-                STATE.lastInputs?.keyword ||
-                'competitors'
-            ).replace(/\s+/g, '-').substring(0, 30);
-            await this._send(
-                '/api/export/competitors-v2',
-                data,
-                `Concurrents-${q}-${Date.now()}.docx`
-            );
-            this._notify('success',
-                STATE.currentLang === 'ar' ? '✅ تم تحميل DOCX!' :
-                STATE.currentLang === 'en' ? '✅ DOCX downloaded!' :
-                '✅ DOCX téléchargé !');
-        } catch(e) {
-            console.error('[DOCX Competitors]', e);
-            this._notify('error', 'Export DOCX échoué: ' + e.message);
-        } finally {
-            this._unlock(btn);
-        }
-    },
-
-    // ────────────────────────────────────────────────────────
-    // 3. KEYWORDS
-    // Utilise : STATE.lastKeywords
-    // ────────────────────────────────────────────────────────
-    async keywords() {
-        // STATE.lastKeywords peut être l'objet complet OU juste le tableau
-        const raw  = STATE.lastKeywords;
-        if (!raw) {
-            this._notify('warning',
-                STATE.currentLang === 'ar' ? 'قم بتشغيل تحليل الكلمات المفتاحية أولاً.' :
-                STATE.currentLang === 'en' ? 'Run a Keywords analysis first.' :
-                'Lancez d\'abord une analyse Keywords.');
-            return;
-        }
-        // Normalise : si c'est un tableau direct, on l'emballe
-        const data = Array.isArray(raw)
-            ? { keywords: raw, query: STATE.lastInputs?.seedKeyword || '' }
-            : raw;
-
-        const btn = document.getElementById('btn-export-keywords-pdf');
-        this._lock(btn);
-        this._notify('info',
-            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء Excel...' :
-            STATE.currentLang === 'en' ? '⏳ Generating Excel...' :
-            '⏳ Génération Excel en cours...');
-        try {
-            window.exportKeywordsToExcel();
-        } catch(e) {
-            console.error('[Excel Keywords]', e);
-            this._notify('error', 'Export Excel échoué: ' + e.message);
-        } finally {
-            this._unlock(btn);
-        }
-    },
-
-    // ────────────────────────────────────────────────────────
-    // 4. FUNNEL AIDA
-    // Utilise : STATE.lastFunnelResults
-    // ────────────────────────────────────────────────────────
-    async funnel() {
-        const data = STATE.lastFunnelResults;
-        if (!data) {
-            this._notify('warning',
-                STATE.currentLang === 'ar' ? 'قم بتشغيل تحليل القمع أولاً.' :
-                STATE.currentLang === 'en' ? 'Run a Funnel analysis first.' :
-                'Lancez d\'abord une analyse Funnel AIDA.');
-            return;
-        }
-        const btn = document.getElementById('btn-export-funnel-pdf');
-        this._lock(btn);
-        this._notify('info',
-            STATE.currentLang === 'ar' ? '⏳ جارٍ إنشاء DOCX...' :
-            STATE.currentLang === 'en' ? '⏳ Generating DOCX...' :
-            '⏳ Génération DOCX en cours...');
-        try {
-            const host = (() => {
-                try {
-                    return new URL(
-                        data.url ||
-                        data.analyzedUrl ||
-                        STATE.lastInputs?.funnelUrl || ''
-                    ).hostname;
-                } catch { return 'funnel'; }
-            })();
-            await this._send(
-                '/api/export/funnel-v2',
-                data,
-                `Funnel-AIDA-${host}-${Date.now()}.docx`
-            );
-            this._notify('success',
-                STATE.currentLang === 'ar' ? '✅ تم تحميل DOCX!' :
-                STATE.currentLang === 'en' ? '✅ DOCX downloaded!' :
-                '✅ DOCX téléchargé !');
-        } catch(e) {
-            console.error('[DOCX Funnel]', e);
-            this._notify('error', 'Export DOCX échoué: ' + e.message);
-        } finally {
-            this._unlock(btn);
-        }
-    }
-};
 
     </script>
 
