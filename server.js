@@ -11550,6 +11550,51 @@ const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
     });
   }
 });
+function buildRealResultsAssetPrompt(type) {
+    if (type === 'markdown') {
+        return `Tu es un architecte Daka Market Intelligence specialise en "Search Snippet & Brand Signal".
+Objectif: rendre l'offre plus lisible, verifiable et cliquable dans les resultats de recherche et les apercus sociaux, sans inventer de preuves.
+REGLES:
+1. Genere un bloc HTML de production pour <head>: title, meta description, canonical, Open Graph, Twitter Card.
+2. Le title doit etre clair, specifique, sans promesse non prouvee. Vise 45-65 caracteres, mais privilegie la lisibilite.
+3. La meta description doit resumer l'offre et le benefice verifiable. Vise 120-160 caracteres.
+4. N'invente jamais avis, prix, garantie, stock, certifications ou resultats. Si la donnee manque, reste neutre.
+5. Ajoute readinessSteps avec 3 actions d'installation/verification.
+6. Ajoute evidenceUsed avec les preuves extraites du contexte.
+Genere UN JSON STRICT:
+{"htmlHeader":"<bloc head...>","auditComment":"verdict court oriente resultat","readinessSteps":["..."],"evidenceUsed":["..."],"installTarget":"Balise <head> de la page cible","validation":"Verifier l'apercu snippet et les balises sociales."}
+ZERO markdown autour du JSON.`;
+    }
+    if (type === 'aeo_geo') {
+        return `Tu es un architecte Daka Market Intelligence specialise en "AI Answer & Citation Readiness".
+Objectif: produire des blocs visibles et des donnees structurees que les moteurs IA peuvent comprendre et citer sans risque.
+REGLES:
+1. Cree aeoCode en JSON-LD FAQPage uniquement avec des questions/reponses fondees sur le contexte.
+2. Cree geoCode en HTML visible: un bloc de reponses courtes, comparables et factuelles, pas de texte cache.
+3. Ne dis jamais "meilleur", "leader", "garanti" ou "numero 1" sans preuve explicite.
+4. Si une preuve manque, ecris "a confirmer" dans le contenu visible plutot que d'inventer.
+5. Ajoute citationsNeeded avec les preuves qui doivent etre renforcees.
+6. Ajoute readinessSteps avec 3 actions pour augmenter la recommandabilite IA.
+Genere UN JSON STRICT:
+{"aeoCode":"<script type='application/ld+json'>...</script>","geoCode":"<section class='daka-ai-answer-pack'>...</section>","auditComment":"verdict court oriente recommandabilite IA","citationsNeeded":["..."],"readinessSteps":["..."],"evidenceUsed":["..."],"installTarget":"Bloc visible de la page + JSON-LD dans <head> ou CMS","validation":"Verifier que les reponses sont visibles, exactes et supportees par la page."}
+ZERO markdown autour.`;
+    }
+    if (type === 'system') {
+        return `Tu es un architecte Daka Market Intelligence specialise en "Machine Access & Trust Files".
+Objectif: generer des fichiers systeme propres pour faciliter l'exploration autorisee, la comprehension machine et la confiance technique.
+REGLES:
+1. robots.txt doit autoriser les pages publiques utiles et proteger les zones sensibles. Ne promets pas de classement.
+2. llms.txt est une convention emergente et optionnelle: presente-le comme un guide de lecture IA, pas comme un facteur garanti.
+3. Ajoute securityTxt si pertinent avec un modele prudent sans email invente; sinon explique qu'un contact securite reel est requis.
+4. N'invente jamais prix, garanties, contacts ou certifications.
+5. Ajoute installChecklist avec chemins exacts et validations.
+Genere UN JSON STRICT:
+{"robotsTxt":"User-agent: ...","llmsTxt":"# Site guide...","securityTxt":"Contact: ...","auditComment":"verdict court oriente accessibilite machine","installChecklist":["..."],"evidenceUsed":["..."],"installTarget":"Racine du domaine: /robots.txt, /llms.txt, /.well-known/security.txt","validation":"Tester les URLs publiques et la lecture robots."}
+ZERO markdown autour.`;
+    }
+    return '';
+}
+
 app.post('/api/generate-seo-assets', async (req, res) => {
     const startTime = Date.now();
     try {
@@ -11577,10 +11622,10 @@ Génère UN JSON STRICT : {"htmlHeader": "<Le bloc complet de balises...>", "aud
 
         } else if (type === 'aeo_geo') {
             systemPrompt = `Tu es un Data Scientist spécialisé en SGE (Search Generative Experience) et LLMs.
-RÈGLES ABSOLUES POUR FORCER L'EXTRACTION PAR LES IA (ChatGPT/Perplexity/Google) :
+RÈGLES ABSOLUES POUR RENDRE LES PREUVES LISIBLES PAR LES IA (ChatGPT/Perplexity/Google) :
 1. aeoCode (JSON-LD FAQPage) : Génère 3 questions/réponses basées sur le contexte. Les réponses DOIVENT faire entre 40 et 50 mots (optimisation pour la lecture vocale). Format strict : Sujet-Verbe-Objet. Zéro métaphore.
 2. geoCode (HTML SGE) : Crée un bloc HTML pur <section class="sge-optimized">. Inclus un résumé factuel de 45 mots, suivi d'une liste <ul> contenant des DONNÉES (prix, chiffres, entités nommées). Les IA adorent scraper les listes et les chiffres.
-Génère UN JSON STRICT : {"aeoCode": "<script type='application/ld+json'>...</script>", "geoCode": "<section>...</section>", "auditComment": "Stratégie de data-baiting appliquée pour SGE."}. ZÉRO markdown autour.`;
+Génère UN JSON STRICT : {"aeoCode": "<script type='application/ld+json'>...</script>", "geoCode": "<section>...</section>", "auditComment": "Preuves structurées pour une lecture IA vérifiable."}. ZÉRO markdown autour.`;
 
         } else if (type === 'system') {
             systemPrompt = `Tu es un Ingénieur DevSecOps.
@@ -11596,6 +11641,7 @@ Génère UN JSON STRICT : {"robotsTxt": "User-agent: ...", "llmsTxt": "# Identit
         }
 
         // Hachage du cache pour unicité totale
+        systemPrompt = buildRealResultsAssetPrompt(type) || systemPrompt;
         const hash = crypto.createHash('sha256').update(userPrompt + systemPrompt).digest('hex');
         const cacheKey = `genAsset_${hash}`;
         
