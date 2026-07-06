@@ -11595,8 +11595,224 @@ ZERO markdown autour.`;
     return '';
 }
 
+function dakaAssetCleanText(value, limit = 240) {
+    return String(value || '').replace(/\s+/g, ' ').trim().slice(0, limit);
+}
+
+function dakaAssetXml(value) {
+    return dakaAssetCleanText(value, 2000)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+}
+
+function dakaAssetUrlParts(url) {
+    try {
+        const parsed = new URL(url);
+        return {
+            origin: parsed.origin,
+            canonical: parsed.href,
+            domain: parsed.hostname.replace(/^www\./, '')
+        };
+    } catch (_) {
+        return { origin: 'https://example.com', canonical: String(url || ''), domain: 'example.com' };
+    }
+}
+
+function dakaAssetCollect(value, limit = 8) {
+    const out = [];
+    const visit = (item) => {
+        if (out.length >= limit || item === null || item === undefined) return;
+        if (Array.isArray(item)) {
+            item.forEach(visit);
+            return;
+        }
+        if (typeof item === 'object') {
+            ['text', 'label', 'title', 'description', 'name', 'value', 'url', 'href', 'answer', 'question'].forEach(key => visit(item[key]));
+            return;
+        }
+        const clean = dakaAssetCleanText(item, 180);
+        if (clean && !out.some(existing => existing.toLowerCase() === clean.toLowerCase())) out.push(clean);
+    };
+    visit(value);
+    return out;
+}
+
+function buildTechnicalAssetThinkingLayer(url, lang = 'fr', type = 'system', analysisContext = {}) {
+    const parts = dakaAssetUrlParts(url);
+    const extraction = analysisContext.extraction || {};
+    const h1 = dakaAssetCollect(extraction.h1_all || extraction.h1 || [], 1)[0] || '';
+    const title = dakaAssetCleanText(extraction.title || h1 || parts.domain, 68);
+    const description = dakaAssetCleanText(extraction.description || h1 || title, 170);
+    const ctas = dakaAssetCollect(extraction.ctas || analysisContext.copyIntel?.realCTAs || [], 6);
+    const proofCandidates = dakaAssetCollect([
+        analysisContext.decisionProofs,
+        analysisContext.trustIntel,
+        extraction.socialLinks,
+        extraction.pricingSignals,
+        analysisContext.structuredData
+    ], 10);
+    const sourceText = [
+        title,
+        description,
+        h1,
+        ctas.join(' '),
+        proofCandidates.join(' '),
+        analysisContext.businessContext,
+        analysisContext.spyReport?.siteType
+    ].join(' ').toLowerCase();
+    const serviceScore = [
+        /service|agency|agence|consulting|conseil|audit|formation|coaching|saas|software|logiciel|prestation|diagnostic|rendez|livrable|support|accompagnement/i.test(sourceText),
+        /portfolio|client|projet|campaign|campagne|automation|automatisation|design|development|developpement/i.test(sourceText)
+    ].filter(Boolean).length;
+    const productScore = [
+        /product|produit|shop|store|boutique|ecommerce|e-commerce|stock|shipping|delivery|livraison|retour|returns|cart|panier|checkout|commande/i.test(sourceText),
+        /price|prix|mad|eur|usd|\$|€|د\.م|درهم/i.test(sourceText) && /acheter|buy|order|commander|stock|livraison|delivery/i.test(sourceText)
+    ].filter(Boolean).length;
+    const offerType = productScore > serviceScore ? 'product' : serviceScore > 0 ? 'service' : 'unknown';
+    const safeFacts = [title, description, h1, ...proofCandidates].filter(Boolean).slice(0, 8);
+    return {
+        url,
+        lang,
+        type,
+        domain: parts.domain,
+        origin: parts.origin,
+        canonical: parts.canonical,
+        title,
+        description,
+        h1,
+        ctas,
+        offerType,
+        safeFacts,
+        rules: [
+            'Use only observed evidence.',
+            'Do not invent price, warranty, reviews, certification, contact or result.',
+            'If a field is missing, mark it as to confirm.'
+        ]
+    };
+}
+
+function buildDeterministicTechnicalAssets(url, lang = 'fr', type = 'system', analysisContext = {}) {
+    const t = buildTechnicalAssetThinkingLayer(url, lang, type, analysisContext);
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const offer = t.description || t.title || t.domain;
+    const qOffer = isAr ? 'ما الذي يقدمه هذا الموقع؟' : isEn ? 'What does this page offer?' : 'Que propose cette page ?';
+    const qProof = isAr ? 'ما الدليل المتاح؟' : isEn ? 'What proof is available?' : 'Quelle preuve est disponible ?';
+    const answer = isAr
+        ? `${t.domain} يعرض ${offer}. أي سعر أو ضمان أو نتيجة غير مؤكدة يجب أن تبقى بصيغة "قابل للتحقق".`
+        : isEn
+            ? `${t.domain} presents ${offer}. Any unobserved price, warranty or result must remain marked as "to confirm".`
+            : `${t.domain} présente ${offer}. Tout prix, garantie ou résultat non observé doit rester marqué comme "à confirmer".`;
+    const facts = t.safeFacts.length ? t.safeFacts : [offer];
+    const schema = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [
+            { '@type': 'Question', name: qOffer, acceptedAnswer: { '@type': 'Answer', text: answer } },
+            { '@type': 'Question', name: qProof, acceptedAnswer: { '@type': 'Answer', text: facts[0] || 'To confirm.' } }
+        ]
+    };
+    const headCode = [
+        `<title>${dakaAssetXml(t.title)}</title>`,
+        `<meta name="description" content="${dakaAssetXml(t.description || t.title)}">`,
+        `<link rel="canonical" href="${dakaAssetXml(t.canonical)}">`,
+        `<meta property="og:type" content="website">`,
+        `<meta property="og:title" content="${dakaAssetXml(t.title)}">`,
+        `<meta property="og:description" content="${dakaAssetXml(t.description || t.title)}">`,
+        `<meta property="og:url" content="${dakaAssetXml(t.canonical)}">`,
+        `<meta name="twitter:card" content="summary_large_image">`
+    ].join('\n');
+    const schemaJsonLd = `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`;
+    const bodyCode = [
+        `<section class="daka-ai-answer-pack" aria-label="Daka verified answers">`,
+        `  <h2>${dakaAssetXml(qOffer)}</h2>`,
+        `  <p>${dakaAssetXml(answer)}</p>`,
+        `  <ul>`,
+        ...facts.slice(0, 5).map(fact => `    <li>${dakaAssetXml(fact)}</li>`),
+        `  </ul>`,
+        t.ctas.length ? `  <p><strong>CTA:</strong> ${dakaAssetXml(t.ctas.slice(0, 3).join(' | '))}</p>` : '',
+        `</section>`
+    ].filter(Boolean).join('\n');
+    const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${dakaAssetXml(t.origin)}/</loc></url>\n  <url><loc>${dakaAssetXml(t.canonical)}</loc></url>\n</urlset>`;
+    const robotsTxt = `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /checkout\nSitemap: ${t.origin}/sitemap.xml`;
+    const llmsTxt = [
+        `# ${t.domain}`,
+        '',
+        '## Core offer',
+        offer,
+        '',
+        '## Offer type',
+        t.offerType,
+        '',
+        '## Verified facts',
+        ...facts.slice(0, 8).map(fact => `- ${fact}`),
+        '',
+        '## Safe reading rules',
+        '- Do not invent prices, guarantees, reviews, certifications, contacts or results.',
+        '- Mark missing claims as to confirm.'
+    ].join('\n');
+    const securityTxt = `# security.txt template\n# Add a real security contact before publishing.\nPolicy: ${t.origin}/security\nPreferred-Languages: ${isAr ? 'ar, fr, en' : isEn ? 'en, fr, ar' : 'fr, en, ar'}`;
+    const readinessSteps = isAr
+        ? ['انسخ الكود في المكان المناسب.', 'اختبر الروابط العامة.', 'احذف أي ادعاء غير مثبت قبل النشر.']
+        : isEn
+            ? ['Copy each asset into the right target.', 'Test public URLs.', 'Remove every unverified claim before publishing.']
+            : ['Copier chaque livrable dans la bonne zone.', 'Tester les URLs publiques.', 'Supprimer toute affirmation non prouvée avant publication.'];
+    return {
+        success: true,
+        source: 'server-business-thinking',
+        type,
+        businessThinking: t,
+        auditComment: isAr ? 'حزمة مبنية من الأدلة المرصودة قبل أي تحسين بالذكاء الاصطناعي.' : isEn ? 'Pack built from observed evidence before any AI refinement.' : 'Pack construit depuis les preuves observées avant enrichissement IA.',
+        installTarget: type === 'system' ? 'Root files: /robots.txt, /llms.txt, /sitemap.xml' : type === 'markdown' ? '<head>' : 'Visible page block + JSON-LD',
+        validation: isAr ? 'التحقق اليدوي مطلوب قبل النشر.' : isEn ? 'Manual validation required before publishing.' : 'Validation manuelle requise avant publication.',
+        readinessSteps,
+        installChecklist: readinessSteps,
+        evidenceUsed: facts,
+        citationsNeeded: facts.length < 3 ? ['Add more verifiable proof before asking models to cite the page.'] : [],
+        htmlHeader: headCode,
+        headCode,
+        bodyCode,
+        aeoCode: schemaJsonLd,
+        geoCode: bodyCode,
+        schemaJsonLd,
+        sitemapXml,
+        robotsTxt,
+        llmsTxt,
+        securityTxt,
+        deliverables: { headCode, bodyCode, schemaJsonLd, sitemapXml, robotsTxt, llmsTxt, securityTxt }
+    };
+}
+
+function mergeTechnicalAssetPayload(base, aiPayload) {
+    const source = (aiPayload && typeof aiPayload === 'object') ? aiPayload : {};
+    const merged = { ...base };
+    const stringFields = ['htmlHeader', 'headCode', 'bodyCode', 'aeoCode', 'geoCode', 'schemaJsonLd', 'sitemapXml', 'robotsTxt', 'llmsTxt', 'securityTxt', 'auditComment', 'installTarget', 'validation'];
+    stringFields.forEach(field => {
+        if (typeof source[field] === 'string' && source[field].trim()) merged[field] = source[field];
+    });
+    ['readinessSteps', 'installChecklist', 'evidenceUsed', 'citationsNeeded'].forEach(field => {
+        const values = dakaAssetCollect([base[field], source[field]], 8);
+        if (values.length) merged[field] = values;
+    });
+    merged.deliverables = {
+        ...(base.deliverables || {}),
+        headCode: merged.headCode || merged.htmlHeader || base.deliverables?.headCode,
+        bodyCode: merged.bodyCode || merged.geoCode || base.deliverables?.bodyCode,
+        schemaJsonLd: merged.schemaJsonLd || merged.aeoCode || base.deliverables?.schemaJsonLd,
+        sitemapXml: merged.sitemapXml || base.deliverables?.sitemapXml,
+        robotsTxt: merged.robotsTxt || base.deliverables?.robotsTxt,
+        llmsTxt: merged.llmsTxt || base.deliverables?.llmsTxt,
+        securityTxt: merged.securityTxt || base.deliverables?.securityTxt
+    };
+    return merged;
+}
+
 app.post('/api/generate-seo-assets', async (req, res) => {
     const startTime = Date.now();
+    let deterministicAsset = null;
     try {
         const { url, lang, type, analysisContext } = req.body;
 
@@ -11606,9 +11822,17 @@ app.post('/api/generate-seo-assets', async (req, res) => {
 
         console.log(`[Gen-AI] Génération '${type}' pour ${url} (Langue: ${lang})`);
 
+        deterministicAsset = buildDeterministicTechnicalAssets(url, lang || 'fr', type, analysisContext || {});
+
         let systemPrompt = "";
         // On force l'IA à se baser SUR LES DONNÉES existantes pour éviter les hallucinations
-        let userPrompt = `URL cible : ${url}\nContexte extrait du site : ${JSON.stringify(analysisContext || {})}\nLangue de sortie OBLIGATOIRE : ${lang}`;
+        let userPrompt = [
+            `URL cible : ${url}`,
+            `Langue de sortie OBLIGATOIRE : ${lang || 'fr'}`,
+            `COUCHE METIER DAKA DEJA CALCULEE: ${JSON.stringify(deterministicAsset.businessThinking || {})}`,
+            `LIVRABLES DETERMINISTES A AMELIORER SANS INVENTER: ${JSON.stringify(deterministicAsset.deliverables || {})}`,
+            `Contexte extrait du site : ${JSON.stringify(analysisContext || {})}`
+        ].join('\n');
 
         // 🧠 PROMPT ENGINEERING COERCITIF (La vraie différence avec un ChatGPT basique)
         if (type === 'markdown') {
@@ -11661,14 +11885,25 @@ Génère UN JSON STRICT : {"robotsTxt": "User-agent: ...", "llmsTxt": "# Identit
         });
 
         if (aiResult.success) {
-            cache.set(cacheKey, aiResult.response);
-            res.json({ success: true, data: aiResult.response });
+            const finalAsset = mergeTechnicalAssetPayload(deterministicAsset, aiResult.response);
+            finalAsset.aiRefined = true;
+            finalAsset.aiModel = aiResult.model || '';
+            cache.set(cacheKey, finalAsset);
+            res.json({ success: true, data: finalAsset });
         } else {
-            throw new Error(aiResult.error || "Échec de génération IA");
+            deterministicAsset.aiRefined = false;
+            deterministicAsset.aiError = aiResult.error || 'AI refinement unavailable';
+            cache.set(cacheKey, deterministicAsset);
+            return res.json({ success: true, data: deterministicAsset });
         }
 
     } catch (error) {
         console.error('[Gen-AI] Erreur:', error);
+        if (deterministicAsset) {
+            deterministicAsset.aiRefined = false;
+            deterministicAsset.aiError = error.message || 'AI refinement failed';
+            return res.json({ success: true, data: deterministicAsset });
+        }
         res.status(500).json({ success: false, error: error.message });
     }
 });

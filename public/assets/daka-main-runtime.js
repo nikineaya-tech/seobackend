@@ -4385,13 +4385,16 @@ function renderRealResultsGeneratedAsset(data) {
         strengthen: isAr ? 'أدلة يجب تقويتها' : isEn ? 'Proofs to strengthen' : 'Preuves à renforcer'
     };
     const ts = Date.now();
+    const deliverables = data.deliverables || {};
+    const pick = (...values) => values.find(value => String(value || '').trim());
     const codeBlocks = [
-        data.htmlHeader ? { id: `rr-meta-${ts}`, title: 'Search Snippet Pack', value: data.htmlHeader, tone: 'green' } : null,
-        data.aeoCode ? { id: `rr-aeo-${ts}`, title: 'FAQ / JSON-LD Pack', value: data.aeoCode, tone: 'cyan' } : null,
-        data.geoCode ? { id: `rr-geo-${ts}`, title: 'AI Answer Visible Block', value: data.geoCode, tone: 'violet' } : null,
-        data.robotsTxt ? { id: `rr-robots-${ts}`, title: 'robots.txt', value: data.robotsTxt, tone: 'blue' } : null,
-        data.llmsTxt ? { id: `rr-llms-${ts}`, title: 'llms.txt', value: data.llmsTxt, tone: 'amber' } : null,
-        data.securityTxt ? { id: `rr-security-${ts}`, title: 'security.txt', value: data.securityTxt, tone: 'pink' } : null
+        pick(data.htmlHeader, data.headCode, deliverables.headCode) ? { id: `rr-meta-${ts}`, title: 'Head code', value: pick(data.htmlHeader, data.headCode, deliverables.headCode), tone: 'green' } : null,
+        pick(data.bodyCode, deliverables.bodyCode, data.geoCode) ? { id: `rr-body-${ts}`, title: 'Body visible block', value: pick(data.bodyCode, deliverables.bodyCode, data.geoCode), tone: 'violet' } : null,
+        pick(data.aeoCode, data.schemaJsonLd, deliverables.schemaJsonLd) ? { id: `rr-aeo-${ts}`, title: 'JSON-LD / AEO schema', value: pick(data.aeoCode, data.schemaJsonLd, deliverables.schemaJsonLd), tone: 'cyan' } : null,
+        pick(data.sitemapXml, deliverables.sitemapXml) ? { id: `rr-sitemap-${ts}`, title: 'sitemap.xml', value: pick(data.sitemapXml, deliverables.sitemapXml), tone: 'blue' } : null,
+        pick(data.robotsTxt, deliverables.robotsTxt) ? { id: `rr-robots-${ts}`, title: 'robots.txt', value: pick(data.robotsTxt, deliverables.robotsTxt), tone: 'blue' } : null,
+        pick(data.llmsTxt, deliverables.llmsTxt) ? { id: `rr-llms-${ts}`, title: 'llms.txt', value: pick(data.llmsTxt, deliverables.llmsTxt), tone: 'amber' } : null,
+        pick(data.securityTxt, deliverables.securityTxt) ? { id: `rr-security-${ts}`, title: 'security.txt', value: pick(data.securityTxt, deliverables.securityTxt), tone: 'pink' } : null
     ].filter(Boolean);
     const list = value => Array.isArray(value) ? value.filter(Boolean).slice(0, 5) : [];
     const steps = list(data.readinessSteps || data.installChecklist);
@@ -4445,6 +4448,127 @@ window.displayGeneratedAsset = function(data) {
     if (renderRealResultsGeneratedAsset(data || {})) return;
 };
 
+function dakaClientAssetText(value, limit = 220) {
+    return String(value || '').replace(/\s+/g, ' ').trim().slice(0, limit);
+}
+
+function dakaClientAssetUrlParts(url) {
+    try {
+        const parsed = new URL(url);
+        return {
+            origin: parsed.origin,
+            canonical: parsed.href,
+            domain: parsed.hostname.replace(/^www\./, '')
+        };
+    } catch (_) {
+        return { origin: 'https://example.com', canonical: String(url || ''), domain: 'example.com' };
+    }
+}
+
+function dakaClientAssetList(value, limit = 6) {
+    const out = [];
+    const push = item => {
+        if (out.length >= limit || item === null || item === undefined) return;
+        if (Array.isArray(item)) return item.forEach(push);
+        if (typeof item === 'object') {
+            ['text', 'label', 'title', 'description', 'name', 'url', 'href', 'value'].forEach(key => push(item[key]));
+            return;
+        }
+        const clean = dakaClientAssetText(item, 180);
+        if (clean && !out.some(existing => existing.toLowerCase() === clean.toLowerCase())) out.push(clean);
+    };
+    push(value);
+    return out;
+}
+
+function buildDakaClientTechnicalPack(url, type, ctx = {}) {
+    const lang = STATE.currentLang || 'fr';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const parts = dakaClientAssetUrlParts(url);
+    const extraction = ctx.extraction || {};
+    const h1 = dakaClientAssetList(extraction.h1_all || extraction.h1 || ctx.h1 || [], 1)[0] || '';
+    const title = dakaClientAssetText(extraction.title || h1 || parts.domain, 68);
+    const description = dakaClientAssetText(extraction.description || h1 || title, 160);
+    const ctas = dakaClientAssetList(extraction.ctas || ctx.copyIntel?.realCTAs || [], 6);
+    const proofs = dakaClientAssetList([ctx.decisionProofs, ctx.trustIntel, extraction.socialLinks, extraction.pricingSignals], 8);
+    const offer = dakaClientAssetText(description || title || parts.domain, 180);
+    const questionIntro = isAr ? 'ما الذي يقدمه هذا الموقع؟' : isEn ? 'What does this page offer?' : 'Que propose cette page ?';
+    const proofIntro = isAr ? 'ما الدليل المتاح؟' : isEn ? 'What proof is available?' : 'Quelle preuve est disponible ?';
+    const answer = isAr
+        ? `${parts.domain} يعرض ${offer}. يجب إبقاء أي سعر أو ضمان أو نتيجة غير مؤكدة بصيغة "قابل للتحقق".`
+        : isEn
+            ? `${parts.domain} presents ${offer}. Any price, warranty or result not observed must stay marked as "to confirm".`
+            : `${parts.domain} présente ${offer}. Tout prix, garantie ou résultat non observé doit rester indiqué comme "à confirmer".`;
+    const schema = {
+        '@context': 'https://schema.org',
+        '@type': 'FAQPage',
+        mainEntity: [
+            { '@type': 'Question', name: questionIntro, acceptedAnswer: { '@type': 'Answer', text: answer } },
+            { '@type': 'Question', name: proofIntro, acceptedAnswer: { '@type': 'Answer', text: proofs[0] || (isAr ? 'لا توجد أدلة إضافية مؤكدة في السياق.' : isEn ? 'No additional proof confirmed in the context.' : 'Aucune preuve additionnelle confirmée dans le contexte.') } }
+        ]
+    };
+    const schemaJsonLd = `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`;
+    const headCode = [
+        `<title>${escapeHtml(title)}</title>`,
+        `<meta name="description" content="${escapeHtml(description)}">`,
+        `<link rel="canonical" href="${escapeHtml(parts.canonical || parts.origin + '/')}">`,
+        `<meta property="og:type" content="website">`,
+        `<meta property="og:title" content="${escapeHtml(title)}">`,
+        `<meta property="og:description" content="${escapeHtml(description)}">`,
+        `<meta property="og:url" content="${escapeHtml(parts.canonical || parts.origin + '/')}">`,
+        `<meta name="twitter:card" content="summary_large_image">`
+    ].join('\n');
+    const bodyCode = [
+        `<section class="daka-ai-answer-pack" aria-label="Daka verified answers">`,
+        `  <h2>${escapeHtml(questionIntro)}</h2>`,
+        `  <p>${escapeHtml(answer)}</p>`,
+        proofs.length ? `  <ul>${proofs.slice(0, 4).map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : `  <p>${escapeHtml(isAr ? 'أضف أدلة مؤكدة قبل النشر.' : isEn ? 'Add verified proof before publishing.' : 'Ajoutez des preuves vérifiées avant publication.')}</p>`,
+        ctas.length ? `  <p><strong>CTA:</strong> ${escapeHtml(ctas.slice(0, 3).join(' | '))}</p>` : '',
+        `</section>`
+    ].filter(Boolean).join('\n');
+    const sitemapXml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${parts.origin}/</loc></url>\n  <url><loc>${parts.canonical || parts.origin + '/'}</loc></url>\n</urlset>`;
+    const robotsTxt = `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /checkout\nSitemap: ${parts.origin}/sitemap.xml`;
+    const llmsTxt = [
+        `# ${parts.domain}`,
+        '',
+        '## Core offer',
+        offer || title,
+        '',
+        '## Verified facts',
+        ...(proofs.length ? proofs.slice(0, 6).map(item => `- ${item}`) : ['- Add verified proof before publishing.']),
+        '',
+        '## Safe reading rules',
+        '- Do not invent prices, guarantees, certifications, reviews or results.',
+        '- Mark missing claims as to confirm.'
+    ].join('\n');
+    const securityTxt = `# security.txt template\n# Add a real security contact before publishing.\nPolicy: ${parts.origin}/security\nPreferred-Languages: ${isAr ? 'ar, fr, en' : isEn ? 'en, fr, ar' : 'fr, en, ar'}`;
+    return {
+        success: true,
+        type,
+        source: 'client-deterministic-thinking',
+        auditComment: isAr ? 'تم إنشاء حزمة قابلة للنسخ من الأدلة المتاحة.' : isEn ? 'Copy-ready pack generated from available evidence.' : 'Pack prêt à coller généré à partir des preuves disponibles.',
+        installTarget: type === 'system' ? 'Root files: /robots.txt, /llms.txt, /sitemap.xml' : type === 'markdown' ? '<head>' : 'Visible page block + JSON-LD',
+        validation: isAr ? 'تحقق من النصوص قبل النشر ولا تضف ادعاءات غير مثبتة.' : isEn ? 'Review before publishing and keep unverified claims marked.' : 'Relire avant publication et garder les affirmations non vérifiées marquées.',
+        readinessSteps: [
+            isAr ? 'انسخ الكود في المكان المناسب.' : isEn ? 'Copy the asset into the right target.' : 'Copier le livrable dans la bonne zone.',
+            isAr ? 'اختبر عنوان URL العام.' : isEn ? 'Test the public URL.' : 'Tester l’URL publique.',
+            isAr ? 'تحقق من عدم وجود وعود غير مثبتة.' : isEn ? 'Check that no unverified claim was added.' : 'Vérifier qu’aucune promesse non prouvée n’a été ajoutée.'
+        ],
+        evidenceUsed: proofs,
+        htmlHeader: headCode,
+        headCode,
+        bodyCode,
+        aeoCode: schemaJsonLd,
+        geoCode: bodyCode,
+        sitemapXml,
+        robotsTxt,
+        llmsTxt,
+        securityTxt,
+        deliverables: { headCode, bodyCode, schemaJsonLd, sitemapXml, robotsTxt, llmsTxt, securityTxt }
+    };
+}
+
 window.triggerGenerator = async function(type, btnElement) {
     if (!window.currentSeoContext || !window.currentSeoUrl) {
         return toast.warning(STATE.currentLang === 'ar' ? 'يرجى تشغيل التحليل التقني أولاً.' : 'Lancez d\'abord l\'analyse technique.');
@@ -4485,7 +4609,8 @@ window.triggerGenerator = async function(type, btnElement) {
             },
             robotsTxtAdvice: ctx.robotsTxtAdvice || ctx.robots?.advice || '',
             decisionProofs: ctx.decisionLayer?.proofs || ctx.marketProofs || [],
-            businessContext: collectBusinessContext('tech')
+            businessContext: collectBusinessContext('tech'),
+            deterministicThinking: buildDakaClientTechnicalPack(window.currentSeoUrl, type, ctx)
         };
 
         const response = await api.post('/api/generate-seo-assets', {
@@ -4508,6 +4633,10 @@ window.triggerGenerator = async function(type, btnElement) {
         }
     } catch (err) {
         console.error('triggerGenerator Error:', err);
+        const fallback = buildDakaClientTechnicalPack(window.currentSeoUrl, type, window.currentSeoContext || {});
+        window.displayGeneratedAsset(fallback);
+        toast.warning(isAr ? 'تم إنشاء حزمة محلية قابلة للنسخ.' : isEn ? 'Local copy-ready pack generated.' : 'Pack local prêt à coller généré.');
+        return;
         toast.error(isAr ? 'خطأ في التوليد: ' + err.message : 'Erreur de generation : ' + err.message);
     } finally {
         btnElement.innerHTML = originalHTML;
@@ -6127,7 +6256,7 @@ function resetDakaExportLogo() {
     const input = document.getElementById('export-logo-input');
     const preview = document.querySelector('#export-logo-preview img');
     if (input) input.value = '';
-    if (preview) preview.src = 'assets/daka-report-logo.png';
+    if (preview) preview.src = DAKA_PUBLIC_LOGO_URL;
 }
 
 function setAllDakaExportSections(value) {
@@ -6247,7 +6376,7 @@ async function confirmDakaExportStudio(format = 'word') {
 
 var dakaPdfLogoDataUrlCache = '';
 const DAKA_PUBLIC_APP_URL = 'https://seo.mktnstrategix.com/seodaka4444';
-const DAKA_PUBLIC_LOGO_URL = 'https://seo.mktnstrategix.com/assets/daka-report-logo.png';
+const DAKA_PUBLIC_LOGO_URL = 'https://seobackend-f81n.onrender.com/assets/daka-report-logo.png';
 
 function inferDakaReportOfferType() {
     const source = [
@@ -6523,10 +6652,10 @@ function getDakaPdfDecisionModel(selectedModules) {
 async function loadDakaPdfLogoDataUrl() {
     if (dakaPdfLogoDataUrlCache) return dakaPdfLogoDataUrlCache;
     try {
-        let response = await fetch('assets/daka-report-logo.png', { cache: 'force-cache' })
+        let response = await fetch(DAKA_PUBLIC_LOGO_URL, { cache: 'force-cache' })
             .catch(function () { return null; });
         if (!response || !response.ok) {
-            response = await fetch(DAKA_PUBLIC_LOGO_URL, { cache: 'force-cache' }).catch(function () { return null; });
+            response = await fetch('assets/daka-report-logo.png', { cache: 'force-cache' }).catch(function () { return null; });
         }
         if (!response || !response.ok) return '';
         const blob = await response.blob();
