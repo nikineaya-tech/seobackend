@@ -83,6 +83,63 @@ function getDakaCountryHelperText(lang = 'fr') {
     return 'Le libell\u00e9 du pays suit la langue du rapport, sans modifier le march\u00e9 cibl\u00e9.';
 }
 
+function looksLikeMojibake(value = '') {
+    return /(?:Ã|Â|â|Ø|Ù|ð|œ|ƒ)/.test(String(value || ''));
+}
+
+function repairMojibakeString(value) {
+    if (typeof value !== 'string' || !looksLikeMojibake(value)) return value;
+    let text = value;
+    for (let index = 0; index < 3; index += 1) {
+        try {
+            const repaired = decodeURIComponent(escape(text));
+            if (!repaired || repaired === text) break;
+            text = repaired;
+            if (!looksLikeMojibake(text)) break;
+        } catch (_) {
+            break;
+        }
+    }
+    return text;
+}
+
+function deepRepairMojibake(input, seen = new WeakSet()) {
+    if (!input || typeof input !== 'object') return input;
+    if (seen.has(input)) return input;
+    seen.add(input);
+
+    if (Array.isArray(input)) {
+        for (let index = 0; index < input.length; index += 1) {
+            const value = input[index];
+            if (typeof value === 'string') input[index] = repairMojibakeString(value);
+            else if (value && typeof value === 'object') deepRepairMojibake(value, seen);
+        }
+        return input;
+    }
+
+    Object.keys(input).forEach((key) => {
+        const value = input[key];
+        if (typeof value === 'string') input[key] = repairMojibakeString(value);
+        else if (value && typeof value === 'object') deepRepairMojibake(value, seen);
+    });
+    return input;
+}
+
+function repairVisibleMojibake(root = document.body) {
+    if (!root) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    const textNodes = [];
+    while (walker.nextNode()) textNodes.push(walker.currentNode);
+    textNodes.forEach((node) => {
+        const parent = node.parentElement;
+        if (!parent || /^(SCRIPT|STYLE|PRE|CODE|TEXTAREA)$/i.test(parent.tagName)) return;
+        const original = String(node.nodeValue || '');
+        const repaired = repairMojibakeString(original);
+        if (repaired !== original) node.nodeValue = repaired;
+    });
+}
+window.repairVisibleMojibake = repairVisibleMojibake;
+
 function hydrateCompetitorCountrySelect(preferredValue = null, lang = null) {
     const select = document.getElementById('country');
     if (!select) return;
@@ -352,6 +409,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <a href="#" style="color: var(--accent-primary);">${copy.terms}</a>
                             </p>
                         </div>`;
+                    repairVisibleMojibake(footer);
                 }
             }
 
@@ -387,7 +445,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                return value || key;
+                return typeof value === 'string' ? (repairMojibakeString(value) || key) : (value || key);
             }
         }
 
@@ -593,6 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
             Object.keys(premiumCopy).forEach(lang => {
                 TRANSLATIONS[lang] = { ...(TRANSLATIONS[lang] || {}), ...premiumCopy[lang] };
             });
+            deepRepairMojibake(TRANSLATIONS);
         }
 
         const i18n = new I18n();
@@ -676,6 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
             phase_tech_3: 'ØªÙˆØ§ÙÙ‚ Ø§Ù„Ù‚Ø±Ø§Ø¡Ø©',
             btn_keywords: 'Ø§ÙƒØªØ´Ù Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ø±Ø§Ø¨Ø­Ø©'
         });
+        deepRepairMojibake(TRANSLATIONS);
         i18n.setLanguage(i18n.currentLang || STATE.currentLang || 'fr');
 
         // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -4197,6 +4257,7 @@ function renderCompetitorRadar(scores) {
    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 async function analyzeCompetitors(e) {
     if (e) e.preventDefault();
+    if (STATE.competitorAnalysisInFlight) return;
 
     const keyword = document.getElementById('keyword')?.value.trim();
     const url     = document.getElementById('url')?.value.trim();
@@ -4225,6 +4286,7 @@ async function analyzeCompetitors(e) {
     setButtonLoading('analyzeBtn', true);
     showLoading('loadingState');
     hideResults('resultsCompetitors');
+    STATE.competitorAnalysisInFlight = true;
 
     // â”€â”€ Cacher bouton export pendant l'analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const exportBtn = document.getElementById('btn-export-competitors-pdf')
@@ -4306,6 +4368,7 @@ async function analyzeCompetitors(e) {
         if (exportBtn) exportBtn.style.display = 'none';
 
     } finally {
+        STATE.competitorAnalysisInFlight = false;
         setButtonLoading('analyzeBtn', false);
         hideLoading('loadingState');
     }
@@ -9138,7 +9201,7 @@ function escapeHtml(text) {
             return '';
         }
     }
-    text = String(text);
+    text = repairMojibakeString(String(text));
     if (/^\s*(null|undefined|nan|\[object object\])\s*$/i.test(text)) return '';
     return text
         .replace(/&/g, "&amp;")
@@ -9154,13 +9217,18 @@ function cleanRenderedOutput(root) {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     const dirtyToken = /(\bnull\b|\bundefined\b|\bNaN\b|\[object Object\])/gi;
     const emptyDash = /^\s*(?:[-â€“â€”:|/()\[\]{}.,;]+)?\s*$/;
+    const leakedRuntimePattern = /(const\s+blob\s*=\s*new\s+Blob|function\s+(?:animateLoadingSteps|getReportLabels|renderGroqCodePreview|renderOpenRouterCodePreview|getDakaExportModules)|window\.exportFullAnalysisTo(?:PDF|Word)|\$\{safe\(|\$\{model\.score|pulseItems\.map|dashboardItems\.map|mindItems\.map|const\s+headerHtml\s*=|Daka report runtime served by the backend|STATE GLOBAL|CONFIGURATION GLOBALE|ANALYZE COMPETITORS)/i;
     const textNodes = [];
 
     while (walker.nextNode()) textNodes.push(walker.currentNode);
 
     textNodes.forEach(node => {
         const original = node.nodeValue || '';
-        const cleaned = original.replace(dirtyToken, '').replace(/\s{2,}/g, ' ');
+        if (original.length > 140 && leakedRuntimePattern.test(original)) {
+            node.remove();
+            return;
+        }
+        const cleaned = repairMojibakeString(original.replace(dirtyToken, '').replace(/\s{2,}/g, ' '));
         node.nodeValue = cleaned;
 
         const parent = node.parentElement;
@@ -9168,6 +9236,7 @@ function cleanRenderedOutput(root) {
             parent.style.display = 'none';
         }
     });
+    repairVisibleMojibake(root);
     requestAnimationFrame(() => enhanceReportNavigation(root));
 }
 
@@ -14542,7 +14611,7 @@ function escapeHtml(str) {
             return '';
         }
     }
-    str = String(str);
+    str = repairMojibakeString(String(str));
     if (/^\s*(null|undefined|nan|\[object object\])\s*$/i.test(str)) return '';
     return str
         .replace(/&/g,  '&amp;')
@@ -15572,7 +15641,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     
-
-
 
 

@@ -4281,7 +4281,7 @@ table tbody td {
             </div>
         </div>
 
-        <form id="competitorsForm" onsubmit="analyzeCompetitors(event)">
+        <form id="competitorsForm">
             <div class="form-group">
                 <label class="form-label" for="keyword" data-i18n="label_keyword">🎯 Mot-clé ou Niche à conquérir</label>
                 <div class="input-wrapper">
@@ -5215,8 +5215,9 @@ navkeywords: 'Market demand',
         </script>
 
 
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260706-main3"></script>
-<script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260705-rr2"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260718-compfix1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260718-compfix1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-competitor-refonte.js?v=20260718-competitorroot1"></script>
 
 <style id="daka-brand-loader-style">
 .logo-mark {
@@ -8691,7 +8692,7 @@ body.modal-open {
     }
 
     function cleanupLeakedInlineCodeText() {
-        const leakPattern = /(const\s+blob\s*=\s*new\s+Blob|function\s+getDakaExportModules|function\s+buildDakaMegaPromptPackage|function\s+renderOpenRouterCodePreview|function\s+renderGroqCodePreview|MODE\s+DAKA\s+CODE\s+BUILDER|window\.exportFullAnalysisToPDF|window\.displayMagicPrompt|restorePdfExportDom|const\s+PDF_EXPORT\s*=)/i;
+        const leakPattern = /(const\s+blob\s*=\s*new\s+Blob|function\s+(?:getDakaExportModules|buildDakaMegaPromptPackage|renderOpenRouterCodePreview|renderGroqCodePreview|animateLoadingSteps|getReportLabels)|MODE\s+DAKA\s+CODE\s+BUILDER|window\.exportFullAnalysisTo(?:PDF|Word)|window\.displayMagicPrompt|restorePdfExportDom|const\s+PDF_EXPORT\s*=|\$\{safe\(|\$\{model\.score|pulseItems\.map|dashboardItems\.map|mindItems\.map|const\s+headerHtml\s*=|Daka report runtime served by the backend|STATE GLOBAL|CONFIGURATION GLOBALE|ANALYZE COMPETITORS)/i;
         const safeParents = /^(SCRIPT|STYLE|PRE|CODE|TEXTAREA)$/;
         const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
         const leakedNodes = [];
@@ -8715,6 +8716,8 @@ body.modal-open {
         cleanupLeakedInlineCodeText();
         window.setTimeout(cleanupLeakedInlineCodeText, 500);
         window.setTimeout(cleanupLeakedInlineCodeText, 1500);
+        window.setTimeout(() => window.repairVisibleMojibake?.(document.body), 250);
+        window.setTimeout(() => window.repairVisibleMojibake?.(document.body), 1200);
         try {
             new MutationObserver(scheduleLeakCleanup).observe(document.body, {
                 childList: true,
@@ -8731,4 +8734,3 @@ body.modal-open {
 
 </body>
 </html>
-

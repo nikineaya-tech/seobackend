@@ -7141,6 +7141,249 @@ function competitorRejectionReason(rawUrl = '', title = '', snippet = '', commer
     return null;
 }
 
+function marketResultLabelsV2(kind = 'market_source', lang = 'fr') {
+    const locale = ['fr', 'en', 'ar'].includes(lang) ? lang : 'fr';
+    const catalog = {
+        direct_competitor: {
+            sourceGroup: 'competitors',
+            fr: {
+                typeLabel: 'Concurrent direct',
+                role: 'Concurrent commercial direct',
+                recommendedUse: 'Comparer offre, prix, preuve, parcours et angle de conversion.'
+            },
+            en: {
+                typeLabel: 'Direct competitor',
+                role: 'Direct commercial competitor',
+                recommendedUse: 'Compare offer, pricing, proof, funnel, and conversion angle.'
+            },
+            ar: {
+                typeLabel: '\u0645\u0646\u0627\u0641\u0633 \u0645\u0628\u0627\u0634\u0631',
+                role: '\u0645\u0646\u0627\u0641\u0633 \u062a\u062c\u0627\u0631\u064a \u0645\u0628\u0627\u0634\u0631',
+                recommendedUse: '\u0642\u0627\u0631\u0646 \u0627\u0644\u0639\u0631\u0636 \u0648\u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u0623\u062f\u0644\u0629 \u0648\u0645\u0633\u0627\u0631 \u0627\u0644\u062a\u062d\u0648\u064a\u0644.'
+            }
+        },
+        benchmark_regional: {
+            sourceGroup: 'marketSources',
+            fr: {
+                typeLabel: 'Benchmark régional',
+                role: 'Référence marché',
+                recommendedUse: 'Étudier promesse, visuels, preuve et structure sans le traiter comme leader local.'
+            },
+            en: {
+                typeLabel: 'Regional benchmark',
+                role: 'Market benchmark',
+                recommendedUse: 'Study promise, visuals, proof, and structure without treating it as the local leader.'
+            },
+            ar: {
+                typeLabel: '\u0645\u0631\u062c\u0639 \u0625\u0642\u0644\u064a\u0645\u064a',
+                role: '\u0645\u0631\u062c\u0639 \u0644\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0633\u0648\u0642',
+                recommendedUse: '\u0627\u0633\u062a\u062e\u062f\u0645\u0647 \u0644\u062f\u0631\u0627\u0633\u0629 \u0627\u0644\u0648\u0639\u062f \u0648\u0627\u0644\u0635\u0648\u0631 \u0648\u0627\u0644\u0623\u062f\u0644\u0629 \u062f\u0648\u0646 \u0627\u0639\u062a\u0628\u0627\u0631\u0647 \u0642\u0627\u0626\u062f\u0627 \u0645\u062d\u0644\u064a\u0627.'
+            }
+        },
+        marketplace: {
+            sourceGroup: 'distributionChannels',
+            fr: {
+                typeLabel: 'Marketplace / revendeur',
+                role: 'Canal de distribution',
+                recommendedUse: 'Lire prix, disponibilité, livraison, avis et bundles comme signaux de marché.'
+            },
+            en: {
+                typeLabel: 'Marketplace / reseller',
+                role: 'Distribution channel',
+                recommendedUse: 'Read price, availability, shipping, reviews, and bundles as market signals.'
+            },
+            ar: {
+                typeLabel: '\u0633\u0648\u0642 \u0623\u0648 \u0645\u0648\u0632\u0639',
+                role: '\u0642\u0646\u0627\u0629 \u062a\u0648\u0632\u064a\u0639',
+                recommendedUse: '\u0627\u0633\u062a\u062e\u062f\u0645 \u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u062a\u0648\u0641\u0631 \u0648\u0627\u0644\u062a\u0648\u0635\u064a\u0644 \u0648\u0627\u0644\u0622\u0631\u0627\u0621 \u0643\u0625\u0634\u0627\u0631\u0627\u062a \u0633\u0648\u0642.'
+            }
+        },
+        social_source: {
+            sourceGroup: 'socialSources',
+            fr: {
+                typeLabel: 'Source sociale',
+                role: 'Source pour comprendre le marché',
+                recommendedUse: 'Observer commentaires, hooks, objections et langage client.'
+            },
+            en: {
+                typeLabel: 'Social source',
+                role: 'Market signal source',
+                recommendedUse: 'Observe comments, hooks, objections, and customer language.'
+            },
+            ar: {
+                typeLabel: '\u0645\u0635\u062f\u0631 \u0627\u062c\u062a\u0645\u0627\u0639\u064a',
+                role: '\u0645\u0635\u062f\u0631 \u0644\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0633\u0648\u0642',
+                recommendedUse: '\u0627\u0642\u0631\u0623 \u0627\u0644\u062a\u0639\u0644\u064a\u0642\u0627\u062a \u0648\u0627\u0644\u0647\u0648\u0643\u0633 \u0648\u0627\u0644\u0627\u0639\u062a\u0631\u0627\u0636\u0627\u062a \u0648\u0644\u063a\u0629 \u0627\u0644\u0639\u0645\u064a\u0644.'
+            }
+        },
+        market_source: {
+            sourceGroup: 'marketSources',
+            fr: {
+                typeLabel: 'Source marché',
+                role: 'Source pour lire la catégorie',
+                recommendedUse: 'Utiliser comme preuve de demande, de vocabulaire ou de comparaison, pas comme concurrent direct.'
+            },
+            en: {
+                typeLabel: 'Market source',
+                role: 'Category reading source',
+                recommendedUse: 'Use as demand, vocabulary, or comparison evidence, not as a direct competitor.'
+            },
+            ar: {
+                typeLabel: '\u0645\u0635\u062f\u0631 \u0633\u0648\u0642\u064a',
+                role: '\u0645\u0635\u062f\u0631 \u0644\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0641\u0626\u0629',
+                recommendedUse: '\u0627\u0633\u062a\u062e\u062f\u0645\u0647 \u0643\u062f\u0644\u064a\u0644 \u0637\u0644\u0628 \u0623\u0648 \u0645\u0641\u0631\u062f\u0627\u062a \u0623\u0648 \u0645\u0642\u0627\u0631\u0646\u0629\u060c \u0644\u0627 \u0643\u0645\u0646\u0627\u0641\u0633 \u0645\u0628\u0627\u0634\u0631.'
+            }
+        }
+    };
+    const picked = catalog[kind] || catalog.market_source;
+    return {
+        sourceGroup: picked.sourceGroup,
+        typeLabel: picked[locale].typeLabel,
+        role: picked[locale].role,
+        recommendedUse: picked[locale].recommendedUse
+    };
+}
+
+function classifyMarketResultV2({ url = '', title = '', snippet = '', query = '', lang = 'fr' } = {}) {
+    const host = safeHostname(url);
+    const path = safePath(url);
+    const blob = `${host} ${title} ${snippet} ${path} ${query}`.toLowerCase();
+    const baseType = classifyCompetitorType(url, title, snippet, lang);
+    const commercialScore = commercialIntentScore(url, title, snippet);
+    const blocked = isBlockedCompetitorUrl(url, title, snippet);
+    const officialLike = isOfficialLikeCompetitor(url, title, snippet);
+    const rejectionReason = competitorRejectionReason(url, title, snippet, commercialScore);
+    const marketplace = /(amazon|fnac|cdiscount|jumia|noon|etsy|ebay|aliexpress|carrefour|walmart|bestbuy|marketplace)/i.test(`${host} ${blob}`);
+    const social = SOCIAL_COMPETITOR_DOMAINS.some(domain => host.includes(domain));
+    const labelsFor = (kind) => marketResultLabelsV2(kind, lang);
+
+    if (!host) {
+        const labels = labelsFor('market_source');
+        return {
+            isRealCompetitor: false,
+            category: 'market_source',
+            typeLabel: labels.typeLabel,
+            role: labels.role,
+            recommendedUse: labels.recommendedUse,
+            sourceGroup: labels.sourceGroup,
+            rejectionReason: 'invalid_url'
+        };
+    }
+
+    if (social) {
+        const labels = labelsFor('social_source');
+        return {
+            isRealCompetitor: false,
+            category: 'social_source',
+            typeLabel: labels.typeLabel,
+            role: labels.role,
+            recommendedUse: labels.recommendedUse,
+            sourceGroup: labels.sourceGroup,
+            rejectionReason: 'social_source'
+        };
+    }
+
+    if (marketplace) {
+        const labels = labelsFor('marketplace');
+        return {
+            isRealCompetitor: false,
+            category: 'marketplace',
+            typeLabel: labels.typeLabel,
+            role: labels.role,
+            recommendedUse: labels.recommendedUse,
+            sourceGroup: labels.sourceGroup,
+            rejectionReason: 'marketplace_not_direct'
+        };
+    }
+
+    if (blocked) {
+        const labels = labelsFor('market_source');
+        return {
+            isRealCompetitor: false,
+            category: 'market_source',
+            typeLabel: baseType.type || labels.typeLabel,
+            role: labels.role,
+            recommendedUse: labels.recommendedUse,
+            sourceGroup: labels.sourceGroup,
+            rejectionReason: rejectionReason || 'informational_source'
+        };
+    }
+
+    if (commercialScore >= 45 && officialLike) {
+        const labels = labelsFor('direct_competitor');
+        return {
+            isRealCompetitor: true,
+            category: baseType.competitorType || 'website',
+            typeLabel: baseType.type || labels.typeLabel,
+            role: labels.role,
+            recommendedUse: labels.recommendedUse,
+            sourceGroup: labels.sourceGroup,
+            rejectionReason: null
+        };
+    }
+
+    if (commercialScore >= 25 && officialLike) {
+        const labels = labelsFor('benchmark_regional');
+        return {
+            isRealCompetitor: false,
+            category: baseType.competitorType || 'website',
+            typeLabel: baseType.type || labels.typeLabel,
+            role: labels.role,
+            recommendedUse: labels.recommendedUse,
+            sourceGroup: labels.sourceGroup,
+            rejectionReason: 'benchmark_only'
+        };
+    }
+
+    const labels = labelsFor('market_source');
+    return {
+        isRealCompetitor: false,
+        category: baseType.competitorType || 'market_source',
+        typeLabel: baseType.type || labels.typeLabel,
+        role: labels.role,
+        recommendedUse: labels.recommendedUse,
+        sourceGroup: labels.sourceGroup,
+        rejectionReason: rejectionReason || 'insufficient_commercial_signals'
+    };
+}
+
+function competitorGeoMismatchNote(query = '', geo = '', lang = 'fr') {
+    const rawQuery = String(query || '').toLowerCase();
+    const geoKey = String(geo || '').trim().toLowerCase();
+    if (!rawQuery || !geoKey) return '';
+
+    const aliases = {
+        morocco: ['morocco', 'maroc', '\u0627\u0644\u0645\u063a\u0631\u0628'],
+        libya: ['libya', '\u0644\u064a\u0628\u064a\u0627'],
+        tunisia: ['tunisia', 'tunisie', '\u062a\u0648\u0646\u0633'],
+        algeria: ['algeria', 'alg\u00e9rie', 'algerie', '\u0627\u0644\u062c\u0632\u0627\u0626\u0631'],
+        egypt: ['egypt', '\u00e9gypte', 'egypte', '\u0645\u0635\u0631'],
+        'saudi arabia': ['saudi arabia', 'saudi', 'arabie saoudite', '\u0627\u0644\u0633\u0639\u0648\u062f\u064a\u0629'],
+        'united arab emirates': ['united arab emirates', 'uae', 'emirats arabes unis', '\u0627\u0644\u0625\u0645\u0627\u0631\u0627\u062a'],
+        france: ['france', '\u0641\u0631\u0646\u0633\u0627'],
+        'united states': ['united states', 'usa', 'us ', '\u0627\u0644\u0648\u0644\u0627\u064a\u0627\u062a \u0627\u0644\u0645\u062a\u062d\u062f\u0629']
+    };
+
+    const mentioned = Object.keys(aliases).find((country) => aliases[country].some((token) => rawQuery.includes(token)));
+    if (!mentioned) return '';
+
+    if (geoKey === 'global english') {
+        return lang === 'ar'
+            ? `\u062a\u062d\u062a\u0648\u064a \u0627\u0644\u0639\u0628\u0627\u0631\u0629 \u0639\u0644\u0649 ${localizeCompetitorMarketName(mentioned, 'ar')}\u060c \u0644\u0643\u0646 \u0627\u0644\u0627\u0633\u062a\u0647\u062f\u0627\u0641 \u0627\u0644\u0645\u062d\u062f\u062f \u0647\u0648 \u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064a\u0629. \u0641\u0633\u0631 \u0627\u0644\u0646\u062a\u0627\u0626\u062c \u0643\u0625\u0634\u0627\u0631\u0627\u062a \u0639\u0627\u0644\u0645\u064a\u0629 \u0645\u0639 \u062d\u0627\u062c\u0629 \u0625\u0644\u0649 \u062a\u062d\u0642\u0642 \u0645\u062d\u0644\u064a.`
+            : lang === 'en'
+                ? `The query mentions ${localizeCompetitorMarketName(mentioned, 'en')}, but the selected targeting is Global English. Treat the findings as global signals and verify locally.`
+                : `La requête mentionne ${localizeCompetitorMarketName(mentioned, 'fr')}, mais le ciblage sélectionné est Global English. Interprétez les résultats comme des signaux globaux avec vérification locale nécessaire.`;
+    }
+
+    if (mentioned === geoKey) return '';
+
+    return lang === 'ar'
+        ? `\u062a\u0630\u0643\u0631 \u0627\u0644\u0639\u0628\u0627\u0631\u0629 ${localizeCompetitorMarketName(mentioned, 'ar')}\u060c \u0628\u064a\u0646\u0645\u0627 \u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0645\u062d\u062f\u062f \u0647\u0648 ${localizeCompetitorMarketName(geo, 'ar')}. \u0627\u0644\u0646\u062a\u064a\u062c\u0629 \u062a\u062d\u062a\u0627\u062c \u0642\u0631\u0627\u0621\u0629 \u0645\u062d\u0644\u064a\u0629 \u0645\u0646\u0641\u0635\u0644\u0629.`
+        : lang === 'en'
+            ? `The query mentions ${localizeCompetitorMarketName(mentioned, 'en')}, while the selected market is ${localizeCompetitorMarketName(geo, 'en')}. Review the output with local validation.`
+            : `La requête mentionne ${localizeCompetitorMarketName(mentioned, 'fr')}, alors que le marché ciblé est ${localizeCompetitorMarketName(geo, 'fr')}. Relisez la sortie avec validation locale.`;
+}
+
 function geoBoostScore(rawUrl = '', geoData = {}, title = '', snippet = '') {
     const host = safeHostname(rawUrl);
     const blob = `${host} ${title} ${snippet}`.toLowerCase();
