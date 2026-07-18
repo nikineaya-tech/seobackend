@@ -7818,6 +7818,174 @@ function detectCompetitorBusinessArchetype(query = '', competitors = []) {
     return 'generic';
 }
 
+function marketProductSourceText(lang = 'fr') {
+    const copy = {
+        fr: {
+            directCompetitor: 'Concurrent direct identifie dans les resultats accessibles.',
+            sameProductPage: 'Page qui semble vendre ou presenter le meme produit ou une offre tres proche.',
+            marketplaceProduct: 'Marketplace ou canal de distribution utile pour comparer prix, disponibilite et presentation.',
+            youtubeVideo: 'Video YouTube liee au produit ou a la demande detectee.',
+            contentProof: 'Source utile pour verifier le vocabulaire, les objections ou les preuves du marche.',
+            weakOrUnconfirmed: 'Signal detecte mais pas assez confirme pour le classer fortement.',
+            serp: 'Resultat observe dans la recherche accessible.',
+            shopping: 'Resultat observe dans les offres shopping accessibles.'
+        },
+        en: {
+            directCompetitor: 'Direct competitor identified in accessible results.',
+            sameProductPage: 'Page that appears to sell or present the same product or a very close offer.',
+            marketplaceProduct: 'Marketplace or distribution channel useful for comparing price, availability, and presentation.',
+            youtubeVideo: 'YouTube video related to the product or detected demand.',
+            contentProof: 'Useful source for verifying market language, objections, or proof.',
+            weakOrUnconfirmed: 'Detected signal, but not confirmed enough for a strong classification.',
+            serp: 'Observed in accessible search results.',
+            shopping: 'Observed in accessible shopping results.'
+        },
+        ar: {
+            directCompetitor: '\u0645\u0646\u0627\u0641\u0633 \u0645\u0628\u0627\u0634\u0631 \u062a\u0645 \u0631\u0635\u062f\u0647 \u0641\u064a \u0627\u0644\u0646\u062a\u0627\u0626\u062c \u0627\u0644\u0645\u062a\u0627\u062d\u0629.',
+            sameProductPage: '\u0635\u0641\u062d\u0629 \u062a\u0628\u062f\u0648 \u0643\u0623\u0646\u0647\u0627 \u062a\u0628\u064a\u0639 \u0646\u0641\u0633 \u0627\u0644\u0645\u0646\u062a\u062c \u0623\u0648 \u0639\u0631\u0636\u0627 \u0642\u0631\u064a\u0628\u0627 \u062c\u062f\u0627.',
+            marketplaceProduct: '\u0633\u0648\u0642 \u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0623\u0648 \u0642\u0646\u0627\u0629 \u062a\u0648\u0632\u064a\u0639 \u0645\u0641\u064a\u062f\u0629 \u0644\u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u062a\u0648\u0641\u0631 \u0648\u0637\u0631\u064a\u0642\u0629 \u0627\u0644\u0639\u0631\u0636.',
+            youtubeVideo: '\u0641\u064a\u062f\u064a\u0648 YouTube \u0645\u0631\u062a\u0628\u0637 \u0628\u0627\u0644\u0645\u0646\u062a\u062c \u0623\u0648 \u0628\u0627\u0644\u0637\u0644\u0628 \u0627\u0644\u0645\u0631\u0635\u0648\u062f.',
+            contentProof: '\u0645\u0635\u062f\u0631 \u0645\u0641\u064a\u062f \u0644\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0644\u063a\u0629 \u0627\u0644\u0633\u0648\u0642 \u0648\u0627\u0644\u0627\u0639\u062a\u0631\u0627\u0636\u0627\u062a \u0623\u0648 \u0627\u0644\u0623\u062f\u0644\u0629.',
+            weakOrUnconfirmed: '\u0625\u0634\u0627\u0631\u0629 \u0645\u0631\u0635\u0648\u062f\u0629 \u0644\u0643\u0646\u0647\u0627 \u063a\u064a\u0631 \u0645\u0624\u0643\u062f\u0629 \u0628\u0645\u0627 \u064a\u0643\u0641\u064a.',
+            serp: '\u0646\u062a\u064a\u062c\u0629 \u0645\u0631\u0635\u0648\u062f\u0629 \u0641\u064a \u0627\u0644\u0628\u062d\u062b \u0627\u0644\u0645\u062a\u0627\u062d.',
+            shopping: '\u0646\u062a\u064a\u062c\u0629 \u0645\u0631\u0635\u0648\u062f\u0629 \u0641\u064a \u0639\u0631\u0648\u0636 \u0627\u0644\u062a\u0633\u0648\u0642 \u0627\u0644\u0645\u062a\u0627\u062d\u0629.'
+        }
+    };
+    return copy[lang] || copy.fr;
+}
+
+function marketProductSourceUrl(item = {}) {
+    return item.url || item.link || item.productLink || item.product_link ||
+        item.sourceUrl || item.source_url || item.serpapi_link || item.googleProductLink ||
+        item.google_product_link || item.offerLink || item.offer_link || item.merchantLink || '';
+}
+
+function marketProductSourceTitle(item = {}) {
+    return cleanCompetitorBusinessText(
+        item.title || item.name || item.productTitle || item.product_title ||
+        item.sourceTitle || item.merchant || item.seller || item.domain || item.url || item.link,
+        140
+    );
+}
+
+function buildCompetitorMarketProductSources({
+    assessedCompetitors = [],
+    enrichedCompetitors = [],
+    marketSources = [],
+    shoppingProducts = [],
+    scrapeDoSerpData = null,
+    query = '',
+    lang = 'fr'
+} = {}) {
+    const copy = marketProductSourceText(lang);
+    const groups = {
+        directCompetitor: [],
+        sameProductPage: [],
+        marketplaceProduct: [],
+        youtubeVideo: [],
+        contentProof: [],
+        weakOrUnconfirmed: []
+    };
+    const marketplaceHosts = ['amazon.', 'jumia.', 'aliexpress.', 'ebay.', 'etsy.', 'walmart.', 'noon.', 'fnac.', 'cdiscount.'];
+    const safeArray = value => Array.isArray(value) ? value : [];
+
+    const push = (type, raw = {}, extra = {}) => {
+        const url = marketProductSourceUrl(raw) || extra.url || '';
+        if (!isPublicHttpUrl(url)) return;
+        const title = marketProductSourceTitle(raw) || safeHostname(url) || url;
+        const snippet = cleanCompetitorBusinessText(raw.snippet || raw.description || raw.text || extra.evidence, 220);
+        const bucket = groups[type] ? type : 'weakOrUnconfirmed';
+        groups[bucket].push({
+            title,
+            url,
+            domain: safeHostname(url),
+            sourceType: type,
+            type,
+            whyRelevant: extra.whyRelevant || copy[type] || copy.weakOrUnconfirmed,
+            observedEvidence: extra.observedEvidence || snippet || copy.serp,
+            confidence: extra.confidence || 'MEDIUM',
+            source: extra.source || raw.source || 'serp',
+            category: raw.category || extra.category || type
+        });
+    };
+
+    const allSearchSources = uniqueByKey([
+        ...safeArray(assessedCompetitors).map(item => ({
+            ...item,
+            url: item.url,
+            link: item.url,
+            source: item.raw?.source || 'serp',
+            title: item.title,
+            snippet: item.snippet
+        })),
+        ...safeArray(marketSources),
+        ...(Array.isArray(scrapeDoSerpData?.organic)
+            ? scrapeDoSerpData.organic.map(item => ({ ...item, url: item.link || item.url, source: 'scrape.do/google' }))
+            : [])
+    ], item => marketProductSourceUrl(item));
+
+    for (const competitor of safeArray(enrichedCompetitors).slice(0, 6)) {
+        push('directCompetitor', competitor, {
+            confidence: competitor.businessProfile?.confidence || 'MEDIUM',
+            observedEvidence: competitor.snippet || copy.serp,
+            source: 'serp'
+        });
+    }
+
+    for (const source of allSearchSources) {
+        const url = marketProductSourceUrl(source);
+        const host = safeHostname(url);
+        const blob = `${host} ${safePath(url)} ${source.title || ''} ${source.snippet || ''} ${query}`.toLowerCase();
+        const isYoutube = /youtube\.com|youtu\.be/.test(host);
+        const isMarketplace = marketplaceHosts.some(pattern => host.includes(pattern)) ||
+            source.category === 'marketplace' || source.category === 'reseller' ||
+            /marketplace|shopping|shop|store|boutique|acheter|buy|product|produit|prix|price/.test(blob);
+        const isProductPage = /\/(p|product|produit|shop|store|boutique|item|dp|gp\/product)\b|acheter|buy|prix|price|livraison|delivery/.test(blob) ||
+            Number(source.commercialIntentScore || source.commercialScore || 0) >= 25;
+
+        if (isYoutube) {
+            push('youtubeVideo', source, { confidence: 'MEDIUM', observedEvidence: source.snippet || copy.serp, source: source.source || 'serp' });
+        } else if (isMarketplace) {
+            push('marketplaceProduct', source, { confidence: isProductPage ? 'HIGH' : 'MEDIUM', observedEvidence: source.snippet || copy.serp, source: source.source || 'serp' });
+        }
+
+        if (!isYoutube && isProductPage) {
+            push('sameProductPage', source, { confidence: source.isRealCompetitor ? 'HIGH' : 'MEDIUM', observedEvidence: source.snippet || copy.serp, source: source.source || 'serp' });
+        } else if (!isYoutube && !isMarketplace && !source.isRealCompetitor) {
+            push('contentProof', source, { confidence: 'LOW', observedEvidence: source.snippet || copy.serp, source: source.source || 'serp' });
+        }
+    }
+
+    for (const product of safeArray(shoppingProducts).slice(0, 12)) {
+        const url = marketProductSourceUrl(product);
+        if (!url) continue;
+        const price = product.price || product.extracted_price || product.price_value || '';
+        push('marketplaceProduct', product, {
+            confidence: 'HIGH',
+            observedEvidence: [copy.shopping, price ? `Price: ${price}` : null].filter(Boolean).join(' | '),
+            source: 'google-shopping',
+            category: 'shopping'
+        });
+    }
+
+    for (const key of Object.keys(groups)) {
+        groups[key] = uniqueByKey(groups[key], item => item.url).slice(0, key === 'directCompetitor' ? 6 : 8);
+    }
+    const items = uniqueByKey(Object.values(groups).flat(), item => item.url);
+    return {
+        version: 'market-product-sources-v1',
+        groups,
+        items,
+        competitorLinks: groups.directCompetitor.map(item => item.url),
+        productLinks: uniqueByKey([...groups.sameProductPage, ...groups.marketplaceProduct], item => item.url).map(item => item.url),
+        proofLinks: items.map(item => item.url),
+        youtubeLinks: groups.youtubeVideo.map(item => item.url),
+        observedUrls: items.map(item => item.url),
+        pagesExplored: items.map(item => item.url),
+        counts: Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, value.length]))
+    };
+}
+
 function buildStrategicPosition({ leader = {}, query = '', geo = '', lang = 'fr' } = {}) {
     const archetype = detectCompetitorBusinessArchetype(query, [leader]);
     return archetypeBusinessCopy(archetype, query, geo, lang).position;
