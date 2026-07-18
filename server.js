@@ -7714,6 +7714,47 @@ function dedupeBusinessActions(actions = []) {
     }).slice(0, 10);
 }
 
+// Keep business classification deterministic and local to the competitor pipeline.
+// This is a routing signal for copy and actions, not an AI verdict.
+function detectCompetitorBusinessArchetype(query = '', competitors = []) {
+    const queryText = String(query || '').toLowerCase();
+    const records = Array.isArray(competitors) ? competitors : [];
+    const corpus = [
+        queryText,
+        ...records.flatMap(item => [
+            item?.title,
+            item?.snippet,
+            item?.description,
+            item?.whatTheySell,
+            item?.primaryPromise,
+            item?.competitorType,
+            item?.category,
+            item?.type,
+            item?.signals?.offerType,
+            item?.signals?.productIntent
+        ])
+    ].filter(Boolean).join(' ').toLowerCase();
+
+    const servicePattern = /\bagenc(?:e|y)\b|\bservice(?:s)?\b|\bprestation(?:s)?\b|\bconsult(?:ing)?\b|\bconseil\b|\bsaas\b|\bsoftware\b|\blogiciel\b|\bplateforme\b|\bformation\b|\bmarketing\b|\bgrowth\b|\bintelligence artificielle\b|\bb2b\b|\baccompagnement|\baudit\b|\bcoaching\b|\u062e\u062f\u0645\u0629|\u062e\u062f\u0645\u0627\u062a|\u0628\u0631\u0645\u062c\u064a\u0627\u062a|\u0645\u0646\u0635\u0629/i;
+    const productPattern = /\be-?commerce\b|\becommerce\b|\bboutique\b|\bshop\b|\bstore\b|\bretail\b|\bmarketplace\b|\bcatalog(?:ue)?\b|\bproduit(?:s)?\b|\bproduct(?:s)?\b|\bappareil\b|\bdevice\b|\bacheter\b|\bbuy\b|\bprix\b|\bprice\b|\blivraison\b|\bdelivery\b|\bstock\b|\bblackhead\b|\bskincare\b|\bcosm[eé]tique\b|\bbeaut[yé]\b|\u0645\u0646\u062a\u062c|\u0645\u062a\u062c\u0631|\u0633\u0639\u0631|\u062a\u0648\u0635\u064a\u0644|\u0645\u0632\u064a\u0644|\u0631\u0624\u0648\u0633\u0627\u0644\u0633\u0648\u062f\u0627\u0621/i;
+    const supplementPattern = /\bsupplement(?:s)?\b|\bcompl[eé]ment(?:s)?\b|\bvitamin(?:e|s)?\b|\bcaffeine\b|\bcaf[eé]ine\b|\bginseng\b|\bnutrition\b|\bminer(?:al|aux)\b|\benergy\b|\b[ée]nergie\b|\bfatigue\b|\bconcentration\b|\bsant[eé]\b|\u0645\u0643\u0645\u0644|\u0637\u0627\u0642\u0629|\u062a\u063a\u0630\u064a\u0629/i;
+
+    // The query is the strongest signal: it prevents competitor snippets from
+    // changing a service into a product, or a product into a generic service.
+    if (servicePattern.test(queryText) && !productPattern.test(queryText)) return 'service';
+    if (productPattern.test(queryText)) return 'physical_product';
+    if (supplementPattern.test(queryText)) return 'supplement';
+
+    if (servicePattern.test(corpus) && !productPattern.test(corpus)) return 'service';
+    if (productPattern.test(corpus) || records.some(item => (
+        item?.signals?.hasPrice ||
+        item?.signals?.hasProductCards ||
+        item?.signals?.hasCatalog
+    ))) return 'physical_product';
+    if (supplementPattern.test(corpus)) return 'supplement';
+    return 'generic';
+}
+
 function buildStrategicPosition({ leader = {}, query = '', geo = '', lang = 'fr' } = {}) {
     const archetype = detectCompetitorBusinessArchetype(query, [leader]);
     return archetypeBusinessCopy(archetype, query, geo, lang).position;
@@ -22562,5 +22603,4 @@ console.log('');
 console.log('🎉🎉🎉 ALL 5 PARTS LOADED SUCCESSFULLY! 🎉🎉🎉');
 console.log('💪 Your backend is now ULTRA-COMPETITIVE and ready to DOMINATE! 💪');
 console.log('');
-
 
