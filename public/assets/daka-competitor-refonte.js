@@ -302,7 +302,7 @@
   }
 
   function looksBroken(value) {
-    return /(?:Ãƒ|Ã‚|Ã¢|Ã˜|Ã™|Ã°|Å“|Æ’|â€™|â€“|â€”|â€œ|â€|Â·)/.test(String(value || ''));
+    return /(?:Ã|Â|â|Ø|Ù|ð|Å“|Æ’|’|–|—|“|”|·)/.test(String(value || ''));
   }
 
   function fixText(value) {
@@ -1179,14 +1179,15 @@
   }
 
   async function requestCompetitorReport(payload) {
-    if (typeof window.api?.request === 'function') {
-      return window.api.request('/api/competitors', {
+    if (typeof api !== 'undefined' && typeof api.request === 'function') {
+      return api.request('/api/competitors', {
         method: 'POST',
         body: JSON.stringify(payload),
         timeout: 180000
       });
     }
-    const res = await fetch('/api/competitors', {
+    const apiBase = window.DAKA_API_BASE_URL || 'https://seobackend-f81n.onrender.com';
+    const res = await fetch(`${apiBase}/api/competitors`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

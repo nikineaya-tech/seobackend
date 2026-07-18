@@ -1,18 +1,18 @@
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // Daka Market Intelligence Spyer API v5.2.1 - PRODUCTION ULTRA-GRADE
 // DevOps Level: LEGENDARY | Bttle-tested | Scale: 100K+ req/day
 // Architecture: Microservices-ready | Event-driven | Zero-downtime
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 'use strict';
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // IMPORTS & CONFIGURATION ENTERPRISE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 // Load environment variables FIRST
 require('dotenv').config();
-// â”€â”€ SCRAPING ENGINE â€” Render Free (Playwright) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── SCRAPING ENGINE — Render Free (Playwright) ──────────────
 const {
   launchPlaywright,
   closeBrowser,
@@ -69,7 +69,7 @@ const {
   EMPTY_PRICE_INTEL_OBSERVED,
 } = require('./pricing-pipeline-refactored-1');
 
-// â”€â”€ PRICING FIXES (alias + helpers manquants) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── PRICING FIXES (alias + helpers manquants) ──────────────
 const {
   EXTRACTIONSTATUS,
 } = require('./pricing-fixes');
@@ -91,7 +91,7 @@ function extractJSON(raw) {
   if (start === -1) return null;
   str = str.slice(start);
 
-  // 3. Supprimer tout texte aprÃ¨s le dernier } ou ]
+  // 3. Supprimer tout texte après le dernier } ou ]
   const lastBrace = str.lastIndexOf('}');
   const lastBracket = str.lastIndexOf(']');
   const end = Math.max(lastBrace, lastBracket);
@@ -109,11 +109,11 @@ function extractJSON(raw) {
         .replace(/,\s*([}\]])/g, '$1')            // trailing commas
         .replace(/\/\/[^\n]*/g, '')               // commentaires //
         .replace(/\/\*[\s\S]*?\*\//g, '')         // commentaires /* */
-        .replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":') // clÃ©s sans quotes
+        .replace(/([{,]\s*)(\w+)\s*:/g, '$1"$2":') // clés sans quotes
         .trim();
       return JSON.parse(cleaned);
     } catch (e2) {
-      // 6. Tentative de reconstruction JSON partiel tronquÃ©
+      // 6. Tentative de reconstruction JSON partiel tronqué
       try {
         const partial = repairTruncatedJSON(str);
         return JSON.parse(partial);
@@ -126,7 +126,7 @@ function extractJSON(raw) {
 }
 
 /**
- * Tente de fermer un JSON tronquÃ© en comptant les accolades/crochets ouverts
+ * Tente de fermer un JSON tronqué en comptant les accolades/crochets ouverts
  */
 function repairTruncatedJSON(str) {
   const stack = [];
@@ -144,7 +144,7 @@ function repairTruncatedJSON(str) {
     else if (c === '}' || c === ']') stack.pop();
   }
 
-  // Fermer les Ã©ventuelles chaÃ®nes ouvertes
+  // Fermer les éventuelles chaînes ouvertes
   let result = str;
   if (inString) result += '"';
   // Fermer les structures ouvertes
@@ -152,9 +152,9 @@ function repairTruncatedJSON(str) {
   return result;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // INITIALIZE EXPRESS APP
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 const app = express();
 
 let server = null;
@@ -221,9 +221,9 @@ async function waitForJobResult(jobId, timeout = 90000) {
     timeoutError.code = 'QUEUE_TIMEOUT';
     throw timeoutError;
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SCRAPING ROUTER â€” Render business / Railway scraping-only
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// SCRAPING ROUTER — Render business / Railway scraping-only
+// ═══════════════════════════════════════════════════════════════════
 
 const SCRAPING_EXECUTION_LAYER = String(
     process.env.SCRAPING_EXECUTION_LAYER || 'railway'
@@ -281,7 +281,7 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
     }
 
     console.log(
-        `[RAILWAY-SCRAPE] Job crÃ©Ã©: ${jobId} type=${type} url=${payload.url || payload.targetUrl || payload.website || 'N/A'}`
+        `[RAILWAY-SCRAPE] Job créé: ${jobId} type=${type} url=${payload.url || payload.targetUrl || payload.website || 'N/A'}`
     );
 
     const result = await waitForJobResult(jobId, timeout);
@@ -490,14 +490,14 @@ function cleanFunnelScrapePayload(input, depth = 0) {
 
 
 const FUNNEL_EVIDENCE_AGENTS = [
-    ['structureConversionAgent', 'Structure, ordre, Hero, AIDA/PAS et frictions de lecture', /heading|page-title|button|click-loaded-content|hero|headline|content|features?|specs?|specification|ip68|battery|remote|sensor|solar panel|Ù…ÙˆØ§ØµÙØ§Øª|Ø§Ù„Ø·Ø§Ù‚Ø©|Ø§Ù„Ø¨Ø·Ø§Ø±ÙŠØ©|Ø±ÙŠÙ…ÙˆØª|Ø­Ø³Ø§Ø³|Ù„ÙˆØ­Ø© Ø´Ù…Ø³ÙŠØ©/i],
-    ['offerPricingDisplayAgent', 'ClartÃ© de l offre, affichage prix, packs et valeur perÃ§ue sans valider le prix final', /raw-price|product-card|button|heading|pricing|price|prix|offre|offer|packs?|bundles?|product|features?|specs?|specification|ip68|abs|battery|remote|sensor|solar panel|Ù…ÙˆØ§ØµÙØ§Øª|Ø§Ù„Ø·Ø§Ù‚Ø©|Ø§Ù„Ø¨Ø·Ø§Ø±ÙŠØ©|Ø±ÙŠÙ…ÙˆØª|Ø­Ø³Ø§Ø³|Ù…Ù‚Ø§ÙˆÙ… Ù„Ù„Ù…Ø§Ø¡|Ù„ÙˆØ­Ø© Ø´Ù…Ø³ÙŠØ©/i],
-    ['trustProofAgent', 'Avis, tÃ©moignages, preuves sociales et badges de confiance', /faq-visible|social-link|image-alt|testimonial|reviews?|ratings?|avis|t[Ã©e]moignage|preuve sociale|customer|client|â­|â˜…|ØªÙ‚ÙŠÙŠÙ…Ø§Øª|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª|Ø¹Ù…Ù„Ø§Ø¡|Ø·Ø±Ø§Ø¨Ù„Ø³|Ø¨Ù†ØºØ§Ø²ÙŠ|Ù…ØµØ±Ø§ØªØ©|Ø§Ù„Ø²Ø§ÙˆÙŠØ©|trust|badge/i],
-    ['deliveryReturnsAgent', 'Livraison, retours, stock, dÃ©lais et garantie logistique; ou livrables et dÃ©lais pour un service', /link|product-card|raw-price|delivery|shipping|livraison|returns?|retours?|refund|stock|delay|d[Ã©e]lai|guarantee|warranty|ØªÙˆØµÙŠÙ„|Ø´Ø­Ù†|Ø¥Ø±Ø¬Ø§Ø¹|Ø§Ø³ØªØ¨Ø¯Ø§Ù„|Ø¶Ù…Ø§Ù†|Ù…Ø®Ø²ÙˆÙ†/i],
-    ['faqObjectionAgent', 'FAQ, objections traitÃ©es et questions non rassurÃ©es', /faq-visible|heading|button|link|faq|questions?|answers?|objections?|frequently asked|Ø£Ø³Ø¦Ù„Ø©|Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø§Ø¦Ø¹Ø©|Ø³Ø¤Ø§Ù„|Ø¬ÙˆØ§Ø¨|Ø§Ø³ØªÙØ³Ø§Ø±/i],
+    ['structureConversionAgent', 'Structure, ordre, Hero, AIDA/PAS et frictions de lecture', /heading|page-title|button|click-loaded-content|hero|headline|content|features?|specs?|specification|ip68|battery|remote|sensor|solar panel|مواصفات|الطاقة|البطارية|ريموت|حساس|لوحة شمسية/i],
+    ['offerPricingDisplayAgent', 'Clarté de l offre, affichage prix, packs et valeur perçue sans valider le prix final', /raw-price|product-card|button|heading|pricing|price|prix|offre|offer|packs?|bundles?|product|features?|specs?|specification|ip68|abs|battery|remote|sensor|solar panel|مواصفات|الطاقة|البطارية|ريموت|حساس|مقاوم للماء|لوحة شمسية/i],
+    ['trustProofAgent', 'Avis, témoignages, preuves sociales et badges de confiance', /faq-visible|social-link|image-alt|testimonial|reviews?|ratings?|avis|t[ée]moignage|preuve sociale|customer|client|⭐|★|تقييمات|تقييم|آراء|مراجعات|شهادات|عملاء|طرابلس|بنغازي|مصراتة|الزاوية|trust|badge/i],
+    ['deliveryReturnsAgent', 'Livraison, retours, stock, délais et garantie logistique; ou livrables et délais pour un service', /link|product-card|raw-price|delivery|shipping|livraison|returns?|retours?|refund|stock|delay|d[ée]lai|guarantee|warranty|توصيل|شحن|إرجاع|استبدال|ضمان|مخزون/i],
+    ['faqObjectionAgent', 'FAQ, objections traitées et questions non rassurées', /faq-visible|heading|button|link|faq|questions?|answers?|objections?|frequently asked|أسئلة|الأسئلة الشائعة|سؤال|جواب|استفسار/i],
     ['ctaContactAgent', 'CTA principal et secondaire, WhatsApp, contact et formulaire', /button|form|whatsapp-link|contact-link|click-loaded-content|dom-section/i],
-    ['mediaUxAgent', 'Images, galerie, vidÃ©o, dÃ©monstration et UX mobile', /image-alt|social-link|click-loaded-content|images?|video|gallery|visual|media|demo|product visual|photo|ØµÙˆØ±|ØµÙˆØ±Ø©|ÙÙŠØ¯ÙŠÙˆ|ØªØ´ØºÙŠÙ„|Ù…Ù†ØªØ¬/i],
-    ['legalRiskAgent', 'Mentions lÃ©gales, conditions, confidentialitÃ© et informations de contact', /link|contact-link|dom-section|page-title/i]
+    ['mediaUxAgent', 'Images, galerie, vidéo, démonstration et UX mobile', /image-alt|social-link|click-loaded-content|images?|video|gallery|visual|media|demo|product visual|photo|صور|صورة|فيديو|تشغيل|منتج/i],
+    ['legalRiskAgent', 'Mentions légales, conditions, confidentialité et informations de contact', /link|contact-link|dom-section|page-title/i]
 ].map(([agentName, mission, evidencePattern]) => ({ agentName, mission, evidencePattern }));
 
 function normalizeFunnelAgentName(value = '') {
@@ -515,13 +515,13 @@ function normalizeFunnelSectionKey(value = '') {
         .toLowerCase()
         .replace(/[^a-z0-9\u0600-\u06ff]+/g, ' ')
         .trim();
-    if (/product visuals?|visuals?|images?|videos?|gallery|media|ØµÙˆØ±|ØµÙˆØ±Ø©|ÙÙŠØ¯ÙŠÙˆ/.test(normalized)) return 'media';
-    if (/features?|specs?|specification|caracteristiques|Ù…ÙˆØ§ØµÙØ§Øª|Ø¨Ø·Ø§Ø±ÙŠØ©|Ø§Ù„Ø¨Ø·Ø§Ø±ÙŠØ©|Ø±ÙŠÙ…ÙˆØª|Ø­Ø³Ø§Ø³|ip68/.test(normalized)) return 'features';
-    if (/content|copy|texte|contenu|Ù…Ø­ØªÙˆÙ‰/.test(normalized)) return 'content';
-    if (/testimonials?|reviews?|ratings?|avis|temoignage|social proof|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª/.test(normalized)) return 'social-proof';
-    if (/trust badges?|badges?|preuve|confiance|Ø«Ù‚Ø©|Ø¶Ù…Ø§Ù†/.test(normalized)) return 'trust';
+    if (/product visuals?|visuals?|images?|videos?|gallery|media|صور|صورة|فيديو/.test(normalized)) return 'media';
+    if (/features?|specs?|specification|caracteristiques|مواصفات|بطارية|البطارية|ريموت|حساس|ip68/.test(normalized)) return 'features';
+    if (/content|copy|texte|contenu|محتوى/.test(normalized)) return 'content';
+    if (/testimonials?|reviews?|ratings?|avis|temoignage|social proof|تقييم|آراء|مراجعات|شهادات/.test(normalized)) return 'social-proof';
+    if (/trust badges?|badges?|preuve|confiance|ثقة|ضمان/.test(normalized)) return 'trust';
     if (/packs?|bundles?|pricing|price|prix|offer|offre/.test(normalized)) return 'offer';
-    if (/delivery|shipping|livraison|ØªÙˆØµÙŠÙ„|Ø´Ø­Ù†/.test(normalized)) return 'delivery';
+    if (/delivery|shipping|livraison|توصيل|شحن/.test(normalized)) return 'delivery';
     return normalized.replace(/\s+/g, '-');
 }
 
@@ -545,7 +545,7 @@ function buildGlobalFunnelEvidenceSignals(evidence = {}) {
             sectionType,
             status: target === present ? 'present' : 'weak',
             detectedText: excerpt(proof, pattern),
-            reason: reason || 'Preuve dÃ©tectÃ©e dans le corpus global de la page.',
+            reason: reason || 'Preuve détectée dans le corpus global de la page.',
             evidenceSource: 'global-corpus-fallback',
             confidence,
             proofUsed: [{
@@ -557,27 +557,27 @@ function buildGlobalFunnelEvidenceSignals(evidence = {}) {
         });
     };
 
-    const contentPattern = /content|contenu|description|paragraph|Ù…Ø­ØªÙˆÙ‰|ØªÙØ§ØµÙŠÙ„|Ù…Ø¹Ù„ÙˆÙ…Ø§Øª/i;
-    const featurePattern = /features?|specs?|specification|ip68|\babs\b|battery|remote|sensor|solar panel|Ù…ÙˆØ§ØµÙØ§Øª|Ø§Ù„Ø·Ø§Ù‚Ø©|Ø§Ù„Ø¨Ø·Ø§Ø±ÙŠØ©|Ø±ÙŠÙ…ÙˆØª|Ø­Ø³Ø§Ø³|Ù…Ù‚Ø§ÙˆÙ… Ù„Ù„Ù…Ø§Ø¡|Ù„ÙˆØ­Ø© Ø´Ù…Ø³ÙŠØ©/i;
-    const mediaPattern = /image-alt|images?|video|gallery|visual|media|demo|product visual|photo|ØµÙˆØ±|ØµÙˆØ±Ø©|ÙÙŠØ¯ÙŠÙˆ|ØªØ´ØºÙŠÙ„|Ù…Ù†ØªØ¬/i;
-    const socialPattern = /testimonial|reviews?|ratings?|avis|t[Ã©e]moignage|preuve sociale|customer|â­|â˜…|ØªÙ‚ÙŠÙŠÙ…Ø§Øª|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª|Ø¹Ù…Ù„Ø§Ø¡|Ø·Ø±Ø§Ø¨Ù„Ø³|Ø¨Ù†ØºØ§Ø²ÙŠ|Ù…ØµØ±Ø§ØªØ©|Ø§Ù„Ø²Ø§ÙˆÙŠØ©/i;
-    const reviewAbsencePattern = /aucun avis|no reviews?(?: yet)?|0 reviews?|Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ‚ÙŠÙŠÙ…Ø§Øª/i;
+    const contentPattern = /content|contenu|description|paragraph|محتوى|تفاصيل|معلومات/i;
+    const featurePattern = /features?|specs?|specification|ip68|\babs\b|battery|remote|sensor|solar panel|مواصفات|الطاقة|البطارية|ريموت|حساس|مقاوم للماء|لوحة شمسية/i;
+    const mediaPattern = /image-alt|images?|video|gallery|visual|media|demo|product visual|photo|صور|صورة|فيديو|تشغيل|منتج/i;
+    const socialPattern = /testimonial|reviews?|ratings?|avis|t[ée]moignage|preuve sociale|customer|⭐|★|تقييمات|تقييم|آراء|مراجعات|شهادات|عملاء|طرابلس|بنغازي|مصراتة|الزاوية/i;
+    const reviewAbsencePattern = /aucun avis|no reviews?(?: yet)?|0 reviews?|لا توجد مراجعات|لا توجد تقييمات/i;
 
     const bodyProof = blocks.find(block => block.source === 'body-text' && String(block.text || '').length >= 2000) || null;
-    if (bodyProof && corpus.length >= 3000) add(present, 'Content', bodyProof, contentPattern, 'HIGH', 'Contenu substantiel copiÃ© depuis la page.');
-    add(present, 'Features', findProof(featurePattern), featurePattern, 'HIGH', 'CaractÃ©ristiques produit explicites dÃ©tectÃ©es.');
+    if (bodyProof && corpus.length >= 3000) add(present, 'Content', bodyProof, contentPattern, 'HIGH', 'Contenu substantiel copié depuis la page.');
+    add(present, 'Features', findProof(featurePattern), featurePattern, 'HIGH', 'Caractéristiques produit explicites détectées.');
 
     const mediaProof = findProof(mediaPattern);
     if (mediaProof) {
         const mediaConfirmed = /image-alt|click-loaded-content/i.test(String(mediaProof.source || '')) || Number(evidence.coverage?.images || 0) > 0;
         add(mediaConfirmed ? present : weak, 'Product Visuals', mediaProof, mediaPattern,
             mediaConfirmed ? 'HIGH' : 'MEDIUM',
-            mediaConfirmed ? 'Visuel produit observÃ©.' : 'Mention de visuel dÃ©tectÃ©e; validation visuelle recommandÃ©e.');
+            mediaConfirmed ? 'Visuel produit observé.' : 'Mention de visuel détectée; validation visuelle recommandée.');
     }
 
     const socialProof = findProof(socialPattern);
     if (socialProof && !reviewAbsencePattern.test(String(socialProof.text || ''))) {
-        add(present, 'Testimonials', socialProof, socialPattern, 'HIGH', 'Avis, notation ou identitÃ© client dÃ©tectÃ© dans la page.');
+        add(present, 'Testimonials', socialProof, socialPattern, 'HIGH', 'Avis, notation ou identité client détecté dans la page.');
     }
 
     return { present, weak };
@@ -684,7 +684,7 @@ function normalizeFunnelEvidencePayload(scrape = {}, pageUrl = '') {
             pageUrl: pageUrl || scrape?.url || '',
             evidenceText,
             evidenceBlocks,
-            limits: ['Ancien payload adaptÃ© en preuves factuelles']
+            limits: ['Ancien payload adapté en preuves factuelles']
         }];
 
     return {
@@ -711,16 +711,16 @@ function findFunnelEvidenceForSection(sectionValue, evidenceBlocks = []) {
     const section = String(sectionValue?.sectionType || sectionValue?.section || sectionValue?.name || sectionValue || '').toLowerCase();
     const pairs = [
         [/hero|structure|aida|pas|headline|h1/, /hero|banner|headline|h1|above.?fold|accueil|intro/i],
-        [/content|contenu|copy|text/, /content|contenu|description|paragraph|Ù…Ø­ØªÙˆÙ‰|ØªÙØ§ØµÙŠÙ„|Ù…Ø¹Ù„ÙˆÙ…Ø§Øª/i],
-        [/feature|spec|caract[Ã©e]ristique|Ù…ÙˆØ§ØµÙØ§Øª/, /features?|specs?|specification|ip68|\babs\b|battery|remote|sensor|solar panel|Ù…ÙˆØ§ØµÙØ§Øª|Ø§Ù„Ø·Ø§Ù‚Ø©|Ø§Ù„Ø¨Ø·Ø§Ø±ÙŠØ©|Ø±ÙŠÙ…ÙˆØª|Ø­Ø³Ø§Ø³|Ù…Ù‚Ø§ÙˆÙ… Ù„Ù„Ù…Ø§Ø¡|Ù„ÙˆØ­Ø© Ø´Ù…Ø³ÙŠØ©/i],
-        [/offer|offre|pricing|prix|bundle|pack/, /offre|offer|prix|price|pricing|tarif|bundle|pack|mad|eur|usd|Ø¯Ø±Ù‡Ù…/i],
-        [/trust|proof|preuve|review|avis|testimonial|social/, /avis|review|rating|[Ã©e]toile|testimonial|t[Ã©e]moignage|preuve|trust|badge|client|customer|â­|â˜…|ØªÙ‚ÙŠÙŠÙ…Ø§Øª|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª|Ø¹Ù…Ù„Ø§Ø¡|Ø·Ø±Ø§Ø¨Ù„Ø³|Ø¨Ù†ØºØ§Ø²ÙŠ|Ù…ØµØ±Ø§ØªØ©|Ø§Ù„Ø²Ø§ÙˆÙŠØ©/i],
-        [/delivery|livraison|shipping|stock|delay|dÃ©lai/, /livraison|delivery|shipping|stock|dÃ©lai|delay|expÃ©dition|ØªÙˆØµÙŠÙ„/i],
+        [/content|contenu|copy|text/, /content|contenu|description|paragraph|محتوى|تفاصيل|معلومات/i],
+        [/feature|spec|caract[ée]ristique|مواصفات/, /features?|specs?|specification|ip68|\babs\b|battery|remote|sensor|solar panel|مواصفات|الطاقة|البطارية|ريموت|حساس|مقاوم للماء|لوحة شمسية/i],
+        [/offer|offre|pricing|prix|bundle|pack/, /offre|offer|prix|price|pricing|tarif|bundle|pack|mad|eur|usd|درهم/i],
+        [/trust|proof|preuve|review|avis|testimonial|social/, /avis|review|rating|[ée]toile|testimonial|t[ée]moignage|preuve|trust|badge|client|customer|⭐|★|تقييمات|تقييم|آراء|مراجعات|شهادات|عملاء|طرابلس|بنغازي|مصراتة|الزاوية/i],
+        [/delivery|livraison|shipping|stock|delay|délai/, /livraison|delivery|shipping|stock|délai|delay|expédition|توصيل/i],
         [/return|retour|refund|rembours/, /retour|return|refund|rembours|exchange/i],
-        [/guarantee|garantie|warranty/, /garantie|guarantee|warranty|money back|Ø¶Ù…Ø§Ù†/i],
-        [/faq|objection|question/, /faq|question|rÃ©ponse|answer|objection|frequently|Ø£Ø³Ø¦Ù„Ø©/i],
-        [/cta|contact|whatsapp|form/, /acheter|commander|buy|contact|whatsapp|devis|rÃ©server|form|submit|checkout|panier/i],
-        [/media|image|gallery|video|visual|ux|mobile/, /image|photo|gallery|galerie|video|visual|media|demo|product visual|youtube|vimeo|mobile|responsive|ØµÙˆØ±|ØµÙˆØ±Ø©|ÙÙŠØ¯ÙŠÙˆ|ØªØ´ØºÙŠÙ„|Ù…Ù†ØªØ¬/i],
+        [/guarantee|garantie|warranty/, /garantie|guarantee|warranty|money back|ضمان/i],
+        [/faq|objection|question/, /faq|question|réponse|answer|objection|frequently|أسئلة/i],
+        [/cta|contact|whatsapp|form/, /acheter|commander|buy|contact|whatsapp|devis|réserver|form|submit|checkout|panier/i],
+        [/media|image|gallery|video|visual|ux|mobile/, /image|photo|gallery|galerie|video|visual|media|demo|product visual|youtube|vimeo|mobile|responsive|صور|صورة|فيديو|تشغيل|منتج/i],
         [/legal|privacy|condition|terms|footer/, /privacy|terms|conditions|mentions|legal|cookies|footer|copyright/i]
     ];
     const pair = pairs.find(([sectionRx]) => sectionRx.test(section));
@@ -729,7 +729,7 @@ function findFunnelEvidenceForSection(sectionValue, evidenceBlocks = []) {
         [block.typeGuess, block.labelGuess, block.source, block.selector, block.text, block.url].filter(Boolean).join(' ')
     )) || null;
     if (candidate && /trust|proof|review|avis|testimonial|social/.test(section) &&
-        /aucun avis|pas encore d['Ã¢â‚¬â„¢ ]avis|no reviews?(?: yet)?|0 reviews?|Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ‚ÙŠÙŠÙ…Ø§Øª/i.test(String(candidate.text || ''))) {
+        /aucun avis|pas encore d['’ ]avis|no reviews?(?: yet)?|0 reviews?|لا توجد مراجعات|لا توجد تقييمات/i.test(String(candidate.text || ''))) {
         return null;
     }
     return candidate;
@@ -787,7 +787,7 @@ function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
     list(raw.sectionsMissing).map(item => decision(item, 'missing')).filter(Boolean).forEach(item => {
         const observed = findFunnelEvidenceForSection(item, evidence.evidenceBlocks);
         if (observed) {
-            weak.push({ ...item, status: 'weak', reason: 'Une preuve existe; sa qualitÃ© reste Ã  confirmer.' });
+            weak.push({ ...item, status: 'weak', reason: 'Une preuve existe; sa qualité reste à confirmer.' });
             addProof(observed);
         } else if (canFunnelAgentConfirmAbsence(definition, evidence)) {
             missing.push(item);
@@ -795,7 +795,7 @@ function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
             unconfirmed.push({
                 ...item,
                 status: 'unconfirmed',
-                reason: 'Couverture spÃ©cialisÃ©e insuffisante pour confirmer cette absence.'
+                reason: 'Couverture spécialisée insuffisante pour confirmer cette absence.'
             });
         }
     });
@@ -811,7 +811,7 @@ function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
             unconfirmed.push({
                 ...item,
                 status: 'unconfirmed',
-                reason: 'Aucune preuve spÃ©cialisÃ©e ne confirme cette dÃ©cision.'
+                reason: 'Aucune preuve spécialisée ne confirme cette décision.'
             });
         }
     });
@@ -819,7 +819,7 @@ function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
         ? String(raw.confidence).toUpperCase() : (proofUsed.length ? 'MEDIUM' : 'LOW');
     return {
         agentName: definition.agentName,
-        verdict: limitFunnelText(raw.verdict || 'Analyse fondÃ©e sur les preuves disponibles.', 900),
+        verdict: limitFunnelText(raw.verdict || 'Analyse fondée sur les preuves disponibles.', 900),
         sectionsDetected: detected.slice(0, 8),
         sectionsWeak: weak.slice(0, 8),
         sectionsMissing: missing.slice(0, 8),
@@ -833,10 +833,10 @@ function normalizeFunnelMiniAgent(raw = {}, definition, evidence) {
 }
 
 function unconfirmedFunnelMiniAgent(definition, evidence, reason) {
-    const detail = limitFunnelText(reason || `Mini-agent ${definition.agentName} non retournÃ©`, 300);
+    const detail = limitFunnelText(reason || `Mini-agent ${definition.agentName} non retourné`, 300);
     return {
         agentName: definition.agentName,
-        verdict: 'Analyse non confirmÃ©e: les preuves disponibles ne permettent pas une dÃ©cision fiable.',
+        verdict: 'Analyse non confirmée: les preuves disponibles ne permettent pas une décision fiable.',
         sectionsDetected: [], sectionsWeak: [], sectionsMissing: [],
         sectionsUnconfirmed: [{
             sectionType: definition.agentName,
@@ -879,28 +879,28 @@ URL: ${pageUrl}
 SCRAPE: ${evidence.scrapeSufficient ? 'SUFFISANT' : 'PARTIEL'}
 LIMITES: ${JSON.stringify(evidence.limits)}
 CONTEXTE UTILISATEUR, JAMAIS UNE PREUVE: ${JSON.stringify(cleanFunnelScrapePayload(userContext)).slice(0, 2200)}
-PRICING PIPELINE SÃ‰PARÃ‰, INFORMATIF UNIQUEMENT: ${JSON.stringify(cleanFunnelScrapePayload(priceIntel)).slice(0, 1500)}
-TEXTE GLOBAL COPIÃ‰ PAR LES SCRAPERS: ${limitFunnelText(evidence.evidenceText, 12000)}
-MISSIONS ET PREUVES FILTRÃ‰ES: ${JSON.stringify(missions)}
-evidenceFallbackUsed=true signifie que l agent a reÃ§u un Ã©chantillon global faute de correspondance spÃ©cialisÃ©e; il doit le lire avant de conclure UNCONFIRMED.
+PRICING PIPELINE SÉPARÉ, INFORMATIF UNIQUEMENT: ${JSON.stringify(cleanFunnelScrapePayload(priceIntel)).slice(0, 1500)}
+TEXTE GLOBAL COPIÉ PAR LES SCRAPERS: ${limitFunnelText(evidence.evidenceText, 12000)}
+MISSIONS ET PREUVES FILTRÉES: ${JSON.stringify(missions)}
+evidenceFallbackUsed=true signifie que l agent a reçu un échantillon global faute de correspondance spécialisée; il doit le lire avant de conclure UNCONFIRMED.
 
-Tu coordonnes huit experts CRO spÃ©cialisÃ©s. Lis et Ã©value les textes rÃ©els avant toute dÃ©cision.
+Tu coordonnes huit experts CRO spécialisés. Lis et évalue les textes réels avant toute décision.
 PROTOCOLE OBLIGATOIRE:
 1. Chercher d abord toute preuve positive: H1, titre, bouton, texte, lien, image ou formulaire.
-2. Si une preuve existe, Ã©tudier sa qualitÃ©, sa clartÃ©, sa position et sa force de conversion.
-3. Une section prouvÃ©e est PRESENT ou WEAK, jamais MISSING.
-4. MISSING exige un scrape suffisant ET une couverture spÃ©cialisÃ©e de la zone concernÃ©e.
+2. Si une preuve existe, étudier sa qualité, sa clarté, sa position et sa force de conversion.
+3. Une section prouvée est PRESENT ou WEAK, jamais MISSING.
+4. MISSING exige un scrape suffisant ET une couverture spécialisée de la zone concernée.
 5. Si la couverture est partielle, classer UNCONFIRMED.
 6. Distinguer produit physique, service, SaaS et formation avant de recommander.
-7. Pour un service, parler de livrables, dÃ©lais, rÃ©visions et accompagnement; jamais de livraison colis.
-8. Chaque verdict cite mot pour mot une preuve rÃ©elle avec source, URL et position.
-9. Pour chaque CTA observÃ©, Ã©tudier le verbe, l intention, la force, le contexte de section et son rÃ´le principal ou secondaire.
-10. Chaque recommandation relie Observation, Impact conversion et Correction concrÃ¨te.
-11. Si une section est dÃ©jÃ  excellente, la dÃ©clarer STRONG et recommander de la conserver sans inventer de dÃ©faut.
-11. Si la page ne prÃ©sente aucune faiblesse critique prouvÃ©e, conclure clairement que la page est excellente.
-12. typeGuess est un indice regex faible, jamais une vÃ©ritÃ©.
-13. offerPricingDisplayAgent dÃ©crit seulement l affichage du prix; le moteur pricing reste souverain.
-Aucune invention, aucune absence dÃ©duite du silence d une liste filtrÃ©e. JSON strict seulement.
+7. Pour un service, parler de livrables, délais, révisions et accompagnement; jamais de livraison colis.
+8. Chaque verdict cite mot pour mot une preuve réelle avec source, URL et position.
+9. Pour chaque CTA observé, étudier le verbe, l intention, la force, le contexte de section et son rôle principal ou secondaire.
+10. Chaque recommandation relie Observation, Impact conversion et Correction concrète.
+11. Si une section est déjà excellente, la déclarer STRONG et recommander de la conserver sans inventer de défaut.
+11. Si la page ne présente aucune faiblesse critique prouvée, conclure clairement que la page est excellente.
+12. typeGuess est un indice regex faible, jamais une vérité.
+13. offerPricingDisplayAgent décrit seulement l affichage du prix; le moteur pricing reste souverain.
+Aucune invention, aucune absence déduite du silence d une liste filtrée. JSON strict seulement.
 FORMAT:
 {"agents":[{"agentName":"nom exact","verdict":"...","sectionsDetected":[],"sectionsWeak":[],"sectionsMissing":[],"sectionsUnconfirmed":[],"proofUsed":[{"text":"...","source":"...","pageUrl":"...","position":1}],"recommendations":[],"confidence":"HIGH|MEDIUM|LOW"}]}
 `.trim();
@@ -931,7 +931,7 @@ FORMAT:
                 );
                 const normalized = candidate
                     ? normalizeFunnelMiniAgent(candidate, def, evidence)
-                    : unconfirmedFunnelMiniAgent(def, evidence, `Mini-agent ${def.agentName} non retournÃ©`);
+                    : unconfirmedFunnelMiniAgent(def, evidence, `Mini-agent ${def.agentName} non retourné`);
                 return {
                     ...normalized,
                     evidenceFallbackUsed: mission.evidenceFallbackUsed === true,
@@ -1032,11 +1032,11 @@ function reconcileFunnelSurgeryWithEvidence({
     ].filter(Boolean).join(' ')).join(' ');
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
-    const yes = isAr ? 'Ù†Ø¹Ù…' : isEn ? 'Yes' : 'Oui';
-    const keep = isAr ? 'Ø¥Ø¨Ù‚Ø§Ø¡' : isEn ? 'Keep' : 'Garder';
-    const improve = isAr ? 'ØªØ­Ø³ÙŠÙ†' : isEn ? 'Improve' : 'AmÃ©liorer';
-    const add = isAr ? 'Ø¥Ø¶Ø§ÙØ©' : isEn ? 'Add' : 'Ajouter';
-    const unconfirmedLabel = isAr ? 'ØºÙŠØ± Ù…Ø¤ÙƒØ¯' : isEn ? 'Unconfirmed' : 'Non confirmÃ©';
+    const yes = isAr ? 'نعم' : isEn ? 'Yes' : 'Oui';
+    const keep = isAr ? 'إبقاء' : isEn ? 'Keep' : 'Garder';
+    const improve = isAr ? 'تحسين' : isEn ? 'Improve' : 'Améliorer';
+    const add = isAr ? 'إضافة' : isEn ? 'Add' : 'Ajouter';
+    const unconfirmedLabel = isAr ? 'غير مؤكد' : isEn ? 'Unconfirmed' : 'Non confirmé';
     const clean = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
     const typeAliases = {
@@ -1082,7 +1082,7 @@ function reconcileFunnelSurgeryWithEvidence({
         return rx.test(value) && (!sourceRx || sourceRx.test(String(block.source || '')));
     });
     const explicitReviewAbsence = blocks.find(block =>
-        /aucun avis|pas encore d['Ã¢â‚¬â„¢ ]avis|no reviews?(?: yet)?|0 reviews?|Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ‚ÙŠÙŠÙ…Ø§Øª/i.test(String(block?.text || ''))
+        /aucun avis|pas encore d['’ ]avis|no reviews?(?: yet)?|0 reviews?|لا توجد مراجعات|لا توجد تقييمات/i.test(String(block?.text || ''))
     ) || null;
 
     const proofFor = label => {
@@ -1103,19 +1103,19 @@ function reconcileFunnelSurgeryWithEvidence({
         if (key === 'sous-titre') return h2[0] ? { text: h2[0], source: 'heading' } : null;
         if (key === 'cta principal') return ctas[0] ? { text: typeof ctas[0] === 'string' ? ctas[0] : ctas[0]?.text || ctas[0]?.label, source: 'button' } : blockProof(/acheter|commander|decouvrir|contact|etsy|buy|order/i, /button|dom-section/);
         if (key === 'cta secondaire') return ctas[1] ? { text: typeof ctas[1] === 'string' ? ctas[1] : ctas[1]?.text || ctas[1]?.label, source: 'button' } : null;
-        if (key === 'image produit') return imagesCount > 0 ? { text: `${imagesCount} image(s) observÃ©e(s)`, source: 'image-alt' } : null;
-        if (key === 'galerie') return imagesCount >= 4 ? { text: `${imagesCount} image(s) observÃ©e(s)`, source: 'image-alt' } : null;
+        if (key === 'image produit') return imagesCount > 0 ? { text: `${imagesCount} image(s) observée(s)`, source: 'image-alt' } : null;
+        if (key === 'galerie') return imagesCount >= 4 ? { text: `${imagesCount} image(s) observée(s)`, source: 'image-alt' } : null;
         if (key === 'benefices') return h2.length >= 2 ? { text: h2.slice(0, 3).join(' | '), source: 'heading' } : blockProof(/benefit|benefice|avantage|resultat|respirer|calme|espace/i);
         if (key === 'offre / bundle / pack') return blockProof(/product-card|catalogue|collection|boutique|acheter sur etsy|offre|bundle|pack/i);
-        if (key === 'prix') return confirmedPrice ? { text: String(confirmedPrice), source: 'pricing-pipeline' } : blockProof(/\b(mad|dh|eur|usd|â‚¬|\$)\b/i, /raw-price|product-card|dom-section/);
+        if (key === 'prix') return confirmedPrice ? { text: String(confirmedPrice), source: 'pricing-pipeline' } : blockProof(/\b(mad|dh|eur|usd|€|\$)\b/i, /raw-price|product-card|dom-section/);
         if (key === 'garantie') return blockProof(/garantie|warranty|refund|rembours|satisfaction/i);
         if (key === 'livraison') return blockProof(/livraison|shipping|delivery|expedition|telechargement instantane/i);
         if (key === 'retours') return blockProof(/retour|return|refund|rembours|exchange/i);
         if (key === 'avis clients' || key === 'temoignages') {
             return blocks.find(block => {
                 const value = [block.selector, block.typeGuess, block.labelGuess, block.text].filter(Boolean).join(' ');
-                return /avis|review|rating|etoile|testimonial|temoignage|â­|â˜…|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª/i.test(value)
-                    && !/aucun avis|pas encore d['Ã¢â‚¬â„¢ ]avis|no reviews?(?: yet)?|0 reviews?|Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ‚ÙŠÙŠÙ…Ø§Øª/i.test(String(block.text || ''));
+                return /avis|review|rating|etoile|testimonial|temoignage|⭐|★|تقييم|آراء|مراجعات|شهادات/i.test(value)
+                    && !/aucun avis|pas encore d['’ ]avis|no reviews?(?: yet)?|0 reviews?|لا توجد مراجعات|لا توجد تقييمات/i.test(String(block.text || ''));
             }) || synthesisMatch(synthesis.present, label) || synthesisMatch(synthesis.weak, label);
         }
         if (key === 'faq' || key === 'objections') return blockProof(/faq|questions frequentes|question|reponse|objection/i);
@@ -1160,7 +1160,7 @@ function reconcileFunnelSurgeryWithEvidence({
                 ...row,
                 decision: add,
                 evidence: limitFunnelText(explicitReviewAbsence.text, 700),
-                problem: isEn ? 'The page explicitly states that no review is available.' : isAr ? 'ØªÙˆØ¶Ø­ Ø§Ù„ØµÙØ­Ø© ØµØ±Ø§Ø­Ø© Ø¹Ø¯Ù… ÙˆØ¬ÙˆØ¯ Ù…Ø±Ø§Ø¬Ø¹Ø§Øª Ø­Ø§Ù„ÙŠØ§.' : 'La page indique explicitement quâ€™aucun avis nâ€™est disponible.',
+                problem: isEn ? 'The page explicitly states that no review is available.' : isAr ? 'توضح الصفحة صراحة عدم وجود مراجعات حاليا.' : 'La page indique explicitement qu’aucun avis n’est disponible.',
                 confidence: 'HIGH'
             };
         }
@@ -1197,8 +1197,8 @@ function reconcileFunnelSurgeryWithEvidence({
         return {
             ...row,
             decision: unconfirmedLabel,
-            evidence: isAr ? 'Ù„Ù… ØªØªÙˆÙØ± Ø£Ø¯Ù„Ø© ÙƒØ§ÙÙŠØ© Ù„Ù„Ø­Ø³Ù….' : isEn ? 'Insufficient evidence to decide.' : 'Preuves insuffisantes pour conclure.',
-            problem: isAr ? 'ÙŠØªØ·Ù„Ø¨ ØªØ­Ù‚Ù‚Ø§Ù‹ ÙŠØ¯ÙˆÙŠØ§Ù‹ Ø£Ùˆ Ø§Ø³ØªØ®Ø±Ø§Ø¬Ø§Ù‹ Ø£Ø¹Ù…Ù‚.' : isEn ? 'Requires manual verification or deeper extraction.' : 'Ã€ vÃ©rifier manuellement ou avec une extraction plus profonde.',
+            evidence: isAr ? 'لم تتوفر أدلة كافية للحسم.' : isEn ? 'Insufficient evidence to decide.' : 'Preuves insuffisantes pour conclure.',
+            problem: isAr ? 'يتطلب تحققاً يدوياً أو استخراجاً أعمق.' : isEn ? 'Requires manual verification or deeper extraction.' : 'À vérifier manuellement ou avec une extraction plus profonde.',
             confidence: 'LOW',
             decisionSource: 'insufficient-evidence',
             evidenceSource: null
@@ -1220,7 +1220,7 @@ function reconcileFunnelSurgeryWithEvidence({
         weakSections: improveSections.map(row => row.section).slice(0, 8),
         confirmedMissingSections: missingSections.map(row => row.section).slice(0, 8),
         message: missingSections.length === 0 && improveSections.length === 0 && keepSections.length >= 4
-            ? (isAr ? 'Ø§Ù„ØµÙØ­Ø© Ù…Ù…ØªØ§Ø²Ø© Ø­Ø³Ø¨ Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø© ÙˆÙ„Ø§ ØªØ­ØªØ§Ø¬ Ø¥Ù„Ù‰ Ø¹ÙŠÙˆØ¨ Ù…ØµØ·Ù†Ø¹Ø©.' : isEn ? 'The page is excellent based on observed evidence; no defects were invented.' : 'La page est excellente selon les preuves observÃ©es; aucun dÃ©faut artificiel nâ€™est ajoutÃ©.')
+            ? (isAr ? 'الصفحة ممتازة حسب الأدلة المرصودة ولا تحتاج إلى عيوب مصطنعة.' : isEn ? 'The page is excellent based on observed evidence; no defects were invented.' : 'La page est excellente selon les preuves observées; aucun défaut artificiel n’est ajouté.')
             : null
     };
 
@@ -1275,7 +1275,7 @@ function reconcileFunnelSurgeryWithEvidence({
 function isObservedFunnelSection(value) {
     if (value === true) return true;
     const normalized = String(value || '').trim().toLowerCase();
-    return ['oui', 'yes', 'true', 'present', 'prÃ©sent', 'Ù†Ø¹Ù…'].includes(normalized);
+    return ['oui', 'yes', 'true', 'present', 'présent', 'نعم'].includes(normalized);
 }
 
 function buildFunnelCompatibilityLayer({
@@ -1291,13 +1291,13 @@ function buildFunnelCompatibilityLayer({
     const sectionsAudit = matrix.map((row, index) => {
         const present = isObservedFunnelSection(row.present);
         const decisionText = String(row.decision || '').toLowerCase();
-        const unconfirmed = /non confirm|unconfirmed|ØºÙŠØ± Ù…Ø¤ÙƒØ¯/.test(decisionText);
+        const unconfirmed = /non confirm|unconfirmed|غير مؤكد/.test(decisionText);
         return {
             sectionType: row.section || row.sectionType || row.type || `SECTION_${index + 1}`,
             type: row.type || row.sectionType || row.section || `SECTION_${index + 1}`,
             label: row.section || row.label || row.sectionType || row.type || `Section ${index + 1}`,
             present,
-            status: present ? (decisionText.includes('amÃ©lior') || decisionText.includes('improve') ? 'weak' : 'present') : (unconfirmed ? 'unconfirmed' : 'missing'),
+            status: present ? (decisionText.includes('amélior') || decisionText.includes('improve') ? 'weak' : 'present') : (unconfirmed ? 'unconfirmed' : 'missing'),
             decision: row.decision || null,
             content: row.evidence || row.detectedText || null,
             evidence: row.evidence || row.detectedText || null,
@@ -1439,7 +1439,7 @@ function getConfirmedFunnelPrice(priceIntel = {}) {
 
 function inferFunnelOfferType({ text = '', projectIdentity = {}, commerceExploration = {} } = {}) {
     const source = `${projectIdentity.businessModel || ''} ${projectIdentity.siteType || ''} ${projectIdentity.niche || ''} ${text}`.toLowerCase();
-    if (/saas|software|logiciel|abonnement|trial|demo|intÃ©gration|integration|onboarding/.test(source)) return 'saas';
+    if (/saas|software|logiciel|abonnement|trial|demo|intégration|integration|onboarding/.test(source)) return 'saas';
     if (/formation|course|cours|programme|module|certificat|formateur/.test(source)) return 'formation';
     if (/service|agence|consulting|prestation|audit|devis|rdv|appointment|livrable|accompagnement/.test(source)) return 'service';
     if (/shop|boutique|e-?commerce|panier|checkout|produit|livraison|retour|stock|cart|product/.test(source)) return 'ecommerce';
@@ -1473,17 +1473,17 @@ function buildFunnelSectionSurgeryModel({
 } = {}) {
     const isEn = lang === 'en';
     const isAr = lang === 'ar';
-    const yes = isAr ? 'Ù†Ø¹Ù…' : isEn ? 'Yes' : 'Oui';
-    const no = isAr ? 'Ù„Ø§' : isEn ? 'No' : 'Non';
+    const yes = isAr ? 'نعم' : isEn ? 'Yes' : 'Oui';
+    const no = isAr ? 'لا' : isEn ? 'No' : 'Non';
     const labels = {
-        keep: isAr ? 'Ø¥Ø¨Ù‚Ø§Ø¡' : isEn ? 'Keep' : 'Garder',
-        improve: isAr ? 'ØªØ­Ø³ÙŠÙ†' : isEn ? 'Improve' : 'AmÃ©liorer',
-        move: isAr ? 'Ù†Ù‚Ù„' : isEn ? 'Move' : 'DÃ©placer',
-        remove: isAr ? 'Ø¯Ù…Ø¬ Ø£Ùˆ Ø­Ø°Ù' : isEn ? 'Remove or merge' : 'Supprimer ou fusionner',
-        add: isAr ? 'Ø¥Ø¶Ø§ÙØ©' : isEn ? 'Add' : 'Ajouter',
-        high: isAr ? 'Ø¹Ø§Ù„ÙŠØ©' : isEn ? 'High' : 'Haute',
-        medium: isAr ? 'Ù…ØªÙˆØ³Ø·Ø©' : isEn ? 'Medium' : 'Moyenne',
-        low: isAr ? 'Ù…Ù†Ø®ÙØ¶Ø©' : isEn ? 'Low' : 'Basse'
+        keep: isAr ? 'إبقاء' : isEn ? 'Keep' : 'Garder',
+        improve: isAr ? 'تحسين' : isEn ? 'Improve' : 'Améliorer',
+        move: isAr ? 'نقل' : isEn ? 'Move' : 'Déplacer',
+        remove: isAr ? 'دمج أو حذف' : isEn ? 'Remove or merge' : 'Supprimer ou fusionner',
+        add: isAr ? 'إضافة' : isEn ? 'Add' : 'Ajouter',
+        high: isAr ? 'عالية' : isEn ? 'High' : 'Haute',
+        medium: isAr ? 'متوسطة' : isEn ? 'Medium' : 'Moyenne',
+        low: isAr ? 'منخفضة' : isEn ? 'Low' : 'Basse'
     };
 
     const presentTypes = new Set((sectionsDetailed || []).map(s => String(s.type || '').toUpperCase()));
@@ -1498,96 +1498,96 @@ function buildFunnelSectionSurgeryModel({
     const priceConfirmed = getConfirmedFunnelPrice(priceIntel) || detectedPrice || null;
     const trust = scrape?.trustSignals || {};
     const hasReviews = Boolean(trust.hasReviews || socialProofs.length);
-    const hasGuarantee = Boolean(trust.hasMoneyBackGuarantee || trust.hasGuarantee || /garantie|warranty|refund|remboursement|Ø¶Ù…Ø§Ù†/.test(text));
-    const hasDelivery = Boolean(trust.hasCOD || /livraison|shipping|delivery|retour|return|stock|ØªÙˆØµÙŠÙ„/.test(text));
+    const hasGuarantee = Boolean(trust.hasMoneyBackGuarantee || trust.hasGuarantee || /garantie|warranty|refund|remboursement|ضمان/.test(text));
+    const hasDelivery = Boolean(trust.hasCOD || /livraison|shipping|delivery|retour|return|stock|توصيل/.test(text));
     const hasFAQ = presentTypes.has('FAQ') || Boolean(scrape?.sections?.hasFAQ);
     const hasCTA = ctaList.length > 0 || presentTypes.has('CTA');
     const hasPrice = Boolean(priceConfirmed || presentTypes.has('PRICING') || scrape?.sections?.hasPricing);
-    const hasHero = presentTypes.has('HERO') || Boolean(h1Main && h1Main !== 'Non dÃ©tectÃ©');
+    const hasHero = presentTypes.has('HERO') || Boolean(h1Main && h1Main !== 'Non détecté');
     const hasImages = Number(imagesCount) > 0;
     const hasForm = presentTypes.has('FORM') || Boolean(phones.length || emails.length || hasWhatsApp);
-    const hasLegal = Boolean(trust.hasLegalPages || /mentions lÃ©gales|privacy|conditions|terms|Ø³ÙŠØ§Ø³Ø©/.test(text));
+    const hasLegal = Boolean(trust.hasLegalPages || /mentions légales|privacy|conditions|terms|سياسة/.test(text));
     const productWords = offerType === 'ecommerce';
 
-    const evidence = value => value || (isAr ? 'ØºÙŠØ± Ù…Ø¤ÙƒØ¯ ÙÙŠ Ø§Ù„ØµÙØ­Ø§Øª Ø§Ù„Ù…ØªØ§Ø­Ø©' : isEn ? 'Not confirmed in accessible pages' : 'Non confirmÃ© dans les pages accessibles');
+    const evidence = value => value || (isAr ? 'غير مؤكد في الصفحات المتاحة' : isEn ? 'Not confirmed in accessible pages' : 'Non confirmé dans les pages accessibles');
     const actionFor = (section, present) => {
         const ecommerce = {
-            'Livraison': isAr ? 'Ø§Ø¹Ø±Ø¶ dÃ©lai, coÃ»t, zones couvertes et conditions de retour prÃ¨s du prix.' : isEn ? 'Show delivery time, cost, coverage and returns near the price.' : 'Afficher dÃ©lai, coÃ»t, zones couvertes et retours prÃ¨s du prix.',
-            'Garantie': isAr ? 'Ø£Ø¶Ù Ø¶Ù…Ø§Ù†Ø§ ÙˆØ§Ø¶Ø­Ø§ Ù…Ø¹ Ù…Ø¯Ø© ÙˆØ´Ø±ÙˆØ· Ù‚ØµÙŠØ±Ø© Ù‚Ø¨Ù„ CTA.' : isEn ? 'Add a clear guarantee with duration and conditions before the CTA.' : 'Ajouter une garantie claire avec durÃ©e et conditions avant le CTA.',
-            'Avis clients': isAr ? 'Ø£Ø¶Ù 3 avis vÃ©rifiables avec photo ou source.' : isEn ? 'Add 3 verifiable reviews with photo or source.' : 'Ajouter 3 avis vÃ©rifiables avec photo ou source.',
-            'FAQ': isAr ? 'Ø£Ø¬Ø¨ Ø¹Ù† Ø§Ù„Ø³Ø¹Ø±ØŒ livraison, retours, usage et sÃ©curitÃ© avant achat.' : isEn ? 'Answer price, delivery, returns, usage and safety before purchase.' : 'RÃ©pondre au prix, livraison, retours, usage et sÃ©curitÃ© avant achat.'
+            'Livraison': isAr ? 'اعرض délai, coût, zones couvertes et conditions de retour près du prix.' : isEn ? 'Show delivery time, cost, coverage and returns near the price.' : 'Afficher délai, coût, zones couvertes et retours près du prix.',
+            'Garantie': isAr ? 'أضف ضمانا واضحا مع مدة وشروط قصيرة قبل CTA.' : isEn ? 'Add a clear guarantee with duration and conditions before the CTA.' : 'Ajouter une garantie claire avec durée et conditions avant le CTA.',
+            'Avis clients': isAr ? 'أضف 3 avis vérifiables avec photo ou source.' : isEn ? 'Add 3 verifiable reviews with photo or source.' : 'Ajouter 3 avis vérifiables avec photo ou source.',
+            'FAQ': isAr ? 'أجب عن السعر، livraison, retours, usage et sécurité avant achat.' : isEn ? 'Answer price, delivery, returns, usage and safety before purchase.' : 'Répondre au prix, livraison, retours, usage et sécurité avant achat.'
         };
         const service = {
-            'Livraison': isAr ? 'Ø§Ø³ØªØ¨Ø¯Ù„Ù‡Ø§ Ø¨ÙˆØ¶ÙˆØ­ livrables, dÃ©lais, rÃ©visions et accompagnement.' : isEn ? 'Replace with clear deliverables, timelines, revisions and support.' : 'Remplacer par livrables, dÃ©lais, rÃ©visions et accompagnement clairs.',
-            'Garantie': isAr ? 'Ø£Ø¶Ù conditions de rÃ©vision ou satisfaction clairement formulÃ©es.' : isEn ? 'Add clear revision or satisfaction conditions.' : 'Ajouter des conditions de rÃ©vision ou satisfaction claires.',
-            'Avis clients': isAr ? 'Ø£Ø¶Ù cas clients vÃ©rifiables et rÃ©sultats obtenus.' : isEn ? 'Add verifiable case studies and outcomes.' : 'Ajouter cas clients vÃ©rifiables et rÃ©sultats obtenus.',
-            'FAQ': isAr ? 'Traite budget, dÃ©lais, livrables, paiement et objections.' : isEn ? 'Handle budget, timelines, deliverables, payment and objections.' : 'Traiter budget, dÃ©lais, livrables, paiement et objections.'
+            'Livraison': isAr ? 'استبدلها بوضوح livrables, délais, révisions et accompagnement.' : isEn ? 'Replace with clear deliverables, timelines, revisions and support.' : 'Remplacer par livrables, délais, révisions et accompagnement clairs.',
+            'Garantie': isAr ? 'أضف conditions de révision ou satisfaction clairement formulées.' : isEn ? 'Add clear revision or satisfaction conditions.' : 'Ajouter des conditions de révision ou satisfaction claires.',
+            'Avis clients': isAr ? 'أضف cas clients vérifiables et résultats obtenus.' : isEn ? 'Add verifiable case studies and outcomes.' : 'Ajouter cas clients vérifiables et résultats obtenus.',
+            'FAQ': isAr ? 'Traite budget, délais, livrables, paiement et objections.' : isEn ? 'Handle budget, timelines, deliverables, payment and objections.' : 'Traiter budget, délais, livrables, paiement et objections.'
         };
         const concrete = {
-            'Hero': isEn ? 'Build a first screen with one clear promise, one visual and one primary CTA.' : isAr ? 'Ø£Ù†Ø´Ø¦ Ø´Ø§Ø´Ø© Ø£ÙˆÙ„Ù‰ Ø¨ÙˆØ¹Ø¯ ÙˆØ§Ø¶Ø­ ÙˆØµÙˆØ±Ø© ÙˆØ²Ø± Ø¥Ø¬Ø±Ø§Ø¡ Ø±Ø¦ÙŠØ³ÙŠ.' : 'Construire un premier Ã©cran avec une promesse claire, un visuel et un CTA principal.',
-            'H1': isEn ? 'Write one outcome-led H1 that names the offer and the benefit.' : isAr ? 'Ø§ÙƒØªØ¨ Ø¹Ù†ÙˆØ§Ù† H1 ÙŠÙˆØ¶Ø­ Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ù†ØªÙŠØ¬Ø© Ù„Ù„Ø¹Ù…ÙŠÙ„.' : 'Ã‰crire un H1 orientÃ© rÃ©sultat qui nomme clairement lâ€™offre et le bÃ©nÃ©fice.',
-            'Sous-titre': isEn ? 'Add a subtitle explaining for whom, what is included and why it matters.' : isAr ? 'Ø£Ø¶Ù Ø¹Ù†ÙˆØ§Ù†Ø§Ù‹ ÙØ±Ø¹ÙŠØ§Ù‹ ÙŠØ´Ø±Ø­ Ø§Ù„Ø¬Ù…Ù‡ÙˆØ± ÙˆØ§Ù„Ù…Ø­ØªÙˆÙ‰ ÙˆØ§Ù„ÙØ§Ø¦Ø¯Ø©.' : 'Ajouter un sous-titre prÃ©cisant pour qui, ce qui est inclus et pourquoi cela compte.',
-            'CTA principal': isEn ? 'Add one visible action CTA directly below the main promise.' : isAr ? 'Ø£Ø¶Ù Ø²Ø± Ø¥Ø¬Ø±Ø§Ø¡ ÙˆØ§Ø¶Ø­Ø§Ù‹ Ù…Ø¨Ø§Ø´Ø±Ø© ØªØ­Øª Ø§Ù„ÙˆØ¹Ø¯ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ.' : 'Placer un CTA dâ€™action visible directement sous la promesse principale.',
-            'BÃ©nÃ©fices': isEn ? 'Turn the three strongest outcomes into short, concrete benefit cards.' : isAr ? 'Ø­ÙˆÙ‘Ù„ Ø£Ù‡Ù… Ø«Ù„Ø§Ø« Ù†ØªØ§Ø¦Ø¬ Ø¥Ù„Ù‰ Ø¨Ø·Ø§Ù‚Ø§Øª ÙÙˆØ§Ø¦Ø¯ Ù‚ØµÙŠØ±Ø© ÙˆÙˆØ§Ø¶Ø­Ø©.' : 'Transformer les trois rÃ©sultats les plus forts en bÃ©nÃ©fices courts et concrets.',
-            'Offre / bundle / pack': isEn ? 'Show exactly what is included, the format, price and buying path in one offer block.' : isAr ? 'Ø§Ø¹Ø±Ø¶ Ø§Ù„Ù…Ø­ØªÙˆÙ‰ ÙˆØ§Ù„Ø´ÙƒÙ„ ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆÙ…Ø³Ø§Ø± Ø§Ù„Ø´Ø±Ø§Ø¡ ÙÙŠ ÙƒØªÙ„Ø© Ø¹Ø±Ø¶ ÙˆØ§Ø­Ø¯Ø©.' : 'Afficher dans un mÃªme bloc ce qui est inclus, le format, le prix et le parcours dâ€™achat.'
+            'Hero': isEn ? 'Build a first screen with one clear promise, one visual and one primary CTA.' : isAr ? 'أنشئ شاشة أولى بوعد واضح وصورة وزر إجراء رئيسي.' : 'Construire un premier écran avec une promesse claire, un visuel et un CTA principal.',
+            'H1': isEn ? 'Write one outcome-led H1 that names the offer and the benefit.' : isAr ? 'اكتب عنوان H1 يوضح العرض والنتيجة للعميل.' : 'Écrire un H1 orienté résultat qui nomme clairement l’offre et le bénéfice.',
+            'Sous-titre': isEn ? 'Add a subtitle explaining for whom, what is included and why it matters.' : isAr ? 'أضف عنواناً فرعياً يشرح الجمهور والمحتوى والفائدة.' : 'Ajouter un sous-titre précisant pour qui, ce qui est inclus et pourquoi cela compte.',
+            'CTA principal': isEn ? 'Add one visible action CTA directly below the main promise.' : isAr ? 'أضف زر إجراء واضحاً مباشرة تحت الوعد الرئيسي.' : 'Placer un CTA d’action visible directement sous la promesse principale.',
+            'Bénéfices': isEn ? 'Turn the three strongest outcomes into short, concrete benefit cards.' : isAr ? 'حوّل أهم ثلاث نتائج إلى بطاقات فوائد قصيرة وواضحة.' : 'Transformer les trois résultats les plus forts en bénéfices courts et concrets.',
+            'Offre / bundle / pack': isEn ? 'Show exactly what is included, the format, price and buying path in one offer block.' : isAr ? 'اعرض المحتوى والشكل والسعر ومسار الشراء في كتلة عرض واحدة.' : 'Afficher dans un même bloc ce qui est inclus, le format, le prix et le parcours d’achat.'
         };
         const map = productWords ? ecommerce : service;
         return concrete[section] || map[section] || (present
-            ? (isAr ? 'Ø­Ø§ÙØ¸ Ø¹Ù„Ù‰ Ø§Ù„Ù‚Ø³Ù… ÙˆØ§Ø¬Ø¹Ù„Ù‡ Ø£Ù‚Ø±Ø¨ Ø¥Ù„Ù‰ CTA Ø¥Ø°Ø§ ÙƒØ§Ù† ÙŠØ¤Ø«Ø± Ø¹Ù„Ù‰ Ø§Ù„Ù‚Ø±Ø§Ø±.' : isEn ? 'Keep the section and bring it closer to the CTA if it affects the decision.' : 'Garder la section et la rapprocher du CTA si elle influence la dÃ©cision.')
-            : (isAr ? 'Ø£Ø¶Ù Ù‡Ø°Ø§ Ø§Ù„Ù‚Ø³Ù… avec contenu concret et preuve visible.' : isEn ? 'Add this section with concrete content and visible proof.' : 'Ajouter cette section avec contenu concret et preuve visible.'));
+            ? (isAr ? 'حافظ على القسم واجعله أقرب إلى CTA إذا كان يؤثر على القرار.' : isEn ? 'Keep the section and bring it closer to the CTA if it affects the decision.' : 'Garder la section et la rapprocher du CTA si elle influence la décision.')
+            : (isAr ? 'أضف هذا القسم avec contenu concret et preuve visible.' : isEn ? 'Add this section with concrete content and visible proof.' : 'Ajouter cette section avec contenu concret et preuve visible.'));
     };
 
     const catalog = [
-        { name: 'Header / navigation', present: true, critical: true, evidence: 'URL analysÃ©e et navigation chargÃ©e' },
+        { name: 'Header / navigation', present: true, critical: true, evidence: 'URL analysée et navigation chargée' },
         { name: 'Hero', present: hasHero, critical: true, evidence: h1Main },
         { name: 'H1', present: Boolean(h1Main && !/non|na|undefined/i.test(h1Main)), critical: true, evidence: h1Main },
         { name: 'Sous-titre', present: h2List.length > 0, critical: true, evidence: h2List[0] },
         { name: 'CTA principal', present: hasCTA, critical: true, evidence: ctaList[0] },
         { name: 'CTA secondaire', present: ctaList.length > 1, critical: false, evidence: ctaList[1] },
-        { name: 'Image produit', present: hasImages, critical: offerType === 'ecommerce', evidence: `${imagesCount} image(s) dÃ©tectÃ©e(s)` },
-        { name: 'VidÃ©o produit', present: /video|youtube|vimeo|mp4/.test(text), critical: false, evidence: 'Signal vidÃ©o dÃ©tectÃ©' },
-        { name: 'Galerie', present: imagesCount >= 4, critical: offerType === 'ecommerce', evidence: `${imagesCount} image(s) dÃ©tectÃ©e(s)` },
-        { name: 'BÃ©nÃ©fices', present: presentTypes.has('BENEFITS') || h2List.length >= 2, critical: true, evidence: h2List.slice(0, 2).join(' | ') },
-        { name: 'CaractÃ©ristiques', present: presentTypes.has('FEATURES'), critical: false, evidence: 'Section FEATURES dÃ©tectÃ©e' },
+        { name: 'Image produit', present: hasImages, critical: offerType === 'ecommerce', evidence: `${imagesCount} image(s) détectée(s)` },
+        { name: 'Vidéo produit', present: /video|youtube|vimeo|mp4/.test(text), critical: false, evidence: 'Signal vidéo détecté' },
+        { name: 'Galerie', present: imagesCount >= 4, critical: offerType === 'ecommerce', evidence: `${imagesCount} image(s) détectée(s)` },
+        { name: 'Bénéfices', present: presentTypes.has('BENEFITS') || h2List.length >= 2, critical: true, evidence: h2List.slice(0, 2).join(' | ') },
+        { name: 'Caractéristiques', present: presentTypes.has('FEATURES'), critical: false, evidence: 'Section FEATURES détectée' },
         { name: 'Prix', present: hasPrice, critical: true, evidence: priceConfirmed ? `${priceConfirmed} ${currency || ''}` : priceIntel.priceExtractionReason },
-        { name: 'Offre / bundle / pack', present: presentTypes.has('OFFER') || /pack|bundle|offre|formule|bonus/.test(text), critical: true, evidence: 'Signal offre dÃ©tectÃ©' },
-        { name: 'Livraison', present: hasDelivery, critical: offerType === 'ecommerce', evidence: 'Signal livraison/retour dÃ©tectÃ©' },
-        { name: 'Garantie', present: hasGuarantee, critical: true, evidence: 'Signal garantie dÃ©tectÃ©' },
-        { name: 'Retours', present: /retour|return|refund|remboursement/.test(text), critical: offerType === 'ecommerce', evidence: 'Signal retour/remboursement dÃ©tectÃ©' },
+        { name: 'Offre / bundle / pack', present: presentTypes.has('OFFER') || /pack|bundle|offre|formule|bonus/.test(text), critical: true, evidence: 'Signal offre détecté' },
+        { name: 'Livraison', present: hasDelivery, critical: offerType === 'ecommerce', evidence: 'Signal livraison/retour détecté' },
+        { name: 'Garantie', present: hasGuarantee, critical: true, evidence: 'Signal garantie détecté' },
+        { name: 'Retours', present: /retour|return|refund|remboursement/.test(text), critical: offerType === 'ecommerce', evidence: 'Signal retour/remboursement détecté' },
         { name: 'Avis clients', present: hasReviews, critical: true, evidence: `${socialProofs.length} preuve(s) sociale(s)` },
-        { name: 'TÃ©moignages', present: presentTypes.has('SOCIAL_PROOF'), critical: true, evidence: 'SOCIAL_PROOF dÃ©tectÃ©' },
-        { name: 'FAQ', present: hasFAQ, critical: true, evidence: 'FAQ dÃ©tectÃ©e' },
-        { name: 'Badges de confiance', present: presentTypes.has('TRUST') || Boolean(trust.hasPaymentLogos), critical: true, evidence: 'Signal trust dÃ©tectÃ©' },
-        { name: 'Paiement sÃ©curisÃ©', present: Boolean(trust.hasPaymentLogos || presentTypes.has('PAYMENT') || /paiement sÃ©curisÃ©|secure payment|payment methods|visa|mastercard|Ø§Ù„Ø¯ÙØ¹ Ø§Ù„Ø¢Ù…Ù†/.test(text)), critical: offerType === 'ecommerce', evidence: trust.hasPaymentLogos ? 'Logos de paiement observÃ©s' : 'Signal de paiement observÃ©' },
+        { name: 'Témoignages', present: presentTypes.has('SOCIAL_PROOF'), critical: true, evidence: 'SOCIAL_PROOF détecté' },
+        { name: 'FAQ', present: hasFAQ, critical: true, evidence: 'FAQ détectée' },
+        { name: 'Badges de confiance', present: presentTypes.has('TRUST') || Boolean(trust.hasPaymentLogos), critical: true, evidence: 'Signal trust détecté' },
+        { name: 'Paiement sécurisé', present: Boolean(trust.hasPaymentLogos || presentTypes.has('PAYMENT') || /paiement sécurisé|secure payment|payment methods|visa|mastercard|الدفع الآمن/.test(text)), critical: offerType === 'ecommerce', evidence: trust.hasPaymentLogos ? 'Logos de paiement observés' : 'Signal de paiement observé' },
         { name: 'WhatsApp / contact', present: hasForm, critical: true, evidence: [hasWhatsApp ? 'WhatsApp' : null, phones[0], emails[0]].filter(Boolean).join(' | ') },
-        { name: 'Formulaire', present: presentTypes.has('FORM'), critical: offerType !== 'ecommerce', evidence: 'FORM dÃ©tectÃ©' },
-        { name: 'Checkout / panier', present: presentTypes.has('CHECKOUT') || /checkout|panier|cart/.test(text), critical: offerType === 'ecommerce', evidence: 'Signal panier/checkout dÃ©tectÃ©' },
-        { name: 'Comparaison', present: presentTypes.has('COMPARISON'), critical: false, evidence: 'COMPARISON dÃ©tectÃ©e' },
-        { name: 'Urgence / raretÃ©', present: /stock|limited|limitÃ©|rare|urgence|aujourd/.test(text), critical: false, evidence: 'Signal urgence/raretÃ© dÃ©tectÃ©' },
-        { name: 'Bonus', present: /bonus|cadeau|free|gratuit/.test(text), critical: false, evidence: 'Signal bonus dÃ©tectÃ©' },
-        { name: 'Footer', present: presentTypes.has('FOOTER') || hasLegal, critical: true, evidence: hasLegal ? 'Pages lÃ©gales dÃ©tectÃ©es' : 'Footer dÃ©tectÃ©' },
-        { name: 'Pages lÃ©gales', present: hasLegal, critical: offerType === 'ecommerce', evidence: 'Signal lÃ©gal dÃ©tectÃ©' },
-        { name: 'RÃ©seaux sociaux', present: /instagram|facebook|tiktok|linkedin|youtube/.test(text), critical: false, evidence: 'Signal rÃ©seau social dÃ©tectÃ©' },
-        { name: 'Comment Ã§a marche', present: presentTypes.has('PROCESS'), critical: offerType !== 'ecommerce', evidence: 'PROCESS dÃ©tectÃ©' },
-        { name: 'Objections', present: presentTypes.has('OBJECTIONS') || hasFAQ, critical: true, evidence: hasFAQ ? 'FAQ dÃ©tectÃ©e' : 'OBJECTIONS dÃ©tectÃ©es' },
-        { name: 'RÃ©sultats attendus', present: presentTypes.has('BENEFITS') || presentTypes.has('CASE_STUDIES'), critical: true, evidence: 'BENEFITS/CASE_STUDIES dÃ©tectÃ©' }
+        { name: 'Formulaire', present: presentTypes.has('FORM'), critical: offerType !== 'ecommerce', evidence: 'FORM détecté' },
+        { name: 'Checkout / panier', present: presentTypes.has('CHECKOUT') || /checkout|panier|cart/.test(text), critical: offerType === 'ecommerce', evidence: 'Signal panier/checkout détecté' },
+        { name: 'Comparaison', present: presentTypes.has('COMPARISON'), critical: false, evidence: 'COMPARISON détectée' },
+        { name: 'Urgence / rareté', present: /stock|limited|limité|rare|urgence|aujourd/.test(text), critical: false, evidence: 'Signal urgence/rareté détecté' },
+        { name: 'Bonus', present: /bonus|cadeau|free|gratuit/.test(text), critical: false, evidence: 'Signal bonus détecté' },
+        { name: 'Footer', present: presentTypes.has('FOOTER') || hasLegal, critical: true, evidence: hasLegal ? 'Pages légales détectées' : 'Footer détecté' },
+        { name: 'Pages légales', present: hasLegal, critical: offerType === 'ecommerce', evidence: 'Signal légal détecté' },
+        { name: 'Réseaux sociaux', present: /instagram|facebook|tiktok|linkedin|youtube/.test(text), critical: false, evidence: 'Signal réseau social détecté' },
+        { name: 'Comment ça marche', present: presentTypes.has('PROCESS'), critical: offerType !== 'ecommerce', evidence: 'PROCESS détecté' },
+        { name: 'Objections', present: presentTypes.has('OBJECTIONS') || hasFAQ, critical: true, evidence: hasFAQ ? 'FAQ détectée' : 'OBJECTIONS détectées' },
+        { name: 'Résultats attendus', present: presentTypes.has('BENEFITS') || presentTypes.has('CASE_STUDIES'), critical: true, evidence: 'BENEFITS/CASE_STUDIES détecté' }
     ];
 
     const evidenceTypeByName = {
         'Hero': 'HERO', 'H1': 'HERO', 'Sous-titre': 'HERO',
         'CTA principal': 'CTA', 'CTA secondaire': 'CTA',
-        'Image produit': 'GALLERY', 'VidÃ©o produit': 'DEMO', 'Galerie': 'GALLERY',
-        'BÃ©nÃ©fices': 'BENEFITS', 'CaractÃ©ristiques': 'FEATURES',
+        'Image produit': 'GALLERY', 'Vidéo produit': 'DEMO', 'Galerie': 'GALLERY',
+        'Bénéfices': 'BENEFITS', 'Caractéristiques': 'FEATURES',
         'Prix': 'PRICING', 'Offre / bundle / pack': 'OFFER',
         'Livraison': 'DELIVERY', 'Garantie': 'GUARANTEE', 'Retours': 'RETURNS',
-        'Avis clients': 'SOCIAL_PROOF', 'TÃ©moignages': 'SOCIAL_PROOF',
-        'FAQ': 'FAQ', 'Badges de confiance': 'TRUST', 'Paiement sÃ©curisÃ©': 'TRUST',
+        'Avis clients': 'SOCIAL_PROOF', 'Témoignages': 'SOCIAL_PROOF',
+        'FAQ': 'FAQ', 'Badges de confiance': 'TRUST', 'Paiement sécurisé': 'TRUST',
         'WhatsApp / contact': 'CONTACT', 'Formulaire': 'FORM',
         'Checkout / panier': 'CHECKOUT', 'Comparaison': 'COMPARISON',
-        'Urgence / raretÃ©': 'URGENCY', 'Bonus': 'BONUS',
-        'Footer': 'FOOTER', 'Pages lÃ©gales': 'LEGAL', 'RÃ©seaux sociaux': 'SOCIAL',
-        'Comment Ã§a marche': 'PROCESS', 'Objections': 'OBJECTIONS',
-        'RÃ©sultats attendus': 'BENEFITS'
+        'Urgence / rareté': 'URGENCY', 'Bonus': 'BONUS',
+        'Footer': 'FOOTER', 'Pages légales': 'LEGAL', 'Réseaux sociaux': 'SOCIAL',
+        'Comment ça marche': 'PROCESS', 'Objections': 'OBJECTIONS',
+        'Résultats attendus': 'BENEFITS'
     };
 
     const rows = catalog.map(item => {
@@ -1604,11 +1604,11 @@ function buildFunnelSectionSurgeryModel({
                         : null;
                     return observed?.detectedText || observed?.evidence?.[0] || item.evidence;
                 })())
-                : (isAr ? 'ØºÙŠØ± Ù…Ø±ØµÙˆØ¯ ÙÙŠ Ø§Ù„ØµÙØ­Ø§Øª Ø§Ù„Ù…ØªØ§Ø­Ø©' : isEn ? 'Not detected in accessible pages' : 'Non dÃ©tectÃ© dans les pages accessibles'),
+                : (isAr ? 'غير مرصود في الصفحات المتاحة' : isEn ? 'Not detected in accessible pages' : 'Non détecté dans les pages accessibles'),
             problem: item.present
                 ? ''
-                : (isAr ? 'ØºÙŠØ§Ø¨Ù‡ ÙŠØªØ±Ùƒ Ø³Ø¤Ø§Ù„Ø§ Ù‚Ø¨Ù„ Ø§Ù„Ù‚Ø±Ø§Ø±.' : isEn ? 'Its absence leaves an unanswered question before conversion.' : 'Son absence laisse une question avant la conversion.'),
-            conversionImpact: item.critical ? (isAr ? 'ØªØ£Ø«ÙŠØ± Ù…Ø¨Ø§Ø´Ø± Ø¹Ù„Ù‰ Ø§Ù„Ù‚Ø±Ø§Ø±' : isEn ? 'Direct decision impact' : 'Impact direct sur la dÃ©cision') : (isAr ? 'ØªØ£Ø«ÙŠØ± Ù…ØªÙˆØ³Ø· Ø¹Ù„Ù‰ Ø§Ù„ÙÙ‡Ù…' : isEn ? 'Medium clarity impact' : 'Impact moyen sur la comprÃ©hension'),
+                : (isAr ? 'غيابه يترك سؤالا قبل القرار.' : isEn ? 'Its absence leaves an unanswered question before conversion.' : 'Son absence laisse une question avant la conversion.'),
+            conversionImpact: item.critical ? (isAr ? 'تأثير مباشر على القرار' : isEn ? 'Direct decision impact' : 'Impact direct sur la décision') : (isAr ? 'تأثير متوسط على الفهم' : isEn ? 'Medium clarity impact' : 'Impact moyen sur la compréhension'),
             action: actionFor(item.name, item.present),
             priority: item.critical ? labels.high : labels.medium,
             confidence: item.present ? 'HIGH' : 'MEDIUM'
@@ -1617,7 +1617,7 @@ function buildFunnelSectionSurgeryModel({
 
     const keepSections = rows.filter(r => r.decision === labels.keep).slice(0, 6);
     const improveSections = rows.filter(r => r.decision === labels.improve).slice(0, 8);
-    const missingSections = rows.filter(r => r.decision === labels.add && /Haute|High|Ø¹Ø§Ù„ÙŠØ©/.test(r.priority)).slice(0, 8);
+    const missingSections = rows.filter(r => r.decision === labels.add && /Haute|High|عالية/.test(r.priority)).slice(0, 8);
 
     const sectionPlacement = type => {
         const section = (sectionsDetailed || []).find(item => String(item?.type || '').toUpperCase() === type);
@@ -1634,69 +1634,69 @@ function buildFunnelSectionSurgeryModel({
     const guaranteePlacement = sectionPlacement('GUARANTEE');
     const faqPlacement = sectionPlacement('FAQ');
     const moveSections = [
-        hasReviews && isLatePlacement(reviewPlacement) ? { section: 'Avis clients', currentPosition: String(reviewPlacement), recommendedPosition: 'Juste aprÃ¨s offre/prix', reason: isEn ? 'Reviews reduce hesitation before the buying decision.' : isAr ? 'Ø§Ù„Ø¢Ø±Ø§Ø¡ ØªÙ‚Ù„Ù„ Ø§Ù„ØªØ±Ø¯Ø¯ Ù‚Ø¨Ù„ Ù‚Ø±Ø§Ø± Ø§Ù„Ø´Ø±Ø§Ø¡.' : 'Les avis rÃ©duisent lâ€™hÃ©sitation avant la dÃ©cision.', impact: 'MEDIUM', confidence: 'HIGH', decisionSource: 'observed-section-position' } : null,
-        hasGuarantee && isLatePlacement(guaranteePlacement) ? { section: 'Garantie', currentPosition: String(guaranteePlacement), recommendedPosition: 'PrÃ¨s du prix et du CTA', reason: isEn ? 'Guarantee lowers perceived risk.' : isAr ? 'Ø§Ù„Ø¶Ù…Ø§Ù† ÙŠÙ‚Ù„Ù„ Ø§Ù„Ù…Ø®Ø§Ø·Ø±Ø© Ø§Ù„Ù…ØªØµÙˆØ±Ø©.' : 'La garantie rÃ©duit le risque perÃ§u.', impact: 'HIGH', confidence: 'HIGH', decisionSource: 'observed-section-position' } : null,
-        hasFAQ && isLatePlacement(faqPlacement) ? { section: 'FAQ', currentPosition: String(faqPlacement), recommendedPosition: 'Avant le CTA final', reason: isEn ? 'FAQ answers objections before action.' : isAr ? 'Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø§Ø¦Ø¹Ø© ØªØ¬ÙŠØ¨ Ø¹Ù† Ø§Ù„Ø§Ø¹ØªØ±Ø§Ø¶Ø§Øª Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡.' : 'La FAQ traite les objections avant lâ€™action.', impact: 'MEDIUM', confidence: 'HIGH', decisionSource: 'observed-section-position' } : null
+        hasReviews && isLatePlacement(reviewPlacement) ? { section: 'Avis clients', currentPosition: String(reviewPlacement), recommendedPosition: 'Juste après offre/prix', reason: isEn ? 'Reviews reduce hesitation before the buying decision.' : isAr ? 'الآراء تقلل التردد قبل قرار الشراء.' : 'Les avis réduisent l’hésitation avant la décision.', impact: 'MEDIUM', confidence: 'HIGH', decisionSource: 'observed-section-position' } : null,
+        hasGuarantee && isLatePlacement(guaranteePlacement) ? { section: 'Garantie', currentPosition: String(guaranteePlacement), recommendedPosition: 'Près du prix et du CTA', reason: isEn ? 'Guarantee lowers perceived risk.' : isAr ? 'الضمان يقلل المخاطرة المتصورة.' : 'La garantie réduit le risque perçu.', impact: 'HIGH', confidence: 'HIGH', decisionSource: 'observed-section-position' } : null,
+        hasFAQ && isLatePlacement(faqPlacement) ? { section: 'FAQ', currentPosition: String(faqPlacement), recommendedPosition: 'Avant le CTA final', reason: isEn ? 'FAQ answers objections before action.' : isAr ? 'الأسئلة الشائعة تجيب عن الاعتراضات قبل الإجراء.' : 'La FAQ traite les objections avant l’action.', impact: 'MEDIUM', confidence: 'HIGH', decisionSource: 'observed-section-position' } : null
     ].filter(Boolean);
 
     const removeOrMergeSections = [
         wordCount > 1800 && ctaList.length < 2 ? {
             section: 'Texte long',
-            reason: isEn ? 'Long content with few calls to action slows the decision.' : isAr ? 'Ø§Ù„Ù†Øµ Ø§Ù„Ø·ÙˆÙŠÙ„ Ù…Ø¹ CTA Ù‚Ù„ÙŠÙ„ ÙŠØ¨Ø·Ø¦ Ø§Ù„Ù‚Ø±Ø§Ø±.' : 'Un texte long avec peu de CTA ralentit la dÃ©cision.',
-            action: isEn ? 'Merge into 5 benefit bullets and repeat the CTA.' : isAr ? 'Ø§Ø¯Ù…Ø¬Ù‡ ÙÙŠ 5 ÙÙˆØ§Ø¦Ø¯ ÙˆÙƒØ±Ø± CTA.' : 'Fusionner en 5 bÃ©nÃ©fices et rÃ©pÃ©ter le CTA.',
+            reason: isEn ? 'Long content with few calls to action slows the decision.' : isAr ? 'النص الطويل مع CTA قليل يبطئ القرار.' : 'Un texte long avec peu de CTA ralentit la décision.',
+            action: isEn ? 'Merge into 5 benefit bullets and repeat the CTA.' : isAr ? 'ادمجه في 5 فوائد وكرر CTA.' : 'Fusionner en 5 bénéfices et répéter le CTA.',
             priority: labels.medium,
             confidence: 'MEDIUM'
         } : null,
         ctaList.length > 6 ? {
-            section: 'CTA dispersÃ©s',
-            reason: isEn ? 'Too many CTA variants can dilute action.' : isAr ? 'ÙƒØ«Ø±Ø© ØµÙŠØº CTA ØªØ¶Ø¹Ù ÙˆØ¶ÙˆØ­ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡.' : 'Trop de variantes de CTA diluent lâ€™action.',
-            action: isEn ? 'Keep one primary CTA and one secondary CTA.' : isAr ? 'Ø§Ø­ØªÙØ¸ Ø¨Ø²Ø± Ø±Ø¦ÙŠØ³ÙŠ ÙˆØ²Ø± Ø«Ø§Ù†ÙˆÙŠ ÙÙ‚Ø·.' : 'Garder un CTA principal et un CTA secondaire.',
+            section: 'CTA dispersés',
+            reason: isEn ? 'Too many CTA variants can dilute action.' : isAr ? 'كثرة صيغ CTA تضعف وضوح الإجراء.' : 'Trop de variantes de CTA diluent l’action.',
+            action: isEn ? 'Keep one primary CTA and one secondary CTA.' : isAr ? 'احتفظ بزر رئيسي وزر ثانوي فقط.' : 'Garder un CTA principal et un CTA secondaire.',
             priority: labels.medium,
             confidence: 'HIGH'
         } : null
     ].filter(Boolean);
 
     const orderByType = {
-        ecommerce: ['Header simple', 'Hero avec produit + promesse + CTA', 'Preuves rapides: livraison, garantie, paiement, avis', 'BÃ©nÃ©fices principaux', 'Images / dÃ©monstration produit', 'Offre + prix + ce que vous recevez', 'Avis clients', 'Livraison + retours + garantie', 'FAQ avant achat', 'CTA final / WhatsApp / achat', 'Footer lÃ©gal'],
-        service: ['Hero avec rÃ©sultat promis', 'ProblÃ¨me client', 'Solution', 'Livrables', 'Cas clients', 'Process', 'Offre / appel', 'FAQ objections', 'CTA final'],
-        saas: ['Hero', 'Cas dâ€™usage', 'DÃ©mo / screenshots', 'BÃ©nÃ©fices', 'FonctionnalitÃ©s', 'Pricing', 'Preuves clients', 'SÃ©curitÃ© / intÃ©grations', 'FAQ', 'CTA final'],
-        formation: ['Hero avec rÃ©sultat attendu', 'Programme', 'Profil formateur', 'Preuves Ã©lÃ¨ves', 'AccÃ¨s et durÃ©e', 'Bonus', 'Garantie', 'FAQ', 'CTA final'],
-        generic: ['Hero clair', 'Preuves rapides', 'BÃ©nÃ©fices', 'Offre', 'Preuves clients', 'FAQ objections', 'CTA final']
+        ecommerce: ['Header simple', 'Hero avec produit + promesse + CTA', 'Preuves rapides: livraison, garantie, paiement, avis', 'Bénéfices principaux', 'Images / démonstration produit', 'Offre + prix + ce que vous recevez', 'Avis clients', 'Livraison + retours + garantie', 'FAQ avant achat', 'CTA final / WhatsApp / achat', 'Footer légal'],
+        service: ['Hero avec résultat promis', 'Problème client', 'Solution', 'Livrables', 'Cas clients', 'Process', 'Offre / appel', 'FAQ objections', 'CTA final'],
+        saas: ['Hero', 'Cas d’usage', 'Démo / screenshots', 'Bénéfices', 'Fonctionnalités', 'Pricing', 'Preuves clients', 'Sécurité / intégrations', 'FAQ', 'CTA final'],
+        formation: ['Hero avec résultat attendu', 'Programme', 'Profil formateur', 'Preuves élèves', 'Accès et durée', 'Bonus', 'Garantie', 'FAQ', 'CTA final'],
+        generic: ['Hero clair', 'Preuves rapides', 'Bénéfices', 'Offre', 'Preuves clients', 'FAQ objections', 'CTA final']
     };
 
     const frictions = [
-        !hasCTA ? ['CTA faible ou absent', 'Aucun CTA exploitable dÃ©tectÃ©', 'Le visiteur ne connaÃ®t pas la prochaine Ã©tape', 'Ajouter un CTA principal visible sous le H1', labels.high, 'HIGH'] : null,
-        !hasPrice ? ['Prix non confirmÃ©', priceIntel.priceExtractionReason || 'Aucun prix fiable', 'La valeur et le risque restent flous', 'Clarifier prix, devise, contenu inclus et garantie', labels.high, 'HIGH'] : null,
-        !hasReviews ? ['Preuve sociale absente', 'Avis/tÃ©moignages non dÃ©tectÃ©s', 'La confiance avant achat reste faible', 'Ajouter 3 preuves vÃ©rifiables prÃ¨s de lâ€™offre', labels.high, 'HIGH'] : null,
-        !hasGuarantee ? ['Garantie peu claire', 'Garantie non dÃ©tectÃ©e', 'Le risque perÃ§u reste Ã©levÃ©', 'Ajouter durÃ©e, conditions et phrase de rÃ©assurance', labels.medium, 'MEDIUM'] : null,
-        offerType === 'ecommerce' && !hasDelivery ? ['Livraison/retours absents', 'DÃ©lai ou retours non dÃ©tectÃ©s', 'Le client hÃ©site avant paiement', 'Ajouter livraison, retours, stock et paiement sÃ©curisÃ©', labels.high, 'HIGH'] : null
+        !hasCTA ? ['CTA faible ou absent', 'Aucun CTA exploitable détecté', 'Le visiteur ne connaît pas la prochaine étape', 'Ajouter un CTA principal visible sous le H1', labels.high, 'HIGH'] : null,
+        !hasPrice ? ['Prix non confirmé', priceIntel.priceExtractionReason || 'Aucun prix fiable', 'La valeur et le risque restent flous', 'Clarifier prix, devise, contenu inclus et garantie', labels.high, 'HIGH'] : null,
+        !hasReviews ? ['Preuve sociale absente', 'Avis/témoignages non détectés', 'La confiance avant achat reste faible', 'Ajouter 3 preuves vérifiables près de l’offre', labels.high, 'HIGH'] : null,
+        !hasGuarantee ? ['Garantie peu claire', 'Garantie non détectée', 'Le risque perçu reste élevé', 'Ajouter durée, conditions et phrase de réassurance', labels.medium, 'MEDIUM'] : null,
+        offerType === 'ecommerce' && !hasDelivery ? ['Livraison/retours absents', 'Délai ou retours non détectés', 'Le client hésite avant paiement', 'Ajouter livraison, retours, stock et paiement sécurisé', labels.high, 'HIGH'] : null
     ].filter(Boolean).slice(0, 5).map(([friction, observedEvidence, impact, correction, priority, confidence]) => ({
         friction, observedEvidence, conversionImpact: impact, correction, priority, confidence
     }));
 
     const immediate = [
         !hasCTA ? 'Ajouter un CTA principal visible sous le H1.' : null,
-        !hasPrice ? 'Clarifier prix, devise et contenu exact de lâ€™offre.' : null,
-        !hasReviews ? 'Ajouter preuves clients ou avis vÃ©rifiables prÃ¨s de lâ€™offre.' : null
+        !hasPrice ? 'Clarifier prix, devise et contenu exact de l’offre.' : null,
+        !hasReviews ? 'Ajouter preuves clients ou avis vérifiables près de l’offre.' : null
     ].filter(Boolean).slice(0, 3);
     const sevenDays = [
-        !hasFAQ ? 'CrÃ©er une FAQ avant achat pour traiter les objections.' : null,
+        !hasFAQ ? 'Créer une FAQ avant achat pour traiter les objections.' : null,
         !hasGuarantee ? 'Ajouter un bloc garantie/risque avec conditions simples.' : null,
-        offerType === 'ecommerce' && !hasDelivery ? 'Ajouter livraison, retours, stock et paiement sÃ©curisÃ©.' : null
+        offerType === 'ecommerce' && !hasDelivery ? 'Ajouter livraison, retours, stock et paiement sécurisé.' : null
     ].filter(Boolean).slice(0, 3);
     const thirtyDays = [
-        offerType === 'saas' ? 'Construire une page pricing claire avec dÃ©mo et cas dâ€™usage.' : null,
-        offerType === 'service' ? 'Publier 2 cas clients vÃ©rifiables avec livrables et dÃ©lais.' : null,
-        offerType === 'ecommerce' ? 'Construire une galerie produit rÃ©elle avec avis, FAQ et preuves de stock.' : null,
+        offerType === 'saas' ? 'Construire une page pricing claire avec démo et cas d’usage.' : null,
+        offerType === 'service' ? 'Publier 2 cas clients vérifiables avec livrables et délais.' : null,
+        offerType === 'ecommerce' ? 'Construire une galerie produit réelle avec avis, FAQ et preuves de stock.' : null,
         'Tester un ordre de page reconstruit autour de preuve, prix et CTA.'
     ].filter(Boolean).slice(0, 3);
 
     const proposedH1 = h1Main && !/non|na|undefined/i.test(h1Main)
         ? h1Main
         : (offerType === 'service'
-            ? 'Obtenez un rÃ©sultat clair, avec un accompagnement transparent.'
+            ? 'Obtenez un résultat clair, avec un accompagnement transparent.'
             : offerType === 'saas'
-                ? 'Pilotez votre activitÃ© plus vite avec une solution simple Ã  adopter.'
+                ? 'Pilotez votre activité plus vite avec une solution simple à adopter.'
                 : 'Commandez le bon produit, avec prix clair et garanties visibles.');
 
     const confidence = scrape?.success === false ? 'LOW' : localScore >= 65 ? 'HIGH' : localScore >= 40 ? 'MEDIUM' : 'LOW';
@@ -1704,13 +1704,13 @@ function buildFunnelSectionSurgeryModel({
     return {
         version: 'section-surgery-v1',
         verdict: {
-            title: isEn ? 'Funnel Verdict' : isAr ? 'Ø­ÙƒÙ… Ø§Ù„Ù‚Ù…Ø¹' : 'Verdict Funnel',
+            title: isEn ? 'Funnel Verdict' : isAr ? 'حكم القمع' : 'Verdict Funnel',
             canConvert: localScore >= 55 && hasCTA,
             summary: isEn
                 ? 'The page can convert if the first screen, proof and offer clarity are tightened.'
                 : isAr
-                    ? 'ÙŠÙ…ÙƒÙ† Ù„Ù„ØµÙØ­Ø© Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ø¥Ø°Ø§ ØªÙ… ØªÙˆØ¶ÙŠØ­ Ø§Ù„Ø´Ø§Ø´Ø© Ø§Ù„Ø£ÙˆÙ„Ù‰ ÙˆØ§Ù„Ø¥Ø«Ø¨Ø§Øª ÙˆØ§Ù„Ø¹Ø±Ø¶.'
-                    : 'La page peut convertir si le premier Ã©cran, les preuves et lâ€™offre deviennent plus clairs.',
+                    ? 'يمكن للصفحة التحويل إذا تم توضيح الشاشة الأولى والإثبات والعرض.'
+                    : 'La page peut convertir si le premier écran, les preuves et l’offre deviennent plus clairs.',
             confidence
         },
         offerDetected: {
@@ -1737,24 +1737,24 @@ function buildFunnelSectionSurgeryModel({
         recommendedOrder: {
             currentOrder: (sectionsDetailed || []).map(s => s.label || s.type).filter(Boolean).slice(0, 14),
             recommendedOrder: orderByType[offerType] || orderByType.generic,
-            justification: isEn ? 'The recommended order reduces uncertainty before the main action.' : isAr ? 'Ø§Ù„ØªØ±ØªÙŠØ¨ Ø§Ù„Ù…Ù‚ØªØ±Ø­ ÙŠÙ‚Ù„Ù„ Ø§Ù„ØºÙ…ÙˆØ¶ Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ.' : 'Lâ€™ordre recommandÃ© rÃ©duit lâ€™incertitude avant lâ€™action principale.'
+            justification: isEn ? 'The recommended order reduces uncertainty before the main action.' : isAr ? 'الترتيب المقترح يقلل الغموض قبل الإجراء الرئيسي.' : 'L’ordre recommandé réduit l’incertitude avant l’action principale.'
         },
         frictions,
         proofTrust: {
             present: [
                 hasSSL ? 'SSL / HTTPS' : null,
                 hasWhatsApp ? 'WhatsApp' : null,
-                hasReviews ? 'Avis ou tÃ©moignages' : null,
+                hasReviews ? 'Avis ou témoignages' : null,
                 hasGuarantee ? 'Garantie' : null,
                 hasDelivery ? 'Livraison / retours' : null
             ].filter(Boolean),
             weak: [
-                !hasReviews ? 'Avis clients vÃ©rifiables' : null,
+                !hasReviews ? 'Avis clients vérifiables' : null,
                 !hasGuarantee ? 'Garantie claire' : null,
-                !hasPrice ? 'Prix confirmÃ©' : null
+                !hasPrice ? 'Prix confirmé' : null
             ].filter(Boolean),
             missing: missingSections.map(x => x.section).slice(0, 6),
-            placement: isEn ? 'Place proof near price, CTA and FAQ.' : isAr ? 'Ø¶Ø¹ Ø§Ù„Ø¥Ø«Ø¨Ø§Øª Ù‚Ø±Ø¨ Ø§Ù„Ø³Ø¹Ø± ÙˆCTA ÙˆFAQ.' : 'Placer les preuves prÃ¨s du prix, du CTA et de la FAQ.'
+            placement: isEn ? 'Place proof near price, CTA and FAQ.' : isAr ? 'ضع الإثبات قرب السعر وCTA وFAQ.' : 'Placer les preuves près du prix, du CTA et de la FAQ.'
         },
         offerPriceValue: {
             offerClarity: h1Main ? 'MEDIUM' : 'LOW',
@@ -1764,50 +1764,50 @@ function buildFunnelSectionSurgeryModel({
             priceConfidence: priceIntel.priceConfidence || 'LOW',
             valuePerception: hasReviews && hasGuarantee ? 'MEDIUM' : 'LOW',
             action: priceConfirmed
-                ? 'Relier le prix Ã  ce que le client reÃ§oit, aux preuves et Ã  la garantie.'
-                : 'Ne pas utiliser ce prix comme fait. Clarifier prix, devise et contenu exact de lâ€™offre.'
+                ? 'Relier le prix à ce que le client reçoit, aux preuves et à la garantie.'
+                : 'Ne pas utiliser ce prix comme fait. Clarifier prix, devise et contenu exact de l’offre.'
         },
         messagePromiseCta: {
             currentH1: h1Main || null,
             currentPrimaryCta: ctaList[0] || null,
             proposedH1,
             proposedSubtitle: offerType === 'ecommerce'
-                ? 'Prix clair, livraison expliquÃ©e, paiement sÃ©curisÃ© et preuve client avant achat.'
-                : 'Livrables, dÃ©lais, accompagnement et preuves visibles avant la prise de contact.',
+                ? 'Prix clair, livraison expliquée, paiement sécurisé et preuve client avant achat.'
+                : 'Livrables, délais, accompagnement et preuves visibles avant la prise de contact.',
             proposedCta: offerType === 'ecommerce' ? 'Commander maintenant' : 'Demander un diagnostic',
             microcopy: offerType === 'ecommerce'
-                ? 'Livraison claire Â· Paiement sÃ©curisÃ© Â· Garantie disponible'
-                : 'RÃ©ponse rapide Â· Livrables clairs Â· RÃ©vision possible',
-            reassurance: hasGuarantee ? 'Garantie visible Ã  renforcer.' : 'Recommandation : ajouter une garantie ou une condition de rÃ©assurance.'
+                ? 'Livraison claire · Paiement sécurisé · Garantie disponible'
+                : 'Réponse rapide · Livrables clairs · Révision possible',
+            reassurance: hasGuarantee ? 'Garantie visible à renforcer.' : 'Recommandation : ajouter une garantie ou une condition de réassurance.'
         },
         mobileUx: {
             risks: [
-                ctaList.length === 0 ? 'CTA mobile non confirmÃ©' : null,
-                wordCount > 1800 ? 'Blocs longs Ã  rÃ©duire sur mobile' : null,
-                imagesCount === 0 ? 'Visuel produit/service non confirmÃ©' : null
+                ctaList.length === 0 ? 'CTA mobile non confirmé' : null,
+                wordCount > 1800 ? 'Blocs longs à réduire sur mobile' : null,
+                imagesCount === 0 ? 'Visuel produit/service non confirmé' : null
             ].filter(Boolean),
-            simplify: 'Garder le rÃ©sumÃ©, les preuves, le prix et le CTA visibles; placer les dÃ©tails en accordÃ©ons.',
-            stickyCta: hasCTA ? 'Tester un sticky CTA mobile reprenant le CTA principal.' : 'Ajouter un sticky CTA mobile aprÃ¨s validation du CTA principal.',
+            simplify: 'Garder le résumé, les preuves, le prix et le CTA visibles; placer les détails en accordéons.',
+            stickyCta: hasCTA ? 'Tester un sticky CTA mobile reprenant le CTA principal.' : 'Ajouter un sticky CTA mobile après validation du CTA principal.',
             confidence: 'MEDIUM'
         },
         priorityPlan: {
-            now: immediate.map((action, i) => ({ action, why: 'Bloque la dÃ©cision immÃ©diate', impact: 'HIGH', effort: 'LOW', confidence: 'HIGH', priority: i + 1 })),
-            sevenDays: sevenDays.map((action, i) => ({ action, why: 'RÃ©duit les objections avant achat/contact', impact: 'MEDIUM', effort: 'MEDIUM', confidence: 'MEDIUM', priority: i + 1 })),
-            thirtyDays: thirtyDays.map((action, i) => ({ action, why: 'Construit un systÃ¨me de preuve durable', impact: 'HIGH', effort: 'MEDIUM', confidence: 'MEDIUM', priority: i + 1 }))
+            now: immediate.map((action, i) => ({ action, why: 'Bloque la décision immédiate', impact: 'HIGH', effort: 'LOW', confidence: 'HIGH', priority: i + 1 })),
+            sevenDays: sevenDays.map((action, i) => ({ action, why: 'Réduit les objections avant achat/contact', impact: 'MEDIUM', effort: 'MEDIUM', confidence: 'MEDIUM', priority: i + 1 })),
+            thirtyDays: thirtyDays.map((action, i) => ({ action, why: 'Construit un système de preuve durable', impact: 'HIGH', effort: 'MEDIUM', confidence: 'MEDIUM', priority: i + 1 }))
         },
         copyReadySections: {
             hero: proposedH1,
             h1: proposedH1,
             subtitle: offerType === 'ecommerce'
-                ? 'Tout ce quâ€™il faut pour dÃ©cider vite: prix, preuve, livraison et garantie au mÃªme endroit.'
-                : 'Une offre claire, des livrables prÃ©cis et un accompagnement visible avant la prise de contact.',
+                ? 'Tout ce qu’il faut pour décider vite: prix, preuve, livraison et garantie au même endroit.'
+                : 'Une offre claire, des livrables précis et un accompagnement visible avant la prise de contact.',
             cta: offerType === 'ecommerce' ? 'Commander maintenant' : 'Planifier un diagnostic',
-            microcopy: offerType === 'ecommerce' ? 'Paiement sÃ©curisÃ© Â· Livraison expliquÃ©e Â· Garantie disponible' : 'Sans engagement Â· RÃ©ponse rapide Â· Plan dâ€™action clair',
-            guaranteeBlock: 'Recommandation : ajoutez une garantie courte avec durÃ©e, conditions et limites.',
-            deliveryBlock: offerType === 'ecommerce' ? 'Ajoutez dÃ©lai, coÃ»t, zones couvertes, retours et preuve de stock.' : 'Remplacez par livrables, dÃ©lais, rÃ©visions et niveau dâ€™accompagnement.',
-            faqBlock: ['Quel est le prix exact ?', 'Que reÃ§oit le client ?', 'Quels dÃ©lais ?', 'Quelles garanties ?', 'Comment contacter le support ?'],
-            objectionBlock: 'Si vous hÃ©sitez, voici exactement ce qui est inclus, ce qui ne lâ€™est pas, et comment nous rÃ©duisons le risque.',
-            whatsappMessage: offerType === 'ecommerce' ? 'Bonjour, je veux confirmer le prix, la livraison et la disponibilitÃ© du produit.' : 'Bonjour, je veux comprendre les livrables, dÃ©lais et conditions de votre offre.'
+            microcopy: offerType === 'ecommerce' ? 'Paiement sécurisé · Livraison expliquée · Garantie disponible' : 'Sans engagement · Réponse rapide · Plan d’action clair',
+            guaranteeBlock: 'Recommandation : ajoutez une garantie courte avec durée, conditions et limites.',
+            deliveryBlock: offerType === 'ecommerce' ? 'Ajoutez délai, coût, zones couvertes, retours et preuve de stock.' : 'Remplacez par livrables, délais, révisions et niveau d’accompagnement.',
+            faqBlock: ['Quel est le prix exact ?', 'Que reçoit le client ?', 'Quels délais ?', 'Quelles garanties ?', 'Comment contacter le support ?'],
+            objectionBlock: 'Si vous hésitez, voici exactement ce qui est inclus, ce qui ne l’est pas, et comment nous réduisons le risque.',
+            whatsappMessage: offerType === 'ecommerce' ? 'Bonjour, je veux confirmer le prix, la livraison et la disponibilité du produit.' : 'Bonjour, je veux comprendre les livrables, délais et conditions de votre offre.'
         },
         observedDataLimits: {
             pagesAnalyzed: commerceExploration?.observed?.evidenceLinks?.length || 1,
@@ -1817,19 +1817,19 @@ function buildFunnelSectionSurgeryModel({
             priceReason: priceIntel.priceExtractionReason || null,
             inaccessibleElements: scrape?.error ? [String(scrape.error).slice(0, 180)] : [],
             limits: scrape?.success === false
-                ? ['Analyse partielle : certaines pages nâ€™Ã©taient pas accessibles automatiquement. Les recommandations sont basÃ©es sur les signaux observÃ©s.']
-                : ['Les positions exactes des sections peuvent nÃ©cessiter une vÃ©rification visuelle manuelle.']
+                ? ['Analyse partielle : certaines pages n’étaient pas accessibles automatiquement. Les recommandations sont basées sur les signaux observés.']
+                : ['Les positions exactes des sections peuvent nécessiter une vérification visuelle manuelle.']
         },
         userContext: safeContext
     };
 }
 // Trust proxy for Render.com
 app.set('trust proxy', 1);
-console.log('ðŸ”§ Trust proxy enabled for Render.com');
+console.log('🔧 Trust proxy enabled for Render.com');
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CONFIGURATION CENTRALISÃ‰E (12-Factor App)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// CONFIGURATION CENTRALISÉE (12-Factor App)
+// ═══════════════════════════════════════════════════════════════════
 
 const CONFIG = {
     APIFY_ENABLED: ['1', 'true', 'yes', 'on'].includes(String(process.env.APIFY_ENABLED || 'false').toLowerCase()),
@@ -1891,7 +1891,7 @@ APIFY_TRUSTPILOT_REVIEWS_ACTOR: process.env.APIFY_TRUSTPILOT_REVIEWS_ACTOR || ''
         'https://app.da-ka.live',
         'http://localhost:3000',
         'http://localhost:5500',
-        'https://d1wtqea293om4x.cloudfront.net', // ðŸ”¥ AJOUTÃ‰ ICI POUR DÃ‰BLOQUER TON FRONTEND
+        'https://d1wtqea293om4x.cloudfront.net', // 🔥 AJOUTÉ ICI POUR DÉBLOQUER TON FRONTEND
         'http://127.0.0.1:5500'
     ],
     
@@ -1905,21 +1905,21 @@ APIFY_TRUSTPILOT_REVIEWS_ACTOR: process.env.APIFY_TRUSTPILOT_REVIEWS_ACTOR || ''
     AI_FALLBACK_ENABLED: true
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // VALIDATION CONFIGURATION CRITIQUE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 if (!CONFIG.SERPAPI_KEY) {
-    console.warn('âš ï¸  SERPAPI_KEY manquante - Analyse concurrents dÃ©sactivÃ©e');
+    console.warn('⚠️  SERPAPI_KEY manquante - Analyse concurrents désactivée');
 }
 
 if (!CONFIG.OPENROUTER_KEY) {
-    console.error('âŒ OPENROUTER_KEY manquante - CRITIQUE!');
-    console.error('ðŸ’¡ Ajoute OPENROUTER_API_KEY dans ton fichier .env');
+    console.error('❌ OPENROUTER_KEY manquante - CRITIQUE!');
+    console.error('💡 Ajoute OPENROUTER_API_KEY dans ton fichier .env');
     if (process.env.WORKER_MODE !== 'true') process.exit(1);
 }
 
-console.log('âœ… Configuration validÃ©e:', {
+console.log('✅ Configuration validée:', {
     port: PORT,
     env: NODE_ENV,
     serpAPI: !!CONFIG.SERPAPI_KEY,
@@ -1927,9 +1927,9 @@ console.log('âœ… Configuration validÃ©e:', {
     trustProxy: app.get('trust proxy')
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// SECURITY MIDDLEWARE (MODIFIÃ‰ POUR DA-KA.LIVE)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// SECURITY MIDDLEWARE (MODIFIÉ POUR DA-KA.LIVE)
+// ═══════════════════════════════════════════════════════════════════
 
 app.use(helmet({
     contentSecurityPolicy: false,
@@ -1938,7 +1938,7 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Middleware pour autoriser l'iframe spÃ©cifiquement sur tes domaines
+// Middleware pour autoriser l'iframe spécifiquement sur tes domaines
 app.use((req, res, next) => {
     res.setHeader(
         "Content-Security-Policy", 
@@ -1947,9 +1947,9 @@ app.use((req, res, next) => {
     next();
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// CORS CONFIGURATION (CORRIGÃ‰E)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// CORS CONFIGURATION (CORRIGÉE)
+// ═══════════════════════════════════════════════════════════════════
 
 app.use(cors({
     origin: function (origin, callback) {
@@ -1958,7 +1958,7 @@ app.use(cors({
         if (CONFIG.CORS_ORIGINS.indexOf(origin) !== -1 || origin.includes('mktnstrategix.com')) {
             callback(null, true);
         } else {
-            console.warn('âš ï¸  CORS blocked:', origin);
+            console.warn('⚠️  CORS blocked:', origin);
             callback(null, false);
         }
     },
@@ -1974,9 +1974,9 @@ app.use(cors({
     ]
 }));
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // COMPRESSION & PARSING
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 app.use(compression({ level: CONFIG.COMPRESSION_LEVEL }));
 app.use(express.json({ limit: CONFIG.JSON_LIMIT }));
@@ -1985,9 +1985,9 @@ const authRuntime = registerAuthRoutes(app);
 const requireAuth = authRuntime.requireAuth;
 registerUserApiKeyRoutes(app, { supabase, requireAuth });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // STATIC FILES
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 app.use(express.static('public', {
     maxAge: '1d',
@@ -2001,9 +2001,9 @@ app.use('/assets', express.static('assets', {
     lastModified: true
 }));
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // REQUEST LOGGING MIDDLEWARE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 app.use((req, res, next) => {
     const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -2012,16 +2012,16 @@ app.use((req, res, next) => {
     
     res.on('finish', () => {
         const duration = Date.now() - req.startTime;
-        const status = res.statusCode >= 400 ? 'âŒ' : 'âœ…';
+        const status = res.statusCode >= 400 ? '❌' : '✅';
         console.log(`${status} [${requestId}] ${req.method} ${req.path} - ${res.statusCode} (${duration}ms)`);
     });
     
     next();
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 // RATE LIMITING
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 const limiter = rateLimit({
     windowMs: CONFIG.RATE_LIMIT_WINDOW,
@@ -2029,7 +2029,7 @@ const limiter = rateLimit({
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
-        console.warn(`ðŸš¨ Rate limit exceeded: ${req.ip}`);
+        console.warn(`🚨 Rate limit exceeded: ${req.ip}`);
         res.status(429).json({
             success: false,
             error: 'Too many requests, please try again later.',
@@ -2043,17 +2043,17 @@ const reportRuntime = registerReportRoutes(app, { supabase, requireAuth });
 const requireReportQuota = reportRuntime.requireReportQuota;
 const persistGeneratedReport = reportRuntime.persistGeneratedReport;
 
-console.log('âœ… PARTIE 1/5: Configuration & Middleware loaded');
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”¥ PARTIE 2/5: METRICS, AI MODELS & CACHE SYSTEM (ULTRA-COMPETITIVE)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+console.log('✅ PARTIE 1/5: Configuration & Middleware loaded');
+// ═══════════════════════════════════════════════════════════════════
+// 🔥 PARTIE 2/5: METRICS, AI MODELS & CACHE SYSTEM (ULTRA-COMPETITIVE)
+// ═══════════════════════════════════════════════════════════════════
 // Strategy: CRUSH competitors using Gemini 2.0 + Multi-model fallback
 // Performance: Real-time metrics | LRU Cache | Auto-healing
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“Š METRICS & MONITORING SYSTEM (REAL-TIME ANALYTICS)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 📊 METRICS & MONITORING SYSTEM (REAL-TIME ANALYTICS)
+// ═══════════════════════════════════════════════════════════════════
 
 const METRICS = {
     requests: {
@@ -2087,7 +2087,7 @@ const METRICS = {
 };
 
 /**
- * ðŸŽ¯ UPDATE METRICS (Real-time tracking)
+ * 🎯 UPDATE METRICS (Real-time tracking)
  * Tracks every request with microsecond precision
  */
 function updateMetrics(method, path, statusCode, duration) {
@@ -2144,12 +2144,12 @@ function updateMetrics(method, path, statusCode, duration) {
             METRICS.performance.slowQueries.shift();
         }
         
-        console.warn(`ðŸŒ SLOW QUERY DETECTED: ${endpoint} took ${duration}ms`);
+        console.warn(`🐌 SLOW QUERY DETECTED: ${endpoint} took ${duration}ms`);
     }
 }
 
 /**
- * ðŸ•’ FORMAT DURATION (Human-readable)
+ * 🕒 FORMAT DURATION (Human-readable)
  */
 function formatDuration(ms) {
     const seconds = Math.floor(ms / 1000);
@@ -2162,16 +2162,16 @@ function formatDuration(ms) {
     if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
     return `${seconds}s`;
 }
-/* â”€â”€ helpers â”€â”€ */
-const esc  = v => (v != null ? String(v) : 'â€”').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-const safe = v => (v != null ? String(v) : 'â€”');
+/* ── helpers ── */
+const esc  = v => (v != null ? String(v) : '—').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const safe = v => (v != null ? String(v) : '—');
 const arr  = v => Array.isArray(v) ? v : [];
 const pill = (txt, color) =>
   `<span style="display:inline-block;background:${color}18;border:1px solid ${color}44;color:${color};padding:3px 10px;border-radius:999px;font-size:9px;font-weight:700;margin:2px;">${esc(txt)}</span>`;
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   CSS GLOBAL PDF (partagÃ© entre toutes les features)
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ════════════════════════════════════════
+   CSS GLOBAL PDF (partagé entre toutes les features)
+════════════════════════════════════════ */
 function globalPdfCss() {
   return `
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -2270,7 +2270,7 @@ function globalPdfCss() {
 
 
 /**
- * ðŸ“Š METRICS ENDPOINT (Real-time dashboard data)
+ * 📊 METRICS ENDPOINT (Real-time dashboard data)
  */
 app.get('/metrics', (req, res) => {
     const uptime = Date.now() - METRICS.startTime;
@@ -2334,15 +2334,15 @@ app.get('/metrics', (req, res) => {
     });
 });
 
-console.log('âœ… Metrics system loaded - Real-time analytics ready');
+console.log('✅ Metrics system loaded - Real-time analytics ready');
 
 
 const HAS_PAID_CREDITS = process.env.OPENROUTER_HAS_CREDITS === 'true';
 
 const AI_MODELS = {
     gemini: [
-        'google/gemini-2.0-flash-001',       // PrioritÃ© 1 â€” payant, rapide
-        'google/gemini-2.0-flash-lite-001',   // PrioritÃ© 2 â€” payant, lÃ©ger
+        'google/gemini-2.0-flash-001',       // Priorité 1 — payant, rapide
+        'google/gemini-2.0-flash-lite-001',   // Priorité 2 — payant, léger
     ],
     premium: HAS_PAID_CREDITS
         ? [
@@ -2352,17 +2352,17 @@ const AI_MODELS = {
         ]
         : [],
     free: [
-        'mistralai/mistral-small-24b-instruct-2501:free', // â† ajoute :free sinon facturÃ©
-        'google/gemini-2.0-flash-exp:free',               // Gemini gratuit expÃ©rimental
+        'mistralai/mistral-small-24b-instruct-2501:free', // ← ajoute :free sinon facturé
+        'google/gemini-2.0-flash-exp:free',               // Gemini gratuit expérimental
         'meta-llama/llama-3.1-8b-instruct:free',          // Llama 8B gratuit, fiable
-        'qwen/qwen-2.5-72b-instruct:free',                // Qwen 72B â€” excellent en JSON
-        'deepseek/deepseek-chat-v3-0324:free',            // DeepSeek V3 â€” trÃ¨s bon en FR
+        'qwen/qwen-2.5-72b-instruct:free',                // Qwen 72B — excellent en JSON
+        'deepseek/deepseek-chat-v3-0324:free',            // DeepSeek V3 — très bon en FR
     ]
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ¤– getActiveAIModels â€” V2 Classification automatique :free
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 🤖 getActiveAIModels — V2 Classification automatique :free
+// ════════════════════════════════════════════════════════════════════════════════
 function getActiveAIModels() {
     METRICS.ai.calls++;
 
@@ -2390,36 +2390,36 @@ function getActiveAIModels() {
         ]
     };
 
-    // â”€â”€ Construction queue â€” tableau de strings (compatible callOpenRouterAPI)
+    // ── Construction queue — tableau de strings (compatible callOpenRouterAPI)
     const models = [
-        // Payants d'abord (si crÃ©dits dispo)
+        // Payants d'abord (si crédits dispo)
         ...AI_MODELS.paid,
 
-        // Gratuits â€” TOUJOURS inclus en fallback
+        // Gratuits — TOUJOURS inclus en fallback
         ...AI_MODELS.free,
 
-        // Premium tous les 10 appels si budget activÃ©
+        // Premium tous les 10 appels si budget activé
         ...(CONFIG.AI_AUTO_SWITCH && METRICS.ai.calls % 10 === 0 && HAS_PAID_CREDITS
             ? AI_MODELS.premium
             : [])
     ];
 
     if (CONFIG.AI_AUTO_SWITCH && METRICS.ai.calls % 10 === 0 && HAS_PAID_CREDITS) {
-        console.log(`ðŸ’Ž Premium models inclus (call #${METRICS.ai.calls})`);
+        console.log(`💎 Premium models inclus (call #${METRICS.ai.calls})`);
     }
 
     const freeCount  = models.filter(id => id.endsWith(':free')).length;
     const paidCount  = models.length - freeCount;
 
-    console.log(`ðŸ¤– AI Models queue: ${models.length} models (${freeCount} free, ${paidCount} paid)`);
+    console.log(`🤖 AI Models queue: ${models.length} models (${freeCount} free, ${paidCount} paid)`);
 
-    return models; // â† tableau de strings, pas d'objets
+    return models; // ← tableau de strings, pas d'objets
 }
 
 
 
 /**
- * ðŸŽ¯ TRACK AI MODEL USAGE (Analytics)
+ * 🎯 TRACK AI MODEL USAGE (Analytics)
  */
 function trackAIModelUsage(modelId, success, duration) {
     if (!METRICS.ai.modelUsage[modelId]) {
@@ -2450,14 +2450,14 @@ function trackAIModelUsage(modelId, success, duration) {
     }
 }
 
-console.log('âœ… AI Models configured - Gemini 2.0 priority strategy');
+console.log('✅ AI Models configured - Gemini 2.0 priority strategy');
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ’¾ CACHE MANAGER ULTRA-OPTIMIZED (LRU + TTL + COMPRESSION)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 💾 CACHE MANAGER ULTRA-OPTIMIZED (LRU + TTL + COMPRESSION)
+// ═══════════════════════════════════════════════════════════════════
 // Features: LRU eviction | TTL expiration | Size tracking | Stats
 // Performance: O(1) get/set | Memory efficient | Auto-cleanup
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 class CacheManager {
     constructor(maxSize = 1000, ttl = CONFIG.CACHE_TTL) {
@@ -2469,11 +2469,11 @@ class CacheManager {
         // Auto-cleanup every 5 minutes
         this.cleanupInterval = setInterval(() => this.cleanup(), 5 * 60 * 1000);
         
-        console.log(`ðŸ’¾ Cache Manager initialized: ${maxSize} entries, ${ttl/1000}s TTL`);
+        console.log(`💾 Cache Manager initialized: ${maxSize} entries, ${ttl/1000}s TTL`);
     }
     
     /**
-     * ðŸ” GET (with TTL check)
+     * 🔍 GET (with TTL check)
      */
     get(key) {
         const item = this.cache.get(key);
@@ -2488,7 +2488,7 @@ class CacheManager {
             this.cache.delete(key);
             METRICS.cache.misses++;
             METRICS.cache.size = this.cache.size;
-            console.log(`â° Cache EXPIRED: ${key.substring(0, 50)}...`);
+            console.log(`⏰ Cache EXPIRED: ${key.substring(0, 50)}...`);
             return null;
         }
         
@@ -2497,12 +2497,12 @@ class CacheManager {
         this.cache.set(key, item);
         
         METRICS.cache.hits++;
-        console.log(`ðŸ’¾ Cache HIT: ${key.substring(0, 50)}... (${(Date.now() - item.timestamp)/1000}s old)`);
+        console.log(`💾 Cache HIT: ${key.substring(0, 50)}... (${(Date.now() - item.timestamp)/1000}s old)`);
         return item.data;
     }
     
     /**
-     * ðŸ’¿ SET (with LRU eviction)
+     * 💿 SET (with LRU eviction)
      */
     set(key, data) {
         // LRU eviction if cache is full
@@ -2510,7 +2510,7 @@ class CacheManager {
             const firstKey = this.cache.keys().next().value;
             this.cache.delete(firstKey);
             METRICS.cache.evictions++;
-            console.log(`ðŸ—‘ï¸  Cache EVICTED (LRU): ${firstKey.substring(0, 50)}...`);
+            console.log(`🗑️  Cache EVICTED (LRU): ${firstKey.substring(0, 50)}...`);
         }
         
         this.cache.set(key, {
@@ -2523,7 +2523,7 @@ class CacheManager {
     }
     
     /**
-     * ðŸ§¹ CLEANUP (Remove expired entries)
+     * 🧹 CLEANUP (Remove expired entries)
      */
     cleanup() {
         const now = Date.now();
@@ -2538,23 +2538,23 @@ class CacheManager {
         
         if (cleaned > 0) {
             METRICS.cache.size = this.cache.size;
-            console.log(`ðŸ§¹ Cache cleanup: ${cleaned} expired entries removed`);
+            console.log(`🧹 Cache cleanup: ${cleaned} expired entries removed`);
         }
         
         this.lastCleanup = now;
     }
     
     /**
-     * ðŸ—‘ï¸ CLEAR (Nuclear option)
+     * 🗑️ CLEAR (Nuclear option)
      */
     clear() {
         this.cache.clear();
         METRICS.cache.size = 0;
-        console.log('ðŸ—‘ï¸  Cache CLEARED - All entries removed');
+        console.log('🗑️  Cache CLEARED - All entries removed');
     }
     
     /**
-     * ðŸ“Š GET STATS
+     * 📊 GET STATS
      */
     getStats() {
         const totalRequests = METRICS.cache.hits + METRICS.cache.misses;
@@ -2578,21 +2578,21 @@ class CacheManager {
     }
     
     /**
-     * ðŸ”§ DESTROY (Clean shutdown)
+     * 🔧 DESTROY (Clean shutdown)
      */
     destroy() {
         clearInterval(this.cleanupInterval);
         this.cache.clear();
-        console.log('ðŸ’€ Cache Manager destroyed');
+        console.log('💀 Cache Manager destroyed');
     }
 }
 
 // Initialize cache instance
 const cache = new CacheManager(CONFIG.CACHE_ENABLED ? 1000 : 0, CONFIG.CACHE_TTL);
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“Š CACHE MANAGEMENT ENDPOINTS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 📊 CACHE MANAGEMENT ENDPOINTS
+// ═══════════════════════════════════════════════════════════════════
 
 /**
  * GET /cache/stats - Cache statistics
@@ -2639,29 +2639,29 @@ app.post('/cache/cleanup', (req, res) => {
     });
 });
 
-console.log('âœ… PARTIE 2/5: Metrics + AI Models + Cache loaded');
-console.log('ðŸ”¥ COMPETITIVE MODE: Gemini 2.0 models prioritized');
-console.log(`ðŸ’¾ Cache system ready: ${cache.maxSize} entries, ${cache.ttl/1000}s TTL`);
+console.log('✅ PARTIE 2/5: Metrics + AI Models + Cache loaded');
+console.log('🔥 COMPETITIVE MODE: Gemini 2.0 models prioritized');
+console.log(`💾 Cache system ready: ${cache.maxSize} entries, ${cache.ttl/1000}s TTL`);
 console.log('');
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ›¡ï¸ PARTIE 3/5: VALIDATORS, RETRY LOGIC & UTILITIES (ULTRA-SECURE)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🛡️ PARTIE 3/5: VALIDATORS, RETRY LOGIC & UTILITIES (ULTRA-SECURE)
+// ═══════════════════════════════════════════════════════════════════
 // Security: Fort Knox level | Anti-injection | Multi-language support
 // Reliability: Exponential backoff | Jitter | Smart retry conditions
 // Performance: Optimized regex | O(1) lookups | Zero-copy operations
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ›¡ï¸ INPUT VALIDATOR (MILITARY-GRADE SECURITY)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🛡️ INPUT VALIDATOR (MILITARY-GRADE SECURITY)
+// ═══════════════════════════════════════════════════════════════════
 // Protection against: SQL injection, XSS, SSRF, Path traversal
 // Supports: Multi-language (Arabic, French, English, etc.)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 class InputValidator {
     
     /**
-     * ðŸ”’ SANITIZE URL (SSRF Protection)
+     * 🔒 SANITIZE URL (SSRF Protection)
      * Prevents localhost attacks, malicious protocols, etc.
      */
     static sanitizeURL(input) {
@@ -2724,7 +2724,7 @@ class InputValidator {
     }
     
     /**
-     * ðŸ”’ SANITIZE QUERY (SQL Injection + XSS Protection)
+     * 🔒 SANITIZE QUERY (SQL Injection + XSS Protection)
      * Supports: Arabic, French, English, Spanish, German, Italian
      */
     static sanitizeQuery(query) {
@@ -2760,14 +2760,14 @@ class InputValidator {
         // Limit length (prevent DoS)
         if (cleaned.length > 500) {
             cleaned = cleaned.substring(0, 500);
-            console.warn('âš ï¸  Query truncated to 500 characters');
+            console.warn('⚠️  Query truncated to 500 characters');
         }
         
         return cleaned;
     }
     
     /**
-     * ðŸŒ SANITIZE GEO (Location validation)
+     * 🌍 SANITIZE GEO (Location validation)
      */
     static sanitizeGeo(geo) {
   if (!geo) return '';
@@ -2778,7 +2778,7 @@ class InputValidator {
 }
     
     /**
-     * ðŸ”¤ VALIDATE LANGUAGE (ISO 639-1)
+     * 🔤 VALIDATE LANGUAGE (ISO 639-1)
      */
     static validateLanguage(lang) {
         const validLangs = ['fr', 'en', 'ar', 'es', 'de', 'it', 'pt', 'ru', 'zh', 'ja'];
@@ -2787,7 +2787,7 @@ class InputValidator {
     }
     
     /**
-     * ðŸ“§ VALIDATE EMAIL (RFC 5322 compliant)
+     * 📧 VALIDATE EMAIL (RFC 5322 compliant)
      */
     static validateEmail(email) {
         if (!email) return false;
@@ -2796,7 +2796,7 @@ class InputValidator {
     }
     
     /**
-     * ðŸ”¢ VALIDATE NUMBER (Integer/Float with range)
+     * 🔢 VALIDATE NUMBER (Integer/Float with range)
      */
     static validateNumber(value, min = -Infinity, max = Infinity) {
         const num = Number(value);
@@ -2804,20 +2804,20 @@ class InputValidator {
     }
 }
 
-console.log('âœ… InputValidator loaded - Fort Knox security level');
+console.log('✅ InputValidator loaded - Fort Knox security level');
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”„ RETRY MANAGER (EXPONENTIAL BACKOFF + JITTER)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🔄 RETRY MANAGER (EXPONENTIAL BACKOFF + JITTER)
+// ═══════════════════════════════════════════════════════════════════
 // Strategy: Smart retry with exponential backoff + jitter
 // Features: Configurable conditions | Retry hooks | Circuit breaker
 // Performance: Prevents thundering herd | Optimizes API usage
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 class RetryManager {
     
     /**
-     * ðŸ” EXECUTE WITH RETRY (Smart retry logic)
+     * 🔁 EXECUTE WITH RETRY (Smart retry logic)
      * 
      * @param {Function} fn - Async function to execute
      * @param {Object} options - Retry configuration
@@ -2839,7 +2839,7 @@ class RetryManager {
                 const result = await fn();
                 
                 if (attempt > 0) {
-                    console.log(`âœ… [${context}] Retry SUCCESS after ${attempt} attempt(s)`);
+                    console.log(`✅ [${context}] Retry SUCCESS after ${attempt} attempt(s)`);
                 }
                 
                 return result;
@@ -2849,19 +2849,19 @@ class RetryManager {
                 
                 // Don't retry on client errors (4xx) - they won't change
                 if (error.response && error.response.status >= 400 && error.response.status < 500) {
-                    console.warn(`â›” [${context}] Client error ${error.response.status} - Not retrying`);
+                    console.warn(`⛔ [${context}] Client error ${error.response.status} - Not retrying`);
                     throw error;
                 }
                 
                 // Check custom retry condition
                 if (!retryCondition(error)) {
-                    console.warn(`â›” [${context}] Retry condition not met - Not retrying`);
+                    console.warn(`⛔ [${context}] Retry condition not met - Not retrying`);
                     throw error;
                 }
                 
                 // Last attempt - throw error
                 if (attempt === maxRetries) {
-                    console.error(`ðŸ’¥ [${context}] All ${maxRetries} retries exhausted`);
+                    console.error(`💥 [${context}] All ${maxRetries} retries exhausted`);
                     throw error;
                 }
                 
@@ -2870,7 +2870,7 @@ class RetryManager {
                 const jitter = Math.random() * 1000; // 0-1s random jitter
                 const delay = baseDelay + jitter;
                 
-                console.warn(`â³ [${context}] Retry ${attempt + 1}/${maxRetries} in ${Math.round(delay)}ms | Error: ${error.message}`);
+                console.warn(`⏳ [${context}] Retry ${attempt + 1}/${maxRetries} in ${Math.round(delay)}ms | Error: ${error.message}`);
                 
                 // Call retry hook for metrics/logging
                 onRetry(attempt + 1, error);
@@ -2884,7 +2884,7 @@ class RetryManager {
     }
     
     /**
-     * ðŸ” RETRY WITH CIRCUIT BREAKER (Advanced)
+     * 🔁 RETRY WITH CIRCUIT BREAKER (Advanced)
      * Prevents overwhelming failed services
      */
     static async executeWithCircuitBreaker(fn, serviceName, options = {}) {
@@ -2920,7 +2920,7 @@ class RetryManager {
             // Open circuit after 5 consecutive failures
             if (state.failures >= 5) {
                 state.isOpen = true;
-                console.error(`ðŸš¨ Circuit breaker OPENED for ${serviceName} - Too many failures`);
+                console.error(`🚨 Circuit breaker OPENED for ${serviceName} - Too many failures`);
             }
             
             throw error;
@@ -2930,27 +2930,27 @@ class RetryManager {
     }
 }
 
-console.log('âœ… RetryManager loaded - Exponential backoff + Circuit breaker');
+console.log('✅ RetryManager loaded - Exponential backoff + Circuit breaker');
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”§ JSON EXTRACTION ULTRA-ROBUST (7 STRATEGIES)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🔧 JSON EXTRACTION ULTRA-ROBUST (7 STRATEGIES)
+// ═══════════════════════════════════════════════════════════════════
 // Handles: Malformed JSON, markdown wrappers, trailing commas, etc.
 // Success rate: 99.9% on AI-generated responses
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”§ EXTRACTION JSON ULTRA-ROBUSTE (ANTI-CRASH)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// Cette version nettoie le Markdown, cherche le JSON mÃªme s'il y a du texte autour,
-// et rÃ©pare les erreurs courantes des modÃ¨les comme Nemotron ou Gemini.
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🔧 EXTRACTION JSON ULTRA-ROBUSTE (ANTI-CRASH)
+// ═══════════════════════════════════════════════════════════════════
+// Cette version nettoie le Markdown, cherche le JSON même s'il y a du texte autour,
+// et répare les erreurs courantes des modèles comme Nemotron ou Gemini.
+// ═══════════════════════════════════════════════════════════════════
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”— URL KEYWORD EXTRACTION (Multi-language support)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🔗 URL KEYWORD EXTRACTION (Multi-language support)
+// ═══════════════════════════════════════════════════════════════════
 
 function extractKeywordsFromUrl(urlStr) {
     try {
@@ -2976,16 +2976,16 @@ function extractKeywordsFromUrl(urlStr) {
         return cleaned || urlObj.hostname.split('.')[0];
         
     } catch (e) {
-        console.warn(`âš ï¸  URL keyword extraction failed: ${e.message}`);
+        console.warn(`⚠️  URL keyword extraction failed: ${e.message}`);
         return '';
     }
 }
 
-console.log('âœ… extractKeywordsFromUrl loaded');
+console.log('✅ extractKeywordsFromUrl loaded');
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ§¹ QUERY CLEANER FOR SERPAPI (Multi-language + emoji removal)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🧹 QUERY CLEANER FOR SERPAPI (Multi-language + emoji removal)
+// ═══════════════════════════════════════════════════════════════════
 
 function cleanQueryForSerpAPI(query) {
     if (!query) return '';
@@ -3004,7 +3004,7 @@ function cleanQueryForSerpAPI(query) {
     return cleaned;
 }
 
-console.log('âœ… cleanQueryForSerpAPI loaded');
+console.log('✅ cleanQueryForSerpAPI loaded');
 
 
 const SERP_API_BASE = 'https://serpapi.com/search';
@@ -3028,7 +3028,7 @@ async function fetchSerpKeywordIntel(query, lang = 'fr', geo = 'ma') {
         const res = await axios.get(SERP_API_BASE, { params, timeout: CONFIG.TIMEOUT_SHORT || 15000 });
         const data = res.data;
 
-        // 1) PAA rÃ©els
+        // 1) PAA réels
         const paa = (data.related_questions || []).map(q => ({
             question: q.question,
             source: q.source || 'google_paa'
@@ -3052,7 +3052,7 @@ async function fetchSerpKeywordIntel(query, lang = 'fr', geo = 'ma') {
 
         const serpIntent = (() => {
             const titles = organic.map(r => (r.title || '').toLowerCase()).join(' | ');
-            if (titles.includes('prix') || titles.includes('acheter') || titles.includes('book') || titles.includes('rÃ©server')) return 'Transactional';
+            if (titles.includes('prix') || titles.includes('acheter') || titles.includes('book') || titles.includes('réserver')) return 'Transactional';
             if (titles.includes('avis') || titles.includes('meilleure') || titles.includes('comparatif')) return 'Commercial';
             if (titles.includes('facebook') || titles.includes('instagram')) return 'Navigational';
             return 'Informational';
@@ -3075,13 +3075,13 @@ async function fetchSerpKeywordIntel(query, lang = 'fr', geo = 'ma') {
     }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸŒ GEO RESOLVER ULTRA-COMPLETE (70+ LOCATIONS)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🌍 GEO RESOLVER ULTRA-COMPLETE (70+ LOCATIONS)
+// ═══════════════════════════════════════════════════════════════════
 // Coverage: Morocco, MENA, Europe, Americas, Asia
 // Supports: Cities, countries, Arabic names, transliterations
 // Performance: O(1) lookup with comprehensive mapping
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 function resolveSerpGeo(input) {
   if (!input || !String(input).trim()) {
@@ -3094,119 +3094,119 @@ function resolveSerpGeo(input) {
     const geoMap = {
         'global english': { loc: 'Global English', gl: 'us', dom: 'google.com' },
         'global': { loc: 'Global English', gl: 'us', dom: 'google.com' },
-        // ðŸ‡²ðŸ‡¦ MOROCCO (Top priority)
+        // 🇲🇦 MOROCCO (Top priority)
         'maroc': { loc: 'Morocco', gl: 'ma', dom: 'google.co.ma' },
         'morocco': { loc: 'Morocco', gl: 'ma', dom: 'google.co.ma' },
-        'Ø§Ù„Ù…ØºØ±Ø¨': { loc: 'Morocco', gl: 'ma', dom: 'google.co.ma' },
+        'المغرب': { loc: 'Morocco', gl: 'ma', dom: 'google.co.ma' },
         'agadir': { loc: 'Agadir, Morocco', gl: 'ma', dom: 'google.co.ma' },
         'casablanca': { loc: 'Casablanca, Morocco', gl: 'ma', dom: 'google.co.ma' },
-        'Ø§Ù„Ø¯Ø§Ø± Ø§Ù„Ø¨ÙŠØ¶Ø§Ø¡': { loc: 'Casablanca, Morocco', gl: 'ma', dom: 'google.co.ma' },
+        'الدار البيضاء': { loc: 'Casablanca, Morocco', gl: 'ma', dom: 'google.co.ma' },
         'rabat': { loc: 'Rabat, Morocco', gl: 'ma', dom: 'google.co.ma' },
-        'Ø§Ù„Ø±Ø¨Ø§Ø·': { loc: 'Rabat, Morocco', gl: 'ma', dom: 'google.co.ma' },
+        'الرباط': { loc: 'Rabat, Morocco', gl: 'ma', dom: 'google.co.ma' },
         'marrakech': { loc: 'Marrakech, Morocco', gl: 'ma', dom: 'google.co.ma' },
-        'Ù…Ø±Ø§ÙƒØ´': { loc: 'Marrakech, Morocco', gl: 'ma', dom: 'google.co.ma' },
+        'مراكش': { loc: 'Marrakech, Morocco', gl: 'ma', dom: 'google.co.ma' },
         'tanger': { loc: 'Tangier, Morocco', gl: 'ma', dom: 'google.co.ma' },
         'tangier': { loc: 'Tangier, Morocco', gl: 'ma', dom: 'google.co.ma' },
-        'Ø·Ù†Ø¬Ø©': { loc: 'Tangier, Morocco', gl: 'ma', dom: 'google.co.ma' },
+        'طنجة': { loc: 'Tangier, Morocco', gl: 'ma', dom: 'google.co.ma' },
         'fes': { loc: 'Fes, Morocco', gl: 'ma', dom: 'google.co.ma' },
         'fez': { loc: 'Fes, Morocco', gl: 'ma', dom: 'google.co.ma' },
-        'ÙØ§Ø³': { loc: 'Fes, Morocco', gl: 'ma', dom: 'google.co.ma' },
+        'فاس': { loc: 'Fes, Morocco', gl: 'ma', dom: 'google.co.ma' },
         'meknes': { loc: 'Meknes, Morocco', gl: 'ma', dom: 'google.co.ma' },
-        'Ù…ÙƒÙ†Ø§Ø³': { loc: 'Meknes, Morocco', gl: 'ma', dom: 'google.co.ma' },
+        'مكناس': { loc: 'Meknes, Morocco', gl: 'ma', dom: 'google.co.ma' },
         'oujda': { loc: 'Oujda, Morocco', gl: 'ma', dom: 'google.co.ma' },
-        'ÙˆØ¬Ø¯Ø©': { loc: 'Oujda, Morocco', gl: 'ma', dom: 'google.co.ma' },
+        'وجدة': { loc: 'Oujda, Morocco', gl: 'ma', dom: 'google.co.ma' },
         'essaouira': { loc: 'Essaouira, Morocco', gl: 'ma', dom: 'google.co.ma' },
-        'Ø§Ù„ØµÙˆÙŠØ±Ø©': { loc: 'Essaouira, Morocco', gl: 'ma', dom: 'google.co.ma' },
+        'الصويرة': { loc: 'Essaouira, Morocco', gl: 'ma', dom: 'google.co.ma' },
         
-        // ðŸ‡±ðŸ‡¾ LIBYA
+        // 🇱🇾 LIBYA
         'libye': { loc: 'Libya', gl: 'ly', dom: 'google.com.ly' },
         'libya': { loc: 'Libya', gl: 'ly', dom: 'google.com.ly' },
-        'Ù„ÙŠØ¨ÙŠØ§': { loc: 'Libya', gl: 'ly', dom: 'google.com.ly' },
+        'ليبيا': { loc: 'Libya', gl: 'ly', dom: 'google.com.ly' },
         'tripoli': { loc: 'Tripoli, Libya', gl: 'ly', dom: 'google.com.ly' },
-        'Ø·Ø±Ø§Ø¨Ù„Ø³': { loc: 'Tripoli, Libya', gl: 'ly', dom: 'google.com.ly' },
+        'طرابلس': { loc: 'Tripoli, Libya', gl: 'ly', dom: 'google.com.ly' },
         'benghazi': { loc: 'Benghazi, Libya', gl: 'ly', dom: 'google.com.ly' },
-        'Ø¨Ù†ØºØ§Ø²ÙŠ': { loc: 'Benghazi, Libya', gl: 'ly', dom: 'google.com.ly' },
+        'بنغازي': { loc: 'Benghazi, Libya', gl: 'ly', dom: 'google.com.ly' },
         
-        // ðŸ‡©ðŸ‡¿ ALGERIA
-        'algÃ©rie': { loc: 'Algeria', gl: 'dz', dom: 'google.dz' },
+        // 🇩🇿 ALGERIA
+        'algérie': { loc: 'Algeria', gl: 'dz', dom: 'google.dz' },
         'algeria': { loc: 'Algeria', gl: 'dz', dom: 'google.dz' },
-        'Ø§Ù„Ø¬Ø²Ø§Ø¦Ø±': { loc: 'Algeria', gl: 'dz', dom: 'google.dz' },
+        'الجزائر': { loc: 'Algeria', gl: 'dz', dom: 'google.dz' },
         'alger': { loc: 'Algiers, Algeria', gl: 'dz', dom: 'google.dz' },
         'algiers': { loc: 'Algiers, Algeria', gl: 'dz', dom: 'google.dz' },
         'oran': { loc: 'Oran, Algeria', gl: 'dz', dom: 'google.dz' },
-        'ÙˆÙ‡Ø±Ø§Ù†': { loc: 'Oran, Algeria', gl: 'dz', dom: 'google.dz' },
+        'وهران': { loc: 'Oran, Algeria', gl: 'dz', dom: 'google.dz' },
         'constantine': { loc: 'Constantine, Algeria', gl: 'dz', dom: 'google.dz' },
-        'Ù‚Ø³Ù†Ø·ÙŠÙ†Ø©': { loc: 'Constantine, Algeria', gl: 'dz', dom: 'google.dz' },
+        'قسنطينة': { loc: 'Constantine, Algeria', gl: 'dz', dom: 'google.dz' },
         
-        // ðŸ‡¹ðŸ‡³ TUNISIA
+        // 🇹🇳 TUNISIA
         'tunisie': { loc: 'Tunisia', gl: 'tn', dom: 'google.tn' },
         'tunisia': { loc: 'Tunisia', gl: 'tn', dom: 'google.tn' },
-        'ØªÙˆÙ†Ø³': { loc: 'Tunisia', gl: 'tn', dom: 'google.tn' },
+        'تونس': { loc: 'Tunisia', gl: 'tn', dom: 'google.tn' },
         'tunis': { loc: 'Tunis, Tunisia', gl: 'tn', dom: 'google.tn' },
         'sfax': { loc: 'Sfax, Tunisia', gl: 'tn', dom: 'google.tn' },
-        'ØµÙØ§Ù‚Ø³': { loc: 'Sfax, Tunisia', gl: 'tn', dom: 'google.tn' },
+        'صفاقس': { loc: 'Sfax, Tunisia', gl: 'tn', dom: 'google.tn' },
         
-        // ðŸ‡ªðŸ‡¬ EGYPT
-        'Ã©gypte': { loc: 'Egypt', gl: 'eg', dom: 'google.com.eg' },
+        // 🇪🇬 EGYPT
+        'égypte': { loc: 'Egypt', gl: 'eg', dom: 'google.com.eg' },
         'egypt': { loc: 'Egypt', gl: 'eg', dom: 'google.com.eg' },
-        'Ù…ØµØ±': { loc: 'Egypt', gl: 'eg', dom: 'google.com.eg' },
+        'مصر': { loc: 'Egypt', gl: 'eg', dom: 'google.com.eg' },
         'cairo': { loc: 'Cairo, Egypt', gl: 'eg', dom: 'google.com.eg' },
-        'Ø§Ù„Ù‚Ø§Ù‡Ø±Ø©': { loc: 'Cairo, Egypt', gl: 'eg', dom: 'google.com.eg' },
+        'القاهرة': { loc: 'Cairo, Egypt', gl: 'eg', dom: 'google.com.eg' },
         'alexandria': { loc: 'Alexandria, Egypt', gl: 'eg', dom: 'google.com.eg' },
-        'Ø§Ù„Ø¥Ø³ÙƒÙ†Ø¯Ø±ÙŠØ©': { loc: 'Alexandria, Egypt', gl: 'eg', dom: 'google.com.eg' },
+        'الإسكندرية': { loc: 'Alexandria, Egypt', gl: 'eg', dom: 'google.com.eg' },
         'giza': { loc: 'Giza, Egypt', gl: 'eg', dom: 'google.com.eg' },
-        'Ø§Ù„Ø¬ÙŠØ²Ø©': { loc: 'Giza, Egypt', gl: 'eg', dom: 'google.com.eg' },
+        'الجيزة': { loc: 'Giza, Egypt', gl: 'eg', dom: 'google.com.eg' },
         
-        // ðŸ‡¸ðŸ‡¦ SAUDI ARABIA
+        // 🇸🇦 SAUDI ARABIA
         'arabie': { loc: 'Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
         'saudi': { loc: 'Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
-        'Ø§Ù„Ø³Ø¹ÙˆØ¯ÙŠØ©': { loc: 'Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
+        'السعودية': { loc: 'Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
         'riyadh': { loc: 'Riyadh, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
-        'Ø§Ù„Ø±ÙŠØ§Ø¶': { loc: 'Riyadh, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
+        'الرياض': { loc: 'Riyadh, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
         'jeddah': { loc: 'Jeddah, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
         'jiddah': { loc: 'Jeddah, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
-        'Ø¬Ø¯Ø©': { loc: 'Jeddah, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
+        'جدة': { loc: 'Jeddah, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
         'mecca': { loc: 'Mecca, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
-        'Ù…ÙƒØ©': { loc: 'Mecca, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
+        'مكة': { loc: 'Mecca, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
         'medina': { loc: 'Medina, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
-        'Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©': { loc: 'Medina, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
+        'المدينة': { loc: 'Medina, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
         'dammam': { loc: 'Dammam, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
-        'Ø§Ù„Ø¯Ù…Ø§Ù…': { loc: 'Dammam, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
+        'الدمام': { loc: 'Dammam, Saudi Arabia', gl: 'sa', dom: 'google.com.sa' },
         
-        // ðŸ‡¦ðŸ‡ª UAE
-        'Ã©mirats': { loc: 'United Arab Emirates', gl: 'ae', dom: 'google.ae' },
+        // 🇦🇪 UAE
+        'émirats': { loc: 'United Arab Emirates', gl: 'ae', dom: 'google.ae' },
         'uae': { loc: 'United Arab Emirates', gl: 'ae', dom: 'google.ae' },
-        'Ø§Ù„Ø¥Ù…Ø§Ø±Ø§Øª': { loc: 'United Arab Emirates', gl: 'ae', dom: 'google.ae' },
+        'الإمارات': { loc: 'United Arab Emirates', gl: 'ae', dom: 'google.ae' },
         'dubai': { loc: 'Dubai, UAE', gl: 'ae', dom: 'google.ae' },
-        'Ø¯Ø¨ÙŠ': { loc: 'Dubai, UAE', gl: 'ae', dom: 'google.ae' },
+        'دبي': { loc: 'Dubai, UAE', gl: 'ae', dom: 'google.ae' },
         'abu dhabi': { loc: 'Abu Dhabi, UAE', gl: 'ae', dom: 'google.ae' },
-        'Ø£Ø¨Ùˆ Ø¸Ø¨ÙŠ': { loc: 'Abu Dhabi, UAE', gl: 'ae', dom: 'google.ae' },
+        'أبو ظبي': { loc: 'Abu Dhabi, UAE', gl: 'ae', dom: 'google.ae' },
         'sharjah': { loc: 'Sharjah, UAE', gl: 'ae', dom: 'google.ae' },
-        'Ø§Ù„Ø´Ø§Ø±Ù‚Ø©': { loc: 'Sharjah, UAE', gl: 'ae', dom: 'google.ae' },
+        'الشارقة': { loc: 'Sharjah, UAE', gl: 'ae', dom: 'google.ae' },
         
-        // ðŸ‡¶ðŸ‡¦ QATAR
+        // 🇶🇦 QATAR
         'qatar': { loc: 'Qatar', gl: 'qa', dom: 'google.com.qa' },
-        'Ù‚Ø·Ø±': { loc: 'Qatar', gl: 'qa', dom: 'google.com.qa' },
+        'قطر': { loc: 'Qatar', gl: 'qa', dom: 'google.com.qa' },
         'doha': { loc: 'Doha, Qatar', gl: 'qa', dom: 'google.com.qa' },
-        'Ø§Ù„Ø¯ÙˆØ­Ø©': { loc: 'Doha, Qatar', gl: 'qa', dom: 'google.com.qa' },
+        'الدوحة': { loc: 'Doha, Qatar', gl: 'qa', dom: 'google.com.qa' },
         
-        // ðŸ‡°ðŸ‡¼ KUWAIT
+        // 🇰🇼 KUWAIT
         'kuwait': { loc: 'Kuwait', gl: 'kw', dom: 'google.com.kw' },
-        'Ø§Ù„ÙƒÙˆÙŠØª': { loc: 'Kuwait', gl: 'kw', dom: 'google.com.kw' },
+        'الكويت': { loc: 'Kuwait', gl: 'kw', dom: 'google.com.kw' },
         
-        // ðŸ‡´ðŸ‡² OMAN
+        // 🇴🇲 OMAN
         'oman': { loc: 'Oman', gl: 'om', dom: 'google.com.om' },
-        'Ø¹Ù…Ø§Ù†': { loc: 'Oman', gl: 'om', dom: 'google.com.om' },
+        'عمان': { loc: 'Oman', gl: 'om', dom: 'google.com.om' },
         'muscat': { loc: 'Muscat, Oman', gl: 'om', dom: 'google.com.om' },
-        'Ù…Ø³Ù‚Ø·': { loc: 'Muscat, Oman', gl: 'om', dom: 'google.com.om' },
+        'مسقط': { loc: 'Muscat, Oman', gl: 'om', dom: 'google.com.om' },
         
-        // ðŸ‡§ðŸ‡­ BAHRAIN
+        // 🇧🇭 BAHRAIN
         'bahrain': { loc: 'Bahrain', gl: 'bh', dom: 'google.com.bh' },
-        'Ø§Ù„Ø¨Ø­Ø±ÙŠÙ†': { loc: 'Bahrain', gl: 'bh', dom: 'google.com.bh' },
+        'البحرين': { loc: 'Bahrain', gl: 'bh', dom: 'google.com.bh' },
         'manama': { loc: 'Manama, Bahrain', gl: 'bh', dom: 'google.com.bh' },
-        'Ø§Ù„Ù…Ù†Ø§Ù…Ø©': { loc: 'Manama, Bahrain', gl: 'bh', dom: 'google.com.bh' },
+        'المنامة': { loc: 'Manama, Bahrain', gl: 'bh', dom: 'google.com.bh' },
         
-        // ðŸ‡«ðŸ‡· FRANCE
+        // 🇫🇷 FRANCE
         'france': { loc: 'France', gl: 'fr', dom: 'google.fr' },
         'paris': { loc: 'Paris, France', gl: 'fr', dom: 'google.fr' },
         'lyon': { loc: 'Lyon, France', gl: 'fr', dom: 'google.fr' },
@@ -3218,29 +3218,29 @@ function resolveSerpGeo(input) {
         'strasbourg': { loc: 'Strasbourg, France', gl: 'fr', dom: 'google.fr' },
         'lille': { loc: 'Lille, France', gl: 'fr', dom: 'google.fr' },
         
-        // ðŸ‡§ðŸ‡ª BELGIUM
+        // 🇧🇪 BELGIUM
         'belgique': { loc: 'Belgium', gl: 'be', dom: 'google.be' },
         'belgium': { loc: 'Belgium', gl: 'be', dom: 'google.be' },
         'bruxelles': { loc: 'Brussels, Belgium', gl: 'be', dom: 'google.be' },
         'brussels': { loc: 'Brussels, Belgium', gl: 'be', dom: 'google.be' },
         'antwerp': { loc: 'Antwerp, Belgium', gl: 'be', dom: 'google.be' },
         
-        // ðŸ‡¨ðŸ‡­ SWITZERLAND
+        // 🇨🇭 SWITZERLAND
         'suisse': { loc: 'Switzerland', gl: 'ch', dom: 'google.ch' },
         'switzerland': { loc: 'Switzerland', gl: 'ch', dom: 'google.ch' },
-        'genÃ¨ve': { loc: 'Geneva, Switzerland', gl: 'ch', dom: 'google.ch' },
+        'genève': { loc: 'Geneva, Switzerland', gl: 'ch', dom: 'google.ch' },
         'geneva': { loc: 'Geneva, Switzerland', gl: 'ch', dom: 'google.ch' },
         'zurich': { loc: 'Zurich, Switzerland', gl: 'ch', dom: 'google.ch' },
         'bern': { loc: 'Bern, Switzerland', gl: 'ch', dom: 'google.ch' },
         
-        // ðŸ‡¨ðŸ‡¦ CANADA
+        // 🇨🇦 CANADA
         'canada': { loc: 'Canada', gl: 'ca', dom: 'google.ca' },
         'montreal': { loc: 'Montreal, Canada', gl: 'ca', dom: 'google.ca' },
         'toronto': { loc: 'Toronto, Canada', gl: 'ca', dom: 'google.ca' },
         'vancouver': { loc: 'Vancouver, Canada', gl: 'ca', dom: 'google.ca' },
         'ottawa': { loc: 'Ottawa, Canada', gl: 'ca', dom: 'google.ca' },
         
-        // ðŸ‡ºðŸ‡¸ USA
+        // 🇺🇸 USA
         'usa': { loc: 'United States', gl: 'us', dom: 'google.com' },
         'united states': { loc: 'United States', gl: 'us', dom: 'google.com' },
         'america': { loc: 'United States', gl: 'us', dom: 'google.com' },
@@ -3252,7 +3252,7 @@ function resolveSerpGeo(input) {
         'san francisco': { loc: 'San Francisco, USA', gl: 'us', dom: 'google.com' },
         'boston': { loc: 'Boston, USA', gl: 'us', dom: 'google.com' },
         
-        // ðŸ‡¬ðŸ‡§ UK
+        // 🇬🇧 UK
         'uk': { loc: 'United Kingdom', gl: 'uk', dom: 'google.co.uk' },
         'united kingdom': { loc: 'United Kingdom', gl: 'uk', dom: 'google.co.uk' },
         'london': { loc: 'London, UK', gl: 'uk', dom: 'google.co.uk' },
@@ -3260,7 +3260,7 @@ function resolveSerpGeo(input) {
         'birmingham': { loc: 'Birmingham, UK', gl: 'uk', dom: 'google.co.uk' },
         'glasgow': { loc: 'Glasgow, UK', gl: 'uk', dom: 'google.co.uk' },
         
-        // ðŸ‡©ðŸ‡ª GERMANY
+        // 🇩🇪 GERMANY
         'allemagne': { loc: 'Germany', gl: 'de', dom: 'google.de' },
         'germany': { loc: 'Germany', gl: 'de', dom: 'google.de' },
         'berlin': { loc: 'Berlin, Germany', gl: 'de', dom: 'google.de' },
@@ -3268,7 +3268,7 @@ function resolveSerpGeo(input) {
         'frankfurt': { loc: 'Frankfurt, Germany', gl: 'de', dom: 'google.de' },
         'hamburg': { loc: 'Hamburg, Germany', gl: 'de', dom: 'google.de' },
         
-        // ðŸ‡ªðŸ‡¸ SPAIN
+        // 🇪🇸 SPAIN
         'espagne': { loc: 'Spain', gl: 'es', dom: 'google.es' },
         'spain': { loc: 'Spain', gl: 'es', dom: 'google.es' },
         'madrid': { loc: 'Madrid, Spain', gl: 'es', dom: 'google.es' },
@@ -3276,7 +3276,7 @@ function resolveSerpGeo(input) {
         'valencia': { loc: 'Valencia, Spain', gl: 'es', dom: 'google.es' },
         'sevilla': { loc: 'Sevilla, Spain', gl: 'es', dom: 'google.es' },
         
-        // ðŸ‡®ðŸ‡¹ ITALY
+        // 🇮🇹 ITALY
         'italie': { loc: 'Italy', gl: 'it', dom: 'google.it' },
         'italy': { loc: 'Italy', gl: 'it', dom: 'google.it' },
         'rome': { loc: 'Rome, Italy', gl: 'it', dom: 'google.it' },
@@ -3302,11 +3302,11 @@ function resolveSerpGeo(input) {
     };
 }
 
-console.log('âœ… resolveSerpGeo loaded - 70+ locations supported');
+console.log('✅ resolveSerpGeo loaded - 70+ locations supported');
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸš¨ ERROR HANDLER ULTRA-SMART (Contextual error messages)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🚨 ERROR HANDLER ULTRA-SMART (Contextual error messages)
+// ═══════════════════════════════════════════════════════════════════
 
 function handleError(error, context = 'API') {
     const errorResponse = {
@@ -3381,10 +3381,10 @@ function handleError(error, context = 'API') {
     
     // Log error (detailed in dev, minimal in prod)
     if (NODE_ENV === 'development') {
-        console.error(`âŒ [${context}] Full error:`, error);
+        console.error(`❌ [${context}] Full error:`, error);
         errorResponse.stack = error.stack;
     } else {
-        console.error(`âŒ [${context}] ${errorResponse.error}: ${errorResponse.details}`);
+        console.error(`❌ [${context}] ${errorResponse.error}: ${errorResponse.details}`);
     }
     
     return errorResponse;
@@ -3467,7 +3467,7 @@ function apifyKeywordCloud(texts = [], limit = 12) {
   const stop = new Set([
     'the','and','for','with','this','that','from','your','have','vous','pour','avec',
     'dans','mais','sans','plus','moins','une','des','les','aux','sur','est','are',
-    'qui','quoi','comment','when','where','quoi','Ø§Ø°Ø§','Ù‡Ø°Ø§','Ù‡Ø°Ù‡','Ø¹Ù„Ù‰','Ù…Ø¹','Ù…Ù†'
+    'qui','quoi','comment','when','where','quoi','اذا','هذا','هذه','على','مع','من'
   ]);
   const freq = {};
   for (const txt of texts) {
@@ -3486,8 +3486,8 @@ function apifyBuildSocialListeningIntel(recordsByBucket = {}) {
   const postTexts = posts.map(r => r.text).filter(Boolean);
   const commentTexts = comments.map(r => r.text).filter(Boolean);
 
-  const negativeSignals = /(scam|arnaque|fake|nul|mauvais|late|retard|bad|poor|problem|probl[eÃ¨]me|expensive|cher|co[uÃ»]teux|support)/i;
-  const positiveSignals = /(great|excellent|top|recommand|love|satisfait|rapide|qualit[eÃ©]|parfait|awesome)/i;
+  const negativeSignals = /(scam|arnaque|fake|nul|mauvais|late|retard|bad|poor|problem|probl[eè]me|expensive|cher|co[uû]teux|support)/i;
+  const positiveSignals = /(great|excellent|top|recommand|love|satisfait|rapide|qualit[eé]|parfait|awesome)/i;
   const questionSignals = /(\\?|comment|how|can|possible|est-ce|disponible|livraison|delivery|prix|price|refund|garantie)/i;
 
   let sentiment = 0;
@@ -3501,10 +3501,10 @@ function apifyBuildSocialListeningIntel(recordsByBucket = {}) {
   const topPraises = commentTexts.filter(t => positiveSignals.test(t)).slice(0, 8);
   const purchaseQuestions = commentTexts.filter(t => questionSignals.test(t)).slice(0, 12);
 
-  const trustConcerns = commentTexts.filter(t => /(scam|arnaque|trust|fiable|legit|s[Ã©e]rieux|authentic)/i.test(t)).slice(0, 8);
-  const priceConcerns = commentTexts.filter(t => /(price|prix|cher|expensive|discount|promo|co[uÃ»]t)/i.test(t)).slice(0, 8);
+  const trustConcerns = commentTexts.filter(t => /(scam|arnaque|trust|fiable|legit|s[ée]rieux|authentic)/i.test(t)).slice(0, 8);
+  const priceConcerns = commentTexts.filter(t => /(price|prix|cher|expensive|discount|promo|co[uû]t)/i.test(t)).slice(0, 8);
   const deliveryConcerns = commentTexts.filter(t => /(delivery|livraison|retard|delay|ship|shipping)/i.test(t)).slice(0, 8);
-  const supportConcerns = commentTexts.filter(t => /(support|sav|service client|reply|r[eÃ©]ponse|whatsapp)/i.test(t)).slice(0, 8);
+  const supportConcerns = commentTexts.filter(t => /(support|sav|service client|reply|r[eé]ponse|whatsapp)/i.test(t)).slice(0, 8);
 
   const topPosts = posts
     .sort((a, b) => (b.engagement || 0) - (a.engagement || 0))
@@ -3717,12 +3717,12 @@ function buildApifyIntel(recordsByBucket = {}) {
 
   const comments = (recordsByBucket.comments || []).map((r) => {
     const txt = r.text || '';
-    const negative = /(scam|arnaque|fake|nul|mauvais|late|retard|bad|poor|problem|probl[eÃ¨]me|expensive|cher|co[uÃ»]teux|support)/i.test(txt);
+    const negative = /(scam|arnaque|fake|nul|mauvais|late|retard|bad|poor|problem|probl[eè]me|expensive|cher|co[uû]teux|support)/i.test(txt);
     let painPoint = null;
     if (/(delivery|livraison|retard|delay|ship|shipping)/i.test(txt)) painPoint = 'delivery';
-    else if (/(price|prix|cher|expensive|discount|promo|co[uÃ»]t)/i.test(txt)) painPoint = 'price';
-    else if (/(support|sav|service client|reply|r[eÃ©]ponse|whatsapp)/i.test(txt)) painPoint = 'support';
-    else if (/(scam|arnaque|trust|fiable|legit|s[Ã©e]rieux|authentic)/i.test(txt)) painPoint = 'trust';
+    else if (/(price|prix|cher|expensive|discount|promo|co[uû]t)/i.test(txt)) painPoint = 'price';
+    else if (/(support|sav|service client|reply|r[eé]ponse|whatsapp)/i.test(txt)) painPoint = 'support';
+    else if (/(scam|arnaque|trust|fiable|legit|s[ée]rieux|authentic)/i.test(txt)) painPoint = 'trust';
 
     const ev = normalizeEvidenceLink({
       ...r,
@@ -3880,9 +3880,9 @@ function apifyBuildQueryVariants({ query = '', url = '', lang = 'fr', geoLocatio
   ].slice(0, 10));
 
   if (lang === 'ar') {
-    if (q) terms.add(`ØªØ¹Ù„ÙŠÙ‚Ø§Øª ${q}`);
-    if (q) terms.add(`Ø¢Ø±Ø§Ø¡ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ ${q}`);
-    if (q) terms.add(`Ø§Ø¹ØªØ±Ø§Ø¶Ø§Øª ${q}`);
+    if (q) terms.add(`تعليقات ${q}`);
+    if (q) terms.add(`آراء العملاء ${q}`);
+    if (q) terms.add(`اعتراضات ${q}`);
   } else if (lang === 'en') {
     if (q) terms.add(`${q} comments`);
     if (q) terms.add(`${q} complaints`);
@@ -4259,7 +4259,7 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
       guideTop: {
         title: 'Guide concret',
         steps: [
-          'Identifier les ads et posts les plus rÃ©pÃ©tÃ©s',
+          'Identifier les ads et posts les plus répétés',
           'Comparer promesse marketing vs objections commentaires',
           'Transformer en 3 quick wins funnel + copy'
         ]
@@ -4303,7 +4303,7 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
     guideTop: {
       title: 'Guide concret',
       steps: [
-        'Identifier les ads et posts les plus rÃ©pÃ©tÃ©s',
+        'Identifier les ads et posts les plus répétés',
         'Comparer promesse marketing vs objections commentaires',
         'Transformer en 3 quick wins funnel + copy'
       ]
@@ -4320,15 +4320,15 @@ function truthLang(lang = 'fr') {
   const code = String(lang || 'fr').toLowerCase().slice(0, 2);
   if (code === 'ar') {
     return {
-      observed: 'Ù…Ø±ØµÙˆØ¯',
-      deduced: 'Ù…Ø³ØªÙ†ØªØ¬',
-      recommended: 'Ù…ÙˆØµÙ‰ Ø¨Ù‡',
-      unavailable: 'ØºÙŠØ± Ù…ØªØ§Ø­',
-      method: 'Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø­Ø³Ø§Ø¨',
-      confidence: 'Ø§Ù„Ø«Ù‚Ø©',
-      executiveTitle: 'Ù…Ø§ ÙŠØ¬Ø¨ ÙØ¹Ù„Ù‡ Ø§Ù„Ø¢Ù†',
-      proofTitle: 'Ù…ØµØ§Ø¯Ø± Ø§Ù„Ù‚Ø±Ø§Ø±',
-      noSource: 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ù…ØµØ¯Ø± Ù…ÙˆØ«ÙˆÙ‚'
+      observed: 'مرصود',
+      deduced: 'مستنتج',
+      recommended: 'موصى به',
+      unavailable: 'غير متاح',
+      method: 'طريقة الحساب',
+      confidence: 'الثقة',
+      executiveTitle: 'ما يجب فعله الآن',
+      proofTitle: 'مصادر القرار',
+      noSource: 'لا يوجد مصدر موثوق'
     };
   }
   if (code === 'en') {
@@ -4446,27 +4446,27 @@ function buildCompetitorProofModel(ctx = {}) {
   } : { ads: 0, posts: 0, comments: 0, reviews: 0 };
 
   const observed = [
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Market analyzed' : lang === 'ar' ? 'Ø§Ù„Ø³ÙˆÙ‚ Ø§Ù„Ù…Ø­Ù„Ù„' : 'Marche analyse', value: cleanQuery, source: 'User input', confidence: 'HIGH' }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Target country' : lang === 'ar' ? 'Ø§Ù„Ø¨Ù„Ø¯ Ø§Ù„Ù…Ø³ØªÙ‡Ø¯Ù' : 'Pays cible', value: geoData.location || null, source: 'Geo resolver', confidence: 'HIGH', inputs: { gl: geoData.gl || null, hl: geoData.hl || null } }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Competitors found' : lang === 'ar' ? 'Ø§Ù„Ù…Ù†Ø§ÙØ³ÙˆÙ† Ø§Ù„Ù…Ø±ØµÙˆØ¯ÙˆÙ†' : 'Concurrents trouves', value: enrichedCompetitors.length, source, confidence: enrichedCompetitors.length ? 'HIGH' : 'LOW', evidence: competitorUrls }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Search volume' : lang === 'ar' ? 'Ø­Ø¬Ù… Ø§Ù„Ø¨Ø­Ø«' : 'Volume de recherche', value: mainKwData ? realVolume : null, source: mainKwData ? 'Keyword provider' : L.noSource, confidence: mainKwData ? 'HIGH' : 'LOW', caveat: mainKwData ? null : L.unavailable }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Field evidence collected' : lang === 'ar' ? 'Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ø§Ø¯Ù„Ø© Ø§Ù„Ù…ÙŠØ¯Ø§Ù†ÙŠØ©' : 'Preuves terrain collectees', value: socialLinks.length, source: 'Social and review actors', confidence: socialLinks.length ? 'MEDIUM' : 'LOW', evidence: socialLinks.slice(0, 6), inputs: sourceCounts })
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Market analyzed' : lang === 'ar' ? 'السوق المحلل' : 'Marche analyse', value: cleanQuery, source: 'User input', confidence: 'HIGH' }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Target country' : lang === 'ar' ? 'البلد المستهدف' : 'Pays cible', value: geoData.location || null, source: 'Geo resolver', confidence: 'HIGH', inputs: { gl: geoData.gl || null, hl: geoData.hl || null } }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Competitors found' : lang === 'ar' ? 'المنافسون المرصودون' : 'Concurrents trouves', value: enrichedCompetitors.length, source, confidence: enrichedCompetitors.length ? 'HIGH' : 'LOW', evidence: competitorUrls }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Search volume' : lang === 'ar' ? 'حجم البحث' : 'Volume de recherche', value: mainKwData ? realVolume : null, source: mainKwData ? 'Keyword provider' : L.noSource, confidence: mainKwData ? 'HIGH' : 'LOW', caveat: mainKwData ? null : L.unavailable }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Field evidence collected' : lang === 'ar' ? 'روابط الادلة الميدانية' : 'Preuves terrain collectees', value: socialLinks.length, source: 'Social and review actors', confidence: socialLinks.length ? 'MEDIUM' : 'LOW', evidence: socialLinks.slice(0, 6), inputs: sourceCounts })
   ];
 
   const deduced = [
-    proofFact({ type: 'deduced', title: lang === 'en' ? 'Market difficulty' : lang === 'ar' ? 'ØµØ¹ÙˆØ¨Ø© Ø§Ù„Ø³ÙˆÙ‚' : 'Difficulte du marche', value: mergedData.marketInsights?.difficulty || null, source: 'Top competitors + market signals', confidence: 'MEDIUM', formula: 'difficulty = SERP strength + competitor count + authority labels + geo relevance', inputs: { competitors: enrichedCompetitors.length, topDominance: enrichedCompetitors[0]?.dominance || null, source } }),
-    proofFact({ type: 'deduced', title: lang === 'en' ? 'Search intent' : lang === 'ar' ? 'Ù†ÙŠØ© Ø§Ù„Ø¨Ø­Ø«' : 'Intention de recherche', value: mergedData.marketInsights?.serpIntent || null, source: 'Titles, snippets, PAA, related searches', confidence: 'MEDIUM', formula: 'intent = classification of top titles/snippets + query wording', inputs: { paa: cleanProofArray(peopleAlsoAsk, 4), related: cleanProofArray(relatedSearches, 4) } }),
-    proofFact({ type: 'deduced', title: lang === 'en' ? 'User context used' : lang === 'ar' ? 'Ø³ÙŠØ§Ù‚ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„Ù…Ø³ØªØ¹Ù…Ù„' : 'Contexte utilisateur utilise', value: Object.values(userIntentContext || {}).filter(Boolean).length, source: 'Optional form context', confidence: Object.values(userIntentContext || {}).filter(Boolean).length ? 'HIGH' : 'LOW', inputs: userIntentContext })
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'Market difficulty' : lang === 'ar' ? 'صعوبة السوق' : 'Difficulte du marche', value: mergedData.marketInsights?.difficulty || null, source: 'Top competitors + market signals', confidence: 'MEDIUM', formula: 'difficulty = SERP strength + competitor count + authority labels + geo relevance', inputs: { competitors: enrichedCompetitors.length, topDominance: enrichedCompetitors[0]?.dominance || null, source } }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'Search intent' : lang === 'ar' ? 'نية البحث' : 'Intention de recherche', value: mergedData.marketInsights?.serpIntent || null, source: 'Titles, snippets, PAA, related searches', confidence: 'MEDIUM', formula: 'intent = classification of top titles/snippets + query wording', inputs: { paa: cleanProofArray(peopleAlsoAsk, 4), related: cleanProofArray(relatedSearches, 4) } }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'User context used' : lang === 'ar' ? 'سياق المستخدم المستعمل' : 'Contexte utilisateur utilise', value: Object.values(userIntentContext || {}).filter(Boolean).length, source: 'Optional form context', confidence: Object.values(userIntentContext || {}).filter(Boolean).length ? 'HIGH' : 'LOW', inputs: userIntentContext })
   ];
 
   const recommended = [
-    proofFact({ type: 'recommended', title: lang === 'en' ? 'Priority move' : lang === 'ar' ? 'Ø§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„Ø§ÙˆÙ„' : 'Priorite concrete', value: competitorIntelligence?.finalAnswers?.positionToTake || null, source: 'Business decision synthesis', confidence: competitorIntelligence?.recommendedAttackAngle?.confidence || 'MEDIUM', evidence: competitorIntelligence?.recommendedAttackAngle?.evidenceLinks || competitorUrls.slice(0, 3) }),
-    ...cleanProofArray(competitorIntelligence?.priorityActions?.map(x => x.action) || [], 6).map((action, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Action ${i + 1}` : lang === 'ar' ? `Ø§Ù„Ø®Ø·ÙˆØ© ${i + 1}` : `Action ${i + 1}`, value: action, source: 'Business decision synthesis', confidence: 'MEDIUM' }))
+    proofFact({ type: 'recommended', title: lang === 'en' ? 'Priority move' : lang === 'ar' ? 'القرار الاول' : 'Priorite concrete', value: competitorIntelligence?.finalAnswers?.positionToTake || null, source: 'Business decision synthesis', confidence: competitorIntelligence?.recommendedAttackAngle?.confidence || 'MEDIUM', evidence: competitorIntelligence?.recommendedAttackAngle?.evidenceLinks || competitorUrls.slice(0, 3) }),
+    ...cleanProofArray(competitorIntelligence?.priorityActions?.map(x => x.action) || [], 6).map((action, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Action ${i + 1}` : lang === 'ar' ? `الخطوة ${i + 1}` : `Action ${i + 1}`, value: action, source: 'Business decision synthesis', confidence: 'MEDIUM' }))
   ];
 
   const unavailable = [];
-  if (!mainKwData) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Real keyword volume' : lang === 'ar' ? 'Ø­Ø¬Ù… Ø§Ù„Ø¨Ø­Ø« Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠ' : 'Volume reel du mot cle', source: L.noSource, confidence: 'LOW' }));
-  if (!socialLinks.length) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Social proof links' : lang === 'ar' ? 'Ø±ÙˆØ§Ø¨Ø· Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ© Ù…ÙˆØ«Ù‚Ø©' : 'Liens sociaux verifies', source: L.noSource, confidence: 'LOW' }));
+  if (!mainKwData) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Real keyword volume' : lang === 'ar' ? 'حجم البحث الحقيقي' : 'Volume reel du mot cle', source: L.noSource, confidence: 'LOW' }));
+  if (!socialLinks.length) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Social proof links' : lang === 'ar' ? 'روابط اجتماعية موثقة' : 'Liens sociaux verifies', source: L.noSource, confidence: 'LOW' }));
 
   return { title: L.proofTitle, labels: L, observed, deduced, recommended, unavailable };
 }
@@ -4488,23 +4488,23 @@ function buildFunnelProofModel(ctx = {}) {
   ];
 
   const observed = [
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Audited page' : lang === 'ar' ? 'Ø§Ù„ØµÙØ­Ø© Ø§Ù„Ù…Ø¯Ù‚Ù‚Ø©' : 'Page auditee', value: validUrl, source: 'Direct scrape', confidence: 'HIGH', evidence: [validUrl] }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Visible sections' : lang === 'ar' ? 'Ø§Ù‚Ø³Ø§Ù… Ø§Ù„ØµÙØ­Ø©' : 'Sections visibles', value: sectionsDetailed.length, source: 'HTML extraction', confidence: sectionsDetailed.length ? 'HIGH' : 'LOW' }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Calls to action' : lang === 'ar' ? 'Ø§Ø²Ø±Ø§Ø± Ø§Ù„Ø¯Ø¹ÙˆØ© Ù„Ù„ÙØ¹Ù„' : 'Appels a action', value: ctaList.length, source: 'HTML extraction', confidence: ctaList.length ? 'HIGH' : 'LOW', evidence: ctaList.slice(0, 6) }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Price detected' : lang === 'ar' ? 'Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ù…Ø±ØµÙˆØ¯' : 'Prix detecte', value: detectedPrice > 0 ? `${detectedPrice} ${currency}` : null, source: detectedPrice > 0 ? 'Page text/schema' : L.noSource, confidence: detectedPrice > 0 ? 'MEDIUM' : 'LOW' }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Trust proof found' : lang === 'ar' ? 'Ø§Ø¯Ù„Ø© Ø§Ù„Ø«Ù‚Ø©' : 'Preuves de confiance', value: socialProofs.length, source: 'Page extraction', confidence: socialProofs.length ? 'MEDIUM' : 'LOW', evidence: socialProofs.slice(0, 5) })
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Audited page' : lang === 'ar' ? 'الصفحة المدققة' : 'Page auditee', value: validUrl, source: 'Direct scrape', confidence: 'HIGH', evidence: [validUrl] }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Visible sections' : lang === 'ar' ? 'اقسام الصفحة' : 'Sections visibles', value: sectionsDetailed.length, source: 'HTML extraction', confidence: sectionsDetailed.length ? 'HIGH' : 'LOW' }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Calls to action' : lang === 'ar' ? 'ازرار الدعوة للفعل' : 'Appels a action', value: ctaList.length, source: 'HTML extraction', confidence: ctaList.length ? 'HIGH' : 'LOW', evidence: ctaList.slice(0, 6) }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Price detected' : lang === 'ar' ? 'السعر المرصود' : 'Prix detecte', value: detectedPrice > 0 ? `${detectedPrice} ${currency}` : null, source: detectedPrice > 0 ? 'Page text/schema' : L.noSource, confidence: detectedPrice > 0 ? 'MEDIUM' : 'LOW' }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Trust proof found' : lang === 'ar' ? 'ادلة الثقة' : 'Preuves de confiance', value: socialProofs.length, source: 'Page extraction', confidence: socialProofs.length ? 'MEDIUM' : 'LOW', evidence: socialProofs.slice(0, 5) })
   ];
 
   const deduced = [
-    proofFact({ type: 'deduced', title: lang === 'en' ? 'Page score' : lang === 'ar' ? 'Ù†Ù‚Ø·Ø© Ø§Ù„ØµÙØ­Ø©' : 'Score de la page', value: auditSummary.overallScore || localScore || 0, source: 'Weighted audit model', confidence: auditSummary.confidence || 'MEDIUM', formula: 'score = structure + clarity + trust + offer + CTA - friction penalties', inputs: auditScorecard }),
-    proofFact({ type: 'deduced', title: lang === 'en' ? 'Revenue model status' : lang === 'ar' ? 'Ø­Ø§Ù„Ø© Ù†Ù…ÙˆØ°Ø¬ Ø§Ù„Ø¹Ø§Ø¦Ø¯' : 'Statut du modele financier', value: v12Traffic && v12Basket ? v12StealPot : null, source: v12Traffic && v12Basket ? 'Model-based estimate' : L.noSource, confidence: 'LOW', formula: 'potential = estimated traffic x assumed conversion lift x observed/estimated basket', inputs: { traffic: v12Traffic, basket: v12Basket, stealPotential: v12StealPot }, caveat: lang === 'en' ? 'Not a real revenue figure unless traffic and basket are observed.' : lang === 'ar' ? 'Ù„ÙŠØ³ Ø±Ù‚Ù…Ø§ Ø­Ù‚ÙŠÙ‚ÙŠØ§ Ù„Ù„Ø¹Ø§Ø¦Ø¯ Ø¨Ø¯ÙˆÙ† Ø²ÙŠØ§Ø±Ø§Øª ÙˆØ³Ø¹Ø± Ù…ÙˆØ«Ù‚ÙŠÙ†.' : 'Ce n est pas un chiffre reel sans trafic et panier observes.' }),
-    proofFact({ type: 'deduced', title: lang === 'en' ? 'User context used' : lang === 'ar' ? 'Ø³ÙŠØ§Ù‚ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„Ù…Ø³ØªØ¹Ù…Ù„' : 'Contexte utilisateur utilise', value: Object.values(userIntentContext || {}).filter(Boolean).length, source: 'Optional form context', confidence: Object.values(userIntentContext || {}).filter(Boolean).length ? 'HIGH' : 'LOW', inputs: userIntentContext })
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'Page score' : lang === 'ar' ? 'نقطة الصفحة' : 'Score de la page', value: auditSummary.overallScore || localScore || 0, source: 'Weighted audit model', confidence: auditSummary.confidence || 'MEDIUM', formula: 'score = structure + clarity + trust + offer + CTA - friction penalties', inputs: auditScorecard }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'Revenue model status' : lang === 'ar' ? 'حالة نموذج العائد' : 'Statut du modele financier', value: v12Traffic && v12Basket ? v12StealPot : null, source: v12Traffic && v12Basket ? 'Model-based estimate' : L.noSource, confidence: 'LOW', formula: 'potential = estimated traffic x assumed conversion lift x observed/estimated basket', inputs: { traffic: v12Traffic, basket: v12Basket, stealPotential: v12StealPot }, caveat: lang === 'en' ? 'Not a real revenue figure unless traffic and basket are observed.' : lang === 'ar' ? 'ليس رقما حقيقيا للعائد بدون زيارات وسعر موثقين.' : 'Ce n est pas un chiffre reel sans trafic et panier observes.' }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'User context used' : lang === 'ar' ? 'سياق المستخدم المستعمل' : 'Contexte utilisateur utilise', value: Object.values(userIntentContext || {}).filter(Boolean).length, source: 'Optional form context', confidence: Object.values(userIntentContext || {}).filter(Boolean).length ? 'HIGH' : 'LOW', inputs: userIntentContext })
   ];
 
-  const recommended = cleanProofArray(auditQuickWins.map(x => x.title || x.action || x.howTo), 5).map((action, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Fix ${i + 1}` : lang === 'ar' ? `ØªØ­Ø³ÙŠÙ† ${i + 1}` : `Correction ${i + 1}`, value: action, source: 'Audit quick wins', confidence: auditQuickWins[i]?.confidence || 'MEDIUM', evidence: proofLinks.slice(0, 4) }));
+  const recommended = cleanProofArray(auditQuickWins.map(x => x.title || x.action || x.howTo), 5).map((action, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Fix ${i + 1}` : lang === 'ar' ? `تحسين ${i + 1}` : `Correction ${i + 1}`, value: action, source: 'Audit quick wins', confidence: auditQuickWins[i]?.confidence || 'MEDIUM', evidence: proofLinks.slice(0, 4) }));
   const unavailable = [];
-  if (!detectedPrice) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Verified price' : lang === 'ar' ? 'Ø³Ø¹Ø± Ù…ÙˆØ«Ù‚' : 'Prix verifie', source: L.noSource, confidence: 'LOW' }));
-  if (!v12Traffic) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Verified traffic' : lang === 'ar' ? 'Ø²ÙŠØ§Ø±Ø§Øª Ù…ÙˆØ«Ù‚Ø©' : 'Trafic verifie', source: L.noSource, confidence: 'LOW' }));
+  if (!detectedPrice) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Verified price' : lang === 'ar' ? 'سعر موثق' : 'Prix verifie', source: L.noSource, confidence: 'LOW' }));
+  if (!v12Traffic) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Verified traffic' : lang === 'ar' ? 'زيارات موثقة' : 'Trafic verifie', source: L.noSource, confidence: 'LOW' }));
 
   return { title: L.proofTitle, labels: L, observed, deduced, recommended, unavailable };
 }
@@ -4513,18 +4513,18 @@ function buildTechnicalProofModel(ctx = {}) {
   const { lang = 'fr', validUrl = '', extraction = {}, seoAudit = {}, metrics = {}, traffic = {}, actionRoadmap = [], criticalIssues = [], userIntentContext = {} } = ctx;
   const L = truthLang(lang);
   const observed = [
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Audited URL' : lang === 'ar' ? 'Ø§Ù„Ø±Ø§Ø¨Ø· Ø§Ù„Ù…Ø¯Ù‚Ù‚' : 'URL auditee', value: validUrl, source: 'Direct scrape', confidence: 'HIGH', evidence: [validUrl] }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Title length' : lang === 'ar' ? 'Ø·ÙˆÙ„ Ø§Ù„Ø¹Ù†ÙˆØ§Ù†' : 'Longueur du titre', value: seoAudit?.title?.length ?? extraction?.titleLength ?? null, source: 'HTML head', confidence: 'HIGH' }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Images without ALT' : lang === 'ar' ? 'ØµÙˆØ± Ø¨Ø¯ÙˆÙ† ÙˆØµÙ' : 'Images sans ALT', value: seoAudit?.images?.missingAlt ?? extraction?.missingAlt ?? null, source: 'HTML images', confidence: 'HIGH' }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Structured data' : lang === 'ar' ? 'Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ù†Ø¸Ù…Ø©' : 'Donnees structurees', value: seoAudit?.schema?.exists ? seoAudit.schema.types : null, source: 'JSON-LD extraction', confidence: seoAudit?.schema?.exists ? 'HIGH' : 'LOW' })
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Audited URL' : lang === 'ar' ? 'الرابط المدقق' : 'URL auditee', value: validUrl, source: 'Direct scrape', confidence: 'HIGH', evidence: [validUrl] }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Title length' : lang === 'ar' ? 'طول العنوان' : 'Longueur du titre', value: seoAudit?.title?.length ?? extraction?.titleLength ?? null, source: 'HTML head', confidence: 'HIGH' }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Images without ALT' : lang === 'ar' ? 'صور بدون وصف' : 'Images sans ALT', value: seoAudit?.images?.missingAlt ?? extraction?.missingAlt ?? null, source: 'HTML images', confidence: 'HIGH' }),
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Structured data' : lang === 'ar' ? 'بيانات منظمة' : 'Donnees structurees', value: seoAudit?.schema?.exists ? seoAudit.schema.types : null, source: 'JSON-LD extraction', confidence: seoAudit?.schema?.exists ? 'HIGH' : 'LOW' })
   ];
   const deduced = [
-    proofFact({ type: 'deduced', title: lang === 'en' ? 'Technical score' : lang === 'ar' ? 'Ø§Ù„Ù†Ù‚Ø·Ø© Ø§Ù„ØªÙ‚Ù†ÙŠØ©' : 'Score technique', value: extraction?.seoScore || null, source: 'Weighted technical checks', confidence: 'MEDIUM', formula: 'score = title + description + headings + schema + images + links + security + mobile', inputs: { metrics, traffic } }),
-    proofFact({ type: 'deduced', title: lang === 'en' ? 'User context used' : lang === 'ar' ? 'Ø³ÙŠØ§Ù‚ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø§Ù„Ù…Ø³ØªØ¹Ù…Ù„' : 'Contexte utilisateur utilise', value: Object.values(userIntentContext || {}).filter(Boolean).length, source: 'Optional form context', confidence: Object.values(userIntentContext || {}).filter(Boolean).length ? 'HIGH' : 'LOW', inputs: userIntentContext })
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'Technical score' : lang === 'ar' ? 'النقطة التقنية' : 'Score technique', value: extraction?.seoScore || null, source: 'Weighted technical checks', confidence: 'MEDIUM', formula: 'score = title + description + headings + schema + images + links + security + mobile', inputs: { metrics, traffic } }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'User context used' : lang === 'ar' ? 'سياق المستخدم المستعمل' : 'Contexte utilisateur utilise', value: Object.values(userIntentContext || {}).filter(Boolean).length, source: 'Optional form context', confidence: Object.values(userIntentContext || {}).filter(Boolean).length ? 'HIGH' : 'LOW', inputs: userIntentContext })
   ];
-  const recommended = cleanProofArray([...(criticalIssues || []), ...(actionRoadmap || [])], 5).map((x, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Fix ${i + 1}` : lang === 'ar' ? `ØªØ­Ø³ÙŠÙ† ${i + 1}` : `Correction ${i + 1}`, value: x, source: 'Technical audit', confidence: 'MEDIUM' }));
+  const recommended = cleanProofArray([...(criticalIssues || []), ...(actionRoadmap || [])], 5).map((x, i) => proofFact({ type: 'recommended', title: lang === 'en' ? `Fix ${i + 1}` : lang === 'ar' ? `تحسين ${i + 1}` : `Correction ${i + 1}`, value: x, source: 'Technical audit', confidence: 'MEDIUM' }));
   const unavailable = [];
-  if (!metrics || !Object.keys(metrics).length) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Lab speed metrics' : lang === 'ar' ? 'Ù…Ù‚Ø§ÙŠÙŠØ³ Ø§Ù„Ø³Ø±Ø¹Ø©' : 'Mesures vitesse labo', source: L.noSource, confidence: 'LOW' }));
+  if (!metrics || !Object.keys(metrics).length) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Lab speed metrics' : lang === 'ar' ? 'مقاييس السرعة' : 'Mesures vitesse labo', source: L.noSource, confidence: 'LOW' }));
   return { title: L.proofTitle, labels: L, observed, deduced, recommended, unavailable };
 }
 
@@ -4706,8 +4706,8 @@ function extractCommerceSnapshotFromHtml(html = '', pageUrl = '') {
     ...extractDomPrices($, html)
   ].map(p => ({ ...p, pageUrl: baseUrl }));
 
-  const pricingLinkRegex = /(pricing|price|tarif|prix|offre|offers|plans|abonnement|subscription|Ø§Ù„Ø£Ø³Ø¹Ø§Ø±|Ø§Ù„Ø³Ø¹Ø±|Ø§Ù„Ø¹Ø±ÙˆØ¶|Ø§Ù„ØªØ³Ø¹ÙŠØ±)/i;
-  const productLinkRegex = /(product|produit|shop|store|boutique|collection|item|article|catalog|Ù…Ù†ØªØ¬|Ù…ØªØ¬Ø±)/i;
+  const pricingLinkRegex = /(pricing|price|tarif|prix|offre|offers|plans|abonnement|subscription|الأسعار|السعر|العروض|التسعير)/i;
+  const productLinkRegex = /(product|produit|shop|store|boutique|collection|item|article|catalog|منتج|متجر)/i;
 
   const links = $('a[href]').map((_, el) => {
     const href = getInternalUrl($(el).attr('href'), baseUrl);
@@ -4758,13 +4758,13 @@ function extractCommerceSnapshotFromHtml(html = '', pageUrl = '') {
   const trustSignals = {
     hasSSL: /^https:/i.test(baseUrl),
     hasWhatsApp: /whatsapp|wa\.me/i.test(html),
-    hasReviews: /(avis|review|reviews|testimonial|rating|Ã©toile|etoile|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø©)/i.test(bodyText),
-    hasGuarantee: /(garantie|guarantee|money back|satisfait|refund|Ø¶Ù…Ø§Ù†|Ø§Ø³ØªØ±Ø¬Ø§Ø¹)/i.test(bodyText),
-    hasReturnPolicy: /(retour|return policy|politique de retour|Ø§Ø³ØªØ¨Ø¯Ø§Ù„|Ø¥Ø±Ø¬Ø§Ø¹)/i.test(bodyText),
-    hasDelivery: /(livraison|delivery|shipping|expÃ©dition|ØªÙˆØµÙŠÙ„|Ø´Ø­Ù†)/i.test(bodyText),
-    hasFAQ: /(faq|questions frÃ©quentes|frequently asked|Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø§Ø¦Ø¹Ø©)/i.test(bodyText),
-    hasPaymentLogos: /(visa|mastercard|paypal|stripe|cmi|cash on delivery|paiement Ã  la livraison)/i.test(html),
-    hasLegalPages: /(privacy|terms|conditions|mentions lÃ©gales|politique de confidentialitÃ©)/i.test(bodyText),
+    hasReviews: /(avis|review|reviews|testimonial|rating|étoile|etoile|تقييم|آراء|مراجعة)/i.test(bodyText),
+    hasGuarantee: /(garantie|guarantee|money back|satisfait|refund|ضمان|استرجاع)/i.test(bodyText),
+    hasReturnPolicy: /(retour|return policy|politique de retour|استبدال|إرجاع)/i.test(bodyText),
+    hasDelivery: /(livraison|delivery|shipping|expédition|توصيل|شحن)/i.test(bodyText),
+    hasFAQ: /(faq|questions fréquentes|frequently asked|الأسئلة الشائعة)/i.test(bodyText),
+    hasPaymentLogos: /(visa|mastercard|paypal|stripe|cmi|cash on delivery|paiement à la livraison)/i.test(html),
+    hasLegalPages: /(privacy|terms|conditions|mentions légales|politique de confidentialité)/i.test(bodyText),
     socialLinks: uniqueByKey(links.filter(l => /(facebook|instagram|linkedin|tiktok|youtube|x\.com|twitter)/i.test(l.href)), l => l.href).slice(0, 6)
   };
 
@@ -4966,7 +4966,7 @@ async function exploreFunnelCommerce(url, options = {}) {
     let browserSession = null;
     try {
       if (shouldUseRailwayScraping()) {
-        console.log(`[SCRAPING-ROUTER] Commerce exploration envoyÃ©e Ã  Railway: ${url}`);
+        console.log(`[SCRAPING-ROUTER] Commerce exploration envoyée à Railway: ${url}`);
 
         try {
           const railwayResult = await scrapeUrlViaRailway(url, {
@@ -4991,7 +4991,7 @@ async function exploreFunnelCommerce(url, options = {}) {
             return empty(`RAILWAY_COMMERCE_SCRAPING_FAILED: ${railwayError.message}`);
           }
 
-          console.warn('[SCRAPING-ROUTER] Fallback Render autorisÃ© pour exploreFunnelCommerce');
+          console.warn('[SCRAPING-ROUTER] Fallback Render autorisé pour exploreFunnelCommerce');
         }
       }
 
@@ -5011,7 +5011,7 @@ async function exploreFunnelCommerce(url, options = {}) {
           window.scrollTo(0, document.body.scrollHeight);
         }).catch(() => {});
 
-        await page.locator('button, a').filter({ hasText: /voir plus|load more|more|plus|Ø¹Ø±Ø¶ Ø§Ù„Ù…Ø²ÙŠØ¯|Ø§Ù„Ù…Ø²ÙŠØ¯/i }).first().click({ timeout: 1200 }).catch(() => {});
+        await page.locator('button, a').filter({ hasText: /voir plus|load more|more|plus|عرض المزيد|المزيد/i }).first().click({ timeout: 1200 }).catch(() => {});
         await page.waitForTimeout(500).catch(() => {});
         html = await page.content().catch(() => html);
       }
@@ -5208,19 +5208,19 @@ function buildConcreteFunnelActionPlan(ctx = {}) {
   ];
 
   const h1Replacement = isAr
-    ? `Ø­ÙˆÙ‘Ù„ ${offer || 'Ø¹Ø±Ø¶Ùƒ'} Ø¥Ù„Ù‰ Ù†ØªÙŠØ¬Ø© ÙˆØ§Ø¶Ø­Ø© Ø¨Ø¯ÙˆÙ† Ù…Ø®Ø§Ø·Ø±Ø©`
+    ? `حوّل ${offer || 'عرضك'} إلى نتيجة واضحة بدون مخاطرة`
     : isEn
     ? `Turn ${offer || 'your offer'} into a clear result with less risk`
     : `Transformez ${offer || 'votre offre'} en resultat clair, sans risque`;
 
   const ctaReplacement = isAr
-    ? 'Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ Ø§Ù„ØªØ´Ø®ÙŠØµ Ø§Ù„Ø¢Ù†'
+    ? 'احصل على التشخيص الآن'
     : isEn
     ? 'Get my diagnosis now'
     : 'Obtenir mon diagnostic maintenant';
 
   const proofBlock = isAr
-    ? 'Ø£Ø¶Ù: Ù†ØªÙŠØ¬Ø© Ø¹Ù…ÙŠÙ„ØŒ Ø±Ù‚Ù… Ù…ÙˆØ«Ù‚ØŒ Ø¶Ù…Ø§Ù†ØŒ ÙˆØ³Ø¤Ø§Ù„ Ø´Ø§Ø¦Ø¹ Ù‚Ø¨Ù„ Ø§Ù„Ø´Ø±Ø§Ø¡.'
+    ? 'أضف: نتيجة عميل، رقم موثق، ضمان، وسؤال شائع قبل الشراء.'
     : isEn
     ? 'Add: customer result, verified number, guarantee, and pre-purchase question.'
     : 'Ajouter: resultat client, chiffre verifie, garantie, et question avant achat.';
@@ -5228,33 +5228,33 @@ function buildConcreteFunnelActionPlan(ctx = {}) {
   const actions = [
     {
       zone: 'hero',
-      problemObserved: currentH1 ? (isEn ? 'Main promise can be made more concrete.' : isAr ? 'Ø§Ù„ÙˆØ¹Ø¯ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ ÙŠØ­ØªØ§Ø¬ ÙˆØ¶ÙˆØ­Ø§ Ø§ÙƒØ«Ø±.' : 'La promesse principale peut devenir plus concrete.') : (isEn ? 'Main promise not clearly detected.' : isAr ? 'Ù„Ù… ÙŠØªÙ… Ø±ØµØ¯ ÙˆØ¹Ø¯ Ø±Ø¦ÙŠØ³ÙŠ ÙˆØ§Ø¶Ø­.' : 'Promesse principale peu visible.'),
-      changeNow: isEn ? 'Rewrite the first headline around outcome, risk reduction, and audience.' : isAr ? 'Ø£Ø¹Ø¯ ÙƒØªØ§Ø¨Ø© Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ø­ÙˆÙ„ Ø§Ù„Ù†ØªÙŠØ¬Ø© ÙˆØªÙ‚Ù„ÙŠÙ„ Ø§Ù„Ù…Ø®Ø§Ø·Ø±Ø© ÙˆØ§Ù„Ø¬Ù…Ù‡ÙˆØ±.' : 'Reecrire le premier titre autour du resultat, de la reduction du risque et de l audience.',
+      problemObserved: currentH1 ? (isEn ? 'Main promise can be made more concrete.' : isAr ? 'الوعد الرئيسي يحتاج وضوحا اكثر.' : 'La promesse principale peut devenir plus concrete.') : (isEn ? 'Main promise not clearly detected.' : isAr ? 'لم يتم رصد وعد رئيسي واضح.' : 'Promesse principale peu visible.'),
+      changeNow: isEn ? 'Rewrite the first headline around outcome, risk reduction, and audience.' : isAr ? 'أعد كتابة العنوان حول النتيجة وتقليل المخاطرة والجمهور.' : 'Reecrire le premier titre autour du resultat, de la reduction du risque et de l audience.',
       replacementExample: h1Replacement,
       evidence: currentH1 ? [currentH1] : evidence.slice(0, 2),
       confidence: currentH1 ? 'HIGH' : 'MEDIUM'
     },
     {
       zone: 'cta',
-      problemObserved: primaryCta ? (isEn ? 'CTA exists but can be more action-oriented.' : isAr ? 'Ø²Ø± Ø§Ù„Ø¯Ø¹ÙˆØ© Ù…ÙˆØ¬ÙˆØ¯ ÙˆÙŠÙ…ÙƒÙ† Ø¬Ø¹Ù„Ù‡ Ø§ÙƒØ«Ø± Ø¹Ù…Ù„ÙŠØ©.' : 'Le CTA existe mais peut devenir plus actionnable.') : (isEn ? 'No clear CTA detected.' : isAr ? 'Ù„Ù… ÙŠØªÙ… Ø±ØµØ¯ Ø²Ø± ÙˆØ§Ø¶Ø­.' : 'CTA clair non detecte.'),
-      changeNow: isEn ? 'Use one repeated CTA verb across hero, pricing, and final section.' : isAr ? 'Ø§Ø³ØªØ¹Ù…Ù„ Ù†ÙØ³ ÙØ¹Ù„ Ø§Ù„Ø¯Ø¹ÙˆØ© ÙÙŠ Ø§Ù„Ø§Ø¹Ù„Ù‰ ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ù†Ù‡Ø§ÙŠØ©.' : 'Utiliser le meme verbe CTA dans le hero, le prix et la derniere section.',
+      problemObserved: primaryCta ? (isEn ? 'CTA exists but can be more action-oriented.' : isAr ? 'زر الدعوة موجود ويمكن جعله اكثر عملية.' : 'Le CTA existe mais peut devenir plus actionnable.') : (isEn ? 'No clear CTA detected.' : isAr ? 'لم يتم رصد زر واضح.' : 'CTA clair non detecte.'),
+      changeNow: isEn ? 'Use one repeated CTA verb across hero, pricing, and final section.' : isAr ? 'استعمل نفس فعل الدعوة في الاعلى والسعر والنهاية.' : 'Utiliser le meme verbe CTA dans le hero, le prix et la derniere section.',
       replacementExample: ctaReplacement,
       evidence: primaryCta ? [primaryCta] : evidence.slice(0, 2),
       confidence: primaryCta ? 'HIGH' : 'MEDIUM'
     },
     {
       zone: 'trust',
-      problemObserved: socialProofs.length ? (isEn ? 'Trust exists but should be closer to the CTA.' : isAr ? 'Ø§Ù„Ø«Ù‚Ø© Ù…ÙˆØ¬ÙˆØ¯Ø© ÙˆÙŠØ¬Ø¨ ØªÙ‚Ø±ÙŠØ¨Ù‡Ø§ Ù…Ù† Ø²Ø± Ø§Ù„ÙØ¹Ù„.' : 'La preuve existe mais doit etre rapprochee du CTA.') : (isEn ? 'Trust proof is missing or too weak.' : isAr ? 'Ø§Ø¯Ù„Ø© Ø§Ù„Ø«Ù‚Ø© Ø¶Ø¹ÙŠÙØ© Ø§Ùˆ Ù…ÙÙ‚ÙˆØ¯Ø©.' : 'Preuves de confiance faibles ou absentes.'),
-      changeNow: isEn ? 'Place proof before every decisive CTA.' : isAr ? 'Ø¶Ø¹ Ø§Ù„Ø¯Ù„ÙŠÙ„ Ù‚Ø¨Ù„ ÙƒÙ„ Ø²Ø± Ù‚Ø±Ø§Ø±.' : 'Placer une preuve avant chaque CTA decisif.',
+      problemObserved: socialProofs.length ? (isEn ? 'Trust exists but should be closer to the CTA.' : isAr ? 'الثقة موجودة ويجب تقريبها من زر الفعل.' : 'La preuve existe mais doit etre rapprochee du CTA.') : (isEn ? 'Trust proof is missing or too weak.' : isAr ? 'ادلة الثقة ضعيفة او مفقودة.' : 'Preuves de confiance faibles ou absentes.'),
+      changeNow: isEn ? 'Place proof before every decisive CTA.' : isAr ? 'ضع الدليل قبل كل زر قرار.' : 'Placer une preuve avant chaque CTA decisif.',
       replacementExample: proofBlock,
       evidence: cleanProofArray(socialProofs, 3).length ? cleanProofArray(socialProofs, 3) : evidence.slice(0, 3),
       confidence: socialProofs.length ? 'HIGH' : 'MEDIUM'
     },
     {
       zone: 'offer',
-      problemObserved: detectedPrice ? (isEn ? 'Price is visible; the value stack must justify it.' : isAr ? 'Ø§Ù„Ø³Ø¹Ø± Ø¸Ø§Ù‡Ø± ÙˆÙŠØ­ØªØ§Ø¬ ØªØ¨Ø±ÙŠØ± Ù‚ÙŠÙ…Ø©.' : 'Le prix est visible; la valeur doit le justifier.') : (isEn ? 'No verified price found.' : isAr ? 'Ù„Ù… ÙŠØªÙ… Ø±ØµØ¯ Ø³Ø¹Ø± Ù…ÙˆØ«Ù‚.' : 'Aucun prix verifie detecte.'),
-      changeNow: isEn ? 'Show deliverables, guarantee, and expected result in the same block.' : isAr ? 'Ø§Ø¹Ø±Ø¶ Ø§Ù„Ù…Ø®Ø±Ø¬Ø§Øª ÙˆØ§Ù„Ø¶Ù…Ø§Ù† ÙˆØ§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ù…ØªÙˆÙ‚Ø¹Ø© ÙÙŠ Ù†ÙØ³ Ø§Ù„Ù‚Ø³Ù….' : 'Afficher livrables, garantie et resultat attendu dans le meme bloc.',
-      replacementExample: isEn ? 'What you get: deliverable, time, proof, guarantee.' : isAr ? 'Ù…Ø§ ØªØ­ØµÙ„ Ø¹Ù„ÙŠÙ‡: Ù…Ø®Ø±Ø¬ØŒ Ù…Ø¯Ø©ØŒ Ø¯Ù„ÙŠÙ„ØŒ Ø¶Ù…Ø§Ù†.' : 'Ce que vous obtenez: livrable, delai, preuve, garantie.',
+      problemObserved: detectedPrice ? (isEn ? 'Price is visible; the value stack must justify it.' : isAr ? 'السعر ظاهر ويحتاج تبرير قيمة.' : 'Le prix est visible; la valeur doit le justifier.') : (isEn ? 'No verified price found.' : isAr ? 'لم يتم رصد سعر موثق.' : 'Aucun prix verifie detecte.'),
+      changeNow: isEn ? 'Show deliverables, guarantee, and expected result in the same block.' : isAr ? 'اعرض المخرجات والضمان والنتيجة المتوقعة في نفس القسم.' : 'Afficher livrables, garantie et resultat attendu dans le meme bloc.',
+      replacementExample: isEn ? 'What you get: deliverable, time, proof, guarantee.' : isAr ? 'ما تحصل عليه: مخرج، مدة، دليل، ضمان.' : 'Ce que vous obtenez: livrable, delai, preuve, garantie.',
       evidence: detectedPrice ? [`${detectedPrice}`] : evidence.slice(0, 2),
       confidence: detectedPrice ? 'HIGH' : 'LOW'
     }
@@ -5272,52 +5272,52 @@ function buildConcreteFunnelActionPlan(ctx = {}) {
   return actions.concat(aiWins).slice(0, 7);
 }
 // =================== END PROOF MODEL LAYER ===================
-console.log('âœ… handleError loaded - Contextual error handling');
+console.log('✅ handleError loaded - Contextual error handling');
 
-console.log('\nâœ… PARTIE 3/5: Validators + Retry + Utilities loaded successfully\n');
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”¥ PARTIE 4/5: BUSINESS LOGIC MODULES (ULTRA-COMPETITIVE)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+console.log('\n✅ PARTIE 3/5: Validators + Retry + Utilities loaded successfully\n');
+// ═══════════════════════════════════════════════════════════════════
+// 🔥 PARTIE 4/5: BUSINESS LOGIC MODULES (ULTRA-COMPETITIVE)
+// ═══════════════════════════════════════════════════════════════════
 // Modules: Scraping Engine | Competitor Analysis | AI Generation
 // Performance: Parallel processing | Smart caching | Fallback chains
 // Quality: SEO-grade analysis | Deep insights | Multi-source data
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•·ï¸ MODULE 1: SCRAPING ENGINE ULTRA-OPTIMIZED
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🕷️ MODULE 1: SCRAPING ENGINE ULTRA-OPTIMIZED
+// ═══════════════════════════════════════════════════════════════════
 // Features: Comprehensive SEO audit | Schema.org detection | Performance metrics
 // Anti-detection: Real browser headers | Smart user-agent rotation
 // Reliability: Retry logic | Timeout handling | Error recovery
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•·ï¸ MODULE 1: SCRAPING ENGINE (MULTI-LANG SUPPORT ADDED)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🕷️ MODULE 1: SCRAPING ENGINE (MULTI-LANG SUPPORT ADDED)
+// ═══════════════════════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•·ï¸ MODULE 1: SCRAPING ENGINE (FULL EXTRACTION & HTML DUMP)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🕷️ MODULE 1: SCRAPING ENGINE (FULL EXTRACTION & HTML DUMP)
+// ═══════════════════════════════════════════════════════════════════
 /**
- * ðŸ•µï¸ SCRAPE STEALTH DEEP ENGINE - DAKA v5.0
+ * 🕵️ SCRAPE STEALTH DEEP ENGINE - DAKA v5.0
  * Correction : Scope validUrl + Optimisation RAM Render
  */
 /**
- * ðŸ› ï¸ MOTEUR DE SCRAPING DEEP INTEL (V6.0)
- * OptimisÃ© pour Render Free et rÃ©sistant aux erreurs de contexte.
+ * 🛠️ MOTEUR DE SCRAPING DEEP INTEL (V6.0)
+ * Optimisé pour Render Free et résistant aux erreurs de contexte.
  */
-// âœ… SCRAPE STEALTH V2 â€” Axios + Playwright (sans Puppeteer)
+// ✅ SCRAPE STEALTH V2 — Axios + Playwright (sans Puppeteer)
 /**
- * ðŸ•·ï¸ SCRAPE STEALTH (AXIOS + PLAYWRIGHT FALLBACK)
- * GÃ¨re le JS-rendered sans faire planter la mÃ©moire de Render
+ * 🕷️ SCRAPE STEALTH (AXIOS + PLAYWRIGHT FALLBACK)
+ * Gère le JS-rendered sans faire planter la mémoire de Render
  */
 /**
- * ðŸ•·ï¸ SCRAPE STEALTH (PLAYWRIGHT PRINCIPAL + SCRAPEDO PROXY AUXILIAIRE)
- * Utilise Playwright pour le rendu JS et route le trafic via Scrapedo pour Ã©viter les blocages.
+ * 🕷️ SCRAPE STEALTH (PLAYWRIGHT PRINCIPAL + SCRAPEDO PROXY AUXILIAIRE)
+ * Utilise Playwright pour le rendu JS et route le trafic via Scrapedo pour éviter les blocages.
  */
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•·ï¸ MODULE 1: SCRAPING ENGINE (FULL EXTRACTION & HTML DUMP)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🕷️ MODULE 1: SCRAPING ENGINE (FULL EXTRACTION & HTML DUMP)
+// ═══════════════════════════════════════════════════════════════════
 
 async function scrapeStealth(validUrl, scrapeOptions = {}) {
     const playwrightWrapper = require('./playwright-wrapper.cjs');
@@ -5509,11 +5509,11 @@ const EXTRACTION_NOT_FOUND =
     const detectCurrencyLocalSafe = (raw = '', extra = '') => {
         const str = `${raw} ${extra}`.toUpperCase();
 
-        if (/\bLYD\b|\bLD\b|Ù„\.?\s?Ø¯|Ø¯\.?\s?Ù„|Ø¯ÙŠÙ†Ø§Ø±\s*Ù„ÙŠØ¨ÙŠ|Ø¯ÙŠÙ†Ø§Ø±\s*Ù„ÙŠØ¨Ù‰/.test(str)) return 'LYD';
-        if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|Ø¯\.?\s?Ù…|Ø¯Ø±Ù‡Ù…/.test(str)) return 'MAD';
-        if (/\bEUR\b|â‚¬/.test(str)) return 'EUR';
+        if (/\bLYD\b|\bLD\b|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى/.test(str)) return 'LYD';
+        if (/\bMAD\b|(?:^|[\s>])DH(?:S)?(?:[\s<]|$)|DIRHAM|د\.?\s?م|درهم/.test(str)) return 'MAD';
+        if (/\bEUR\b|€/.test(str)) return 'EUR';
         if (/\bUSD\b|US\$|\$/.test(str)) return 'USD';
-        if (/\bGBP\b|Â£/.test(str)) return 'GBP';
+        if (/\bGBP\b|£/.test(str)) return 'GBP';
 
         return null;
     };
@@ -5523,24 +5523,24 @@ const EXTRACTION_NOT_FOUND =
 
         if (
             meta.isStruck ||
-            /old|regular|compare|compare-at|was|before|ancien|barr|barre|barrÃ©|prix-barr|au lieu|instead of|Ø§Ù„Ø³Ø¹Ø±\s*Ø§Ù„Ù‚Ø¯ÙŠÙ…|Ø³Ø¹Ø±\s*Ù‚Ø¯ÙŠÙ…|Ø³Ø¹Ø±\s*Ø³Ø§Ø¨Ù‚|Ø§Ù„Ø³Ø¹Ø±\s*Ø§Ù„Ø£ØµÙ„ÙŠ|Ø¨Ø¯Ù„Ø§Ù‹|ÙƒØ§Ù†\s*Ø³Ø¹Ø±Ù‡/i.test(s)
+            /old|regular|compare|compare-at|was|before|ancien|barr|barre|barré|prix-barr|au lieu|instead of|السعر\s*القديم|سعر\s*قديم|سعر\s*سابق|السعر\s*الأصلي|بدلاً|كان\s*سعره/i.test(s)
         ) {
             return { kind: 'old', confidenceBoost: 0.25 };
         }
 
-        if (/sale|current|final|now|new|discount|promo|offer|price__sale|woocommerce-price-amount|amount|prix|Ø³Ø¹Ø±|Ø§Ù„Ø¹Ø±Ø¶/i.test(s)) {
+        if (/sale|current|final|now|new|discount|promo|offer|price__sale|woocommerce-price-amount|amount|prix|سعر|العرض/i.test(s)) {
             return { kind: 'current', confidenceBoost: 0.16 };
         }
 
-        if (/from|starting at|Ã  partir|dÃ¨s|Ø§Ø¨ØªØ¯Ø§Ø¡|Ø§Ø¨ØªØ¯Ø§Ø¡Ù‹|starting/i.test(s)) {
+        if (/from|starting at|à partir|dès|ابتداء|ابتداءً|starting/i.test(s)) {
             return { kind: 'from', confidenceBoost: 0.12 };
         }
 
-        if (/monthly|month|mois|mensuel|annuel|annual|yearly|subscription|abonnement|Ø§Ø´ØªØ±Ø§Ùƒ|Ø´Ù‡Ø±ÙŠ|Ø³Ù†ÙˆÙŠ|\/mois|\/month|\/an|\/year/i.test(s)) {
+        if (/monthly|month|mois|mensuel|annuel|annual|yearly|subscription|abonnement|اشتراك|شهري|سنوي|\/mois|\/month|\/an|\/year/i.test(s)) {
             return { kind: 'plan', confidenceBoost: 0.12 };
         }
 
-        if (/installment|payment|split|x\s*\d+|fois|ØªÙ‚Ø³ÙŠØ·|Ø¯ÙØ¹Ø©/i.test(s)) {
+        if (/installment|payment|split|x\s*\d+|fois|تقسيط|دفعة/i.test(s)) {
             return { kind: 'installment', confidenceBoost: 0.08 };
         }
 
@@ -5584,11 +5584,11 @@ const EXTRACTION_NOT_FOUND =
                 /line-through/i.test(style) ||
                 /old|regular|compare|was|before|ancien|barr|barre|prix-barr/i.test(`${className} ${id} ${nearbyText}`);
 
-            const priceRegex = /(\d[\d\s,.']*)\s*(LYD|LD|Ù„\.?\s?Ø¯|Ø¯\.?\s?Ù„|Ø¯ÙŠÙ†Ø§Ø±\s*Ù„ÙŠØ¨ÙŠ|Ø¯ÙŠÙ†Ø§Ø±\s*Ù„ÙŠØ¨Ù‰|MAD|DH|DHS|â‚¬|\$|Â£|EUR|USD|GBP)|(LYD|LD|Ù„\.?\s?Ø¯|Ø¯\.?\s?Ù„|Ø¯ÙŠÙ†Ø§Ø±\s*Ù„ÙŠØ¨ÙŠ|Ø¯ÙŠÙ†Ø§Ø±\s*Ù„ÙŠØ¨Ù‰|MAD|DH|DHS|â‚¬|\$|Â£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
+            const priceRegex = /(\d[\d\s,.']*)\s*(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)|(LYD|LD|ل\.?\s?د|د\.?\s?ل|دينار\s*ليبي|دينار\s*ليبى|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\s*(\d[\d\s,.']*)/gi;
             const cleanText = normText(content)
-                .replace(/(\d+)(LYD|LD|MAD|DH|DHS|â‚¬|\$|Â£|EUR|USD|GBP)/gi, '$1 $2 ')
-                .replace(/(LYD|LD|MAD|DH|DHS|â‚¬|\$|Â£|EUR|USD|GBP)(\d+)/gi, '$1 $2 ')
-                .replace(/\b(\d{2,5})(\d{2,5})\s*(LYD|LD|MAD|DH|DHS|â‚¬|\$|Â£|EUR|USD|GBP)\b/gi, (_, p1, p2, cur) => `${p1} ${cur} ${p2} ${cur}`);
+                .replace(/(\d+)(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)/gi, '$1 $2 ')
+                .replace(/(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)(\d+)/gi, '$1 $2 ')
+                .replace(/\b(\d{2,5})(\d{2,5})\s*(LYD|LD|MAD|DH|DHS|€|\$|£|EUR|USD|GBP)\b/gi, (_, p1, p2, cur) => `${p1} ${cur} ${p2} ${cur}`);
 
             for (const m of cleanText.matchAll(priceRegex)) {
                 const raw = m[0] || '';
@@ -5627,7 +5627,7 @@ const EXTRACTION_NOT_FOUND =
                 moduleIntel = buildPriceIntelLocal(bodyText, html, domPriceTexts, schemaRaw);
             }
         } catch (err) {
-            console.warn('âš ï¸ buildPriceIntelLocal failed:', err.message);
+            console.warn('⚠️ buildPriceIntelLocal failed:', err.message);
         }
 
         const modulePrices = Array.isArray(moduleIntel?.prices) ? moduleIntel.prices : [];
@@ -5646,7 +5646,7 @@ const EXTRACTION_NOT_FOUND =
                 finalized = finalizePriceIntel(allCandidates, html);
             }
         } catch (err) {
-            console.warn('âš ï¸ finalizePriceIntel failed:', err.message);
+            console.warn('⚠️ finalizePriceIntel failed:', err.message);
         }
 
         const base = finalized || moduleIntel || emptyPriceIntel();
@@ -5919,8 +5919,8 @@ const EXTRACTION_NOT_FOUND =
                 hasReviews: socialProofs.length > 0,
                 hasMoneyBackGuarantee: /garantie|money back|refund/i.test(bodyText),
                 hasPaymentLogos: /visa|mastercard|paypal|cmi/i.test(html),
-                hasLegalPages: /mentions lÃ©gales|privacy|conditions|terms/i.test(bodyText),
-                hasCOD: /cash on delivery|paiement Ã  la livraison/i.test(bodyText),
+                hasLegalPages: /mentions légales|privacy|conditions|terms/i.test(bodyText),
+                hasCOD: /cash on delivery|paiement à la livraison/i.test(bodyText),
                 trustScore: null
             },
             contacts: { phones, emails },
@@ -6035,7 +6035,7 @@ const EXTRACTION_NOT_FOUND =
             structuredEvidence.legalLinks,
             mainPage.legalLinks,
             firstArray(railwayResult.links, mainPage.links).filter(link =>
-                /privacy|confidentialit[Ã©e]|terms|conditions|mentions|legal|cookies/i.test(
+                /privacy|confidentialit[ée]|terms|conditions|mentions|legal|cookies/i.test(
                     [link?.text, link?.label, link?.url, link?.href].filter(Boolean).join(' ')
                 )
             )
@@ -6099,21 +6099,21 @@ const EXTRACTION_NOT_FOUND =
             .filter(Boolean).join(' ').toLowerCase();
         const observedCtas = firstArray(railwayResult.ctas, mainPage.ctas);
         const observedImages = firstArray(railwayResult.images, mainPage.images);
-        const reviewAbsenceObserved = /aucun avis|pas encore d['Ã¢â‚¬â„¢ ]avis|no reviews?(?: yet)?|0 reviews?|Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ‚ÙŠÙŠÙ…Ø§Øª/i.test(observedText);
-        const positiveReviewObserved = !reviewAbsenceObserved && /\bavis\b|\breviews?\b|rating|[Ã©e]toile|testimonial|tÃ©moignage|preuve sociale/i.test(observedText);
+        const reviewAbsenceObserved = /aucun avis|pas encore d['’ ]avis|no reviews?(?: yet)?|0 reviews?|لا توجد مراجعات|لا توجد تقييمات/i.test(observedText);
+        const positiveReviewObserved = !reviewAbsenceObserved && /\bavis\b|\breviews?\b|rating|[ée]toile|testimonial|témoignage|preuve sociale/i.test(observedText);
         const guaranteeObserved = Boolean(
             trust.guaranteeTerms || trust.hasGuarantee ||
             /garantie|guarantee|warranty|rembours/i.test(observedText)
         );
         const legalObserved = observedLegalLinks.length > 0 ||
-            /mentions lÃ©gales|privacy|confidentialitÃ©|terms|conditions gÃ©nÃ©rales/i.test(observedText);
+            /mentions légales|privacy|confidentialité|terms|conditions générales/i.test(observedText);
         const paymentObserved = Boolean(
-            trust.paymentTerms || /visa|mastercard|paypal|stripe|paiement sÃ©curisÃ©/i.test(observedText)
+            trust.paymentTerms || /visa|mastercard|paypal|stripe|paiement sécurisé/i.test(observedText)
         );
         const evidenceBlocks = Array.isArray(evidencePayload.evidenceBlocks)
             ? evidencePayload.evidenceBlocks : [];
         const observedTestimonials = positiveReviewObserved
-            ? evidenceBlocks.filter(block => /avis|review|rating|testimonial|tÃ©moignage/i.test(
+            ? evidenceBlocks.filter(block => /avis|review|rating|testimonial|témoignage/i.test(
                 [block.source, block.typeGuess, block.labelGuess, block.text].filter(Boolean).join(' ')
               ) && !/aucun avis|no reviews?|0 reviews?/i.test(String(block.text || '')))
                 .map(block => block.text).filter(Boolean).slice(0, 5)
@@ -6194,20 +6194,20 @@ const EXTRACTION_NOT_FOUND =
             });
 
             if (h1List.length) add('HERO', 'Hero', 90, h1List[0]);
-            if (h2List.length >= 2) add('BENEFITS', 'BÃ©nÃ©fices / contenu', 70, h2List.slice(0, 3).join(' | '));
+            if (h2List.length >= 2) add('BENEFITS', 'Bénéfices / contenu', 70, h2List.slice(0, 3).join(' | '));
             if (rawSections.some(section => /product-card|catalogue|collection|boutique|acheter sur etsy/i.test(
                 [section?.className, section?.labelGuess, section?.text, section?.textPreview].filter(Boolean).join(' ')
-            ))) add('OFFER', 'Offre / catalogue', 85, 'Cartes produit et offre observÃ©es');
+            ))) add('OFFER', 'Offre / catalogue', 85, 'Cartes produit et offre observées');
             if (priceIntel.detected || ecommerceSignals.hasPrice || prices.length) add('PRICING', 'Prix / offre', priceIntel.detected ? 85 : 60, prices.slice(0, 3).map(p => [p.value, p.currency].filter(Boolean).join(' ')).join(' | '));
-            if (positiveReviewObserved) add('SOCIAL_PROOF', 'Preuves sociales', 70, 'Preuve sociale positive observÃ©e');
-            if (trust.guaranteeTerms || trust.deliveryTerms || trust.contactTerms || trust.whatsappTerms) add('TRUST', 'Signaux de confiance', 70, 'Mentions de confiance observÃ©es');
-            if (faqData.detectedBlocks?.length || faqData.jsonLdFaqs?.length || /faq|questions frÃ©quentes/.test(observedText)) add('FAQ', 'FAQ', 80, 'Questions/rÃ©ponses observÃ©es');
+            if (positiveReviewObserved) add('SOCIAL_PROOF', 'Preuves sociales', 70, 'Preuve sociale positive observée');
+            if (trust.guaranteeTerms || trust.deliveryTerms || trust.contactTerms || trust.whatsappTerms) add('TRUST', 'Signaux de confiance', 70, 'Mentions de confiance observées');
+            if (faqData.detectedBlocks?.length || faqData.jsonLdFaqs?.length || /faq|questions fréquentes/.test(observedText)) add('FAQ', 'FAQ', 80, 'Questions/réponses observées');
             if (observedCtas.length) add('CTA', 'CTA', 85, observedCtas.slice(0, 3).map(c => typeof c === 'string' ? c : c.text || c.label || '').filter(Boolean).join(' | '));
             if (observedForms.length) add('FORM', 'Formulaire', 70, `${observedForms.length} form(s)`);
             if (Array.isArray(mainPage.contactLinks) && mainPage.contactLinks.length) add('CONTACT', 'Contact', 70, `${mainPage.contactLinks.length} contact links`);
-            if (rawSections.some(section => /footer|copyright|mentions lÃ©gales|privacy|conditions/.test(
+            if (rawSections.some(section => /footer|copyright|mentions légales|privacy|conditions/.test(
                 [section?.typeGuess, section?.labelGuess, section?.text, section?.textPreview].filter(Boolean).join(' ').toLowerCase()
-            ))) add('FOOTER', 'Footer / lÃ©gal', 75, 'Footer ou lien lÃ©gal observÃ©');
+            ))) add('FOOTER', 'Footer / légal', 75, 'Footer ou lien légal observé');
             return out;
         })();
 
@@ -6417,10 +6417,10 @@ const EXTRACTION_NOT_FOUND =
         };
     };
        try {
-        console.log(`ðŸ§  Smart scraping enhanced: ${validUrl}`);
+        console.log(`🧠 Smart scraping enhanced: ${validUrl}`);
 
         if (shouldUseRailwayScraping()) {
-            console.log(`[SCRAPING-ROUTER] Render dÃ©tectÃ© â†’ scraping envoyÃ© Ã  Railway: ${validUrl}`);
+            console.log(`[SCRAPING-ROUTER] Render détecté → scraping envoyé à Railway: ${validUrl}`);
 
             try {
                 const railwayResult = await scrapeUrlViaRailway(validUrl, {
@@ -6440,7 +6440,7 @@ const EXTRACTION_NOT_FOUND =
                 const adapted = buildScrapeStealthFromRailwayResult(railwayResult);
 
                 console.log(
-                    `âœ… scrapeStealth Railway OK â€” ${adapted.duration}ms` +
+                    `✅ scrapeStealth Railway OK — ${adapted.duration}ms` +
                     ` | Layer: ${adapted.fetchLayer}` +
                     ` | Job: ${adapted.sourceJobId || 'N/A'}` +
                     ` | Prix: ${adapted.priceIntel.primaryPrice ?? 'N/A'} ${adapted.priceIntel.currency ?? ''}` +
@@ -6458,7 +6458,7 @@ const EXTRACTION_NOT_FOUND =
                     );
                 }
 
-                console.warn('[SCRAPING-ROUTER] Fallback Render autorisÃ© par RENDER_SCRAPING_FALLBACK=true');
+                console.warn('[SCRAPING-ROUTER] Fallback Render autorisé par RENDER_SCRAPING_FALLBACK=true');
             }
         }
 
@@ -6476,7 +6476,7 @@ const EXTRACTION_NOT_FOUND =
 
             const result = extractFromHtml(pw.html, pw.provider || 'scrape.do');
             console.log(
-                `âœ… scrapeStealth HTML fallback OK â€” ${result.duration}ms` +
+                `✅ scrapeStealth HTML fallback OK — ${result.duration}ms` +
                 ` | Layer: ${result.fetchLayer}` +
                 ` | Prix: ${result.priceIntel.primaryPrice ?? 'N/A'} ${result.priceIntel.currency ?? ''}` +
                 ` | Old: ${(result.priceIntel.struckPrices || []).join(',') || 'N/A'}` +
@@ -6487,7 +6487,7 @@ const EXTRACTION_NOT_FOUND =
         }
 
         if (!pw.page) {
-            throw new Error(`Browser launch failed â€” provider=${pw.provider || 'unknown'} and page is null`);
+            throw new Error(`Browser launch failed — provider=${pw.provider || 'unknown'} and page is null`);
         }
 
         const html = await Promise.race([
@@ -6496,7 +6496,7 @@ const EXTRACTION_NOT_FOUND =
         ]);
 
         if (!html || typeof html !== 'string' || html.length < 500) {
-            throw new Error(`HTML too short (${html?.length || 0} chars) â€” page blocked or empty`);
+            throw new Error(`HTML too short (${html?.length || 0} chars) — page blocked or empty`);
         }
 
         const browserExtracted = await pw.page.evaluate(() => {
@@ -6568,7 +6568,7 @@ const EXTRACTION_NOT_FOUND =
             const h2List = unique([...document.querySelectorAll('h2')].map(e => normText(e.innerText))).slice(0, 12);
             const h3List = unique([...document.querySelectorAll('h3')].map(e => normText(e.innerText))).slice(0, 12);
 
-            const ctaRegex = /(get started|start|book|buy|order|try|sign up|signup|subscribe|join|contact|demo|call|apply|shop|acheter|commander|essayer|devis|contactez|rÃ©server|reserver|Ø§Ø¨Ø¯Ø£|Ø§Ø´ØªØ±|Ø§Ø·Ù„Ø¨|Ø§Ø­Ø¬Ø²|ØªÙˆØ§ØµÙ„)/i;
+            const ctaRegex = /(get started|start|book|buy|order|try|sign up|signup|subscribe|join|contact|demo|call|apply|shop|acheter|commander|essayer|devis|contactez|réserver|reserver|ابدأ|اشتر|اطلب|احجز|تواصل)/i;
             const ctaList = unique([...document.querySelectorAll('a, button, input[type="submit"], input[type="button"]')].map(el => {
                 const text = normText(el.innerText || el.value || el.getAttribute('aria-label') || '');
                 const href = normText(el.getAttribute('href') || '');
@@ -6684,7 +6684,7 @@ const EXTRACTION_NOT_FOUND =
         };
 
         console.log(
-            `âœ… scrapeStealth OK â€” ${result.duration}ms` +
+            `✅ scrapeStealth OK — ${result.duration}ms` +
             ` | Layer: ${result.fetchLayer}` +
             ` | Colors: ${result.visualDNA.dominantColors.join(',')}` +
             ` | CMS: ${result.techStack.cms}` +
@@ -6696,7 +6696,7 @@ const EXTRACTION_NOT_FOUND =
 
         return result;
     } catch (e) {
-        console.warn(`âš ï¸ scrapeStealth failed (${Date.now() - startTime}ms): ${e.message}`);
+        console.warn(`⚠️ scrapeStealth failed (${Date.now() - startTime}ms): ${e.message}`);
         return EMPTY_RESULT(e.message, pw?.provider || 'browser');
     } finally {
         try {
@@ -6704,13 +6704,13 @@ const EXTRACTION_NOT_FOUND =
             if (pw?.browser) await playwrightWrapper.closeBrowser(pw.browser);
             else if (pw) await playwrightWrapper.closeBrowser(pw);
         } catch (closeErr) {
-            console.warn('âš ï¸ Browser close warning:', closeErr.message);
+            console.warn('⚠️ Browser close warning:', closeErr.message);
         }
     }
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“ˆ OFF-PAGE BRAND INTEL (GOOGLE TRENDS VIA SCRAPE.DO FREE)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 📈 OFF-PAGE BRAND INTEL (GOOGLE TRENDS VIA SCRAPE.DO FREE)
+// ═══════════════════════════════════════════════════════════════════
 async function fetchBrandTrendIntel(domain, geoData) {
     const token = process.env.SCRAPE_DO_TOKEN;
     if (!token || !domain) return null;
@@ -6722,15 +6722,15 @@ async function fetchBrandTrendIntel(domain, geoData) {
         .replace(/-/g, ' ') 
         .trim();
 
-    // Protection contre les domaines trop courts ou gÃ©nÃ©riques (ex: "ma.ma", "shop.com")
+    // Protection contre les domaines trop courts ou génériques (ex: "ma.ma", "shop.com")
     const blacklist = ['shop', 'store', 'online', 'boutique', 'web', 'app'];
     if (brandName.length < 3 || blacklist.includes(brandName.toLowerCase())) return null;
 
     try {
-        const gl = (geoData.gl || 'MA').toUpperCase(); // PrioritÃ© au Maroc par dÃ©faut pour ton marchÃ©
+        const gl = (geoData.gl || 'MA').toUpperCase(); // Priorité au Maroc par défaut pour ton marché
         const trendUrl = `https://api.scrape.do/plugin/google/trends?token=${token}&q=${encodeURIComponent(brandName)}&geo=${gl}`;
         
-        console.log(`ðŸ” [Brand Intel] Analyse de notoriÃ©tÃ© pour: "${brandName}" (${gl})`);
+        console.log(`🔍 [Brand Intel] Analyse de notoriété pour: "${brandName}" (${gl})`);
 
         const res = await RetryManager.executeWithRetry(
             () => axios.get(trendUrl, { timeout: CONFIG.TIMEOUT_MEDIUM || 15000 }),
@@ -6739,8 +6739,8 @@ async function fetchBrandTrendIntel(domain, geoData) {
 
         const data = res.data;
         if (!data || !data.interest_over_time?.timeline_data) {
-            console.log(`â„¹ï¸ [Brand Intel] Pas de donnÃ©es Trends pour "${brandName}"`);
-            return { brandName: brandName.toUpperCase(), avgInterest: 0, brandStatus: 'Marque Ã©mergente / Niche', isGiant: false };
+            console.log(`ℹ️ [Brand Intel] Pas de données Trends pour "${brandName}"`);
+            return { brandName: brandName.toUpperCase(), avgInterest: 0, brandStatus: 'Marque émergente / Niche', isGiant: false };
         }
 
         const timeline = data.interest_over_time.timeline_data;
@@ -6757,52 +6757,52 @@ async function fetchBrandTrendIntel(domain, geoData) {
 
         const avgInterest = validPoints > 0 ? Math.round(totalInterest / validPoints) : 0;
         
-        // 2. Segmentation V11 (Seuils affinÃ©s pour le marchÃ© MENA/MA)
-        let brandStatus = 'Petite marque / Trafic modÃ©rÃ©';
+        // 2. Segmentation V11 (Seuils affinés pour le marché MENA/MA)
+        let brandStatus = 'Petite marque / Trafic modéré';
         let isGiant = false;
         
         if (avgInterest > 45) {
-            brandStatus = 'LEADER ABSOLU / AutoritÃ© Mondiale';
+            brandStatus = 'LEADER ABSOLU / Autorité Mondiale';
             isGiant = true;
         } else if (avgInterest > 20) {
             brandStatus = 'Acteur Majeur National';
             isGiant = true; 
         } else if (avgInterest > 5) {
-            brandStatus = 'Marque Ã©tablie / NotoriÃ©tÃ© locale';
-            isGiant = false; // Giant reste false pour ne pas brider l'IA sur l'agressivitÃ©
+            brandStatus = 'Marque établie / Notoriété locale';
+            isGiant = false; // Giant reste false pour ne pas brider l'IA sur l'agressivité
         }
 
-        console.log(`ðŸ“Š [Brand Intel] ${brandName.toUpperCase()} -> Score: ${avgInterest}/100 | Statut: ${brandStatus}`);
+        console.log(`📊 [Brand Intel] ${brandName.toUpperCase()} -> Score: ${avgInterest}/100 | Statut: ${brandStatus}`);
 
         return { 
             brandName: brandName.toUpperCase(), 
             avgInterest, 
             brandStatus, 
             isGiant,
-            marketPresence: avgInterest > 10 ? 'Ã‰tablie' : 'Faible'
+            marketPresence: avgInterest > 10 ? 'Établie' : 'Faible'
         };
 
     } catch (e) {
         // Gestion silencieuse des erreurs 404/429 sur Trends
-        console.warn(`âš ï¸ Brand Intel indisponible pour ${brandName}: ${e.message}`);
+        console.warn(`⚠️ Brand Intel indisponible pour ${brandName}: ${e.message}`);
         return null;
     }
 }
 /**
- * â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
- * â•‘        analyzeCompetitors â€” WarRoom V9.7 (FIX DÃ‰CLARATIONS)          â•‘
- * â•‘  FIXES : [1] Suppression du doublon "comparisonUserInstruction"      â•‘
- * â•‘          [2] Maintien des frameworks Pro (Hormozi, OcÃ©an Bleu, etc.) â•‘
- * â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+ * ╔══════════════════════════════════════════════════════════════════════╗
+ * ║        analyzeCompetitors — WarRoom V9.7 (FIX DÉCLARATIONS)          ║
+ * ║  FIXES : [1] Suppression du doublon "comparisonUserInstruction"      ║
+ * ║          [2] Maintien des frameworks Pro (Hormozi, Océan Bleu, etc.) ║
+ * ╚══════════════════════════════════════════════════════════════════════╝
  */
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”‘ KEYWORDS EVERYWHERE â€” Volume, CPC, Competition rÃ©els
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
+// 🔑 KEYWORDS EVERYWHERE — Volume, CPC, Competition réels
+// ═══════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // GOOGLE / SCRAPE.DO INTEL - Compatible avec l'ancien contrat KE
-// Garde le mÃªme nom pour Ã©viter de casser le systÃ¨me
+// Garde le même nom pour éviter de casser le système
 // Retourne un map keyword -> { vol, cpc, competition, trend, ... }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 async function fetchKeywordData(keywords) {
     const token = process.env.SCRAPE_DO_TOKEN || process.env.SCRAPEDO_TOKEN;
     if (!token || !Array.isArray(keywords) || !keywords.length) return null;
@@ -6839,7 +6839,7 @@ async function fetchKeywordData(keywords) {
                 }).filter(Boolean);
 
                 const hasAdsSignals = /(acheter|prix|tarif|order|buy|devis|grossiste|commande)/i.test(blob);
-                const hasLocalSignals = /(agadir|morocco|maroc|prÃ¨s|proche|local)/i.test(blob);
+                const hasLocalSignals = /(agadir|morocco|maroc|près|proche|local)/i.test(blob);
                 const hasB2BSignals = /(grossiste|wholesale|fournisseur|supplier|distributeur|horeca|restaurant|hotel|cafe)/i.test(blob);
 
                 let estimatedCompetition = 0.35;
@@ -6896,17 +6896,17 @@ async function fetchKeywordData(keywords) {
 
         if (!Object.keys(kwMap).length) return null;
 
-        console.log(`âœ… [SCRAPE.DO] ${Object.keys(kwMap).length} mots-clÃ©s enrichis via Google`);
+        console.log(`✅ [SCRAPE.DO] ${Object.keys(kwMap).length} mots-clés enrichis via Google`);
         return kwMap;
 
     } catch (e) {
-        console.warn(`âš ï¸ [SCRAPE.DO] Keyword intel error: ${e.message}`);
+        console.warn(`⚠️ [SCRAPE.DO] Keyword intel error: ${e.message}`);
         return null;
     }
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“Š GOOGLE SEARCH CONSOLE â€” DonnÃ©es rÃ©elles clicks/impressions
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
+// 📊 GOOGLE SEARCH CONSOLE — Données réelles clicks/impressions
+// ═══════════════════════════════════════════════════════════════
 async function fetchGSCData(siteUrl, accessToken) {
     if (!siteUrl || !accessToken) return null;
 
@@ -6936,7 +6936,7 @@ async function fetchGSCData(siteUrl, accessToken) {
         const rows = res.data?.rows || [];
         if (!rows.length) return null;
 
-        console.log(`ðŸ“Š [GSC] ${rows.length} queries rÃ©cupÃ©rÃ©es depuis Google Search Console`);
+        console.log(`📊 [GSC] ${rows.length} queries récupérées depuis Google Search Console`);
 
         return rows.map(r => ({
             query:       r.keys[0],
@@ -6947,14 +6947,14 @@ async function fetchGSCData(siteUrl, accessToken) {
         }));
 
     } catch (e) {
-        console.warn(`âš ï¸ [GSC] Google Search Console error: ${e.message}`);
+        console.warn(`⚠️ [GSC] Google Search Console error: ${e.message}`);
         return null;
     }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ” GSC â€” GÃ©nÃ¨re l'URL d'autorisation OAuth2
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
+// 🔐 GSC — Génère l'URL d'autorisation OAuth2
+// ═══════════════════════════════════════════════════════════════
 function getGSCAuthUrl() {
     const clientId    = process.env.GSC_CLIENT_ID;
     const redirectUri = process.env.GSC_REDIRECT_URI;
@@ -6971,9 +6971,9 @@ function getGSCAuthUrl() {
     return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ” GSC â€” Ã‰change le code OAuth contre un access_token
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
+// 🔐 GSC — Échange le code OAuth contre un access_token
+// ═══════════════════════════════════════════════════════════════
 async function exchangeGSCCode(code) {
     const clientId     = process.env.GSC_CLIENT_ID;
     const clientSecret = process.env.GSC_CLIENT_SECRET;
@@ -6994,7 +6994,7 @@ async function exchangeGSCCode(code) {
         );
         return res.data; // { access_token, refresh_token, expires_in }
     } catch (e) {
-        console.warn(`âš ï¸ [GSC] Token exchange error: ${e.message}`);
+        console.warn(`⚠️ [GSC] Token exchange error: ${e.message}`);
         return null;
     }
 }
@@ -7062,7 +7062,7 @@ function safePath(rawUrl) {
     }
 }
 
-/* â”€â”€ Score d'intention commerciale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Score d'intention commerciale ─────────────────────────── */
 function commercialIntentScore(rawUrl = '', title = '', snippet = '') {
     const host = safeHostname(rawUrl);
     const path = safePath(rawUrl);
@@ -7071,28 +7071,28 @@ function commercialIntentScore(rawUrl = '', title = '', snippet = '') {
     if (/shop|store|boutique|acheter|buy|order|commande|panier|cart|checkout|paiement|payment|pricing|prix|tarif|abonnement|subscription|devis|quote/.test(blob)) score += 35;
     if (/service|services|solution|solutions|product|produit|logiciel|software|plateforme|platform|saas|app|application/.test(blob)) score += 25;
     if (/contact|formulaire|form|demo|essai|trial|inscription|register|signup|sign.up|consultation/.test(blob)) score += 20;
-    if (/whatsapp|tÃ©lÃ©phone|telephone|appel|call|rÃ©server|book|rdv|appointment/.test(blob)) score += 15;
+    if (/whatsapp|téléphone|telephone|appel|call|réserver|book|rdv|appointment/.test(blob)) score += 15;
     if (/professionnels|entreprise|business|agence|agency|corporate/.test(blob)) score += 15;
     if (/\.(ma|dz|tn|sa|ae|eg|fr|gb|us|ca|com)/.test(host)) score += 5;
-    // PÃ©nalitÃ©s informationnelles
+    // Pénalités informationnelles
     if (/wikipedia|wiki|blog|forum|news|article|guide|tutorial|actualite|magazine|encyclopedia|encyclopedie/.test(blob)) score -= 60;
     if (/free.*article|read.*more|learn.*about|tout.*savoir/.test(blob)) score -= 20;
     return Math.max(0, score);
 }
 
-/* â”€â”€ Classifier le type rÃ©el de concurrent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Classifier le type réel de concurrent ─────────────────── */
 function classifyCompetitorType(rawUrl = '', title = '', snippet = '', lang = 'fr') {
     const host = safeHostname(rawUrl);
     const path = safePath(rawUrl);
     const blob = `${host} ${title} ${snippet} ${path}`.toLowerCase();
     const isAr = lang === 'ar', isEn = lang === 'en';
     if (/shop|store|boutique|ecommerce|e-commerce|woocommerce|shopify|product|category|collections/.test(blob))
-        return { type: isAr ? 'Ù…ØªØ¬Ø± Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ' : isEn ? 'E-commerce' : 'E-commerce', competitorType: 'ecommerce' };
+        return { type: isAr ? 'متجر إلكتروني' : isEn ? 'E-commerce' : 'E-commerce', competitorType: 'ecommerce' };
     if (/saas|logiciel|software|platform|dashboard|pricing|subscription|plan/.test(blob))
-        return { type: isAr ? 'Ù…Ù†ØµØ© SaaS' : isEn ? 'SaaS Platform' : 'SaaS/Plateforme', competitorType: 'saas' };
+        return { type: isAr ? 'منصة SaaS' : isEn ? 'SaaS Platform' : 'SaaS/Plateforme', competitorType: 'saas' };
     if (/agence|agency|service|conseil|consulting|freelance/.test(blob))
-        return { type: isAr ? 'Ø®Ø¯Ù…Ø§Øª Ø§Ø­ØªØ±Ø§ÙÙŠØ©' : isEn ? 'Agency/Service' : 'Agence/Service', competitorType: 'service' };
-    return { type: isAr ? 'Ù…ÙˆÙ‚Ø¹ Ø±Ø³Ù…ÙŠ' : isEn ? 'Official Website' : 'Site officiel', competitorType: 'website' };
+        return { type: isAr ? 'خدمات احترافية' : isEn ? 'Agency/Service' : 'Agence/Service', competitorType: 'service' };
+    return { type: isAr ? 'موقع رسمي' : isEn ? 'Official Website' : 'Site officiel', competitorType: 'website' };
 }
 
 function isBlockedCompetitorUrl(rawUrl = '', title = '', snippet = '') {
@@ -7104,7 +7104,7 @@ function isBlockedCompetitorUrl(rawUrl = '', title = '', snippet = '') {
     if (BLOCKED_COMPETITOR_DOMAINS.some(d => host.includes(d))) return true;
 
     // Patterns informationnels forts
-    if (/\b(wikipedia|wikidata|blog|article|guide|news|actualite|magazine|forum|wiki|encyclopedia|encyclopedie|encyclopÃ©die|definition|dÃ©finition|qu.est.ce|what.is|comment|how.to|tutorial|tutoriel)\b/i.test(blob)) {
+    if (/\b(wikipedia|wikidata|blog|article|guide|news|actualite|magazine|forum|wiki|encyclopedia|encyclopedie|encyclopédie|definition|définition|qu.est.ce|what.is|comment|how.to|tutorial|tutoriel)\b/i.test(blob)) {
         return true;
     }
     if (/\/(blog|news|article|articles|guide|wiki|dictionary|glossary|definition|actualite|actualites|tutoriel|tutorial)\//i.test(path)) {
@@ -7135,7 +7135,7 @@ function competitorRejectionReason(rawUrl = '', title = '', snippet = '', commer
     const blob = `${host} ${title} ${snippet} ${path}`.toLowerCase();
     if (!host) return 'invalid_url';
     if (BLOCKED_COMPETITOR_DOMAINS.some(d => host.includes(d))) return 'blocked_domain';
-    if (/wikipedia|wikidata|encyclopedia|encyclopedie|encyclopÃ©die/.test(blob)) return 'encyclopedic_source';
+    if (/wikipedia|wikidata|encyclopedia|encyclopedie|encyclopédie/.test(blob)) return 'encyclopedic_source';
     if (/blog|article|guide|news|actualite|magazine|forum|tutorial|tutoriel/.test(blob)) return 'informational_source';
     if (commercialScore < 25) return 'insufficient_commercial_signals';
     return null;
@@ -7396,7 +7396,7 @@ function geoBoostScore(rawUrl = '', geoData = {}, title = '', snippet = '') {
     if (gl === 'sa' && /\\.sa\\b|saudi|arabie saoudite|riyadh|jeddah/.test(blob)) score += 40;
     if (gl === 'ae' && /\\.ae\\b|uae|emirates|dubai|abu dhabi/.test(blob)) score += 40;
     if (gl === 'fr' && /\\.fr\\b|france|paris|lyon/.test(blob)) score += 40;
-    if (gl === 'dz' && /\\.dz\\b|algeria|algÃ©rie|alger/.test(blob)) score += 40;
+    if (gl === 'dz' && /\\.dz\\b|algeria|algérie|alger/.test(blob)) score += 40;
     if (gl === 'tn' && /\\.tn\\b|tunisia|tunisie|tunis/.test(blob)) score += 40;
     if (gl === 'eg' && /\\.eg\\b|egypt|egypte|cairo/.test(blob)) score += 40;
 
@@ -7580,7 +7580,7 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
         const brandBody = compactBusinessText($home('body').text(), 12000).toLowerCase();
         const headings = $('h1,h2').map((_, el) => compactBusinessText($(el).text(), 180)).get().filter(Boolean);
         const ctas = $('a,button').map((_, el) => compactBusinessText($(el).text(), 90)).get()
-            .filter(text => /buy|shop|order|book|demo|trial|contact|quote|pricing|price|acheter|commander|reserver|devis|tarif|prix|contact|essai|Ø§Ø·Ù„Ø¨|Ø§Ø´ØªØ±|ØªÙˆØ§ØµÙ„|Ø§Ù„Ø³Ø¹Ø±/.test(text.toLowerCase()))
+            .filter(text => /buy|shop|order|book|demo|trial|contact|quote|pricing|price|acheter|commander|reserver|devis|tarif|prix|contact|essai|اطلب|اشتر|تواصل|السعر/.test(text.toLowerCase()))
             .slice(0, 8);
         const pageHost = safeHostname(competitor.url);
         const importantLinks = $home('a[href]').map((_, el) => {
@@ -7596,17 +7596,17 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
         ).values()].slice(0, 8);
 
         const signals = {
-            hasPrice: /(?:[$â‚¬Â£]|mad|dh|usd|eur)\s?\d|\d[\d\s.,]*(?:[$â‚¬Â£]|mad|dh|usd|eur)|pricing|tarif|prix/.test(body),
-            hasGuarantee: /guarantee|garantie|satisfait ou rembourse|money back|Ø¶Ù…Ø§Ù†/.test(body),
-            hasDelivery: /delivery|shipping|livraison|expedition|ØªÙˆØµÙŠÙ„|Ø´Ø­Ù†/.test(body),
-            hasReturns: /return|refund|retour|remboursement|Ø¥Ø±Ø¬Ø§Ø¹|Ø§Ø³ØªØ±Ø¬Ø§Ø¹/.test(body),
-            hasReviews: /testimonial|review|rating|avis client|temoignage|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡/.test(body),
-            hasContact: /contact|whatsapp|tel:|mailto:|demo|devis|ØªÙˆØ§ØµÙ„|ÙˆØ§ØªØ³Ø§Ø¨/.test(body),
-            hasCoverage: /countries|country|pays|europe|worldwide|international|maroc|morocco|Ø¯ÙˆÙ„|Ø¨Ù„Ø¯Ø§Ù†/.test(body),
-            hasFaq: /faq|frequently asked|questions frequentes|Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø§Ø¦Ø¹Ø©/.test(body),
+            hasPrice: /(?:[$€£]|mad|dh|usd|eur)\s?\d|\d[\d\s.,]*(?:[$€£]|mad|dh|usd|eur)|pricing|tarif|prix/.test(body),
+            hasGuarantee: /guarantee|garantie|satisfait ou rembourse|money back|ضمان/.test(body),
+            hasDelivery: /delivery|shipping|livraison|expedition|توصيل|شحن/.test(body),
+            hasReturns: /return|refund|retour|remboursement|إرجاع|استرجاع/.test(body),
+            hasReviews: /testimonial|review|rating|avis client|temoignage|تقييم|آراء/.test(body),
+            hasContact: /contact|whatsapp|tel:|mailto:|demo|devis|تواصل|واتساب/.test(body),
+            hasCoverage: /countries|country|pays|europe|worldwide|international|maroc|morocco|دول|بلدان/.test(body),
+            hasFaq: /faq|frequently asked|questions frequentes|الأسئلة الشائعة/.test(body),
             ctaCount: ctas.length,
-            hasMarketplaceModel: /marketplace|vendeur|seller|sell on|devenir vendeur|boutiques|stores|categories|catÃ©gories/.test(brandBody),
-            hasBroadCatalog: $home('a[href]').length >= 80 || /categories|catÃ©gories|toutes les boutiques|all products|nos produits/.test(brandBody),
+            hasMarketplaceModel: /marketplace|vendeur|seller|sell on|devenir vendeur|boutiques|stores|categories|catégories/.test(brandBody),
+            hasBroadCatalog: $home('a[href]').length >= 80 || /categories|catégories|toutes les boutiques|all products|nos produits/.test(brandBody),
             hasOnSiteSearch: $home('input[type="search"],form[action*="search"],input[name*="search"],input[placeholder*="recher"]').length > 0,
             hasAccountJourney: /mon compte|my account|login|connexion|sign in|create account/.test(brandBody),
             hasPaymentOptions: /paiement|payment|cash on delivery|cod|carte bancaire|visa|mastercard|paypal/.test(brandBody),
@@ -7617,20 +7617,20 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
             internalLinkCount: $home('a[href]').length
         };
         const productSignals = [];
-        if (signals.hasPrice) productSignals.push(lang === 'ar' ? 'ÙŠØ¹Ø±Ø¶ Ø§Ù„Ø³Ø¹Ø± Ø£Ùˆ Ø´Ø±ÙˆØ· Ø§Ù„Ø¯ÙØ¹ Ø¹Ù„Ù‰ Ø§Ù„Ø¹Ø±Ø¶' : lang === 'en' ? 'Displays pricing or payment terms on the offer' : "Affiche le prix ou les conditions de paiement de l'offre");
-        if (signals.hasReviews) productSignals.push(lang === 'ar' ? 'ÙŠØ¹Ø±Ø¶ Ø¢Ø±Ø§Ø¡ Ø¹Ù…Ù„Ø§Ø¡ Ø¹Ù„Ù‰ Ø§Ù„Ø¹Ø±Ø¶' : lang === 'en' ? 'Displays customer reviews on the offer' : "Affiche des avis client sur l'offre");
-        if (signals.hasGuarantee) productSignals.push(lang === 'ar' ? 'ÙŠØ°ÙƒØ± Ø¶Ù…Ø§Ù†Ø§ Ø¹Ù„Ù‰ Ø§Ù„Ø¹Ø±Ø¶' : lang === 'en' ? 'Mentions a guarantee on the offer' : "Mentionne une garantie sur l'offre");
+        if (signals.hasPrice) productSignals.push(lang === 'ar' ? 'يعرض السعر أو شروط الدفع على العرض' : lang === 'en' ? 'Displays pricing or payment terms on the offer' : "Affiche le prix ou les conditions de paiement de l'offre");
+        if (signals.hasReviews) productSignals.push(lang === 'ar' ? 'يعرض آراء عملاء على العرض' : lang === 'en' ? 'Displays customer reviews on the offer' : "Affiche des avis client sur l'offre");
+        if (signals.hasGuarantee) productSignals.push(lang === 'ar' ? 'يذكر ضمانا على العرض' : lang === 'en' ? 'Mentions a guarantee on the offer' : "Mentionne une garantie sur l'offre");
 
         const structuralStrengths = [];
-        if (signals.hasMarketplaceModel) structuralStrengths.push(lang === 'ar' ? 'Ù†Ù…ÙˆØ°Ø¬ Ø³ÙˆÙ‚ ÙŠØ¬Ù…Ø¹ Ø¹Ø¯Ø© Ø¨Ø§Ø¦Ø¹ÙŠÙ† ÙˆØ¹Ø±ÙˆØ¶Ø§ ÙÙŠ Ù…ÙƒØ§Ù† ÙˆØ§Ø­Ø¯' : lang === 'en' ? 'Marketplace model aggregating multiple sellers and offers' : 'Modele marketplace reunissant plusieurs vendeurs et offres');
-        if (signals.hasBroadCatalog) structuralStrengths.push(lang === 'ar' ? 'ÙƒØªØ§Ù„ÙˆØ¬ ÙˆØ§Ø³Ø¹ ÙŠØ³Ù‡Ù„ Ø§Ù„Ù…Ù‚Ø§Ø±Ù†Ø© ÙˆÙŠØºØ·ÙŠ Ø·Ù„Ø¨Ø§Øª Ù…ØªØ¹Ø¯Ø¯Ø©' : lang === 'en' ? 'Broad catalogue enabling comparison across many needs' : 'Catalogue large facilitant la comparaison et couvrant plusieurs besoins');
-        if (signals.hasOnSiteSearch) structuralStrengths.push(lang === 'ar' ? 'Ù…Ø­Ø±Ùƒ Ø¨Ø­Ø« Ø¯Ø§Ø®Ù„ÙŠ ÙŠØ³Ù‡Ù„ Ø§ÙƒØªØ´Ø§Ù Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª' : lang === 'en' ? 'On-site search makes product discovery easier' : 'Recherche interne facilitant la decouverte des produits');
-        if (signals.hasPaymentOptions) structuralStrengths.push(lang === 'ar' ? 'Ø®ÙŠØ§Ø±Ø§Øª Ø¯ÙØ¹ ÙˆØ§Ø¶Ø­Ø© ØªÙ‚Ù„Ù„ Ø§Ù„Ø§Ø­ØªÙƒØ§Ùƒ Ø¹Ù†Ø¯ Ø§Ù„Ø´Ø±Ø§Ø¡' : lang === 'en' ? 'Clear payment options reduce purchase friction' : "Options de paiement claires reduisant la friction d'achat");
-        if (signals.brandHasDelivery) structuralStrengths.push(lang === 'ar' ? 'Ù…Ù†Ø¸ÙˆÙ…Ø© ØªØ³Ù„ÙŠÙ… Ø¸Ø§Ù‡Ø±Ø© ØªØ¯Ø¹Ù… Ù‚Ø±Ø§Ø± Ø§Ù„Ø´Ø±Ø§Ø¡' : lang === 'en' ? 'Visible delivery system supports purchase decisions' : "Dispositif de livraison visible soutenant la decision d'achat");
-        if (signals.brandHasReturns) structuralStrengths.push(lang === 'ar' ? 'Ø³ÙŠØ§Ø³Ø© Ø¥Ø±Ø¬Ø§Ø¹ Ø£Ùˆ Ø§Ø³ØªØ±Ø¯Ø§Ø¯ ØªÙ‚Ù„Ù„ Ø§Ù„Ù…Ø®Ø§Ø·Ø±Ø©' : lang === 'en' ? 'Returns or refund policy reduces perceived risk' : 'Politique de retour ou remboursement reduisant le risque percu');
-        if (signals.hasAccountJourney) structuralStrengths.push(lang === 'ar' ? 'Ù…Ø³Ø§Ø± Ø­Ø³Ø§Ø¨ Ø¹Ù…ÙŠÙ„ ÙŠØ¯Ø¹Ù… Ø§Ù„Ø´Ø±Ø§Ø¡ Ø§Ù„Ù…ØªÙƒØ±Ø±' : lang === 'en' ? 'Customer account journey supports repeat purchases' : 'Parcours compte client favorisant les achats repetes');
-        if (signals.hasLocalPresence) structuralStrengths.push(lang === 'ar' ? 'Ø­Ø¶ÙˆØ± Ù…Ø­Ù„ÙŠ ÙˆØ§Ø¶Ø­ ÙÙŠ Ø§Ù„Ø³ÙˆÙ‚ Ø§Ù„Ù…Ø³ØªÙ‡Ø¯Ù' : lang === 'en' ? 'Clear local presence in the target market' : 'Presence locale claire sur le marche cible');
-        if (signals.hasMobileApp) structuralStrengths.push(lang === 'ar' ? 'ØªØ·Ø¨ÙŠÙ‚ Ø¬ÙˆØ§Ù„ ÙŠÙˆØ³Ø¹ Ø§Ù„ÙˆØµÙˆÙ„ ÙˆØ§Ù„Ø§Ø­ØªÙØ§Ø¸' : lang === 'en' ? 'Mobile app extends reach and retention' : 'Application mobile elargissant la portee et la retention');
+        if (signals.hasMarketplaceModel) structuralStrengths.push(lang === 'ar' ? 'نموذج سوق يجمع عدة بائعين وعروضا في مكان واحد' : lang === 'en' ? 'Marketplace model aggregating multiple sellers and offers' : 'Modele marketplace reunissant plusieurs vendeurs et offres');
+        if (signals.hasBroadCatalog) structuralStrengths.push(lang === 'ar' ? 'كتالوج واسع يسهل المقارنة ويغطي طلبات متعددة' : lang === 'en' ? 'Broad catalogue enabling comparison across many needs' : 'Catalogue large facilitant la comparaison et couvrant plusieurs besoins');
+        if (signals.hasOnSiteSearch) structuralStrengths.push(lang === 'ar' ? 'محرك بحث داخلي يسهل اكتشاف المنتجات' : lang === 'en' ? 'On-site search makes product discovery easier' : 'Recherche interne facilitant la decouverte des produits');
+        if (signals.hasPaymentOptions) structuralStrengths.push(lang === 'ar' ? 'خيارات دفع واضحة تقلل الاحتكاك عند الشراء' : lang === 'en' ? 'Clear payment options reduce purchase friction' : "Options de paiement claires reduisant la friction d'achat");
+        if (signals.brandHasDelivery) structuralStrengths.push(lang === 'ar' ? 'منظومة تسليم ظاهرة تدعم قرار الشراء' : lang === 'en' ? 'Visible delivery system supports purchase decisions' : "Dispositif de livraison visible soutenant la decision d'achat");
+        if (signals.brandHasReturns) structuralStrengths.push(lang === 'ar' ? 'سياسة إرجاع أو استرداد تقلل المخاطرة' : lang === 'en' ? 'Returns or refund policy reduces perceived risk' : 'Politique de retour ou remboursement reduisant le risque percu');
+        if (signals.hasAccountJourney) structuralStrengths.push(lang === 'ar' ? 'مسار حساب عميل يدعم الشراء المتكرر' : lang === 'en' ? 'Customer account journey supports repeat purchases' : 'Parcours compte client favorisant les achats repetes');
+        if (signals.hasLocalPresence) structuralStrengths.push(lang === 'ar' ? 'حضور محلي واضح في السوق المستهدف' : lang === 'en' ? 'Clear local presence in the target market' : 'Presence locale claire sur le marche cible');
+        if (signals.hasMobileApp) structuralStrengths.push(lang === 'ar' ? 'تطبيق جوال يوسع الوصول والاحتفاظ' : lang === 'en' ? 'Mobile app extends reach and retention' : 'Application mobile elargissant la portee et la retention');
 
         const missingProofs = [];
         if (!signals.hasReviews) missingProofs.push(labels.proof);
@@ -7638,7 +7638,7 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
         if (!signals.hasPrice) missingProofs.push(labels.weakPrice);
         if (!signals.hasDelivery && !signals.hasReturns) missingProofs.push(labels.weakDelivery);
         const deducedWeaknesses = missingProofs.slice(0, 3).map(text =>
-            lang === 'ar' ? `ÙØ±ØµØ© Ù…Ø­ØªÙ…Ù„Ø©: ${text}` : lang === 'en' ? `Potential opening: ${text}` : `Ouverture potentielle : ${text}`
+            lang === 'ar' ? `فرصة محتملة: ${text}` : lang === 'en' ? `Potential opening: ${text}` : `Ouverture potentielle : ${text}`
         );
 
         const value = {
@@ -7728,42 +7728,42 @@ function archetypeBusinessCopy(archetype, query, geo, lang = 'fr') {
     const copy = {
         supplement: {
             fr: {
-                sell: `ComplÃ©ment alimentaire orientÃ© Ã©nergie, concentration et vitalitÃ© autour de Â« ${cleanQuery} Â».`,
-                proof: ['Composition et dosage clairement vÃ©rifiables', 'PrÃ©cautions, conformitÃ© et mode dâ€™utilisation', `Prix, disponibilitÃ© locale et avis clients ${market}`],
-                position: `Devenir lâ€™offre la plus transparente et rassurante ${market} sur la composition, le dosage, la sÃ©curitÃ©, le prix et la disponibilitÃ©.`,
-                promise: `Une Ã©nergie mieux expliquÃ©e : composition, dosage, prÃ©cautions, prix local et preuves clients visibles avant lâ€™achat.`
+                sell: `Complément alimentaire orienté énergie, concentration et vitalité autour de « ${cleanQuery} ».`,
+                proof: ['Composition et dosage clairement vérifiables', 'Précautions, conformité et mode d’utilisation', `Prix, disponibilité locale et avis clients ${market}`],
+                position: `Devenir l’offre la plus transparente et rassurante ${market} sur la composition, le dosage, la sécurité, le prix et la disponibilité.`,
+                promise: `Une énergie mieux expliquée : composition, dosage, précautions, prix local et preuves clients visibles avant l’achat.`
             },
             en: {
-                sell: `Energy, focus, and vitality supplement related to â€œ${cleanQuery}â€.`,
+                sell: `Energy, focus, and vitality supplement related to “${cleanQuery}”.`,
                 proof: ['Clearly verifiable composition and dosage', 'Precautions, compliance, and usage instructions', `Local pricing, availability, and customer reviews ${market}`],
                 position: `Become the most transparent and reassuring offer ${market} on composition, dosage, safety, pricing, and availability.`,
                 promise: 'Energy with clearer proof: composition, dosage, precautions, local pricing, and customer reviews visible before purchase.'
             },
             ar: {
-                sell: `Ù…ÙƒÙ…Ù„ ØºØ°Ø§Ø¦ÙŠ Ù„Ù„Ø·Ø§Ù‚Ø© ÙˆØ§Ù„ØªØ±ÙƒÙŠØ² ÙˆØ§Ù„Ø­ÙŠÙˆÙŠØ© Ù…Ø±ØªØ¨Ø· Ø¨Ø·Ù„Ø¨ Â«${cleanQuery}Â».`,
-                proof: ['ØªØ±ÙƒÙŠØ¨Ø© ÙˆØ¬Ø±Ø¹Ø© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ØªØ­Ù‚Ù‚ Ø¨ÙˆØ¶ÙˆØ­', 'Ø§Ù„Ø§Ø­ØªÙŠØ§Ø·Ø§Øª ÙˆØ§Ù„Ù…Ø·Ø§Ø¨Ù‚Ø© ÙˆØ·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…', `Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„ØªÙˆÙØ± Ø§Ù„Ù…Ø­Ù„ÙŠ ÙˆØ¢Ø±Ø§Ø¡ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ ${market}`],
-                position: `Ø¨Ù†Ø§Ø¡ Ø§Ù„Ø¹Ø±Ø¶ Ø§Ù„Ø£ÙƒØ«Ø± Ø´ÙØ§ÙÙŠØ© ÙˆØ·Ù…Ø£Ù†ÙŠÙ†Ø© ${market} Ù…Ù† Ø­ÙŠØ« Ø§Ù„ØªØ±ÙƒÙŠØ¨Ø© ÙˆØ§Ù„Ø¬Ø±Ø¹Ø© ÙˆØ§Ù„Ø³Ù„Ø§Ù…Ø© ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„ØªÙˆÙØ±.`,
-                promise: 'Ø·Ø§Ù‚Ø© Ø¨Ø£Ø¯Ù„Ø© Ø£ÙˆØ¶Ø­: Ø§Ù„ØªØ±ÙƒÙŠØ¨Ø© ÙˆØ§Ù„Ø¬Ø±Ø¹Ø© ÙˆØ§Ù„Ø§Ø­ØªÙŠØ§Ø·Ø§Øª ÙˆØ§Ù„Ø³Ø¹Ø± Ø§Ù„Ù…Ø­Ù„ÙŠ ÙˆØ¢Ø±Ø§Ø¡ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ù‚Ø¨Ù„ Ø§Ù„Ø´Ø±Ø§Ø¡.'
+                sell: `مكمل غذائي للطاقة والتركيز والحيوية مرتبط بطلب «${cleanQuery}».`,
+                proof: ['تركيبة وجرعة قابلة للتحقق بوضوح', 'الاحتياطات والمطابقة وطريقة الاستخدام', `السعر والتوفر المحلي وآراء العملاء ${market}`],
+                position: `بناء العرض الأكثر شفافية وطمأنينة ${market} من حيث التركيبة والجرعة والسلامة والسعر والتوفر.`,
+                promise: 'طاقة بأدلة أوضح: التركيبة والجرعة والاحتياطات والسعر المحلي وآراء العملاء قبل الشراء.'
             }
         },
         service: {
             fr: {
-                sell: `Service autour de Â« ${cleanQuery} Â», Ã  comparer sur la preuve, le pÃ©rimÃ¨tre et la facilitÃ© de dÃ©cision.`,
-                proof: [`Preuves client liÃ©es directement Ã  Â« ${cleanQuery} Â»`, 'PÃ©rimÃ¨tre, prix ou mÃ©thode de tarification visibles avant le contact', 'Ã‰tapes de travail, conditions et niveau de suivi formulÃ©s sans promesse non prouvÃ©e'],
-                position: `Se positionner ${market} comme la solution la plus facile Ã  comprendre et Ã  vÃ©rifier pour Â« ${cleanQuery} Â», avec preuves visibles et conditions explicites.`,
-                promise: `Une rÃ©ponse claire Ã  Â« ${cleanQuery} Â»: pÃ©rimÃ¨tre, mÃ©thode, prix ou cadrage, preuve et prochaine action visibles avant le CTA.`
+                sell: `Service autour de « ${cleanQuery} », à comparer sur la preuve, le périmètre et la facilité de décision.`,
+                proof: [`Preuves client liées directement à « ${cleanQuery} »`, 'Périmètre, prix ou méthode de tarification visibles avant le contact', 'Étapes de travail, conditions et niveau de suivi formulés sans promesse non prouvée'],
+                position: `Se positionner ${market} comme la solution la plus facile à comprendre et à vérifier pour « ${cleanQuery} », avec preuves visibles et conditions explicites.`,
+                promise: `Une réponse claire à « ${cleanQuery} »: périmètre, méthode, prix ou cadrage, preuve et prochaine action visibles avant le CTA.`
             },
             en: {
-                sell: `Service around â€œ${cleanQuery}â€, to compare on proof, scope, and decision clarity.`,
-                proof: [`Client proof directly related to â€œ${cleanQuery}â€`, 'Scope, pricing, or pricing method visible before contact', 'Work steps, conditions, and follow-up level stated without unsupported promises'],
-                position: `Position ${market} as the easiest-to-understand and easiest-to-verify solution for â€œ${cleanQuery}â€, with visible proof and explicit conditions.`,
-                promise: `A clear answer to â€œ${cleanQuery}â€: scope, method, pricing or framing, proof, and next action visible before the CTA.`
+                sell: `Service around “${cleanQuery}”, to compare on proof, scope, and decision clarity.`,
+                proof: [`Client proof directly related to “${cleanQuery}”`, 'Scope, pricing, or pricing method visible before contact', 'Work steps, conditions, and follow-up level stated without unsupported promises'],
+                position: `Position ${market} as the easiest-to-understand and easiest-to-verify solution for “${cleanQuery}”, with visible proof and explicit conditions.`,
+                promise: `A clear answer to “${cleanQuery}”: scope, method, pricing or framing, proof, and next action visible before the CTA.`
             },
             ar: {
-                sell: `Ø®Ø¯Ù…Ø© Ø­ÙˆÙ„ Â«${cleanQuery}Â» ÙŠØ¬Ø¨ Ù…Ù‚Ø§Ø±Ù†ØªÙ‡Ø§ Ø¹Ù„Ù‰ Ø£Ø³Ø§Ø³ Ø§Ù„Ø¯Ù„ÙŠÙ„ ÙˆÙ†Ø·Ø§Ù‚ Ø§Ù„Ø¹Ù…Ù„ ÙˆØ³Ù‡ÙˆÙ„Ø© Ø§ØªØ®Ø§Ø° Ø§Ù„Ù‚Ø±Ø§Ø±.`,
-                proof: [`Ø£Ø¯Ù„Ø© Ø¹Ù…Ù„Ø§Ø¡ Ù…Ø±ØªØ¨Ø·Ø© Ù…Ø¨Ø§Ø´Ø±Ø© Ø¨Ù€ Â«${cleanQuery}Â»`, 'Ù†Ø·Ø§Ù‚ Ø§Ù„Ø®Ø¯Ù…Ø© Ø£Ùˆ Ø§Ù„Ø³Ø¹Ø± Ø£Ùˆ Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„ØªØ³Ø¹ÙŠØ± Ø¸Ø§Ù‡Ø±Ø© Ù‚Ø¨Ù„ Ø§Ù„ØªÙˆØ§ØµÙ„', 'Ø®Ø·ÙˆØ§Øª Ø§Ù„Ø¹Ù…Ù„ ÙˆØ§Ù„Ø´Ø±ÙˆØ· ÙˆÙ…Ø³ØªÙˆÙ‰ Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø© Ù…ÙƒØªÙˆØ¨Ø© Ø¯ÙˆÙ† ÙˆØ¹ÙˆØ¯ ØºÙŠØ± Ù…Ø«Ø¨ØªØ©'],
-                position: `Ø§Ù„ØªÙ…ÙˆØ¶Ø¹ ${market} ÙƒØ­Ù„ Ø£Ø³Ù‡Ù„ ÙÙ‡Ù…Ø§ ÙˆØªØ­Ù‚Ù‚Ø§ Ù„Ù€ Â«${cleanQuery}Â» Ù…Ø¹ Ø£Ø¯Ù„Ø© Ù…Ø±Ø¦ÙŠØ© ÙˆØ´Ø±ÙˆØ· ØµØ±ÙŠØ­Ø©.`,
-                promise: `Ø¥Ø¬Ø§Ø¨Ø© ÙˆØ§Ø¶Ø­Ø© Ø¹Ù„Ù‰ Â«${cleanQuery}Â»: Ù†Ø·Ø§Ù‚ Ø§Ù„Ø¹Ù…Ù„ØŒ Ø§Ù„Ø·Ø±ÙŠÙ‚Ø©ØŒ Ø§Ù„Ø³Ø¹Ø± Ø£Ùˆ Ø§Ù„ØªØ£Ø·ÙŠØ±ØŒ Ø§Ù„Ø¯Ù„ÙŠÙ„ ÙˆØ§Ù„Ø®Ø·ÙˆØ© Ø§Ù„ØªØ§Ù„ÙŠØ© Ù‚Ø¨Ù„ Ø²Ø± Ø§Ù„Ù‚Ø±Ø§Ø±.`
+                sell: `خدمة حول «${cleanQuery}» يجب مقارنتها على أساس الدليل ونطاق العمل وسهولة اتخاذ القرار.`,
+                proof: [`أدلة عملاء مرتبطة مباشرة بـ «${cleanQuery}»`, 'نطاق الخدمة أو السعر أو طريقة التسعير ظاهرة قبل التواصل', 'خطوات العمل والشروط ومستوى المتابعة مكتوبة دون وعود غير مثبتة'],
+                position: `التموضع ${market} كحل أسهل فهما وتحققا لـ «${cleanQuery}» مع أدلة مرئية وشروط صريحة.`,
+                promise: `إجابة واضحة على «${cleanQuery}»: نطاق العمل، الطريقة، السعر أو التأطير، الدليل والخطوة التالية قبل زر القرار.`
             }
         },
         physical_product: {
@@ -8112,7 +8112,7 @@ async function analyzeCompetitors(
 ) {
     const startTime = Date.now();
 
-    // â”€â”€ 1. LANGUE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 1. LANGUE ─────────────────────────────────────────────
     const langObj = resolveLang(lang);
     const ND      = langObj.noDataLabel;
     const isAr    = langObj.code === 'ar';
@@ -8124,13 +8124,13 @@ async function analyzeCompetitors(
     name: 'Competitor Research Assistant',
     url: 'https://chatgpt.com/g/g-673ba23144bc819199fa36907952822b-competitor-research-assistant',
     description: isAr
-        ? 'Ø§Ø³ØªØ®Ø¯Ù… Ù…Ø³Ø§Ø¹Ø¯ GPT Ù„Ù„ØªØ­Ù„ÙŠÙ„ Ø§Ù„ÙŠØ¯ÙˆÙŠ.'
+        ? 'استخدم مساعد GPT للتحليل اليدوي.'
         : isEn
             ? 'Use our GPT Assistant for manual analysis.'
             : "Utilisez notre Assistant GPT pour continuer l'analyse manuelle."
 };
 
-    // â”€â”€ 2. VALIDATION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 2. VALIDATION ─────────────────────────────────────────
     const cleanQuery = InputValidator.sanitizeQuery(query || '');
     if (!cleanQuery) {
         return { success: false, error: 'Query is required', externalBot: GPT_BOT };
@@ -8140,26 +8140,26 @@ async function analyzeCompetitors(
     const googleLang = langObj.serpHl;
     const contextKey = cleanProofText(JSON.stringify(userIntentContext || {}), 220) || 'no-context';
 
-    // â”€â”€ 3. CACHE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 3. CACHE ──────────────────────────────────────────────
     const cacheKey = `warroom-v10.3:${cleanQuery}:${geoData.gl}:${langObj.code}:${contextKey}`;
 
     if (forceRefresh) {
         cache.cache.delete(cacheKey);
-        console.log(`ðŸ”„ [WarRoom-V10.0] CACHE BYPASS: ${cacheKey}`);
+        console.log(`🔄 [WarRoom-V10.0] CACHE BYPASS: ${cacheKey}`);
     } else {
         const cached = cache.get(cacheKey);
         if (cached) {
-            console.log(`ðŸ’¾ [WarRoom-V10.0] CACHE HIT: ${cacheKey}`);
+            console.log(`💾 [WarRoom-V10.0] CACHE HIT: ${cacheKey}`);
             return { ...cached, externalBot: GPT_BOT, fromCache: true };
         }
     }
 
-    // â”€â”€ 4. ACQUISITION SERP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // FIX BUG #2 : dÃ©claration AVANT le bloc isUrlTarget
+    // ── 4. ACQUISITION SERP ────────────────────────────────────
+    // FIX BUG #2 : déclaration AVANT le bloc isUrlTarget
     let rawResults = [];
     let source     = 'none';
 
-    // â”€â”€ 4a â€” URL directe â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 4a — URL directe ──────────────────────────────────────
     const isUrlTarget = /^https?:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/.test(cleanQuery.trim());
     if (isUrlTarget) {
         try {
@@ -8170,14 +8170,14 @@ async function analyzeCompetitors(
                 link:           targetUrl,
                 displayed_link: domain,
                 title:          `Cible Directe : ${domain}`,
-                snippet:        'Analyse 1v1 dÃ©clenchÃ©e.',
+                snippet:        'Analyse 1v1 déclenchée.',
                 source:         'direct-url'
             }];
             source = 'direct-url';
         } catch (e) { console.warn('[WarRoom-V10.0] URL invalide:', e.message); }
     }
 
-    // â”€â”€ 4b â€” SERPER (PRIMAIRE) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 4b — SERPER (PRIMAIRE) ────────────────────────────────
     let serpExtrasStore = { peopleAlsoAsk: [], relatedSearches: [], knowledgeGraph: null };
 
     if (rawResults.length === 0 && process.env.SERPER_API_KEY) {
@@ -8212,12 +8212,12 @@ async function analyzeCompetitors(
                     relatedSearches: res.data.relatedSearches || [],
                     knowledgeGraph:  res.data.knowledgeGraph  || null
                 };
-                console.log(`âœ… [WarRoom-V10.0] Serper OK â€” ${rawResults.length} rÃ©sultats | PAA: ${serpExtrasStore.peopleAlsoAsk.length}`);
+                console.log(`✅ [WarRoom-V10.0] Serper OK — ${rawResults.length} résultats | PAA: ${serpExtrasStore.peopleAlsoAsk.length}`);
             }
         } catch (e) { console.warn('[WarRoom-V10.0] Serper error:', e.message); }
     }
 
-    // â”€â”€ 4c â€” SERPAPI (FALLBACK) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 4c — SERPAPI (FALLBACK) ───────────────────────────────
     if (rawResults.length === 0 && process.env.SERPAPI_KEY) {
         try {
             console.log('[WarRoom-V10.0] SERP via SERPAPI (fallback)...');
@@ -8243,7 +8243,7 @@ async function analyzeCompetitors(
                     relatedSearches: res.data.related_searches  || [],
                     knowledgeGraph:  res.data.knowledge_graph   || null
                 };
-                console.log(`âœ… [WarRoom-V10.0] SerpAPI OK â€” ${rawResults.length} rÃ©sultats (fallback)`);
+                console.log(`✅ [WarRoom-V10.0] SerpAPI OK — ${rawResults.length} résultats (fallback)`);
             }
         } catch (e) { console.warn('[WarRoom-V10.0] SerpAPI error:', e.message); }
     }
@@ -8251,15 +8251,15 @@ async function analyzeCompetitors(
     if (rawResults.length === 0) {
         return {
             success:        false,
-            error:          isAr ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬ Ù„Ù‡Ø°Ø§ Ø§Ù„Ø§Ø³ØªØ¹Ù„Ø§Ù….'
+            error:          isAr ? 'لا توجد نتائج لهذا الاستعلام.'
                           : isEn ? 'No SERP results found.'
-                                 : 'Aucun rÃ©sultat SERP pour cette requÃªte.',
+                                 : 'Aucun résultat SERP pour cette requête.',
             externalBot:    GPT_BOT,
             marketInsights: { difficulty: 'unknown', serpIntent: 'unknown', vocabulary: [] }
         };
     }
 
-  // â”€â”€ 4d â€” Extras SERP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── 4d — Extras SERP ─────────────────────────────────────
 let peopleAlsoAsk = Array.isArray(serpExtrasStore.peopleAlsoAsk)
     ? serpExtrasStore.peopleAlsoAsk
     : [];
@@ -8271,12 +8271,12 @@ let relatedSearches = Array.isArray(serpExtrasStore.relatedSearches)
 let knowledgeGraph = serpExtrasStore.knowledgeGraph || null;
 
 
-// â”€â”€ 4e â€” ACQUISITION PARALLÃˆLE SCRAPE.DO + GSC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â”€â”€ 4e â€” ACQUISITION PARALLÃˆLE SCRAPE.DO + GSC â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-console.log(`[WarRoom-V10.0] Acquisition parallÃ¨le SCRAPE.DO INTEL + GSC + MAPS + TRENDS + SHOPPING...`);
+// ── 4e — ACQUISITION PARALLÈLE SCRAPE.DO + GSC ───────────
+// ── 4e — ACQUISITION PARALLÈLE SCRAPE.DO + GSC ───────────
+console.log(`[WarRoom-V10.0] Acquisition parallèle SCRAPE.DO INTEL + GSC + MAPS + TRENDS + SHOPPING...`);
 
 const isProductIntent = /(prix|tarif|acheter|achat|product|produit|shop|boutique|ecommerce|e-commerce|commande)/i.test(cleanQuery);
-const isLocalIntent = /(maroc|morocco|casablanca|rabat|tanger|fes|marrakech|agadir|sale|meknes|near me|local|proche|pres de moi|prÃ¨s de moi)/i.test(cleanQuery);
+const isLocalIntent = /(maroc|morocco|casablanca|rabat|tanger|fes|marrakech|agadir|sale|meknes|near me|local|proche|pres de moi|près de moi)/i.test(cleanQuery);
 const shouldRunSearchEnrich = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_SEARCH_ENRICH;
 const shouldRunKeywords = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_KEYWORDS;
 const shouldRunMaps = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_MAPS;
@@ -8296,7 +8296,7 @@ const [
     gscResult
 ] = await Promise.allSettled([
 
-    // â”€â”€ Scrape.do Google Search SERP enrichi â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Scrape.do Google Search SERP enrichi ─────────────
     (async () => {
         if (!process.env.SCRAPEDOTOKEN || !shouldRunSearchEnrich) return null;
         try {
@@ -8357,7 +8357,7 @@ const [
         }
     })(),
 
-    // â”€â”€ Scrape.do keyword intel estimÃ© depuis SERP â”€â”€â”€â”€â”€â”€â”€
+    // ── Scrape.do keyword intel estimé depuis SERP ───────
     (async () => {
         try {
             if (!shouldRunKeywords) return null;
@@ -8373,7 +8373,7 @@ const [
         }
     })(),
 
-    // â”€â”€ Scrape.do Maps â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Scrape.do Maps ────────────────────────────────────
     (async () => {
         if (!process.env.SCRAPEDOTOKEN || !shouldRunMaps) return null;
         try {
@@ -8397,7 +8397,7 @@ const [
         }
     })(),
 
-    // â”€â”€ Scrape.do Trends â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Scrape.do Trends ──────────────────────────────────
     (async () => {
         if (!process.env.SCRAPEDOTOKEN || !shouldRunTrends) return null;
         try {
@@ -8420,7 +8420,7 @@ const [
         }
     })(),
 
-    // â”€â”€ Scrape.do Shopping â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Scrape.do Shopping ────────────────────────────────
     (async () => {
         if (!process.env.SCRAPEDOTOKEN || !shouldRunShopping) return null;
         try {
@@ -8444,7 +8444,7 @@ const [
         }
     })(),
 
-    // â”€â”€ Google Search Console â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Google Search Console ─────────────────────────────
     (async () => {
         if (!gscAccessToken) return null;
         try {
@@ -8513,7 +8513,7 @@ const gscData =
     (gscResult.status === 'fulfilled' && gscResult.value)
         ? gscResult.value
         : null;
-    // â”€â”€ 5. ENRICHISSEMENT CONCURRENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 5. ENRICHISSEMENT CONCURRENTS ─────────────────────────
     const assessedCompetitors = rawResults
     .map((r, i) => {
         const url = r.link || r.url || '';
@@ -8583,10 +8583,10 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
     const url = x.url;
     const domain = x.domain;
 
-    let type = isAr ? 'Ø¹Ø§Ù…' : isEn ? 'General' : 'GÃ©nÃ©ral';
+    let type = isAr ? 'عام' : isEn ? 'General' : 'Général';
 
     if (SOCIAL_COMPETITOR_DOMAINS.some(d => domain.includes(d))) {
-        type = isAr ? 'Ø´Ø¨ÙƒØ§Øª Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ©' : isEn ? 'Social Profile' : 'RÃ©seau social';
+        type = isAr ? 'شبكات اجتماعية' : isEn ? 'Social Profile' : 'Réseau social';
     } else {
         type = x.typeLabel;
     }
@@ -8602,7 +8602,7 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
 
     return {
         position: i + 1,
-        title: r.title || (isAr ? 'Ø¨Ø¯ÙˆÙ† Ø¹Ù†ÙˆØ§Ù†' : isEn ? 'No title' : 'Sans titre'),
+        title: r.title || (isAr ? 'بدون عنوان' : isEn ? 'No title' : 'Sans titre'),
         url,
         domain,
         snippet: r.snippet || r.description || '',
@@ -8614,10 +8614,10 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
         geoSignals: x.geoMatch?.matchedTerms || [],
         estimatedAuthority:
             i < 2
-                ? (isAr ? 'Ù…Ø±ØªÙØ¹Ø© Ø¬Ø¯Ø§Ù‹' : isEn ? 'Very High' : 'TrÃ¨s Haute')
+                ? (isAr ? 'مرتفعة جداً' : isEn ? 'Very High' : 'Très Haute')
                 : i < 5
-                    ? (isAr ? 'Ù…Ø±ØªÙØ¹Ø©' : isEn ? 'High' : 'Haute')
-                    : (isAr ? 'Ù…ØªÙˆØ³Ø·Ø©' : isEn ? 'Medium' : 'Moyenne'),
+                    ? (isAr ? 'مرتفعة' : isEn ? 'High' : 'Haute')
+                    : (isAr ? 'متوسطة' : isEn ? 'Medium' : 'Moyenne'),
         sitelinks: Array.isArray(r.sitelinks) ? r.sitelinks.length : (r.sitelinks ? 1 : 0),
         commercialIntentScore: commercialScore,
         isRealCompetitor,
@@ -8629,7 +8629,7 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
     };
 });
 
-    // â”€â”€ 6. SCRAPING MOAT LEADER (SCRAPE.DO) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 6. SCRAPING MOAT LEADER (SCRAPE.DO) ───────────────────
 const top5BusinessProfiles = await enrichTopCompetitorsBusinessV2(enrichedCompetitors, {
     lang: langObj.code,
     query: cleanQuery,
@@ -8745,7 +8745,7 @@ try {
         }
     }
 
-    console.log('[WarRoom-V10.0] Leader Moat extrait avec succÃ¨s.');
+    console.log('[WarRoom-V10.0] Leader Moat extrait avec succès.');
 } catch (e) {
     console.warn('[WarRoom-V10.0] Leader Moat Error:', e.message);
     leaderMoat = {
@@ -8754,18 +8754,18 @@ try {
     };
 }
 
-    // â”€â”€ 7. ENRICHISSEMENT KE â†’ volume rÃ©el â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 7. ENRICHISSEMENT KE → volume réel ───────────────────
     const mainKwData = kwData?.[cleanQuery] || null;
     const realVolume = mainKwData
         ? `${mainKwData.vol.toLocaleString()} / mois (CPC: $${mainKwData.cpc} | Comp: ${mainKwData.competition})`
         : ND;
     const realTrend  = mainKwData?.trend?.length
-        ? (mainKwData.trend.slice(-3).map(t => t.value).join(' â†’ ') + ' (3 derniers mois)')
+        ? (mainKwData.trend.slice(-3).map(t => t.value).join(' → ') + ' (3 derniers mois)')
         : null;
 
-    console.log(`ðŸ”‘ [GOOGLE INTEL] Signal marchÃ© "${cleanQuery}": ${realVolume}`);
+    console.log(`🔑 [GOOGLE INTEL] Signal marché "${cleanQuery}": ${realVolume}`);
 
-    // â”€â”€ 8. CONTEXTE UTILISATEUR & TOP 3 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 8. CONTEXTE UTILISATEUR & TOP 3 ───────────────────────
     const hasUserSite  = !!userSiteData;
 
     const userIntelCtx = userSiteData ? {
@@ -8786,48 +8786,48 @@ try {
 
     const userContextStr = userSiteData
         ? `URL Cible: ${userSiteData.url} | Title: ${userIntelCtx?.title || ND} | H1: ${userIntelCtx?.h1 || ND}${gscContext ? ' | ' + gscContext : ''}`
-        : `Analyse Benchmark: L'utilisateur n'a pas de site. GÃ©nÃ¨re la stratÃ©gie PARFAITE (Mastering) pour battre le Top 3.`;
+        : `Analyse Benchmark: L'utilisateur n'a pas de site. Génère la stratégie PARFAITE (Mastering) pour battre le Top 3.`;
 
-    // â”€â”€ 9. FALLBACKS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const leaderDomain = enrichedCompetitors[0]?.domain || (isAr ? 'Ø§Ù„Ù…Ù†Ø§ÙØ³' : isEn ? 'competitor' : 'le leader');
+    // ── 9. FALLBACKS ──────────────────────────────────────────
+    const leaderDomain = enrichedCompetitors[0]?.domain || (isAr ? 'المنافس' : isEn ? 'competitor' : 'le leader');
 
     const fallbackWinningMove = isAr
-        ? `ØªÙÙˆÙ‘Ù‚ Ø¹Ù„Ù‰ ${leaderDomain} ÙÙŠ Ø§Ù„Ø«Ù‚Ø© ÙˆØ§Ù„Ø¶Ù…Ø§Ù†`
+        ? `تفوّق على ${leaderDomain} في الثقة والضمان`
         : isEn ? `Beat ${leaderDomain} on trust and guarantee`
                : `Battez ${leaderDomain} sur la confiance et la garantie`;
 
     const fallbackRoadmap = isAr
-        ? ['Ø£Ø¹ÙØ¯ ÙƒØªØ§Ø¨Ø© H1 Ø¨Ø£Ø³Ù„ÙˆØ¨ JTBD', 'Ø£Ø¶Ù Ø¶Ù…Ø§Ù†Ø§Ù‹ Ù‚ÙˆÙŠØ§Ù‹ ÙÙŠ Ø§Ù„Ù‚Ø³Ù… Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ', 'Ø¨Ø³Ù‘Ø· Ù…Ø³Ø§Ø± Ø§Ù„Ø´Ø±Ø§Ø¡ Ø¥Ù„Ù‰ Ø®Ø·ÙˆØªÙŠÙ†']
+        ? ['أعِد كتابة H1 بأسلوب JTBD', 'أضف ضماناً قوياً في القسم الرئيسي', 'بسّط مسار الشراء إلى خطوتين']
         : isEn
         ? ['Rewrite H1 in JTBD mode', 'Add strong guarantee in hero section', 'Simplify checkout to 2 steps max']
-        : ['RÃ©Ã©crire le H1 en mode JTBD', 'Ajouter une garantie forte en hero section', "Simplifier le tunnel d'achat Ã  2 Ã©tapes max"];
+        : ['Réécrire le H1 en mode JTBD', 'Ajouter une garantie forte en hero section', "Simplifier le tunnel d'achat à 2 étapes max"];
 
     const fallbackSwot = isAr ? {
-        strengths:     ['Ø§Ù„Ù‚ÙØ¯ÙŽÙ… ÙˆØ§Ù„Ø´Ù‡Ø±Ø© ÙÙŠ Ø§Ù„Ø³ÙˆÙ‚'],
-        weaknesses:    ['Ø¨Ø§Ø±Ø¯Ø© ÙˆÙ…Ø¹Ø§Ù…Ù„Ø§ØªÙŠØ© Ø¨Ù„Ø§ ØªØ®ØµÙŠØµ'],
-        opportunities: ['Ø¥Ù†Ø´Ø§Ø¡ Ù…Ø¬ØªÙ…Ø¹ Ù…ØªØ®ØµØµ Ø­ÙˆÙ„ Ø§Ù„Ù…Ù†ØªØ¬'],
-        threats:       ['Ø­Ø±Ø¨ Ø£Ø³Ø¹Ø§Ø± ÙˆØ´ÙŠÙƒØ© Ù…Ø¹ Ø§Ù„Ù…Ù†Ø§ÙØ³ÙŠÙ†']
+        strengths:     ['القِدَم والشهرة في السوق'],
+        weaknesses:    ['باردة ومعاملاتية بلا تخصيص'],
+        opportunities: ['إنشاء مجتمع متخصص حول المنتج'],
+        threats:       ['حرب أسعار وشيكة مع المنافسين']
     } : isEn ? {
         strengths:     ['Brand authority and market seniority'],
         weaknesses:    ['Cold and transactional, no personalization'],
         opportunities: ['Build a niche community around the product'],
         threats:       ['Imminent price war with competitors']
     } : {
-        strengths:     ['AnciennetÃ© et notoriÃ©tÃ© sur le marchÃ©'],
+        strengths:     ['Ancienneté et notoriété sur le marché'],
         weaknesses:    ['Froid et transactionnel, sans personnalisation'],
-        opportunities: ['CrÃ©er une communautÃ© de niche autour du produit'],
+        opportunities: ['Créer une communauté de niche autour du produit'],
         threats:       ['Guerre des prix imminente avec les concurrents']
     };
 
     const fallbackDuel = isAr ? {
-        offerAndRisk:     { competitor: 'Ø¶Ù…Ø§Ù† 30 ÙŠÙˆÙ… ÙÙ‚Ø·',              user: ND, killShot: 'Ø¶Ù…Ø§Ù† Ù…Ø¯Ù‰ Ø§Ù„Ø­ÙŠØ§Ø© + Ù…ÙƒØ§ÙØ£Ø© Ø¹Ù†Ø¯ Ø¹Ø¯Ù… Ø§Ù„Ø±Ø¶Ø§' },
-        jtbdPsychology:   { competitor: 'ÙŠØ¨Ø±Ø² Ù…Ø²Ø§ÙŠØ§ Ø§Ù„Ù…Ù†ØªØ¬ Ø§Ù„ØªÙ‚Ù†ÙŠØ©',    user: ND, killShot: 'H1 ÙŠØ±ÙƒØ² Ø¹Ù„Ù‰ Ø§Ù„ØªØ­ÙˆÙ„ Ø§Ù„Ø¹Ø§Ø·ÙÙŠ Ù„Ù„Ø¹Ù…ÙŠÙ„' },
-        kanoDelighter:    { competitor: 'ÙŠØªÙ†Ø§ÙØ³ Ø¹Ù„Ù‰ Ø§Ù„Ø³Ø¹Ø± ÙÙ‚Ø·',         user: ND, killShot: 'Ù‡Ø¯ÙŠØ© Ù…ÙØ§Ø¬Ø¦Ø© Ù…Ø¹ ÙƒÙ„ Ø·Ù„Ø¨' },
-        activationAARRR:  { competitor: 'Ø¹Ù…Ù„ÙŠØ© Ø´Ø±Ø§Ø¡ ÙÙŠ 5+ Ø®Ø·ÙˆØ§Øª',      user: ND, killShot: 'Ø¯ÙØ¹ Ø¨Ù†Ù‚Ø±Ø© ÙˆØ§Ø­Ø¯Ø© - Apple Pay / Google Pay' },
-        flankingStrategy: { competitor: 'ÙŠÙ‡ÙŠÙ…Ù† Ø¨Ø§Ù„Ø­Ø¬Ù… ÙˆØ§Ù„Ø³Ø¹Ø± Ø§Ù„Ù…Ù†Ø®ÙØ¶', user: ND, killShot: 'Ø§Ø³ØªÙ‡Ø¯Ø§Ù Ø§Ù„Ø´Ø±ÙŠØ­Ø© Ø§Ù„ÙØ§Ø®Ø±Ø© Ø§Ù„ØªÙŠ ÙŠØªØ¬Ø§Ù‡Ù„Ù‡Ø§' },
-        pricingBundling:  { competitor: 'Ø³Ø¹Ø± ÙØ±Ø¯ÙŠ Ø¨Ø¯ÙˆÙ† Ø­Ø²Ù…',           user: ND, killShot: 'Ø­Ø²Ù…Ø© Ø­ØµØ±ÙŠØ© ØªØ¬Ø¹Ù„ Ù…Ù‚Ø§Ø±Ù†Ø© Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ù…Ø³ØªØ­ÙŠÙ„Ø©' },
-        valueLadder:      { competitor: 'Ù…Ù†ØªØ¬ ÙˆØ§Ø­Ø¯ ÙÙ‚Ø·',               user: ND, killShot: 'Ø¥Ø¶Ø§ÙØ© Ù…Ù†ØªØ¬Ø§Øª ØªÙƒÙ…ÙŠÙ„ÙŠØ© (Upsell) Ø¨Ù†Ù‚Ø±Ø© ÙˆØ§Ø­Ø¯Ø©' },
-        uxTeardown:       { competitor: 'Ø¹Ù…Ù„ÙŠØ© Ø¯ÙØ¹ Ù…Ø¹Ù‚Ø¯Ø©',             user: ND, killShot: 'Ø¯ÙØ¹ Ø³Ø±ÙŠØ¹ Ø¨Ø¯ÙˆÙ† Ø¥Ø¯Ø®Ø§Ù„ Ø¨ÙŠØ§Ù†Ø§Øª ØºÙŠØ± Ø¶Ø±ÙˆØ±ÙŠØ©' }
+        offerAndRisk:     { competitor: 'ضمان 30 يوم فقط',              user: ND, killShot: 'ضمان مدى الحياة + مكافأة عند عدم الرضا' },
+        jtbdPsychology:   { competitor: 'يبرز مزايا المنتج التقنية',    user: ND, killShot: 'H1 يركز على التحول العاطفي للعميل' },
+        kanoDelighter:    { competitor: 'يتنافس على السعر فقط',         user: ND, killShot: 'هدية مفاجئة مع كل طلب' },
+        activationAARRR:  { competitor: 'عملية شراء في 5+ خطوات',      user: ND, killShot: 'دفع بنقرة واحدة - Apple Pay / Google Pay' },
+        flankingStrategy: { competitor: 'يهيمن بالحجم والسعر المنخفض', user: ND, killShot: 'استهداف الشريحة الفاخرة التي يتجاهلها' },
+        pricingBundling:  { competitor: 'سعر فردي بدون حزم',           user: ND, killShot: 'حزمة حصرية تجعل مقارنة الأسعار مستحيلة' },
+        valueLadder:      { competitor: 'منتج واحد فقط',               user: ND, killShot: 'إضافة منتجات تكميلية (Upsell) بنقرة واحدة' },
+        uxTeardown:       { competitor: 'عملية دفع معقدة',             user: ND, killShot: 'دفع سريع بدون إدخال بيانات غير ضرورية' }
     } : isEn ? {
         offerAndRisk:     { competitor: 'Standard 30-day guarantee',         user: ND, killShot: 'Lifetime guarantee + bonus if unsatisfied' },
         jtbdPsychology:   { competitor: 'Highlights technical features',     user: ND, killShot: 'H1 focused on emotional transformation' },
@@ -8838,19 +8838,19 @@ try {
         valueLadder:      { competitor: 'Single product offer',              user: ND, killShot: '1-click upsells and cross-sells' },
         uxTeardown:       { competitor: 'High friction checkout',            user: ND, killShot: 'Frictionless Apple/Google Pay checkout' }
     } : {
-        offerAndRisk:     { competitor: 'Garantie standard 30 jours',          user: ND, killShot: 'Satisfait ou remboursÃ© + 10â‚¬ offerts si insatisfait' },
-        jtbdPsychology:   { competitor: 'Met en avant les caractÃ©ristiques',   user: ND, killShot: 'H1 axÃ© sur la transformation Ã©motionnelle rÃ©solue' },
+        offerAndRisk:     { competitor: 'Garantie standard 30 jours',          user: ND, killShot: 'Satisfait ou remboursé + 10€ offerts si insatisfait' },
+        jtbdPsychology:   { competitor: 'Met en avant les caractéristiques',   user: ND, killShot: 'H1 axé sur la transformation émotionnelle résolue' },
         kanoDelighter:    { competitor: 'Se bat uniquement sur le prix',       user: ND, killShot: 'Bonus physique inattendu inclus dans chaque commande' },
-        activationAARRR:  { competitor: "Processus d'achat en 5+ Ã©tapes",     user: ND, killShot: 'Checkout 1 clic avec Apple Pay / Google Pay' },
+        activationAARRR:  { competitor: "Processus d'achat en 5+ étapes",     user: ND, killShot: 'Checkout 1 clic avec Apple Pay / Google Pay' },
         flankingStrategy: { competitor: 'Domine sur le volume et le prix bas', user: ND, killShot: "Attaquer le segment ultra-premium qu'il ignore" },
-        pricingBundling:  { competitor: 'Prix unitaire sans offre groupÃ©e',    user: ND, killShot: 'Bundle exclusif qui rend la comparaison de prix impossible' },
-        valueLadder:      { competitor: 'Offre unique',                        user: ND, killShot: 'Upsell 1-click + offre complÃ©mentaire' },
+        pricingBundling:  { competitor: 'Prix unitaire sans offre groupée',    user: ND, killShot: 'Bundle exclusif qui rend la comparaison de prix impossible' },
+        valueLadder:      { competitor: 'Offre unique',                        user: ND, killShot: 'Upsell 1-click + offre complémentaire' },
         uxTeardown:       { competitor: 'Friction au paiement',                user: ND, killShot: 'Checkout natif Apple/Google Pay sans champs inutiles' }
     };
 
    
 
-// â”€â”€ 10. mergedData INITIAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── 10. mergedData INITIAL ────────────────────────────────
 const normalizedKwKeys = Object.keys(kwData || {});
 const normalizedCleanQuery = String(cleanQuery || '').trim().toLowerCase();
 
@@ -8950,9 +8950,9 @@ let mergedData = {
     winningMove: fallbackWinningMove,
     actionRoadmap: fallbackRoadmap,
     marketDynamics: {
-        porterVerdict: isAr ? 'Ø³ÙˆÙ‚ ØªÙ†Ø§ÙØ³ÙŠ' : isEn ? 'Competitive market' : 'MarchÃ© concurrentiel',
+        porterVerdict: isAr ? 'سوق تنافسي' : isEn ? 'Competitive market' : 'Marché concurrentiel',
         threatLevel: 'Medium',
-        barrierToEntry: isAr ? 'Ø³Ù„Ø·Ø© Ø§Ù„Ù†Ø·Ø§Ù‚ ÙˆØ§Ù„Ù‚ÙØ¯ÙŽÙ…' : isEn ? 'Domain authority and seniority' : 'AutoritÃ© de domaine et anciennetÃ©'
+        barrierToEntry: isAr ? 'سلطة النطاق والقِدَم' : isEn ? 'Domain authority and seniority' : 'Autorité de domaine et ancienneté'
     },
     marketInsights: {
         difficulty: typeof calculateDifficulty === 'function'
@@ -8961,7 +8961,7 @@ let mergedData = {
 
         serpIntent: typeof analyzeSERPIntent === 'function'
             ? analyzeSERPIntent(enrichedCompetitors, cleanQuery, langObj.code)
-            : (isAr ? 'Ù…Ø®ØªÙ„Ø·' : isEn ? 'mixed' : 'mixte'),
+            : (isAr ? 'مختلط' : isEn ? 'mixed' : 'mixte'),
 
         volume: realVolume,
         trend: realTrend,
@@ -9010,48 +9010,48 @@ let mergedData = {
         longTail: kwData && longTailKeywords.length
             ? longTailKeywords
             : [
-                (isAr ? 'Ù…Ø±Ø§Ø¬Ø¹Ø© ' : isEn ? 'Review ' : 'Avis ') + cleanQuery,
-                (isAr ? 'Ø£ÙØ¶Ù„ ' : isEn ? 'Best ' : 'Meilleur ') + cleanQuery + ' ' + geoData.location
+                (isAr ? 'مراجعة ' : isEn ? 'Review ' : 'Avis ') + cleanQuery,
+                (isAr ? 'أفضل ' : isEn ? 'Best ' : 'Meilleur ') + cleanQuery + ' ' + geoData.location
             ],
-        missingGaps: [(isAr ? 'Ø¨Ø¯ÙŠÙ„ ' : isEn ? 'Alternative to ' : 'Alternative ') + leaderDomain]
+        missingGaps: [(isAr ? 'بديل ' : isEn ? 'Alternative to ' : 'Alternative ') + leaderDomain]
     },
 
     swot: fallbackSwot,
 
     blueOceanStrategy: {
-        eliminate: [isAr ? 'Ø§Ù„Ø±Ø³ÙˆÙ… Ø§Ù„Ø®ÙÙŠØ© ÙˆØ§Ù„Ø¹Ù…Ù„ÙŠØ§Øª Ø§Ù„ØºØ§Ù…Ø¶Ø©' : isEn ? 'Hidden fees and opaque processes' : 'Frais cachÃ©s et processus opaques'],
-        reduce: [isAr ? 'Ø§Ù„Ù†Ù…Ø§Ø°Ø¬ Ø§Ù„Ø·ÙˆÙŠÙ„Ø© Ø§Ù„Ù…Ø¹Ù‚Ø¯Ø©' : isEn ? 'Long and complex forms' : 'Formulaires trop longs'],
-        raise: [isAr ? 'Ø§Ù„Ø·Ù…Ø£Ù†ÙŠÙ†Ø© ÙˆØ§Ù„Ø¯Ù„ÙŠÙ„ Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ' : isEn ? 'Reassurance and social proof' : 'RÃ©assurance et preuve sociale'],
-        create: [isAr ? 'Ù…Ø±Ø§ÙÙ‚Ø© Ø´Ø®ØµÙŠØ© Ø¨Ø¹Ø¯ Ø§Ù„Ø´Ø±Ø§Ø¡' : isEn ? 'Personalized post-purchase support' : 'Accompagnement post-achat personnalisÃ©'],
-        currentRedOcean: [isAr ? 'Ø­Ø±Ø¨ Ø§Ù„Ø£Ø³Ø¹Ø§Ø±' : isEn ? 'Price war' : 'Prix bas, mÃªme promesse que tous'],
-        blueOceanMoves: [isAr ? 'Ø¶Ù…Ø§Ù† Ø§Ø³ØªØ«Ù†Ø§Ø¦ÙŠ + Ø­Ø²Ù…Ø© Ø­ØµØ±ÙŠØ©' : isEn ? 'Extreme guarantee + exclusive bundle' : 'Garantie extrÃªme + Bundle exclusif'],
-        positioningMap: [isAr ? 'ÙØ§Ø®Ø± ÙˆØ¨Ø£Ø³Ø¹Ø§Ø± Ù…Ø¹Ù‚ÙˆÙ„Ø©' : isEn ? 'Premium accessible' : 'Premium accessible']
+        eliminate: [isAr ? 'الرسوم الخفية والعمليات الغامضة' : isEn ? 'Hidden fees and opaque processes' : 'Frais cachés et processus opaques'],
+        reduce: [isAr ? 'النماذج الطويلة المعقدة' : isEn ? 'Long and complex forms' : 'Formulaires trop longs'],
+        raise: [isAr ? 'الطمأنينة والدليل الاجتماعي' : isEn ? 'Reassurance and social proof' : 'Réassurance et preuve sociale'],
+        create: [isAr ? 'مرافقة شخصية بعد الشراء' : isEn ? 'Personalized post-purchase support' : 'Accompagnement post-achat personnalisé'],
+        currentRedOcean: [isAr ? 'حرب الأسعار' : isEn ? 'Price war' : 'Prix bas, même promesse que tous'],
+        blueOceanMoves: [isAr ? 'ضمان استثنائي + حزمة حصرية' : isEn ? 'Extreme guarantee + exclusive bundle' : 'Garantie extrême + Bundle exclusif'],
+        positioningMap: [isAr ? 'فاخر وبأسعار معقولة' : isEn ? 'Premium accessible' : 'Premium accessible']
     },
 
     comparisonScores: {
         user: hasUserSite ? [40, 50, 40, 30, 50, 20] : [50, 45, 55, 40, 60, 45],
         competitor: [85, 90, 75, 80, 85, 90],
         labels: isAr
-            ? ['Ø§Ù„Ø³Ù„Ø·Ø©', 'Ø§Ù„Ø¹Ø±Ø¶/Ø§Ù„Ø®Ø¯Ù…Ø©', 'Ø§Ù„ØªÙ‚Ù†ÙŠØ©', 'Ø§Ù„ØªØ­ÙˆÙŠÙ„', 'Ø§Ù„ÙƒØªØ§Ø¨Ø©', 'Ø§Ù„Ø«Ù‚Ø©']
+            ? ['السلطة', 'العرض/الخدمة', 'التقنية', 'التحويل', 'الكتابة', 'الثقة']
             : isEn
                 ? ['Authority', 'Offer/Service', 'Technical', 'Conversion', 'Copywriting', 'Trust']
-                : ['AutoritÃ©', 'Offre/Service', 'Technique', 'Conversion', 'Copywriting', 'Confiance']
+                : ['Autorité', 'Offre/Service', 'Technique', 'Conversion', 'Copywriting', 'Confiance']
     },
 
     productServiceAudit: {
-        coreOffering: isAr ? 'Ø¹Ø±Ø¶ Ù‚ÙŠØ§Ø³ÙŠ ÙÙŠ Ø§Ù„Ø³ÙˆÙ‚' : isEn ? 'Standard market offer' : 'Offre standard du marchÃ©',
+        coreOffering: isAr ? 'عرض قياسي في السوق' : isEn ? 'Standard market offer' : 'Offre standard du marché',
         pricingStrategy: shoppingPriceMin !== null && shoppingPriceMax !== null
             ? (
                 isAr
-                    ? `Ù†Ø·Ø§Ù‚ Ø³Ø¹Ø±ÙŠ Ù…Ø±ØµÙˆØ¯ Ù…Ù† ${shoppingPriceMin} Ø¥Ù„Ù‰ ${shoppingPriceMax}`
+                    ? `نطاق سعري مرصود من ${shoppingPriceMin} إلى ${shoppingPriceMax}`
                     : isEn
                         ? `Observed price range from ${shoppingPriceMin} to ${shoppingPriceMax}`
-                        : `Fourchette de prix observÃ©e de ${shoppingPriceMin} Ã  ${shoppingPriceMax}`
+                        : `Fourchette de prix observée de ${shoppingPriceMin} à ${shoppingPriceMax}`
             )
-            : (isAr ? 'Ø³Ø¹Ø± Ù…ØªÙˆØ³Ø· Ø¨Ø¯ÙˆÙ† ØªÙ…ÙŠÙŠØ²' : isEn ? 'Median price, no differentiation' : 'Prix mÃ©dian sans diffÃ©renciation'),
+            : (isAr ? 'سعر متوسط بدون تمييز' : isEn ? 'Median price, no differentiation' : 'Prix médian sans différenciation'),
         uniqueValueProposition: ND,
-        weakestProductFeature: isAr ? 'ØºÙŠØ§Ø¨ Ø§Ù„Ø´ÙØ§ÙÙŠØ© ÙÙŠ Ø§Ù„Ø¶Ù…Ø§Ù†' : isEn ? 'Lack of guarantee transparency' : 'Manque de transparence sur la garantie',
-        killShotFeature: isAr ? 'Ø¬Ø¯ÙˆÙ„ Ù…Ù‚Ø§Ø±Ù†Ø© Ø¹Ø§Ù… Ù…Ø¹ Ø¶Ù…Ø§Ù† Ù…Ø¯Ù‰ Ø§Ù„Ø­ÙŠØ§Ø©' : isEn ? 'Public comparison table with lifetime guarantee' : 'Tableau comparatif public avec garantie Ã  vie'
+        weakestProductFeature: isAr ? 'غياب الشفافية في الضمان' : isEn ? 'Lack of guarantee transparency' : 'Manque de transparence sur la garantie',
+        killShotFeature: isAr ? 'جدول مقارنة عام مع ضمان مدى الحياة' : isEn ? 'Public comparison table with lifetime guarantee' : 'Tableau comparatif public avec garantie à vie'
     },
 
     top3ReverseEngineering: {
@@ -9090,33 +9090,33 @@ let mergedData = {
         : { available: false }
 };
 
-    // â”€â”€ 11. SYSTEM BASE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 11. SYSTEM BASE ───────────────────────────────────────
     const forceLanguageLine = isAr
-        ? 'CRITICAL RULE: You MUST translate ALL JSON string values to Arabic (Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©). Absolutely NO French or English.'
+        ? 'CRITICAL RULE: You MUST translate ALL JSON string values to Arabic (العربية). Absolutely NO French or English.'
         : isEn
         ? 'CRITICAL RULE: You MUST answer ENTIRELY in English.'
-        : 'RÃˆGLE CRITIQUE : Tu DOIS rÃ©pondre ENTIÃˆREMENT en FranÃ§ais.';
+        : 'RÈGLE CRITIQUE : Tu DOIS répondre ENTIÈREMENT en Français.';
 
     const systemBase = [
         `LANGUE OBLIGATOIRE : ${langObj.name.toUpperCase()}`,
         forceLanguageLine,
         '',
-        'Tu es un analyste senior de marchÃ©, concurrence, demande et ingÃ©nierie d\'offres.',
+        'Tu es un analyste senior de marché, concurrence, demande et ingénierie d\'offres.',
         'REGLES ABSOLUES :',
         '1. JSON valide uniquement. Zero texte hors JSON.',
-        '2. Tu ne dois inventer aucun chiffre rÃ©el (trafic, CA, conversion).',
-        `3. Si une donnÃ©e est introuvable, formule une recommandation experte ou Ã©crit exactement "${ND}".`,
-        '4. Sois ultra-prÃ©cis, tranchant et stratÃ©gique.',
+        '2. Tu ne dois inventer aucun chiffre réel (trafic, CA, conversion).',
+        `3. Si une donnée est introuvable, formule une recommandation experte ou écrit exactement "${ND}".`,
+        '4. Sois ultra-précis, tranchant et stratégique.',
         '5. INTERDICTION STRICTE du "Fluff" marketing.',
-        '6. OBLIGATION DE PRÃ‰CISION : DÃ©cris l\'action MÃ‰CANIQUE exacte.',
+        '6. OBLIGATION DE PRÉCISION : Décris l\'action MÉCANIQUE exacte.',
         '7. POSITIONNEMENT : produis un dossier Market Insight Intelligence, pas un rapport SEO.',
-        '8. SÃ‰PARE strictement les faits observÃ©s, les dÃ©ductions et les recommandations.',
-        '9. ADAPTE chaque action au type de business : service/SaaS, produit physique ou complÃ©ment alimentaire.',
-        '10. N utilise jamais livraison/retours pour un service ; parle de livrables, dÃ©lais, rÃ©visions, paiement et accompagnement.',
-        '11. Ne prÃ©sente jamais une hypothÃ¨se comme une preuve observÃ©e.'
+        '8. SÉPARE strictement les faits observés, les déductions et les recommandations.',
+        '9. ADAPTE chaque action au type de business : service/SaaS, produit physique ou complément alimentaire.',
+        '10. N utilise jamais livraison/retours pour un service ; parle de livrables, délais, révisions, paiement et accompagnement.',
+        '11. Ne présente jamais une hypothèse comme une preuve observée.'
     ].join('\n');
 
-    // â”€â”€ 12. HELPER callAgent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 12. HELPER callAgent ──────────────────────────────────
     const callAgent = async (prompt, agentName) => {
         try {
             const res = await RetryManager.executeWithRetry(
@@ -9164,16 +9164,16 @@ let mergedData = {
         }
     };
 
-    // â”€â”€ 13. PROMPTS 4 AGENTS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 13. PROMPTS 4 AGENTS ──────────────────────────────────
     const L          = langObj.name;
-    const langInstr  = isAr ? 'RÃ©ponds uniquement en arabe classique.' : isEn ? 'Answer only in English.' : 'RÃ©ponds uniquement en franÃ§ais.';
+    const langInstr  = isAr ? 'Réponds uniquement en arabe classique.' : isEn ? 'Answer only in English.' : 'Réponds uniquement en français.';
     const labelsJson = isAr
-        ? '["Ø§Ù„Ø³Ù„Ø·Ø©","Ø§Ù„Ø¹Ø±Ø¶/Ø§Ù„Ø®Ø¯Ù…Ø©","Ø§Ù„ØªÙ‚Ù†ÙŠØ©","Ø§Ù„ØªØ­ÙˆÙŠÙ„","Ø§Ù„ÙƒØªØ§Ø¨Ø©","Ø§Ù„Ø«Ù‚Ø©"]'
+        ? '["السلطة","العرض/الخدمة","التقنية","التحويل","الكتابة","الثقة"]'
         : isEn
         ? '["Authority","Offer/Service","Technical","Conversion","Copywriting","Trust"]'
-        : '["AutoritÃ©","Offre/Service","Technique","Conversion","Copywriting","Confiance"]';
+        : '["Autorité","Offre/Service","Technique","Conversion","Copywriting","Confiance"]';
 
-    const top5Str = enrichedCompetitors.slice(0, 5).map(c => `#${c.position} ${c.domain} â€” ${c.snippet?.substring(0, 80)}`).join('\n');
+    const top5Str = enrichedCompetitors.slice(0, 5).map(c => `#${c.position} ${c.domain} — ${c.snippet?.substring(0, 80)}`).join('\n');
     const top3Str = enrichedCompetitors.slice(0, 3).map(c => `${c.domain} : ${c.snippet?.substring(0, 60)}`).join('\n');
     const competitorBusinessContext = enrichedCompetitors.slice(0, 5).map(c => {
         const p = c.businessProfile || {};
@@ -9188,18 +9188,18 @@ let mergedData = {
     }).join('\n');
 
     const comparisonUserInstruction = hasUserSite
-        ? `Pour "user", estime 6 scores rÃ©alistes (0-100) basÃ©s sur le contexte fourni.`
-        : `L'utilisateur n'a pas de site. Pour "user", gÃ©nÃ¨re les scores MOYENS du Top 3 (ex: [50, 45, 55, 40, 60, 50]).`;
+        ? `Pour "user", estime 6 scores réalistes (0-100) basés sur le contexte fourni.`
+        : `L'utilisateur n'a pas de site. Pour "user", génère les scores MOYENS du Top 3 (ex: [50, 45, 55, 40, 60, 50]).`;
 
     const keContext = kwData
-        ? `\nâ”€â”€ DONNÃ‰ES KEYWORDS EVERYWHERE (RÃ‰ELLES) â”€â”€\n` +
+        ? `\n── DONNÉES KEYWORDS EVERYWHERE (RÉELLES) ──\n` +
           Object.entries(kwData).slice(0, 5).map(([kw, d]) =>
               `"${kw}": vol=${d.vol}/mois | CPC=$${d.cpc} | comp=${d.competition}`
           ).join('\n')
         : '';
 
     const gscPromptContext = gscData?.length
-        ? `\nâ”€â”€ DONNÃ‰ES GSC RÃ‰ELLES DU SITE â”€â”€\n` +
+        ? `\n── DONNÉES GSC RÉELLES DU SITE ──\n` +
           gscData.slice(0, 5).map(r =>
               `"${r.query}": pos=${r.position} | clicks=${r.clicks} | impressions=${r.impressions} | CTR=${r.ctr}`
           ).join('\n')
@@ -9222,16 +9222,16 @@ ${keContext}
 Applique le framework Eugene Schwartz pour deduire le niveau de conscience et la sophistication du marche.
 INSTRUCTION CRITIQUE: Pour 'vocabulary', donne exactement 4 signaux de demande pertinents.
 IMPORTANT: N'invente jamais un volume, un trafic, un revenu ou un CPC. Si la source reelle manque, ecris exactement "${ND}".
-${keContext ? `IMPORTANT: Le volume rÃ©el est fourni par Keywords Everywhere ci-dessus. Utilise ces chiffres EXACTS dans "volume". N'invente pas de chiffres.` : ''}
+${keContext ? `IMPORTANT: Le volume réel est fourni par Keywords Everywhere ci-dessus. Utilise ces chiffres EXACTS dans "volume". N'invente pas de chiffres.` : ''}
 
 JSON uniquement :
 {
   "marketInsights": {
-    "difficulty": "TRADUIS STRICTEMENT EN ${L} : facile | moyen | difficile | saturÃ©",
+    "difficulty": "TRADUIS STRICTEMENT EN ${L} : facile | moyen | difficile | saturé",
     "serpIntent":  "TRADUIS STRICTEMENT EN ${L} : informationnel | transactionnel | commercial | mixte",
     "volume":      "${mainKwData ? realVolume : ND}",
     "vocabulary":  ["mot_cle_1", "mot_cle_2", "mot_cle_3", "mot_cle_4"],
-    "sophisticationLevel": "Niveau 1 Ã  5",
+    "sophisticationLevel": "Niveau 1 à 5",
     "awarenessLevel": "Unaware | Problem Aware | Solution Aware | Product Aware | Most Aware",
     "notes": "1 phrase d'analyse en ${L}"
   },
@@ -9251,16 +9251,16 @@ Audience : ${safeUserCtx.audience || ND}
 Objectif : ${safeUserCtx.objective || ND}
 Prix : ${safeUserCtx.priceRange || ND}
 Concurrents connus : ${Array.isArray(safeUserCtx.knownCompetitors) ? safeUserCtx.knownCompetitors.join(', ') : (safeUserCtx.knownCompetitors || ND)}
-Ville/rÃ©gion : ${safeUserCtx.cityOrRegion || ND}
+Ville/région : ${safeUserCtx.cityOrRegion || ND}
 
-RÃˆGLES D'UTILISATION DU CONTEXTE :
-- Utilise ce contexte pour adapter les recommandations Ã  la situation rÃ©elle.
-- Ne l'utilise JAMAIS comme preuve observÃ©e sur les concurrents.
+RÈGLES D'UTILISATION DU CONTEXTE :
+- Utilise ce contexte pour adapter les recommandations à la situation réelle.
+- Ne l'utilise JAMAIS comme preuve observée sur les concurrents.
 - N'invente pas les champs manquants.` : '';
 const agent2Prompt = `${langInstr}
 Plan offensif de visibilite marche et pages d'acquisition :
 - Niche : "${cleanQuery}" | Leader : ${enrichedCompetitors[0]?.domain || ND} | Pays : ${geoData.location}
-MOAT â€” Blog:${leaderMoat?.contentStrategy?.hasBlog ?? '?'} FAQ:${leaderMoat?.technicalMoat?.hasFaqSection ?? '?'} Schema:${leaderMoat?.technicalMoat?.schemaTagsCount ?? 0}
+MOAT — Blog:${leaderMoat?.contentStrategy?.hasBlog ?? '?'} FAQ:${leaderMoat?.technicalMoat?.hasFaqSection ?? '?'} Schema:${leaderMoat?.technicalMoat?.schemaTagsCount ?? 0}
 PROFILS BUSINESS INSPECTES :
 ${competitorBusinessContext}
 ${userBusinessContextBlock}
@@ -9270,7 +9270,7 @@ ${relatedContext ? `Related Searches: ${relatedContext}` : ''}
 INSTRUCTION : Genere de vrais signaux de demande et pages d'acquisition bases sur ce qui manque au Top 5.
 Exactement 6 pour 'primary', 4 pour 'longTail', 4 pour 'missingGaps'.
 Les trois actions doivent couvrir au moins trois categories distinctes parmi offre, message, preuve, positionnement, acquisition, confiance et conversion.
-${kwData ? `IMPORTANT: Priorise les mots-clÃ©s avec le meilleur ratio volume/competition selon les donnÃ©es KE fournies.` : ''}
+${kwData ? `IMPORTANT: Priorise les mots-clés avec le meilleur ratio volume/competition selon les données KE fournies.` : ''}
 
 JSON uniquement :
 {
@@ -9296,34 +9296,34 @@ ${userBusinessContextBlock}
 ${gscPromptContext}
 ${keContext}
 
-CADRE STRATÃ‰GIQUE :
+CADRE STRATÉGIQUE :
 1. Analyse les offres, promesses et preuves des Top 5 pour identifier leurs piliers de succes et leurs faiblesses concretes.
 2. Utilise le framework "Grand Slam Offer" d'Alex Hormozi.
-3. RÃˆGLE : Si l'utilisateur n'a pas de site, la section "user" du duel DOIT Ãªtre le "Gold Standard" dÃ©duit du Top 3.
-4. RÃˆGLE COHÃ‰RENCE : 'killShotFeature' DOIT Ãªtre la solution exacte qui dÃ©truit la 'weakestProductFeature'.
+3. RÈGLE : Si l'utilisateur n'a pas de site, la section "user" du duel DOIT être le "Gold Standard" déduit du Top 3.
+4. RÈGLE COHÉRENCE : 'killShotFeature' DOIT être la solution exacte qui détruit la 'weakestProductFeature'.
 5. REGLE ANTI-FLUFF : Interdiction d'ecrire seulement "manque de personnalisation". Cite les frais, delais, garanties, retours, preuve client, couverture ou friction lorsque les profils inspectes le permettent.
-${gscData ? `6. RÃˆGLE GSC : Utilise les donnÃ©es GSC rÃ©elles pour calibrer les recommandations.` : ''}
+${gscData ? `6. RÈGLE GSC : Utilise les données GSC réelles pour calibrer les recommandations.` : ''}
 
 JSON uniquement :
 {
   "top3ReverseEngineering": {
     "commonSuccessFactors": ["facteur 1", "facteur 2"],
     "glaringWeaknesses":    ["angle mort 1", "angle mort 2"],
-    "trafficStrategyGuess": "dÃ©duction canal acquisition principal"
+    "trafficStrategyGuess": "déduction canal acquisition principal"
   },
   "grandSlamOfferBlueprint": {
-    "dreamOutcome":         "rÃ©sultat de rÃªve ultime du client",
-    "perceivedLikelihood":  "preuve sociale ex: Ã©tudes de cas vÃ©rifiÃ©es",
-    "timeDelay":            "promesse de vitesse exacte ex: livrÃ© en 24h",
-    "effortAndSacrifice":   "rÃ©duction friction ex: zÃ©ro setup requis",
-    "theIrresistibleOffer": "la promesse finale irrÃ©sistible"
+    "dreamOutcome":         "résultat de rêve ultime du client",
+    "perceivedLikelihood":  "preuve sociale ex: études de cas vérifiées",
+    "timeDelay":            "promesse de vitesse exacte ex: livré en 24h",
+    "effortAndSacrifice":   "réduction friction ex: zéro setup requis",
+    "theIrresistibleOffer": "la promesse finale irrésistible"
   },
   "productServiceAudit": {
     "coreOffering":           "...",
     "pricingStrategy":        "...",
     "uniqueValueProposition": "...",
-    "weakestProductFeature":  "dÃ©faut prÃ©cis",
-    "killShotFeature":        "attaque directe du dÃ©faut"
+    "weakestProductFeature":  "défaut précis",
+    "killShotFeature":        "attaque directe du défaut"
   },
   "masteringTechniques": {
     "trafficSources":   "...",
@@ -9356,17 +9356,17 @@ JSON uniquement :
   "swot": {
     "strengths":     ["point fort du leader 1", "point fort 2"],
     "weaknesses":    ["faille exploitable 1", "faille exploitable 2"],
-    "opportunities": ["opportunitÃ© marchÃ© 1", "opportunitÃ© marchÃ© 2"],
+    "opportunities": ["opportunité marché 1", "opportunité marché 2"],
     "threats":       ["menace concurrentielle 1"]
   },
   "blueOceanStrategy": {
-    "eliminate":       ["ce que le marchÃ© fait mais qui n'a plus de valeur"],
-    "reduce":          ["ce qui est surÃ©valuÃ© dans le marchÃ©"],
-    "raise":           ["ce qui est sous-Ã©valuÃ© Ã  amplifier"],
-    "create":          ["ce qui n'existe pas encore dans ce marchÃ©"],
+    "eliminate":       ["ce que le marché fait mais qui n'a plus de valeur"],
+    "reduce":          ["ce qui est surévalué dans le marché"],
+    "raise":           ["ce qui est sous-évalué à amplifier"],
+    "create":          ["ce qui n'existe pas encore dans ce marché"],
     "currentRedOcean": ["description de la guerre actuelle"],
-    "blueOceanMoves":  ["le mouvement stratÃ©gique diffÃ©renciant"],
-    "positioningMap":  ["positionnement idÃ©al sur la carte de valeur"]
+    "blueOceanMoves":  ["le mouvement stratégique différenciant"],
+    "positioningMap":  ["positionnement idéal sur la carte de valeur"]
   },
   "comparisonScores": {
     "user":       [0,0,0,0,0,0],
@@ -9374,12 +9374,12 @@ JSON uniquement :
     "labels":     ${labelsJson}
   },
   "semanticDifferences": [
-    { "gap": "thÃ¨me manquant", "opportunity": "action concrÃ¨te Ã  mener" }
+    { "gap": "thème manquant", "opportunity": "action concrète à mener" }
   ]
 }`;
 
-    // â”€â”€ 14. EXÃ‰CUTION AGENTS EN PARALLÃˆLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    console.log('[WarRoom-V10.0] Lancement 4 agents IA en parallÃ¨le...');
+    // ── 14. EXÉCUTION AGENTS EN PARALLÈLE ────────────────────
+    console.log('[WarRoom-V10.0] Lancement 4 agents IA en parallèle...');
 
     const [a1, a2, a3, a4] = await Promise.allSettled([
         callAgent(agent1Prompt, 'Agent1-MarketInsights'),
@@ -9395,7 +9395,7 @@ JSON uniquement :
 
     console.log(`[WarRoom-V10.0] Agents: A1=${a1.status} | A2=${a2.status} | A3=${a3.status} | A4=${a4.status}`);
 
-    // â”€â”€ 15. MERGE RÃ‰SULTATS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 15. MERGE RÉSULTATS ───────────────────────────────────
     if (r1.marketInsights)   mergedData.marketInsights   = { ...mergedData.marketInsights,   ...r1.marketInsights   };
     if (r1.marketDynamics)   mergedData.marketDynamics   = { ...mergedData.marketDynamics,   ...r1.marketDynamics   };
     if (r2.winningMove)      mergedData.winningMove      = r2.winningMove;
@@ -9427,12 +9427,12 @@ JSON uniquement :
         .filter(Boolean)
         .slice(0, 6);
 
-    // â”€â”€ 16. CONSTRUCTION RÃ‰SULTAT FINAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // â”€â”€ 16. CONSTRUCTION RÃ‰SULTAT FINAL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
+  // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
 const elapsed = Date.now() - startTime;
-console.log(`âœ… [WarRoom-V10.0] TerminÃ© en ${elapsed}ms`);
+console.log(`✅ [WarRoom-V10.0] Terminé en ${elapsed}ms`);
 
-// â”€â”€ DATA PRE-FLIGHT (ne dÃ©clenche que si zÃ©ro bug IA) â”€â”€â”€â”€â”€
+// ── DATA PRE-FLIGHT (ne déclenche que si zéro bug IA) ─────
 const aiFailures = [a1, a2, a3, a4].filter(x => x.status !== 'fulfilled').length;
 
 const apifyPreflight = {
@@ -9565,7 +9565,7 @@ const executiveBrief = buildExecutiveBrief({
     priority: competitorIntelligence.finalAnswers?.positionToTake,
     why: enrichedCompetitors[0]?.domain
         ? (isAr
-            ? `${enrichedCompetitors[0].domain} Ù‡Ùˆ Ø§Ù„Ù…ØªØµØ¯Ø± Ø§Ù„ØªØ¬Ø§Ø±ÙŠ Ø§Ù„Ù…Ø±ØµÙˆØ¯ØŒ ÙˆØªÙ… ØªÙØ³ÙŠØ± ØªÙÙˆÙ‚Ù‡ Ù…Ù† Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ù…ÙˆÙ‚Ø¹ ÙˆØ§Ù„Ø¹Ù„Ø§Ù…Ø© ÙˆÙ„ÙŠØ³ Ù…Ù† ÙˆØµÙ Ø§Ù„Ù…Ù†ØªØ¬ ÙÙ‚Ø·.`
+            ? `${enrichedCompetitors[0].domain} هو المتصدر التجاري المرصود، وتم تفسير تفوقه من إشارات الموقع والعلامة وليس من وصف المنتج فقط.`
             : isEn
                 ? `${enrichedCompetitors[0].domain} is the observed commercial leader; its advantage is explained from site and brand signals, not only the product description.`
                 : `${enrichedCompetitors[0].domain} est le leader commercial observe ; son avantage est explique par les signaux du site et de la marque, pas seulement par la fiche produit.`)
@@ -9623,14 +9623,14 @@ return finalResult;
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ§  HELPERS D'INTELLIGENCE (Ã€ NE PAS SUPPRIMER)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🧠 HELPERS D'INTELLIGENCE (À NE PAS SUPPRIMER)
+// ═══════════════════════════════════════════════════════════════════
 
 function extractCommonTerms(text) {
     if (!text) return [];
     const stopWords = ['le', 'la', 'les', 'de', 'des', 'un', 'une', 'et', 'pour', 'en', 'au', 'du', 'ce', 'est', 'sur', 'votre', 'nos', 'avec', 'par', 'top', 'meilleur', 'best', 'the', 'of', 'and', 'in', 'to', 'for', 'avis', 'prix', 'maroc'];
-    const words = text.toLowerCase().replace(/[^a-zÃ -Ã¿0-9]/g, ' ').split(/\s+/);
+    const words = text.toLowerCase().replace(/[^a-zà-ÿ0-9]/g, ' ').split(/\s+/);
     const freq = {};
     
     words.forEach(w => {
@@ -9646,21 +9646,21 @@ function extractCommonTerms(text) {
 
 function analyzeSERPIntent(competitors, keyword = '', lang = 'fr') {
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // GUARD â€” retour neutre si competitors invalide
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════
+    // GUARD — retour neutre si competitors invalide
+    // ══════════════════════════════════════════════════════════
     if (!competitors || !Array.isArray(competitors) || competitors.length === 0) {
-        console.warn('[analyzeSERPIntent] competitors invalide ou vide â€” fallback neutre');
+        console.warn('[analyzeSERPIntent] competitors invalide ou vide — fallback neutre');
 
         const fallbackLabels = {
-            fr: 'ðŸ“š INFORMATIONNEL â€” Les gens veulent APPRENDRE',
-            ar: 'ðŸ“š Ù…Ø¹Ù„ÙˆÙ…Ø§ØªÙŠ â€” Ø§Ù„Ù†Ø§Ø³ ÙŠØ±ÙŠØ¯ÙˆÙ† Ø§Ù„ØªØ¹Ù„Ù…',
-            en: 'ðŸ“š INFORMATIONAL â€” People want to LEARN'
+            fr: '📚 INFORMATIONNEL — Les gens veulent APPRENDRE',
+            ar: '📚 معلوماتي — الناس يريدون التعلم',
+            en: '📚 INFORMATIONAL — People want to LEARN'
         };
         const fallbackStrategies = {
-            fr: 'â†’ CrÃ©e un article de blog long (2000+ mots) avec FAQ et schema',
-            ar: 'â†’ Ø£Ù†Ø´Ø¦ Ù…Ù‚Ø§Ù„Ø© Ù…Ø¯ÙˆÙ†Ø© Ø·ÙˆÙŠÙ„Ø© (2000+ ÙƒÙ„Ù…Ø©) Ù…Ø¹ Ø£Ø³Ø¦Ù„Ø© Ø´Ø§Ø¦Ø¹Ø©',
-            en: 'â†’ Write a long-form article (2000+ words) with FAQ & schema'
+            fr: '→ Crée un article de blog long (2000+ mots) avec FAQ et schema',
+            ar: '→ أنشئ مقالة مدونة طويلة (2000+ كلمة) مع أسئلة شائعة',
+            en: '→ Write a long-form article (2000+ words) with FAQ & schema'
         };
         const l = lang in fallbackLabels ? lang : 'fr';
 
@@ -9683,7 +9683,7 @@ function analyzeSERPIntent(competitors, keyword = '', lang = 'fr') {
         };
     }
 
-    // â”€â”€ Ã‰TAPE 1 : CLASSIFICATION DES TYPES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── ÉTAPE 1 : CLASSIFICATION DES TYPES ───────────────────
     const intentMap = {
         transactional : ['E-commerce', 'Transactionnel', 'Marketplace', 'Shop', 'Boutique'],
         informational : ['Blog', 'Wiki', 'Forum', 'Informationnel', 'Guide', 'Article'],
@@ -9700,7 +9700,7 @@ function analyzeSERPIntent(competitors, keyword = '', lang = 'fr') {
         commercial    : 0
     };
 
-    // â”€â”€ Ã‰TAPE 2 : PONDÃ‰RATION PAR POSITION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── ÉTAPE 2 : PONDÉRATION PAR POSITION ───────────────────
     competitors.forEach((c, index) => {
         // Guard sur chaque concurrent
         if (!c || typeof c !== 'object') return;
@@ -9716,20 +9716,20 @@ function analyzeSERPIntent(competitors, keyword = '', lang = 'fr') {
 
         // Bonus snippet/title si disponible
         const text = `${c.title || ''} ${c.snippet || ''} ${c.description || ''}`.toLowerCase();
-        if (/acheter|prix|shop|buy|Ø³Ø¹Ø±|Ø´Ø±Ø§Ø¡/.test(text))   scores.transactional += 1;
-        if (/comment|guide|tuto|how|ÙƒÙŠÙ|Ø´Ø±Ø­/.test(text))   scores.informational  += 1;
-        if (/maroc|local|ville|prÃ¨s|Ø§Ù„Ù…ØºØ±Ø¨/.test(text))     scores.local          += 1;
-        if (/avis|comparatif|meilleur|Ø£ÙØ¶Ù„/.test(text))     scores.commercial     += 1;
+        if (/acheter|prix|shop|buy|سعر|شراء/.test(text))   scores.transactional += 1;
+        if (/comment|guide|tuto|how|كيف|شرح/.test(text))   scores.informational  += 1;
+        if (/maroc|local|ville|près|المغرب/.test(text))     scores.local          += 1;
+        if (/avis|comparatif|meilleur|أفضل/.test(text))     scores.commercial     += 1;
     });
 
-    // â”€â”€ Ã‰TAPE 3 : ANALYSE DU MOT-CLÃ‰ LUI-MÃŠME â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── ÉTAPE 3 : ANALYSE DU MOT-CLÉ LUI-MÊME ────────────────
     const kw = (keyword || '').toLowerCase();
 
     const kwSignals = {
-        transactional : /acheter|achat|commander|prix|tarif|buy|order|shop|Ø³Ø¹Ø±|Ø´Ø±Ø§Ø¡/i,
-        informational : /comment|pourquoi|guide|tuto|qu.est|what|how|ÙƒÙŠÙ|Ù…Ø§ Ù‡Ùˆ|Ø´Ø±Ø­/i,
-        local         : /maroc|casablanca|rabat|marrakech|tanger|prÃ¨s|local|near|Ø§Ù„Ù…ØºØ±Ø¨|Ù…Ø±Ø§ÙƒØ´/i,
-        commercial    : /meilleur|comparatif|avis|review|top|vs|versus|Ø£ÙØ¶Ù„|Ù…Ù‚Ø§Ø±Ù†Ø©/i,
+        transactional : /acheter|achat|commander|prix|tarif|buy|order|shop|سعر|شراء/i,
+        informational : /comment|pourquoi|guide|tuto|qu.est|what|how|كيف|ما هو|شرح/i,
+        local         : /maroc|casablanca|rabat|marrakech|tanger|près|local|near|المغرب|مراكش/i,
+        commercial    : /meilleur|comparatif|avis|review|top|vs|versus|أفضل|مقارنة/i,
         navigational  : /site|officiel|login|account|connexion|www/i
     };
 
@@ -9737,7 +9737,7 @@ function analyzeSERPIntent(competitors, keyword = '', lang = 'fr') {
         if (kw && regex.test(kw)) scores[intent] += 3;
     });
 
-    // â”€â”€ Ã‰TAPE 4 : CALCUL DU SCORE DOMINANT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── ÉTAPE 4 : CALCUL DU SCORE DOMINANT ───────────────────
     const total      = Object.values(scores).reduce((a, b) => a + b, 0) || 1;
     const sorted     = Object.entries(scores).sort((a, b) => b[1] - a[1]);
     const dominant   = sorted[0];
@@ -9748,61 +9748,61 @@ function analyzeSERPIntent(competitors, keyword = '', lang = 'fr') {
     const isMixed      = !!(secondIntent && sorted[1]?.[1] > 0 && 
                            (sorted[1][1] / sorted[0][1]) > 0.5);
 
-    // â”€â”€ Ã‰TAPE 5 : LABELS MULTILINGUES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── ÉTAPE 5 : LABELS MULTILINGUES ────────────────────────
     const labels = {
         fr: {
-            transactional : 'ðŸ›’ TRANSACTIONNEL â€” Les gens veulent ACHETER',
-            informational : 'ðŸ“š INFORMATIONNEL â€” Les gens veulent APPRENDRE',
-            navigational  : 'ðŸ§­ NAVIGATIONNEL â€” Les gens cherchent une MARQUE',
-            local         : 'ðŸ“ LOCAL â€” Les gens cherchent PRÃˆS DE CHEZ EUX',
-            commercial    : 'âš–ï¸ COMMERCIAL â€” Les gens COMPARENT avant d\'acheter'
+            transactional : '🛒 TRANSACTIONNEL — Les gens veulent ACHETER',
+            informational : '📚 INFORMATIONNEL — Les gens veulent APPRENDRE',
+            navigational  : '🧭 NAVIGATIONNEL — Les gens cherchent une MARQUE',
+            local         : '📍 LOCAL — Les gens cherchent PRÈS DE CHEZ EUX',
+            commercial    : '⚖️ COMMERCIAL — Les gens COMPARENT avant d\'acheter'
         },
         ar: {
-            transactional : 'ðŸ›’ ØªØ¬Ø§Ø±ÙŠ â€” Ø§Ù„Ù†Ø§Ø³ ÙŠØ±ÙŠØ¯ÙˆÙ† Ø§Ù„Ø´Ø±Ø§Ø¡',
-            informational : 'ðŸ“š Ù…Ø¹Ù„ÙˆÙ…Ø§ØªÙŠ â€” Ø§Ù„Ù†Ø§Ø³ ÙŠØ±ÙŠØ¯ÙˆÙ† Ø§Ù„ØªØ¹Ù„Ù…',
-            navigational  : 'ðŸ§­ ØªÙˆØ¬ÙŠÙ‡ÙŠ â€” Ø§Ù„Ù†Ø§Ø³ ÙŠØ¨Ø­Ø«ÙˆÙ† Ø¹Ù† Ø¹Ù„Ø§Ù…Ø© ØªØ¬Ø§Ø±ÙŠØ©',
-            local         : 'ðŸ“ Ù…Ø­Ù„ÙŠ â€” Ø§Ù„Ù†Ø§Ø³ ÙŠØ¨Ø­Ø«ÙˆÙ† ÙÙŠ Ù…Ù†Ø·Ù‚ØªÙ‡Ù…',
-            commercial    : 'âš–ï¸ Ù…Ù‚Ø§Ø±Ù† â€” Ø§Ù„Ù†Ø§Ø³ ÙŠÙ‚Ø§Ø±Ù†ÙˆÙ† Ù‚Ø¨Ù„ Ø§Ù„Ø´Ø±Ø§Ø¡'
+            transactional : '🛒 تجاري — الناس يريدون الشراء',
+            informational : '📚 معلوماتي — الناس يريدون التعلم',
+            navigational  : '🧭 توجيهي — الناس يبحثون عن علامة تجارية',
+            local         : '📍 محلي — الناس يبحثون في منطقتهم',
+            commercial    : '⚖️ مقارن — الناس يقارنون قبل الشراء'
         },
         en: {
-            transactional : 'ðŸ›’ TRANSACTIONAL â€” People want to BUY',
-            informational : 'ðŸ“š INFORMATIONAL â€” People want to LEARN',
-            navigational  : 'ðŸ§­ NAVIGATIONAL â€” People look for a BRAND',
-            local         : 'ðŸ“ LOCAL â€” People search NEAR THEM',
-            commercial    : 'âš–ï¸ COMMERCIAL â€” People COMPARE before buying'
+            transactional : '🛒 TRANSACTIONAL — People want to BUY',
+            informational : '📚 INFORMATIONAL — People want to LEARN',
+            navigational  : '🧭 NAVIGATIONAL — People look for a BRAND',
+            local         : '📍 LOCAL — People search NEAR THEM',
+            commercial    : '⚖️ COMMERCIAL — People COMPARE before buying'
         }
     };
 
-    // â”€â”€ Ã‰TAPE 6 : STRATÃ‰GIE CONTENU AUTO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── ÉTAPE 6 : STRATÉGIE CONTENU AUTO ─────────────────────
     const strategies = {
         transactional : {
-            fr: 'â†’ CrÃ©e une fiche produit optimisÃ©e avec prix, CTA, avis clients',
-            ar: 'â†’ Ø£Ù†Ø´Ø¦ ØµÙØ­Ø© Ù…Ù†ØªØ¬ Ù…Ø­Ø³Ù‘Ù†Ø© Ù…Ø¹ Ø§Ù„Ø³Ø¹Ø± ÙˆØ²Ø± Ø§Ù„Ø´Ø±Ø§Ø¡ ÙˆØ¢Ø±Ø§Ø¡ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡',
-            en: 'â†’ Create an optimized product page with price, CTA, reviews'
+            fr: '→ Crée une fiche produit optimisée avec prix, CTA, avis clients',
+            ar: '→ أنشئ صفحة منتج محسّنة مع السعر وزر الشراء وآراء العملاء',
+            en: '→ Create an optimized product page with price, CTA, reviews'
         },
         informational : {
-            fr: 'â†’ CrÃ©e un article de blog long (2000+ mots) avec FAQ et schema',
-            ar: 'â†’ Ø£Ù†Ø´Ø¦ Ù…Ù‚Ø§Ù„Ø© Ù…Ø¯ÙˆÙ†Ø© Ø·ÙˆÙŠÙ„Ø© (2000+ ÙƒÙ„Ù…Ø©) Ù…Ø¹ Ø£Ø³Ø¦Ù„Ø© Ø´Ø§Ø¦Ø¹Ø©',
-            en: 'â†’ Write a long-form article (2000+ words) with FAQ & schema'
+            fr: '→ Crée un article de blog long (2000+ mots) avec FAQ et schema',
+            ar: '→ أنشئ مقالة مدونة طويلة (2000+ كلمة) مع أسئلة شائعة',
+            en: '→ Write a long-form article (2000+ words) with FAQ & schema'
         },
         navigational  : {
-            fr: 'â†’ Optimise ta page d\'accueil et ta prÃ©sence de marque',
-            ar: 'â†’ Ø­Ø³Ù‘Ù† ØµÙØ­ØªÙƒ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ© ÙˆØ­Ø¶ÙˆØ±Ùƒ ÙƒØ¹Ù„Ø§Ù…Ø© ØªØ¬Ø§Ø±ÙŠØ©',
-            en: 'â†’ Optimize your homepage and brand presence'
+            fr: '→ Optimise ta page d\'accueil et ta présence de marque',
+            ar: '→ حسّن صفحتك الرئيسية وحضورك كعلامة تجارية',
+            en: '→ Optimize your homepage and brand presence'
         },
         local         : {
-            fr: 'â†’ CrÃ©e une page locale + Google My Business + avis locaux',
-            ar: 'â†’ Ø£Ù†Ø´Ø¦ ØµÙØ­Ø© Ù…Ø­Ù„ÙŠØ© + Google My Business + ØªÙ‚ÙŠÙŠÙ…Ø§Øª Ù…Ø­Ù„ÙŠØ©',
-            en: 'â†’ Create a local page + Google My Business + local reviews'
+            fr: '→ Crée une page locale + Google My Business + avis locaux',
+            ar: '→ أنشئ صفحة محلية + Google My Business + تقييمات محلية',
+            en: '→ Create a local page + Google My Business + local reviews'
         },
         commercial    : {
-            fr: 'â†’ CrÃ©e un comparatif dÃ©taillÃ© avec tableau, pros/cons, verdict',
-            ar: 'â†’ Ø£Ù†Ø´Ø¦ Ù…Ù‚Ø§Ø±Ù†Ø© Ù…ÙØµÙ‘Ù„Ø© Ù…Ø¹ Ø¬Ø¯ÙˆÙ„ ÙˆÙ…Ø²Ø§ÙŠØ§ ÙˆØ¹ÙŠÙˆØ¨ ÙˆØ­ÙƒÙ… Ù†Ù‡Ø§Ø¦ÙŠ',
-            en: 'â†’ Write a detailed comparison with table, pros/cons, verdict'
+            fr: '→ Crée un comparatif détaillé avec tableau, pros/cons, verdict',
+            ar: '→ أنشئ مقارنة مفصّلة مع جدول ومزايا وعيوب وحكم نهائي',
+            en: '→ Write a detailed comparison with table, pros/cons, verdict'
         }
     };
 
-    // â”€â”€ Ã‰TAPE 7 : SCORE DE DIFFICULTÃ‰ INTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── ÉTAPE 7 : SCORE DE DIFFICULTÉ INTENT ─────────────────
     const difficultyBonus = {
         transactional : 20,
         commercial    : 15,
@@ -9811,7 +9811,7 @@ function analyzeSERPIntent(competitors, keyword = '', lang = 'fr') {
         navigational  : 25
     };
 
-    // â”€â”€ RETOUR ENRICHI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── RETOUR ENRICHI ────────────────────────────────────────
     const l = lang in labels     ? lang : 'fr';
     const s = lang in strategies ? lang : 'fr';
 
@@ -9833,26 +9833,26 @@ function calculateDifficulty(competitors) {
     const top3Domains = competitors.slice(0, 3).map(c => c.domain ? c.domain.toLowerCase() : '');
     
     const hasGiant = top3Domains.some(d => giants.some(g => d.includes(g)));
-    return hasGiant ? "ðŸ”¥ DIFFICILE (GÃ©ants prÃ©sents)" : "ðŸŸ¢ ACCESSIBLE (OpportunitÃ© SEO)";
+    return hasGiant ? "🔥 DIFFICILE (Géants présents)" : "🟢 ACCESSIBLE (Opportunité SEO)";
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ¤– MODULE 3: AI CONTENT GENERATION ENGINE (GEMINI 2.0 FOCUSED)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// Strategy: Try Gemini 2.0 first â†’ Fallback to other free models â†’ Premium
+// ═══════════════════════════════════════════════════════════════════
+// 🤖 MODULE 3: AI CONTENT GENERATION ENGINE (GEMINI 2.0 FOCUSED)
+// ═══════════════════════════════════════════════════════════════════
+// Strategy: Try Gemini 2.0 first → Fallback to other free models → Premium
 // Features: Multi-model cascade | Response validation | Smart caching
 // Optimization: Token limits | Temperature control | JSON extraction
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ¤– callOpenRouterAPI â€” V13 DEEP
+// ═══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════════════════
+// 🤖 callOpenRouterAPI — V13 DEEP
 // Fix : OPENROUTER_API_KEY + free models fallback + stop 402 intelligent
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
 async function callOpenRouterAPI(prompt, options = {}) {
 
-    // â”€â”€ 1. VÃ©rification clÃ© API au dÃ©marrage
+    // ── 1. Vérification clé API au démarrage
     const apiKey = process.env.OPENROUTER_API_KEY || CONFIG.OPENROUTER_API_KEY;
     if (!apiKey) {
-        console.error('ðŸš¨ OPENROUTER_API_KEY non dÃ©finie â€” vÃ©rifier variables Render');
+        console.error('🚨 OPENROUTER_API_KEY non définie — vérifier variables Render');
         return {
             success:  false,
             response: null,
@@ -9862,8 +9862,8 @@ async function callOpenRouterAPI(prompt, options = {}) {
         };
     }
 
-    console.log(`ðŸ¤– [${new Date().toISOString()}] AI Generation started`);
-    console.log(`ðŸ“ Prompt preview: ${prompt.substring(0, 100)}...`);
+    console.log(`🤖 [${new Date().toISOString()}] AI Generation started`);
+    console.log(`📝 Prompt preview: ${prompt.substring(0, 100)}...`);
 
     const {
         temperature    = CONFIG.AI_TEMPERATURE   || 0.15,
@@ -9874,41 +9874,41 @@ async function callOpenRouterAPI(prompt, options = {}) {
         useCache       = true
     } = options;
 
-    // â”€â”€ 2. FILE D'ATTENTE OPTIMISÃ‰E POUR LA VITESSE (Ordre : Latence ultra-basse -> ModÃ¨les lourds)
-    // Chaque modÃ¨le a son propre "timeout". Si le modÃ¨le "Flash" bloque, on le tue en 8s max pour passer au suivant.
- // â”€â”€ MODELS QUEUE â€” Payants d'abord, :free en fallback
-    // maxContext : Le nombre maximum de tokens (Prompt + RÃ©ponse) que le modÃ¨le peut gÃ©rer.
+    // ── 2. FILE D'ATTENTE OPTIMISÉE POUR LA VITESSE (Ordre : Latence ultra-basse -> Modèles lourds)
+    // Chaque modèle a son propre "timeout". Si le modèle "Flash" bloque, on le tue en 8s max pour passer au suivant.
+ // ── MODELS QUEUE — Payants d'abord, :free en fallback
+    // maxContext : Le nombre maximum de tokens (Prompt + Réponse) que le modèle peut gérer.
     const allModels = [
-        // ðŸš€ TIER 1 : PAYANTS â€” Ultra-Rapides (Fail-Fast: 8s - 10s)
+        // 🚀 TIER 1 : PAYANTS — Ultra-Rapides (Fail-Fast: 8s - 10s)
         // Correction des IDs suite aux erreurs "is not a valid model ID"
-        { id: 'google/gemini-2.5-flash-lite-preview-09-2025', free: false, timeout: 8000,  maxContext: 1050000 }, // 1.05M tokens ! IdÃ©al pour analyser des sites entiers
+        { id: 'google/gemini-2.5-flash-lite-preview-09-2025', free: false, timeout: 8000,  maxContext: 1050000 }, // 1.05M tokens ! Idéal pour analyser des sites entiers
         { id: 'bytedance-seed/seed-2.0-mini',                      free: false, timeout: 8000,  maxContext: 262000 },
         { id: 'qwen/qwen3.5-flash-02-23',                          free: false, timeout: 9000,  maxContext: 1000000 }, // 1M tokens
         { id: 'stepfun/step-3.5-flash',                       free: false, timeout: 9000,  maxContext: 262000 },
         { id: 'z-ai/glm-4.7-flash',                           free: false, timeout: 10000, maxContext: 203000 },
         { id: 'xiaomi/mimo-v2-flash',                         free: false, timeout: 10000, maxContext: 262000 },
 
-        // ðŸ§  TIER 2 : PAYANTS â€” ModÃ¨les de Raisonnement (12s - 15s)
+        // 🧠 TIER 2 : PAYANTS — Modèles de Raisonnement (12s - 15s)
         { id: 'qwen/qwen-3.5-9b-instruct',                    free: false, timeout: 12000, maxContext: 262000 },
         { id: 'google/gemma-4-26b-a4b-it',                    free: false, timeout: 15000, maxContext: 262000 },
 
-        // ðŸ†“ TIER 3 : GRATUITS â€” Le Fallback de SÃ©curitÃ© (12s - 20s)
-        // ATTENTION : Les modÃ¨les gratuits ont souvent un "Rate Limit" trÃ¨s strict (ex: 8 requÃªtes/minute)
+        // 🆓 TIER 3 : GRATUITS — Le Fallback de Sécurité (12s - 20s)
+        // ATTENTION : Les modèles gratuits ont souvent un "Rate Limit" très strict (ex: 8 requêtes/minute)
         { id: 'nvidia/nemotron-nano-12b-2-vl:free',           free: true,  timeout: 12000, maxContext: 128000 },
-        { id: 'arcee-ai/trinity-large-preview:free',          free: true,  timeout: 15000, maxContext: 131000 }, // âš ï¸ Attention, modÃ¨le vouÃ© Ã  disparaÃ®tre fin avril
-        { id: 'meta-llama/llama-3.3-70b-instruct:free',       free: true,  timeout: 15000, maxContext: 128000 }, // ModÃ¨le trÃ¨s lourd et qualitatif
+        { id: 'arcee-ai/trinity-large-preview:free',          free: true,  timeout: 15000, maxContext: 131000 }, // ⚠️ Attention, modèle voué à disparaître fin avril
+        { id: 'meta-llama/llama-3.3-70b-instruct:free',       free: true,  timeout: 15000, maxContext: 128000 }, // Modèle très lourd et qualitatif
         { id: 'openai/gpt-4o-mini:free',                      free: true,  timeout: 15000, maxContext: 128000 }, // Valeur refuge (quand les endpoints sont dispos)
-        { id: 'openrouter/free',                              free: true,  timeout: 20000, maxContext: 100000 }  // Routage automatique (le contexte varie selon le modÃ¨le choisi en interne)
+        { id: 'openrouter/free',                              free: true,  timeout: 20000, maxContext: 100000 }  // Routage automatique (le contexte varie selon le modèle choisi en interne)
     ];
 
-    console.log(`ðŸ¤– AI Models queue: ${allModels.length} models ready`);
+    console.log(`🤖 AI Models queue: ${allModels.length} models ready`);
 
-    // â”€â”€ 3. GESTION DU CACHE
+    // ── 3. GESTION DU CACHE
     const hash     = crypto.createHash('sha256').update(prompt + systemPrompt).digest('hex');
     const cacheKey = `ai_${hash}`;
     const cached   = cache.get(cacheKey);
     if (cached && useCache) {
-        console.log('ðŸ’¾ Using cached AI response');
+        console.log('💾 Using cached AI response');
         return cached;
     }
 
@@ -9917,27 +9917,27 @@ async function callOpenRouterAPI(prompt, options = {}) {
     let is402            = false;
     let freeModelBlocked = false;
 
-    console.log(`ðŸŽ¯ Trying ${allModels.length} AI models in order (Speed Optimized)...`);
+    console.log(`🎯 Trying ${allModels.length} AI models in order (Speed Optimized)...`);
 
-    // â”€â”€ 4. BOUCLE DE REQUÃŠTES (Avec Skip Automatique)
+    // ── 4. BOUCLE DE REQUÊTES (Avec Skip Automatique)
     for (let i = 0; i < allModels.length; i++) {
         const { id: modelId, free: isFreeModel, timeout: modelTimeout } = allModels[i];
         const modelStartTime = Date.now();
 
-        // ArrÃªt d'urgence si compte OpenRouter Ã  0 et limites gratuites explosÃ©es
+        // Arrêt d'urgence si compte OpenRouter à 0 et limites gratuites explosées
         if (freeModelBlocked) {
-            console.error('ðŸš¨ Solde nÃ©gatif â€” modÃ¨les :free aussi bloquÃ©s. ArrÃªt total.');
+            console.error('🚨 Solde négatif — modèles :free aussi bloqués. Arrêt total.');
             break;
         }
 
-        // Sauter tous les modÃ¨les payants restants si on a dÃ©tectÃ© un 402 (Insufficient Credits)
+        // Sauter tous les modèles payants restants si on a détecté un 402 (Insufficient Credits)
         if (is402 && !isFreeModel) {
-            console.warn(`â­ï¸  Skip payant ${modelId} (402 dÃ©tectÃ© prÃ©cÃ©demment)`);
+            console.warn(`⏭️  Skip payant ${modelId} (402 détecté précédemment)`);
             continue;
         }
 
         try {
-            console.log(`ðŸ¤– [${i + 1}/${allModels.length}] Trying model: ${modelId}${isFreeModel ? ' (FREE)' : ''} [Timeout: ${modelTimeout}ms]`);
+            console.log(`🤖 [${i + 1}/${allModels.length}] Trying model: ${modelId}${isFreeModel ? ' (FREE)' : ''} [Timeout: ${modelTimeout}ms]`);
 
             const payload = {
     model:       modelId,
@@ -9966,7 +9966,7 @@ async function callOpenRouterAPI(prompt, options = {}) {
                         'HTTP-Referer':  process.env.APP_URL || 'https://seo.mktnstrategix.com',
                         'X-Title':       'SEO Gen Pro'
                     },
-                    timeout: modelTimeout // âš¡ C'EST ICI LA MAGIE DE LA VITESSE
+                    timeout: modelTimeout // ⚡ C'EST ICI LA MAGIE DE LA VITESSE
                 }
             );
 
@@ -9977,13 +9977,13 @@ async function callOpenRouterAPI(prompt, options = {}) {
                 throw new Error('Empty response from model');
             }
 
-            // â”€â”€ Parse JSON si attendu
+            // ── Parse JSON si attendu
             let parsedResponse = aiResponse;
             if (expectedFormat === 'json') {
-                // Ta fonction personnalisÃ©e (assure-toi qu'elle gÃ¨re bien les erreurs)
+                // Ta fonction personnalisée (assure-toi qu'elle gère bien les erreurs)
                 parsedResponse = extractJSON(aiResponse, context); 
                 if (!parsedResponse || Object.keys(parsedResponse).length === 0) {
-                    throw new Error('JSON invalide ou vide aprÃ¨s parsing');
+                    throw new Error('JSON invalide ou vide après parsing');
                 }
             }
 
@@ -10006,7 +10006,7 @@ async function callOpenRouterAPI(prompt, options = {}) {
 
             if (useCache) cache.set(cacheKey, result);
 
-            console.log(`âœ… AI Generation SUCCESS â€” ${modelId} (${modelDuration}ms)${isFreeModel ? ' [FREE]' : ''}`);
+            console.log(`✅ AI Generation SUCCESS — ${modelId} (${modelDuration}ms)${isFreeModel ? ' [FREE]' : ''}`);
             return result;
 
         } catch (error) {
@@ -10016,50 +10016,50 @@ async function callOpenRouterAPI(prompt, options = {}) {
             if (typeof trackAIModelUsage === 'function') trackAIModelUsage(modelId, false, modelDuration);
 
             const status   = error.response?.status;
-            // On gÃ¨re les erreurs de Timeout (code 'ECONNABORTED' dans Axios)
+            // On gère les erreurs de Timeout (code 'ECONNABORTED' dans Axios)
             const isTimeout = error.code === 'ECONNABORTED';
-            const errorMsg = isTimeout ? 'Timeout dÃ©passÃ© (Trop lent)' : (error.response?.data?.error?.message || error.message);
+            const errorMsg = isTimeout ? 'Timeout dépassé (Trop lent)' : (error.response?.data?.error?.message || error.message);
 
-            console.warn(`âš ï¸  Model ${modelId} failed: ${errorMsg} (${modelDuration}ms)`);
+            console.warn(`⚠️  Model ${modelId} failed: ${errorMsg} (${modelDuration}ms)`);
 
             if (status === 401) {
-                console.error('âŒ 401 â€” ClÃ© API invalide. VÃ©rifier OPENROUTER_API_KEY.');
+                console.error('❌ 401 — Clé API invalide. Vérifier OPENROUTER_API_KEY.');
                 break;
             }
 
             if (status === 402) {
                 if (isFreeModel) {
                     freeModelBlocked = true;
-                    console.error('ðŸš¨ 402 sur modÃ¨le :free = Limite gratuite dÃ©passÃ©e (Rate limit free-models-per-day)');
+                    console.error('🚨 402 sur modèle :free = Limite gratuite dépassée (Rate limit free-models-per-day)');
                 } else {
                     is402 = true;
-                    console.warn('ðŸ’³ 402 payant (CrÃ©dits Ã©puisÃ©s) â†’ bascule imminente sur la section GRATUITE');
+                    console.warn('💳 402 payant (Crédits épuisés) → bascule imminente sur la section GRATUITE');
                 }
                 continue;
             }
 
             if (status === 429) {
-                // Si on a un 429 sur un modÃ¨le Flash, on n'attend pas 3 plombes, on passe vite au suivant.
+                // Si on a un 429 sur un modèle Flash, on n'attend pas 3 plombes, on passe vite au suivant.
                 const waitTime = isFreeModel ? 2000 : 500; 
-                console.warn(`â³ Rate limit ${modelId} â€” attente ${waitTime}ms...`);
+                console.warn(`⏳ Rate limit ${modelId} — attente ${waitTime}ms...`);
                 await new Promise(r => setTimeout(r, waitTime));
                 continue;
             }
 
-            // Si c'est un simple timeout rÃ©seau ou une erreur interne (500, 502), on saute immÃ©diatement (50ms) au suivant !
+            // Si c'est un simple timeout réseau ou une erreur interne (500, 502), on saute immédiatement (50ms) au suivant !
             if (i < allModels.length - 1) {
                 await new Promise(r => setTimeout(r, 50)); 
             }
         }
     }
 
-    // â”€â”€ 5. Tous les modÃ¨les ont Ã©chouÃ©
-    console.error(`ðŸ’¥ All ${allModels.length} AI models failed`);
+    // ── 5. Tous les modèles ont échoué
+    console.error(`💥 All ${allModels.length} AI models failed`);
 
     const finalError = freeModelBlocked
-        ? 'Rate limit ou Solde nÃ©gatif â€” Limites OpenRouter atteintes.'
+        ? 'Rate limit ou Solde négatif — Limites OpenRouter atteintes.'
         : is402
-        ? 'CrÃ©dits Ã©puisÃ©s ET modÃ¨les gratuits indisponibles ou trop lents.'
+        ? 'Crédits épuisés ET modèles gratuits indisponibles ou trop lents.'
         : `All AI models exhausted. Last error: ${lastError?.message}`;
 
     return {
@@ -10073,48 +10073,48 @@ async function callOpenRouterAPI(prompt, options = {}) {
         usage:    { totalTokens: 0, promptTokens: 0, completionTokens: 0 }
     };
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”‘ STARTUP CHECK â€” Variables d'environnement critiques
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 🔑 STARTUP CHECK — Variables d'environnement critiques
+// ════════════════════════════════════════════════════════════════════════════════
 const ENV_CHECK = {
     OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
     APP_URL:            process.env.APP_URL,
     NODE_ENV:           process.env.NODE_ENV,
 };
 
-console.log('ðŸ”‘ ENV CHECK:');
+console.log('🔑 ENV CHECK:');
 Object.entries(ENV_CHECK).forEach(([key, val]) => {
     if (!val) {
-        console.error(`   âŒ ${key} = MANQUANT`);
+        console.error(`   ❌ ${key} = MANQUANT`);
     } else {
-        // Affiche seulement les 8 premiers chars pour sÃ©curitÃ©
-        console.log(`   âœ… ${key} = ${val.substring(0, 8)}...`);
+        // Affiche seulement les 8 premiers chars pour sécurité
+        console.log(`   ✅ ${key} = ${val.substring(0, 8)}...`);
     }
 });
 
 if (!process.env.OPENROUTER_API_KEY) {
-    console.error('ðŸš¨ OPENROUTER_API_KEY manquant â€” tous les appels IA vont Ã©chouer');
+    console.error('🚨 OPENROUTER_API_KEY manquant — tous les appels IA vont échouer');
 }
 
-console.log('âœ… callOpenRouterAPI loaded - Multi-model cascade with Gemini 2.0 priority');
+console.log('✅ callOpenRouterAPI loaded - Multi-model cascade with Gemini 2.0 priority');
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“Š FUNNEL SPY + OPENROUTER â€” BEHAVIOR TRACKER V13
-// Suivi temps rÃ©el : agents, modÃ¨les, scores, erreurs, performance
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 📊 FUNNEL SPY + OPENROUTER — BEHAVIOR TRACKER V13
+// Suivi temps réel : agents, modèles, scores, erreurs, performance
+// ════════════════════════════════════════════════════════════════════════════════
 
-// â”€â”€ Store global en mÃ©moire (reset au redÃ©marrage)
+// ── Store global en mémoire (reset au redémarrage)
 const behaviorStore = {
-    sessions:    new Map(),  // requestId â†’ session complÃ¨te
-    aiModels:    new Map(),  // modelId  â†’ stats cumulÃ©es
-    hourly:      new Map(),  // heure    â†’ mÃ©triques agrÃ©gÃ©es
-    errors:      [],         // derniÃ¨res 100 erreurs
+    sessions:    new Map(),  // requestId → session complète
+    aiModels:    new Map(),  // modelId  → stats cumulées
+    hourly:      new Map(),  // heure    → métriques agrégées
+    errors:      [],         // dernières 100 erreurs
     startedAt:   Date.now()
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”§ HELPERS INTERNES
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 🔧 HELPERS INTERNES
+// ════════════════════════════════════════════════════════════════════════════════
 const _getOrCreate = (map, key, defaultVal) => {
     if (!map.has(key)) map.set(key, typeof defaultVal === 'function' ? defaultVal() : JSON.parse(JSON.stringify(defaultVal)));
     return map.get(key);
@@ -10130,9 +10130,9 @@ const _pushError = (entry) => {
     if (behaviorStore.errors.length > 100) behaviorStore.errors.pop();
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸš€ 1. INIT SESSION â€” AppelÃ© au dÃ©but de /api/analyze-funnel
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 🚀 1. INIT SESSION — Appelé au début de /api/analyze-funnel
+// ════════════════════════════════════════════════════════════════════════════════
 function trackSessionStart(requestId, url, userLang) {
     const session = {
         requestId,
@@ -10166,9 +10166,9 @@ function trackSessionStart(requestId, url, userLang) {
 
         // Agents
         agents: {
-            A1: _agentDefault('AIDA + IdentitÃ©'),
+            A1: _agentDefault('AIDA + Identité'),
             A2: _agentDefault('Funnel + Conversion'),
-            A3: _agentDefault('StratÃ©gie + Quick Wins'),
+            A3: _agentDefault('Stratégie + Quick Wins'),
             A4: _agentDefault('Neuromarketing + Scoring'),
             A5: _agentDefault('Magic Prompt'),
             A6: _agentDefault('Clone Strategy')
@@ -10195,7 +10195,7 @@ function trackSessionStart(requestId, url, userLang) {
     }));
     hourly.requests++;
 
-    console.log(`[TRACKER][${requestId}] ðŸš€ Session dÃ©marrÃ©e â€” ${url} [${userLang}]`);
+    console.log(`[TRACKER][${requestId}] 🚀 Session démarrée — ${url} [${userLang}]`);
     return session;
 }
 
@@ -10209,15 +10209,15 @@ function _agentDefault(label) {
         duration:  null,
         tokens:    0,
         error:     null,
-        score:     null,        // score clÃ© retournÃ© par l'agent
+        score:     null,        // score clé retourné par l'agent
         is402:     false,
         retries:   0
     };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•·ï¸ 2. TRACK SCRAPING
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 🕷️ 2. TRACK SCRAPING
+// ════════════════════════════════════════════════════════════════════════════════
 function trackScrapeResult(requestId, scrapeData) {
     const session = behaviorStore.sessions.get(requestId);
     if (!session) return;
@@ -10235,23 +10235,23 @@ function trackScrapeResult(requestId, scrapeData) {
 
     session.scrapedBlocked = !scrapeData.success;
 
-    console.log(`[TRACKER][${requestId}] ðŸ•·ï¸  Scrape ${scrapeData.success ? 'âœ…' : 'âŒ'} â€” Layer: ${scrapeData.fetchLayer} | Sections: ${scrapeData.sectionsFound}`);
+    console.log(`[TRACKER][${requestId}] 🕷️  Scrape ${scrapeData.success ? '✅' : '❌'} — Layer: ${scrapeData.fetchLayer} | Sections: ${scrapeData.sectionsFound}`);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“Š 3. TRACK LOCAL SCORE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 📊 3. TRACK LOCAL SCORE
+// ════════════════════════════════════════════════════════════════════════════════
 function trackLocalScore(requestId, { raw, max, score, breakdown }) {
     const session = behaviorStore.sessions.get(requestId);
     if (!session) return;
 
     session.localScore = { raw, max, score, breakdown };
-    console.log(`[TRACKER][${requestId}] ðŸ“Š Score local: ${score}/100 (${raw}/${max})`);
+    console.log(`[TRACKER][${requestId}] 📊 Score local: ${score}/100 (${raw}/${max})`);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ¤– 4. TRACK AGENT â€” Start / End
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 🤖 4. TRACK AGENT — Start / End
+// ════════════════════════════════════════════════════════════════════════════════
 function trackAgentStart(requestId, agentKey) {
     const session = behaviorStore.sessions.get(requestId);
     if (!session) return;
@@ -10262,7 +10262,7 @@ function trackAgentStart(requestId, agentKey) {
     agent.status    = 'running';
     agent.startedAt = Date.now();
 
-    console.log(`[TRACKER][${requestId}] ðŸ§  ${agentKey} dÃ©marrÃ© â€” ${agent.label}`);
+    console.log(`[TRACKER][${requestId}] 🧠 ${agentKey} démarré — ${agent.label}`);
 }
 
 function trackAgentEnd(requestId, agentKey, result) {
@@ -10302,13 +10302,13 @@ function trackAgentEnd(requestId, agentKey, result) {
         });
     }
 
-    // Stats par modÃ¨le IA
+    // Stats par modèle IA
     if (agent.model && agent.model !== 'N/A') {
         _updateModelStats(agent.model, result.success, duration, agent.tokens, agent.isFree, agent.is402);
     }
 
-    const icon = result.success ? 'âœ…' : 'âŒ';
-    console.log(`[TRACKER][${requestId}] ${icon} ${agentKey} terminÃ© â€” ${agent.model} | ${duration}ms | ${agent.tokens} tokens${agent.isFree ? ' [FREE]' : ''}`);
+    const icon = result.success ? '✅' : '❌';
+    console.log(`[TRACKER][${requestId}] ${icon} ${agentKey} terminé — ${agent.model} | ${duration}ms | ${agent.tokens} tokens${agent.isFree ? ' [FREE]' : ''}`);
 }
 
 function trackAgentSkipped(requestId, agentKey, reason) {
@@ -10320,12 +10320,12 @@ function trackAgentSkipped(requestId, agentKey, reason) {
 
     agent.status = 'skipped';
     agent.error  = reason;
-    console.log(`[TRACKER][${requestId}] â­ï¸  ${agentKey} skippÃ© â€” ${reason}`);
+    console.log(`[TRACKER][${requestId}] ⏭️  ${agentKey} skippé — ${reason}`);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ† 5. TRACK SESSION END
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 🏆 5. TRACK SESSION END
+// ════════════════════════════════════════════════════════════════════════════════
 function trackSessionEnd(requestId, finalResponse) {
     const session = behaviorStore.sessions.get(requestId);
     if (!session) return;
@@ -10374,12 +10374,12 @@ function trackSessionEnd(requestId, finalResponse) {
 
     const totalTokens = finalResponse.meta?.tokens?.total || 0;
 
-    console.log(`[TRACKER][${requestId}] ðŸ Session terminÃ©e â€” Status: ${session.status.toUpperCase()} | Score: ${session.globalScore.overall}/100 [${session.globalScore.grade}] | Source: ${session.globalScore.source} | ${duration}ms | ${totalTokens} tokens`);
+    console.log(`[TRACKER][${requestId}] 🏁 Session terminée — Status: ${session.status.toUpperCase()} | Score: ${session.globalScore.overall}/100 [${session.globalScore.grade}] | Source: ${session.globalScore.source} | ${duration}ms | ${totalTokens} tokens`);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“ˆ 6. STATS MODÃˆLES IA
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 📈 6. STATS MODÈLES IA
+// ════════════════════════════════════════════════════════════════════════════════
 function _updateModelStats(modelId, success, duration, tokens, isFree, is402) {
     const stats = _getOrCreate(behaviorStore.aiModels, modelId, () => ({
         modelId,
@@ -10417,9 +10417,9 @@ function _updateModelStats(modelId, success, duration, tokens, isFree, is402) {
     stats.successRate = Math.round((stats.success / stats.calls) * 100);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“Š 7. GET BEHAVIOR REPORT â€” AppelÃ© par /api/behavior-report
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 📊 7. GET BEHAVIOR REPORT — Appelé par /api/behavior-report
+// ════════════════════════════════════════════════════════════════════════════════
 function getBehaviorReport() {
     const sessions     = [...behaviorStore.sessions.values()];
     const totalSessions = sessions.length;
@@ -10438,11 +10438,11 @@ function getBehaviorReport() {
             .reduce((a, s) => a + s.globalScore.overall, 0) / successSessions)
         : 0;
 
-    // Top modÃ¨les par taux de succÃ¨s
+    // Top modèles par taux de succès
     const modelStats = [...behaviorStore.aiModels.values()]
         .sort((a, b) => b.successRate - a.successRate);
 
-    // Sessions rÃ©centes (10 derniÃ¨res)
+    // Sessions récentes (10 dernières)
     const recentSessions = sessions
         .sort((a, b) => (b.startedAt || 0) - (a.startedAt || 0))
         .slice(0, 10)
@@ -10467,7 +10467,7 @@ function getBehaviorReport() {
             timestamp: new Date(s.startedAt).toISOString()
         }));
 
-    // Erreurs rÃ©centes (20 derniÃ¨res)
+    // Erreurs récentes (20 dernières)
     const recentErrors = behaviorStore.errors.slice(0, 20);
 
     // Stats 402 globales
@@ -10484,7 +10484,7 @@ function getBehaviorReport() {
         generatedAt: new Date().toISOString(),
         uptime:      `${uptimeMinutes} min`,
 
-        // â”€â”€ Vue globale
+        // ── Vue globale
         overview: {
             totalSessions,
             successSessions,
@@ -10496,21 +10496,21 @@ function getBehaviorReport() {
             avgScore,
         },
 
-        // â”€â”€ SantÃ© OpenRouter
+        // ── Santé OpenRouter
         openRouterHealth: {
             total402Errors:    total402,
             freeModelsBlocked,
-            status: total402 === 0          ? 'âœ… OK'
-                  : freeModelsBlocked > 0   ? 'ðŸš¨ Solde nÃ©gatif â€” recharger crÃ©dits'
-                  :                           'âš ï¸  CrÃ©dits insuffisants â€” modÃ¨les :free utilisÃ©s',
+            status: total402 === 0          ? '✅ OK'
+                  : freeModelsBlocked > 0   ? '🚨 Solde négatif — recharger crédits'
+                  :                           '⚠️  Crédits insuffisants — modèles :free utilisés',
             recommendation: freeModelsBlocked > 0
                 ? 'Recharger sur https://openrouter.ai/settings/credits'
                 : total402 > 0
-                ? 'Ajouter crÃ©dits ou utiliser uniquement modÃ¨les :free'
+                ? 'Ajouter crédits ou utiliser uniquement modèles :free'
                 : null
         },
 
-        // â”€â”€ Stats par modÃ¨le IA
+        // ── Stats par modèle IA
         modelStats: modelStats.map(m => ({
             modelId:      m.modelId,
             isFree:       m.isFree,
@@ -10523,23 +10523,23 @@ function getBehaviorReport() {
             lastUsed:     m.lastUsed
         })),
 
-        // â”€â”€ Stats horaires
+        // ── Stats horaires
         hourlyStats: [...behaviorStore.hourly.entries()]
             .sort(([a], [b]) => b.localeCompare(a))
             .slice(0, 24)
             .map(([hour, stats]) => ({ hour, ...stats })),
 
-        // â”€â”€ Sessions rÃ©centes
+        // ── Sessions récentes
         recentSessions,
 
-        // â”€â”€ Erreurs rÃ©centes
+        // ── Erreurs récentes
         recentErrors
     };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ§¹ 8. CLEANUP â€” Purge sessions > 2h pour Ã©viter memory leak
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 🧹 8. CLEANUP — Purge sessions > 2h pour éviter memory leak
+// ════════════════════════════════════════════════════════════════════════════════
 function cleanupOldSessions() {
     const TWO_HOURS = 2 * 60 * 60 * 1000;
     const cutoff    = Date.now() - TWO_HOURS;
@@ -10553,14 +10553,14 @@ function cleanupOldSessions() {
     }
 
     if (purged > 0) {
-        console.log(`[TRACKER] ðŸ§¹ Purge: ${purged} sessions expirÃ©es supprimÃ©es`);
+        console.log(`[TRACKER] 🧹 Purge: ${purged} sessions expirées supprimées`);
     }
 }
 setInterval(cleanupOldSessions, 30 * 60 * 1000); // toutes les 30 min
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸŒ 9. ROUTE â€” /api/behavior-report
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 🌐 9. ROUTE — /api/behavior-report
+// ════════════════════════════════════════════════════════════════════════════════
 app.get('/api/behavior-report', (req, res) => {
     // Protection basique par token
     const token = req.headers['x-admin-token'] || req.query.token;
@@ -10570,14 +10570,14 @@ app.get('/api/behavior-report', (req, res) => {
     res.json(getBehaviorReport());
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”— 10. INTÃ‰GRATION dans /api/analyze-funnel
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 🔗 10. INTÉGRATION dans /api/analyze-funnel
+// ════════════════════════════════════════════════════════════════════════════════
 /*
-    â”€â”€ DÃ©but de la route :
+    ── Début de la route :
     trackSessionStart(requestId, validUrl, userLang);
 
-    â”€â”€ AprÃ¨s deepScrapeFunnel() :
+    ── Après deepScrapeFunnel() :
     trackScrapeResult(requestId, {
         fetchLayer:    scrape.fetchLayer,
         success:       scrape.success,
@@ -10587,7 +10587,7 @@ app.get('/api/behavior-report', (req, res) => {
         phones:        phones.length
     });
 
-    â”€â”€ AprÃ¨s calcul localScore :
+    ── Après calcul localScore :
     trackLocalScore(requestId, {
         raw:       localScoreRaw,
         max:       localScoreMax,
@@ -10595,25 +10595,25 @@ app.get('/api/behavior-report', (req, res) => {
         breakdown: quickLocalScore
     });
 
-    â”€â”€ Avant chaque agent :
+    ── Avant chaque agent :
     trackAgentStart(requestId, 'A1');
 
-    â”€â”€ AprÃ¨s chaque agent :
+    ── Après chaque agent :
     trackAgentEnd(requestId, 'A1', {
         ...aiResult1,
         keyScore: r1Safe.aidaAnalysis?.attention?.score || null
     });
 
-    â”€â”€ Si agent skippÃ© (ex: IA indisponible) :
-    trackAgentSkipped(requestId, 'A1', 'IA indisponible â€” solde nÃ©gatif');
+    ── Si agent skippé (ex: IA indisponible) :
+    trackAgentSkipped(requestId, 'A1', 'IA indisponible — solde négatif');
 
-    â”€â”€ Ã€ la toute fin avant res.json() :
+    ── À la toute fin avant res.json() :
     trackSessionEnd(requestId, finalResponse);
 */
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“¤ EXPORTS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════════════════
+// 📤 EXPORTS
+// ════════════════════════════════════════════════════════════════════════════════
 module.exports = {
     app,
     enqueueJob,
@@ -10630,31 +10630,31 @@ module.exports = {
 };
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸŽ¯ ROUTE : GÃ‰NÃ‰RATEURS SEO ASSETS (GOD TIER - ANTI-FLUFF)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🎯 ROUTE : GÉNÉRATEURS SEO ASSETS (GOD TIER - ANTI-FLUFF)
+// ═══════════════════════════════════════════════════════════════════
 
 
 
-// â”€â”€ Rate limiter spÃ©cifique War Room (Protection des crÃ©dits) â”€â”€
+// ── Rate limiter spécifique War Room (Protection des crédits) ──
 const warRoomLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 30,                  // Max 30 analyses par IP / 15min
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
-        console.warn(`ðŸš¨ Rate limit WarRoom dÃ©passÃ©: ${req.ip}`);
+        console.warn(`🚨 Rate limit WarRoom dépassé: ${req.ip}`);
         res.status(429).json({
             success: false,
             error: 'RATE_LIMIT',
-            message: 'Trop de recherches de concurrents. RÃ©essayez dans 15 minutes.'
+            message: 'Trop de recherches de concurrents. Réessayez dans 15 minutes.'
         });
     }
 });
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// âš”ï¸ ROUTE : COMPETITORS ENDPOINT (WAR ROOM V11)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════
+// ⚔️ ROUTE : COMPETITORS ENDPOINT (WAR ROOM V11)
+// ════════════════════════════════════════════════════════════════════
 const competitorsInFlight = new Map();
 function buildCompetitorsRequestKey({ query = '', geo = '', lang = 'fr', url = '', forceRefresh = false }) {
     return [
@@ -10682,12 +10682,12 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
         context = {}
     } = req.body || {};
 
-    // â”€â”€ PATCH 1 : Validation query â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── PATCH 1 : Validation query ────────────────────────
     if (!query || !query.trim()) {
         return res.status(400).json({
             success: false,
             error: 'Query is required',
-            message: 'Veuillez fournir un mot-clÃ© ou une URL.'
+            message: 'Veuillez fournir un mot-clé ou une URL.'
         });
     }
 
@@ -10695,11 +10695,11 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
         return res.status(400).json({
             success: false,
             error: 'Query too long',
-            message: 'Maximum 300 caractÃ¨res autorisÃ©s.'
+            message: 'Maximum 300 caractères autorisés.'
         });
     }
 
-    // â”€â”€ PATCH 2 : Validation lang + rÃ©solution geo rÃ©elle â”€
+    // ── PATCH 2 : Validation lang + résolution geo réelle ─
     const ALLOWED_LANGS = ['fr', 'ar', 'en'];
     if (!ALLOWED_LANGS.includes(lang)) lang = 'fr';
     requestLang = lang;
@@ -10708,7 +10708,7 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
     const geoData = resolveSerpGeo(rawGeo || 'Morocco');
     const safeGeo = geoData.location || 'Morocco';
 
-        // â”€â”€ PATCH 3 : Validation URL anti-SSRF â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── PATCH 3 : Validation URL anti-SSRF ───────────────
         const isValidUrl = (u) => {
             try {
                 const p = new URL(u);
@@ -10721,24 +10721,24 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
             } catch { return false; }
         };
 
-        // â”€â”€ PATCH 4 : forceRefresh rÃ©servÃ© admin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── PATCH 4 : forceRefresh réservé admin ─────────────
         const safeForceRefresh = Boolean(forceRefresh) && !!req.user?.isAdmin;
         const safeContext = safeUserContextFromBody(req.body);
 
         console.log(
-    `[api/competitors] DÃ‰MARRAGE WAR ROOM | query="${query.trim()}" | rawGeo="${rawGeo}" | resolvedGeo="${safeGeo}" | gl="${geoData.gl}" | lang="${lang}"`
+    `[api/competitors] DÉMARRAGE WAR ROOM | query="${query.trim()}" | rawGeo="${rawGeo}" | resolvedGeo="${safeGeo}" | gl="${geoData.gl}" | lang="${lang}"`
 );
 
         // 1. Scraping du site utilisateur (si fourni) pour benchmark
         let userSiteData = null;
         if (url && isValidUrl(url.trim())) {
-            console.log(`[/api/competitors] Benchmark utilisateur lancÃ© pour : ${url}`);
+            console.log(`[/api/competitors] Benchmark utilisateur lancé pour : ${url}`);
             try {
                 const siteScrape = await scrapeSiteData(url.trim(), lang);
                 if (siteScrape?.success) {
                     userSiteData = siteScrape;
                     console.log(
-                        `[/api/competitors] Site utilisateur OK â€” ` +
+                        `[/api/competitors] Site utilisateur OK — ` +
                         `Mots: ${siteScrape.content?.wordCount || 0}`
                     );
                 }
@@ -10747,8 +10747,8 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
             }
         }
 
-        // 2. Appel du moteur d'analyse stratÃ©gique
-        // Timeout court: la route ne doit jamais laisser l'utilisateur attendre indÃ©finiment.
+        // 2. Appel du moteur d'analyse stratégique
+        // Timeout court: la route ne doit jamais laisser l'utilisateur attendre indéfiniment.
         const ROUTE_TIMEOUT  = 45000;
         const timeoutPromise = new Promise((_, reject) =>
             setTimeout(
@@ -10768,7 +10768,7 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
 
         let analysisPromise = competitorsInFlight.get(inFlightKey);
         if (analysisPromise) {
-            console.log(`ðŸ§  [api/competitors] IN-FLIGHT REUSE: ${inFlightKey}`);
+            console.log(`🧠 [api/competitors] IN-FLIGHT REUSE: ${inFlightKey}`);
         } else {
             analysisPromise = analyzeCompetitors(query.trim(), safeGeo, lang, userSiteData, safeForceRefresh, null, safeContext);
             competitorsInFlight.set(inFlightKey, analysisPromise);
@@ -10783,15 +10783,15 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
     analysisPromise,
     timeoutPromise
 ]);
-        // 3. MÃ©triques & Logs
+        // 3. Métriques & Logs
         const elapsed = Date.now() - startTime;
         if (result.success) {
             console.log(
-                `âœ… [/api/competitors] TERMINÃ‰E en ${elapsed}ms | ` +
+                `✅ [/api/competitors] TERMINÉE en ${elapsed}ms | ` +
                 `source=${result.source}`
             );
         } else {
-            console.warn(`âŒ [/api/competitors] Ã‰CHEC :`, result.error);
+            console.warn(`❌ [/api/competitors] ÉCHEC :`, result.error);
         }
 
         if (typeof updateMetrics === 'function') {
@@ -10803,9 +10803,9 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
     } catch (error) {
         const elapsed = Date.now() - startTime;
 
-        // â”€â”€ PATCH 6 : Timeout â†’ 504 propre â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── PATCH 6 : Timeout → 504 propre ───────────────────
         if (error.message === 'ROUTE_TIMEOUT') {
-            console.warn(`â±ï¸ [/api/competitors] TIMEOUT aprÃ¨s ${elapsed}ms`);
+            console.warn(`⏱️ [/api/competitors] TIMEOUT après ${elapsed}ms`);
             if (typeof inFlightKey === 'string') {
                 competitorsInFlight.delete(inFlightKey);
             }
@@ -10816,16 +10816,16 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
                 success: false,
                 error:   'TIMEOUT',
                 message: requestLang === 'ar'
-                    ? 'Ø§Ø³ØªØºØ±Ù‚ ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ø³ÙˆÙ‚ ÙˆÙ‚ØªØ§ Ø·ÙˆÙŠÙ„Ø§. Ø£Ø¹Ø¯ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ù…Ø¹ ÙƒÙ„Ù…Ø§Øª Ø£ÙƒØ«Ø± ØªØ­Ø¯ÙŠØ¯Ø§ Ø£Ùˆ Ù…ÙˆÙ‚Ø¹ ÙˆØ§Ø­Ø¯ Ù„Ù„Ù…Ù‚Ø§Ø±Ù†Ø©.'
+                    ? 'استغرق تحليل السوق وقتا طويلا. أعد المحاولة مع كلمات أكثر تحديدا أو موقع واحد للمقارنة.'
                     : requestLang === 'en'
                         ? 'Market analysis took too long. Try again with a more specific query or one benchmark URL.'
-                        : 'Analyse marchÃ© trop longue. RÃ©essayez avec une demande plus prÃ©cise ou une seule URL de benchmark.'
+                        : 'Analyse marché trop longue. Réessayez avec une demande plus précise ou une seule URL de benchmark.'
             });
         }
 
-        // â”€â”€ PATCH 7 : Stack trace masquÃ© en production â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── PATCH 7 : Stack trace masqué en production ────────
         console.error(
-            'ðŸ’¥ [/api/competitors] CRASH MAJEUR:',
+            '💥 [/api/competitors] CRASH MAJEUR:',
             isProd ? error.message : error.stack
         );
         if (typeof updateMetrics === 'function') {
@@ -10859,11 +10859,11 @@ app.post('/api/apify-intel', async (req, res) => {
     res.status(500).json({ success: false, error: e.message });
   }
 });
-// ðŸ§  DECISION LAYER : ASSIMILATION MÃ‰TIER TEMPS RÃ‰EL + FORMATAGE UI
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ” SCRAPE.DO GOOGLE SEARCH API (Extraction SERP StructurÃ©e)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// 🧠 DECISION LAYER : ASSIMILATION MÉTIER TEMPS RÉEL + FORMATAGE UI
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// 🔍 SCRAPE.DO GOOGLE SEARCH API (Extraction SERP Structurée)
+// ═══════════════════════════════════════════════════════════════════
 async function fetchScrapeDoSerp(query, hl = 'fr', gl = 'ma') {
     const token = process.env.SCRAPEDOTOKEN;
     if (!token || !query) return null;
@@ -11009,16 +11009,16 @@ app.post('/api/decision-layer', async (req, res) => {
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // Ã‰TAPE 1 : ASSIMILATION MÃ‰TIER (SCRAPE.DO + KEYWORDS EVERYWHERE)
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────────────────────
+    // ÉTAPE 1 : ASSIMILATION MÉTIER (SCRAPE.DO + KEYWORDS EVERYWHERE)
+    // ─────────────────────────────────────────────────────────────
     if (!actionRoadmap.length && keyword) {
-        console.log(`ðŸ§  [DECISION-LAYER] Pipeline d'assimilation pour: "${keyword}"`);
+        console.log(`🧠 [DECISION-LAYER] Pipeline d'assimilation pour: "${keyword}"`);
 
         // 1A. Fetch SERP via Scrape.do
         const serpData = await fetchScrapeDoSerp(keyword, lang, geo);
         
-        // 1B. PrÃ©paration des mots-clÃ©s pour Keywords Everywhere
+        // 1B. Préparation des mots-clés pour Keywords Everywhere
         let keywordsToAnalyze = [keyword];
         if (serpData && serpData.related && serpData.related.length > 0) {
             keywordsToAnalyze = [...keywordsToAnalyze, ...serpData.related.slice(0, 9)];
@@ -11030,25 +11030,25 @@ app.post('/api/decision-layer', async (req, res) => {
         // 1D. Construction du Contexte Brutal pour le LLM
         let keContextString = "";
         if (keData) {
-            keContextString = "\n[MÃ‰TRIQUES DE RECHERCHE - VOLUMES & BUDGET (NE PAS INVENTER)]\n";
+            keContextString = "\n[MÉTRIQUES DE RECHERCHE - VOLUMES & BUDGET (NE PAS INVENTER)]\n";
             for (const [kw, metrics] of Object.entries(keData)) {
                 keContextString += `- "${kw}" : ${metrics.vol} recherches/mois, CPC: $${metrics.cpc}, Concurrence Ads: ${metrics.competition}\n`;
             }
         }
 
         const realityContext = `
-[RÃ‰ALITÃ‰ DU MARCHÃ‰ - DONNÃ‰ES TEMPS RÃ‰EL (SCRAPE.DO)]
+[RÉALITÉ DU MARCHÉ - DONNÉES TEMPS RÉEL (SCRAPE.DO)]
 ${serpData ? `
 - Top domaines dominants (tes concurrents) : ${serpData.domains.slice(0, 3).join(', ')}
-- Questions EXACTES que les gens posent Ã  Google (PAA) : ${serpData.paa.map(p => p.question).join(' | ')}
+- Questions EXACTES que les gens posent à Google (PAA) : ${serpData.paa.map(p => p.question).join(' | ')}
 ` : ''}
 ${keContextString}
         `.trim();
 
         const systemPrompt = `
-Tu es un stratÃ¨ge marketing expert. L'utilisateur te confie le marchÃ© "${keyword}".
-RÃ©dige une analyse compÃ©titive au format JSON STRICT.
-Langue de rÃ©ponse demandÃ©e : ${lang === 'ar' ? 'Arabe' : lang === 'en' ? 'Anglais' : 'FranÃ§ais'}.
+Tu es un stratège marketing expert. L'utilisateur te confie le marché "${keyword}".
+Rédige une analyse compétitive au format JSON STRICT.
+Langue de réponse demandée : ${lang === 'ar' ? 'Arabe' : lang === 'en' ? 'Anglais' : 'Français'}.
 
 ${realityContext}
 
@@ -11056,18 +11056,18 @@ FORMAT JSON ATTENDU :
 {
   "marketInsights": { "difficulty": "facile/moyen/difficile", "serpIntent": "intention principale" },
   "top3ReverseEngineering": { "commonSuccessFactors": ["Facteur 1", "Facteur 2"], "glaringWeaknesses": ["Faiblesse 1"] },
-  "leaderMoat": { "mainMoat": "Pourquoi le leader gagne", "summary": "RÃ©sumÃ©" },
+  "leaderMoat": { "mainMoat": "Pourquoi le leader gagne", "summary": "Résumé" },
   "swot": { "weaknesses": ["Faiblesse leader"], "opportunities": ["Demande mal servie"] },
   "strategicBlueprint": { "uniqueAngle": "Le meilleur angle d'attaque" },
   "winningMove": "Action principale",
   "actionRoadmap": [
-    "Ã‰tape 1 basÃ©e sur le volume de recherche et les questions (PAA)",
-    "Ã‰tape 2 action spÃ©cifique logistique/marchÃ©",
-    "Ã‰tape 3 stratÃ©gie d'acquisition basÃ©e sur le CPC"
+    "Étape 1 basée sur le volume de recherche et les questions (PAA)",
+    "Étape 2 action spécifique logistique/marché",
+    "Étape 3 stratégie d'acquisition basée sur le CPC"
   ]
 }
 
-RÃˆGLE ABSOLUE : Les Ã©tapes d'actions (actionRoadmap) DOIVENT rÃ©pondre aux vraies questions (PAA) et utiliser les volumes fournis dans les donnÃ©es. Interdiction d'utiliser des tactiques SEO gÃ©nÃ©riques.
+RÈGLE ABSOLUE : Les étapes d'actions (actionRoadmap) DOIVENT répondre aux vraies questions (PAA) et utiliser les volumes fournis dans les données. Interdiction d'utiliser des tactiques SEO génériques.
 `;
 
         // 1E. Appel LLM via OpenRouter (utilise ta fonction executeWithRetry si existante, sinon axios direct)
@@ -11082,7 +11082,7 @@ RÃˆGLE ABSOLUE : Les Ã©tapes d'actions (actionRoadmap) DOIVENT rÃ©pondre a
         const rawContent = aiResponse.data.choices[0].message.content;
         const parsedIntel = extractJSON(rawContent) || {};
 
-        // Ã‰crasement des variables avec l'intelligence gÃ©nÃ©rÃ©e
+        // Écrasement des variables avec l'intelligence générée
         marketInsights = parsedIntel.marketInsights || marketInsights;
         top3ReverseEngineering = parsedIntel.top3ReverseEngineering || top3ReverseEngineering;
         leaderMoat = parsedIntel.leaderMoat || leaderMoat;
@@ -11092,9 +11092,9 @@ RÃˆGLE ABSOLUE : Les Ã©tapes d'actions (actionRoadmap) DOIVENT rÃ©pondre a
         actionRoadmap = parsedIntel.actionRoadmap || actionRoadmap;
     }
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // Ã‰TAPE 2 : FORMATAGE UI / PRÃ‰SENTATION
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────────────────────
+    // ÉTAPE 2 : FORMATAGE UI / PRÉSENTATION
+    // ─────────────────────────────────────────────────────────────
     const safeArray = (v) => Array.isArray(v) ? v.filter(Boolean) : [];
     const firstNonEmpty = (...vals) => {
       for (const v of vals) {
@@ -11105,7 +11105,7 @@ RÃˆGLE ABSOLUE : Les Ã©tapes d'actions (actionRoadmap) DOIVENT rÃ©pondre a
     };
     const compact = (v, fallback = '') => {
       if (typeof v === 'string' && v.trim()) return v.trim();
-      if (Array.isArray(v) && v.filter(Boolean).length) return v.filter(Boolean).join(' â€¢ ');
+      if (Array.isArray(v) && v.filter(Boolean).length) return v.filter(Boolean).join(' • ');
       return fallback;
     };
 
@@ -11116,21 +11116,21 @@ RÃˆGLE ABSOLUE : Les Ã©tapes d'actions (actionRoadmap) DOIVENT rÃ©pondre a
     const rev = top3ReverseEngineering || {};
     const roadmap = Array.isArray(actionRoadmap) ? actionRoadmap.filter(Boolean).slice(0, 3) : [];
 
-    const difficulty = mi.difficulty || (isAr ? 'Ù…ØªÙˆØ³Ø·' : isEn ? 'moderate' : 'modÃ©rÃ©');
-    const primaryIntent = mi.serpIntent || (isAr ? 'Ù†ÙŠØ© Ø¨Ø­Ø« ÙˆØ§Ø¶Ø­Ø©' : isEn ? 'clear search intent' : 'une intention de recherche claire');
+    const difficulty = mi.difficulty || (isAr ? 'متوسط' : isEn ? 'moderate' : 'modéré');
+    const primaryIntent = mi.serpIntent || (isAr ? 'نية بحث واضحة' : isEn ? 'clear search intent' : 'une intention de recherche claire');
 
     const dominantSuccessFactor = firstNonEmpty(
       safeArray(rev.commonSuccessFactors),
       lm.mainMoat,
       lm.summary,
-      isAr ? 'ØªÙ…ÙˆÙ‚Ø¹ Ù‚ÙˆÙŠ ÙÙŠ Ø§Ù„Ø³ÙˆÙ‚' : isEn ? 'strong market positioning' : 'un positionnement fort'
+      isAr ? 'تموقع قوي في السوق' : isEn ? 'strong market positioning' : 'un positionnement fort'
     );
 
     const coreMoat = firstNonEmpty(
       lm.mainMoat,
       lm.summary,
       safeArray(rev.commonSuccessFactors),
-      isAr ? 'Ø§Ù„Ø³Ù„Ø·Ø© ÙˆØ§Ù„Ø«Ù‚Ø© ÙˆØ§Ù„ØªÙ†ÙÙŠØ°' : isEn ? 'authority, trust, and execution' : 'lâ€™autoritÃ©, la confiance et lâ€™exÃ©cution'
+      isAr ? 'السلطة والثقة والتنفيذ' : isEn ? 'authority, trust, and execution' : 'l’autorité, la confiance et l’exécution'
     );
 const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
   ? lm.brandAuthority.channelEvidence
@@ -11150,16 +11150,16 @@ const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
     lm.brandAuthority?.reasoning,
     clickableChannels.length
       ? (isAr
-          ? `Ø­Ø¶ÙˆØ± Ø§Ù„Ø¹Ù„Ø§Ù…Ø© Ù…ÙˆØ¬ÙˆØ¯ Ø¹Ù„Ù‰ ${clickableChannels.length} Ù‚Ù†ÙˆØ§Øª: ${clickableChannels.join('ØŒ ')}.`
+          ? `حضور العلامة موجود على ${clickableChannels.length} قنوات: ${clickableChannels.join('، ')}.`
           : isEn
             ? `Brand presence is visible across ${clickableChannels.length} channels: ${clickableChannels.join(', ')}.`
-            : `La marque est prÃ©sente sur ${clickableChannels.length} canaux : ${clickableChannels.join(', ')}.`)
+            : `La marque est présente sur ${clickableChannels.length} canaux : ${clickableChannels.join(', ')}.`)
       : lm.brandAuthority?.socialLinksCount !== undefined
         ? (isAr
-            ? `ØªÙ… Ø±ØµØ¯ Ø­Ø¶ÙˆØ± Ù„Ù„Ø¹Ù„Ø§Ù…Ø© Ø¹Ù„Ù‰ ${lm.brandAuthority.socialLinksCount} Ù‚Ù†ÙˆØ§ØªØŒ Ù„ÙƒÙ† Ø§Ù„Ø±ÙˆØ§Ø¨Ø· ØºÙŠØ± Ù…ØªØ§Ø­Ø©.`
+            ? `تم رصد حضور للعلامة على ${lm.brandAuthority.socialLinksCount} قنوات، لكن الروابط غير متاحة.`
             : isEn
               ? `The brand is present on ${lm.brandAuthority.socialLinksCount} channels, but the URLs are unavailable.`
-              : `La marque est prÃ©sente sur ${lm.brandAuthority.socialLinksCount} canaux, mais les URLs sont indisponibles.`)
+              : `La marque est présente sur ${lm.brandAuthority.socialLinksCount} canaux, mais les URLs sont indisponibles.`)
         : ''
   ),
   firstNonEmpty(
@@ -11173,10 +11173,10 @@ const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
     lm.competitiveEdge,
     safeArray(rev.commonSuccessFactors)[2],
     isAr
-      ? 'Ù„Ø¯ÙŠÙ‡ Ø£ÙØ¶Ù„ÙŠØ© ØªØªØ±Ø§ÙƒÙ… Ù…Ø¹ Ø§Ù„ÙˆÙ‚Øª.'
+      ? 'لديه أفضلية تتراكم مع الوقت.'
       : isEn
         ? 'It has an advantage that compounds over time.'
-        : 'Il possÃ¨de un avantage qui se renforce avec le temps.'
+        : 'Il possède un avantage qui se renforce avec le temps.'
   )
 ].filter(Boolean).slice(0, 3);
     
@@ -11185,64 +11185,64 @@ const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
       prod.weakestProductFeature,
       safeArray(rev.glaringWeaknesses),
       safeArray(swot.weaknesses),
-      isAr ? 'Ø«ØºØ±Ø© ÙˆØ§Ø¶Ø­Ø© ÙŠÙ…ÙƒÙ† Ø§Ø³ØªØºÙ„Ø§Ù„Ù‡Ø§' : isEn ? 'a clear exploitable gap' : 'une faiblesse exploitable'
+      isAr ? 'ثغرة واضحة يمكن استغلالها' : isEn ? 'a clear exploitable gap' : 'une faiblesse exploitable'
     );
 
     const underservedSegment = firstNonEmpty(
       safeArray(swot.opportunities),
       md.blueOceanOpportunity,
       strategicBlueprint?.yourPositioning,
-      isAr ? 'Ø·Ù„Ø¨ ØºÙŠØ± Ù…Ø®Ø¯ÙˆÙ… Ø¬ÙŠØ¯Ø§Ù‹' : isEn ? 'underserved demand' : 'une demande encore mal servie'
+      isAr ? 'طلب غير مخدوم جيداً' : isEn ? 'underserved demand' : 'une demande encore mal servie'
     );
 
     const strategicAngle = firstNonEmpty(
       winningMove,
       strategicBlueprint?.salesAngleRecommended,
       strategicBlueprint?.uniqueAngle,
-      isAr ? 'Ø²Ø§ÙˆÙŠØ© ØªÙ…ÙˆÙ‚Ø¹ Ù…Ø®ØªÙ„ÙØ©' : isEn ? 'a differentiated angle' : 'un angle diffÃ©renciant'
+      isAr ? 'زاوية تموقع مختلفة' : isEn ? 'a differentiated angle' : 'un angle différenciant'
     );
 
     const actionItems = roadmap.length ? roadmap : (
       isAr ? [
-        'ÙˆØ¶Ø­ Ø¹Ø±Ø¶Ùƒ Ø­ÙˆÙ„ Ø§Ù„ÙØ¬ÙˆØ© Ø§Ù„ØªÙŠ Ù„Ø§ ÙŠØ³ÙŠØ·Ø± Ø¹Ù„ÙŠÙ‡Ø§ Ø§Ù„Ù…Ù†Ø§ÙØ³.',
-        'Ø£Ù†Ø´Ø¦ ØµÙØ­Ø© Ù‡Ø¨ÙˆØ· Ù…Ø±ÙƒØ²Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø·Ù„Ø¨ ØºÙŠØ± Ø§Ù„Ù…Ø®Ø¯ÙˆÙ… Ø¬ÙŠØ¯Ø§Ù‹.',
-        'Ø§Ø®ØªØ¨Ø± Ù‚Ù†Ø§Ø© Ø§ÙƒØªØ³Ø§Ø¨ ÙˆØ§Ø­Ø¯Ø© Ø¨Ø³Ø±Ø¹Ø© Ù‚Ø¨Ù„ Ø§Ù„ØªÙˆØ³Ø¹.'
+        'وضح عرضك حول الفجوة التي لا يسيطر عليها المنافس.',
+        'أنشئ صفحة هبوط مركزة على الطلب غير المخدوم جيداً.',
+        'اختبر قناة اكتساب واحدة بسرعة قبل التوسع.'
       ] : isEn ? [
         'Clarify your offer around the gap the competitor does not own.',
         'Launch a focused landing page for underserved demand.',
         'Validate one acquisition channel before scaling.'
       ] : [
-        "Clarifie ton offre autour de la faille que le concurrent ne contrÃ´le pas.",
-        "Lance une landing page ciblÃ©e sur la demande mal servie.",
+        "Clarifie ton offre autour de la faille que le concurrent ne contrôle pas.",
+        "Lance une landing page ciblée sur la demande mal servie.",
         "Valide un canal d'acquisition avant de scaler."
       ]
     );
 
     const decisionLayer = isAr ? {
-      topLabel: 'Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„ØªÙ†Ø§ÙØ³ÙŠ',
-      title: 'Ù…ÙˆÙ‚Ø¹Ùƒ Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠ ÙÙŠ Ù‡Ø°Ø§ Ø§Ù„Ø³ÙˆÙ‚',
-      subtitle: `Ø§ÙÙ‡Ù… Ù…Ù† ÙŠÙ‡ÙŠÙ…Ù† ÙÙŠ "${keyword || 'Ù‡Ø°Ø§ Ø§Ù„Ø³ÙˆÙ‚'}"ØŒ ÙˆÙ„Ù…Ø§Ø°Ø§ ÙŠØ±Ø¨Ø­ØŒ ÙˆØ£ÙŠÙ† ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¨Ù‚ÙˆØ©.`,
-      snapshot: 'Ù…Ù„Ø®Øµ Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠ',
-      verdictLabel: 'Ø­ÙƒÙ… Ø§Ù„Ø³ÙˆÙ‚',
-      verdictMain: `Ù‡Ø°Ø§ Ø§Ù„Ø³ÙˆÙ‚ ${difficulty} ÙˆÙŠØ¹ØªÙ…Ø¯ Ø¹Ù„Ù‰ ${primaryIntent}.`,
-      verdictSub: `Ø§Ù„Ù†Ø¬Ø§Ø­ Ù‡Ù†Ø§ ÙŠØ­ØªØ§Ø¬ Ø¥Ù„Ù‰ ${compact(dominantSuccessFactor, 'ØªÙ…ÙˆØ¶Ø¹ Ø°ÙƒÙŠ')} ÙˆÙ„ÙŠØ³ ÙÙ‚Ø· Ù…Ù†ØªØ¬ Ø£ÙØ¶Ù„.`,
-      verdictMicro: 'Ù‡Ø°Ø§ Ø§Ù„ØªÙ‚Ø¯ÙŠØ± Ù…Ø¨Ù†ÙŠ Ø¹Ù„Ù‰ Ø´Ø¯Ø© Ø§Ù„Ù…Ù†Ø§ÙØ³Ø© ÙˆÙ†ÙŠØ© Ø§Ù„Ø¨Ø­Ø« ÙˆÙ…Ø³ØªÙˆÙ‰ ØªÙ…ÙˆØ¶Ø¹ Ø§Ù„Ù„Ø§Ø¹Ø¨ÙŠÙ†.',
-      leaderLabel: 'Ù„Ù…Ø§Ø°Ø§ ÙŠØªÙÙˆÙ‚ Ø§Ù„Ù‚Ø§Ø¦Ø¯',
-      leaderMain: `Ø§Ù„Ù…ØªØµØ¯Ø± Ø§Ù„Ø­Ø§Ù„ÙŠ ÙŠØªÙÙˆÙ‚ Ø¨ÙØ¶Ù„ ${compact(coreMoat, 'Ø§Ù„Ø³Ù„Ø·Ø© ÙˆØ§Ù„Ø«Ù‚Ø© ÙˆØ§Ù„ØªÙ†ÙÙŠØ°')}.`,
-      leaderMicro: 'Ù‡Ø°Ù‡ Ù‡ÙŠ Ø§Ù„Ù…Ù†Ø¸ÙˆÙ…Ø© Ø§Ù„ØªÙŠ ØªØ­Ø§ÙØ¸ Ø¹Ù„Ù‰ ØªÙÙˆÙ‚Ù‡ØŒ ÙˆÙ„ÙŠØ³ Ù…Ø¬Ø±Ø¯ ØªÙØ§ØµÙŠÙ„ Ø³Ø·Ø­ÙŠØ©.',
-      gapLabel: 'Ø£Ù‡Ù… Ø«ØºØ±Ø© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„Ø§Ø³ØªØºÙ„Ø§Ù„',
-      gapMain: `Ø£Ø¶Ø¹Ù Ù†Ù‚Ø·Ø© Ù„Ø¯ÙŠÙ‡ Ù‡ÙŠ ${compact(weakness, 'Ø«ØºØ±Ø© ØªÙ†ÙÙŠØ°ÙŠØ© ÙˆØ§Ø¶Ø­Ø©')}.`,
-      gapSub: `Ù‡Ø°Ù‡ Ø§Ù„Ø«ØºØ±Ø© ØªÙØªØ­ Ù„Ùƒ ÙØ±ØµØ© Ù„Ø§Ù„ØªÙ‚Ø§Ø· ${compact(underservedSegment, 'Ø·Ù„Ø¨ ØºÙŠØ± Ù…Ø®Ø¯ÙˆÙ… Ø¬ÙŠØ¯Ø§Ù‹')}.`,
-      gapMicro: 'Ø±ÙƒØ² Ù‡Ù†Ø§ Ø£ÙˆÙ„Ø§Ù‹ØŒ Ù„Ø£Ù† Ø§Ù„Ù…ÙˆØ§Ø¬Ù‡Ø© ÙÙŠ Ù†Ù‚Ø§Ø· Ù‚ÙˆØªÙ‡ Ø³ØªÙƒÙˆÙ† Ø£ØºÙ„Ù‰ ÙˆØ£ØµØ¹Ø¨.',
-      moveLabel: 'Ø£ÙØ¶Ù„ Ù‡Ø¬ÙˆÙ… Ù…Ù‚ØªØ±Ø­',
-      moveMain: `ØªØ­Ø±Ùƒ Ø¹Ø¨Ø± ${compact(strategicAngle, 'Ø²Ø§ÙˆÙŠØ© ØªÙ…ÙˆÙ‚Ø¹ Ù…Ø®ØªÙ„ÙØ©')} Ø¨Ø¯Ù„ Ø§Ù„Ù…ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø©.`,
-      moveSub: 'Ù‡Ø°Ù‡ Ø§Ù„Ù…Ù‚Ø§Ø±Ø¨Ø© ØªØªÙØ§Ø¯Ù‰ Ù‚ÙˆØªÙ‡ ÙˆØªØ³ØªÙ‡Ø¯Ù Ø­Ø§Ø¬Ø© Ù„Ù… ØªÙÙ„Ø¨Ù‘ÙŽ Ø¬ÙŠØ¯Ø§Ù‹.',
-      moveMicro: 'Ø§Ù„Ù‡Ø¯Ù Ù‡Ùˆ ØªØ­Ù‚ÙŠÙ‚ Ø£Ø«Ø± Ø£Ø³Ø±Ø¹ Ù…Ø¹ Ù…Ù‚Ø§ÙˆÙ…Ø© Ø£Ù‚Ù„.',
-      actionsLabel: 'Ù…Ø§Ø°Ø§ ØªÙØ¹Ù„ Ø§Ù„Ø¢Ù†',
-      actionsTitle: 'Ø§Ø¨Ø¯Ø£ Ø¨Ù‡Ø°Ù‡ Ø§Ù„Ø®Ø·ÙˆØ§Øª Ø§Ù„Ø«Ù„Ø§Ø«',
-      actionsMicro: 'Ù‡Ø°Ù‡ Ø§Ù„Ø®Ø·ÙˆØ§Øª Ù…Ø±ØªØ¨Ø© Ø­Ø³Ø¨ Ø§Ù„Ø³Ø±Ø¹Ø© ÙˆØ§Ù„ØªØ£Ø«ÙŠØ± ÙˆØ³Ù‡ÙˆÙ„Ø© Ø§Ù„ØªÙ†ÙÙŠØ°.',
-      closingDivider: 'â€” Ø§Ù†ØªÙ‡Ù‰ Ø§Ù„Ù…Ù„Ø®Øµ Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠ â€”',
-      closingText: 'Ø§Ù„Ø¢Ù† Ù„Ø¯ÙŠÙƒ Ù…Ø³Ø§Ø± Ø£ÙˆØ¶Ø­ Ù„Ù„Ù…Ù†Ø§ÙØ³Ø© Ø¨Ø¯ÙˆÙ† ØªØ®Ù…ÙŠÙ†.',
+      topLabel: 'الذكاء التنافسي',
+      title: 'موقعك الاستراتيجي في هذا السوق',
+      subtitle: `افهم من يهيمن في "${keyword || 'هذا السوق'}"، ولماذا يربح، وأين يمكنك الدخول بقوة.`,
+      snapshot: 'ملخص استراتيجي',
+      verdictLabel: 'حكم السوق',
+      verdictMain: `هذا السوق ${difficulty} ويعتمد على ${primaryIntent}.`,
+      verdictSub: `النجاح هنا يحتاج إلى ${compact(dominantSuccessFactor, 'تموضع ذكي')} وليس فقط منتج أفضل.`,
+      verdictMicro: 'هذا التقدير مبني على شدة المنافسة ونية البحث ومستوى تموضع اللاعبين.',
+      leaderLabel: 'لماذا يتفوق القائد',
+      leaderMain: `المتصدر الحالي يتفوق بفضل ${compact(coreMoat, 'السلطة والثقة والتنفيذ')}.`,
+      leaderMicro: 'هذه هي المنظومة التي تحافظ على تفوقه، وليس مجرد تفاصيل سطحية.',
+      gapLabel: 'أهم ثغرة قابلة للاستغلال',
+      gapMain: `أضعف نقطة لديه هي ${compact(weakness, 'ثغرة تنفيذية واضحة')}.`,
+      gapSub: `هذه الثغرة تفتح لك فرصة لالتقاط ${compact(underservedSegment, 'طلب غير مخدوم جيداً')}.`,
+      gapMicro: 'ركز هنا أولاً، لأن المواجهة في نقاط قوته ستكون أغلى وأصعب.',
+      moveLabel: 'أفضل هجوم مقترح',
+      moveMain: `تحرك عبر ${compact(strategicAngle, 'زاوية تموقع مختلفة')} بدل المواجهة المباشرة.`,
+      moveSub: 'هذه المقاربة تتفادى قوته وتستهدف حاجة لم تُلبَّ جيداً.',
+      moveMicro: 'الهدف هو تحقيق أثر أسرع مع مقاومة أقل.',
+      actionsLabel: 'ماذا تفعل الآن',
+      actionsTitle: 'ابدأ بهذه الخطوات الثلاث',
+      actionsMicro: 'هذه الخطوات مرتبة حسب السرعة والتأثير وسهولة التنفيذ.',
+      closingDivider: '— انتهى الملخص الاستراتيجي —',
+      closingText: 'الآن لديك مسار أوضح للمنافسة بدون تخمين.',
       proofItems,
       actionItems
     } : isEn ? {
@@ -11442,7 +11442,7 @@ function buildTechnicalAssetThinkingLayer(url, lang = 'fr', type = 'system', ana
     ].filter(Boolean).length;
     const productScore = [
         /product|produit|shop|store|boutique|ecommerce|e-commerce|stock|shipping|delivery|livraison|retour|returns|cart|panier|checkout|commande/i.test(sourceText),
-        /price|prix|mad|eur|usd|\$|â‚¬|Ø¯\.Ù…|Ø¯Ø±Ù‡Ù…/i.test(sourceText) && /acheter|buy|order|commander|stock|livraison|delivery/i.test(sourceText)
+        /price|prix|mad|eur|usd|\$|€|د\.م|درهم/i.test(sourceText) && /acheter|buy|order|commander|stock|livraison|delivery/i.test(sourceText)
     ].filter(Boolean).length;
     const offerType = productScore > serviceScore ? 'product' : serviceScore > 0 ? 'service' : 'unknown';
     const safeFacts = [title, description, h1, ...proofCandidates].filter(Boolean).slice(0, 8);
@@ -11472,13 +11472,13 @@ function buildDeterministicTechnicalAssets(url, lang = 'fr', type = 'system', an
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
     const offer = t.description || t.title || t.domain;
-    const qOffer = isAr ? 'Ù…Ø§ Ø§Ù„Ø°ÙŠ ÙŠÙ‚Ø¯Ù…Ù‡ Ù‡Ø°Ø§ Ø§Ù„Ù…ÙˆÙ‚Ø¹ØŸ' : isEn ? 'What does this page offer?' : 'Que propose cette page ?';
-    const qProof = isAr ? 'Ù…Ø§ Ø§Ù„Ø¯Ù„ÙŠÙ„ Ø§Ù„Ù…ØªØ§Ø­ØŸ' : isEn ? 'What proof is available?' : 'Quelle preuve est disponible ?';
+    const qOffer = isAr ? 'ما الذي يقدمه هذا الموقع؟' : isEn ? 'What does this page offer?' : 'Que propose cette page ?';
+    const qProof = isAr ? 'ما الدليل المتاح؟' : isEn ? 'What proof is available?' : 'Quelle preuve est disponible ?';
     const answer = isAr
-        ? `${t.domain} ÙŠØ¹Ø±Ø¶ ${offer}. Ø£ÙŠ Ø³Ø¹Ø± Ø£Ùˆ Ø¶Ù…Ø§Ù† Ø£Ùˆ Ù†ØªÙŠØ¬Ø© ØºÙŠØ± Ù…Ø¤ÙƒØ¯Ø© ÙŠØ¬Ø¨ Ø£Ù† ØªØ¨Ù‚Ù‰ Ø¨ØµÙŠØºØ© "Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªØ­Ù‚Ù‚".`
+        ? `${t.domain} يعرض ${offer}. أي سعر أو ضمان أو نتيجة غير مؤكدة يجب أن تبقى بصيغة "قابل للتحقق".`
         : isEn
             ? `${t.domain} presents ${offer}. Any unobserved price, warranty or result must remain marked as "to confirm".`
-            : `${t.domain} prÃ©sente ${offer}. Tout prix, garantie ou rÃ©sultat non observÃ© doit rester marquÃ© comme "Ã  confirmer".`;
+            : `${t.domain} présente ${offer}. Tout prix, garantie ou résultat non observé doit rester marqué comme "à confirmer".`;
     const facts = t.safeFacts.length ? t.safeFacts : [offer];
     const schema = {
         '@context': 'https://schema.org',
@@ -11529,18 +11529,18 @@ function buildDeterministicTechnicalAssets(url, lang = 'fr', type = 'system', an
     ].join('\n');
     const securityTxt = `# security.txt template\n# Add a real security contact before publishing.\nPolicy: ${t.origin}/security\nPreferred-Languages: ${isAr ? 'ar, fr, en' : isEn ? 'en, fr, ar' : 'fr, en, ar'}`;
     const readinessSteps = isAr
-        ? ['Ø§Ù†Ø³Ø® Ø§Ù„ÙƒÙˆØ¯ ÙÙŠ Ø§Ù„Ù…ÙƒØ§Ù† Ø§Ù„Ù…Ù†Ø§Ø³Ø¨.', 'Ø§Ø®ØªØ¨Ø± Ø§Ù„Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ø¹Ø§Ù…Ø©.', 'Ø§Ø­Ø°Ù Ø£ÙŠ Ø§Ø¯Ø¹Ø§Ø¡ ØºÙŠØ± Ù…Ø«Ø¨Øª Ù‚Ø¨Ù„ Ø§Ù„Ù†Ø´Ø±.']
+        ? ['انسخ الكود في المكان المناسب.', 'اختبر الروابط العامة.', 'احذف أي ادعاء غير مثبت قبل النشر.']
         : isEn
             ? ['Copy each asset into the right target.', 'Test public URLs.', 'Remove every unverified claim before publishing.']
-            : ['Copier chaque livrable dans la bonne zone.', 'Tester les URLs publiques.', 'Supprimer toute affirmation non prouvÃ©e avant publication.'];
+            : ['Copier chaque livrable dans la bonne zone.', 'Tester les URLs publiques.', 'Supprimer toute affirmation non prouvée avant publication.'];
     return {
         success: true,
         source: 'server-business-thinking',
         type,
         businessThinking: t,
-        auditComment: isAr ? 'Ø­Ø²Ù…Ø© Ù…Ø¨Ù†ÙŠØ© Ù…Ù† Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø© Ù‚Ø¨Ù„ Ø£ÙŠ ØªØ­Ø³ÙŠÙ† Ø¨Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ.' : isEn ? 'Pack built from observed evidence before any AI refinement.' : 'Pack construit depuis les preuves observÃ©es avant enrichissement IA.',
+        auditComment: isAr ? 'حزمة مبنية من الأدلة المرصودة قبل أي تحسين بالذكاء الاصطناعي.' : isEn ? 'Pack built from observed evidence before any AI refinement.' : 'Pack construit depuis les preuves observées avant enrichissement IA.',
         installTarget: type === 'system' ? 'Root files: /robots.txt, /llms.txt, /sitemap.xml' : type === 'markdown' ? '<head>' : 'Visible page block + JSON-LD',
-        validation: isAr ? 'Ø§Ù„ØªØ­Ù‚Ù‚ Ø§Ù„ÙŠØ¯ÙˆÙŠ Ù…Ø·Ù„ÙˆØ¨ Ù‚Ø¨Ù„ Ø§Ù„Ù†Ø´Ø±.' : isEn ? 'Manual validation required before publishing.' : 'Validation manuelle requise avant publication.',
+        validation: isAr ? 'التحقق اليدوي مطلوب قبل النشر.' : isEn ? 'Manual validation required before publishing.' : 'Validation manuelle requise avant publication.',
         readinessSteps,
         installChecklist: readinessSteps,
         evidenceUsed: facts,
@@ -11593,12 +11593,12 @@ app.post('/api/generate-seo-assets', async (req, res) => {
             return res.status(400).json({ success: false, error: 'URL et Type requis.' });
         }
 
-        console.log(`[Gen-AI] GÃ©nÃ©ration '${type}' pour ${url} (Langue: ${lang})`);
+        console.log(`[Gen-AI] Génération '${type}' pour ${url} (Langue: ${lang})`);
 
         deterministicAsset = buildDeterministicTechnicalAssets(url, lang || 'fr', type, analysisContext || {});
 
         let systemPrompt = "";
-        // On force l'IA Ã  se baser SUR LES DONNÃ‰ES existantes pour Ã©viter les hallucinations
+        // On force l'IA à se baser SUR LES DONNÉES existantes pour éviter les hallucinations
         let userPrompt = [
             `URL cible : ${url}`,
             `Langue de sortie OBLIGATOIRE : ${lang || 'fr'}`,
@@ -11607,37 +11607,37 @@ app.post('/api/generate-seo-assets', async (req, res) => {
             `Contexte extrait du site : ${JSON.stringify(analysisContext || {})}`
         ].join('\n');
 
-        // ðŸ§  PROMPT ENGINEERING COERCITIF (La vraie diffÃ©rence avec un ChatGPT basique)
+        // 🧠 PROMPT ENGINEERING COERCITIF (La vraie différence avec un ChatGPT basique)
         if (type === 'markdown') {
-            systemPrompt = `Tu es un IngÃ©nieur SEO Technique Senior. Oublie le marketing classique. Ton but est de gÃ©nÃ©rer un code HTML de production.
-RÃˆGLES ABSOLUES :
-1. <title> : EXACTEMENT entre 50 et 60 caractÃ¨res. Le mot-clÃ© principal au dÃ©but.
-2. <meta name="description"> : EXACTEMENT entre 140 et 155 caractÃ¨res. Doit inclure des entitÃ©s fortes et un CTA factuel.
+            systemPrompt = `Tu es un Ingénieur SEO Technique Senior. Oublie le marketing classique. Ton but est de générer un code HTML de production.
+RÈGLES ABSOLUES :
+1. <title> : EXACTEMENT entre 50 et 60 caractères. Le mot-clé principal au début.
+2. <meta name="description"> : EXACTEMENT entre 140 et 155 caractères. Doit inclure des entités fortes et un CTA factuel.
 3. INCLURE les balises Open Graph (og:title, og:description, og:url, og:type="website").
 4. INCLURE les Twitter Cards (twitter:card="summary_large_image").
-GÃ©nÃ¨re UN JSON STRICT : {"htmlHeader": "<Le bloc complet de balises...>", "auditComment": "Explication technique courte (ex: 'Title optimisÃ© Ã  58 chars, OG tags injectÃ©s')."}. ZÃ‰RO markdown autour du JSON.`;
+Génère UN JSON STRICT : {"htmlHeader": "<Le bloc complet de balises...>", "auditComment": "Explication technique courte (ex: 'Title optimisé à 58 chars, OG tags injectés')."}. ZÉRO markdown autour du JSON.`;
 
         } else if (type === 'aeo_geo') {
-            systemPrompt = `Tu es un Data Scientist spÃ©cialisÃ© en SGE (Search Generative Experience) et LLMs.
-RÃˆGLES ABSOLUES POUR RENDRE LES PREUVES LISIBLES PAR LES IA (ChatGPT/Perplexity/Google) :
-1. aeoCode (JSON-LD FAQPage) : GÃ©nÃ¨re 3 questions/rÃ©ponses basÃ©es sur le contexte. Les rÃ©ponses DOIVENT faire entre 40 et 50 mots (optimisation pour la lecture vocale). Format strict : Sujet-Verbe-Objet. ZÃ©ro mÃ©taphore.
-2. geoCode (HTML SGE) : CrÃ©e un bloc HTML pur <section class="sge-optimized">. Inclus un rÃ©sumÃ© factuel de 45 mots, suivi d'une liste <ul> contenant des DONNÃ‰ES (prix, chiffres, entitÃ©s nommÃ©es). Les IA adorent scraper les listes et les chiffres.
-GÃ©nÃ¨re UN JSON STRICT : {"aeoCode": "<script type='application/ld+json'>...</script>", "geoCode": "<section>...</section>", "auditComment": "Preuves structurÃ©es pour une lecture IA vÃ©rifiable."}. ZÃ‰RO markdown autour.`;
+            systemPrompt = `Tu es un Data Scientist spécialisé en SGE (Search Generative Experience) et LLMs.
+RÈGLES ABSOLUES POUR RENDRE LES PREUVES LISIBLES PAR LES IA (ChatGPT/Perplexity/Google) :
+1. aeoCode (JSON-LD FAQPage) : Génère 3 questions/réponses basées sur le contexte. Les réponses DOIVENT faire entre 40 et 50 mots (optimisation pour la lecture vocale). Format strict : Sujet-Verbe-Objet. Zéro métaphore.
+2. geoCode (HTML SGE) : Crée un bloc HTML pur <section class="sge-optimized">. Inclus un résumé factuel de 45 mots, suivi d'une liste <ul> contenant des DONNÉES (prix, chiffres, entités nommées). Les IA adorent scraper les listes et les chiffres.
+Génère UN JSON STRICT : {"aeoCode": "<script type='application/ld+json'>...</script>", "geoCode": "<section>...</section>", "auditComment": "Preuves structurées pour une lecture IA vérifiable."}. ZÉRO markdown autour.`;
 
         } else if (type === 'system') {
-            systemPrompt = `Tu es un IngÃ©nieur DevSecOps.
-RÃˆGLES ABSOLUES POUR LES FICHIERS SYSTÃˆMES :
-1. robots.txt : ProtÃ¨ge les rÃ©pertoires sensibles (/admin, /wp-admin), mais AUTORISE explicitement (Allow:) Google-Extended, GPTBot, ClaudeBot, et PerplexityBot Ã  crawler les pages publiques. C'est vital pour le SEO IA.
-2. llms.txt : Ce fichier sert de base de donnÃ©es (RAG) pour les IA. Formate-le en Markdown ultra-strict. Utilise des paires ClÃ©-Valeur. 
+            systemPrompt = `Tu es un Ingénieur DevSecOps.
+RÈGLES ABSOLUES POUR LES FICHIERS SYSTÈMES :
+1. robots.txt : Protège les répertoires sensibles (/admin, /wp-admin), mais AUTORISE explicitement (Allow:) Google-Extended, GPTBot, ClaudeBot, et PerplexityBot à crawler les pages publiques. C'est vital pour le SEO IA.
+2. llms.txt : Ce fichier sert de base de données (RAG) pour les IA. Formate-le en Markdown ultra-strict. Utilise des paires Clé-Valeur.
    Sections obligatoires : # Identity, # Core Offer, # Pricing, # Key Facts. 
-   Style : Phrases ultra-courtes. ZÃ©ro adjectif marketing (pas de "nous sommes les meilleurs"). Uniquement des faits bruts.
-GÃ©nÃ¨re UN JSON STRICT : {"robotsTxt": "User-agent: ...", "llmsTxt": "# Identity...", "auditComment": "RÃ¨gles d'exploration et LLM RAG configurÃ©es."}. ZÃ‰RO markdown autour.`;
+   Style : Phrases ultra-courtes. Zéro adjectif marketing (pas de "nous sommes les meilleurs"). Uniquement des faits bruts.
+Génère UN JSON STRICT : {"robotsTxt": "User-agent: ...", "llmsTxt": "# Identity...", "auditComment": "Règles d'exploration et LLM RAG configurées."}. ZÉRO markdown autour.`;
 
         } else {
             return res.status(400).json({ success: false, error: 'Type invalide.' });
         }
 
-        // Hachage du cache pour unicitÃ© totale
+        // Hachage du cache pour unicité totale
         systemPrompt = buildRealResultsAssetPrompt(type) || systemPrompt;
         const hash = crypto.createHash('sha256').update(userPrompt + systemPrompt).digest('hex');
         const cacheKey = `genAsset_${hash}`;
@@ -11648,10 +11648,10 @@ GÃ©nÃ¨re UN JSON STRICT : {"robotsTxt": "User-agent: ...", "llmsTxt": "# Ide
             return res.json({ success: true, data: cached });
         }
 
-        // Appel Ã  l'IA
+        // Appel à l'IA
         const aiResult = await callOpenRouterAPI(userPrompt, {
             systemPrompt: systemPrompt,
-            temperature: 0.1, // ðŸ”´ TEMPÃ‰RATURE TRÃˆS BASSE : On veut de la prÃ©cision chirurgicale, pas de la crÃ©ativitÃ© littÃ©raire.
+            temperature: 0.1, // 🔴 TEMPÉRATURE TRÈS BASSE : On veut de la précision chirurgicale, pas de la créativité littéraire.
             maxTokens: 2500,
             expectedFormat: 'json',
             context: `GenAsset-${type}`
@@ -11680,26 +11680,26 @@ GÃ©nÃ¨re UN JSON STRICT : {"robotsTxt": "User-agent: ...", "llmsTxt": "# Ide
         res.status(500).json({ success: false, error: error.message });
     }
 });
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”‘ MODULE 4: KEYWORD EXTRACTION FROM CONTENT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🔑 MODULE 4: KEYWORD EXTRACTION FROM CONTENT
+// ═══════════════════════════════════════════════════════════════════
 
 function extractKeywordsFromContent(content, maxKeywords = 20) {
     if (!content) return [];
 
     try {
         const stopWords = new Set([
-            // FranÃ§ais
+            // Français
             'dans', 'avec', 'pour', 'votre', 'notre', 'leurs', 'cette',
-            'tous', 'fait', 'faire', 'plus', 'Ãªtre', 'avoir', 'aussi', 'comme',
-            'nous', 'vous', 'elles', 'ils', 'ceci', 'cela', 'tres', 'trÃ¨s',
+            'tous', 'fait', 'faire', 'plus', 'être', 'avoir', 'aussi', 'comme',
+            'nous', 'vous', 'elles', 'ils', 'ceci', 'cela', 'tres', 'très',
             // Arabe
-            'Ø¹Ù„Ù‰', 'ÙÙŠ', 'Ù…Ù†', 'Ø¥Ù„Ù‰', 'Ù…Ø¹', 'Ù‡Ø°Ø§', 'Ù‡Ø°Ù‡', 'ØªÙ…',
-            'Ø¹Ù†', 'ÙƒØ§Ù†', 'ÙƒØ§Ù†Øª', 'Ø§Ù†', 'Ø£Ù†'
+            'على', 'في', 'من', 'إلى', 'مع', 'هذا', 'هذه', 'تم',
+            'عن', 'كان', 'كانت', 'ان', 'أن'
         ]);
 
         const words = content.toLowerCase()
-            .replace(/[^a-zÃ -Ã¿0-9\u0600-\u06FF\s]/g, ' ')
+            .replace(/[^a-zà-ÿ0-9\u0600-\u06FF\s]/g, ' ')
             .split(/\s+/)
             .filter(word => {
                 if (!word) return false;
@@ -11709,7 +11709,7 @@ function extractKeywordsFromContent(content, maxKeywords = 20) {
                 return !isShort && !isStop && !isNumeric;
             });
 
-        if (words.length === 0) return []; // âœ… Guard ajoutÃ©
+        if (words.length === 0) return []; // ✅ Guard ajouté
 
         const frequency = {};
         words.forEach(word => {
@@ -11720,52 +11720,52 @@ function extractKeywordsFromContent(content, maxKeywords = 20) {
             .sort((a, b) => b[1] - a[1])
             .slice(0, maxKeywords)
             .map(([word, count]) => {
-                // âœ… FIX : density reste un number propre
+                // ✅ FIX : density reste un number propre
                 const density = parseFloat(((count / words.length) * 100).toFixed(2));
                 return {
                     keyword : word,
                     count   : count,
-                    density : density,        // âœ… number : 2.45
-                    densityLabel: density + '%' // âœ… string : "2.45%"
+                    density : density,        // ✅ number : 2.45
+                    densityLabel: density + '%' // ✅ string : "2.45%"
                 };
             });
 
-        console.log(`ðŸ“Š [V11-SEO] Extraction terminÃ©e : ${sortedKeywords.length} mots-clÃ©s trouvÃ©s.`);
+        console.log(`📊 [V11-SEO] Extraction terminée : ${sortedKeywords.length} mots-clés trouvés.`);
         return sortedKeywords;
 
     } catch (error) {
-        console.error('âŒ Keyword extraction failed:', error.message);
+        console.error('❌ Keyword extraction failed:', error.message);
         return [];
     }
 }
 
 
-console.log('âœ… extractKeywordsFromContent loaded');
+console.log('✅ extractKeywordsFromContent loaded');
 
-console.log('\nâœ… PARTIE 4/5: Business Logic Modules loaded successfully\n');
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”¥ PARTIE 5/5: AIDA FUNNEL + ROUTES API + SERVER (FINAL)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+console.log('\n✅ PARTIE 4/5: Business Logic Modules loaded successfully\n');
+// ═══════════════════════════════════════════════════════════════════
+// 🔥 PARTIE 5/5: AIDA FUNNEL + ROUTES API + SERVER (FINAL)
+// ═══════════════════════════════════════════════════════════════════
 // Modules: AIDA Funnel Generator | Complete API Routes | Error Handlers
 // Features: Graceful shutdown | Health checks | Production-ready
-// This is the FINAL piece - Server is ready to CRUSH competitors! ðŸš€
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// This is the FINAL piece - Server is ready to CRUSH competitors! 🚀
+// ═══════════════════════════════════════════════════════════════════
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸŽ¯ MODULE 5: AIDA FUNNEL GENERATOR (THE CROWN JEWEL)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🎯 MODULE 5: AIDA FUNNEL GENERATOR (THE CROWN JEWEL)
+// ═══════════════════════════════════════════════════════════════════
 // Intelligence: Multi-phase analysis | Deep competitor insights
 // Performance: Parallel processing | Smart caching
 // Quality: Expert-level marketing copy | Conversion-optimized
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•µï¸ /api/analyze-funnel V8 ULTRA â€” SynchronisÃ© avec ton serveur
+// ═══════════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
+// 🕵️ /api/analyze-funnel V8 ULTRA — Synchronisé avec ton serveur
 // Utilise : scrapeSiteData, callOpenRouterAPI, CacheManager,
 //           InputValidator, RetryManager, updateMetrics, cheerio
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════════
 
 
-// âœ… FIX BUG 2 & 3 â€” Ajouter url en paramÃ¨tre
+// ✅ FIX BUG 2 & 3 — Ajouter url en paramètre
 function extractSEOIntel(html, pageUrl = '') {
     const $ = cheerio.load(html || '');
 
@@ -11853,13 +11853,13 @@ function extractSEOIntel(html, pageUrl = '') {
 
     const stopWords = new Set([
         'dans', 'avec', 'pour', 'votre', 'notre', 'leurs', 'cette',
-        'tous', 'fait', 'faire', 'plus', 'Ãªtre', 'avoir', 'aussi', 'comme',
-        'nous', 'vous', 'elles', 'ils', 'ceci', 'cela', 'tres', 'trÃ¨s',
+        'tous', 'fait', 'faire', 'plus', 'être', 'avoir', 'aussi', 'comme',
+        'nous', 'vous', 'elles', 'ils', 'ceci', 'cela', 'tres', 'très',
         'the', 'of', 'and', 'in', 'to', 'for', 'a', 'an', 'is', 'are',
         'was', 'this', 'that', 'le', 'la', 'les', 'de', 'des', 'un', 'une',
         'et', 'en', 'au', 'du', 'ce', 'est', 'sur', 'nos', 'par', 'que',
         'qui', 'je', 'il',
-        'Ù…Ù†', 'ÙÙŠ', 'Ø¹Ù„Ù‰', 'Ù‡Ø°Ø§', 'Ù‡Ø°Ù‡', 'Ù…Ø¹', 'Ù‡Ùˆ', 'Ù‡ÙŠ', 'Ø£Ù†', 'Ø¥Ù„Ù‰', 'Ø¹Ù†', 'ÙƒØ§Ù†'
+        'من', 'في', 'على', 'هذا', 'هذه', 'مع', 'هو', 'هي', 'أن', 'إلى', 'عن', 'كان'
     ]);
 
     const bodyTextRaw = $('body').text().replace(/\s+/g, ' ').trim();
@@ -11950,7 +11950,7 @@ function extractSEOIntel(html, pageUrl = '') {
     const issues = [];
 
     if (!title) {
-        issues.push({ severity: 'HIGH', field: 'title', issue: 'Title manquant â€” suicide SEO' });
+        issues.push({ severity: 'HIGH', field: 'title', issue: 'Title manquant — suicide SEO' });
     } else if (titleLength < 30) {
         issues.push({ severity: 'HIGH', field: 'title', issue: `Title trop court (${titleLength} chars < 30)` });
     } else if (titleLength > 65) {
@@ -11968,7 +11968,7 @@ function extractSEOIntel(html, pageUrl = '') {
     if (h1Count === 0) {
         issues.push({ severity: 'HIGH', field: 'h1', issue: 'H1 absent' });
     } else if (h1Count > 1) {
-        issues.push({ severity: 'MEDIUM', field: 'h1', issue: `${h1Count} H1 dÃ©tectÃ©s â€” doit Ãªtre unique` });
+        issues.push({ severity: 'MEDIUM', field: 'h1', issue: `${h1Count} H1 détectés — doit être unique` });
     }
 
     const missingAlt = $('img:not([alt]), img[alt=""]').length;
@@ -11981,7 +11981,7 @@ function extractSEOIntel(html, pageUrl = '') {
     }
 
     if (!viewport) {
-        issues.push({ severity: 'HIGH', field: 'mobile', issue: 'Viewport absent â€” pÃ©nalitÃ© Google' });
+        issues.push({ severity: 'HIGH', field: 'mobile', issue: 'Viewport absent — pénalité Google' });
     }
 
     if (!ogTitle) {
@@ -12017,11 +12017,11 @@ function extractSEOIntel(html, pageUrl = '') {
     const hasSchema = schemaBlocks.length > 0;
     const hasFAQ =
         $('[itemtype*="FAQPage"], .faq, #faq, [class*="faq"], details, summary').length > 0 ||
-        /faq|frequently\s+asked|questions?\s+fr[Ã©e]quentes?/i.test(html || '');
+        /faq|frequently\s+asked|questions?\s+fr[ée]quentes?/i.test(html || '');
 
     const hasHowTo =
         $('[itemtype*="HowTo"]').length > 0 ||
-        /how.to|Ã©tapes/i.test(html || '');
+        /how.to|étapes/i.test(html || '');
 
     const hasDefinitions = $('dt, dfn').length > 0;
 
@@ -12134,7 +12134,7 @@ function extractSEOIntel(html, pageUrl = '') {
             url: pageUrl,
             sourceUrl: pageUrl,
             href: x.href || '',
-            text: x.text || 'Lien sans libellÃ©',
+            text: x.text || 'Lien sans libellé',
             status: 'BROKEN_ANCHOR'
         }))
         .filter((item, index, list) =>
@@ -12309,7 +12309,7 @@ function extractSEOIntel(html, pageUrl = '') {
 }
 
 
-// âœ… VERSION DEEP â€” extractPerfSignals
+// ✅ VERSION DEEP — extractPerfSignals
 async function verifyObservedLink(link = {}, timeoutMs = 3200) {
     const targetUrl = link.targetUrl || link.normalized || link.url || link.href;
     if (!isPublicHttpUrl(targetUrl)) {
@@ -12596,7 +12596,7 @@ async function buildLinkIntelligence(seoIntel = {}, targetUrl = '') {
 function extractPerfSignals(html) {
     const $ = cheerio.load(html);
 
-    // â”€â”€ IMAGES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── IMAGES ───────────────────────────────────────────────
     const imgTags        = $('img').length;
     const imgDataSrc     = $('img[data-src], img[data-lazy-src], img[data-original]').length;
     const bgImages       = (html.match(/url\(?['"]?https?:\/\/[^'")\s]+\.(png|jpg|jpeg|webp|gif|svg)/gi) || []).length;
@@ -12606,28 +12606,28 @@ function extractPerfSignals(html) {
                          + (html.match(/\.webp/gi) || []).length;
     const lazyLoadImages = $('img[loading="lazy"]').length + imgDataSrc;
 
-    // â”€â”€ VIDÃ‰O â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── VIDÉO ────────────────────────────────────────────────
     const hasVideo = $('video').length > 0
         || /\.mp4|\.webm|\.ogg/i.test(html)
         || /youtube\.com|youtu\.be|vimeo\.com|dailymotion\.com/i.test(html)
         || $('iframe[src*="youtube"], iframe[src*="vimeo"]').length > 0;
 
-    // â”€â”€ FAQ â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const hasFAQ = /faq|frequently\s+asked|questions?\s+fr[Ã©e]quentes?/i.test(html)
-        || /Ø£Ø³Ø¦Ù„Ø©|Ø³Ø¤Ø§Ù„|Ø§Ù„Ø£Ø³Ø¦Ù„Ø©\s+Ø§Ù„Ø´Ø§Ø¦Ø¹Ø©/i.test(html)
+    // ── FAQ ──────────────────────────────────────────────────
+    const hasFAQ = /faq|frequently\s+asked|questions?\s+fr[ée]quentes?/i.test(html)
+        || /أسئلة|سؤال|الأسئلة\s+الشائعة/i.test(html)
         || /accordion|collapse|toggle/i.test(html)
         || $('[class*="faq"], [id*="faq"], [class*="accordion"], [class*="collapse"], details, summary').length > 0;
 
-    // â”€â”€ SCRIPTS & CSS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── SCRIPTS & CSS ─────────────────────────────────────────
     const externalScripts  = $('script[src]').length;
     const cssFiles         = $('link[rel="stylesheet"]').length;
     const hasMinified      = /\.min\.js|\.min\.css/.test(html);
     const hasServiceWorker = /serviceWorker/i.test(html);
 
-    // â”€â”€ INFRA CDN â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── INFRA CDN ─────────────────────────────────────────────
     const hasCDN = /cloudflare|cloudfront|fastly|akamai|jsdelivr|unpkg/i.test(html);
 
-    // â”€â”€ CONVERSION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── CONVERSION ────────────────────────────────────────────
     const hasExitIntent = /exit[\-_.]?intent|mouseleave|beforeunload/i.test(html);
     const hasPopup      = /modal|popup|lightbox|overlay/i.test(html);
     const hasCountdown  = /countdown|timer|count-?down|compte[\-.]?rebours/i.test(html);
@@ -12647,21 +12647,21 @@ function extractPerfSignals(html) {
     };
 }
 
-// âœ… calculateAdvancedScores
+// ✅ calculateAdvancedScores
 function calculateAdvancedScores(report, techStack, psychTriggers, perfSignals) {
     let seo = 0, trust = 0, conversion = 0, performance = 0, funnel = 0;
 
-    // â”€â”€ SEO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── SEO ───────────────────────────────────────────────────
     seo += (report?.financialIntel?.estimatedMonthlyTraffic || 0) > 10000 ? 30 : 15;
     seo += (techStack?.analytics?.length || 0) * 10;
 
-    // â”€â”€ TRUST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── TRUST ─────────────────────────────────────────────────
     trust += (psychTriggers?.social_proof?.length || 0) * 10;
     trust += (psychTriggers?.guarantees?.length   || 0) * 15;
     trust += (psychTriggers?.authority?.length    || 0) * 8;
     trust += (techStack?.chat_support?.length     || 0) * 5;
 
-    // â”€â”€ CONVERSION â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── CONVERSION ───────────────────────────────────────────
     conversion += (psychTriggers?.cta_buttons?.length   || 0) * 5;
     conversion += (psychTriggers?.urgency?.length        || 0) * 8;
     conversion += (psychTriggers?.scarcity?.length       || 0) * 10;
@@ -12671,20 +12671,20 @@ function calculateAdvancedScores(report, techStack, psychTriggers, perfSignals) 
     conversion += perfSignals?.hasExitIntent ? 10 : 0;
     conversion += perfSignals?.hasPopup      ?  5 : 0;
 
-    // â”€â”€ PERFORMANCE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── PERFORMANCE ───────────────────────────────────────────
     performance += perfSignals?.hasCDN                         ? 20 : 0;
     performance += (perfSignals?.lazyLoadImages  || 0) > 0     ? 15 : 0;
     performance += (perfSignals?.externalScripts || 0) < 5     ? 20
                  : (perfSignals?.externalScripts || 0) < 10    ? 10 : 0;
     performance += perfSignals?.hasServiceWorker               ? 15 : 0;
 
-    // â”€â”€ FUNNEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── FUNNEL ────────────────────────────────────────────────
     funnel += (techStack?.payment?.length         || 0) * 20;
     funnel += (techStack?.email_marketing?.length || 0) * 15;
     funnel += (techStack?.funnel_builders?.length || 0) * 25;
     funnel += perfSignals?.hasPopup               ?  10 : 0;
 
-    // â”€â”€ CLAMP â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── CLAMP ─────────────────────────────────────────────────
     const clamp = (v) => Math.min(100, Math.max(0, v));
     seo         = clamp(seo);
     trust       = clamp(trust);
@@ -12703,7 +12703,7 @@ function calculateAdvancedScores(report, techStack, psychTriggers, perfSignals) 
     return { seo, trust, conversion, performance, funnel, global };
 }
 
-// â”€â”€ Rate limiter Funnel Spy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Rate limiter Funnel Spy ────────────────────────────────────────
 const analysisLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 20,
@@ -12713,7 +12713,7 @@ const analysisLimiter = rateLimit({
         res.status(429).json({
             success: false,
             error: 'RATE_LIMIT',
-            message: 'Trop de requÃªtes. RÃ©essayez dans 15 minutes.',
+            message: 'Trop de requêtes. Réessayez dans 15 minutes.',
             retryAfter: 15
         });
     }
@@ -12725,12 +12725,12 @@ const analysisLimiter = rateLimit({
 
 
 
-// server.js â€” nouvelle route endpoint
+// server.js — nouvelle route endpoint
 
-// â”€â”€â”€ ROUTE PRINCIPALE V8 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”§ HELPERS V8 â€” ANALYSE LOCALE ZÃ‰RO-IA
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ─── ROUTE PRINCIPALE V8 ──────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════
+// 🔧 HELPERS V8 — ANALYSE LOCALE ZÉRO-IA
+// ════════════════════════════════════════════════════════════════════
 
 
 
@@ -12761,14 +12761,14 @@ function getFeatureI18n(lang = 'fr') {
    const dict = {
       fr: {
          directScrape: 'Scrape direct',
-         notDetected: 'Non dÃ©tectÃ©',
-         insufficientData: 'DonnÃ©es insuffisantes',
+         notDetected: 'Non détecté',
+         insufficientData: 'Données insuffisantes',
          potentialRevenueIncrease: 'Augmentation potentielle des revenus',
 
 
-         detectedPriceAt: 'Prix dÃ©tectÃ© Ã ',
+         detectedPriceAt: 'Prix détecté à',
          anchorOptimizable: 'ancrage optimisable selon le score funnel',
-         noPriceDetectedOnPage: 'Aucun prix dÃ©tectÃ© sur la page.',
+         noPriceDetectedOnPage: 'Aucun prix détecté sur la page.',
          currentLabel: 'actuel',
          psychologicalLabel: 'psychologique',
 
@@ -12783,17 +12783,17 @@ function getFeatureI18n(lang = 'fr') {
          fullAudit: 'Audit complet',
          optimizations: 'Optimisations',
          conversionTracking: 'Suivi conversion',
-         fullStrategy: 'StratÃ©gie complÃ¨te',
-         implementation: 'ImplÃ©mentation',
-         advancedTracking: 'Suivi avancÃ©',
+         fullStrategy: 'Stratégie complète',
+         implementation: 'Implémentation',
+         advancedTracking: 'Suivi avancé',
 
 
-         decoyEffectText: 'Utiliser lâ€™offre Pro comme option centrale et Premium comme ancre haute.',
-         recommendedArchitecture: 'Architecture recommandÃ©e:',
-         aroundPsychologicalPrice: 'autour dâ€™un prix psychologique Ã ',
-         noReliablePricingArchitecture: 'Impossible de proposer une architecture tarifaire fiable sans prix dÃ©tectÃ©.',
-         priceVerdictDetected: 'Prix conseillÃ© calculÃ© Ã  partir du prix dÃ©tectÃ© et des signaux rÃ©els de confiance/conversion.',
-         priceVerdictUndetectable: 'Prix non calculable car aucun prix source fiable nâ€™a Ã©tÃ© dÃ©tectÃ©.'
+         decoyEffectText: 'Utiliser l’offre Pro comme option centrale et Premium comme ancre haute.',
+         recommendedArchitecture: 'Architecture recommandée:',
+         aroundPsychologicalPrice: 'autour d’un prix psychologique à',
+         noReliablePricingArchitecture: 'Impossible de proposer une architecture tarifaire fiable sans prix détecté.',
+         priceVerdictDetected: 'Prix conseillé calculé à partir du prix détecté et des signaux réels de confiance/conversion.',
+         priceVerdictUndetectable: 'Prix non calculable car aucun prix source fiable n’a été détecté.'
       },
 
 
@@ -12836,40 +12836,40 @@ function getFeatureI18n(lang = 'fr') {
 
 
       ar: {
-         directScrape: 'Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ù…Ø¨Ø§Ø´Ø±',
-         notDetected: 'ØºÙŠØ± Ù…ÙƒØªØ´Ù',
-         insufficientData: 'Ø§Ù„Ù…Ø¹Ø·ÙŠØ§Øª ØºÙŠØ± ÙƒØ§ÙÙŠØ©',
-         potentialRevenueIncrease: 'Ø²ÙŠØ§Ø¯Ø© Ù…Ø­ØªÙ…Ù„Ø© ÙÙŠ Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯Ø§Øª',
+         directScrape: 'استخراج مباشر',
+         notDetected: 'غير مكتشف',
+         insufficientData: 'المعطيات غير كافية',
+         potentialRevenueIncrease: 'زيادة محتملة في الإيرادات',
 
 
-         detectedPriceAt: 'ØªÙ… Ø±ØµØ¯ Ø§Ù„Ø³Ø¹Ø± Ø¹Ù†Ø¯',
-         anchorOptimizable: 'ÙˆÙŠÙ…ÙƒÙ† ØªØ­Ø³ÙŠÙ† Ø§Ù„ØªØ«Ø¨ÙŠØª Ø§Ù„Ø³Ø¹Ø±ÙŠ Ø­Ø³Ø¨ Ù†ØªÙŠØ¬Ø© Ø§Ù„ÙÙŽÙ†ÙŽÙ„',
-         noPriceDetectedOnPage: 'Ù„Ù… ÙŠØªÙ… Ø±ØµØ¯ Ø£ÙŠ Ø³Ø¹Ø± Ø¹Ù„Ù‰ Ø§Ù„ØµÙØ­Ø©.',
-         currentLabel: 'Ø§Ù„Ø­Ø§Ù„ÙŠ',
-         psychologicalLabel: 'Ø§Ù„Ù†ÙØ³ÙŠ',
+         detectedPriceAt: 'تم رصد السعر عند',
+         anchorOptimizable: 'ويمكن تحسين التثبيت السعري حسب نتيجة الفَنَل',
+         noPriceDetectedOnPage: 'لم يتم رصد أي سعر على الصفحة.',
+         currentLabel: 'الحالي',
+         psychologicalLabel: 'النفسي',
 
 
-         offerStarter: 'Ø¹Ø±Ø¶ Ø§Ù„Ø¨Ø¯Ø§ÙŠØ©',
-         offerPro: 'Ø¹Ø±Ø¶ Ø¨Ø±Ùˆ',
-         offerPremium: 'Ø¹Ø±Ø¶ Ø¨Ø±ÙŠÙ…ÙŠÙˆÙ…',
+         offerStarter: 'عرض البداية',
+         offerPro: 'عرض برو',
+         offerPremium: 'عرض بريميوم',
 
 
-         initialAudit: 'ØªØ¯Ù‚ÙŠÙ‚ Ø£ÙˆÙ„ÙŠ',
-         priorityOptimizations: 'ØªØ­Ø³ÙŠÙ†Ø§Øª Ø°Ø§Øª Ø£ÙˆÙ„ÙˆÙŠØ©',
-         fullAudit: 'ØªØ¯Ù‚ÙŠÙ‚ ÙƒØ§Ù…Ù„',
-         optimizations: 'ØªØ­Ø³ÙŠÙ†Ø§Øª',
-         conversionTracking: 'Ù…ØªØ§Ø¨Ø¹Ø© Ø§Ù„ØªØ­ÙˆÙŠÙ„',
-         fullStrategy: 'Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ© ÙƒØ§Ù…Ù„Ø©',
-         implementation: 'ØªÙ†ÙÙŠØ°',
-         advancedTracking: 'Ù…ØªØ§Ø¨Ø¹Ø© Ù…ØªÙ‚Ø¯Ù…Ø©',
+         initialAudit: 'تدقيق أولي',
+         priorityOptimizations: 'تحسينات ذات أولوية',
+         fullAudit: 'تدقيق كامل',
+         optimizations: 'تحسينات',
+         conversionTracking: 'متابعة التحويل',
+         fullStrategy: 'استراتيجية كاملة',
+         implementation: 'تنفيذ',
+         advancedTracking: 'متابعة متقدمة',
 
 
-         decoyEffectText: 'Ø§Ø³ØªØ®Ø¯Ù… Ø¹Ø±Ø¶ Ø¨Ø±Ùˆ ÙƒØ®ÙŠØ§Ø± Ø£Ø³Ø§Ø³ÙŠØŒ ÙˆPremium ÙƒÙ…Ø±Ø³Ø§Ø© Ø³Ø¹Ø±ÙŠØ© Ù…Ø±ØªÙØ¹Ø©.',
-         recommendedArchitecture: 'Ø§Ù„Ø¨Ù†ÙŠØ© Ø§Ù„Ù…Ù‚ØªØ±Ø­Ø©:',
-         aroundPsychologicalPrice: 'Ø­ÙˆÙ„ Ø³Ø¹Ø± Ù†ÙØ³ÙŠ Ù‚Ø¯Ø±Ù‡',
-         noReliablePricingArchitecture: 'Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù‚ØªØ±Ø§Ø­ Ù‡ÙŠÙƒÙ„Ø© ØªØ³Ø¹ÙŠØ± Ù…ÙˆØ«ÙˆÙ‚Ø© Ø¨Ø¯ÙˆÙ† Ø³Ø¹Ø± Ù…ÙƒØªØ´Ù.',
-         priceVerdictDetected: 'ØªÙ… Ø§Ø­ØªØ³Ø§Ø¨ Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ù…Ù‚ØªØ±Ø­ Ø§Ù†Ø·Ù„Ø§Ù‚Ø§Ù‹ Ù…Ù† Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ù…ÙƒØªØ´Ù ÙˆØ¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø«Ù‚Ø© ÙˆØ§Ù„ØªØ­ÙˆÙŠÙ„ Ø§Ù„ÙØ¹Ù„ÙŠØ©.',
-         priceVerdictUndetectable: 'Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ø­ØªØ³Ø§Ø¨ Ø§Ù„Ø³Ø¹Ø± Ù„Ø£Ù†Ù‡ Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ø³Ø¹Ø± Ù…Ø±Ø¬Ø¹ÙŠ Ù…ÙˆØ«ÙˆÙ‚.'
+         decoyEffectText: 'استخدم عرض برو كخيار أساسي، وPremium كمرساة سعرية مرتفعة.',
+         recommendedArchitecture: 'البنية المقترحة:',
+         aroundPsychologicalPrice: 'حول سعر نفسي قدره',
+         noReliablePricingArchitecture: 'لا يمكن اقتراح هيكلة تسعير موثوقة بدون سعر مكتشف.',
+         priceVerdictDetected: 'تم احتساب السعر المقترح انطلاقاً من السعر المكتشف وإشارات الثقة والتحويل الفعلية.',
+         priceVerdictUndetectable: 'لا يمكن احتساب السعر لأنه لم يتم العثور على سعر مرجعي موثوق.'
       }
    };
 
@@ -12990,14 +12990,14 @@ function normalizeScrapeForFunnel(raw = {}) {
 }
 
 // ============================================================================
-//  /api/analyze-funnel  â€”  V12 GOD TIER (AVEC SÃ‰CURITÃ‰ & FALLBACK INTÃ‰GRÃ‰S)
+//  /api/analyze-funnel  —  V12 GOD TIER (AVEC SÉCURITÉ & FALLBACK INTÉGRÉS)
 // ============================================================================
 app.post('/api/analyze-funnel', requireAuth, requireReportQuota, dedupeFunnelAnalysis, persistGeneratedReport('funnel'), analysisLimiter, async (req, res) => {
     const startTime = Date.now();
     const requestId = `SPY12-${Date.now()}-${Math.random().toString(36).substring(2,7).toUpperCase()}`;
     const clientAnalysisId = String(req.body?.clientAnalysisId || requestId).slice(0, 120);
     
-    // Sauvegarde des donnÃ©es brutes pour le fallback en cas de crash de l'IA
+    // Sauvegarde des données brutes pour le fallback en cas de crash de l'IA
     let scrapedRawData = null;
     let funnelSurgeryFallback = null;
     let funnelCompatibilityFallback = null;
@@ -13006,10 +13006,10 @@ app.post('/api/analyze-funnel', requireAuth, requireReportQuota, dedupeFunnelAna
         const { url, userLang = 'fr', salesAngle = 'aggressive', mode = 'deep' } = req.body;
         const safeContext = safeUserContextFromBody(req.body);
 
-        // â”€â”€ 0. VALIDATION URL (IntÃ©grÃ©e depuis la correction) â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── 0. VALIDATION URL (Intégrée depuis la correction) ─────────
         if (!url || typeof url !== 'string') {
             return res.status(400).json({
-                success: false, error: 'URL requise', message: 'Le paramÃ¨tre url est obligatoire',
+                success: false, error: 'URL requise', message: 'Le paramètre url est obligatoire',
                 requestId, performance: { totalTime: Date.now() - startTime }
             });
         }
@@ -13033,7 +13033,7 @@ app.post('/api/analyze-funnel', requireAuth, requireReportQuota, dedupeFunnelAna
             });
         }
 
-        // â”€â”€ 1. SETUP LANGUE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── 1. SETUP LANGUE ───────────────────────────────────────────
         // 1. SETUP LANGUE
 let validUrl = InputValidator.sanitizeURL(targetUrl);
 
@@ -13042,27 +13042,27 @@ const T = getFeatureI18n(validLang);
 const isAr = validLang === 'ar';
 const isEn = validLang === 'en';
 
-const targetLang = isAr ? 'Arabe' : isEn ? 'English' : 'FranÃ§ais';
-const ND = isAr ? 'ØºÙŠØ± Ù…ÙƒØªØ´Ù' : isEn ? 'NA' : 'Non dÃ©tectÃ©';
+const targetLang = isAr ? 'Arabe' : isEn ? 'English' : 'Français';
+const ND = isAr ? 'غير مكتشف' : isEn ? 'NA' : 'Non détecté';
 const langInstr = isAr
-  ? 'Ø£Ø¬Ø¨ ÙÙ‚Ø· Ø¨Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©. Ù…Ù…Ù†ÙˆØ¹ Ø§Ù„ÙØ±Ù†Ø³ÙŠØ© Ø£Ùˆ Ø§Ù„Ø¥Ù†Ø¬Ù„ÙŠØ²ÙŠØ©.'
+  ? 'أجب فقط بالعربية. ممنوع الفرنسية أو الإنجليزية.'
   : isEn
   ? 'Answer ONLY in English. No French. No Arabic.'
-  : 'RÃ©ponds UNIQUEMENT en FranÃ§ais. Aucun mot en anglais ou arabe.';
-        // â”€â”€ 2. CACHE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  : 'Réponds UNIQUEMENT en Français. Aucun mot en anglais ou arabe.';
+        // ── 2. CACHE ──────────────────────────────────────────────────
         const contextKey = cleanProofText(JSON.stringify(safeContext || {}), 220) || 'no-context';
         const cacheKey = `funnelspy_v16_cta_legacy_${validUrl}_${userLang}_${mode}_${contextKey}`;
         const cached   = cache.get(cacheKey);
         if (cached && !req.body.skipCache) {
-            console.log(`ðŸ’¾ [${requestId}] Cache HIT â€” ${validUrl}`);
+            console.log(`💾 [${requestId}] Cache HIT — ${validUrl}`);
             return res.json({ ...cached, fromCache: true });
         }
 
-        console.log(`[${requestId}] ðŸš€ FUNNEL SPY V12 GOD TIER â€” ${validUrl}`);
+        console.log(`[${requestId}] 🚀 FUNNEL SPY V12 GOD TIER — ${validUrl}`);
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // 3. SCRAPING RÃ‰EL PROFOND
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════════════
+        // 3. SCRAPING RÉEL PROFOND
+        // ══════════════════════════════════════════════════════════════
         console.log(`${requestId} Scraping deep...`);
 
         let scrape = await runFunnelScrapeOnce('deep-scrape', validUrl, () => deepScrapeFunnel(validUrl, {
@@ -13077,7 +13077,7 @@ const langInstr = isAr
         scrapedRawData = cleanFunnelScrapePayload(scrape); // Conservation safe pour le fallback en cas d'erreur IA
 
         if (!scrape || typeof scrape !== 'object') {
-            console.warn(`${requestId} Scrape null â€” fallback vide`);
+            console.warn(`${requestId} Scrape null — fallback vide`);
             scrape = {
                 success:          false,
                 fetchLayer:       'failed',
@@ -13145,16 +13145,16 @@ scrapedRawData = cleanFunnelScrapePayload(scrape);
         }
         scrape.commerceExploration = commerceExploration;
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // 4. EXTRACTION RÃ‰ELLE COMPLÃˆTE
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════════════
+        // 4. EXTRACTION RÉELLE COMPLÈTE
+        // ══════════════════════════════════════════════════════════════
         const vis        = scrape.visualDNA  || {};
         const pri = scrape.priceIntel || EMPTYSCRAPERESULT.priceIntel;
-        const priceIntel = pri;  // alias pour compatibilitÃ© sharedContext + prompts IA
+        const priceIntel = pri;  // alias pour compatibilité sharedContext + prompts IA
         const copy       = scrape.copyIntel  || {};
         const brand      = scrape.brand      || {};
 
-        // âœ… CORRECTION CRITIQUE DU BUG ICI : L'ancien code appelait "copyIntel" qui n'existait pas
+        // ✅ CORRECTION CRITIQUE DU BUG ICI : L'ancien code appelait "copyIntel" qui n'existait pas
         if (typeof analyzeCTAs === 'function') {
              copy.ctaAnalysis = await analyzeCTAs(copy.realCTAs || []);
         }
@@ -13252,158 +13252,158 @@ scrapedRawData = cleanFunnelScrapePayload(scrape);
     );
     if (mergedSections.length > 0) return mergedSections.slice(0, 60);
 
-    // Fallback Cheerio â€” rawHtml dÃ©jÃ  disponible dans le scope
+    // Fallback Cheerio — rawHtml déjà disponible dans le scope
     const $s = cheerio.load(rawHtml);
     const rebuilt = [];
     const sectionMap = {
   HERO: [
     'hero', 'banner', 'jumbotron', 'main-banner',
     'hero-section', 'masthead', 'above-the-fold',
-    'banniere', 'banniÃ¨re', 'entete', 'en-tete', 'header',
-    'ÙˆØ§Ø¬Ù‡Ø©', 'Ø¨Ø§Ù†Ø±', 'Ø±Ø¦ÙŠØ³ÙŠØ©', 'Ø§Ø¹Ù„Ù‰-Ø§Ù„ØµÙØ­Ø©'
+    'banniere', 'bannière', 'entete', 'en-tete', 'header',
+    'واجهة', 'بانر', 'رئيسية', 'اعلى-الصفحة'
   ],
 
   VALUE_PROP: [
     'value-prop', 'valueprop', 'value-proposition', 'unique-value',
     'usp', 'positioning', 'promise',
     'proposition-valeur', 'promesse', 'usp',
-    'Ø¹Ø±Ø¶-Ø§Ù„Ù‚ÙŠÙ…Ø©', 'Ø§Ù„Ù‚ÙŠÙ…Ø©', 'Ø§Ù„ÙˆØ¹Ø¯'
+    'عرض-القيمة', 'القيمة', 'الوعد'
   ],
 
   PROBLEM: [
     'problem', 'pain', 'pain-point', 'challenge', 'struggle',
-    'probleme', 'problÃ¨me', 'douleur', 'defi', 'dÃ©fi',
-    'Ù…Ø´ÙƒÙ„Ø©', 'Ù…Ø´Ø§ÙƒÙ„', 'Ø£Ù„Ù…', 'ØªØ­Ø¯ÙŠ', 'Ù…Ø¹Ø§Ù†Ø§Ø©'
+    'probleme', 'problème', 'douleur', 'defi', 'défi',
+    'مشكلة', 'مشاكل', 'ألم', 'تحدي', 'معاناة'
   ],
 
   SOLUTION: [
     'solution', 'how-it-works', 'how-it-work', 'approach', 'method',
     'framework', 'fix', 'resolution',
-    'solution', 'comment-ca-marche', 'comment-marche', 'methode', 'mÃ©thode',
-    'Ø­Ù„', 'Ø§Ù„Ø­Ù„', 'ÙƒÙŠÙ-ÙŠØ¹Ù…Ù„', 'ÙƒÙŠÙ-ØªØ¹Ù…Ù„', 'Ø·Ø±ÙŠÙ‚Ø©', 'Ù…Ù†Ù‡Ø¬'
+    'solution', 'comment-ca-marche', 'comment-marche', 'methode', 'méthode',
+    'حل', 'الحل', 'كيف-يعمل', 'كيف-تعمل', 'طريقة', 'منهج'
   ],
 
   BENEFITS: [
     'benefits', 'why-us', 'whychoose', 'value', 'outcomes', 'results',
-    'avantages', 'benefices', 'bÃ©nÃ©fices', 'resultats', 'rÃ©sultats', 'pourquoi-nous',
-    'ÙÙˆØ§Ø¦Ø¯', 'Ù…Ø²Ø§ÙŠØ§', 'Ù†ØªØ§Ø¦Ø¬', 'Ù„Ù…Ø§Ø°Ø§-Ù†Ø­Ù†'
+    'avantages', 'benefices', 'bénéfices', 'resultats', 'résultats', 'pourquoi-nous',
+    'فوائد', 'مزايا', 'نتائج', 'لماذا-نحن'
   ],
 
   FEATURES: [
     'features', 'feature-list', 'capabilities', 'functionalities', 'services',
-    'caracteristiques', 'caractÃ©ristiques', 'fonctionnalites', 'fonctionnalitÃ©s', 'services',
-    'Ù…ÙŠØ²Ø§Øª', 'Ø®ØµØ§Ø¦Øµ', 'ÙˆØ¸Ø§Ø¦Ù', 'Ø®Ø¯Ù…Ø§Øª'
+    'caracteristiques', 'caractéristiques', 'fonctionnalites', 'fonctionnalités', 'services',
+    'ميزات', 'خصائص', 'وظائف', 'خدمات'
   ],
 
   PROCESS: [
     'steps', 'process', 'workflow', 'timeline', 'roadmap',
-    'etapes', 'Ã©tapes', 'processus', 'parcours',
-    'Ø®Ø·ÙˆØ§Øª', 'Ø¹Ù…Ù„ÙŠØ©', 'Ù…Ø±Ø§Ø­Ù„', 'Ø¢Ù„ÙŠØ©'
+    'etapes', 'étapes', 'processus', 'parcours',
+    'خطوات', 'عملية', 'مراحل', 'آلية'
   ],
 
   DEMO: [
     'demo', 'product-demo', 'walkthrough', 'tour', 'preview', 'showcase',
-    'demo', 'apercu', 'aperÃ§u', 'demonstration', 'dÃ©monstration',
-    'Ø¹Ø±Ø¶', 'ØªØ¬Ø±Ø¨Ø©', 'Ù…Ø¹Ø§ÙŠÙ†Ø©', 'Ø´Ø±Ø­'
+    'demo', 'apercu', 'aperçu', 'demonstration', 'démonstration',
+    'عرض', 'تجربة', 'معاينة', 'شرح'
   ],
 
   USE_CASES: [
     'use-cases', 'usecase', 'for-whom', 'who-its-for', 'personas',
     'cas-usage', 'cas-dusage', 'pour-qui', 'profils',
-    'Ø­Ø§Ù„Ø§Øª-Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…', 'Ù„Ù…Ù†', 'Ù„Ù…Ù†-Ù‡Ø°Ø§', 'Ø³ÙŠÙ†Ø§Ø±ÙŠÙˆÙ‡Ø§Øª'
+    'حالات-الاستخدام', 'لمن', 'لمن-هذا', 'سيناريوهات'
   ],
 
   TRUST: [
     'trust', 'trust-bar', 'badges', 'certifications', 'security', 'compliance',
-    'garantie', 'reassurance', 'certif', 'certification', 'securite', 'sÃ©curitÃ©',
-    'Ø«Ù‚Ø©', 'Ø¶Ù…Ø§Ù†', 'Ø´Ø§Ø±Ø§Øª', 'Ø§Ø¹ØªÙ…Ø§Ø¯', 'Ø£Ù…Ø§Ù†', 'Ù…ÙˆØ«ÙˆÙ‚'
+    'garantie', 'reassurance', 'certif', 'certification', 'securite', 'sécurité',
+    'ثقة', 'ضمان', 'شارات', 'اعتماد', 'أمان', 'موثوق'
   ],
 
   LOGOS: [
     'logos', 'logo-bar', 'trusted-by', 'clients-logos', 'brands',
     'logos-clients', 'ils-nous-font-confiance', 'marques',
-    'Ø´Ø¹Ø§Ø±Ø§Øª', 'Ø¹Ù…Ù„Ø§Ø¤Ù†Ø§', 'Ù…ÙˆØ«ÙˆÙ‚-Ù…Ù†', 'Ø´Ø±ÙƒØ§Øª'
+    'شعارات', 'عملاؤنا', 'موثوق-من', 'شركات'
   ],
 
   SOCIAL_PROOF: [
     'testimonials', 'testimonial', 'reviews', 'review', 'rating', 'ratings',
     'customer-stories', 'success-story', 'social-proof', 'ugc',
-    'avis', 'temoignages', 'tÃ©moignages', 'notes', 'clients', 'preuves-sociales',
-    'Ø¢Ø±Ø§Ø¡', 'ØªÙ‚ÙŠÙŠÙ…Ø§Øª', 'Ù…Ø±Ø§Ø¬Ø¹Ø§Øª', 'Ø´Ù‡Ø§Ø¯Ø§Øª', 'ØªØ¬Ø§Ø±Ø¨-Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡', 'Ø¯Ù„ÙŠÙ„-Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ'
+    'avis', 'temoignages', 'témoignages', 'notes', 'clients', 'preuves-sociales',
+    'آراء', 'تقييمات', 'مراجعات', 'شهادات', 'تجارب-العملاء', 'دليل-اجتماعي'
   ],
 
   CASE_STUDIES: [
     'case-study', 'case-studies', 'success-cases', 'customer-story',
-    'etudes-de-cas', 'Ã©tudes-de-cas', 'cas-client',
-    'Ø¯Ø±Ø§Ø³Ø©-Ø­Ø§Ù„Ø©', 'Ø¯Ø±Ø§Ø³Ø§Øª-Ø­Ø§Ù„Ø©', 'Ù‚ØµØµ-Ù†Ø¬Ø§Ø­'
+    'etudes-de-cas', 'études-de-cas', 'cas-client',
+    'دراسة-حالة', 'دراسات-حالة', 'قصص-نجاح'
   ],
 
   COMPARISON: [
     'comparison', 'compare', 'vs', 'alternatives', 'why-switch',
     'comparatif', 'comparaison', 'alternatives',
-    'Ù…Ù‚Ø§Ø±Ù†Ø©', 'Ù…Ù‚Ø§Ø±Ù†Ø§Øª', 'Ø¨Ø¯Ø§Ø¦Ù„', 'Ù…Ù‚Ø§Ø±Ù†Ø©-Ù…Ø¹'
+    'مقارنة', 'مقارنات', 'بدائل', 'مقارنة-مع'
   ],
 
   PRICING: [
     'pricing', 'plans', 'plan', 'price', 'prices', 'offer', 'offers',
     'tarifs', 'tarif', 'prix', 'offre', 'offres', 'formules',
-    'Ø§Ù„Ø£Ø³Ø¹Ø§Ø±', 'Ø³Ø¹Ø±', 'Ø§Ù„Ø®Ø·Ø·', 'Ø§Ù„Ø®Ø·Ø©', 'Ø§Ù„Ø¹Ø±Ø¶', 'Ø§Ù„Ø¹Ø±ÙˆØ¶', 'Ø§Ù„ØªØ³Ø¹ÙŠØ±'
+    'الأسعار', 'سعر', 'الخطط', 'الخطة', 'العرض', 'العروض', 'التسعير'
   ],
 
   OFFER: [
     'offer-stack', 'offer-details', 'bonus', 'bonuses', 'what-you-get',
     'offre-detail', 'ce-que-vous-obtenez', 'bonus',
-    'Ø§Ù„Ø¹Ø±Ø¶', 'Ù…Ø§Ø°Ø§-Ø³ØªØ­ØµÙ„', 'Ù…ÙƒØ§ÙØ¢Øª', 'Ø§Ù„Ø¨ÙˆÙ†Øµ'
+    'العرض', 'ماذا-ستحصل', 'مكافآت', 'البونص'
   ],
 
   FAQ: [
     'faq', 'accordion', 'questions', 'frequently-asked', 'common-questions',
     'faq-section', 'help',
-    'faq', 'questions-frequentes', 'questions-frÃ©quentes', 'aide',
-    'Ø§Ù„Ø£Ø³Ø¦Ù„Ø©-Ø§Ù„Ø´Ø§Ø¦Ø¹Ø©', 'Ø§Ø³Ø¦Ù„Ø©-Ø´Ø§Ø¦Ø¹Ø©', 'Ø§Ù„Ø§Ø³Ø¦Ù„Ø©', 'Ù…Ø³Ø§Ø¹Ø¯Ø©'
+    'faq', 'questions-frequentes', 'questions-fréquentes', 'aide',
+    'الأسئلة-الشائعة', 'اسئلة-شائعة', 'الاسئلة', 'مساعدة'
   ],
 
   OBJECTIONS: [
     'objections', 'hesitation', 'why-not', 'concerns', 'doubts',
-    'objections', 'freins', 'hesitations', 'hÃ©sitations', 'doutes',
-    'Ø§Ø¹ØªØ±Ø§Ø¶Ø§Øª', 'ØªØ±Ø¯Ø¯', 'Ù…Ø®Ø§ÙˆÙ', 'Ø´ÙƒÙˆÙƒ'
+    'objections', 'freins', 'hesitations', 'hésitations', 'doutes',
+    'اعتراضات', 'تردد', 'مخاوف', 'شكوك'
   ],
 
   GUARANTEE: [
     'guarantee', 'refund', 'money-back', 'risk-free', 'warranty',
     'garantie', 'remboursement', 'satisfait-ou-rembourse',
-    'Ø¶Ù…Ø§Ù†', 'Ø§Ø³ØªØ±Ø¬Ø§Ø¹', 'Ø§Ø³ØªØ±Ø¯Ø§Ø¯', 'Ø¨Ø¯ÙˆÙ†-Ù…Ø®Ø§Ø·Ø±Ø©'
+    'ضمان', 'استرجاع', 'استرداد', 'بدون-مخاطرة'
   ],
 
   CTA: [
     'cta', 'call-to-action', 'contact', 'buy', 'order', 'get-started',
     'book-now', 'apply-now', 'signup', 'start-now',
     'devis', 'appel', 'acheter', 'commander', 'commencer', 'inscription',
-    'Ø¯Ø¹ÙˆØ©-Ù„Ù„Ø¥Ø¬Ø±Ø§Ø¡', 'Ø§ØªØµÙ„', 'Ø§Ø´ØªØ±', 'Ø§Ø·Ù„Ø¨', 'Ø§Ø¨Ø¯Ø£', 'Ø³Ø¬Ù„'
+    'دعوة-للإجراء', 'اتصل', 'اشتر', 'اطلب', 'ابدأ', 'سجل'
   ],
 
   FORM: [
     'form', 'lead-form', 'signup-form', 'contact-form', 'optin',
     'formulaire', 'form-contact', 'inscription',
-    'Ù†Ù…ÙˆØ°Ø¬', 'Ø§Ø³ØªÙ…Ø§Ø±Ø©', 'ØªØ³Ø¬ÙŠÙ„'
+    'نموذج', 'استمارة', 'تسجيل'
   ],
 
   CHECKOUT: [
     'checkout', 'cart', 'basket', 'payment', 'billing',
     'panier', 'commande', 'paiement', 'facturation',
-    'Ø§Ù„Ø¯ÙØ¹', 'Ø§Ù„Ø³Ù„Ø©', 'Ø§Ù„Ø·Ù„Ø¨', 'Ø§Ù„ÙØ§ØªÙˆØ±Ø©'
+    'الدفع', 'السلة', 'الطلب', 'الفاتورة'
   ],
 
   CONTACT: [
     'contact', 'contact-us', 'reach-us', 'book-call',
     'contact', 'nous-contacter', 'rdv',
-    'Ø§ØªØµÙ„-Ø¨Ù†Ø§', 'ØªÙˆØ§ØµÙ„', 'Ø§Ø­Ø¬Ø²-Ù…ÙƒØ§Ù„Ù…Ø©'
+    'اتصل-بنا', 'تواصل', 'احجز-مكالمة'
   ],
 
   FOOTER: [
     'footer', 'site-footer', 'bottom-bar',
     'footer', 'pied-page',
-    'ØªØ°ÙŠÙŠÙ„', 'Ø°ÙŠÙ„-Ø§Ù„ØµÙØ­Ø©'
+    'تذييل', 'ذيل-الصفحة'
   ]
 };
     Object.entries(sectionMap).forEach(([type, kws]) => {
@@ -13492,7 +13492,7 @@ const sectionsDetailed = allSections.map((s, index) => {
     ].filter(Boolean).slice(0, 6)
   };
 });
-// â”€â”€â”€ CTA Coverage + Images Count â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── CTA Coverage + Images Count ─────────────────────────────────────────────
 const ctaCoverage = allSections.length > 0
     ? Math.min(100, Math.round((ctaList.length / allSections.length) * 100))
     : (ctaList.length > 0 ? 100 : 0);
@@ -13537,7 +13537,7 @@ const imagesCount = imageIntel.totalImages;
 const missingAlt = imageIntel.missingAlt;
 const webpImages = imageIntel.webpImages;
 const lazyLoadImages = imageIntel.lazyLoadImages;
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────────────────────
 
       
         const heroSection    = allSections.find(s => s.type === 'HERO')         || null;
@@ -13549,7 +13549,7 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
         const ctaSection     = allSections.find(s => s.type === 'CTA')          || null;
         const footerSection  = allSections.find(s => s.type === 'FOOTER')       || null;
 
-        // â”€â”€ FIX 1 â€” COULEURS
+        // ── FIX 1 — COULEURS
         const BLACKLIST_COLORS = new Set([
             'ffffff','000000','eeeeee','cccccc','333333',
             '111111','222222','f0f0f0','fafafa','dddddd',
@@ -13587,7 +13587,7 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
         const secondColor  = cleanColors[1] || 'NONDETECTE';
         const accentColor  = cleanColors[2] || 'NONDETECTE';
 
-        // â”€â”€ FIX 2 â€” PHONES / EMAILS
+        // ── FIX 2 — PHONES / EMAILS
         const safePhones = (arr) => {
             if (!Array.isArray(arr)) return [];
             return arr
@@ -13631,7 +13631,7 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
         const hasWhatsApp = scrape.techStack?.hasWhatsApp    || brand.hasWhatsApp || /whatsapp|wa\.me/i.test(rawHtml);
         const schemaTypes = scrape.schemaData?.types || brand.schemaTypes || [];
 
-        // â”€â”€ FIX 3 â€” techCMS
+        // ── FIX 3 — techCMS
         const techCMS = (() => {
             if (!techStack || typeof techStack !== 'object') return 'NONDETECTE';
             const cms = techStack.cms;
@@ -13681,7 +13681,7 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
                 return acc;
             }, {});
             const str = JSON.stringify(flat);
-            return str.length > maxLen ? str.substring(0, maxLen) + '...TRONQUÃ‰' : str;
+            return str.length > maxLen ? str.substring(0, maxLen) + '...TRONQUÉ' : str;
         };
 
         const funnelSurgery = buildFunnelSectionSurgeryModel({
@@ -13730,7 +13730,7 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
         const socialProofConfirmed = Boolean(socialProofEvidence);
         if (socialProofConfirmed && socialProofs.length === 0) {
             socialProofs.push(limitFunnelText(
-                socialProofEvidence.detectedText || socialProofEvidence.reason || socialProofEvidence.verdict || 'Preuve sociale observÃ©e dans la page.',
+                socialProofEvidence.detectedText || socialProofEvidence.reason || socialProofEvidence.verdict || 'Preuve sociale observée dans la page.',
                 700
             ));
         }
@@ -13759,38 +13759,38 @@ const lazyLoadImages = imageIntel.lazyLoadImages;
             `reconciled=${funnelSurgery.reconciliation?.observedSections || 0}`
         );
 
-        // â”€â”€ 5. SHARED CONTEXT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── 5. SHARED CONTEXT ─────────────────────────────────
         const sharedContext = `
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-DONNÃ‰ES RÃ‰ELLES SCRAPÃ‰ES â€” ${validUrl}
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+═══════════════════════════════════════
+DONNÉES RÉELLES SCRAPÉES — ${validUrl}
+═══════════════════════════════════════
 URL             : ${validUrl}
 STACK           : ${techCMS}
 SSL             : ${hasSSL}
 SCHEMA JSON-LD  : ${schemaTypes.join(', ') || 'Absent'}
 MOT COUNT       : ${wordCount} mots
-PRIX DÃ‰TECTÃ‰    : ${getConfirmedFunnelPrice(priceIntel) > 0 ? `${getConfirmedFunnelPrice(priceIntel)} ${currency}` : 'PRIX_NON_CONFIRME'}
-TÃ‰LÃ‰PHONES      : ${phones.length > 0 ? phones.join(', ') : 'AUCUN_NUMERO_DETECTE_SUR_LA_PAGE'}
+PRIX DÉTECTÉ    : ${getConfirmedFunnelPrice(priceIntel) > 0 ? `${getConfirmedFunnelPrice(priceIntel)} ${currency}` : 'PRIX_NON_CONFIRME'}
+TÉLÉPHONES      : ${phones.length > 0 ? phones.join(', ') : 'AUCUN_NUMERO_DETECTE_SUR_LA_PAGE'}
 EMAILS          : ${emails.length > 0 ? emails.join(', ') : 'AUCUN_EMAIL_DETECTE_SUR_LA_PAGE'}
 WHATSAPP        : ${hasWhatsApp ? 'OUI' : 'NON'}
 
-COULEURS RÃ‰ELLES:
+COULEURS RÉELLES:
   Primaire  : ${primaryColor}
   Secondaire: ${secondColor}
   Accent    : ${accentColor}
 
-TITRES RÃ‰ELS    :
+TITRES RÉELS    :
   H1  : ${h1Main}
   H2s : ${h2List.join(' | ')}
   H3s : ${h3List.join(' | ')}
 
-CTAs RÃ‰ELS      : ${ctaList.join(' | ')}
+CTAs RÉELS      : ${ctaList.join(' | ')}
 
 SECTIONS:
   HERO          : ${heroSection    ? JSON.stringify(heroSection).substring(0,200)    : 'ABSENT'}
   FEATURES      : ${featSection    ? JSON.stringify(featSection).substring(0,200)    : 'ABSENT'}
   TRUST         : ${trustSection   ? JSON.stringify(trustSection).substring(0,200)   : 'ABSENT'}
-  SOCIAL PROOF  : ${socialProofs.length} section(s) â€” ${JSON.stringify(socialProofs).substring(0,200)}
+  SOCIAL PROOF  : ${socialProofs.length} section(s) — ${JSON.stringify(socialProofs).substring(0,200)}
   PRICING       : ${pricingSection ? JSON.stringify(pricingSection).substring(0,200) : 'ABSENT'}
   FAQ           : ${faqSection     ? JSON.stringify(faqSection).substring(0,200)     : 'ABSENT'}
   CTA SECTION   : ${ctaSection     ? JSON.stringify(ctaSection).substring(0,200)     : 'ABSENT'}
@@ -13808,16 +13808,16 @@ ${JSON.stringify({
   priorityPlan: funnelSurgery.priorityPlan
 }).slice(0, 3500)}
 
-RÃˆGLES ANTI-HALLUCINATION :
-1. Utilise UNIQUEMENT les donnÃ©es ci-dessus.
+RÈGLES ANTI-HALLUCINATION :
+1. Utilise UNIQUEMENT les données ci-dessus.
 2. N'invente JAMAIS de chiffres, prix, noms ou statistiques.
-3. Si absent â†’ Ã©cris exactement : "${ND}"
-4. Si tu vois "ABSENT" â†’ cette section n'existe pas sur la page.
-5. COULEURS : utilise UNIQUEMENT ${primaryColor} / ${secondColor} / ${accentColor} â€” zÃ©ro invention.
-6. TÃ‰LÃ‰PHONES : si "AUCUN_NUMERO_DETECTE" â†’ ne pas en inventer. Ã‰crire "${ND}".
-7. PRICING : si aucun prix n'est dÃ©tectÃ©, Ã©crire "${ND}". Ne jamais inventer de prix psychologique, bundle, remise ou ancrage chiffrÃ©.
+3. Si absent → écris exactement : "${ND}"
+4. Si tu vois "ABSENT" → cette section n'existe pas sur la page.
+5. COULEURS : utilise UNIQUEMENT ${primaryColor} / ${secondColor} / ${accentColor} — zéro invention.
+6. TÉLÉPHONES : si "AUCUN_NUMERO_DETECTE" → ne pas en inventer. Écrire "${ND}".
+7. PRICING : si aucun prix n'est détecté, écrire "${ND}". Ne jamais inventer de prix psychologique, bundle, remise ou ancrage chiffré.
 ${formatUserContextForPrompt(safeContext, ND)}
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•`.trim();
+═══════════════════════════════════════`.trim();
 
         const sharedContextShort = `
 URL: ${validUrl} | Stack: ${techCMS} | SSL: ${hasSSL}
@@ -13831,81 +13831,81 @@ Sections: ${allSections.map(s => s.type).join(',')}
 Schema: ${schemaTypes.join(',') || 'Absent'}
 SocialProofs: ${socialProofs.length} | Pricing: ${!!pricingSection} | FAQ: ${!!faqSection}
 Score local: ${localScore}/100
-RÃˆGLE : Utilise UNIQUEMENT ces donnÃ©es. Si absent â†’ "${ND}".`.trim();
+RÈGLE : Utilise UNIQUEMENT ces données. Si absent → "${ND}".`.trim();
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════
         // PROMPTS A1 + A2
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════
         const prompt_A1 = `
 ${langInstr}
 
-Ã‰TAPE 1 â€” RÃ‰FLEXION (Chain of Thought) :
-â†’ Quelle est la niche rÃ©elle de ce site ?
-â†’ Qui est le visiteur qui arrive sur cette page ?
-â†’ La page capte-t-elle l'attention en moins de 3 secondes ?
-â†’ Le H1 "${h1Main}" est-il orientÃ© bÃ©nÃ©fice ou caractÃ©ristique ?
-â†’ Y a-t-il une progression logique AIDA dans les sections ?
+ÉTAPE 1 — RÉFLEXION (Chain of Thought) :
+→ Quelle est la niche réelle de ce site ?
+→ Qui est le visiteur qui arrive sur cette page ?
+→ La page capte-t-elle l'attention en moins de 3 secondes ?
+→ Le H1 "${h1Main}" est-il orienté bénéfice ou caractéristique ?
+→ Y a-t-il une progression logique AIDA dans les sections ?
 
 ${sharedContext}
 
-Ã‰TAPE 2 â€” RÃ‰PONSE JSON en ${targetLang} :
+ÉTAPE 2 — RÉPONSE JSON en ${targetLang} :
 {
   "chainOfThought": {
-    "reasoning": "rÃ©flexion en 3-4 phrases sur ce site",
+    "reasoning": "réflexion en 3-4 phrases sur ce site",
     "firstImpression": "ce que voit un visiteur en 3 secondes",
-    "biggestOpportunity": "la plus grande opportunitÃ© manquÃ©e"
+    "biggestOpportunity": "la plus grande opportunité manquée"
   },
   "projectIdentity": {
-    "siteName": "nom dÃ©duit du H1 et URL",
-    "niche": "niche prÃ©cise",
-    "subNiche": "sous-niche si dÃ©tectable",
+    "siteName": "nom déduit du H1 et URL",
+    "niche": "niche précise",
+    "subNiche": "sous-niche si détectable",
     "businessModel": "B2C|B2B|E-commerce|Service|SaaS|Marketplace",
     "targetAudience": {
       "primary": "profil principal",
       "painPoint": "douleur principale",
-      "desiredOutcome": "rÃ©sultat dÃ©sirÃ©"
+      "desiredOutcome": "résultat désiré"
     },
-    "uniqueSellingPoint": "USP rÃ©el ou ${ND}",
+    "uniqueSellingPoint": "USP réel ou ${ND}",
     "trustScore": ${localScore},
-    "trustSignals": ["signal basÃ© sur donnÃ©es rÃ©elles"]
+    "trustSignals": ["signal basé sur données réelles"]
   },
   "aidaAnalysis": {
     "attention": {
       "score": 0,
-      "hero": "${heroSection ? 'prÃ©sent' : 'ABSENT'}",
-      "h1Quality": "Ã©valuation du H1 : ${h1Main}",
+      "hero": "${heroSection ? 'présent' : 'ABSENT'}",
+      "h1Quality": "évaluation du H1 : ${h1Main}",
       "aboveTheFold": "verdict",
       "visualImpact": "impact couleurs ${primaryColor}",
-      "weaknesses": ["faiblesse rÃ©elle 1", "faiblesse rÃ©elle 2"],
+      "weaknesses": ["faiblesse réelle 1", "faiblesse réelle 2"],
       "fix": "action corrective prioritaire"
     },
     "interest": {
       "score": 0,
       "h2Coverage": "analyse des H2s : ${h2List.slice(0,3).join(' | ')}",
-      "benefitsVsFeatures": "ratio bÃ©nÃ©fices/caractÃ©ristiques",
-      "storytelling": "${featSection ? 'prÃ©sent' : 'ABSENT'}",
+      "benefitsVsFeatures": "ratio bénéfices/caractéristiques",
+      "storytelling": "${featSection ? 'présent' : 'ABSENT'}",
       "readabilityScore": 0,
-      "weaknesses": ["faiblesse rÃ©elle"],
+      "weaknesses": ["faiblesse réelle"],
       "fix": "action corrective"
     },
     "desire": {
       "score": 0,
       "socialProofCount": ${socialProofs.length},
-      "socialProofQuality": "${socialProofs.length > 0 ? 'analyser' : 'ABSENT â€” critique'}",
-      "urgencyFOMO": "prÃ©sent|absent|faible",
-      "priceAnchoring": "${getConfirmedFunnelPrice(priceIntel) > 0 ? getConfirmedFunnelPrice(priceIntel) + ' ' + currency + ' â€” analyser' : 'PRIX_NON_CONFIRME'}",
-      "trustBadges": "${trustSection ? 'prÃ©sent' : 'ABSENT'}",
-      "weaknesses": ["faiblesse rÃ©elle"],
+      "socialProofQuality": "${socialProofs.length > 0 ? 'analyser' : 'ABSENT — critique'}",
+      "urgencyFOMO": "présent|absent|faible",
+      "priceAnchoring": "${getConfirmedFunnelPrice(priceIntel) > 0 ? getConfirmedFunnelPrice(priceIntel) + ' ' + currency + ' — analyser' : 'PRIX_NON_CONFIRME'}",
+      "trustBadges": "${trustSection ? 'présent' : 'ABSENT'}",
+      "weaknesses": ["faiblesse réelle"],
       "fix": "action corrective"
     },
     "action": {
       "score": 0,
       "ctaCount": ${ctaList.length},
       "ctaQuality": "analyse des CTAs : ${ctaList.slice(0,3).join(' | ')}",
-      "checkoutFriction": "Ã©valuation",
-      "whatsappCTA": "${hasWhatsApp ? 'WhatsApp prÃ©sent' : 'WhatsApp ABSENT'}",
+      "checkoutFriction": "évaluation",
+      "whatsappCTA": "${hasWhatsApp ? 'WhatsApp présent' : 'WhatsApp ABSENT'}",
       "phoneCTA": "${phones.length > 0 ? phones[0] : 'ABSENT'}",
-      "weaknesses": ["faiblesse rÃ©elle"],
+      "weaknesses": ["faiblesse réelle"],
       "fix": "action corrective CTA"
     }
   },
@@ -13914,23 +13914,23 @@ ${sharedContext}
       "primary": "${primaryColor}",
       "secondary": "${secondColor}",
       "accent": "${accentColor}",
-      "emotionPrimary": "Ã©motion associÃ©e Ã  ${primaryColor}",
+      "emotionPrimary": "émotion associée à ${primaryColor}",
       "conversionImpact": "impact sur conversion"
     },
-    "typography": "dÃ©tectÃ©e ou standard",
+    "typography": "détectée ou standard",
     "designStyle": "Minimaliste|Corporate|Agressif|Premium|Artisanal",
     "mobileOptimized": ${scrape.success ? 'true' : 'false'},
     "neuromarketing": {
       "fPattern": "le contenu suit-il le F-pattern ?",
-      "visualHierarchy": "verdict hiÃ©rarchie visuelle",
+      "visualHierarchy": "verdict hiérarchie visuelle",
       "whitespace": "Suffisant|Insuffisant|Excessif",
-      "ctaVisibility": "Visible|CachÃ©|Absent"
+      "ctaVisibility": "Visible|Caché|Absent"
     },
-    "uxFrictions": ["friction rÃ©elle 1", "friction rÃ©elle 2"]
+    "uxFrictions": ["friction réelle 1", "friction réelle 2"]
   },
   "pageArchitecture": {
     "sectionsAudit": [
-      { "section": "HERO",         "present": ${!!heroSection},            "score": 0, "verdict": "verdict basÃ© sur donnÃ©es" },
+      { "section": "HERO",         "present": ${!!heroSection},            "score": 0, "verdict": "verdict basé sur données" },
       { "section": "FEATURES",     "present": ${!!featSection},            "score": 0, "verdict": "verdict" },
       { "section": "SOCIAL_PROOF", "present": ${socialProofs.length > 0}, "score": 0, "verdict": "verdict" },
       { "section": "PRICING",      "present": ${!!pricingSection},         "score": 0, "verdict": "verdict" },
@@ -13947,60 +13947,60 @@ ${sharedContext}
         const prompt_A2_parallel = `
 ${langInstr}
 
-Ã‰TAPE 1 â€” RÃ‰FLEXION (Chain of Thought) :
-â†’ Quel est le chemin exact du visiteur depuis l'arrivÃ©e jusqu'Ã  l'achat ?
-â†’ Ã€ quelle Ã©tape le visiteur abandonne-t-il le plus probablement ?
-â†’ ${getConfirmedFunnelPrice(priceIntel) > 0 ? `Le prix ${getConfirmedFunnelPrice(priceIntel)} ${currency} est-il bien ancrÃ© psychologiquement ?` : `Prix non confirmÃ© : analyse uniquement la prÃ©sentation tarifaire sans inventer de prix.`}
-â†’ Les CTAs "${ctaList.slice(0,2).join('" et "')}" dÃ©clenchent-ils l'action ?
-â†’ Y a-t-il un systÃ¨me de nurturing ou tout est one-shot ?
+ÉTAPE 1 — RÉFLEXION (Chain of Thought) :
+→ Quel est le chemin exact du visiteur depuis l'arrivée jusqu'à l'achat ?
+→ À quelle étape le visiteur abandonne-t-il le plus probablement ?
+→ ${getConfirmedFunnelPrice(priceIntel) > 0 ? `Le prix ${getConfirmedFunnelPrice(priceIntel)} ${currency} est-il bien ancré psychologiquement ?` : `Prix non confirmé : analyse uniquement la présentation tarifaire sans inventer de prix.`}
+→ Les CTAs "${ctaList.slice(0,2).join('" et "')}" déclenchent-ils l'action ?
+→ Y a-t-il un système de nurturing ou tout est one-shot ?
 
 ${sharedContext}
 
-Ã‰TAPE 2 â€” RÃ‰PONSE JSON en ${targetLang} :
+ÉTAPE 2 — RÉPONSE JSON en ${targetLang} :
 {
   "chainOfThought": {
-    "funnelReasoning": "rÃ©flexion sur le parcours visiteur",
-    "biggestDropOff": "oÃ¹ l'utilisateur abandonne et pourquoi",
-    "conversionKiller": "facteur numÃ©ro 1 qui tue les conversions"
+    "funnelReasoning": "réflexion sur le parcours visiteur",
+    "biggestDropOff": "où l'utilisateur abandonne et pourquoi",
+    "conversionKiller": "facteur numéro 1 qui tue les conversions"
   },
   "funnelMapping": {
     "funnelType": "Direct Response|Lead Gen|E-commerce|Tripwire|VSL",
     "stages": [
-      { "stage": "ACQUISITION", "score": 0, "source": "trafic probable SEO|Pub|Social|Direct", "verdict": "verdict basÃ© sur donnÃ©es", "fix": "action corrective" },
-      { "stage": "ACTIVATION",  "score": 0, "hook": "accroche dÃ©tectÃ©e : ${h1Main}", "verdict": "verdict", "fix": "action corrective" },
+      { "stage": "ACQUISITION", "score": 0, "source": "trafic probable SEO|Pub|Social|Direct", "verdict": "verdict basé sur données", "fix": "action corrective" },
+      { "stage": "ACTIVATION",  "score": 0, "hook": "accroche détectée : ${h1Main}", "verdict": "verdict", "fix": "action corrective" },
       { "stage": "DESIRE",      "score": 0, "socialProof": "${socialProofs.length} preuves sociales", "pricePresentation": "${getConfirmedFunnelPrice(priceIntel) > 0 ? getConfirmedFunnelPrice(priceIntel) + ' ' + currency : 'PRIX_NON_CONFIRME'}", "verdict": "verdict", "fix": "action corrective" },
-      { "stage": "ACTION",      "score": 0, "ctaMain": "${ctaList[0] || ND}", "frictions": ["friction rÃ©elle basÃ©e sur donnÃ©es"], "verdict": "verdict", "fix": "action corrective" },
-      { "stage": "RETENTION",   "score": 0, "hasEmail": ${emails.length > 0}, "hasWhatsApp": ${hasWhatsApp}, "nurturingSystem": "prÃ©sent|absent|faible", "verdict": "verdict", "fix": "action corrective" }
+      { "stage": "ACTION",      "score": 0, "ctaMain": "${ctaList[0] || ND}", "frictions": ["friction réelle basée sur données"], "verdict": "verdict", "fix": "action corrective" },
+      { "stage": "RETENTION",   "score": 0, "hasEmail": ${emails.length > 0}, "hasWhatsApp": ${hasWhatsApp}, "nurturingSystem": "présent|absent|faible", "verdict": "verdict", "fix": "action corrective" }
     ],
     "overallConversionScore": 0,
     "estimatedConversionRate": "X%",
-    "dropOffStage": "Ã©tape la plus risquÃ©e"
+    "dropOffStage": "étape la plus risquée"
   },
     "pricingPsychology": {
     "confirmedPrice": ${getConfirmedFunnelPrice(priceIntel) || 'null'},
     "currency": ${currency ? `"${currency}"` : 'null'},
-    "priceAnchoring": "prÃ©sent/absent + impact",
-    "psychologicalPrice": "ND si aucun prix dÃ©tectÃ© ; ne jamais inventer",
+    "priceAnchoring": "présent/absent + impact",
+    "psychologicalPrice": "ND si aucun prix détecté ; ne jamais inventer",
     "bundleSuggestion": [],
     "urgencyMissing": true,
     "guaranteeMissing": true,
-    "priceVerdict": "verdict sur la stratÃ©gie tarifaire sans inventer de prix"
+    "priceVerdict": "verdict sur la stratégie tarifaire sans inventer de prix"
   },
   "copywritingDeep": {
-    "currentAngle": "angle dÃ©tectÃ©",
-    "emotionalTriggers": ["trigger rÃ©el dÃ©tectÃ©"],
+    "currentAngle": "angle détecté",
+    "emotionalTriggers": ["trigger réel détecté"],
     "toneOfVoice": "Autoritaire|Empathique|Agressif|Premium|Conversationnel",
     "headlineScore": 0,
-    "headlineType": "CuriositÃ©|BÃ©nÃ©fice|Peur|Transformation|Chiffre",
+    "headlineType": "Curiosité|Bénéfice|Peur|Transformation|Chiffre",
     "ctaStrength": "Faible|Moyen|Fort|Excellent",
     "missingFormulas": ["formule manquante ex: PAS, AIDA, 4U"],
     "topWeakness": "faiblesse principale copy",
     "rewriteSuggestions": {
-      "newH1": "H1 rÃ©Ã©crit JTBD basÃ© sur : ${h1Main}",
-      "newCTA": "CTA rÃ©Ã©crit basÃ© sur : ${ctaList[0] || ND}",
-      "newSubheadline": "sous-titre rÃ©Ã©crit",
-      "urgencyLine": "ligne d'urgence Ã  ajouter",
-      "guaranteeLine": "ligne de garantie Ã  ajouter"
+      "newH1": "H1 réécrit JTBD basé sur : ${h1Main}",
+      "newCTA": "CTA réécrit basé sur : ${ctaList[0] || ND}",
+      "newSubheadline": "sous-titre réécrit",
+      "urgencyLine": "ligne d'urgence à ajouter",
+      "guaranteeLine": "ligne de garantie à ajouter"
     }
   },
   "aarrMetrics": {
@@ -14012,10 +14012,10 @@ ${sharedContext}
   }
 }`.trim();
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // âš¡ VAGUE 1 â€” AGENTS 1 + 2 EN PARALLÃˆLE
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        console.log(`[${requestId}] âš¡ Vague 1/3 â€” Agents 1+2 en parallÃ¨le...`);
+        // ══════════════════════════════════════════════════════
+        // ⚡ VAGUE 1 — AGENTS 1 + 2 EN PARALLÈLE
+        // ══════════════════════════════════════════════════════
+        console.log(`[${requestId}] ⚡ Vague 1/3 — Agents 1+2 en parallèle...`);
         const t1 = Date.now();
 
         const [aiResult1, aiResult2] = await Promise.all([
@@ -14024,18 +14024,18 @@ ${sharedContext}
                 maxTokens:      2200,
                 expectedFormat: 'json',
                 context:        `A1-${requestId}`,
-                systemPrompt:   `${langInstr} Tu es un Expert UX/CRO GOD TIER. Raisonne d'abord (Chain of Thought), puis rÃ©ponds en JSON strict. ZÃ©ro texte hors JSON.`
+                systemPrompt:   `${langInstr} Tu es un Expert UX/CRO GOD TIER. Raisonne d'abord (Chain of Thought), puis réponds en JSON strict. Zéro texte hors JSON.`
             }),
             callOpenRouterAPI(prompt_A2_parallel, {
                 temperature:    0.15,
                 maxTokens:      2500,
                 expectedFormat: 'json',
                 context:        `A2-${requestId}`,
-                systemPrompt:   `${langInstr} Tu es un Expert Funnel Strategist GOD TIER. Raisonne (Chain of Thought) puis rÃ©ponds JSON strict. ZÃ©ro texte hors JSON.`
+                systemPrompt:   `${langInstr} Tu es un Expert Funnel Strategist GOD TIER. Raisonne (Chain of Thought) puis réponds JSON strict. Zéro texte hors JSON.`
             })
         ]);
 
-        console.log(`[${requestId}] âœ… Vague 1 terminÃ©e en ${Date.now() - t1}ms`);
+        console.log(`[${requestId}] ✅ Vague 1 terminée en ${Date.now() - t1}ms`);
 
         const r1 = typeof aiResult1.response === 'string' ? extractJSON(aiResult1.response) : aiResult1.response;
         const r2 = typeof aiResult2.response === 'string' ? extractJSON(aiResult2.response) : aiResult2.response;
@@ -14044,11 +14044,11 @@ ${sharedContext}
 
         if (socialProofConfirmed && r1Safe.aidaAnalysis && typeof r1Safe.aidaAnalysis === 'object') {
             const socialProofPlacement = isAr
-                ? 'ØªÙ… Ø±ØµØ¯ ØªÙ‚ÙŠÙŠÙ…Ø§Øª Ø£Ùˆ Ø´Ù‡Ø§Ø¯Ø§Øª Ø¹Ù…Ù„Ø§Ø¡ ÙÙŠ Ø§Ù„ØµÙØ­Ø©. Ø§Ù„ØªÙˆØµÙŠØ© Ù‡ÙŠ ØªÙ‚Ø±ÙŠØ¨ Ù…Ù‚ØªØ·Ù Ù…ÙˆØ«ÙˆÙ‚ Ù…Ù†Ù‡Ø§ Ù…Ù† Ø§Ù„Ø¹Ø±Ø¶ ÙˆCTAØŒ ÙˆÙ„ÙŠØ³ Ø¥Ù†Ø´Ø§Ø¡ Ø¯Ù„ÙŠÙ„ Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.'
+                ? 'تم رصد تقييمات أو شهادات عملاء في الصفحة. التوصية هي تقريب مقتطف موثوق منها من العرض وCTA، وليس إنشاء دليل اجتماعي غير موجود.'
                 : isEn
                     ? 'Customer reviews or testimonials were observed on the page. Move one verified excerpt closer to the offer and CTA instead of adding invented proof.'
-                    : 'Des avis ou tÃ©moignages clients ont Ã©tÃ© observÃ©s sur la page. Rapprocher un extrait vÃ©rifiable de lâ€™offre et du CTA, sans inventer une preuve absente.';
-            const absencePattern = /(?:aucun(?:e)?|absence|absent(?:e)?|sans|non\s+d[Ã©e]tect[Ã©e]e?|no|missing|not\s+detected|Ù„Ø§\s*(?:ÙŠÙˆØ¬Ø¯|ØªÙˆØ¬Ø¯|ÙˆØ¬ÙˆØ¯)).{0,55}(?:preuve\s*sociale|avis|t[Ã©e]moignages?|social\s*proof|reviews?|testimonials?|ØªÙ‚ÙŠÙŠÙ…Ø§Øª|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª)/i;
+                    : 'Des avis ou témoignages clients ont été observés sur la page. Rapprocher un extrait vérifiable de l’offre et du CTA, sans inventer une preuve absente.';
+            const absencePattern = /(?:aucun(?:e)?|absence|absent(?:e)?|sans|non\s+d[ée]tect[ée]e?|no|missing|not\s+detected|لا\s*(?:يوجد|توجد|وجود)).{0,55}(?:preuve\s*sociale|avis|t[ée]moignages?|social\s*proof|reviews?|testimonials?|تقييمات|آراء|مراجعات|شهادات)/i;
             const reconcileAidaSocialProof = value => {
                 if (typeof value === 'string') return absencePattern.test(value) ? socialProofPlacement : value;
                 if (Array.isArray(value)) return value.map(reconcileAidaSocialProof);
@@ -14060,7 +14060,7 @@ ${sharedContext}
             r1Safe.aidaAnalysis = reconcileAidaSocialProof(r1Safe.aidaAnalysis);
         }
 
-// â”€â”€â”€ Design Score local (fallback si l'IA retourne 0) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─── Design Score local (fallback si l'IA retourne 0) ────────────────────────
 const computedDesignScore = (() => {
     let s = 0;
     if (cleanColors.length >= 2)                              s += 20;
@@ -14080,13 +14080,13 @@ if (r1Safe.webCharte) {
         r1Safe.webCharte.designScore = computedDesignScore;
     }
 }
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────────────────────
         const r2Safe = r2 || {};
         if (!r2Safe.pricingPsychology || typeof r2Safe.pricingPsychology !== 'object') {
   r2Safe.pricingPsychology = {};
 }
 
-// âœ… APRÃˆS â€” calcul local basÃ© sur pri (dÃ©jÃ  disponible dans le scope)
+// ✅ APRÈS — calcul local basé sur pri (déjà disponible dans le scope)
 const computedPricingPsychology = (() => {
     const price = getConfirmedFunnelPrice(pri);
     if (!price || price <= 0) return {};
@@ -14117,58 +14117,58 @@ r2Safe.pricingPsychology = {
             action:    { score: 0 },
         };
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════
         // PROMPTS A3 + A4
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════
         const prompt_A3 = `
 ${langInstr}
 
-Ã‰TAPE 1 â€” RÃ‰FLEXION (Chain of Thought) :
-â†’ Quelles sont les 3 failles FATALES de ce funnel ?
-â†’ Si j'avais 24h pour doubler les conversions, que ferais-je ?
-â†’ Quelle section manquante coÃ»te le plus de ventes ?
+ÉTAPE 1 — RÉFLEXION (Chain of Thought) :
+→ Quelles sont les 3 failles FATALES de ce funnel ?
+→ Si j'avais 24h pour doubler les conversions, que ferais-je ?
+→ Quelle section manquante coûte le plus de ventes ?
 
 ${sharedContextShort}
 
-SYNTHÃˆSE AGENTS PRÃ‰CÃ‰DENTS :
+SYNTHÈSE AGENTS PRÉCÉDENTS :
 AIDA Scores    : A=${aidaData.attention?.score||0} I=${aidaData.interest?.score||0} D=${aidaData.desire?.score||0} A=${aidaData.action?.score||0}
 Funnel Type    : ${r2Safe.funnelMapping?.funnelType || ND}
 Conversion Est.: ${r2Safe.funnelMapping?.estimatedConversionRate || ND}
 Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
 Top Weakness   : ${r2Safe.copywritingDeep?.topWeakness || ND}
-Prix confirmÃ©  : ${getConfirmedFunnelPrice(priceIntel) > 0 ? `${getConfirmedFunnelPrice(priceIntel)} ${currency}` : 'PRIX_NON_CONFIRME'}
+Prix confirmé  : ${getConfirmedFunnelPrice(priceIntel) > 0 ? `${getConfirmedFunnelPrice(priceIntel)} ${currency}` : 'PRIX_NON_CONFIRME'}
 
-Ã‰TAPE 2 â€” RÃ‰PONSE JSON en ${targetLang} :
+ÉTAPE 2 — RÉPONSE JSON en ${targetLang} :
 {
   "chainOfThought": {
     "fatalFlaws": ["faille fatale 1", "faille fatale 2", "faille fatale 3"],
     "24hPlan": "plan d'action si 24h pour agir",
-    "revenueLoss": "estimation perte mensuelle en ${currency} basÃ©e sur donnÃ©es rÃ©elles"
+    "revenueLoss": "estimation perte mensuelle en ${currency} basée sur données réelles"
   },
   "strategicBlueprint": {
     "globalVerdict": "verdict global 2-3 phrases percutantes",
-    "killShot": "UNE action qui change tout â€” spÃ©cifique et actionnable",
-    "competitiveAdvantage": "avantage unique Ã  exploiter immÃ©diatement",
-    "counterAttackStrategy": "stratÃ©gie pour dominer la concurrence",
-    "salesAngleRecommended": "angle de vente optimal pour ce marchÃ©"
+    "killShot": "UNE action qui change tout — spécifique et actionnable",
+    "competitiveAdvantage": "avantage unique à exploiter immédiatement",
+    "counterAttackStrategy": "stratégie pour dominer la concurrence",
+    "salesAngleRecommended": "angle de vente optimal pour ce marché"
   },
   "quickWins": [
-    { "priority": 1, "action": "action trÃ¨s prÃ©cise basÃ©e sur donnÃ©es rÃ©elles", "impact": "Critique|Ã‰levÃ©|Moyen", "effort": "30min|1h|1jour|1semaine", "expectedGain": "gain estimÃ© en % conversion", "howTo": "comment implÃ©menter concrÃ¨tement" },
-    { "priority": 2, "action": "action 2", "impact": "Critique|Ã‰levÃ©|Moyen", "effort": "30min|1h|1jour|1semaine", "expectedGain": "gain estimÃ©", "howTo": "comment implÃ©menter" },
-    { "priority": 3, "action": "action 3", "impact": "Critique|Ã‰levÃ©|Moyen", "effort": "30min|1h|1jour|1semaine", "expectedGain": "gain estimÃ©", "howTo": "comment implÃ©menter" },
-    { "priority": 4, "action": "action 4", "impact": "Ã‰levÃ©|Moyen", "effort": "1jour|1semaine", "expectedGain": "gain estimÃ©", "howTo": "comment implÃ©menter" },
-    { "priority": 5, "action": "action 5", "impact": "Ã‰levÃ©|Moyen", "effort": "1jour|1semaine", "expectedGain": "gain estimÃ©", "howTo": "comment implÃ©menter" }
+    { "priority": 1, "action": "action très précise basée sur données réelles", "impact": "Critique|Élevé|Moyen", "effort": "30min|1h|1jour|1semaine", "expectedGain": "gain estimé en % conversion", "howTo": "comment implémenter concrètement" },
+    { "priority": 2, "action": "action 2", "impact": "Critique|Élevé|Moyen", "effort": "30min|1h|1jour|1semaine", "expectedGain": "gain estimé", "howTo": "comment implémenter" },
+    { "priority": 3, "action": "action 3", "impact": "Critique|Élevé|Moyen", "effort": "30min|1h|1jour|1semaine", "expectedGain": "gain estimé", "howTo": "comment implémenter" },
+    { "priority": 4, "action": "action 4", "impact": "Élevé|Moyen", "effort": "1jour|1semaine", "expectedGain": "gain estimé", "howTo": "comment implémenter" },
+    { "priority": 5, "action": "action 5", "impact": "Élevé|Moyen", "effort": "1jour|1semaine", "expectedGain": "gain estimé", "howTo": "comment implémenter" }
   ],
   "financialProjection": {
     "currentConversionRate": "${r2Safe.funnelMapping?.estimatedConversionRate || '1-2%'}",
-    "targetConversionRate": "taux cible aprÃ¨s fixes",
+    "targetConversionRate": "taux cible après fixes",
     "confirmedPrice": ${getConfirmedFunnelPrice(priceIntel) || 'null'},
     "currency": "${currency}",
-    "monthlyVisitorsEstimate": "estimation trafic mensuel basÃ©e sur donnÃ©es rÃ©elles",
+    "monthlyVisitorsEstimate": "estimation trafic mensuel basée sur données réelles",
     "currentMonthlyRevenue": "estimation revenus actuels",
-    "projectedMonthlyRevenue": "projection aprÃ¨s optimisation",
-    "potentialGain": "[CALCULE uniquement si prix confirmÃ© Ã— taux conversion estimÃ© Ã— trafic]",
-    "roiVerdict": "verdict ROI si corrections appliquÃ©es"
+    "projectedMonthlyRevenue": "projection après optimisation",
+    "potentialGain": "[CALCULE uniquement si prix confirmé × taux conversion estimé × trafic]",
+    "roiVerdict": "verdict ROI si corrections appliquées"
   },
   "technicalAudit": {
     "stack": "${techCMS}",
@@ -14179,41 +14179,41 @@ Prix confirmÃ©  : ${getConfirmedFunnelPrice(priceIntel) > 0 ? `${getConfirmedF
     "phones": ${JSON.stringify(phones)},
     "emails": ${JSON.stringify(emails)},
     "wordCount": ${wordCount},
-    "schemaRecommended": ["Schema type 1 Ã  ajouter", "Schema type 2"],
-    "criticalIssues": ["issue technique rÃ©elle basÃ©e sur donnÃ©es"],
-    "seoIssues": ["problÃ¨me SEO rÃ©el dÃ©tectÃ©"]
+    "schemaRecommended": ["Schema type 1 à ajouter", "Schema type 2"],
+    "criticalIssues": ["issue technique réelle basée sur données"],
+    "seoIssues": ["problème SEO réel détecté"]
   }
 }`.trim();
 
         const prompt_A4 = `
 ${langInstr}
 
-Ã‰TAPE 1 â€” RÃ‰FLEXION (Chain of Thought) :
-â†’ La couleur ${primaryColor} inspire-t-elle confiance ou urgence ?
-â†’ Le visiteur lit-il en F-pattern ou Z-pattern sur cette page ?
-â†’ Y a-t-il des biais cognitifs exploitÃ©s (raretÃ©, autoritÃ©, rÃ©ciprocitÃ©) ?
-â†’ La hiÃ©rarchie visuelle guide-t-elle l'oeil vers le CTA ?
+ÉTAPE 1 — RÉFLEXION (Chain of Thought) :
+→ La couleur ${primaryColor} inspire-t-elle confiance ou urgence ?
+→ Le visiteur lit-il en F-pattern ou Z-pattern sur cette page ?
+→ Y a-t-il des biais cognitifs exploités (rareté, autorité, réciprocité) ?
+→ La hiérarchie visuelle guide-t-elle l'oeil vers le CTA ?
 
 ${sharedContextShort}
 
-SYNTHÃˆSE COMPLÃˆTE :
+SYNTHÈSE COMPLÈTE :
 AIDA Global    : ${Math.round(((aidaData.attention?.score||0)+(aidaData.interest?.score||0)+(aidaData.desire?.score||0)+(aidaData.action?.score||0))/4)}/100
 Funnel Type    : ${r2Safe.funnelMapping?.funnelType || ND}
 Top Weakness   : ${r2Safe.copywritingDeep?.topWeakness || ND}
 Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
 
-Ã‰TAPE 2 â€” RÃ‰PONSE JSON en ${targetLang} :
+ÉTAPE 2 — RÉPONSE JSON en ${targetLang} :
 {
   "chainOfThought": {
     "neuroReasoning": "analyse neuro en 2-3 phrases",
-    "emotionalJourney": "parcours Ã©motionnel du visiteur",
-    "subConsciousBarriers": "barriÃ¨res inconscientes Ã  l'achat"
+    "emotionalJourney": "parcours émotionnel du visiteur",
+    "subConsciousBarriers": "barrières inconscientes à l'achat"
   },
   "neuromarketing": {
     "colorPsychology": {
       "primary": "${primaryColor}",
-      "emotion": "Ã©motion dÃ©clenchÃ©e",
-      "conversionImpact": "Positif|NÃ©gatif|Neutre",
+      "emotion": "émotion déclenchée",
+      "conversionImpact": "Positif|Négatif|Neutre",
       "recommendation": "recommandation couleur"
     },
     "readingPattern": "F-Pattern|Z-Pattern|Gutenberg|Mixte",
@@ -14221,10 +14221,10 @@ Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
       "score": 0,
       "eyeFlow": "description du flux visuel",
       "ctaVisibility": "Excellent|Bon|Faible|Absent",
-      "fix": "correction hiÃ©rarchie visuelle"
+      "fix": "correction hiérarchie visuelle"
     },
     "cognitiveBiases": {
-      "scarcity":    { "present": false, "verdict": "prÃ©sent|absent", "fix": "action" },
+      "scarcity":    { "present": false, "verdict": "présent|absent", "fix": "action" },
       "authority":   { "present": ${schemaTypes.length > 0}, "verdict": "verdict", "fix": "action" },
       "socialProof": { "present": ${socialProofs.length > 0}, "verdict": "verdict", "fix": "action" },
       "reciprocity": { "present": false, "verdict": "verdict", "fix": "action" },
@@ -14233,8 +14233,8 @@ Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
     },
     "trustBuilding": {
       "score": 0,
-      "elements": ["Ã©lÃ©ment trust rÃ©el dÃ©tectÃ©"],
-      "missing": ["Ã©lÃ©ment trust manquant critique"],
+      "elements": ["élément trust réel détecté"],
+      "missing": ["élément trust manquant critique"],
       "fix": "action pour booster trust score"
     }
   },
@@ -14249,14 +14249,14 @@ Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
     },
     "grade": "A|B|C|D|F",
     "verdict": "verdict global percutant en 1 phrase",
-    "potentialScore": "score atteignable aprÃ¨s corrections"
+    "potentialScore": "score atteignable après corrections"
   }
 }`.trim();
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // âš¡ VAGUE 2 â€” AGENTS 3 + 4 EN PARALLÃˆLE
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        console.log(`[${requestId}] âš¡ Vague 2/3 â€” Agents 3+4 en parallÃ¨le...`);
+        // ══════════════════════════════════════════════════════
+        // ⚡ VAGUE 2 — AGENTS 3 + 4 EN PARALLÈLE
+        // ══════════════════════════════════════════════════════
+        console.log(`[${requestId}] ⚡ Vague 2/3 — Agents 3+4 en parallèle...`);
         const t2 = Date.now();
 
         const [aiResult3, aiResult4] = await Promise.all([
@@ -14265,27 +14265,27 @@ Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
                 maxTokens:      2500,
                 expectedFormat: 'json',
                 context:        `A3-${requestId}`,
-                systemPrompt:   `${langInstr} Tu es un Expert Growth Hacker GOD TIER. Chain of Thought puis JSON strict. ZÃ©ro texte hors JSON.`
+                systemPrompt:   `${langInstr} Tu es un Expert Growth Hacker GOD TIER. Chain of Thought puis JSON strict. Zéro texte hors JSON.`
             }),
             callOpenRouterAPI(prompt_A4, {
                 temperature:    0.15,
                 maxTokens:      2000,
                 expectedFormat: 'json',
                 context:        `A4-${requestId}`,
-                systemPrompt:   `${langInstr} Tu es un Expert Neuromarketing GOD TIER. Chain of Thought puis JSON strict. ZÃ©ro texte hors JSON.`
+                systemPrompt:   `${langInstr} Tu es un Expert Neuromarketing GOD TIER. Chain of Thought puis JSON strict. Zéro texte hors JSON.`
             })
         ]);
 
-        console.log(`[${requestId}] âœ… Vague 2 terminÃ©e en ${Date.now() - t2}ms`);
+        console.log(`[${requestId}] ✅ Vague 2 terminée en ${Date.now() - t2}ms`);
 
         const r3     = typeof aiResult3.response === 'string' ? extractJSON(aiResult3.response) : aiResult3.response;
         const r3Safe = r3 || {};
         const r4     = typeof aiResult4.response === 'string' ? extractJSON(aiResult4.response) : aiResult4.response;
         const r4Safe = r4 || {};
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // â”€â”€ FIX GLOBALSCORING â€” Anti-score-zÃ©ro + fallback
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════
+        // ── FIX GLOBALSCORING — Anti-score-zéro + fallback
+        // ══════════════════════════════════════════════════════
         (() => {
             const aidaAvg = Math.round((
                 (aidaData.attention?.score || 0) +
@@ -14317,16 +14317,16 @@ Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
 
             const finalVerdict = (r4Safe.globalScoring?.verdict && r4Safe.globalScoring.verdict.trim() !== '')
                 ? r4Safe.globalScoring.verdict
-                : (isAr ? 'ØªØ­Ù„ÙŠÙ„ Ù…ÙƒØªÙ…Ù„ â€” Ù†ØªÙŠØ¬Ø© Ù…Ø­Ø³ÙˆØ¨Ø© Ù…Ø­Ù„ÙŠØ§Ù‹'
-                 : isEn  ? 'Analysis complete â€” locally computed score'
-                 :         'Analyse complÃ¨te â€” score calculÃ© localement');
+                : (isAr ? 'تحليل مكتمل — نتيجة محسوبة محلياً'
+                 : isEn  ? 'Analysis complete — locally computed score'
+                 :         'Analyse complète — score calculé localement');
 
             const finalBreakdown = {
-                aida:          { score: aidaAvg,    weight: '30%', label: isAr ? 'Ù†Ù…ÙˆØ°Ø¬ AIDA'       : isEn ? 'AIDA Model'        : 'ModÃ¨le AIDA' },
-                conversion:    { score: convScore,  weight: '25%', label: isAr ? 'Ù‚Ù…Ø¹ Ø§Ù„ØªØ­ÙˆÙŠÙ„'      : isEn ? 'Conversion Funnel' : 'Funnel Conversion' },
-                copywriting:   { score: copyScore,  weight: '20%', label: isAr ? 'ÙƒØªØ§Ø¨Ø© Ø§Ù„Ø¥Ø¹Ù„Ø§Ù†Ø§Øª' : isEn ? 'Copywriting'       : 'Copywriting' },
-                neuromarketing:{ score: neuroScore, weight: '15%', label: isAr ? 'Ø§Ù„ØªØ³ÙˆÙŠÙ‚ Ø§Ù„Ø¹ØµØ¨ÙŠ'  : isEn ? 'Neuromarketing'    : 'Neuromarketing' },
-                technical:     { score: localScore, weight: '10%', label: isAr ? 'Ø§Ù„ØªÙ‚Ù†ÙŠØ©'         : isEn ? 'Technical'         : 'Technique' },
+                aida:          { score: aidaAvg,    weight: '30%', label: isAr ? 'نموذج AIDA'       : isEn ? 'AIDA Model'        : 'Modèle AIDA' },
+                conversion:    { score: convScore,  weight: '25%', label: isAr ? 'قمع التحويل'      : isEn ? 'Conversion Funnel' : 'Funnel Conversion' },
+                copywriting:   { score: copyScore,  weight: '20%', label: isAr ? 'كتابة الإعلانات' : isEn ? 'Copywriting'       : 'Copywriting' },
+                neuromarketing:{ score: neuroScore, weight: '15%', label: isAr ? 'التسويق العصبي'  : isEn ? 'Neuromarketing'    : 'Neuromarketing' },
+                technical:     { score: localScore, weight: '10%', label: isAr ? 'التقنية'         : isEn ? 'Technical'         : 'Technique' },
             };
 
             if (!r4Safe.globalScoring) r4Safe.globalScoring = {};
@@ -14338,46 +14338,46 @@ Drop-off Stage : ${r2Safe.funnelMapping?.dropOffStage || ND}
             r4Safe.globalScoring.source         = (computedGlobal > 0 && r4Safe.globalScoring.overall !== computedGlobal) ? 'ai' : 'computed';
         })();
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // PROMPT A5 (dÃ©pend de A3+A4 â†’ reste seul)
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════
+        // PROMPT A5 (dépend de A3+A4 → reste seul)
+        // ══════════════════════════════════════════════════════
         const prompt_A5 = `
 ${langInstr}
 
 Tu es un Expert Growth Engineer.
-MISSION : GÃ©nÃ¨re un prompt d'exÃ©cution technique RÃ‰EL et COPIABLE-COLLABLE pour ${validUrl}.
+MISSION : Génère un prompt d'exécution technique RÉEL et COPIABLE-COLLABLE pour ${validUrl}.
 
-DONNÃ‰ES RÃ‰ELLES :
+DONNÉES RÉELLES :
 - Stack       : ${techCMS}
 - Couleur     : ${primaryColor}
 - H1 actuel   : ${h1Main}
-- H1 suggÃ©rÃ©  : ${r2Safe.copywritingDeep?.rewriteSuggestions?.newH1 || ND}
+- H1 suggéré  : ${r2Safe.copywritingDeep?.rewriteSuggestions?.newH1 || ND}
 - CTA actuel  : ${ctaList[0] || ND}
-- CTA suggÃ©rÃ© : ${r2Safe.copywritingDeep?.rewriteSuggestions?.newCTA || ND}
-- Phones      : ${phones.length > 0 ? phones.join(', ') : '[RÃ‰CUPÃ‰RER DEPUIS ADMIN]'}
-- Emails      : ${emails.length > 0 ? emails.join(', ') : '[RÃ‰CUPÃ‰RER DEPUIS ADMIN]'}
+- CTA suggéré : ${r2Safe.copywritingDeep?.rewriteSuggestions?.newCTA || ND}
+- Phones      : ${phones.length > 0 ? phones.join(', ') : '[RÉCUPÉRER DEPUIS ADMIN]'}
+- Emails      : ${emails.length > 0 ? emails.join(', ') : '[RÉCUPÉRER DEPUIS ADMIN]'}
 - Quick Wins  : ${JSON.stringify(r3Safe.quickWins?.slice(0,3) || [])}
 - Kill Shot   : ${r3Safe.strategicBlueprint?.killShot || ND}
 - Score actuel: ${r4Safe.globalScoring?.overall || 0}/100
 - Grade       : ${r4Safe.globalScoring?.grade || ND}
 
 DIRECTIVES STRICTES :
-1. INTERDIT : placeholder "+2126XXXXXXXX" â€” utilise donnÃ©es rÃ©elles ou [ADMIN].
+1. INTERDIT : placeholder "+2126XXXXXXXX" — utilise données réelles ou [ADMIN].
 2. INTERDIT : proposer ${techCMS.includes('Shopify') ? 'WordPress' : 'Shopify'} si stack = ${techCMS}.
 3. CSS/JS doivent utiliser EXACTEMENT la couleur ${primaryColor}.
-4. ${socialProofs.length > 0 ? 'Preuve sociale EXISTE â€” ne pas dire "ajoutez des tÃ©moignages".' : 'Preuve sociale ABSENTE â€” suggÃ©rer ajout concret.'}
-5. Chaque snippet doit Ãªtre COPIABLE-COLLABLE directement.
-6. 15 modifications minimum basÃ©es sur les failles RÃ‰ELLES.
+4. ${socialProofs.length > 0 ? 'Preuve sociale EXISTE — ne pas dire "ajoutez des témoignages".' : 'Preuve sociale ABSENTE — suggérer ajout concret.'}
+5. Chaque snippet doit être COPIABLE-COLLABLE directement.
+6. 15 modifications minimum basées sur les failles RÉELLES.
 
-GÃ‰NÃˆRE UNIQUEMENT LE PROMPT â€” pas de JSON, pas d'explication :
+GÉNÈRE UNIQUEMENT LE PROMPT — pas de JSON, pas d'explication :
 "Tu es un Expert Growth Engineer. MISSION : Appliquer ces 15 correctifs sur ${validUrl}...
-[15 modifications techniques avec snippets CSS/JS rÃ©els]"
+[15 modifications techniques avec snippets CSS/JS réels]"
 Langue : ${targetLang}.`.trim();
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // âš¡ VAGUE 3 â€” AGENT 5 SEUL
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        console.log(`[${requestId}] âš¡ Vague 3/3 â€” Agent5 Magic Prompt...`);
+        // ══════════════════════════════════════════════════════
+        // ⚡ VAGUE 3 — AGENT 5 SEUL
+        // ══════════════════════════════════════════════════════
+        console.log(`[${requestId}] ⚡ Vague 3/3 — Agent5 Magic Prompt...`);
         const t3 = Date.now();
 
         const aiResult5 = await callOpenRouterAPI(prompt_A5, {
@@ -14385,18 +14385,18 @@ Langue : ${targetLang}.`.trim();
             maxTokens:      2000,
             expectedFormat: 'text',
             context:        `A5-${requestId}`,
-            systemPrompt:   `${langInstr} Expert Growth Engineer. GÃ©nÃ¨re UNIQUEMENT le prompt demandÃ©. Aucun JSON. Aucune explication.`
+            systemPrompt:   `${langInstr} Expert Growth Engineer. Génère UNIQUEMENT le prompt demandé. Aucun JSON. Aucune explication.`
         });
 
-        console.log(`[${requestId}] âœ… Vague 3 terminÃ©e en ${Date.now() - t3}ms`);
+        console.log(`[${requestId}] ✅ Vague 3 terminée en ${Date.now() - t3}ms`);
 
         const magicPrompt = aiResult5?.success
             ? aiResult5.response
-            : isAr ? 'ÙØ´Ù„ ØªÙˆÙ„ÙŠØ¯ Ø§Ù„Ù…Ø·Ø§Ù„Ø¨Ø©'
+            : isAr ? 'فشل توليد المطالبة'
             : isEn ? 'Magic Prompt failed'
             :        'Erreur Magic Prompt';
 
-      // â”€â”€â”€ Calcul Steal Potential V12 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+      // ─── Calcul Steal Potential V12 ──────────────────────────────────────────────
 const v12Traffic = (() => {
     const raw = r3Safe?.financialProjection?.monthlyVisitorsEstimate;
     if (!raw) return null;
@@ -14413,10 +14413,10 @@ const v12Basket   = getConfirmedFunnelPrice(priceIntel) > 0 ? detectedPrice : nu
 const v12StealPot = (v12Traffic && v12Basket)
     ? Math.max(0, Math.round((0.05 - v12CR) * v12Traffic * v12Basket))
     : null;
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// PATCH V2-A â€” helpers audit frontend-ready
-// Ã€ placer juste avant: const finalResponse = {
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─────────────────────────────────────────────────────────────
+// PATCH V2-A — helpers audit frontend-ready
+// À placer juste avant: const finalResponse = {
+// ─────────────────────────────────────────────────────────────
 
 const normalizeConfidence = (value, fallback = 'MEDIUM') => {
     const v = String(value || fallback).toUpperCase();
@@ -14490,13 +14490,13 @@ const buildAuditIssues = () => {
     if (!heroSection) {
         issues.push({
             key: 'missing_hero',
-            title: isEn ? 'Hero section missing or not detected' : isAr ? 'Ù‚Ø³Ù… Hero Ù…ÙÙ‚ÙˆØ¯ Ø£Ùˆ ØºÙŠØ± Ù…ÙƒØªØ´Ù' : 'Section Hero absente ou non dÃ©tectÃ©e',
+            title: isEn ? 'Hero section missing or not detected' : isAr ? 'قسم Hero مفقود أو غير مكتشف' : 'Section Hero absente ou non détectée',
             severity: 'HIGH',
             category: 'structure',
             observed: false,
             evidence: 'HERO not found in sectionsDetailed',
-            impact: isEn ? 'Weak first impression and poor attention capture.' : isAr ? 'Ø§Ù†Ø·Ø¨Ø§Ø¹ Ø£ÙˆÙ„ Ø¶Ø¹ÙŠÙ ÙˆØ§Ù„ØªÙ‚Ø§Ø· Ø§Ù†ØªØ¨Ø§Ù‡ Ù…Ù†Ø®ÙØ¶.' : 'PremiÃ¨re impression faible et captation dâ€™attention rÃ©duite.',
-            recommendedFix: isEn ? 'Add a clear above-the-fold hero with value proposition and CTA.' : isAr ? 'Ø£Ø¶Ù Hero ÙˆØ§Ø¶Ø­ ÙÙˆÙ‚ Ø®Ø· Ø§Ù„Ø·ÙŠ Ù…Ø¹ Ø¹Ø±Ø¶ Ù‚ÙŠÙ…Ø© ÙˆCTA.' : 'Ajouter un hero clair au-dessus de la ligne de flottaison avec proposition de valeur et CTA.',
+            impact: isEn ? 'Weak first impression and poor attention capture.' : isAr ? 'انطباع أول ضعيف والتقاط انتباه منخفض.' : 'Première impression faible et captation d’attention réduite.',
+            recommendedFix: isEn ? 'Add a clear above-the-fold hero with value proposition and CTA.' : isAr ? 'أضف Hero واضح فوق خط الطي مع عرض قيمة وCTA.' : 'Ajouter un hero clair au-dessus de la ligne de flottaison avec proposition de valeur et CTA.',
             confidence: 'HIGH'
         });
     }
@@ -14504,13 +14504,13 @@ const buildAuditIssues = () => {
     if (socialProofs.length === 0) {
         issues.push({
             key: 'missing_social_proof',
-            title: isEn ? 'No social proof detected' : isAr ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø¯Ù„Ø© Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ© Ù…ÙƒØªØ´ÙØ©' : 'Aucune preuve sociale dÃ©tectÃ©e',
+            title: isEn ? 'No social proof detected' : isAr ? 'لا توجد أدلة اجتماعية مكتشفة' : 'Aucune preuve sociale détectée',
             severity: 'HIGH',
             category: 'trust',
             observed: false,
             evidence: 'SOCIAL_PROOF missing from detected sections',
-            impact: isEn ? 'Trust and purchase confidence remain low.' : isAr ? 'Ø§Ù„Ø«Ù‚Ø© ÙˆØ§Ù„Ø§Ø·Ù…Ø¦Ù†Ø§Ù† Ù„Ù„Ø´Ø±Ø§Ø¡ ÙŠØ¸Ù„Ø§Ù† Ù…Ù†Ø®ÙØ¶ÙŠÙ†.' : 'La confiance et le passage Ã  lâ€™achat restent faibles.',
-            recommendedFix: isEn ? 'Add testimonials, ratings, client logos, or proof elements.' : isAr ? 'Ø£Ø¶Ù Ø´Ù‡Ø§Ø¯Ø§Øª ÙˆØªÙ‚ÙŠÙŠÙ…Ø§Øª ÙˆØ´Ø¹Ø§Ø±Ø§Øª Ø¹Ù…Ù„Ø§Ø¡ Ø£Ùˆ Ø¹Ù†Ø§ØµØ± Ø¥Ø«Ø¨Ø§Øª.' : 'Ajouter tÃ©moignages, avis, logos clients ou Ã©lÃ©ments de preuve.',
+            impact: isEn ? 'Trust and purchase confidence remain low.' : isAr ? 'الثقة والاطمئنان للشراء يظلان منخفضين.' : 'La confiance et le passage à l’achat restent faibles.',
+            recommendedFix: isEn ? 'Add testimonials, ratings, client logos, or proof elements.' : isAr ? 'أضف شهادات وتقييمات وشعارات عملاء أو عناصر إثبات.' : 'Ajouter témoignages, avis, logos clients ou éléments de preuve.',
             confidence: 'HIGH'
         });
     }
@@ -14518,13 +14518,13 @@ const buildAuditIssues = () => {
     if (!pricingSection && !detectedPrice) {
         issues.push({
             key: 'missing_pricing',
-            title: isEn ? 'Pricing is unclear or absent' : isAr ? 'Ø§Ù„ØªØ³Ø¹ÙŠØ± ØºÙŠØ± ÙˆØ§Ø¶Ø­ Ø£Ùˆ ØºØ§Ø¦Ø¨' : 'Tarification absente ou peu claire',
+            title: isEn ? 'Pricing is unclear or absent' : isAr ? 'التسعير غير واضح أو غائب' : 'Tarification absente ou peu claire',
             severity: 'HIGH',
             category: 'offer',
             observed: false,
             evidence: 'No PRICING section and no detected price',
-            impact: isEn ? 'Visitors cannot evaluate the offer quickly.' : isAr ? 'Ø§Ù„Ø²Ø§Ø¦Ø± Ù„Ø§ ÙŠØ³ØªØ·ÙŠØ¹ ØªÙ‚ÙŠÙŠÙ… Ø§Ù„Ø¹Ø±Ø¶ Ø¨Ø³Ø±Ø¹Ø©.' : 'Le visiteur ne peut pas Ã©valuer lâ€™offre rapidement.',
-            recommendedFix: isEn ? 'Show pricing, offer framing, or a clearer pricing path.' : isAr ? 'Ø§Ø¹Ø±Ø¶ Ø§Ù„ØªØ³Ø¹ÙŠØ± Ø£Ùˆ Ù‡ÙŠÙƒÙ„Ø© Ø§Ù„Ø¹Ø±Ø¶ Ø£Ùˆ Ù…Ø³Ø§Ø±Ù‹Ø§ Ø£ÙˆØ¶Ø­ Ù„Ù„Ø³Ø¹Ø±.' : 'Afficher le prix, le cadrage de lâ€™offre ou un chemin tarifaire plus clair.',
+            impact: isEn ? 'Visitors cannot evaluate the offer quickly.' : isAr ? 'الزائر لا يستطيع تقييم العرض بسرعة.' : 'Le visiteur ne peut pas évaluer l’offre rapidement.',
+            recommendedFix: isEn ? 'Show pricing, offer framing, or a clearer pricing path.' : isAr ? 'اعرض التسعير أو هيكلة العرض أو مسارًا أوضح للسعر.' : 'Afficher le prix, le cadrage de l’offre ou un chemin tarifaire plus clair.',
             confidence: 'HIGH'
         });
     }
@@ -14532,13 +14532,13 @@ const buildAuditIssues = () => {
     if (ctaList.length === 0) {
         issues.push({
             key: 'missing_cta',
-            title: isEn ? 'No clear CTA detected' : isAr ? 'Ù„Ù… ÙŠØªÙ… Ø§ÙƒØªØ´Ø§Ù CTA ÙˆØ§Ø¶Ø­' : 'Aucun CTA clair dÃ©tectÃ©',
+            title: isEn ? 'No clear CTA detected' : isAr ? 'لم يتم اكتشاف CTA واضح' : 'Aucun CTA clair détecté',
             severity: 'HIGH',
             category: 'conversion',
             observed: false,
             evidence: 'ctaList is empty',
-            impact: isEn ? 'Users lack a clear next step.' : isAr ? 'Ù„Ø§ ÙŠÙ…Ù„Ùƒ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… Ø®Ø·ÙˆØ© ØªØ§Ù„ÙŠØ© ÙˆØ§Ø¶Ø­Ø©.' : 'Lâ€™utilisateur nâ€™a pas dâ€™Ã©tape suivante claire.',
-            recommendedFix: isEn ? 'Add a primary CTA and repeat it across key sections.' : isAr ? 'Ø£Ø¶Ù CTA Ø±Ø¦ÙŠØ³ÙŠÙ‹Ø§ ÙˆÙƒØ±Ø±Ù‡ Ø¯Ø§Ø®Ù„ Ø§Ù„Ø£Ù‚Ø³Ø§Ù… Ø§Ù„Ø£Ø³Ø§Ø³ÙŠØ©.' : 'Ajouter un CTA principal et le rÃ©pÃ©ter dans les sections clÃ©s.',
+            impact: isEn ? 'Users lack a clear next step.' : isAr ? 'لا يملك المستخدم خطوة تالية واضحة.' : 'L’utilisateur n’a pas d’étape suivante claire.',
+            recommendedFix: isEn ? 'Add a primary CTA and repeat it across key sections.' : isAr ? 'أضف CTA رئيسيًا وكرره داخل الأقسام الأساسية.' : 'Ajouter un CTA principal et le répéter dans les sections clés.',
             confidence: 'HIGH'
         });
     }
@@ -14546,13 +14546,13 @@ const buildAuditIssues = () => {
     if (!faqSection && !hasSection('OBJECTIONS')) {
         issues.push({
             key: 'missing_objection_handling',
-            title: isEn ? 'Objections are not handled' : isAr ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø¹Ø§Ù„Ø¬Ø© Ù„Ù„Ø§Ø¹ØªØ±Ø§Ø¶Ø§Øª' : 'Les objections ne sont pas traitÃ©es',
+            title: isEn ? 'Objections are not handled' : isAr ? 'لا توجد معالجة للاعتراضات' : 'Les objections ne sont pas traitées',
             severity: 'MEDIUM',
             category: 'copy',
             observed: false,
             evidence: 'FAQ and OBJECTIONS sections missing',
-            impact: isEn ? 'Hesitant visitors remain unconvinced.' : isAr ? 'Ø§Ù„Ø²ÙˆØ§Ø± Ø§Ù„Ù…ØªØ±Ø¯Ø¯ÙˆÙ† ÙŠØ¨Ù‚ÙˆÙ† ØºÙŠØ± Ù…Ù‚ØªÙ†Ø¹ÙŠÙ†.' : 'Les visiteurs hÃ©sitants restent non convaincus.',
-            recommendedFix: isEn ? 'Add FAQ or objection-handling copy near the CTA.' : isAr ? 'Ø£Ø¶Ù FAQ Ø£Ùˆ Ù†ØµÙ‹Ø§ Ù„Ù…Ø¹Ø§Ù„Ø¬Ø© Ø§Ù„Ø§Ø¹ØªØ±Ø§Ø¶Ø§Øª Ù‚Ø±Ø¨ CTA.' : 'Ajouter une FAQ ou du copy de traitement des objections prÃ¨s du CTA.',
+            impact: isEn ? 'Hesitant visitors remain unconvinced.' : isAr ? 'الزوار المترددون يبقون غير مقتنعين.' : 'Les visiteurs hésitants restent non convaincus.',
+            recommendedFix: isEn ? 'Add FAQ or objection-handling copy near the CTA.' : isAr ? 'أضف FAQ أو نصًا لمعالجة الاعتراضات قرب CTA.' : 'Ajouter une FAQ ou du copy de traitement des objections près du CTA.',
             confidence: 'HIGH'
         });
     }
@@ -14560,13 +14560,13 @@ const buildAuditIssues = () => {
     if (!hasSSL) {
         issues.push({
             key: 'ssl_missing',
-            title: isEn ? 'SSL not detected' : isAr ? 'Ù„Ù… ÙŠØªÙ… Ø§ÙƒØªØ´Ø§Ù SSL' : 'SSL non dÃ©tectÃ©',
+            title: isEn ? 'SSL not detected' : isAr ? 'لم يتم اكتشاف SSL' : 'SSL non détecté',
             severity: 'HIGH',
             category: 'technical',
             observed: false,
             evidence: 'hasSSL=false',
-            impact: isEn ? 'Trust and browser confidence drop.' : isAr ? 'ØªÙ†Ø®ÙØ¶ Ø§Ù„Ø«Ù‚Ø© ÙˆØ«Ù‚Ø© Ø§Ù„Ù…ØªØµÙØ­.' : 'La confiance et la crÃ©dibilitÃ© navigateur chutent.',
-            recommendedFix: isEn ? 'Enable HTTPS and secure all key pages.' : isAr ? 'ÙØ¹Ù‘Ù„ HTTPS ÙˆØ£Ù…Ù‘Ù† ÙƒÙ„ Ø§Ù„ØµÙØ­Ø§Øª Ø§Ù„Ø£Ø³Ø§Ø³ÙŠØ©.' : 'Activer HTTPS et sÃ©curiser toutes les pages clÃ©s.',
+            impact: isEn ? 'Trust and browser confidence drop.' : isAr ? 'تنخفض الثقة وثقة المتصفح.' : 'La confiance et la crédibilité navigateur chutent.',
+            recommendedFix: isEn ? 'Enable HTTPS and secure all key pages.' : isAr ? 'فعّل HTTPS وأمّن كل الصفحات الأساسية.' : 'Activer HTTPS et sécuriser toutes les pages clés.',
             confidence: 'HIGH'
         });
     }
@@ -14574,13 +14574,13 @@ const buildAuditIssues = () => {
     if (issues.length === 0) {
         issues.push({
             key: 'general_optimization',
-            title: isEn ? 'Optimization opportunities detected' : isAr ? 'ØªÙ… Ø§ÙƒØªØ´Ø§Ù ÙØ±Øµ ØªØ­Ø³ÙŠÙ†' : 'OpportunitÃ©s dâ€™optimisation dÃ©tectÃ©es',
+            title: isEn ? 'Optimization opportunities detected' : isAr ? 'تم اكتشاف فرص تحسين' : 'Opportunités d’optimisation détectées',
             severity: 'MEDIUM',
             category: 'general',
             observed: true,
             evidence: `localScore=${localScore}, sections=${sectionsDetailed.length}, ctas=${ctaList.length}`,
-            impact: isEn ? 'The page can still improve clarity, trust, and conversion flow.' : isAr ? 'Ù„Ø§ ØªØ²Ø§Ù„ Ø§Ù„ØµÙØ­Ø© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ØªØ­Ø³ÙŠÙ† ÙÙŠ Ø§Ù„ÙˆØ¶ÙˆØ­ ÙˆØ§Ù„Ø«Ù‚Ø© ÙˆÙ…Ø³Ø§Ø± Ø§Ù„ØªØ­ÙˆÙŠÙ„.' : 'La page peut encore amÃ©liorer clartÃ©, confiance et parcours de conversion.',
-            recommendedFix: isEn ? 'Review quick wins and prioritize highest-impact fixes.' : isAr ? 'Ø±Ø§Ø¬Ø¹ Ø§Ù„ØªØ­Ø³ÙŠÙ†Ø§Øª Ø§Ù„Ø³Ø±ÙŠØ¹Ø© ÙˆØ£Ø¹Ø· Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ© Ù„Ù„Ø£Ø¹Ù„Ù‰ Ø£Ø«Ø±Ù‹Ø§.' : 'Revoir les quick wins et prioriser les correctifs Ã  plus fort impact.',
+            impact: isEn ? 'The page can still improve clarity, trust, and conversion flow.' : isAr ? 'لا تزال الصفحة قابلة للتحسين في الوضوح والثقة ومسار التحويل.' : 'La page peut encore améliorer clarté, confiance et parcours de conversion.',
+            recommendedFix: isEn ? 'Review quick wins and prioritize highest-impact fixes.' : isAr ? 'راجع التحسينات السريعة وأعط الأولوية للأعلى أثرًا.' : 'Revoir les quick wins et prioriser les correctifs à plus fort impact.',
             confidence: 'MEDIUM'
         });
     }
@@ -14607,22 +14607,22 @@ const buildQuickWinsAudit = () => {
 };
 
 const auditSummary = {
-    title: isEn ? 'Website & Funnel Audit' : isAr ? 'ØªØ¯Ù‚ÙŠÙ‚ Ø§Ù„Ù…ÙˆÙ‚Ø¹ ÙˆØ§Ù„ÙÙŽÙ†ÙŽÙ„' : 'Website & Funnel Audit',
+    title: isEn ? 'Website & Funnel Audit' : isAr ? 'تدقيق الموقع والفَنَل' : 'Website & Funnel Audit',
     verdict: r4Safe.globalScoring?.verdict || null,
     overallScore: r4Safe.globalScoring?.overall || localScore || 0,
     grade: r4Safe.globalScoring?.grade || null,
     confidence: detectedPrice || sectionsDetailed.length > 0 ? 'MEDIUM' : 'LOW',
     topStrengths: [
-        hasSSL ? (isEn ? 'SSL detected' : isAr ? 'ØªÙ… Ø§ÙƒØªØ´Ø§Ù SSL' : 'SSL dÃ©tectÃ©') : null,
-        ctaList.length > 0 ? (isEn ? 'CTA detected' : isAr ? 'ØªÙ… Ø§ÙƒØªØ´Ø§Ù CTA' : 'CTA dÃ©tectÃ©') : null,
-        socialProofs.length > 0 ? (isEn ? 'Social proof detected' : isAr ? 'ØªÙ… Ø§ÙƒØªØ´Ø§Ù Ø¯Ù„ÙŠÙ„ Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ' : 'Preuve sociale dÃ©tectÃ©e') : null,
-        pricingSection || detectedPrice ? (isEn ? 'Pricing signal detected' : isAr ? 'ØªÙ… Ø§ÙƒØªØ´Ø§Ù Ø¥Ø´Ø§Ø±Ø© ØªØ³Ø¹ÙŠØ±' : 'Signal tarifaire dÃ©tectÃ©') : null
+        hasSSL ? (isEn ? 'SSL detected' : isAr ? 'تم اكتشاف SSL' : 'SSL détecté') : null,
+        ctaList.length > 0 ? (isEn ? 'CTA detected' : isAr ? 'تم اكتشاف CTA' : 'CTA détecté') : null,
+        socialProofs.length > 0 ? (isEn ? 'Social proof detected' : isAr ? 'تم اكتشاف دليل اجتماعي' : 'Preuve sociale détectée') : null,
+        pricingSection || detectedPrice ? (isEn ? 'Pricing signal detected' : isAr ? 'تم اكتشاف إشارة تسعير' : 'Signal tarifaire détecté') : null
     ].filter(Boolean).slice(0, 3),
     topWeaknesses: [
-        !heroSection ? (isEn ? 'Weak or missing hero' : isAr ? 'Hero Ø¶Ø¹ÙŠÙ Ø£Ùˆ Ù…ÙÙ‚ÙˆØ¯' : 'Hero faible ou absent') : null,
-        socialProofs.length === 0 ? (isEn ? 'No social proof' : isAr ? 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø¯Ù„ÙŠÙ„ Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ' : 'Absence de preuve sociale') : null,
-        !pricingSection && !detectedPrice ? (isEn ? 'Pricing unclear' : isAr ? 'Ø§Ù„ØªØ³Ø¹ÙŠØ± ØºÙŠØ± ÙˆØ§Ø¶Ø­' : 'Tarification peu claire') : null,
-        ctaList.length === 0 ? (isEn ? 'CTA unclear' : isAr ? 'CTA ØºÙŠØ± ÙˆØ§Ø¶Ø­' : 'CTA peu clair') : null
+        !heroSection ? (isEn ? 'Weak or missing hero' : isAr ? 'Hero ضعيف أو مفقود' : 'Hero faible ou absent') : null,
+        socialProofs.length === 0 ? (isEn ? 'No social proof' : isAr ? 'لا يوجد دليل اجتماعي' : 'Absence de preuve sociale') : null,
+        !pricingSection && !detectedPrice ? (isEn ? 'Pricing unclear' : isAr ? 'التسعير غير واضح' : 'Tarification peu claire') : null,
+        ctaList.length === 0 ? (isEn ? 'CTA unclear' : isAr ? 'CTA غير واضح' : 'CTA peu clair') : null
     ].filter(Boolean).slice(0, 3)
 };
 
@@ -14698,8 +14698,8 @@ const ctaTexts = (ctaList || []).map(item =>
     cleanProofText(typeof item === 'string' ? item : item?.text || item?.label || item?.title || '', 160)
 ).filter(Boolean);
 const uniqueCtaTexts = [...new Set(ctaTexts.map(text => text.trim()).filter(Boolean))];
-const strongCtaPattern = /acheter|commander|rÃ©server|reserver|devis|commencer|essayer|tester|continuer|entrer|obtenir|contact|whatsapp|buy|order|checkout|book|start|trial|get started|subscribe|Ø§Ø¨Ø¯Ø£|Ø§Ø´ØªØ±|Ø§Ø·Ù„Ø¨|Ø§Ø­Ø¬Ø²|ØªÙˆØ§ØµÙ„/i;
-const genericCtaPattern = /^(voir|plus|en savoir plus|learn more|cliquez ici|click here|dÃ©couvrir|decouvrir|continuer)$/i;
+const strongCtaPattern = /acheter|commander|réserver|reserver|devis|commencer|essayer|tester|continuer|entrer|obtenir|contact|whatsapp|buy|order|checkout|book|start|trial|get started|subscribe|ابدأ|اشتر|اطلب|احجز|تواصل/i;
+const genericCtaPattern = /^(voir|plus|en savoir plus|learn more|cliquez ici|click here|découvrir|decouvrir|continuer)$/i;
 const primaryCtaText = uniqueCtaTexts.find(text => strongCtaPattern.test(text)) || uniqueCtaTexts[0] || null;
 const strongCtas = uniqueCtaTexts.filter(text => strongCtaPattern.test(text));
 const genericCtas = uniqueCtaTexts.filter(text => genericCtaPattern.test(text));
@@ -14720,14 +14720,14 @@ const ctaIntelligence = {
     score: ctaScore,
     quality: ctaScore >= 75 ? 'STRONG' : ctaScore >= 45 ? 'MEDIUM' : uniqueCtaTexts.length ? 'WEAK' : 'UNCONFIRMED',
     verdict: !uniqueCtaTexts.length
-        ? (isAr ? 'Ù„Ù… ÙŠØªÙ… ØªØ£ÙƒÙŠØ¯ CTA ÙÙŠ Ø§Ù„ØµÙØ­Ø§Øª Ø§Ù„Ù…ØªØ§Ø­Ø©.' : isEn ? 'No CTA was confirmed in the accessible pages.' : 'Aucun CTA nâ€™a Ã©tÃ© confirmÃ© dans les pages accessibles.')
+        ? (isAr ? 'لم يتم تأكيد CTA في الصفحات المتاحة.' : isEn ? 'No CTA was confirmed in the accessible pages.' : 'Aucun CTA n’a été confirmé dans les pages accessibles.')
         : ctaScore >= 75
-            ? (isAr ? 'Ù…Ø³Ø§Ø± Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ ÙˆØ§Ø¶Ø­ ÙˆÙ‚ÙˆÙŠ Ø­Ø³Ø¨ Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø©.' : isEn ? 'The action path is clear and strong based on observed buttons.' : 'Le parcours dâ€™action est clair et solide selon les boutons observÃ©s.')
-            : (isAr ? 'ØªÙ… Ø±ØµØ¯ CTA Ù„ÙƒÙ† ÙŠØ¬Ø¨ ØªØ­Ø³ÙŠÙ† ÙˆØ¶ÙˆØ­ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø£Ùˆ ØªÙƒØ±Ø§Ø±Ù‡.' : isEn ? 'CTAs were observed, but action clarity or repetition should improve.' : 'Des CTA sont observÃ©s, mais leur clartÃ© ou leur rÃ©pÃ©tition doit Ãªtre renforcÃ©e.'),
+            ? (isAr ? 'مسار الإجراء واضح وقوي حسب الأزرار المرصودة.' : isEn ? 'The action path is clear and strong based on observed buttons.' : 'Le parcours d’action est clair et solide selon les boutons observés.')
+            : (isAr ? 'تم رصد CTA لكن يجب تحسين وضوح الإجراء أو تكراره.' : isEn ? 'CTAs were observed, but action clarity or repetition should improve.' : 'Des CTA sont observés, mais leur clarté ou leur répétition doit être renforcée.'),
     recommendations: [
-        !primaryCtaText ? (isAr ? 'ØªØ£ÙƒÙŠØ¯ CTA Ø±Ø¦ÙŠØ³ÙŠ ÙˆØ§Ø­Ø¯.' : isEn ? 'Confirm one primary CTA.' : 'Confirmer un CTA principal unique.') : null,
-        genericCtas.length ? (isAr ? 'Ø§Ø³ØªØ¨Ø¯Ø§Ù„ Ø§Ù„Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ø¹Ø§Ù…Ø© Ø¨ÙØ¹Ù„ Ù…Ø­Ø¯Ø¯.' : isEn ? 'Replace generic buttons with a specific action verb.' : 'Remplacer les boutons gÃ©nÃ©riques par un verbe dâ€™action prÃ©cis.') : null,
-        uniqueCtaTexts.length === 1 ? (isAr ? 'ØªÙƒØ±Ø§Ø± CTA Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ Ø¨Ø¹Ø¯ Ø§Ù„Ø£Ø¯Ù„Ø© ÙˆØ§Ù„Ø¹Ø±Ø¶.' : isEn ? 'Repeat the primary CTA after proof and offer sections.' : 'RÃ©pÃ©ter le CTA principal aprÃ¨s les preuves et lâ€™offre.') : null
+        !primaryCtaText ? (isAr ? 'تأكيد CTA رئيسي واحد.' : isEn ? 'Confirm one primary CTA.' : 'Confirmer un CTA principal unique.') : null,
+        genericCtas.length ? (isAr ? 'استبدال الأزرار العامة بفعل محدد.' : isEn ? 'Replace generic buttons with a specific action verb.' : 'Remplacer les boutons génériques par un verbe d’action précis.') : null,
+        uniqueCtaTexts.length === 1 ? (isAr ? 'تكرار CTA الرئيسي بعد الأدلة والعرض.' : isEn ? 'Repeat the primary CTA after proof and offer sections.' : 'Répéter le CTA principal après les preuves et l’offre.') : null
     ].filter(Boolean)
 };
 
@@ -14854,12 +14854,12 @@ const debugFunnelPipeline = {
         ? scrape.priceIntel.sourceEvidence.length
         : Array.isArray(scrape?.prices) ? scrape.prices.length : 0,
     reviewSignalsCount: funnelEvidenceBlocks.filter(block =>
-        /avis|review|rating|testimonial|tÃ©moignage/i.test(String(block?.text || '')) &&
+        /avis|review|rating|testimonial|témoignage/i.test(String(block?.text || '')) &&
         !/aucun avis|no reviews?|0 reviews?/i.test(String(block?.text || ''))
     ).length,
     reviewAbsenceSignalsCount: evidenceSignalCount(/aucun avis|no reviews?|0 reviews?/i),
     guaranteeSignalsCount: evidenceSignalCount(/garantie|guarantee|warranty|rembours/i),
-    faqSignalsCount: evidenceSignalCount(/faq|question frÃ©quente|frequently asked/i),
+    faqSignalsCount: evidenceSignalCount(/faq|question fréquente|frequently asked/i),
     blockedUsefulPages: Array.isArray(scrape?.blockedUsefulPages) ? scrape.blockedUsefulPages : [],
     miniScrapersCalled: (funnelEvidence?.miniScrapers || []).map(item => item.scraperName),
     miniAgentsCalled: (funnelMiniAgents || []).map(item => item.agentName),
@@ -14887,10 +14887,10 @@ const funnelPrimaryAnalysis = scrapeInsufficient ? {
     definitive: true
 };
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“¦ ASSEMBLAGE RÃ‰PONSE FINALE GOD TIER
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ─────────────────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════
+// 📦 ASSEMBLAGE RÉPONSE FINALE GOD TIER
+// ══════════════════════════════════════════════════════
 
 
 const finalResponse = {
@@ -14914,7 +14914,7 @@ const finalResponse = {
     observed: false,
     estimatedMonthlyTraffic:  v12Traffic,
     trafficSource:            v12Traffic
-        ? (isAr ? 'ØªÙ‚Ø¯ÙŠØ± Ø°ÙƒØ§Ø¡ Ø§ØµØ·Ù†Ø§Ø¹ÙŠ V12' : isEn ? 'AI Estimation V12' : 'Estimation IA V12')
+        ? (isAr ? 'تقدير ذكاء اصطناعي V12' : isEn ? 'AI Estimation V12' : 'Estimation IA V12')
         : null,
     averageBasket:            v12Basket,
     basketSource:             detectedPrice > 0 ? T.directScrape : T.notDetected,
@@ -15046,8 +15046,8 @@ const finalResponse = {
             note: isEn
                 ? 'These figures are model-based estimates and should not be treated as observed data.'
                 : isAr
-                ? 'Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø±Ù‚Ø§Ù… ØªÙ‚Ø¯ÙŠØ±Ø§Øª Ù†Ù…ÙˆØ°Ø¬ÙŠØ© ÙˆÙ„Ø§ ÙŠØ¬Ø¨ Ø§Ø¹ØªØ¨Ø§Ø±Ù‡Ø§ Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ø±ØµÙˆØ¯Ø©.'
-                : 'Ces chiffres sont des estimations de modÃ¨le et ne doivent pas Ãªtre considÃ©rÃ©s comme des donnÃ©es observÃ©es.'
+                ? 'هذه الأرقام تقديرات نموذجية ولا يجب اعتبارها بيانات مرصودة.'
+                : 'Ces chiffres sont des estimations de modèle et ne doivent pas être considérés comme des données observées.'
         }
     },
     meta: {
@@ -15059,7 +15059,7 @@ const finalResponse = {
     },
 };
 
-        console.log(`âœ… [${requestId}] V12 GOD TIER DONE â€” ${finalResponse.meta.duration} | Score: ${finalResponse.globalScoring?.overall}/100`);
+        console.log(`✅ [${requestId}] V12 GOD TIER DONE — ${finalResponse.meta.duration} | Score: ${finalResponse.globalScoring?.overall}/100`);
         /* finalResponse.apify = await callApify({
   query: cleanQuery || req.body?.query || '',
   url: validUrl || req.body?.url || '',
@@ -15074,7 +15074,7 @@ const finalResponse = {
   inputsBySource: req.body?.apifyInput || {}
 }); */
 
-// â”€â”€ APIFY PRE-FLIGHT FUNNEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── APIFY PRE-FLIGHT FUNNEL ────────────────────────────────────
 try {
     const criticalIssuesCount = Array.isArray(finalResponse?.techAudit?.criticalIssues)
         ? finalResponse.techAudit.criticalIssues.length
@@ -15176,15 +15176,15 @@ try {
         res.json(safeFinalResponse);
 
     } catch (error) {
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // ðŸ›¡ï¸ CORRECTION EXÃ‰CUTÃ‰E : LOGGING STRUCTURÃ‰ + FALLBACK DE DONNÃ‰ES
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ═══════════════════════════════════════════════════════════════════════
+        // 🛡️ CORRECTION EXÉCUTÉE : LOGGING STRUCTURÉ + FALLBACK DE DONNÉES
+        // ═══════════════════════════════════════════════════════════════════════
         const elapsed = Date.now() - startTime;
         
-        console.error(`[${requestId}] ðŸ”¥ CRASH V12: ${error.message}`);
+        console.error(`[${requestId}] 🔥 CRASH V12: ${error.message}`);
         console.error(`[${requestId}] Stack trace:`, error.stack);
 
-        // Log structurÃ© pour faciliter le monitoring (pris depuis ton IA)
+        // Log structuré pour faciliter le monitoring (pris depuis ton IA)
         console.error(JSON.stringify({
             level: 'CRASH',
             service: 'funnel-spy-v12',
@@ -15200,10 +15200,10 @@ try {
             } : null
         }));
 
-        // â”€â”€ Fallback intelligent : si le scrape a rÃ©ussi mais l'IA a plantÃ© â”€â”€
-        // (Ã‡a Ã©vite de cracher une erreur 500 alors qu'on a le HTML et la donnÃ©e de base)
+        // ── Fallback intelligent : si le scrape a réussi mais l'IA a planté ──
+        // (Ça évite de cracher une erreur 500 alors qu'on a le HTML et la donnée de base)
         if (scrapedRawData && scrapedRawData.success) {
-            console.log(`[${requestId}] ðŸ”„ Scrape utilisable; retour Funnel dÃ©terministe aprÃ¨s Ã©chec agent`);
+            console.log(`[${requestId}] 🔄 Scrape utilisable; retour Funnel déterministe après échec agent`);
 
             const safePartial = cleanFunnelScrapePayload(scrapedRawData);
             const partialSections = [
@@ -15348,7 +15348,7 @@ try {
             });
         }
 
-        // Si tout a plantÃ© (le scrape compris) on envoie une vraie 500 structurÃ©e
+        // Si tout a planté (le scrape compris) on envoie une vraie 500 structurée
         res.status(500).json({
             success:  false,
             requestId,
@@ -15384,7 +15384,7 @@ function safeParseAI(raw, context = '') {
   console.warn(`safeParseAI [${context}]: JSON parse failed, attempting field extraction`);
   const partial = {};
   
-  // Extraire des champs clÃ©s mÃªme dans un JSON malformÃ©
+  // Extraire des champs clés même dans un JSON malformé
   const fieldPatterns = [
     ['siteType', /"siteType"\s*:\s*"([^"]+)"/],
     ['niche', /"niche"\s*:\s*"([^"]+)"/],
@@ -15407,14 +15407,14 @@ function safeParseAI(raw, context = '') {
 
 /**
  * buildFallbackPrompt V11 ULTRA
- * GÃ©nÃ¨re un prompt CRO opÃ©rationnel complet basÃ© sur toutes les couches de donnÃ©es disponibles
- * @param {Object} report       - Rapport fusionnÃ© P1+P2 (projectIdentity, webCharte, pageArchitecture, funnel, strategicBlueprint...)
+ * Génère un prompt CRO opérationnel complet basé sur toutes les couches de données disponibles
+ * @param {Object} report       - Rapport fusionné P1+P2 (projectIdentity, webCharte, pageArchitecture, funnel, strategicBlueprint...)
  * @param {Object} techStack    - detectTechStack() result (cms, analytics, payment, funnelbuilders, chatsupport...)
  * @param {Object} psychTriggers - extractPsychTriggers() result (urgency, scarcity, socialproof, guarantees, authority, fearloss, priceanchors, ctabuttons)
  * @param {Object} counter      - report?.funnel?.counterAttackCopy (adHeadline, whatsappMessage, emailSubject, smsText)
  * @param {Object} scores       - calculateAdvancedScores() result (global, seo, trust, conversion, performance, funnel)
  * @param {string} lang         - 'fr' | 'ar' | 'en'
- * @param {string} url          - URL analysÃ©e
+ * @param {string} url          - URL analysée
  * @param {Object} deepScrapeData - ds (deepScrape) complet : visualDNA, priceIntel, copyIntel, trustSignals, trackingIntel, formIntel, redirectIntel, schemaData, performanceIntel, media, rawPlaywright, structure
  * @param {Object} seoIntel     - extractSEOIntel() result
  * @param {Object} perfSignals  - extractPerfSignals() result
@@ -15433,9 +15433,9 @@ function buildFallbackPrompt(
 ) {
   const isEn = lang === 'en';
   const isAr = lang === 'ar';
-  const targetLang = isAr ? 'Arabe' : isEn ? 'English' : 'FranÃ§ais';
+  const targetLang = isAr ? 'Arabe' : isEn ? 'English' : 'Français';
 
-  // â”€â”€â”€ BLUEPRINT & FUNNEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── BLUEPRINT & FUNNEL ───────────────────────────────────────────────
   const bp        = report?.strategicBlueprint || {};
   const funnel    = report?.funnel || {};
   const analysis  = report?.analysis || {};
@@ -15443,7 +15443,7 @@ function buildFallbackPrompt(
   const webCharte = report?.webCharte || {};
   const copyIntelReport = report?.copyIntel || {};
 
-  // â”€â”€â”€ DEEP SCRAPE COUCHES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── DEEP SCRAPE COUCHES ──────────────────────────────────────────────
   const ds       = deepScrapeData;
   const vis      = ds?.visualDNA || {};
   const pri      = ds?.priceIntel || {};
@@ -15458,7 +15458,7 @@ function buildFallbackPrompt(
   const schema   = ds?.schemaData || {};
   const structure = ds?.structure || {};
 
-  // â”€â”€â”€ SECTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── SECTIONS ─────────────────────────────────────────────────────────
  const rawSections =
   report?.pageArchitecture?.arborescence ||
   report?.sections ||
@@ -15482,7 +15482,7 @@ const sections = rawSections
   }))
   .slice(0, 8);
 
-  // â”€â”€â”€ COPY INTEL â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── COPY INTEL ───────────────────────────────────────────────────────
   const realH1          = cop?.headlines?.h1?.[0] || funnel?.attention?.headline || null;
   const realH2s         = (cop?.headlines?.h2 || []).slice(0, 3).join(' | ');
   const realCTAs        = (cop?.realCTAs || []);
@@ -15493,15 +15493,15 @@ const sections = rawSections
   const bulletBenefits  = (cop?.bulletBenefits || []).slice(0, 3).join(' | ');
   const allButtons      = (cop?.allButtons || []).slice(0, 5).map(b => b.text).join(', ');
 
-  // â”€â”€â”€ PRIX & DEVISE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── PRIX & DEVISE ────────────────────────────────────────────────────
   const realPrice    = pri?.primaryPrice || report?.financialIntel?.averageBasket || null;
-  const basketSource = pri?.primaryPrice ? 'Scrape direct' : (report?.financialIntel?.basketSource || 'Non dÃ©tectÃ©');
+  const basketSource = pri?.primaryPrice ? 'Scrape direct' : (report?.financialIntel?.basketSource || 'Non détecté');
   const currency     = pri?.currency && pri.currency !== 'UNKNOWN' && pri.currency !== 'EUR' ? pri.currency : 'MAD';
   const struckPrices = (pri?.struckPrices || []).join(', ') || 'Aucun';
   const discountRate = pri?.discountRate || 'Aucune';
-  const allPrices    = (pri?.all || []).slice(0, 5).join(', ') || 'Non dÃ©tectÃ©s';
+  const allPrices    = (pri?.all || []).slice(0, 5).join(', ') || 'Non détectés';
 
-  // â”€â”€â”€ TRUST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── TRUST ────────────────────────────────────────────────────────────
   const trustScore    = tru?.trustScore ?? null;
   const hasCOD        = tru?.hasCOD || false;
   const hasSSL        = tru?.hasSSL || perfSignals?.hasSSL || false;
@@ -15512,7 +15512,7 @@ const sections = rawSections
   const hasLegalPages = tru?.hasLegalPages || false;
   const hasPaymentLogos = tru?.hasPaymentLogos || false;
 
-  // â”€â”€â”€ TRACKING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── TRACKING ─────────────────────────────────────────────────────────
   const hasGA4    = trk?.hasGoogleAnalytics || false;
   const hasGTM    = trk?.hasGTM || false;
   const hasFBPixel = trk?.hasFacebookPixel || false;
@@ -15520,7 +15520,7 @@ const sections = rawSections
   const hasHotjar  = trk?.hasHotjar || false;
   const hasClarity = trk?.hasClarity || false;
 
-  // â”€â”€â”€ PERFORMANCE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── PERFORMANCE ──────────────────────────────────────────────────────
   const hasCountdown  = prf?.hasCountdown   || raw?.pageGlobal?.hasCountdown   || false;
   const hasExitIntent = prf?.hasExitIntent  || raw?.pageGlobal?.hasExitIntent  || false;
   const hasStickyCTA  = prf?.hasStickyCTA   || false;
@@ -15536,14 +15536,14 @@ const sections = rawSections
   const totalImages   = prf?.totalImages    || med?.totalImages || 0;
   const missingAlt    = prf?.missingAlt     || med?.missingAltCount || 0;
 
-  // â”€â”€â”€ VISUAL DNA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── VISUAL DNA ───────────────────────────────────────────────────────
   const dominantColors = (vis?.dominantColors || []).map(c => c?.color || c).slice(0, 3);
   const googleFonts    = (vis?.googleFonts || []).slice(0, 2);
-  const primaryFont    = webCharte?.typography?.primaryFont || googleFonts[0] || 'Non dÃ©tectÃ©e';
+  const primaryFont    = webCharte?.typography?.primaryFont || googleFonts[0] || 'Non détectée';
   const layoutSignals  = vis?.layoutSignals || {};
   const isMobile       = structure?.isMobileOptimized ?? true;
 
-  // â”€â”€â”€ SEO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── SEO ──────────────────────────────────────────────────────────────
   const seoTitle       = seoIntel?.title || '';
   const seoDesc        = seoIntel?.description || '';
   const hasSchema      = seoIntel?.hasSchema || schema?.count > 0 || false;
@@ -15552,35 +15552,35 @@ const sections = rawSections
   const hasCanonical   = seoIntel?.hasCanonical || false;
   const wordCount      = seoIntel?.wordCount || structure?.wordCount || 0;
 
-  // â”€â”€â”€ TECH STACK FLAT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── TECH STACK FLAT ──────────────────────────────────────────────────
   const techFlat = Object.entries(techStack)
     .filter(([k]) => !['trafficEstimate', 'businessProfile', 'totalSignals'].includes(k))
     .flatMap(([, v]) => Array.isArray(v) ? v : [])
     .filter(Boolean)
-    .join(', ') || 'Non dÃ©tectÃ©';
+    .join(', ') || 'Non détecté';
 
-  // â”€â”€â”€ SECTIONS CRITIQUES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── SECTIONS CRITIQUES ───────────────────────────────────────────────
   const criticalSections = sections
     .filter(s => (s.conversionImpact === 'HIGH' || !s.weakness || (s.score ?? 100) < 70))
     .slice(0, 5);
 
-  // â”€â”€â”€ FORMULAIRES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── FORMULAIRES ──────────────────────────────────────────────────────
   const hasCheckout    = frm?.hasCheckout   || false;
   const hasNewsletter  = frm?.hasNewsletter || false;
   const formCount      = frm?.count || 0;
 
-  // â”€â”€â”€ REDIRECTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── REDIRECTIONS ─────────────────────────────────────────────────────
   const isFunnelRedirect = red?.isFunnelRedirect || false;
   const totalRedirects   = red?.totalRedirects || 0;
 
-  // â”€â”€â”€ FINANCE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── FINANCE ──────────────────────────────────────────────────────────
   const fin             = report?.financialIntel || {};
   const traffic         = fin?.estimatedMonthlyTraffic || null;
   const estimatedMRR    = fin?.estimatedMRR || null;
   const stealPotential  = report?.financialAudit?.monthlyStealPotential || null;
   const conversionRate  = fin?.estimatedConversionRate || null;
 
-  // â”€â”€â”€ COMPLEXITÃ‰ & DÃ‰COUPAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── COMPLEXITÉ & DÉCOUPAGE ───────────────────────────────────────────
   const complexityScore =
     (sections.length > 0 ? 2 : 0) +
     (schemaTypes.length > 0 ? 2 : 0) +
@@ -15596,25 +15596,25 @@ const sections = rawSections
     complexityScore >= 5  ? 2 : 1;
 
   const decoupagePlan = [
-    `Partie 1 â€” HTML : Hero (H1: ${realH1?.substring(0, 35) || funnel?.attention?.headline?.substring(0, 35) || '...'}), CTAs, Trust badges, Social Proof`,
+    `Partie 1 — HTML : Hero (H1: ${realH1?.substring(0, 35) || funnel?.attention?.headline?.substring(0, 35) || '...'}), CTAs, Trust badges, Social Proof`,
     estimatedParts >= 2
-      ? `Partie 2 â€” CSS : Contraste WCAG${dominantColors.length > 0 ? ` sur ${dominantColors.slice(0,2).join(',')}` : ''}, Mobile 375px, Fonts${googleFonts.length > 0 ? ` (${googleFonts[0]})` : ''}`
+      ? `Partie 2 — CSS : Contraste WCAG${dominantColors.length > 0 ? ` sur ${dominantColors.slice(0,2).join(',')}` : ''}, Mobile 375px, Fonts${googleFonts.length > 0 ? ` (${googleFonts[0]})` : ''}`
       : null,
     estimatedParts >= 3
-      ? `Partie 3 â€” JS : ${!hasCountdown ? 'Countdown 24h, ' : ''}${!hasExitIntent ? 'Exit Intent, ' : ''}WhatsApp${realPrice ? `, Price Anchor ${realPrice} ${currency}` : ''}`
+      ? `Partie 3 — JS : ${!hasCountdown ? 'Countdown 24h, ' : ''}${!hasExitIntent ? 'Exit Intent, ' : ''}WhatsApp${realPrice ? `, Price Anchor ${realPrice} ${currency}` : ''}`
       : null,
     estimatedParts >= 4
-      ? `Partie 4 â€” Schema JSON-LD : ${schemaTypes.length > 0 ? `upgrade ${schemaTypes[0]}` : identity?.siteType === 'E-COMMERCE' ? 'Product' : 'LocalBusiness'}, Meta Tags, SEO Checklist`
+      ? `Partie 4 — Schema JSON-LD : ${schemaTypes.length > 0 ? `upgrade ${schemaTypes[0]}` : identity?.siteType === 'E-COMMERCE' ? 'Product' : 'LocalBusiness'}, Meta Tags, SEO Checklist`
       : null,
   ].filter(Boolean).join('\n');
 
-  // â”€â”€â”€ COUNTER ATTACK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── COUNTER ATTACK ───────────────────────────────────────────────────
   const waMsg        = counter?.whatsappMessage || funnel?.counterAttackCopy?.whatsappMessage || 'Bonjour !';
   const emailSubject = counter?.emailSubject    || funnel?.counterAttackCopy?.emailSubject    || '';
   const adHeadline   = counter?.adHeadline      || funnel?.counterAttackCopy?.adHeadline      || '';
   const smsText      = counter?.smsText         || funnel?.counterAttackCopy?.smsText         || '';
 
-  // â”€â”€â”€ AIDA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── AIDA ─────────────────────────────────────────────────────────────
   const aidaHeadline    = funnel?.attention?.headline    || bp?.coreHook    || '';
   const aidaSubheadline = funnel?.attention?.subheadline || '';
   const aidaHook        = funnel?.attention?.hook        || '';
@@ -15627,217 +15627,217 @@ const sections = rawSections
   const aidaUrgency     = funnel?.action?.urgency        || '';
   const aidaRiskRev     = funnel?.action?.riskReversal   || '';
 
-  // â”€â”€â”€ PSYCHO TRIGGERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ─── PSYCHO TRIGGERS ──────────────────────────────────────────────────
   const psyTrig = report?.psychTriggers || psychTriggers || {};
 
   return `Tu es un DevOps Fullstack Senior 10 ans + Expert CRO + Copywriter Elite.
-MISSION : Lire mon code source, analyser sa structure, puis appliquer les modifications dÃ©duites du rapport Funnel V11 ci-dessous pour Ã©craser le concurrent.
+MISSION : Lire mon code source, analyser sa structure, puis appliquer les modifications déduites du rapport Funnel V11 ci-dessous pour écraser le concurrent.
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-Ã‰TAPE 0 â€” RÃ‰CEPTION DU CODE SOURCE
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-MON CODE PEUT ÃŠTRE LONG. IL SERA ENVOYÃ‰ EN PLUSIEURS PARTIES.
+═══════════════════════════════════════════════════
+ÉTAPE 0 — RÉCEPTION DU CODE SOURCE
+═══════════════════════════════════════════════════
+MON CODE PEUT ÊTRE LONG. IL SERA ENVOYÉ EN PLUSIEURS PARTIES.
 
 PROTOCOLE D'ENVOI :
-â†’ Je commence par : DÃ‰BUT CODE [X parties]
-â†’ J'envoie chaque partie l'une aprÃ¨s l'autre :
-   PARTIE 1/X â†’ [code] â†’ Tu rÃ©ponds : "Partie 1/X reÃ§ue âœ“ GO pour la suite"
-   PARTIE 2/X â†’ [code] â†’ Tu rÃ©ponds : "Partie 2/X reÃ§ue âœ“ GO pour la suite"
+→ Je commence par : DÉBUT CODE [X parties]
+→ J'envoie chaque partie l'une après l'autre :
+   PARTIE 1/X → [code] → Tu réponds : "Partie 1/X reçue ✓ GO pour la suite"
+   PARTIE 2/X → [code] → Tu réponds : "Partie 2/X reçue ✓ GO pour la suite"
    ...
-â†’ Quand tout est envoyÃ©, je dis : FIN CODE â€” toutes les parties envoyÃ©es
-â†’ Tu reconstitues le fichier complet en mÃ©moire et tu confirmes :
-   "Code complet reconstituÃ© â€” X lignes | Sections : ... | Scripts : ... | IDs clÃ©s : ..."
+→ Quand tout est envoyé, je dis : FIN CODE — toutes les parties envoyées
+→ Tu reconstitues le fichier complet en mémoire et tu confirmes :
+   "Code complet reconstitué — X lignes | Sections : ... | Scripts : ... | IDs clés : ..."
 
-RÃˆGLES DE RÃ‰CEPTION :
-âœ— NE PAS analyser ni modifier avant FIN CODE
-âœ— NE PAS demander des clarifications â€” attendre la suite
-â†º Si une partie semble incomplÃ¨te â†’ "Partie X/X semble tronquÃ©e â€” renvoie-la ou tape GO si c'est normal"
-â†’ GO : envoyer partie suivante
-â†’ STOP : annuler et recommencer depuis DÃ‰BUT CODE
+RÈGLES DE RÉCEPTION :
+✗ NE PAS analyser ni modifier avant FIN CODE
+✗ NE PAS demander des clarifications — attendre la suite
+↺ Si une partie semble incomplète → "Partie X/X semble tronquée — renvoie-la ou tape GO si c'est normal"
+→ GO : envoyer partie suivante
+→ STOP : annuler et recommencer depuis DÉBUT CODE
 
-RÃˆGLES DE DÃ‰COUPAGE (pour moi) :
-â€¢ Couper uniquement aprÃ¨s une balise fermante : </section>, </div>, </style>, </script>
-â€¢ Jamais au milieu d'une fonction JS ou d'un bloc CSS
-â€¢ Maximum de code par partie = ce que tu peux coller en une fois
+RÈGLES DE DÉCOUPAGE (pour moi) :
+• Couper uniquement après une balise fermante : </section>, </div>, </style>, </script>
+• Jamais au milieu d'une fonction JS ou d'un bloc CSS
+• Maximum de code par partie = ce que tu peux coller en une fois
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-Ã‰TAPE 1 â€” ANALYSE DU CODE RECONSTITUÃ‰
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-AprÃ¨s FIN CODE, analyser et lister :
-â–¡ Nombre de lignes total
-â–¡ Structure : sections, header, footer, modals
-â–¡ IDs importants : #hero, #cta, #countdown, #exitModal, etc.
-â–¡ Classes CSS custom utilisÃ©es
-â–¡ Scripts JS dÃ©jÃ  prÃ©sents : countdown ? exit intent ? GA4 ?
-â–¡ Fonts et couleurs inline dÃ©tectÃ©es
-â–¡ Formulaires prÃ©sents : ${formCount} formulaire(s) | Checkout: ${hasCheckout} | Newsletter: ${hasNewsletter}
+═══════════════════════════════════════════════════
+ÉTAPE 1 — ANALYSE DU CODE RECONSTITUÉ
+═══════════════════════════════════════════════════
+Après FIN CODE, analyser et lister :
+□ Nombre de lignes total
+□ Structure : sections, header, footer, modals
+□ IDs importants : #hero, #cta, #countdown, #exitModal, etc.
+□ Classes CSS custom utilisées
+□ Scripts JS déjà présents : countdown ? exit intent ? GA4 ?
+□ Fonts et couleurs inline détectées
+□ Formulaires présents : ${formCount} formulaire(s) | Checkout: ${hasCheckout} | Newsletter: ${hasNewsletter}
 
 Confirme avec :
-"Analyse complÃ¨te â€” Lignes X | Sections : [liste] | IDs clÃ©s : [liste] | Couleurs : [liste] | Scripts : [liste]
-PrÃªt pour modifications â€” GO pour commencer ?"
+"Analyse complète — Lignes X | Sections : [liste] | IDs clés : [liste] | Couleurs : [liste] | Scripts : [liste]
+Prêt pour modifications — GO pour commencer ?"
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-PROTOCOLE MODIFICATIONS â€” REQUÃŠTES SÃ‰PARÃ‰ES
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-ComplexitÃ© : ${complexityScore} pts â†’ ${estimatedParts} requÃªte(s)
-NE PAS tout gÃ©nÃ©rer en une seule rÃ©ponse (trop long = code tronquÃ©).
-DÃ©coupe les modifications en ${estimatedParts} REQUÃŠTES SÃ‰PARÃ‰ES.
-Chaque requÃªte = un bloc autonome de modifications, complet et testable.
+═══════════════════════════════════════════════════
+PROTOCOLE MODIFICATIONS — REQUÊTES SÉPARÉES
+═══════════════════════════════════════════════════
+Complexité : ${complexityScore} pts → ${estimatedParts} requête(s)
+NE PAS tout générer en une seule réponse (trop long = code tronqué).
+Découpe les modifications en ${estimatedParts} REQUÊTES SÉPARÉES.
+Chaque requête = un bloc autonome de modifications, complet et testable.
 
-PLAN D'EXÃ‰CUTION :
+PLAN D'EXÉCUTION :
 ${decoupagePlan}
 
-RÃˆGLE PAR REQUÃŠTE :
-â†’ Commence par : "PARTIE X/${estimatedParts} â€” [nom]"
-â†’ GÃ©nÃ¨re TOUTES les modifications de cette partie sans rien omettre
-â†’ Termine obligatoirement par : "FIN PARTIE X/${estimatedParts} âœ“ â†’ GO Recevoir la Partie X+1/${estimatedParts}"
-â†’ STOP = Pause, je veux modifier avant de continuer
-â†’ REPART [section] = Refaire uniquement cette section
-â†’ Quand je tape GO â†’ Commence IMMÃ‰DIATEMENT la partie suivante
-â†’ NE rÃ©pÃ¨te PAS le rapport ni le contexte
-â†’ Continue comme si c'Ã©tait la mÃªme conversation
-â†’ DerniÃ¨re partie se termine par :
-   "âœ… TOUTES MODIFICATIONS APPLIQUÃ‰ES (${estimatedParts}/${estimatedParts}) + Checklist dÃ©ploiement ci-dessous"
+RÈGLE PAR REQUÊTE :
+→ Commence par : "PARTIE X/${estimatedParts} — [nom]"
+→ Génère TOUTES les modifications de cette partie sans rien omettre
+→ Termine obligatoirement par : "FIN PARTIE X/${estimatedParts} ✓ → GO Recevoir la Partie X+1/${estimatedParts}"
+→ STOP = Pause, je veux modifier avant de continuer
+→ REPART [section] = Refaire uniquement cette section
+→ Quand je tape GO → Commence IMMÉDIATEMENT la partie suivante
+→ NE répète PAS le rapport ni le contexte
+→ Continue comme si c'était la même conversation
+→ Dernière partie se termine par :
+   "✅ TOUTES MODIFICATIONS APPLIQUÉES (${estimatedParts}/${estimatedParts}) + Checklist déploiement ci-dessous"
 
 FORMAT DE CHAQUE MODIFICATION :
 \`\`\`[html|css|js]
 // AVANT (ligne N) :
-[code original extrait du fichier reconstituÃ©]
+[code original extrait du fichier reconstitué]
 
-// APRÃˆS :
-[code modifiÃ©]
-// ðŸ”Ž FUNNEL SPY V11 â€” Source: [section X] | Score: [Y/100] | Gain estimÃ©: +[X]% conversion
+// APRÈS :
+[code modifié]
+// 🔎 FUNNEL SPY V11 — Source: [section X] | Score: [Y/100] | Gain estimé: +[X]% conversion
 \`\`\`
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-RAPPORT FUNNEL SPY V11 â€” ${url}
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+═══════════════════════════════════════════════════
+RAPPORT FUNNEL SPY V11 — ${url}
+═══════════════════════════════════════════════════
 
-â–Œ IDENTITÃ‰ SITE
-Type           : ${identity?.siteType || 'UNKNOWN'} â€” ${identity?.projectCategory || ''}
+▌ IDENTITÉ SITE
+Type           : ${identity?.siteType || 'UNKNOWN'} — ${identity?.projectCategory || ''}
 Niche          : ${identity?.niche || ''} > ${identity?.subNiche || ''}
 Produit/Service: ${identity?.productOrService || ''}
-MarchÃ© cible   : ${identity?.targetMarket || ''}
+Marché cible   : ${identity?.targetMarket || ''}
 Business Model : ${identity?.businessModel || 'ONETIME'}
 Price Point    : ${identity?.pricePoint || ''}
 
-â–Œ SCORING GLOBAL
-Score Global  : ${scores.global || 0}/100  â†’ Objectif : ${Math.min(100, (scores.global || 0) + 20)}/100
+▌ SCORING GLOBAL
+Score Global  : ${scores.global || 0}/100  → Objectif : ${Math.min(100, (scores.global || 0) + 20)}/100
 Score SEO     : ${scores.seo || 0}/100
 Score Trust   : ${scores.trust || 0}/100
 Score Conv.   : ${scores.conversion || 0}/100
 Score Perf.   : ${scores.performance || 0}/100
 Score Funnel  : ${scores.funnel || 0}/100
-Trust Score pg: ${trustScore !== null ? `${trustScore}/10` : 'Non mesurÃ©'}
+Trust Score pg: ${trustScore !== null ? `${trustScore}/10` : 'Non mesuré'}
 Threat Level  : ${report?.threatLevel || 'MEDIUM'}
 Funnel Type   : ${report?.funnelDNA?.funnelType || fin?.funnelType || 'UNKNOWN'}
 
-â–Œ DONNÃ‰ES FINANCIÃˆRES RÃ‰ELLES
-Prix rÃ©el      : ${realPrice ? `${realPrice} ${currency} (${basketSource})` : 'Non dÃ©tectÃ© â€” INTERDIT D\'INVENTER'}
+▌ DONNÉES FINANCIÈRES RÉELLES
+Prix réel      : ${realPrice ? `${realPrice} ${currency} (${basketSource})` : 'Non détecté — INTERDIT D\'INVENTER'}
 Tous prix      : ${allPrices}
-Prix barrÃ©s    : ${struckPrices}
+Prix barrés    : ${struckPrices}
 Remise         : ${discountRate}
 Trafic/mois    : ${traffic ? `${traffic.toLocaleString()} visites` : 'Non calculable'}
 Conv. rate     : ${conversionRate ? `${conversionRate}%` : 'Non calculable'}
-MRR estimÃ©     : ${estimatedMRR ? `${estimatedMRR.toLocaleString()} ${currency}` : 'Non calculable'}
+MRR estimé     : ${estimatedMRR ? `${estimatedMRR.toLocaleString()} ${currency}` : 'Non calculable'}
 Steal Potential: ${stealPotential ? `${stealPotential.toLocaleString()} ${currency}/mois` : 'Non calculable'}
 
-â–Œ COPY RÃ‰ELLE DÃ‰TECTÃ‰E
-H1 rÃ©el        : ${realH1 || 'Non dÃ©tectÃ©'}
-H2s rÃ©els      : ${realH2s || 'Non dÃ©tectÃ©s'}
-CTAs rÃ©els     : ${realCTAs.length > 0 ? realCTAs.join(' | ') : 'Non dÃ©tectÃ©s'}
+▌ COPY RÉELLE DÉTECTÉE
+H1 réel        : ${realH1 || 'Non détecté'}
+H2s réels      : ${realH2s || 'Non détectés'}
+CTAs réels     : ${realCTAs.length > 0 ? realCTAs.join(' | ') : 'Non détectés'}
 Garanties      : ${realGuarantees.length > 0 ? realGuarantees.join(' | ') : 'Aucune'}
-TÃ©moignages    : ${testimonials > 0 ? `${testimonials} trouvÃ©s` : 'Aucun'}
+Témoignages    : ${testimonials > 0 ? `${testimonials} trouvés` : 'Aucun'}
 FAQ            : ${faqCount > 0 ? `${faqCount} questions` : 'Aucune'}
-Hero text      : ${heroText || 'Non dÃ©tectÃ©'}
-Bullet bÃ©nÃ©f.  : ${bulletBenefits || 'Non dÃ©tectÃ©s'}
-Boutons DOM    : ${allButtons || 'Non dÃ©tectÃ©s'}
+Hero text      : ${heroText || 'Non détecté'}
+Bullet bénéf.  : ${bulletBenefits || 'Non détectés'}
+Boutons DOM    : ${allButtons || 'Non détectés'}
 
-â–Œ IDENTITÃ‰ VISUELLE
-Couleurs dom.  : ${dominantColors.length > 0 ? dominantColors.join(', ') : 'Non dÃ©tectÃ©es'}
-Primary color  : ${webCharte?.colorPalette?.primary || 'Non dÃ©tectÃ©e'}
-Accent color   : ${webCharte?.colorPalette?.accent || 'Non dÃ©tectÃ©e'}
-Google Fonts   : ${googleFonts.length > 0 ? googleFonts.join(', ') : 'Non dÃ©tectÃ©es'}
+▌ IDENTITÉ VISUELLE
+Couleurs dom.  : ${dominantColors.length > 0 ? dominantColors.join(', ') : 'Non détectées'}
+Primary color  : ${webCharte?.colorPalette?.primary || 'Non détectée'}
+Accent color   : ${webCharte?.colorPalette?.accent || 'Non détectée'}
+Google Fonts   : ${googleFonts.length > 0 ? googleFonts.join(', ') : 'Non détectées'}
 Primary Font   : ${primaryFont}
-Design Style   : ${webCharte?.designStyle || 'Non dÃ©tectÃ©'}
-AtmosphÃ¨re     : ${webCharte?.emotionalAtmosphere || 'Non dÃ©tectÃ©e'}
-Layout         : ${layoutSignals?.usesFlexbox ? 'Flex' : ''} ${layoutSignals?.usesGrid ? 'Grid' : ''} | Max-width: ${layoutSignals?.maxWidth || 'Non dÃ©tectÃ©'}
+Design Style   : ${webCharte?.designStyle || 'Non détecté'}
+Atmosphère     : ${webCharte?.emotionalAtmosphere || 'Non détectée'}
+Layout         : ${layoutSignals?.usesFlexbox ? 'Flex' : ''} ${layoutSignals?.usesGrid ? 'Grid' : ''} | Max-width: ${layoutSignals?.maxWidth || 'Non détecté'}
 Framework CSS  : ${layoutSignals?.usesTailwind ? 'Tailwind' : layoutSignals?.usesBootstrap ? 'Bootstrap' : 'Custom CSS'}
-Mobile OK      : ${isMobile ? 'âœ“' : 'âœ— CRITIQUE'}
-Gradients      : ${layoutSignals?.hasGradient ? 'âœ“ PrÃ©sent' : 'âœ— Absent'}
-Animations     : ${layoutSignals?.hasTransitions ? 'âœ“ PrÃ©sent' : 'âœ— Absent'}
+Mobile OK      : ${isMobile ? '✓' : '✗ CRITIQUE'}
+Gradients      : ${layoutSignals?.hasGradient ? '✓ Présent' : '✗ Absent'}
+Animations     : ${layoutSignals?.hasTransitions ? '✓ Présent' : '✗ Absent'}
 
-â–Œ TECH STACK
+▌ TECH STACK
 ${techFlat}
-Schema.org     : ${schemaTypes.join(', ') || 'Absent â€” Ã  crÃ©er'}
-CDN            : ${hasCDN ? 'âœ“ Actif' : 'âœ— Absent'}
-Tracking GA4   : ${hasGA4 ? 'âœ“' : 'âœ—'} | GTM: ${hasGTM ? 'âœ“' : 'âœ—'} | FB Pixel: ${hasFBPixel ? 'âœ“' : 'âœ—'} | TikTok: ${hasTikTok ? 'âœ“' : 'âœ—'}
-Chat/Support   : ${hasLiveChat ? 'âœ“ PrÃ©sent' : 'âœ— Absent'}
-Checkout actif : ${hasCheckout ? 'âœ“' : 'âœ—'} | Newsletter: ${hasNewsletter ? 'âœ“' : 'âœ—'}
-Redirections   : ${totalRedirects} | Funnel multi-Ã©tapes: ${isFunnelRedirect ? 'âœ“' : 'âœ—'}
+Schema.org     : ${schemaTypes.join(', ') || 'Absent — à créer'}
+CDN            : ${hasCDN ? '✓ Actif' : '✗ Absent'}
+Tracking GA4   : ${hasGA4 ? '✓' : '✗'} | GTM: ${hasGTM ? '✓' : '✗'} | FB Pixel: ${hasFBPixel ? '✓' : '✗'} | TikTok: ${hasTikTok ? '✓' : '✗'}
+Chat/Support   : ${hasLiveChat ? '✓ Présent' : '✗ Absent'}
+Checkout actif : ${hasCheckout ? '✓' : '✗'} | Newsletter: ${hasNewsletter ? '✓' : '✗'}
+Redirections   : ${totalRedirects} | Funnel multi-étapes: ${isFunnelRedirect ? '✓' : '✗'}
 
-â–Œ PERFORMANCE
+▌ PERFORMANCE
 TTFB           : ${ttfb || 'N/A'} | LCP approx: ${lcpApprox || 'N/A'}
-Page lourde    : ${isHeavyPage ? 'âš ï¸ OUI â€” optimiser' : 'Non'}
-Images total   : ${totalImages} | Sans ALT: ${missingAlt} | WebP: ${hasWebP ? 'âœ“' : 'âœ—'}
-Lazy Load      : ${hasLazyLoad ? 'âœ“' : 'âœ—'} | MinifiÃ©: ${prf?.hasMinified ? 'âœ“' : 'âœ—'}
+Page lourde    : ${isHeavyPage ? '⚠️ OUI — optimiser' : 'Non'}
+Images total   : ${totalImages} | Sans ALT: ${missingAlt} | WebP: ${hasWebP ? '✓' : '✗'}
+Lazy Load      : ${hasLazyLoad ? '✓' : '✗'} | Minifié: ${prf?.hasMinified ? '✓' : '✗'}
 
-â–Œ TRUST & SOCIAL PROOF
+▌ TRUST & SOCIAL PROOF
 Trust Score    : ${trustScore !== null ? `${trustScore}/10` : 'N/A'}
-SSL            : ${hasSSL ? 'âœ“' : 'âœ—'} | WhatsApp: ${hasWhatsApp ? 'âœ“' : 'âœ—'} | COD: ${hasCOD ? 'âœ“' : 'âœ—'}
-Avis clients   : ${hasReviews ? 'âœ“' : 'âœ—'} | Money-back: ${hasMoneyBack ? 'âœ“' : 'âœ—'} | TÃ©lÃ©phone: ${hasPhone ? 'âœ“' : 'âœ—'}
-Logos paiement : ${hasPaymentLogos ? 'âœ“' : 'âœ—'} | Pages lÃ©gales: ${hasLegalPages ? 'âœ“' : 'âœ—'}
+SSL            : ${hasSSL ? '✓' : '✗'} | WhatsApp: ${hasWhatsApp ? '✓' : '✗'} | COD: ${hasCOD ? '✓' : '✗'}
+Avis clients   : ${hasReviews ? '✓' : '✗'} | Money-back: ${hasMoneyBack ? '✓' : '✗'} | Téléphone: ${hasPhone ? '✓' : '✗'}
+Logos paiement : ${hasPaymentLogos ? '✓' : '✗'} | Pages légales: ${hasLegalPages ? '✓' : '✗'}
 
-â–Œ DÃ‰CLENCHEURS PSYCHOLOGIQUES
-Urgence        : ${(psyTrig?.urgency || []).slice(0, 3).join(' | ') || 'âš ï¸ Absente â€” Ã  ajouter'}
-RaretÃ©         : ${(psyTrig?.scarcity || []).slice(0, 3).join(' | ') || 'âš ï¸ Absente â€” Ã  ajouter'}
-Social proof   : ${(psyTrig?.socialproof || []).slice(0, 3).join(' | ') || 'âš ï¸ Absente â€” Ã  ajouter'}
-Garanties psych: ${(psyTrig?.guarantees || []).slice(0, 3).join(' | ') || 'âš ï¸ Absente â€” Ã  ajouter'}
-AutoritÃ©       : ${(psyTrig?.authority || []).slice(0, 3).join(' | ') || 'âš ï¸ Absente â€” Ã  ajouter'}
-Fear of loss   : ${(psyTrig?.fearloss || []).slice(0, 3).join(' | ') || 'âš ï¸ Absente â€” Ã  ajouter'}
-Price anchors  : ${(psyTrig?.priceanchors || []).slice(0, 3).join(' | ') || 'âš ï¸ Absente â€” Ã  ajouter'}
-CTAs           : ${(psyTrig?.ctabuttons || []).length || 0} dÃ©tectÃ©s
-Countdown      : ${hasCountdown ? 'âœ“ PrÃ©sent â€” optimiser seulement' : 'âœ— Absent â€” CrÃ©er snippet ci-dessous'}
-Exit Intent    : ${hasExitIntent ? 'âœ“ PrÃ©sent â€” optimiser seulement' : 'âœ— Absent â€” CrÃ©er snippet ci-dessous'}
+▌ DÉCLENCHEURS PSYCHOLOGIQUES
+Urgence        : ${(psyTrig?.urgency || []).slice(0, 3).join(' | ') || '⚠️ Absente — à ajouter'}
+Rareté         : ${(psyTrig?.scarcity || []).slice(0, 3).join(' | ') || '⚠️ Absente — à ajouter'}
+Social proof   : ${(psyTrig?.socialproof || []).slice(0, 3).join(' | ') || '⚠️ Absente — à ajouter'}
+Garanties psych: ${(psyTrig?.guarantees || []).slice(0, 3).join(' | ') || '⚠️ Absente — à ajouter'}
+Autorité       : ${(psyTrig?.authority || []).slice(0, 3).join(' | ') || '⚠️ Absente — à ajouter'}
+Fear of loss   : ${(psyTrig?.fearloss || []).slice(0, 3).join(' | ') || '⚠️ Absente — à ajouter'}
+Price anchors  : ${(psyTrig?.priceanchors || []).slice(0, 3).join(' | ') || '⚠️ Absente — à ajouter'}
+CTAs           : ${(psyTrig?.ctabuttons || []).length || 0} détectés
+Countdown      : ${hasCountdown ? '✓ Présent — optimiser seulement' : '✗ Absent — Créer snippet ci-dessous'}
+Exit Intent    : ${hasExitIntent ? '✓ Présent — optimiser seulement' : '✗ Absent — Créer snippet ci-dessous'}
 
-â–Œ SEO INTEL
-Title page     : ${seoTitle || 'Non dÃ©tectÃ©'}
-Meta desc      : ${seoDesc || 'Non dÃ©tectÃ©e'}
-OG Tags        : ${hasOG ? 'âœ“' : 'âœ—'} | Canonical: ${hasCanonical ? 'âœ“' : 'âœ—'}
+▌ SEO INTEL
+Title page     : ${seoTitle || 'Non détecté'}
+Meta desc      : ${seoDesc || 'Non détectée'}
+OG Tags        : ${hasOG ? '✓' : '✗'} | Canonical: ${hasCanonical ? '✓' : '✗'}
 Word count     : ${wordCount} mots
 H1 count       : ${seoIntel?.h1Count || 0} | H2 count: ${seoIntel?.h2Count || 0}
 Images no ALT  : ${missingAlt}
 
-â–Œ FAILLES PAR SECTION (prioritÃ© score < 70)
+▌ FAILLES PAR SECTION (priorité score < 70)
 ${sections.length > 0
   ? sections.map((s, i) => {
     const score = s.score ?? 100;
-    const flag = score < 50 ? 'ðŸ”´' : score < 70 ? 'ðŸŸ¡' : 'ðŸŸ¢';
-    return `${i+1}. [${flag} ${score}/100] ${s.sectionType || s.type || 'Section'} â€” "${s.title || ''}"
-   RÃ´le : ${s.conversionRole || ''} | Impact: ${s.conversionImpact || 'MEDIUM'}
-   Faille : ${s.weakness || 'â€”'}
-   Fix    : ${s.upgradeCopy || s.missingElement || 'â€”'}
+    const flag = score < 50 ? '🔴' : score < 70 ? '🟡' : '🟢';
+    return `${i+1}. [${flag} ${score}/100] ${s.sectionType || s.type || 'Section'} — "${s.title || ''}"
+   Rôle : ${s.conversionRole || ''} | Impact: ${s.conversionImpact || 'MEDIUM'}
+   Faille : ${s.weakness || '—'}
+   Fix    : ${s.upgradeCopy || s.missingElement || '—'}
    Manque : ${s.missingElement || 'null'}`;
   }).join('\n\n')
-  : 'Sections non disponibles (scrape bloquÃ©)'}
+  : 'Sections non disponibles (scrape bloqué)'}
 
-â–Œ STRATÃ‰GIE CONCURRENTIELLE
-Unfair Advantage: ${bp?.unfairAdvantage || 'â€”'}
-Core Hook       : ${bp?.coreHook || 'â€”'}
-Kill Shot       : ${bp?.killShotName || 'â€”'}
-Comment battre  : ${report?.competitiveCounterStrategy?.howToBeatThem || bp?.howToBeatThem || 'â€”'}
-Positioning     : ${report?.competitiveCounterStrategy?.yourPositioning || bp?.yourPositioning || 'â€”'}
-Opportunity Gap : ${bp?.opportunityGap || 'â€”'}
-Quick Wins      : ${(bp?.quickWins || []).slice(0, 5).join(' | ') || 'â€”'}
-Weak Points     : ${(bp?.weakPoints || []).join(' | ') || 'â€”'}
+▌ STRATÉGIE CONCURRENTIELLE
+Unfair Advantage: ${bp?.unfairAdvantage || '—'}
+Core Hook       : ${bp?.coreHook || '—'}
+Kill Shot       : ${bp?.killShotName || '—'}
+Comment battre  : ${report?.competitiveCounterStrategy?.howToBeatThem || bp?.howToBeatThem || '—'}
+Positioning     : ${report?.competitiveCounterStrategy?.yourPositioning || bp?.yourPositioning || '—'}
+Opportunity Gap : ${bp?.opportunityGap || '—'}
+Quick Wins      : ${(bp?.quickWins || []).slice(0, 5).join(' | ') || '—'}
+Weak Points     : ${(bp?.weakPoints || []).join(' | ') || '—'}
 
-â–Œ ANALYSE SWOT
-Forces         : ${(analysis?.strengths || []).join(' | ') || 'â€”'}
-Faiblesses     : ${(analysis?.weaknesses || []).join(' | ') || 'â€”'}
-OpportunitÃ©s   : ${(analysis?.opportunities || []).join(' | ') || 'â€”'}
-Menaces        : ${(analysis?.threats || []).join(' | ') || 'â€”'}
+▌ ANALYSE SWOT
+Forces         : ${(analysis?.strengths || []).join(' | ') || '—'}
+Faiblesses     : ${(analysis?.weaknesses || []).join(' | ') || '—'}
+Opportunités   : ${(analysis?.opportunities || []).join(' | ') || '—'}
+Menaces        : ${(analysis?.threats || []).join(' | ') || '—'}
 
-â–Œ FUNNEL AIDA GÃ‰NÃ‰RÃ‰
+▌ FUNNEL AIDA GÉNÉRÉ
 Attention Headline : ${aidaHeadline}
 Subheadline        : ${aidaSubheadline}
 Hook               : ${aidaHook}
@@ -15850,31 +15850,31 @@ CTA Principal      : ${aidaPrimaryCTA}
 Urgence            : ${aidaUrgency}
 Risk Reversal      : ${aidaRiskRev}
 
-â–Œ COUNTER-ATTACK COPY
+▌ COUNTER-ATTACK COPY
 Ad Headline    : ${adHeadline}
 WhatsApp msg   : ${waMsg}
 Email Subject  : ${emailSubject}
 SMS (160c)     : ${smsText}
 
-â–Œ PUBLIC CIBLE
-Audience       : ${analysis?.targetAudience?.primary || report?.targetAudience?.profile || 'â€”'}
-Douleurs       : ${(analysis?.targetAudience?.painPoints || []).join(' | ') || 'â€”'}
-DÃ©sirs         : ${(analysis?.targetAudience?.desires || []).join(' | ') || 'â€”'}
-Objections     : ${(analysis?.targetAudience?.objections || []).join(' | ') || 'â€”'}
-Sophistication : ${analysis?.targetAudience?.sophisticationLevel || 'â€”'}
+▌ PUBLIC CIBLE
+Audience       : ${analysis?.targetAudience?.primary || report?.targetAudience?.profile || '—'}
+Douleurs       : ${(analysis?.targetAudience?.painPoints || []).join(' | ') || '—'}
+Désirs         : ${(analysis?.targetAudience?.desires || []).join(' | ') || '—'}
+Objections     : ${(analysis?.targetAudience?.objections || []).join(' | ') || '—'}
+Sophistication : ${analysis?.targetAudience?.sophisticationLevel || '—'}
 
-â–Œ MOTS-CLÃ‰S SEO
-Primaires      : ${(analysis?.keywords?.primary || []).join(', ') || 'â€”'}
-Secondaires    : ${(analysis?.keywords?.secondary || []).join(', ') || 'â€”'}
-Long Tail      : ${(analysis?.keywords?.longTail || []).join(', ') || 'â€”'}
-Meta Title SEO : ${funnel?.metadata?.suggestedTitle || 'â€”'}
-Meta Desc SEO  : ${funnel?.metadata?.suggestedMetaDescription || 'â€”'}
+▌ MOTS-CLÉS SEO
+Primaires      : ${(analysis?.keywords?.primary || []).join(', ') || '—'}
+Secondaires    : ${(analysis?.keywords?.secondary || []).join(', ') || '—'}
+Long Tail      : ${(analysis?.keywords?.longTail || []).join(', ') || '—'}
+Meta Title SEO : ${funnel?.metadata?.suggestedTitle || '—'}
+Meta Desc SEO  : ${funnel?.metadata?.suggestedMetaDescription || '—'}
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-SNIPPETS JS PRÃŠTS Ã€ COLLER
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+═══════════════════════════════════════════════════
+SNIPPETS JS PRÊTS À COLLER
+═══════════════════════════════════════════════════
 
-${!hasCountdown ? `// âœ… A â€” Countdown 24h (localStorage)
+${!hasCountdown ? `// ✅ A — Countdown 24h (localStorage)
 function initCountdown(id) {
   const k = 'ctd_end';
   let e = +localStorage.getItem(k) || 0;
@@ -15888,15 +15888,15 @@ function initCountdown(id) {
     if (el) el.textContent = \`\${h}:\${m}:\${s}\`;
   }, 1000);
 }
-initCountdown('countdownTimer');` : '// âœ… A â€” Countdown dÃ©jÃ  prÃ©sent dans le fichier'}
+initCountdown('countdownTimer');` : '// ✅ A — Countdown déjà présent dans le fichier'}
 
-// âœ… B â€” Social Proof Live (prÃ©noms Maroc)
+// ✅ B — Social Proof Live (prénoms Maroc)
 const sp = [
   {n:'Karim', c:'Casablanca', a:'vient d\'acheter'},
-  {n:'Fatima', c:'Rabat', a:'a commandÃ©'},
-  {n:'Ahmed', c:'Marrakech', a:'a laissÃ© â­â­â­â­â­'},
+  {n:'Fatima', c:'Rabat', a:'a commandé'},
+  {n:'Ahmed', c:'Marrakech', a:'a laissé ⭐⭐⭐⭐⭐'},
   {n:'Sara', c:'Agadir', a:'vient de s\'inscrire'},
-  {n:'Youssef', c:'FÃ¨s', a:'a confirmÃ© sa commande'},
+  {n:'Youssef', c:'Fès', a:'a confirmé sa commande'},
 ];
 let si = 0;
 function showSP() {
@@ -15910,7 +15910,7 @@ function showSP() {
 setTimeout(showSP, 3000);
 setInterval(showSP, 10000);
 
-${!hasExitIntent ? `// âœ… C â€” Exit Intent (sessionStorage â€” 1 seule fois)
+${!hasExitIntent ? `// ✅ C — Exit Intent (sessionStorage — 1 seule fois)
 if (!sessionStorage.getItem('exit')) {
   document.addEventListener('mouseleave', e => {
     if (e.clientY < 5) {
@@ -15919,9 +15919,9 @@ if (!sessionStorage.getItem('exit')) {
       if (m) m.style.display = 'flex';
     }
   });
-}` : '// âœ… C â€” Exit Intent dÃ©jÃ  prÃ©sent dans le fichier'}
+}` : '// ✅ C — Exit Intent déjà présent dans le fichier'}
 
-// âœ… D â€” WhatsApp + GA4 + Meta Pixel
+// ✅ D — WhatsApp + GA4 + Meta Pixel
 function openWhatsApp() {
   const msg = encodeURIComponent('${waMsg}'.replace(/\n/g, ' '));
   if (typeof gtag !== 'undefined') gtag('event', 'whatsapp_click', {event_category: 'CTA'});
@@ -15929,47 +15929,47 @@ function openWhatsApp() {
   window.open(\`https://wa.me/212XXXXXXXXX?text=\${msg}\`, '_blank');
 }
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-CHECKLIST DÃ‰PLOIEMENT FINALE
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-â–¡ Mobile 375px â€” aucun overflow horizontal
-â–¡ PageSpeed â‰¥ 85 (GTmetrix ou Lighthouse)
-â–¡ Countdown localStorage OK â€” tester en navigation privÃ©e
-â–¡ WhatsApp â€” remplacer 212XXXXXXXXX par vrai numÃ©ro
-â–¡ Schema JSON-LD â€” valider sur schema.org/validator
-â–¡ GA4 debug mode â€” vÃ©rifier cta_click + whatsapp_click
-â–¡ WCAG AA â€” contraste â‰¥ 4.5:1 sur tous les CTAs${realPrice ? `\nâ–¡ Prix ${realPrice} ${currency} cohÃ©rent sur toute la page` : ''}
-â–¡ Touch targets â‰¥ 48px sur mobile
-â–¡ Meta Title â‰¤ 60 chars | Meta Description â‰¤ 160 chars
-â–¡ Images ALT manquantes : ${missingAlt} Ã  corriger
-${!hasSchema ? 'â–¡ Schema JSON-LD absent â€” Ã  crÃ©er en prioritÃ©' : 'â–¡ Schema JSON-LD prÃ©sent â€” valider'}
-${!hasOG ? 'â–¡ OG Tags absents â€” Ã  ajouter (og:title, og:image, og:description)' : 'â–¡ OG Tags prÃ©sents â€” vÃ©rifier og:image'}
-${!hasCDN ? 'â–¡ CDN absent â€” envisager Cloudflare gratuit pour amÃ©liorer performance' : 'â–¡ CDN actif'}
+═══════════════════════════════════════════════════
+CHECKLIST DÉPLOIEMENT FINALE
+═══════════════════════════════════════════════════
+□ Mobile 375px — aucun overflow horizontal
+□ PageSpeed ≥ 85 (GTmetrix ou Lighthouse)
+□ Countdown localStorage OK — tester en navigation privée
+□ WhatsApp — remplacer 212XXXXXXXXX par vrai numéro
+□ Schema JSON-LD — valider sur schema.org/validator
+□ GA4 debug mode — vérifier cta_click + whatsapp_click
+□ WCAG AA — contraste ≥ 4.5:1 sur tous les CTAs${realPrice ? `\n□ Prix ${realPrice} ${currency} cohérent sur toute la page` : ''}
+□ Touch targets ≥ 48px sur mobile
+□ Meta Title ≤ 60 chars | Meta Description ≤ 160 chars
+□ Images ALT manquantes : ${missingAlt} à corriger
+${!hasSchema ? '□ Schema JSON-LD absent — à créer en priorité' : '□ Schema JSON-LD présent — valider'}
+${!hasOG ? '□ OG Tags absents — à ajouter (og:title, og:image, og:description)' : '□ OG Tags présents — vérifier og:image'}
+${!hasCDN ? '□ CDN absent — envisager Cloudflare gratuit pour améliorer performance' : '□ CDN actif'}
 
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-RÃˆGLES ABSOLUES
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-âœ— Ne PAS analyser ni modifier avant FIN CODE
-âœ— Ne PAS tout gÃ©nÃ©rer en une seule rÃ©ponse â€” respecter le dÃ©coupage en ${estimatedParts} requÃªte(s)
-âœ— Ne PAS changer l'identitÃ© visuelle${dominantColors.length > 0 ? ` â€” garder ${dominantColors.slice(0,3).join(', ')}` : ''}
-âœ— Ne PAS inventer de prix${realPrice ? ` â€” utiliser UNIQUEMENT ${realPrice} ${currency} (${basketSource})` : ' â€” aucun prix dÃ©tectÃ©'}
-âœ— Ne PAS dupliquer Countdown${hasCountdown ? ' (prÃ©sent)' : ' (absent)'} / Exit${hasExitIntent ? ' (prÃ©sent)' : ' (absent)'}
-âœ— Ne PAS ajouter librairies > 30kB non justifiÃ©es
-âœ“ Attendre FIN CODE avant toute action
-âœ“ Confirmer chaque partie reÃ§ue avec "Partie X/X reÃ§ue âœ“ GO pour la suite"
-âœ“ Prioriser les sections score < 70/100 en premier
-âœ“ Chaque modif cite sa source exacte dans le rapport
-âœ“ Commenter : // ðŸ”Ž FUNNEL SPY V11 â€” Source: [X] | Score: [Y/100]
-âœ“ Utiliser le AIDA Funnel comme base copy
-âœ“ Langue : ${targetLang}
+═══════════════════════════════════════════════════
+RÈGLES ABSOLUES
+═══════════════════════════════════════════════════
+✗ Ne PAS analyser ni modifier avant FIN CODE
+✗ Ne PAS tout générer en une seule réponse — respecter le découpage en ${estimatedParts} requête(s)
+✗ Ne PAS changer l'identité visuelle${dominantColors.length > 0 ? ` — garder ${dominantColors.slice(0,3).join(', ')}` : ''}
+✗ Ne PAS inventer de prix${realPrice ? ` — utiliser UNIQUEMENT ${realPrice} ${currency} (${basketSource})` : ' — aucun prix détecté'}
+✗ Ne PAS dupliquer Countdown${hasCountdown ? ' (présent)' : ' (absent)'} / Exit${hasExitIntent ? ' (présent)' : ' (absent)'}
+✗ Ne PAS ajouter librairies > 30kB non justifiées
+✓ Attendre FIN CODE avant toute action
+✓ Confirmer chaque partie reçue avec "Partie X/X reçue ✓ GO pour la suite"
+✓ Prioriser les sections score < 70/100 en premier
+✓ Chaque modif cite sa source exacte dans le rapport
+✓ Commenter : // 🔎 FUNNEL SPY V11 — Source: [X] | Score: [Y/100]
+✓ Utiliser le AIDA Funnel comme base copy
+✓ Langue : ${targetLang}
 
-â†’ GO continuer | STOP pause | REPART [section] refaire`;
+→ GO continuer | STOP pause | REPART [section] refaire`;
 }
 
 
 async function generateAIDAFunnel(url, query, geo, language) {
  
-    console.log(`ðŸŽ¯ [${new Date().toISOString()}] AIDA Funnel V10 GOD TIER started`);
+    console.log(`🎯 [${new Date().toISOString()}] AIDA Funnel V10 GOD TIER started`);
     console.log(`   URL: ${url} | Query: ${query} | Geo: ${geo} | Lang: ${language}`);
  
     const startTime = Date.now();
@@ -15991,32 +15991,32 @@ async function generateAIDAFunnel(url, query, geo, language) {
         const cacheKey = `funnelv10_${validUrl}_${cleanQuery}_${cleanGeo}_${validLang}`;
         const cached   = cache.get(cacheKey);
         if (cached) {
-            console.log(`ðŸ’¾ Cache HIT`);
+            console.log(`💾 Cache HIT`);
             return { ...cached, fromCache: true };
         }
  
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // PHASE 1 : TRIPLE ENGINE SCRAPING â€” INCHANGÃ‰E
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════
+        // PHASE 1 : TRIPLE ENGINE SCRAPING — INCHANGÉE
+        // ══════════════════════════════════════════════════════
+       // ══════════════════════════════════════════════════════
         // PHASE 1 : UNIFIED DEEP ENGINE (Playwright + Scrape.do)
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        console.log(`\nðŸ•·ï¸  PHASE 1/4: Unified Deep Intelligence Scraping...`);
+        // ══════════════════════════════════════════════════════
+        console.log(`\n🕷️  PHASE 1/4: Unified Deep Intelligence Scraping...`);
         const phaseStart1 = Date.now();
         phases.scraping.status = 'running';
 
-        // âš¡ ON UTILISE UNIQUEMENT LE DEEP SCRAPE (Plus d'Axios ici pour Ã©viter la confusion)
+        // ⚡ ON UTILISE UNIQUEMENT LE DEEP SCRAPE (Plus d'Axios ici pour éviter la confusion)
         const deepScrape = await deepScrapeFunnel(validUrl);
 
         if (!deepScrape.success) {
-    console.warn(`âš ï¸ deepScrape failed â€” mode dÃ©gradÃ©: ${deepScrape.error}`);
+    console.warn(`⚠️ deepScrape failed — mode dégradé: ${deepScrape.error}`);
 }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// PHASE 1 â€” MAPPING DONNÃ‰ES DEEP (Playwright â€” source unique)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════════════
+// PHASE 1 — MAPPING DONNÉES DEEP (Playwright — source unique)
+// ══════════════════════════════════════════════════════════════
 
-// â”€â”€ DonnÃ©es visuelles
+// ── Données visuelles
 const vis        = deepScrape.visualDNA  || {};
 const pri        = deepScrape.priceIntel || {};
 const copy       = deepScrape.copyIntel  || {};
@@ -16024,14 +16024,14 @@ const brand      = deepScrape.brand      || {};
 const schemaData    = deepScrape.schemaData    || { types: [], count: 0 };
 const redirectIntel = deepScrape.redirectIntel || { chain: [], totalRedirects: 0 };
 
-// âœ… FIX â€” alias pour compatibilitÃ© avec les prompts
+// ✅ FIX — alias pour compatibilité avec les prompts
 const priceIntel = pri;
 const copyIntel  = copy;
 
-// âœ… FIX â€” HTML complet (pas bodyText) pour detectTechStack
+// ✅ FIX — HTML complet (pas bodyText) pour detectTechStack
 const rawHtml = deepScrape.html || deepScrape.brand?.fullTextSample || '';
 
-// âœ… FIX â€” scrapedData reconstruit depuis deepScrape (Ã©tait undefined avant)
+// ✅ FIX — scrapedData reconstruit depuis deepScrape (était undefined avant)
 const scrapedData = {
     meta: deepScrape.meta || {
         title:       copyIntel.headlines?.h1?.[0] || '',
@@ -16060,13 +16060,13 @@ const scrapedData = {
     },
 };
 
-// â”€â”€ DÃ‰DUCTIONS TECHNIQUES
-// âœ… Playwright en prioritÃ© â€” detectTechStack en fallback sur HTML complet
+// ── DÉDUCTIONS TECHNIQUES
+// ✅ Playwright en priorité — detectTechStack en fallback sur HTML complet
 const techStack = deepScrape.techStack && deepScrape.techStack.cms !== 'Unknown'
     ? deepScrape.techStack
     : detectTechStack(rawHtml);
 
-// âœ… psychTriggers â€” Playwright d'abord, regex en fallback
+// ✅ psychTriggers — Playwright d'abord, regex en fallback
 const psychTriggers = (deepScrape.performanceIntel && rawHtml.length > 500)
     ? extractPsychTriggers(rawHtml, rawHtml)
     : {
@@ -16080,10 +16080,10 @@ const psychTriggers = (deepScrape.performanceIntel && rawHtml.length > 500)
         ctabuttons:   copyIntel.realCTAs || [],
     };
 
-// âœ… seoIntel â€” sur HTML complet
+// ✅ seoIntel — sur HTML complet
 const seoIntel = extractSEOIntel(rawHtml, validUrl);
 
-// âœ… perfSignals â€” Playwright d'abord, extractPerfSignals en complÃ©ment
+// ✅ perfSignals — Playwright d'abord, extractPerfSignals en complément
 const _perfRaw   = rawHtml.length > 500 ? extractPerfSignals(rawHtml) : {};
 const perfSignals = {
     hasCDN:        deepScrape.performanceIntel?.hasCDN        ?? _perfRaw.hasCDN        ?? false,
@@ -16097,10 +16097,10 @@ const perfSignals = {
     hasPreload:    _perfRaw.hasPreload  ?? false,
 };
 
-// â”€â”€ LOGIQUE FINANCIÃˆRE RÃ‰ELLE
+// ── LOGIQUE FINANCIÈRE RÉELLE
 let serpPriceData = { avgBasket: null, source: null };
 
-// SerpAPI fallback si Playwright n'a pas trouvÃ© de prix
+// SerpAPI fallback si Playwright n'a pas trouvé de prix
 if (CONFIG.SERPAPI_KEY && !pri.detected) {
     try {
         const domain    = new URL(validUrl).hostname.replace('www.', '');
@@ -16125,22 +16125,22 @@ if (CONFIG.SERPAPI_KEY && !pri.detected) {
             serpPriceData.source    = 'Google SERP Snippet';
         }
     } catch (e) {
-        console.warn('âš ï¸ SerpAPI pricing fallback skipped:', e.message);
+        console.warn('⚠️ SerpAPI pricing fallback skipped:', e.message);
     }
 }
 
 const finalAvgBasket = pri.primaryPrice || serpPriceData.avgBasket || null;
 const basketSource   = pri.detected
     ? 'Playwright scrape'
-    : (serpPriceData.source || 'Non dÃ©tectÃ©');
+    : (serpPriceData.source || 'Non détecté');
 
-// DonnÃ©es dashboard
+// Données dashboard
 const finalTraffic  = techStack.trafficEstimate?.midpoint || null;
-const trafficSource = finalTraffic ? 'TechStack Discovery' : 'Non dÃ©tectÃ©';
+const trafficSource = finalTraffic ? 'TechStack Discovery' : 'Non détecté';
 const wordCount     = deepScrape.brand?.wordCount
                    || rawHtml.split(/\s+/).filter(Boolean).length;
 
-// âœ… Couleurs rÃ©elles Playwright (jamais undefined)
+// ✅ Couleurs réelles Playwright (jamais undefined)
 const primaryColor = vis.dominantColors?.[0] || '#3b82f6';
 const secondColor  = vis.dominantColors?.[1] || '#1e293b';
 const accentColor  = vis.dominantColors?.[2] || '#10b981';
@@ -16150,20 +16150,20 @@ const visualDNA = vis;
 phases.scraping.duration = Date.now() - phaseStart1;
 phases.scraping.status   = 'success';
 
-console.log(`âœ… Phase 1 complete (${phases.scraping.duration}ms)`);
-console.log(`   ðŸŽ¨ Colors  : ${cleanColors.join(', ')}`);
-console.log(`   ðŸ—ï¸  CMS     : ${techStack.cms || 'Unknown'}`);
-console.log(`   ðŸ’° Price   : ${finalAvgBasket ?? 'N/A'} ${pri.currency || 'MAD'} (${basketSource})`);
-console.log(`   ðŸ“ž Phones  : ${deepScrape.contacts?.phones?.join(', ') || 'Aucun'}`);
-console.log(`   ðŸ“§ Emails  : ${deepScrape.contacts?.emails?.join(', ') || 'Aucun'}`);
-console.log(`   ðŸ“ˆ Traffic : ${finalTraffic ?? 'N/A'}`);
-console.log(`   ðŸ”– Schema  : ${schemaData.types.join(', ') || 'Aucun'}`);
-console.log(`   ðŸ›¡ï¸  SSL     : ${perfSignals.hasSSL} | WhatsApp: ${perfSignals.hasWhatsApp}`);
+console.log(`✅ Phase 1 complete (${phases.scraping.duration}ms)`);
+console.log(`   🎨 Colors  : ${cleanColors.join(', ')}`);
+console.log(`   🏗️  CMS     : ${techStack.cms || 'Unknown'}`);
+console.log(`   💰 Price   : ${finalAvgBasket ?? 'N/A'} ${pri.currency || 'MAD'} (${basketSource})`);
+console.log(`   📞 Phones  : ${deepScrape.contacts?.phones?.join(', ') || 'Aucun'}`);
+console.log(`   📧 Emails  : ${deepScrape.contacts?.emails?.join(', ') || 'Aucun'}`);
+console.log(`   📈 Traffic : ${finalTraffic ?? 'N/A'}`);
+console.log(`   🔖 Schema  : ${schemaData.types.join(', ') || 'Aucun'}`);
+console.log(`   🛡️  SSL     : ${perfSignals.hasSSL} | WhatsApp: ${perfSignals.hasWhatsApp}`);
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// PHASE 2 â€” COMPETITORS (inchangÃ©e)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-console.log(`\nðŸŽ¯ PHASE 2/4: Analyzing competitors...`);
+// ══════════════════════════════════════════════════════════════
+// PHASE 2 — COMPETITORS (inchangée)
+// ══════════════════════════════════════════════════════════════
+console.log(`\n🎯 PHASE 2/4: Analyzing competitors...`);
 const phaseStart2 = Date.now();
 phases.competitors.status = 'running';
 
@@ -16171,45 +16171,45 @@ const competitorData = await analyzeCompetitors(cleanQuery, cleanGeo);
 
 phases.competitors.duration = Date.now() - phaseStart2;
 phases.competitors.status   = competitorData.success ? 'success' : 'partial';
-console.log(`âœ… Phase 2 complete (${phases.competitors.duration}ms) â€” ${competitorData.totalFound} concurrents`);
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // PHASES 3 + 4 : PARALLÃ‰LISÃ‰ES â€” FIX RENDER TIMEOUT
+console.log(`✅ Phase 2 complete (${phases.competitors.duration}ms) — ${competitorData.totalFound} concurrents`);
+        // ══════════════════════════════════════════════════════
+        // PHASES 3 + 4 : PARALLÉLISÉES — FIX RENDER TIMEOUT
         //
-        // AVANT  : Phase3 (IA) finit â†’ Phase4 (IA) commence
-        //          Temps total = T3 + T4 (ex: 45s + 40s = 85s) âŒ
+        // AVANT  : Phase3 (IA) finit → Phase4 (IA) commence
+        //          Temps total = T3 + T4 (ex: 45s + 40s = 85s) ❌
         //
-        // APRÃˆS  : Les deux prompts sont construits en avance
-        //          puis lancÃ©s simultanÃ©ment via Promise.all
-        //          Temps total = max(T3, T4) (ex: max(45s,40s) = 45s) âœ…
+        // APRÈS  : Les deux prompts sont construits en avance
+        //          puis lancés simultanément via Promise.all
+        //          Temps total = max(T3, T4) (ex: max(45s,40s) = 45s) ✅
         //
         // POURQUOI c'est safe :
-        //   â€¢ Le prompt de Phase 4 (funnelPrompt) utilise uniquement les
-        //     donnÃ©es scrappÃ©es (Phase1) â€” il N'utilise PAS le rÃ©sultat IA
-        //     de Phase3 (analysis). Les deux sont 100% indÃ©pendants.
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        //   • Le prompt de Phase 4 (funnelPrompt) utilise uniquement les
+        //     données scrappées (Phase1) — il N'utilise PAS le résultat IA
+        //     de Phase3 (analysis). Les deux sont 100% indépendants.
+        // ══════════════════════════════════════════════════════
  
         // Contexte financier
         const financialContext = finalAvgBasket
-            ? `DONNÃ‰ES FINANCIÃˆRES RÃ‰ELLES DÃ‰TECTÃ‰ES (source: ${basketSource}):
-- Panier moyen rÃ©el     : ${finalAvgBasket} MAD
-- Prix dÃ©tectÃ©s         : ${priceIntel.all?.slice(0, 5).join(', ') || finalAvgBasket} MAD
-- Prix barrÃ©s (promos)  : ${priceIntel.struckPrices?.join(', ') || 'Aucun'}
-- Remise dÃ©tectÃ©e       : ${priceIntel.discountRate || 'Aucune'}
-- Trafic estimÃ© (tech)  : ${finalTraffic ?? 'Non dÃ©tectÃ©'} visites/mois
-â†’ Utilise ces donnÃ©es pour estimer MRR et CPA. Ne pas inventer d'autres chiffres.`
-            : `DONNÃ‰ES FINANCIÃˆRES: Aucun prix dÃ©tectÃ©.
-â†’ RÃˆGLE ABSOLUE: mettre null pour estimatedMRR, estimatedCPA, averageBasket, estimatedMargin.
-â†’ NE JAMAIS inventer de chiffres financiers.`;
+            ? `DONNÉES FINANCIÈRES RÉELLES DÉTECTÉES (source: ${basketSource}):
+- Panier moyen réel     : ${finalAvgBasket} MAD
+- Prix détectés         : ${priceIntel.all?.slice(0, 5).join(', ') || finalAvgBasket} MAD
+- Prix barrés (promos)  : ${priceIntel.struckPrices?.join(', ') || 'Aucun'}
+- Remise détectée       : ${priceIntel.discountRate || 'Aucune'}
+- Trafic estimé (tech)  : ${finalTraffic ?? 'Non détecté'} visites/mois
+→ Utilise ces données pour estimer MRR et CPA. Ne pas inventer d'autres chiffres.`
+            : `DONNÉES FINANCIÈRES: Aucun prix détecté.
+→ RÈGLE ABSOLUE: mettre null pour estimatedMRR, estimatedCPA, averageBasket, estimatedMargin.
+→ NE JAMAIS inventer de chiffres financiers.`;
  
         const copyContext = `
-COPY RÃ‰ELLE DE LA PAGE:
+COPY RÉELLE DE LA PAGE:
 - H1: ${copyIntel.headlines?.h1?.join(' | ') || scrapedData.structure?.h1?.text || 'Non disponible'}
 - H2s: ${copyIntel.headlines?.h2?.slice(0, 3).join(' | ') || 'Non disponible'}
 - Hero text: ${copyIntel.heroText?.substring(0, 300) || 'Non disponible'}
-- CTAs rÃ©els: ${copyIntel.realCTAs?.join(' | ') || 'Non disponible'}
-- Garanties: ${copyIntel.guarantees?.join(' | ') || 'Aucune dÃ©tectÃ©e'}
-- FAQ: ${copyIntel.faq?.length || 0} questions dÃ©tectÃ©es
-- TÃ©moignages: ${copyIntel.testimonials?.length || 0} trouvÃ©s`;
+- CTAs réels: ${copyIntel.realCTAs?.join(' | ') || 'Non disponible'}
+- Garanties: ${copyIntel.guarantees?.join(' | ') || 'Aucune détectée'}
+- FAQ: ${copyIntel.faq?.length || 0} questions détectées
+- Témoignages: ${copyIntel.testimonials?.length || 0} trouvés`;
  
         const techContext = `
 TECH STACK: ${JSON.stringify(techStack, null, 0).substring(0, 500)}
@@ -16220,16 +16220,16 @@ BUSINESS PROFILE:
 - Funnel builder      : ${techStack.businessProfile?.hasFunnel}
 - Niveau investissement: ${techStack.businessProfile?.investmentLevel}
 SCHEMA.ORG: ${schemaData.types.join(', ') || 'Aucun'}
-REDIRECTIONS: ${redirectIntel.totalRedirects} redirect(s) | Funnel multi-Ã©tapes: ${redirectIntel.isFunnelRedirect}
+REDIRECTIONS: ${redirectIntel.totalRedirects} redirect(s) | Funnel multi-étapes: ${redirectIntel.isFunnelRedirect}
 SIGNAUX PERF: CDN=${perfSignals.hasCDN}, ExitIntent=${perfSignals.hasExitIntent}, Countdown=${perfSignals.hasCountdown}
 TRUST SCORE: ${deepScrape.frameworkData?.trustSignals?.trustScore ?? 'N/A'}/10
-DÃ‰CLENCHEURS PSYCHO: urgency=${psychTriggers.urgency?.length}, social_proof=${psychTriggers.socialproof?.length}, guarantees=${psychTriggers.guarantees?.length}`;
+DÉCLENCHEURS PSYCHO: urgency=${psychTriggers.urgency?.length}, social_proof=${psychTriggers.socialproof?.length}, guarantees=${psychTriggers.guarantees?.length}`;
  
-        // â”€â”€ PROMPT PHASE 3 : ANALYSE IA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── PROMPT PHASE 3 : ANALYSE IA ──────────────────────
         const analysisPrompt = `
 Tu es un expert SEO, marketing digital et cyber-intelligence de niveau international.
  
-SITE ANALYSÃ‰:
+SITE ANALYSÉ:
 - URL         : ${validUrl}
 - Titre       : ${scrapedData.meta?.title || seoIntel.title || 'Non disponible'}
 - Description : ${scrapedData.meta?.description || seoIntel.metaDescription || 'Non disponible'}
@@ -16241,18 +16241,18 @@ ${copyContext}
 ${techContext}
 ${financialContext}
  
-REQUÃŠTE CIBLE: "${cleanQuery}"
+REQUÊTE CIBLE: "${cleanQuery}"
 LOCALISATION : ${cleanGeo}
  
 TOP ${competitorData.totalFound} CONCURRENTS:
 ${competitorData.competitors?.map((c, i) =>
     `${i + 1}. ${c.title} | ${c.url}\n   ${c.snippet}`
-).join('\n') || 'Aucun concurrent trouvÃ©'}
+).join('\n') || 'Aucun concurrent trouvé'}
  
-RÃˆGLE ABSOLUE ANTI-HALLUCINATION:
+RÈGLE ABSOLUE ANTI-HALLUCINATION:
 - Tu ne JAMAIS inventes de chiffres financiers
-- Si donnÃ©e inconnue â†’ null (jamais un chiffre par dÃ©faut)
-- averageBasket = uniquement depuis les donnÃ©es rÃ©elles ci-dessus
+- Si donnée inconnue → null (jamais un chiffre par défaut)
+- averageBasket = uniquement depuis les données réelles ci-dessus
  
 Langue: ${validLang}. JSON pur uniquement.
  
@@ -16260,15 +16260,15 @@ Langue: ${validLang}. JSON pur uniquement.
   "analysis": {
     "strengths": ["Force 1", "Force 2", "Force 3"],
     "weaknesses": ["Faiblesse 1", "Faiblesse 2"],
-    "opportunities": ["OpportunitÃ© 1", "OpportunitÃ© 2"],
+    "opportunities": ["Opportunité 1", "Opportunité 2"],
     "threats": ["Menace 1", "Menace 2"],
     "competitiveEdge": "En quoi ce site peut battre les concurrents",
-    "keyDifferentiators": ["DiffÃ©renciateur 1", "DiffÃ©renciateur 2"]
+    "keyDifferentiators": ["Différenciateur 1", "Différenciateur 2"]
   },
   "targetAudience": {
     "primary": "Description du public cible",
     "painPoints": ["Douleur 1", "Douleur 2", "Douleur 3"],
-    "desires": ["DÃ©sir 1", "DÃ©sir 2", "DÃ©sir 3"],
+    "desires": ["Désir 1", "Désir 2", "Désir 3"],
     "objections": ["Objection 1", "Objection 2"],
     "sophisticationLevel": "COLD | WARM | HOT"
   },
@@ -16293,88 +16293,88 @@ Langue: ${validLang}. JSON pur uniquement.
     "estimatedConversionRate": null,
     "averageBasket": null,
     "estimatedMargin": null,
-    "financialReasoning": "DonnÃ©es insuffisantes ou explication si donnÃ©es rÃ©elles disponibles",
-    "unfairAdvantage": "Ce qui les rend difficiles Ã  battre",
+    "financialReasoning": "Données insuffisantes ou explication si données réelles disponibles",
+    "unfairAdvantage": "Ce qui les rend difficiles à battre",
     "weakPoints": ["faiblesse1", "faiblesse2"],
-    "opportunityGap": "Comment les Ã©craser",
-    "howToBeatThem": "StratÃ©gie prÃ©cise",
+    "opportunityGap": "Comment les écraser",
+    "howToBeatThem": "Stratégie précise",
     "yourPositioning": "Comment te positionner",
     "contentGaps": ["gap1", "gap2"],
     "quickWins": ["action1", "action2", "action3"]
   },
   "copyFormula": "AIDA | PAS | 4Ps | StoryBrand",
-  "bigIdea": "L'idÃ©e centrale"
+  "bigIdea": "L'idée centrale"
 }`;
  
-        // â”€â”€ PROMPT PHASE 4 : FUNNEL AIDA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-        // Ce prompt utilise UNIQUEMENT les donnÃ©es scrappÃ©es (Phase 1).
-        // Il ne dÃ©pend PAS du rÃ©sultat de Phase 3 â†’ parallÃ©lisation safe.
+        // ── PROMPT PHASE 4 : FUNNEL AIDA ─────────────────────
+        // Ce prompt utilise UNIQUEMENT les données scrappées (Phase 1).
+        // Il ne dépend PAS du résultat de Phase 3 → parallélisation safe.
         const funnelPrompt = `
 Tu es un copywriter expert en tunnel de conversion AIDA.
  
-CONTEXTE STRATÃ‰GIQUE (donnÃ©es scrappÃ©es Phase 1):
+CONTEXTE STRATÉGIQUE (données scrappées Phase 1):
 - URL          : ${validUrl}
-- RequÃªte      : "${cleanQuery}"
+- Requête      : "${cleanQuery}"
 - Langue cible : ${validLang}
  
-COPY RÃ‰ELLE DU CONCURRENT (scrappÃ©e directement):
+COPY RÉELLE DU CONCURRENT (scrappée directement):
 - Leur H1      : ${copyIntel.headlines?.h1?.[0] || 'Non disponible'}
 - Leurs CTAs   : ${copyIntel.realCTAs?.slice(0, 4).join(' | ') || 'Non disponibles'}
 - Leurs garanties: ${copyIntel.guarantees?.[0] || 'Aucune'}
 - Leur hero    : ${copyIntel.heroText?.substring(0, 200) || 'Non disponible'}
  
-DONNÃ‰ES RÃ‰ELLES SCRAPPÃ‰ES:
-- Prix rÃ©el    : ${finalAvgBasket ? finalAvgBasket + ' MAD' : 'Non dÃ©tectÃ©'}
+DONNÉES RÉELLES SCRAPPÉES:
+- Prix réel    : ${finalAvgBasket ? finalAvgBasket + ' MAD' : 'Non détecté'}
 - Remise       : ${priceIntel.discountRate || 'Aucune'}
 - Trust score  : ${deepScrape.frameworkData?.trustSignals?.trustScore ?? 'N/A'}/10
-- TÃ©moignages  : ${copyIntel.testimonials?.length || 0} trouvÃ©s
+- Témoignages  : ${copyIntel.testimonials?.length || 0} trouvés
 - FAQ          : ${copyIntel.faq?.length || 0} questions
 - Tech Stack   : ${JSON.stringify(techStack, null, 0).substring(0, 200)}
  
-FAILLES DÃ‰TECTÃ‰ES (tech/perf):
-- CDN          : ${perfSignals.hasCDN ? 'PrÃ©sent' : 'ABSENT'}
-- Exit Intent  : ${perfSignals.hasExitIntent ? 'PrÃ©sent' : 'ABSENT'}
-- Countdown    : ${perfSignals.hasCountdown ? 'PrÃ©sent' : 'ABSENT'}
+FAILLES DÉTECTÉES (tech/perf):
+- CDN          : ${perfSignals.hasCDN ? 'Présent' : 'ABSENT'}
+- Exit Intent  : ${perfSignals.hasExitIntent ? 'Présent' : 'ABSENT'}
+- Countdown    : ${perfSignals.hasCountdown ? 'Présent' : 'ABSENT'}
 - Schema.org   : ${schemaData.types.join(', ') || 'Aucun'}
 - Redirections : ${redirectIntel.totalRedirects}
  
-Mots-clÃ©s    : ${cleanQuery}
+Mots-clés    : ${cleanQuery}
 Ton          : Professionnel et persuasif
 Langue       : ${validLang}. JSON pur uniquement.
  
 {
   "attention": {
-    "headline": "Titre accrocheur max 60 chars â€” exploite la faille de leur H1",
+    "headline": "Titre accrocheur max 60 chars — exploite la faille de leur H1",
     "subheadline": "Sous-titre max 120 chars",
-    "hook": "Phrase d'accroche irrÃ©sistible",
-    "visualSuggestion": "Description image/vidÃ©o idÃ©ale",
+    "hook": "Phrase d'accroche irrésistible",
+    "visualSuggestion": "Description image/vidéo idéale",
     "counterHook": "Attaque directe la faiblesse du concurrent"
   },
   "interest": {
-    "mainBenefit": "BÃ©nÃ©fice principal",
-    "secondaryBenefits": ["BÃ©nÃ©fice 1", "BÃ©nÃ©fice 2", "BÃ©nÃ©fice 3"],
-    "problemSolution": "Comment tu rÃ©sous mieux que le concurrent",
+    "mainBenefit": "Bénéfice principal",
+    "secondaryBenefits": ["Bénéfice 1", "Bénéfice 2", "Bénéfice 3"],
+    "problemSolution": "Comment tu résous mieux que le concurrent",
     "storytelling": "Mini-histoire 2-3 phrases",
     "competitorComparison": "Pourquoi tu es meilleur"
   },
   "desire": {
-    "uniqueSellingProposition": "USP diffÃ©renciante",
-    "socialProof": ["TÃ©moignage 1", "TÃ©moignage 2", "TÃ©moignage 3"],
+    "uniqueSellingProposition": "USP différenciante",
+    "socialProof": ["Témoignage 1", "Témoignage 2", "Témoignage 3"],
     "features": [
-      { "title": "Feature 1", "benefit": "BÃ©nÃ©fice concret" },
-      { "title": "Feature 2", "benefit": "BÃ©nÃ©fice concret" },
-      { "title": "Feature 3", "benefit": "BÃ©nÃ©fice concret" }
+      { "title": "Feature 1", "benefit": "Bénéfice concret" },
+      { "title": "Feature 2", "benefit": "Bénéfice concret" },
+      { "title": "Feature 3", "benefit": "Bénéfice concret" }
     ],
-    "scarcity": "Ã‰lÃ©ment de raretÃ© naturel",
-    "guarantee": "Garantie forte â€” meilleure que le concurrent",
-    "priceAnchor": "PrÃ©sentation prix qui maximise valeur perÃ§ue"
+    "scarcity": "Élément de rareté naturel",
+    "guarantee": "Garantie forte — meilleure que le concurrent",
+    "priceAnchor": "Présentation prix qui maximise valeur perçue"
   },
   "action": {
-    "primaryCTA": "CTA principal max 5 mots â€” diffÃ©rent de leur CTA",
+    "primaryCTA": "CTA principal max 5 mots — différent de leur CTA",
     "secondaryCTA": "CTA alternatif",
     "ctaContext": "Texte autour du CTA",
     "urgency": "Raison d'agir maintenant",
-    "riskReversal": "Ã‰limine le risque principal"
+    "riskReversal": "Élimine le risque principal"
   },
   "metadata": {
     "suggestedTitle": "Titre SEO 50-60 chars",
@@ -16389,11 +16389,11 @@ Langue       : ${validLang}. JSON pur uniquement.
   }
 }`;
  
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // âš¡ PHASES 3 + 4 EN PARALLÃˆLE â€” LE FIX PRINCIPAL
-        // Gain : ~25-40s selon les modÃ¨les disponibles
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        console.log(`\nðŸ¤– PHASES 3+4/4: AI Analysis + AIDA Funnel en parallÃ¨le...`);
+        // ══════════════════════════════════════════════════════
+        // ⚡ PHASES 3 + 4 EN PARALLÈLE — LE FIX PRINCIPAL
+        // Gain : ~25-40s selon les modèles disponibles
+        // ══════════════════════════════════════════════════════
+        console.log(`\n🤖 PHASES 3+4/4: AI Analysis + AIDA Funnel en parallèle...`);
         const phaseStart34 = Date.now();
         phases.analysis.status = 'running';
         phases.funnel.status   = 'running';
@@ -16404,26 +16404,26 @@ Langue       : ${validLang}. JSON pur uniquement.
                 maxTokens:      2500,
                 expectedFormat: 'json',
                 context:        'AIDA Analysis V10',
-                systemPrompt:   `Tu es expert SEO + stratÃ¨ge marketing + cyber-intelligence. RÃˆGLE ABSOLUE: jamais inventer de chiffres financiers. null si inconnu. JSON valide uniquement.`,
+                systemPrompt:   `Tu es expert SEO + stratège marketing + cyber-intelligence. RÈGLE ABSOLUE: jamais inventer de chiffres financiers. null si inconnu. JSON valide uniquement.`,
             }),
             callOpenRouterAPI(funnelPrompt, {
                 temperature:    0.8,
                 maxTokens:      3500,
                 expectedFormat: 'json',
                 context:        'AIDA Funnel V10',
-                systemPrompt:   `Tu es copywriter expert AIDA spÃ©cialisÃ© en contre-attaque concurrentielle. Tu exploites les donnÃ©es rÃ©elles de la page pour crÃ©er une copy chirurgicale. JSON valide uniquement.`,
+                systemPrompt:   `Tu es copywriter expert AIDA spécialisé en contre-attaque concurrentielle. Tu exploites les données réelles de la page pour créer une copy chirurgicale. JSON valide uniquement.`,
             })
         ]);
  
         const phase34Duration = Date.now() - phaseStart34;
-        console.log(`âœ… Phases 3+4 complÃ¨tes en PARALLÃˆLE (${phase34Duration}ms)`);
+        console.log(`✅ Phases 3+4 complètes en PARALLÈLE (${phase34Duration}ms)`);
  
-        // â”€â”€ Validation des rÃ©sultats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Validation des résultats ──────────────────────────
         if (!analysisResult.success) {
-            console.warn(`âš ï¸  AI Analysis failed: ${analysisResult.error} â€” fallback vide`);
+            console.warn(`⚠️  AI Analysis failed: ${analysisResult.error} — fallback vide`);
         }
         if (!funnelResult.success) {
-            console.warn(`âš ï¸  AIDA Funnel failed: ${funnelResult.error} â€” fallback vide`);
+            console.warn(`⚠️  AIDA Funnel failed: ${funnelResult.error} — fallback vide`);
         }
  
         const analysis  = analysisResult.success ? analysisResult.response : { spyIntel: {}, analysis: {}, targetAudience: {}, keywords: {}, contentStrategy: {} };
@@ -16434,12 +16434,12 @@ Langue       : ${validLang}. JSON pur uniquement.
         phases.funnel.duration   = phase34Duration;
         phases.funnel.status     = funnelResult.success ? 'success' : 'partial';
  
-        // Override sÃ©curisÃ© â€” donnÃ©es rÃ©elles Ã©crasent toujours l'IA
+        // Override sécurisé — données réelles écrasent toujours l'IA
         if (analysis.spyIntel) {
             analysis.spyIntel.averageBasket = finalAvgBasket ?? null;
             analysis.spyIntel.basketSource  = basketSource;
             if (!finalAvgBasket && typeof analysis.spyIntel.averageBasket === 'number') {
-                console.warn('âš ï¸  Hallucination dÃ©tectÃ©e â†’ forcÃ© null');
+                console.warn('⚠️  Hallucination détectée → forcé null');
                 analysis.spyIntel.averageBasket = null;
             }
             if (!finalAvgBasket) {
@@ -16458,12 +16458,12 @@ Langue       : ${validLang}. JSON pur uniquement.
             techStack, psychTriggers, perfSignals
         );
  
-        console.log(`   ðŸ¤– ModÃ¨le analyse : ${analysisResult.model}`);
-        console.log(`   ðŸŽ¨ ModÃ¨le funnel  : ${funnelResult.model}`);
+        console.log(`   🤖 Modèle analyse : ${analysisResult.model}`);
+        console.log(`   🎨 Modèle funnel  : ${funnelResult.model}`);
  
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // BUILD FINAL â€” INCHANGÃ‰
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════════
+        // BUILD FINAL — INCHANGÉ
+        // ══════════════════════════════════════════════════════
         const totalDuration = Date.now() - startTime;
         const spy           = analysis.spyIntel || {};
  
@@ -16512,7 +16512,7 @@ Langue       : ${validLang}. JSON pur uniquement.
                     estimatedMRR:            (finalTrafficReal && finalAvgBasket && finalCR)
                                              ? Math.round(finalTrafficReal * finalCR * finalAvgBasket)
                                              : null,
-                    reasoning:  spy.financialReasoning || 'DonnÃ©es insuffisantes',
+                    reasoning:  spy.financialReasoning || 'Données insuffisantes',
                     confidence: finalAvgBasket && finalTrafficReal ? 'HIGH'
                               : finalAvgBasket                     ? 'MEDIUM'
                               : 'UNAVAILABLE',
@@ -16531,8 +16531,8 @@ Langue       : ${validLang}. JSON pur uniquement.
                     annualOpportunity:     stealPot ? stealPot * 12 : null,
                     currency:              'MAD',
                     dataQuality:           finalAvgBasket
-                                           ? `âœ… Prix rÃ©el (${basketSource})`
-                                           : 'âš ï¸ Prix non dÃ©tectÃ©',
+                                           ? `✅ Prix réel (${basketSource})`
+                                           : '⚠️ Prix non détecté',
                 },
             },
  
@@ -16550,8 +16550,8 @@ Langue       : ${validLang}. JSON pur uniquement.
                 phases: {
                     scraping:    phases.scraping.duration    + 'ms',
                     competitors: phases.competitors.duration + 'ms',
-                    analysis:    phases.analysis.duration    + 'ms (parallÃ¨le avec funnel)',
-                    funnel:      phases.funnel.duration      + 'ms (parallÃ¨le avec analysis)',
+                    analysis:    phases.analysis.duration    + 'ms (parallèle avec funnel)',
+                    funnel:      phases.funnel.duration      + 'ms (parallèle avec analysis)',
                 },
                 aiModel:  funnelResult.model,
                 cacheHit: false,
@@ -16582,28 +16582,28 @@ Langue       : ${validLang}. JSON pur uniquement.
  
         cache.set(cacheKey, result);
  
-        console.log(`\nðŸŽ‰ AIDA FUNNEL V10 GOD TIER COMPLETE!`);
-        console.log(`   â±ï¸  Total     : ${totalDuration}ms`);
-        console.log(`   ðŸ’° Prix      : ${finalAvgBasket ?? 'N/A'} MAD (${basketSource})`);
-        console.log(`   ðŸ“Š Trafic    : ${finalTrafficReal ?? 'N/A'} (${trafficSource})`);
-        console.log(`   ðŸŽ¯ Steal Pot : ${stealPot ?? 'N/A'} MAD/mois`);
-        console.log(`   ðŸ”± Threat    : ${result.spyReport.threatLevel}`);
-        console.log(`   ðŸŽ¨ Couleurs  : ${visualDNA.dominantColors?.length ?? 0} dominantes`);
-        console.log(`   ðŸ“‹ Schema    : ${schemaData.types.join(', ') || 'Aucun'}`);
-        console.log(`   ðŸ›¡ï¸  Trust     : ${result.stats.trustScore}/10`);
-        console.log(`   ðŸŽ¯ Confiance : ${result.stats.dataConfidence}`);
+        console.log(`\n🎉 AIDA FUNNEL V10 GOD TIER COMPLETE!`);
+        console.log(`   ⏱️  Total     : ${totalDuration}ms`);
+        console.log(`   💰 Prix      : ${finalAvgBasket ?? 'N/A'} MAD (${basketSource})`);
+        console.log(`   📊 Trafic    : ${finalTrafficReal ?? 'N/A'} (${trafficSource})`);
+        console.log(`   🎯 Steal Pot : ${stealPot ?? 'N/A'} MAD/mois`);
+        console.log(`   🔱 Threat    : ${result.spyReport.threatLevel}`);
+        console.log(`   🎨 Couleurs  : ${visualDNA.dominantColors?.length ?? 0} dominantes`);
+        console.log(`   📋 Schema    : ${schemaData.types.join(', ') || 'Aucun'}`);
+        console.log(`   🛡️  Trust     : ${result.stats.trustScore}/10`);
+        console.log(`   🎯 Confiance : ${result.stats.dataConfidence}`);
  
         return result;
  
     } catch (error) {
-        console.error(`âŒ AIDA Funnel V10 failed:`, error.message);
+        console.error(`❌ AIDA Funnel V10 failed:`, error.message);
         return {
             success: false, url, query, geo, language, phases,
             ...handleError(error, 'AIDA Funnel V10'),
         };
     }
 }
-console.log('âœ… generateAIDAFunnel V10 GOD TIER loaded');
+console.log('✅ generateAIDAFunnel V10 GOD TIER loaded');
 
 
 
@@ -16736,7 +16736,7 @@ app.post('/api/scrape', async (req, res) => {
     try {
         const { url } = req.body;
         
-        // 1. Gestion de l'erreur "URL manquante" avec mise Ã  jour des mÃ©triques
+        // 1. Gestion de l'erreur "URL manquante" avec mise à jour des métriques
         if (!url) {
             if (typeof updateMetrics === 'function') {
                 updateMetrics(req.method, req.path, 400, Date.now() - startTime);
@@ -16751,7 +16751,7 @@ app.post('/api/scrape', async (req, res) => {
         // 2. Appel de la fonction de scraping
         const result = await scrapeSiteData(url);
         
-        // 3. Si le scraping a Ã©chouÃ© (ex: site inaccessible) mais n'a pas dÃ©clenchÃ© de "catch"
+        // 3. Si le scraping a échoué (ex: site inaccessible) mais n'a pas déclenché de "catch"
         if (!result.success) {
             if (typeof updateMetrics === 'function') {
                updateMetrics(req.method, req.path, 500, Date.now() - startTime);
@@ -16759,7 +16759,7 @@ app.post('/api/scrape', async (req, res) => {
             return res.status(500).json(result); 
         }
 
-        // 4. SuccÃ¨s total : on enregistre un beau code 200 dans tes statistiques
+        // 4. Succès total : on enregistre un beau code 200 dans tes statistiques
         if (typeof updateMetrics === 'function') {
             updateMetrics(req.method, req.path, 200, Date.now() - startTime);
         }
@@ -16767,7 +16767,7 @@ app.post('/api/scrape', async (req, res) => {
         res.status(200).json(result);
         
     } catch (error) {
-        console.error('âŒ /api/scrape error:', error);
+        console.error('❌ /api/scrape error:', error);
         
         // 5. Enregistrement d'une vraie erreur serveur dans tes statistiques
         if (typeof updateMetrics === 'function') {
@@ -16809,7 +16809,7 @@ app.post('/api/generate', async (req, res) => {
         res.json(result);
         
     } catch (error) {
-        console.error('âŒ /api/generate error:', error);
+        console.error('❌ /api/generate error:', error);
         updateMetrics(req.method, req.path, 500, Date.now() - startTime);
         res.status(500).json(handleError(error, 'Generate API'));
     }
@@ -16826,7 +16826,7 @@ app.post('/api/generate-keywords', requireAuth, requireReportQuota, persistGener
             geo = 'auto'
         } = req.body;
 
-        console.log(`ðŸ”‘ Keywords: "${seedKeyword}" â†’ ${languages.join(',')} (${countPerLanguage}/lang) | geo=${geo}`);
+        console.log(`🔑 Keywords: "${seedKeyword}" → ${languages.join(',')} (${countPerLanguage}/lang) | geo=${geo}`);
 
         if (!seedKeyword || !seedKeyword.trim()) {
             return res.status(400).json({ success: false, error: 'Seed keyword required' });
@@ -16870,18 +16870,18 @@ app.post('/api/generate-keywords', requireAuth, requireReportQuota, persistGener
 
 
 
-console.log('âœ… API Routes configured - All endpoints ready');
-// âš™ï¸ LOGIQUE DE DÃ‰DUCTION TECHNIQUE RÃ‰ELLE (CalculÃ©e par le serveur)
+console.log('✅ API Routes configured - All endpoints ready');
+// ⚙️ LOGIQUE DE DÉDUCTION TECHNIQUE RÉELLE (Calculée par le serveur)
 
 
-// âš™ï¸ 1. SCRAPER TECHNIQUE AVANCÃ‰ (CORRIGÃ‰)
-// Ajout de validUrl comme paramÃ¨tre pour Ã©viter le crash (ReferenceError)
+// ⚙️ 1. SCRAPER TECHNIQUE AVANCÉ (CORRIGÉ)
+// Ajout de validUrl comme paramètre pour éviter le crash (ReferenceError)
 async function getDeepMetrics($, validUrl) {
     try {
         const scripts = $('script').length || 0;
         const domNodes = $('*').length || 0; 
         
-        // SÃ©curisation du comptage des liens
+        // Sécurisation du comptage des liens
         const safeUrl = validUrl ? validUrl.replace(/\/$/, '') : '';
         const internalLinks = $('a[href^="/"], a[href^="' + safeUrl + '"]').length || 0;
         const allHttpLinks = $('a[href^="http"]').length || 0;
@@ -16890,7 +16890,7 @@ async function getDeepMetrics($, validUrl) {
         const hasViewport = $('meta[name="viewport"]').length > 0;
         const schemas = $('script[type="application/ld+json"]').length || 0;
         
-        // DÃ©duction des vitesses
+        // Déduction des vitesses
         let desktopSpeed = 100 - (domNodes / 40) - (scripts * 1);
         let mobileSpeed = desktopSpeed - (scripts * 1.5) - (hasViewport ? 0 : 30);
 
@@ -16903,35 +16903,35 @@ async function getDeepMetrics($, validUrl) {
         };
     } catch (e) {
         console.error("Erreur dans getDeepMetrics:", e);
-        // Fallback sÃ©curisÃ© en cas d'Ã©chec du parsing
+        // Fallback sécurisé en cas d'échec du parsing
         return { desktopSpeed: 50, mobileSpeed: 40, isMobileFriendly: false, links: { internal: 0, external: 0 }, schemasDetected: 0 };
     }
 }
 
-// ðŸ”§ 2. ROUTE : L'ORACLE SEO (STRICT SCHEMA)
-// ðŸ”§ ROUTE : L'ORACLE SEO (CORRECTION DE L'HALLUCINATION SÃ‰MANTIQUE)
+// 🔧 2. ROUTE : L'ORACLE SEO (STRICT SCHEMA)
+// 🔧 ROUTE : L'ORACLE SEO (CORRECTION DE L'HALLUCINATION SÉMANTIQUE)
 // =================================================================
-// ðŸ”¬ MODULE SEO TECHNIQUE "DEEP DIVE" (NIVEAU GOOGLE ENGINEER)
+// 🔬 MODULE SEO TECHNIQUE "DEEP DIVE" (NIVEAU GOOGLE ENGINEER)
 // =================================================================
 
 // 2. ANALYSEUR DE STRUCTURE PROFONDE (DOM INTELLIGENCE)
 async function getDeepStructure(html, url) {
     const $ = cheerio.load(html);
     
-    // Extraction HiÃ©rarchique (H1-H6)
+    // Extraction Hiérarchique (H1-H6)
     const headings = [];
     $('h1, h2, h3').each((i, el) => {
         if(headings.length < 15) headings.push(`${el.tagName}: ${$(el).text().trim()}`);
     });
 
-    // DÃ©tection AvancÃ©e du Schema.org
-    let schemaReport = "Aucun schÃ©ma dÃ©tectÃ©";
+    // Détection Avancée du Schema.org
+    let schemaReport = "Aucun schéma détecté";
     const schemaTags = $('script[type="application/ld+json"]');
     if (schemaTags.length) {
         try {
             const firstSchema = JSON.parse(schemaTags.first().html());
             const type = firstSchema['@type'] || firstSchema['@graph']?.[0]?.['@type'] || "Type Inconnu";
-            schemaReport = `DÃ©tectÃ© : ${type} (${schemaTags.length} balises trouvÃ©es)`;
+            schemaReport = `Détecté : ${type} (${schemaTags.length} balises trouvées)`;
         } catch (e) { schemaReport = "Erreur de syntaxe JSON dans le Schema"; }
     }
 
@@ -16956,7 +16956,7 @@ async function getDeepStructure(html, url) {
 
 
 // =================================================================
-// â˜¢ï¸ MODULE SEO TECHNIQUE : GOD MODE V2 (ANTI-CRASH & MULTI-LANG)
+// ☢️ MODULE SEO TECHNIQUE : GOD MODE V2 (ANTI-CRASH & MULTI-LANG)
 
 app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGeneratedReport('technical'), async (req, res) => {
     const startTime = Date.now();
@@ -16973,11 +16973,11 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
         }
         const isAr           = lang === 'ar';
         const isEn           = lang === 'en';
-        const targetLangName = isAr ? 'Arabe (Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©)' : isEn ? 'English' : 'FranÃ§ais';
+        const targetLangName = isAr ? 'Arabe (العربية)' : isEn ? 'English' : 'Français';
 
-        console.log(`\nðŸš€ [${requestId}] DEEP INTEL lancÃ© : ${validUrl} | Lang: ${lang}`);
+        console.log(`\n🚀 [${requestId}] DEEP INTEL lancé : ${validUrl} | Lang: ${lang}`);
 
-        // â”€â”€ CACHE CHECK â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── CACHE CHECK ──────────────────────────────────────────
         const contextKey = cleanProofText(JSON.stringify(safeContext || {}), 220) || 'no-context';
         const cacheKey = `techseo-v7-${validUrl}-${lang}-${contextKey}`;
         const cached   = cache.get(cacheKey);
@@ -16986,27 +16986,27 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
             return res.json({ ...cached, fromCache: true });
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Ã‰TAPE 1 â€” SCRAPING STEALTH
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        console.log(`[${requestId}] Ã‰tape 1/5 â€” Scraping Stealth...`);
+        // ══════════════════════════════════════════════════════════
+        // ÉTAPE 1 — SCRAPING STEALTH
+        // ══════════════════════════════════════════════════════════
+        console.log(`[${requestId}] Étape 1/5 — Scraping Stealth...`);
         const scrapeResult = await scrapeStealth(validUrl);
         if (!scrapeResult.success) throw new Error(`SCRAPE_FAILED: ${scrapeResult.error}`);
 
         const html = scrapeResult.html || '';
         const $    = cheerio.load(html);
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Ã‰TAPE 2 â€” EXTRACTION CHIRURGICALE COMPLÃˆTE
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        console.log(`[${requestId}] Ã‰tape 2/5 â€” Extraction chirurgicale...`);
+        // ══════════════════════════════════════════════════════════
+        // ÉTAPE 2 — EXTRACTION CHIRURGICALE COMPLÈTE
+        // ══════════════════════════════════════════════════════════
+        console.log(`[${requestId}] Étape 2/5 — Extraction chirurgicale...`);
 
         const h1List = $('h1').map((i, el) => $(el).text().trim()).get().filter(t => t.length > 0);
         const h2List = $('h2').map((i, el) => $(el).text().trim()).get().filter(t => t.length > 0);
         const h3List = $('h3').map((i, el) => $(el).text().trim()).get().filter(t => t.length > 0);
 
-        const metaTitle       = $('title').text().trim()                            || (isAr ? 'âŒ Ù…ÙÙ‚ÙˆØ¯' : 'âŒ Manquant');
-        const metaDescription = $('meta[name="description" i]').attr('content')     || (isAr ? 'âŒ Ù…ÙÙ‚ÙˆØ¯Ø©' : 'âŒ Manquante');
+        const metaTitle       = $('title').text().trim()                            || (isAr ? '❌ مفقود' : '❌ Manquant');
+        const metaDescription = $('meta[name="description" i]').attr('content')     || (isAr ? '❌ مفقودة' : '❌ Manquante');
         const metaKeywords    = $('meta[name="keywords" i]').attr('content')         || '';
         const metaRobots      = $('meta[name="robots" i]').attr('content')           || 'index,follow';
         const canonical       = $('link[rel="canonical"]').attr('href')              || null;
@@ -17042,9 +17042,9 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
             })(),
         };
 
-        const titleLen    = metaTitle.replace('âŒ Manquant','').replace('âŒ Ù…ÙÙ‚ÙˆØ¯','').length;
+        const titleLen    = metaTitle.replace('❌ Manquant','').replace('❌ مفقود','').length;
         const titleStatus = titleLen === 0 ? 'ABSENT' : titleLen < 30 ? 'TROP_COURT' : titleLen > 65 ? 'TROP_LONG' : 'OK';
-        const descLen     = metaDescription.replace('âŒ Manquante','').replace('âŒ Ù…ÙÙ‚ÙˆØ¯Ø©','').length;
+        const descLen     = metaDescription.replace('❌ Manquante','').replace('❌ مفقودة','').length;
         const descStatus  = descLen === 0 ? 'ABSENT' : descLen < 70 ? 'TROP_COURTE' : descLen > 165 ? 'TROP_LONGUE' : 'OK';
 
         const allImages   = $('img');
@@ -17075,8 +17075,8 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
         const hasPixelMeta     = /fbq\(|connect\.facebook\.net/i.test(html);
         const hasWhatsApp      = /wa\.me|whatsapp/i.test(html);
 
-        const hasFAQ         = /faq|frequently\s+asked|questions?\s+fr[Ã©e]quentes?|Ø£Ø³Ø¦Ù„Ø©|Ø³Ø¤Ø§Ù„/i.test(html) || /accordion|collapse|toggle/i.test(html);
-        const hasHowTo       = /how.to|Ã©tapes|ÙƒÙŠÙ/i.test(html);
+        const hasFAQ         = /faq|frequently\s+asked|questions?\s+fr[ée]quentes?|أسئلة|سؤال/i.test(html) || /accordion|collapse|toggle/i.test(html);
+        const hasHowTo       = /how.to|étapes|كيف/i.test(html);
         const hasDefinitions = $('dt, dfn').length > 0;
         const aeoScoreBasic  = [hasFAQ, hasHowTo, hasDefinitions, schemaExists].filter(Boolean).length * 25;
 
@@ -17086,7 +17086,7 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
 
         const bodyText      = $('body').text().replace(/\s+/g, ' ').trim();
         const wordCount     = bodyText.split(/\s+/).filter(w => w.length > 1).length;
-        const priceMatches  = $('body').text().match(/(\d+[\s,.]?\d*)\s*(MAD|DH|Ø¯\.Ù…|Ø¯Ø±Ù‡Ù…)/gi) || [];
+        const priceMatches  = $('body').text().match(/(\d+[\s,.]?\d*)\s*(MAD|DH|د\.م|درهم)/gi) || [];
         const rawPrices     = priceMatches.map(p => parseFloat(p.replace(/[^\d.]/g, ''))).filter(p => p > 10 && p < 100000);
         const estimatedAOV  = rawPrices.length > 0 ? Math.round(rawPrices.reduce((a, b) => a + b, 0) / rawPrices.length) : 350;
         const isMobileFriendly = !!viewport && viewport.includes('width=device-width');
@@ -17095,23 +17095,23 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
             url, title: metaTitle, titleLength: titleLen, titleStatus,
             description: metaDescription, descLength: descLen, descStatus,
             metaKeywords, metaRobots, canonical, langAttr, dirAttr, isMobileFriendly,
-            h1: h1List[0] || (isAr ? 'âŒ Ù…ÙÙ‚ÙˆØ¯' : 'âŒ Manquant'),
+            h1: h1List[0] || (isAr ? '❌ مفقود' : '❌ Manquant'),
             h1all: h1List, h1count: h1List.length,
             h2count: h2List.length, h2sample: h2List.slice(0, 5),
             h3count: h3List.length,
             wordCount, ogTitle, ogDescription, ogImage, twitterCard,
             totalImages, missingAlt, lazyImages, webpImages,
             internalLinks, externalLinks, brokenAnchors,
-            schemaExists, schemaTypes, schemaStatus: schemaExists ? `âœ… (${schemaTypes.join(', ')})` : 'âŒ Absent',
+            schemaExists, schemaTypes, schemaStatus: schemaExists ? `✅ (${schemaTypes.join(', ')})` : '❌ Absent',
             hasSSL, hasCDN, hasServiceWorker, hasGTM, hasGA4, hasPixelMeta, hasWhatsApp,
             aeoScore: aeoScoreBasic, hasFAQ, hasHowTo, llmsExists,
             estimatedAOV, detectedPrices: rawPrices.slice(0, 10)
         };
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Ã‰TAPE 3 â€” TRAFIC & SPEED
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        console.log(`[${requestId}] Ã‰tape 3/5 â€” Traffic & Speed...`);
+        // ══════════════════════════════════════════════════════════
+        // ÉTAPE 3 — TRAFIC & SPEED
+        // ══════════════════════════════════════════════════════════
+        console.log(`[${requestId}] Étape 3/5 — Traffic & Speed...`);
 
         let seoMaturity = 0;
         if (hasSSL)               seoMaturity += 10;
@@ -17160,16 +17160,16 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
         const hasHreflang   = seoIntelDeep.hasHreflang    ?? false;
 
         const langRestriction = isAr
-            ? 'âš ï¸ CRITICAL: RESPOND ONLY IN ARABIC (Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©). No French or English.'
-            : isEn ? 'âš ï¸ RESPOND ONLY IN ENGLISH.'
-            : 'âš ï¸ RÃ‰PONDS UNIQUEMENT EN FRANÃ‡AIS.';
+            ? '⚠️ CRITICAL: RESPOND ONLY IN ARABIC (العربية). No French or English.'
+            : isEn ? '⚠️ RESPOND ONLY IN ENGLISH.'
+            : '⚠️ RÉPONDS UNIQUEMENT EN FRANÇAIS.';
 
-        // DonnÃ©es communes rÃ©utilisÃ©es dans les 4 prompts
+        // Données communes réutilisées dans les 4 prompts
         const commonData = `
 URL: ${validUrl}
 ${formatUserContextForPrompt(safeContext, 'Not provided')}
-Title: "${metaTitle}" (${titleLen} chars) â†’ ${titleStatus}
-Description: "${metaDescription.substring(0, 120)}" (${descLen} chars) â†’ ${descStatus}
+Title: "${metaTitle}" (${titleLen} chars) → ${titleStatus}
+Description: "${metaDescription.substring(0, 120)}" (${descLen} chars) → ${descStatus}
 H1 (${h1List.length}): ${JSON.stringify(h1List.slice(0, 3))}
 H2 (${h2List.length}) | H3 (${h3List.length})
 Images: ${totalImages} total | ${missingAlt} sans ALT | ${webpImages} WebP
@@ -17178,24 +17178,24 @@ Mots: ${wordCount} | Schema: ${schemaExists ? schemaTypes.join(', ') : 'ABSENT'}
 SSL: ${hasSSL} | CDN: ${hasCDN} | Mobile: ${isMobileFriendly}
 GA4: ${hasGA4} | GTM: ${hasGTM} | Pixel: ${hasPixelMeta}
 FAQ: ${hasFAQ} | HowTo: ${hasHowTo} | llms.txt: ${llmsExists}
-SEO Score calculÃ©: ${seoScore}/100 (Grade ${seoGrade})
-Trafic estimÃ©: ${monthlyTraffic} v/mois | AOV: ${estimatedAOV} MAD
+SEO Score calculé: ${seoScore}/100 (Grade ${seoGrade})
+Trafic estimé: ${monthlyTraffic} v/mois | AOV: ${estimatedAOV} MAD
 Revenu perdu: ${monthlyRevenueLoss} MAD/mois
 ${langRestriction}`;
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Ã‰TAPE 4 â€” 4 PROMPTS IA EN PARALLÃˆLE
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        console.log(`[${requestId}] Ã‰tape 4/5 â€” 4 prompts IA en parallÃ¨le...`);
+        // ══════════════════════════════════════════════════════════
+        // ÉTAPE 4 — 4 PROMPTS IA EN PARALLÈLE
+        // ══════════════════════════════════════════════════════════
+        console.log(`[${requestId}] Étape 4/5 — 4 prompts IA en parallèle...`);
         const aiStart = Date.now();
 
         const [r1, r2, r3, r4] = await Promise.allSettled([
 
-            // â”€â”€ PROMPT 1 â€” Rapport global + Issues + Roadmap â”€â”€â”€â”€â”€
+            // ── PROMPT 1 — Rapport global + Issues + Roadmap ─────
             callOpenRouterAPI(`
 You are an elite SEO engineer. Analyze this page and return ONLY valid JSON.
 ${commonData}
-Issues auto-dÃ©tectÃ©es: ${issues.slice(0, 8).map(i => `[${i.severity}] ${i.field}: ${i.issue}`).join(' | ')}
+Issues auto-détectées: ${issues.slice(0, 8).map(i => `[${i.severity}] ${i.field}: ${i.issue}`).join(' | ')}
 Top keywords: ${topKeywords.slice(0, 8).map(k => k.word || k.keyword).join(', ')}
 
 Return this exact JSON (language: ${targetLangName}):
@@ -17219,7 +17219,7 @@ Return this exact JSON (language: ${targetLangName}):
   ]
 }`, { maxTokens: 900, temperature: 0.2, context: `${requestId}-P1-Report` }),
 
-            // â”€â”€ PROMPT 2 â€” Titles + Meta + HTML gÃ©nÃ©rÃ© â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── PROMPT 2 — Titles + Meta + HTML généré ───────────
             callOpenRouterAPI(`
 You are an expert SEO copywriter. Analyze and optimize meta tags. Return ONLY valid JSON.
 ${commonData}
@@ -17249,7 +17249,7 @@ Return this exact JSON (language: ${targetLangName}):
   }
 }`, { maxTokens: 900, temperature: 0.3, context: `${requestId}-P2-Titles` }),
 
-            // â”€â”€ PROMPT 3 â€” AEO + Opportunities SEO â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── PROMPT 3 — AEO + Opportunities SEO ──────────────
             callOpenRouterAPI(`
 You are an AEO/GEO specialist (Answer Engine Optimization for ChatGPT/Perplexity/Gemini).
 ${commonData}
@@ -17276,7 +17276,7 @@ Return this exact JSON (language: ${targetLangName}):
   }
 }`, { maxTokens: 600, temperature: 0.2, context: `${requestId}-P3-AEO` }),
 
-            // â”€â”€ PROMPT 4 â€” Structure Audit + llms.txt + robots.txt
+            // ── PROMPT 4 — Structure Audit + llms.txt + robots.txt
             callOpenRouterAPI(`
 You are a technical SEO architect. Audit structure and generate system files. Return ONLY valid JSON.
 ${commonData}
@@ -17304,9 +17304,9 @@ Return this exact JSON (language: ${targetLangName}):
 }`, { maxTokens: 700, temperature: 0.2, context: `${requestId}-P4-Structure` }),
         ]);
 
-        console.log(`âš¡ [${requestId}] 4 prompts terminÃ©s en ${Date.now() - aiStart}ms`);
+        console.log(`⚡ [${requestId}] 4 prompts terminés en ${Date.now() - aiStart}ms`);
 
-        // â”€â”€ ASSEMBLAGE SÃ‰CURISÃ‰ des 4 rÃ©sultats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── ASSEMBLAGE SÉCURISÉ des 4 résultats ──────────────────
         const safe = (result, fallback = {}) =>
             result.status === 'fulfilled' && result.value?.success
                 ? result.value.response
@@ -17332,16 +17332,16 @@ Return this exact JSON (language: ${targetLangName}):
             robotsTxtAdvice: '---'
         });
 
-        // Log les modÃ¨les utilisÃ©s
+        // Log les modèles utilisés
         const modelsUsed = [r1, r2, r3, r4].map((r, i) =>
             r.status === 'fulfilled' ? `P${i+1}:${r.value?.model || '?'}` : `P${i+1}:FAILED`
         );
-        console.log(`ðŸ¤– [${requestId}] Models: ${modelsUsed.join(' | ')}`);
+        console.log(`🤖 [${requestId}] Models: ${modelsUsed.join(' | ')}`);
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // Ã‰TAPE 5 â€” ASSEMBLAGE RÃ‰PONSE FINALE
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        console.log(`[${requestId}] Ã‰tape 5/5 â€” Assemblage final...`);
+        // ══════════════════════════════════════════════════════════
+        // ÉTAPE 5 — ASSEMBLAGE RÉPONSE FINALE
+        // ══════════════════════════════════════════════════════════
+        console.log(`[${requestId}] Étape 5/5 — Assemblage final...`);
 
         const finalResponse = {
             success     : true,
@@ -17350,37 +17350,37 @@ Return this exact JSON (language: ${targetLangName}):
             lang        : lang,
             version     : 'TechSEO-V7',
 
-            // â”€â”€ Rapport IA P1 â”€â”€
+            // ── Rapport IA P1 ──
             globalReport    : p1.globalReport,
             criticalIssues  : p1.criticalIssues  || [],
             actionRoadmap   : p1.actionRoadmap   || [],
 
-            // â”€â”€ Titles + Assets P2 â”€â”€
+            // ── Titles + Assets P2 ──
             titlesAndDescriptions : p2.titlesAndDescriptions,
             generatedAssets       : p2.generatedAssets,
 
-            // â”€â”€ AEO P3 â”€â”€
+            // ── AEO P3 ──
             aeoScore         : p3.aeoScore,
             seoOpportunities : p3.seoOpportunities,
 
-            // â”€â”€ Structure + Technical P4 â”€â”€
+            // ── Structure + Technical P4 ──
             structureAudit  : p4.structureAudit,
             technicalAudit  : p4.technicalAudit,
             llmsTxtContent  : p4.llmsTxtContent  || null,
             robotsTxtAdvice : p4.robotsTxtAdvice || null,
 
-            // â”€â”€ Extraction brute â”€â”€
+            // ── Extraction brute ──
             extraction : extraction,
 
-            // â”€â”€ Speed â”€â”€
+            // ── Speed ──
             metrics    : speedData.metrics,
             speedScore : speedData.score,
 
-            // â”€â”€ Trafic & ROI â”€â”€
+            // ── Trafic & ROI ──
             traffic : trafficData,
             linkIntelligence,
 
-            // â”€â”€ SEO Audit structurÃ© â”€â”€
+            // ── SEO Audit structuré ──
             seoAudit : {
                 title       : { value: metaTitle,       length: titleLen, status: titleStatus },
                 description : { value: metaDescription, length: descLen,  status: descStatus  },
@@ -17409,7 +17409,7 @@ Return this exact JSON (language: ${targetLangName}):
                 contentStatus, hreflang, allTitles, allDescriptions,
             },
 
-            // â”€â”€ Meta â”€â”€
+            // ── Meta ──
             meta : {
                 models       : modelsUsed,
                 processingMs : Date.now() - startTime,
@@ -17451,11 +17451,11 @@ Return this exact JSON (language: ${targetLangName}):
         if (typeof updateMetrics === 'function')
             updateMetrics(req.method, req.path, 200, Date.now() - startTime);
 
-        console.log(`âœ… [${requestId}] TechSEO V7 OK â€” ${Date.now() - startTime}ms | Score: ${seoScore}/100`);
+        console.log(`✅ [${requestId}] TechSEO V7 OK — ${Date.now() - startTime}ms | Score: ${seoScore}/100`);
         res.json(finalResponse);
 
     } catch (error) {
-        console.error(`âŒ [${requestId}] DEEP ERROR: ${error.message}`);
+        console.error(`❌ [${requestId}] DEEP ERROR: ${error.message}`);
         if (typeof updateMetrics === 'function')
             updateMetrics(req.method, req.path, 500, Date.now() - startTime);
         res.status(500).json({
@@ -17475,17 +17475,17 @@ Return this exact JSON (language: ${targetLangName}):
 
 
 
-// ROUTE 2 : GÃ©nÃ¨re le vrai PDF avec Puppeteer
+// ROUTE 2 : Génère le vrai PDF avec Puppeteer
 
 // =================================================================
-// ðŸ•µï¸ MOTEUR "TRAFFIC CLONE" (SIMULATION DE DONNÃ‰ES SEMRUSH)
+// 🕵️ MOTEUR "TRAFFIC CLONE" (SIMULATION DE DONNÉES SEMRUSH)
 // =================================================================
 async function getRealTrafficClone(url, html) {
     const $ = cheerio.load(html);
-    const complexity = $('*').length; // DensitÃ© du DOM
+    const complexity = $('*').length; // Densité du DOM
     const textVolume = $('body').text().length;
     
-    // Algorithme de corrÃ©lation sÃ©mantique
+    // Algorithme de corrélation sémantique
     const baseTraffic = Math.floor(Math.random() * (2500 - 800) + 800); 
     const multiplier = complexity > 1200 ? 4.2 : 1.5;
     
@@ -17497,16 +17497,16 @@ async function getRealTrafficClone(url, html) {
 }
 
 // =================================================================
-// âš¡ MOTEUR "PAGE SPEED" (EXTRACTION DE MÃ‰TRIQUES RÃ‰ELLES)
+// ⚡ MOTEUR "PAGE SPEED" (EXTRACTION DE MÉTRIQUES RÉELLES)
 // =================================================================
 async function getRealPageSpeed(html, url) {
     const $ = cheerio.load(html);
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // SIGNAUX RÃ‰ELS EXTRAITS DU HTML
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════
+    // SIGNAUX RÉELS EXTRAITS DU HTML
+    // ══════════════════════════════════════════════════════
 
-    // â”€â”€ Scripts & CSS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Scripts & CSS ─────────────────────────────────────
     const externalScripts  = $('script[src]').length;
     const inlineScripts    = $('script:not([src])').length;
     const externalCSS      = $('link[rel="stylesheet"]').length;
@@ -17514,7 +17514,7 @@ async function getRealPageSpeed(html, url) {
     const hasDefer         = $('script[defer], script[async]').length;
     const deferRatio       = externalScripts > 0 ? hasDefer / externalScripts : 1;
 
-    // â”€â”€ Images â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Images ────────────────────────────────────────────
     const totalImages      = $('img').length;
     const lazyImages       = $('img[loading="lazy"]').length;
     const webpImages       = $('img[src*=".webp"], source[type="image/webp"]').length;
@@ -17522,19 +17522,19 @@ async function getRealPageSpeed(html, url) {
     const lazyRatio        = totalImages > 0 ? lazyImages / totalImages : 1;
     const webpRatio        = totalImages > 0 ? webpImages / totalImages : 0;
 
-    // â”€â”€ Infrastructure â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Infrastructure ────────────────────────────────────
     const hasCDN           = /cloudflare|cloudfront|fastly|akamai|jsdelivr|unpkg/i.test(html);
     const hasServiceWorker = /serviceWorker/i.test(html);
     const hasPreload       = $('link[rel="preload"], link[rel="prefetch"], link[rel="preconnect"]').length > 0;
     const hasBrotliHint    = /content-encoding.*br|brotli/i.test(html);
     const hasGzip          = /content-encoding.*gzip/i.test(html);
 
-    // â”€â”€ DOM Complexity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── DOM Complexity ─────────────────────────────────────
     const domSize          = ($('*').length || 0);
     const htmlBytes        = Buffer.byteLength(html, 'utf8');
     const htmlKB           = htmlBytes / 1024;
 
-    // â”€â”€ CMS / Framework (corrÃ©lÃ© perf connue) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── CMS / Framework (corrélé perf connue) ─────────────
     const isWordPress      = /wp-content|wp-includes/i.test(html);
     const isShopify        = /cdn\.shopify\.com/i.test(html);
     const isWebflow        = /webflow\.com/i.test(html);
@@ -17542,44 +17542,44 @@ async function getRealPageSpeed(html, url) {
     const isNuxt           = /__nuxt|_nuxt\//i.test(html);
     const hasHeavyCMS      = isWordPress || isShopify;
 
-    // â”€â”€ Render-blocking â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Render-blocking ───────────────────────────────────
     const renderBlocking   = $('link[rel="stylesheet"]:not([media="print"])').length
                            + $('script:not([defer]):not([async])[src]').length;
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // CALCUL SCORE /100 PAR PÃ‰NALITÃ‰S / BONUS RÃ‰ELS
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════
+    // CALCUL SCORE /100 PAR PÉNALITÉS / BONUS RÉELS
+    // ══════════════════════════════════════════════════════
     let score = 100;
 
-    // PÃ©nalitÃ©s scripts
+    // Pénalités scripts
     if (externalScripts > 20)  score -= 25;
     else if (externalScripts > 12) score -= 15;
     else if (externalScripts > 6)  score -= 8;
 
-    // PÃ©nalitÃ©s render-blocking
+    // Pénalités render-blocking
     if (renderBlocking > 10)   score -= 20;
     else if (renderBlocking > 5)   score -= 12;
     else if (renderBlocking > 2)   score -= 5;
 
-    // PÃ©nalitÃ©s images
+    // Pénalités images
     if (lazyRatio < 0.3 && totalImages > 5)  score -= 12;
     else if (lazyRatio < 0.6 && totalImages > 5) score -= 5;
     if (webpRatio < 0.3 && totalImages > 3)  score -= 8;
 
-    // PÃ©nalitÃ©s DOM
+    // Pénalités DOM
     if (domSize > 1500)        score -= 15;
     else if (domSize > 800)    score -= 8;
     else if (domSize > 400)    score -= 3;
 
-    // PÃ©nalitÃ©s taille HTML
+    // Pénalités taille HTML
     if (htmlKB > 500)          score -= 12;
     else if (htmlKB > 200)     score -= 5;
 
-    // PÃ©nalitÃ©s CMS lourds
+    // Pénalités CMS lourds
     if (isWordPress)           score -= 8;
     if (hasHeavyCMS && externalScripts > 10) score -= 5;
 
-    // PÃ©nalitÃ©s CSS ext
+    // Pénalités CSS ext
     if (externalCSS > 8)       score -= 8;
     else if (externalCSS > 4)  score -= 4;
 
@@ -17594,12 +17594,12 @@ async function getRealPageSpeed(html, url) {
     // Clamp final
     score = Math.max(5, Math.min(99, Math.round(score)));
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // MÃ‰TRIQUES ESTIMÃ‰ES DEPUIS LES SIGNAUX (pas random)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════
+    // MÉTRIQUES ESTIMÉES DEPUIS LES SIGNAUX (pas random)
+    // ══════════════════════════════════════════════════════
 
-    // LCP estimÃ© (Largest Contentful Paint)
-    // Base 1.2s â†’ augmente selon DOM, scripts, images sans lazy
+    // LCP estimé (Largest Contentful Paint)
+    // Base 1.2s → augmente selon DOM, scripts, images sans lazy
     let lcpBase = 1.2;
     lcpBase += externalScripts * 0.08;
     lcpBase += renderBlocking  * 0.12;
@@ -17610,8 +17610,8 @@ async function getRealPageSpeed(html, url) {
     lcpBase -= isNextJS         ? 0.3 : 0;
     const lcp = Math.max(0.5, Math.min(8.0, lcpBase)).toFixed(1) + 's';
 
-    // TBT estimÃ© (Total Blocking Time)
-    // Scripts non-defer = thread bloquÃ©
+    // TBT estimé (Total Blocking Time)
+    // Scripts non-defer = thread bloqué
     const blockingScripts = $('script:not([defer]):not([async])[src]').length;
     let tbtBase = 50;
     tbtBase += blockingScripts * 45;
@@ -17621,7 +17621,7 @@ async function getRealPageSpeed(html, url) {
     tbtBase -= hasDefer        ? 20 : 0;
     const tbt = Math.max(10, Math.min(1500, Math.round(tbtBase))) + 'ms';
 
-    // CLS estimÃ© (Cumulative Layout Shift)
+    // CLS estimé (Cumulative Layout Shift)
     // Images sans dimensions = layout shift
     const imgsNoDimensions = $('img:not([width]):not([height])').length;
     let clsBase = 0.0;
@@ -17631,41 +17631,41 @@ async function getRealPageSpeed(html, url) {
     clsBase -= hasPreload  ? 0.02 : 0;
     const cls = Math.max(0.0, Math.min(0.9, clsBase)).toFixed(2);
 
-    // FCP estimÃ© (First Contentful Paint)
+    // FCP estimé (First Contentful Paint)
     let fcpBase = 0.9;
     fcpBase += renderBlocking * 0.15;
     fcpBase += htmlKB > 100 ? 0.3 : 0;
     fcpBase -= hasCDN ? 0.2 : 0;
     const fcp = Math.max(0.4, Math.min(6.0, fcpBase)).toFixed(1) + 's';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════
     // GRADE & VERDICT
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════
     const grade   = score >= 90 ? 'A' : score >= 75 ? 'B' : score >= 60 ? 'C' : score >= 45 ? 'D' : 'F';
-    const verdict = score >= 90 ? 'Excellent â€” Core Web Vitals optimisÃ©s'
-                  : score >= 75 ? 'Bon â€” quelques optimisations recommandÃ©es'
-                  : score >= 60 ? 'Moyen â€” optimisations nÃ©cessaires'
-                  : score >= 45 ? 'Faible â€” problÃ¨mes de performance significatifs'
-                  : 'Critique â€” performance trÃ¨s dÃ©gradÃ©e';
+    const verdict = score >= 90 ? 'Excellent — Core Web Vitals optimisés'
+                  : score >= 75 ? 'Bon — quelques optimisations recommandées'
+                  : score >= 60 ? 'Moyen — optimisations nécessaires'
+                  : score >= 45 ? 'Faible — problèmes de performance significatifs'
+                  : 'Critique — performance très dégradée';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // RECOMMANDATIONS CIBLÃ‰ES
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════
+    // RECOMMANDATIONS CIBLÉES
+    // ══════════════════════════════════════════════════════
     const recommendations = [];
     if (renderBlocking > 2)
         recommendations.push({ issue: `${renderBlocking} ressources render-blocking`, fix: 'Ajouter defer/async sur les scripts, charger CSS critiques inline', impact: 'HIGH' });
     if (lazyRatio < 0.5 && totalImages > 3)
         recommendations.push({ issue: `${totalImages - lazyImages} images sans lazy-load`, fix: 'Ajouter loading="lazy" sur toutes les images hors viewport', impact: 'HIGH' });
     if (!hasCDN)
-        recommendations.push({ issue: 'Pas de CDN dÃ©tectÃ©', fix: 'Activer Cloudflare (gratuit) â€” gain LCP -0.4s minimum', impact: 'HIGH' });
+        recommendations.push({ issue: 'Pas de CDN détecté', fix: 'Activer Cloudflare (gratuit) — gain LCP -0.4s minimum', impact: 'HIGH' });
     if (!hasMinified)
-        recommendations.push({ issue: 'Fichiers non minifiÃ©s dÃ©tectÃ©s', fix: 'Minifier JS/CSS â€” rÃ©duction ~30% du poids', impact: 'MEDIUM' });
+        recommendations.push({ issue: 'Fichiers non minifiés détectés', fix: 'Minifier JS/CSS — réduction ~30% du poids', impact: 'MEDIUM' });
     if (webpRatio < 0.3 && totalImages > 3)
-        recommendations.push({ issue: `Peu d'images WebP (${webpImages}/${totalImages})`, fix: 'Convertir toutes les images en WebP â€” rÃ©duction ~40% du poids', impact: 'MEDIUM' });
+        recommendations.push({ issue: `Peu d'images WebP (${webpImages}/${totalImages})`, fix: 'Convertir toutes les images en WebP — réduction ~40% du poids', impact: 'MEDIUM' });
     if (!hasPreload)
-        recommendations.push({ issue: 'Pas de preload/prefetch dÃ©tectÃ©', fix: 'Ajouter <link rel="preload"> pour fonts et hero image', impact: 'MEDIUM' });
+        recommendations.push({ issue: 'Pas de preload/prefetch détecté', fix: 'Ajouter <link rel="preload"> pour fonts et hero image', impact: 'MEDIUM' });
     if (domSize > 800)
-        recommendations.push({ issue: `DOM trop lourd (${domSize} Ã©lÃ©ments)`, fix: 'RÃ©duire le DOM â€” viser < 800 Ã©lÃ©ments', impact: 'MEDIUM' });
+        recommendations.push({ issue: `DOM trop lourd (${domSize} éléments)`, fix: 'Réduire le DOM — viser < 800 éléments', impact: 'MEDIUM' });
 
     return {
         score,
@@ -17699,22 +17699,22 @@ async function getRealPageSpeed(html, url) {
     };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// 2ï¸âƒ£ NOUVELLE ROUTE : LES GÃ‰NÃ‰RATEURS Ã€ LA DEMANDE (DEEP GENERATION)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 2️⃣ NOUVELLE ROUTE : LES GÉNÉRATEURS À LA DEMANDE (DEEP GENERATION)
+// ═══════════════════════════════════════════════════════════════════
 
 const analysisCache = new CacheManager(500, 60 * 60 * 1000); // 1h de TTL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•µï¸â€â™‚ï¸ ROUTE : LANDING SPY ULTRA-DEEP (Version Finale de Guerre)
+// ═══════════════════════════════════════════════════════════════════
+// 🕵️‍♂️ ROUTE : LANDING SPY ULTRA-DEEP (Version Finale de Guerre)
 
 function resolveLang(lang) {
     const code = typeof lang === 'string' ? lang : (lang?.code || 'fr');
     const map = {
         ar: {
-            code: 'ar', name: 'Arabe (Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©)', serpHl: 'ar',
+            code: 'ar', name: 'Arabe (العربية)', serpHl: 'ar',
             direction: 'rtl',
-            instruction: 'RÃ©ponds UNIQUEMENT en Arabe (Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©).',
-            noDataLabel: 'ØºÙŠØ± Ù…ØªÙˆÙØ±',
+            instruction: 'Réponds UNIQUEMENT en Arabe (العربية).',
+            noDataLabel: 'غير متوفر',
         },
         en: {
             code: 'en', name: 'English', serpHl: 'en',
@@ -17723,9 +17723,9 @@ function resolveLang(lang) {
             noDataLabel: 'N/A',
         },
         fr: {
-            code: 'fr', name: 'FranÃ§ais', serpHl: 'fr',
+            code: 'fr', name: 'Français', serpHl: 'fr',
             direction: 'ltr',
-            instruction: 'RÃ©ponds UNIQUEMENT en FranÃ§ais.',
+            instruction: 'Réponds UNIQUEMENT en Français.',
             noDataLabel: 'Non disponible',
         },
     };
@@ -17734,14 +17734,14 @@ function resolveLang(lang) {
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// MODULE 2 â€” COMPETITOR ANALYSIS ENGINE
+// ═══════════════════════════════════════════════════════════════════
+// MODULE 2 — COMPETITOR ANALYSIS ENGINE
 // War Room v7 | LangObj | Anti-Hallucination | Cache par langue
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 
 
-console.log('âœ… analyzeCompetitors v7 (LangObj + Anti-Hallucination) loaded');
+console.log('✅ analyzeCompetitors v7 (LangObj + Anti-Hallucination) loaded');
 
 function EMPTY_SCRAPE_RESULT(error = 'Unknown scrape error', fetchLayer = 'browser') {
     return {
@@ -18162,8 +18162,8 @@ function normalizeCurrency(cur) {
   const s = String(cur).trim().toUpperCase();
 
   if (['$', 'US$', 'USD', 'DOLLAR', 'DOLLARS', 'US DOLLAR', 'US DOLLARS'].includes(s)) return 'USD';
-  if (['â‚¬', 'EUR', 'EURO', 'EUROS'].includes(s)) return 'EUR';
-  if (['Â£', 'GBP', 'POUND', 'POUNDS'].includes(s)) return 'GBP';
+  if (['€', 'EUR', 'EURO', 'EUROS'].includes(s)) return 'EUR';
+  if (['£', 'GBP', 'POUND', 'POUNDS'].includes(s)) return 'GBP';
   if (['MAD', 'DH', 'DHS', 'DIRHAM', 'DIRHAMS'].includes(s)) return 'MAD';
   if (['LYD', 'LD', 'DINAR LIBYEN', 'LIBYAN DINAR'].includes(s)) return 'LYD';
 
@@ -18174,8 +18174,8 @@ function detectCurrencyLocal(raw, context = '') {
   const s = `${raw || ''} ${context || ''}`.toUpperCase();
 
   if (/(?:\bUSD\b|US\$|\$\s?\d|\d\s?\$|\bDOLLARS?\b)/i.test(s)) return 'USD';
-  if (/(?:\bEUR\b|â‚¬|\bEUROS?\b)/i.test(s)) return 'EUR';
-  if (/(?:\bGBP\b|Â£|\bPOUNDS?\b)/i.test(s)) return 'GBP';
+  if (/(?:\bEUR\b|€|\bEUROS?\b)/i.test(s)) return 'EUR';
+  if (/(?:\bGBP\b|£|\bPOUNDS?\b)/i.test(s)) return 'GBP';
   if (/(?:\bMAD\b|\bDHS?\b|\bDIRHAMS?\b)/i.test(s)) return 'MAD';
   if (/(?:\bLYD\b|\bLD\b|\bLIBYAN DINAR\b)/i.test(s)) return 'LYD';
 
@@ -18194,8 +18194,8 @@ function extractPriceCurrencyPairsFromTextBlock(text, source = 'text', baseConfi
   if (!rawText || rawText.length > 1200) return out;
 
   const patterns = [
-    /((?:US\$|\$|â‚¬|Â£|USD|EUR|GBP|MAD|DHS?|DH|LYD|LD)\s*[0-9][0-9.,]*)/gi,
-    /([0-9][0-9.,]*\s*(?:US\$|\$|â‚¬|Â£|USD|EUR|GBP|MAD|DHS?|DH|LYD|LD))/gi,
+    /((?:US\$|\$|€|£|USD|EUR|GBP|MAD|DHS?|DH|LYD|LD)\s*[0-9][0-9.,]*)/gi,
+    /([0-9][0-9.,]*\s*(?:US\$|\$|€|£|USD|EUR|GBP|MAD|DHS?|DH|LYD|LD))/gi,
     /([0-9][0-9.,]*\s*(?:dollars?|euros?|pounds?|dirhams?|libyan dinar))/gi
   ];
 
@@ -18206,7 +18206,7 @@ function extractPriceCurrencyPairsFromTextBlock(text, source = 'text', baseConfi
   if (/(old price|regular price|compare at|ancien prix|prix barr|au lieu de|instead of|was)/i.test(lowered)) {
     kind = 'old';
     confidence += 0.18;
-  } else if (/(from|starting at|Ã  partir de|dÃ¨s)/i.test(lowered)) {
+  } else if (/(from|starting at|à partir de|dès)/i.test(lowered)) {
     kind = 'from';
     confidence += 0.12;
   } else if (/(monthly|month|annuel|annual|subscription|abonnement|mensuel)/i.test(lowered)) {
@@ -18236,7 +18236,7 @@ function extractPriceCurrencyPairsFromTextBlock(text, source = 'text', baseConfi
     }
   }
 
-  const rangeRegex = /([0-9][0-9.,]*)\s*(USD|EUR|GBP|MAD|DHS?|DH|LYD|LD|US\$|\$|â‚¬|Â£)?\s*(?:-|to|Ã )\s*([0-9][0-9.,]*)\s*(USD|EUR|GBP|MAD|DHS?|DH|LYD|LD|US\$|\$|â‚¬|Â£)?/gi;
+  const rangeRegex = /([0-9][0-9.,]*)\s*(USD|EUR|GBP|MAD|DHS?|DH|LYD|LD|US\$|\$|€|£)?\s*(?:-|to|à)\s*([0-9][0-9.,]*)\s*(USD|EUR|GBP|MAD|DHS?|DH|LYD|LD|US\$|\$|€|£)?/gi;
   let rm;
   while ((rm = rangeRegex.exec(rawText)) !== null) {
     const min = normalizePriceValue(rm[1]);
@@ -18791,28 +18791,28 @@ function mergeScrapeData(base = {}, extra = {}) {
         phones: mergedContacts.phones?.length || 0
     };
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•µï¸ MOTEUR D'ANALYSE PROFONDE (AVEC BYPASS CLOUDFLARE INTÃ‰GRÃ‰)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
+// 🕵️ MOTEUR D'ANALYSE PROFONDE (AVEC BYPASS CLOUDFLARE INTÉGRÉ)
+// ═══════════════════════════════════════════════════════════════
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ’° PRICING PIPELINE â€” MODULE IMPORT (Observed-First Architecture)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 💰 PRICING PIPELINE — MODULE IMPORT (Observed-First Architecture)
+// ═══════════════════════════════════════════════════════════════════
 // Remplace: finalizePriceIntel local, buildPriceIntelLocal local,
 //           pushPrice local, extractSchemaPricesFromNode local,
 //           getCanonicalPrice local, hasCanonicalPrice local
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────────────────
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ” DEEP SCRAPE FUNNEL
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🔍 DEEP SCRAPE FUNNEL
+// ═══════════════════════════════════════════════════════════════════
 
 async function deepScrapeFunnel(url, scrapeOptions = {}) {
   const startTime = Date.now();
-  console.log(`ðŸ” [DEEP SCRAPE] Analyse profonde : ${url}`);
+  console.log(`🔍 [DEEP SCRAPE] Analyse profonde : ${url}`);
 
   const finalizeError = (message, layer = 'browser') => {
     const base = EMPTY_SCRAPE_RESULT(message, layer);
@@ -18991,7 +18991,7 @@ async function deepScrapeFunnel(url, scrapeOptions = {}) {
     if (!railwayUsable && detectBotBlocked(scrapeResult) && scrapeResult?.fetchLayer !== 'scrape.do') {
       if (shouldUseRailwayScraping() && !RENDER_SCRAPING_FALLBACK) {
         console.warn(
-          `[DEEP SCRAPE] Railway incomplet pour ${url}. Fallback Render/Scrape.do dÃ©sactivÃ©.`
+          `[DEEP SCRAPE] Railway incomplet pour ${url}. Fallback Render/Scrape.do désactivé.`
         );
         return finalizeError(
           scrapeResult?.error || scrapeResult?.message || 'RAILWAY_SCRAPING_PARTIAL_NO_RENDER_FALLBACK',
@@ -18999,10 +18999,10 @@ async function deepScrapeFunnel(url, scrapeOptions = {}) {
         );
       }
 
-      console.warn('[DEEP SCRAPE] Page vide ou bloquÃ©e. Fallback Scrape.do autorisÃ©.');
+      console.warn('[DEEP SCRAPE] Page vide ou bloquée. Fallback Scrape.do autorisé.');
       const scrapeDoToken = process.env.SCRAPEDOTOKEN || process.env.SCRAPE_DO_TOKEN;
       if (!scrapeDoToken) {
-        throw new Error('BloquÃ© par anti-bot, et aucun token Scrape.do disponible.');
+        throw new Error('Bloqué par anti-bot, et aucun token Scrape.do disponible.');
       }
 
       try {
@@ -19017,7 +19017,7 @@ async function deepScrapeFunnel(url, scrapeOptions = {}) {
             ? fallbackRes.data
             : (fallbackRes?.data?.html || fallbackRes?.data?.body || '');
         if (!fallbackHtml || fallbackHtml.length < 500) {
-          throw new Error('RÃ©ponse de Scrape.do invalide ou trop courte.');
+          throw new Error('Réponse de Scrape.do invalide ou trop courte.');
         }
         scrapeResult = mergeScrapeData(scrapeResult, {
           success: true,
@@ -19027,12 +19027,12 @@ async function deepScrapeFunnel(url, scrapeOptions = {}) {
           duration: Date.now() - startTime
         });
       } catch (fallbackError) {
-        console.error(`[DEEP SCRAPE] Scrape.do a Ã©chouÃ©: ${fallbackError.message}`);
-        throw new Error('Anti-bot infranchissable (browser + Scrape.do bloquÃ©s).');
+        console.error(`[DEEP SCRAPE] Scrape.do a échoué: ${fallbackError.message}`);
+        throw new Error('Anti-bot infranchissable (browser + Scrape.do bloqués).');
       }
     }
 
-        // Normalisation finale aprÃ¨s Ã©ventuel fallback
+        // Normalisation finale après éventuel fallback
     scrapeResult = normalizeScrapeForFunnel(scrapeResult);
 
     const compactSections =
@@ -19101,7 +19101,7 @@ async function deepScrapeFunnel(url, scrapeOptions = {}) {
     }
 
     if (!html || html.length < 200) {
-      throw new Error('HTML vide ou insuffisant aprÃ¨s scraping.');
+      throw new Error('HTML vide ou insuffisant après scraping.');
     }
 
     const $ = cheerio.load(html);
@@ -19389,12 +19389,12 @@ async function deepScrapeFunnel(url, scrapeOptions = {}) {
 
       hasLegalPages:
         scrapeResult?.trustSignals?.hasLegalPages ??
-        /mentions lÃ©gales|privacy|conditions|terms|Ø³ÙŠØ§Ø³Ø©|Ø®ØµÙˆØµÙŠØ©/i.test(bodyText),
+        /mentions légales|privacy|conditions|terms|سياسة|خصوصية/i.test(bodyText),
 
       hasCOD:
         scrapeResult?.trustSignals?.hasCOD ??
         seoIntelDeep.hasCOD ??
-        /cash on delivery|contre-remboursement|paiement Ã  la livraison|Ø§Ù„Ø¯ÙØ¹ Ø¹Ù†Ø¯ Ø§Ù„Ø§Ø³ØªÙ„Ø§Ù…|ØªÙˆØµÙŠÙ„/i.test(bodyText),
+        /cash on delivery|contre-remboursement|paiement à la livraison|الدفع عند الاستلام|توصيل/i.test(bodyText),
 
       trustScore:
         scrapeResult?.trustSignals?.trustScore ?? null
@@ -19784,7 +19784,7 @@ async function deepScrapeFunnel(url, scrapeOptions = {}) {
     );
 
     console.log(
-      `âœ… [DEEP SCRAPE] OK â€” ${Date.now() - startTime}ms` +
+      `✅ [DEEP SCRAPE] OK — ${Date.now() - startTime}ms` +
       ` | Layer: ${finalResult.fetchLayer}` +
       ` | Colors: ${(finalResult.visualDNA?.dominantColors || []).slice(0, 3).join(',')}` +
       ` | CMS: ${finalResult.techStack?.cms || 'Unknown'}` +
@@ -19821,26 +19821,26 @@ async function deepScrapeFunnel(url, scrapeOptions = {}) {
 
     return finalResult;
   } catch (error) {
-    console.error(`âŒ [DEEP SCRAPE] CRASH: ${error.message}`);
+    console.error(`❌ [DEEP SCRAPE] CRASH: ${error.message}`);
     return finalizeError(error.message, 'browser');
   }
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•·ï¸ MODULE 1: SCRAPING ENGINE (FULL EXTRACTION & HTML DUMP)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🕷️ MODULE 1: SCRAPING ENGINE (FULL EXTRACTION & HTML DUMP)
+// ═══════════════════════════════════════════════════════════════════
 
 /**
- * ðŸ•·ï¸ SCRAPE STEALTH (MOTEUR PLAYWRIGHT EXTRA)
+ * 🕷️ SCRAPE STEALTH (MOTEUR PLAYWRIGHT EXTRA)
  * Launches Playwright. Fails FAST (15s) if blocked, returning an empty
  * result object so the fallback logic can take over immediately.
  */
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•µï¸ ROUTE: SCRAPE SITE DATA (PLAYWRIGHT â†’ SCRAPE.DO FALLBACK)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🕵️ ROUTE: SCRAPE SITE DATA (PLAYWRIGHT → SCRAPE.DO FALLBACK)
+// ═══════════════════════════════════════════════════════════════════
 
 /**
  * Acts as the "Brain" for gathering site data.
@@ -19855,7 +19855,7 @@ async function scrapeSiteData(url, lang = 'fr') {
         const cacheKey  = `scrape_v2_${validUrl}_${lang}`;
         const cached    = cache.get(cacheKey);
         if (cached) {
-            console.log(`ðŸ’¾ Cache HIT: scrapeSiteData ${validUrl}`);
+            console.log(`💾 Cache HIT: scrapeSiteData ${validUrl}`);
             return cached;
         }
 
@@ -19902,7 +19902,7 @@ async function scrapeSiteData(url, lang = 'fr') {
             return Object.entries(map).filter(([, v]) => v).map(([type]) => ({ type, present: true, score: 60 }));
         };
 
-        // â”€â”€â”€ extractFromHtml (scrapeSiteData) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─── extractFromHtml (scrapeSiteData) ───────────────────────
         const extractFromHtml = (html, source = 'axios') => {
             const $ = cheerio.load(html);
             const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
@@ -19926,7 +19926,7 @@ async function scrapeSiteData(url, lang = 'fr') {
             const phones = normalizePhones(bodyText);
             const emails = normalizeEmails(bodyText);
 
-            // â”€â”€ â˜… PRICING: replaced manual block with module pipeline â”€â”€
+            // ── ★ PRICING: replaced manual block with module pipeline ──
             const schemaRaw = $('script[type="application/ld+json"]')
                 .map((_, el) => $(el).html() || '').get().filter(Boolean);
 
@@ -19935,7 +19935,7 @@ async function scrapeSiteData(url, lang = 'fr') {
                     .map((_, el) => $(el).text().replace(/\s+/g, ' ').trim()).get().filter(Boolean)
             ).slice(0, 40);
 
-            // â˜… Full Observed-First pipeline (schema + dom + text, no fallback)
+            // ★ Full Observed-First pipeline (schema + dom + text, no fallback)
             const priceIntel = buildPriceIntelLocal(bodyText, html, domPriceTexts, schemaRaw);
 
             // Schema types (unchanged)
@@ -20093,7 +20093,7 @@ async function scrapeSiteData(url, lang = 'fr') {
 
                 chapterIntel: { chapters: [] },
 
-                // â˜… priceIntel is now PriceIntelObserved from module
+                // ★ priceIntel is now PriceIntelObserved from module
                 priceIntel,
 
                 trustSignals: {
@@ -20103,8 +20103,8 @@ async function scrapeSiteData(url, lang = 'fr') {
                     hasReviews:           socialProofs.length > 0,
                     hasMoneyBackGuarantee: /garantie|money back|refund/i.test(bodyText),
                     hasPaymentLogos:      /visa|mastercard|paypal|cmi/i.test(html),
-                    hasLegalPages:        /mentions lÃ©gales|privacy|conditions|terms/i.test(bodyText),
-                    hasCOD:               /cash on delivery|paiement Ã  la livraison/i.test(bodyText),
+                    hasLegalPages:        /mentions légales|privacy|conditions|terms/i.test(bodyText),
+                    hasCOD:               /cash on delivery|paiement à la livraison/i.test(bodyText),
                     trustScore:           null
                 },
 
@@ -20164,7 +20164,7 @@ async function scrapeSiteData(url, lang = 'fr') {
                     hasStickyCTA:      /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html),
                     hasLiveChat:       /tawk|tidio|crisp|intercom/i.test(html),
                     hasWhatsApp:       /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html),
-                    hasCOD:            /cash on delivery|paiement Ã  la livraison/i.test(bodyText),
+                    hasCOD:            /cash on delivery|paiement à la livraison/i.test(bodyText),
                     internalLinks,
                     externalLinks:     externalOutboundLinks,
                     externalOutboundLinks,
@@ -20184,7 +20184,7 @@ async function scrapeSiteData(url, lang = 'fr') {
                         links:   { totalAnchors: $('a[href]').length, internalCount: internalLinks.length, externalOutboundCount: externalOutboundLinks.length, ignoredCount: Math.max(0, $('a[href]').length - internalLinks.length - externalOutboundLinks.length) },
                         structuredData: { hasSchema: unique(schemaTypes).length > 0, schemaCount: unique(schemaTypes).length, schemaTypes: unique(schemaTypes) },
                         performance:    { scriptCount, inlineScriptCount, externalScripts, cssCount, cssFiles, hasMinified, hasServiceWorker, hasCDN: /cloudflare|cdn\./i.test(html), hasPreload, hasSSL: validUrl.startsWith('https'), charset },
-                        conversion:     { hasFAQ: sections.hasFAQ, hasExitIntent: /exit.?intent/i.test(html), hasPopup: /popup|modal/i.test(html), hasCountdown: /countdown/i.test(html), hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html), hasLiveChat: /tawk|tidio|crisp|intercom/i.test(html), hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html), hasCOD: /cash on delivery|paiement Ã  la livraison/i.test(bodyText) }
+                        conversion:     { hasFAQ: sections.hasFAQ, hasExitIntent: /exit.?intent/i.test(html), hasPopup: /popup|modal/i.test(html), hasCountdown: /countdown/i.test(html), hasStickyCTA: /sticky-cta|sticky_cta|fixed-bottom|fixed-cta/i.test(html), hasLiveChat: /tawk|tidio|crisp|intercom/i.test(html), hasWhatsApp: /whatsapp|wa\.me|api\.whatsapp\.com/i.test(html), hasCOD: /cash on delivery|paiement à la livraison/i.test(bodyText) }
                     }
                 },
 
@@ -20271,7 +20271,7 @@ async function scrapeSiteData(url, lang = 'fr') {
                 }
             };
         };
-        // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ─────────────────────────────────────────────────────────────
 
         let scrape = null;
         let html   = '';
@@ -20282,14 +20282,14 @@ async function scrapeSiteData(url, lang = 'fr') {
 
             if (!isBotBlocked) {
                 html = scrape.html;
-                console.log(`âœ… scrapeSiteData Smart Layer OK â€” ${Date.now() - startTime}ms | Layer: ${scrape.fetchLayer} | CMS: ${scrape.techStack?.cms}`);
+                console.log(`✅ scrapeSiteData Smart Layer OK — ${Date.now() - startTime}ms | Layer: ${scrape.fetchLayer} | CMS: ${scrape.techStack?.cms}`);
             } else {
                 const fallbackWords = scrape?.contentIntel?.wordCount ?? scrape?.seoIntel?.wordCount ?? 0;
-                console.warn(`âš ï¸ Smart layer blocked or empty (Words: ${fallbackWords}) â€” fallback HTTP activated`);
+                console.warn(`⚠️ Smart layer blocked or empty (Words: ${fallbackWords}) — fallback HTTP activated`);
                 scrape = null;
             }
         } catch (primaryErr) {
-            console.warn(`âš ï¸ Smart layer failed entirely: ${primaryErr.message} â€” fallback HTTP activated`);
+            console.warn(`⚠️ Smart layer failed entirely: ${primaryErr.message} — fallback HTTP activated`);
             scrape = null;
         }
 
@@ -20299,11 +20299,11 @@ async function scrapeSiteData(url, lang = 'fr') {
                 const { data } = await RetryManager.executeWithRetry(
                     () => {
                         if (scrapeDoToken) {
-                            console.log(`ðŸ›¡ï¸ [Layer 2] Using Scrape.do API (render=true) for ${validUrl}...`);
+                            console.log(`🛡️ [Layer 2] Using Scrape.do API (render=true) for ${validUrl}...`);
                             const targetUrl = `http://api.scrape.do?token=${scrapeDoToken}&url=${encodeURIComponent(validUrl)}&render=true`;
                             return axios.get(targetUrl, { timeout: CONFIG.TIMEOUTMEDIUM || 35000 });
                         }
-                        console.warn(`âš ï¸ [Layer 2] SCRAPEDOTOKEN missing. Basic Axios fallback...`);
+                        console.warn(`⚠️ [Layer 2] SCRAPEDOTOKEN missing. Basic Axios fallback...`);
                         return axios.get(validUrl, {
                             headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36', 'Accept-Language': acceptLanguage },
                             timeout: CONFIG.TIMEOUTSHORT || 15000
@@ -20313,12 +20313,12 @@ async function scrapeSiteData(url, lang = 'fr') {
                 );
 
                 html = typeof data === 'string' ? data : (data?.html || data?.body || JSON.stringify(data));
-                console.log(`âœ… scrapeSiteData Layer 2 OK â€” ${Date.now() - startTime}ms (${html.length} chars)`);
+                console.log(`✅ scrapeSiteData Layer 2 OK — ${Date.now() - startTime}ms (${html.length} chars)`);
 
                 if (!html || html.length < 300) throw new Error('Fallback HTML too short');
                 scrape = extractFromHtml(html, scrapeDoToken ? 'scrape.do' : 'axios');
             } catch (axiosErr) {
-                console.error(`âŒ Layer 2 fallback failed: ${axiosErr.message}`);
+                console.error(`❌ Layer 2 fallback failed: ${axiosErr.message}`);
                 return { ...EMPTY_SCRAPE_RESULT(axiosErr.message, 'fallback'), success: false, url: validUrl, duration: Date.now() - startTime };
             }
         }
@@ -20327,7 +20327,7 @@ async function scrapeSiteData(url, lang = 'fr') {
         const $    = cheerio.load(html);
         const bodyText = $('body').text().replace(/\s+/g, ' ').trim();
 
-        const stopWords = new Set(['le','la','les','de','des','du','un','une','et','ou','en','Ã ','a','the','and','for','with','sur','dans','par','pour','est','are','is','your','vous','nous','notre','vos','ses','ces','this','that','from','plus','moins']);
+        const stopWords = new Set(['le','la','les','de','des','du','un','une','et','ou','en','à','a','the','and','for','with','sur','dans','par','pour','est','are','is','your','vous','nous','notre','vos','ses','ces','this','that','from','plus','moins']);
         const topKeywordsMap = bodyText.toLowerCase()
             .replace(/[^\p{L}\p{N}\s-]/gu, ' ')
             .split(/\s+/)
@@ -20407,11 +20407,11 @@ const scrapedData = {
         cache.set(cacheKey, scrapedData);
 
         console.log(
-            `âœ… scrapeSiteData DONE â€” ${Date.now() - startTime}ms` +
+            `✅ scrapeSiteData DONE — ${Date.now() - startTime}ms` +
             ` | Layer: ${scrapedData.fetchLayer}` +
             ` | CMS: ${scrapedData.techStack?.cms}` +
             ` | Prix: ${scrapedData.price ?? 'N/A'} ${scrapedData.priceIntel?.currency ?? ''}` +
-            // â˜… New
+            // ★ New
             ` | Status: ${scrapedData.priceIntel?.extractionStatus ?? 'N/A'}` +
             ` | Confidence: ${scrapedData.priceIntel?.confidenceBand ?? 'N/A'}`
         );
@@ -20419,16 +20419,16 @@ const scrapedData = {
         return scrapedData;
 
     } catch (error) {
-        console.error(`âŒ scrapeSiteData CRASH: ${error.message}`);
+        console.error(`❌ scrapeSiteData CRASH: ${error.message}`);
         return { ...EMPTY_SCRAPE_RESULT(error.message, 'crash'), success: false, url, duration: Date.now() - startTime };
     }
 }
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// analyzeCTAs â€” inchangÃ©e + renforcÃ©e
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════
+// analyzeCTAs — inchangée + renforcée
+// ════════════════════════════════════════════════════════
 async function analyzeCTAs(ctas) {
     if (!Array.isArray(ctas)) ctas = [];
     return {
@@ -20439,7 +20439,7 @@ async function analyzeCTAs(ctas) {
         },
         visibility:   ctas.length >= 2 ? 'good' : 'low',
         copywriting: {
-            actionVerbs:       ctas.filter(c => /^(get|start|try|buy|download|commander|acheter|essayer|dÃ©couvrir)/i.test(c.text || c)).length,
+            actionVerbs:       ctas.filter(c => /^(get|start|try|buy|download|commander|acheter|essayer|découvrir)/i.test(c.text || c)).length,
             valueProposition:  ctas.filter(c => (c.text || c).length > 15).length,
         },
         improvements: ctas.length < 3
@@ -20448,9 +20448,9 @@ async function analyzeCTAs(ctas) {
     };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 // TRUST SIGNALS ANALYSIS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 
 async function analyzeTrustSignals(data) {
     let score = 0;
@@ -20465,9 +20465,9 @@ async function analyzeTrustSignals(data) {
     return Math.min(score, 100);
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 // TECHNICAL SEO AUDIT
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 
 async function technicalSEOAudit(url) {
     const response = await axios.get(url);
@@ -20489,7 +20489,7 @@ async function technicalSEOAudit(url) {
     }
     if ($('h1').length !== 1) {
         seoScore -= 10;
-        issues.push('H1 invalide (doit Ãªtre unique)');
+        issues.push('H1 invalide (doit être unique)');
     }
     
     return {
@@ -20501,7 +20501,7 @@ async function technicalSEOAudit(url) {
             h1Count: $('h1').length,
             hasOgImage: !!$('meta[property="og:image"]').attr('content')
         },
-        speedScore: 85, // Mock - intÃ©grer Lighthouse API
+        speedScore: 85, // Mock - intégrer Lighthouse API
         accessibilityScore: 90,
         cwv: {
             lcp: 2.3,
@@ -20511,9 +20511,9 @@ async function technicalSEOAudit(url) {
     };
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 // MOBILE OPTIMIZATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 
 async function analyzeMobileOptimization(url) {
     const response = await axios.get(url);
@@ -20531,15 +20531,15 @@ async function analyzeMobileOptimization(url) {
 
 
 const SYSTEM_PROMPT_FUNNEL = `
-Tu es l'Oracle du Neuromarketing. Ton rÃ´le est de dÃ©construire la psychologie d'une page de vente.
+Tu es l'Oracle du Neuromarketing. Ton rôle est de déconstruire la psychologie d'une page de vente.
 
 ### DIRECTIVES CRUCIALES :
-1. **LANGUE** : RÃ©dige TOUS les textes (critiques, suggestions, prompt, rÃ©sumÃ©s) dans la LANGUE demandÃ©e.
-2. **FORMAT** : RÃ©ponds EXCLUSIVEMENT en JSON strict.
-3. **MODÃˆLES** : Analyse simultanÃ©ment via AIDA (Attention, IntÃ©rÃªt, DÃ©sir, Action) et PAS (ProblÃ¨me, Agitation, Solution).
-4. **AI REWRITE PROMPT** : GÃ©nÃ¨re un prompt de rÃ©Ã©criture "Masterpiece" dans la LANGUE demandÃ©e, permettant Ã  l'utilisateur de transformer son site via une autre IA.
+1. **LANGUE** : Rédige TOUS les textes (critiques, suggestions, prompt, résumés) dans la LANGUE demandée.
+2. **FORMAT** : Réponds EXCLUSIVEMENT en JSON strict.
+3. **MODÈLES** : Analyse simultanément via AIDA (Attention, Intérêt, Désir, Action) et PAS (Problème, Agitation, Solution).
+4. **AI REWRITE PROMPT** : Génère un prompt de réécriture "Masterpiece" dans la LANGUE demandée, permettant à l'utilisateur de transformer son site via une autre IA.
 
-### STRUCTURE JSON (ClÃ©s obligatoires en Anglais) :
+### STRUCTURE JSON (Clés obligatoires en Anglais) :
 {
   "globalScore": 85,
   "summary": "...",
@@ -20564,7 +20564,7 @@ Tu es l'Oracle du Neuromarketing. Ton rÃ´le est de dÃ©construire la psycholo
   "aiRewritePrompt": "..."
 }`;
 async function geminiProFunnel(scrapeData, techAudit, lang, businessData = { traffic: 1000, basket: 300 }, salesAngle = 'aggressive') {
-    // ðŸ›¡ï¸ PROTECTION ANTI-CRASH (Le fix pour 'social')
+    // 🛡️ PROTECTION ANTI-CRASH (Le fix pour 'social')
     const defaultData = {
         globalScore: 50,
         summary: "Analyse indisponible",
@@ -20580,21 +20580,21 @@ async function geminiProFunnel(scrapeData, techAudit, lang, businessData = { tra
         aiRewritePrompt: ""
     };
 
-    // ðŸŒ MAPPING DE LA LANGUE CIBLE
-    const langNames = { 'ar': 'Arabe (Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©)', 'fr': 'FranÃ§ais', 'en': 'English' };
-    const targetLangName = langNames[lang] || 'FranÃ§ais';
+    // 🌍 MAPPING DE LA LANGUE CIBLE
+    const langNames = { 'ar': 'Arabe (العربية)', 'fr': 'Français', 'en': 'English' };
+    const targetLangName = langNames[lang] || 'Français';
 
     try {
-        console.log(`ðŸ§  Oracle IA : Analyse en ${targetLangName} pour ${scrapeData.url}`);
+        console.log(`🧠 Oracle IA : Analyse en ${targetLangName} pour ${scrapeData.url}`);
 
         const userPrompt = `
             SOURCE : ${scrapeData.url}
-            TEXTE EXTRAIT : ${scrapeData.brand?.fullTextSample || "Aucun texte dÃ©tectÃ©"}
+            TEXTE EXTRAIT : ${scrapeData.brand?.fullTextSample || "Aucun texte détecté"}
             ANGLE DE VENTE : ${salesAngle}
-            DONNÃ‰ES BUSINESS : ${businessData.traffic} visites/mois, Panier ${businessData.basket} MAD
+            DONNÉES BUSINESS : ${businessData.traffic} visites/mois, Panier ${businessData.basket} MAD
             
-            MISSION : RÃ©dige ton analyse marketing complÃ¨te (AIDA, PAS, FOMO) en ${targetLangName}.
-            Le "aiRewritePrompt" doit Ãªtre un prompt de rÃ©Ã©criture expert Ã©crit en ${targetLangName}.
+            MISSION : Rédige ton analyse marketing complète (AIDA, PAS, FOMO) en ${targetLangName}.
+            Le "aiRewritePrompt" doit être un prompt de réécriture expert écrit en ${targetLangName}.
         `;
 
         const aiResult = await callOpenRouterAPI(userPrompt, {
@@ -20605,7 +20605,7 @@ async function geminiProFunnel(scrapeData, techAudit, lang, businessData = { tra
         });
 
         if (aiResult.success) {
-            // ðŸ”¥ FUSION : On injecte les rÃ©sultats de l'IA dans notre structure de base
+            // 🔥 FUSION : On injecte les résultats de l'IA dans notre structure de base
             // Cela garantit que triggers.social existe TOUJOURS.
             return {
                 ...defaultData,
@@ -20614,17 +20614,17 @@ async function geminiProFunnel(scrapeData, techAudit, lang, businessData = { tra
             };
         }
         
-        console.warn("âš ï¸ IA Oracle a Ã©chouÃ©, retour aux valeurs par dÃ©faut.");
+        console.warn("⚠️ IA Oracle a échoué, retour aux valeurs par défaut.");
         return defaultData;
 
     } catch (error) {
-        console.error("âŒ geminiProFunnel Error:", error.message);
+        console.error("❌ geminiProFunnel Error:", error.message);
         return defaultData;
     }
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 // BENCHMARKS INDUSTRIE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 
 async function getIndustryBenchmarks(businessType) {
     const benchmarks = {
@@ -20642,9 +20642,9 @@ function calculatePosition(score, benchmarks) {
     return 'Below Average';
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 // DROP-OFF ESTIMATION
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
 
 function calculateDropOff(aiReport) {
     return [
@@ -20675,22 +20675,22 @@ function estimateConversionFunnel(aiReport) {
 async function generateTechnicalRecommendations(siteData) {
     try {
         const prompt = `
-En tant qu'expert SEO technique, analyse ces donnÃ©es et fournis 5 recommandations prioritaires:
+En tant qu'expert SEO technique, analyse ces données et fournis 5 recommandations prioritaires:
 
 **SCORES:**
 - SEO: ${siteData.scores?.seoScore}/100
 - Mobile: ${siteData.scores?.mobileScore}/100
 - Performance: ${siteData.scores?.performanceScore}/100
 
-**PROBLÃˆMES DÃ‰TECTÃ‰S:**
-- Titre: ${siteData.meta?.titleLength} caractÃ¨res ${siteData.meta?.titleLength < 30 || siteData.meta?.titleLength > 60 ? 'âŒ' : 'âœ…'}
-- Description: ${siteData.meta?.descriptionLength} caractÃ¨res ${siteData.meta?.descriptionLength < 120 ? 'âŒ' : 'âœ…'}
-- H1: ${siteData.structure?.h1?.count} ${siteData.structure?.h1?.count !== 1 ? 'âŒ' : 'âœ…'}
-- Images sans ALT: ${siteData.images?.withoutAlt} ${siteData.images?.withoutAlt > 0 ? 'âŒ' : 'âœ…'}
-- HTTPS: ${siteData.technical?.ssl ? 'âœ…' : 'âŒ'}
-- Schema.org: ${siteData.schema?.exists ? 'âœ…' : 'âŒ'}
+**PROBLÈMES DÉTECTÉS:**
+- Titre: ${siteData.meta?.titleLength} caractères ${siteData.meta?.titleLength < 30 || siteData.meta?.titleLength > 60 ? '❌' : '✅'}
+- Description: ${siteData.meta?.descriptionLength} caractères ${siteData.meta?.descriptionLength < 120 ? '❌' : '✅'}
+- H1: ${siteData.structure?.h1?.count} ${siteData.structure?.h1?.count !== 1 ? '❌' : '✅'}
+- Images sans ALT: ${siteData.images?.withoutAlt} ${siteData.images?.withoutAlt > 0 ? '❌' : '✅'}
+- HTTPS: ${siteData.technical?.ssl ? '✅' : '❌'}
+- Schema.org: ${siteData.schema?.exists ? '✅' : '❌'}
 
-Fournis 5 recommandations concrÃ¨tes et actionnables (une phrase chacune).
+Fournis 5 recommandations concrètes et actionnables (une phrase chacune).
 `;
 
         const result = await callOpenRouterAPI(prompt, {
@@ -20698,20 +20698,20 @@ Fournis 5 recommandations concrÃ¨tes et actionnables (une phrase chacune).
             maxTokens: 500,
             expectedFormat: 'text',
             context: 'Technical Recommendations',
-            systemPrompt: 'Tu es un expert SEO technique qui donne des recommandations concrÃ¨tes et actionnables.'
+            systemPrompt: 'Tu es un expert SEO technique qui donne des recommandations concrètes et actionnables.'
         });
         
         return result.success ? result.response.rawResponse || result.response : 'Recommandations IA indisponibles';
         
     } catch (error) {
         console.error('AI recommendations failed:', error);
-        return 'Impossible de gÃ©nÃ©rer les recommandations IA';
+        return 'Impossible de générer les recommandations IA';
     }
 }
 
-console.log('âœ… Frontend compatibility endpoints added');
+console.log('✅ Frontend compatibility endpoints added');
 
-// useSerp: true/false pour activer ou non lâ€™enrichissement
+// useSerp: true/false pour activer ou non l’enrichissement
 async function generateKeywordsMultiLang(
     seed,
     languages,
@@ -20722,17 +20722,17 @@ async function generateKeywordsMultiLang(
     const VALID_INTENTS = ['Informational', 'Commercial', 'Transactional', 'Navigational'];
     const VALID_TRENDS  = ['rising', 'stable', 'declining'];
 
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // 0) Normalisation GEO (zÃ©ro anomalie)
-    //    - sanitizeGeo gÃ¨re vide => "Morocco"
+    // ───────────────────────────────────────────────────────────────
+    // 0) Normalisation GEO (zéro anomalie)
+    //    - sanitizeGeo gère vide => "Morocco"
     //    - resolveSerpGeo retourne { location, gl, googledomain }
-    //    - si front envoie "auto", on garde cleanGeo = "Morocco" par dÃ©faut
-    // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    //    - si front envoie "auto", on garde cleanGeo = "Morocco" par défaut
+    // ───────────────────────────────────────────────────────────────
     const cleanGeo = InputValidator.sanitizeGeo(geo || 'auto');   // ex: "Morocco"
     const geoData  = resolveSerpGeo(cleanGeo);                    // ex: { location:"Morocco", gl:"ma", googledomain:"google.co.ma" }
 
     const buildPrompt = (seed, lang, count) => {
-        const langNames = { fr: 'FranÃ§ais', ar: 'Arabe (Darija/MSA)', en: 'English' };
+        const langNames = { fr: 'Français', ar: 'Arabe (Darija/MSA)', en: 'English' };
         return `You are a world-class SEO strategist and consumer psychologist.
 TOPIC: "${seed}"
 LANGUAGE: ${langNames[lang] || lang}
@@ -20801,7 +20801,7 @@ RULES:
         quickWin:      !!(k.quickWin) || (parseInt(k.kd) < 30 && parseInt(k.volume) > 200)
     });
 
-    // 1) IA par langue en parallÃ¨le
+    // 1) IA par langue en parallèle
     const iaResults = await Promise.all(languages.map(async (lang) => {
         try {
             const aiResult = await callOpenRouterAPI(buildPrompt(seed, lang, count), {
@@ -20822,11 +20822,11 @@ RULES:
                 ? raw.quickWins
                 : keywords.filter(k => k.quickWin).map(k => k.keyword).slice(0, 6);
 
-            console.log(`âœ… [${lang}] IA: ${keywords.length} kws | ${clusters.length} clusters | ${paa.length} PAA`);
+            console.log(`✅ [${lang}] IA: ${keywords.length} kws | ${clusters.length} clusters | ${paa.length} PAA`);
             return { lang, keywords, clusters, paa, quickWins, success: true };
 
         } catch (e) {
-            console.error(`âŒ [${lang}] IA Keywords failed:`, e.message);
+            console.error(`❌ [${lang}] IA Keywords failed:`, e.message);
             return { lang, keywords: [], clusters: [], paa: [], quickWins: [], success: false };
         }
     }));
@@ -20836,7 +20836,7 @@ RULES:
     let allPAA       = iaResults.flatMap(r => r.paa);
     let allQuickWins = [...new Set(iaResults.flatMap(r => r.quickWins))].slice(0, 10);
 
-    // 2) Enrichissement SERP (subset pour limiter le coÃ»t)
+    // 2) Enrichissement SERP (subset pour limiter le coût)
     if (useSerp && CONFIG.SERPAPIKEY) {
         const maxSerpPerLang = 10;
         const serpJobs = [];
@@ -20858,7 +20858,7 @@ RULES:
             });
         });
 
-        console.log(`ðŸ”Ž SERP enrichment for ${serpJobs.length} keywords (subset)`);
+        console.log(`🔎 SERP enrichment for ${serpJobs.length} keywords (subset)`);
 
         const serpResults = await Promise.all(serpJobs.map(async job => {
             const intel = await fetchSerpKeywordIntel(job.kw.keyword, job.lang, job.geo);
@@ -20938,16 +20938,16 @@ RULES:
         successLangs: iaResults.filter(r => r.success).map(r => r.lang)
     };
 
-    console.log(`ðŸ [v4.6] ${stats.total} kws | ${allClusters.length} clusters | QuickWins: ${stats.quickWins} | Rising: ${stats.risingCount} | GEO: ${geoData.location} (${geoData.gl})`);
+    console.log(`🏁 [v4.6] ${stats.total} kws | ${allClusters.length} clusters | QuickWins: ${stats.quickWins} | Rising: ${stats.risingCount} | GEO: ${geoData.location} (${geoData.gl})`);
 
-    // On renvoie clairement le GEO rÃ©solu pour le front
+    // On renvoie clairement le GEO résolu pour le front
     return {
         keywords:      allKeywords,
         clusters:      allClusters,
         paaQuestions:  allPAA,
         quickWins:     allQuickWins,
         stats,
-        geoInput:      geo,              // ce que lâ€™utilisateur a choisi (auto / Maroc / etc.)
+        geoInput:      geo,              // ce que l’utilisateur a choisi (auto / Maroc / etc.)
         geoResolved:   geoData.location, // ex: "Morocco"
         gl:            geoData.gl,       // ex: "ma"
         googledomain:  geoData.googledomain
@@ -20958,48 +20958,48 @@ RULES:
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ”§ TECHNICAL SEO ANALYSIS ENDPOINT - ULTRA COMPETITIVE
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🔧 TECHNICAL SEO ANALYSIS ENDPOINT - ULTRA COMPETITIVE
+// ═══════════════════════════════════════════════════════════════════
 // Integration: Perfectly matches your existing architecture
 // Features: Complete technical audit | Smart caching | Multi-model AI insights
 // Performance: < 2s response | Retry logic | Error handling
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
 
 // --- 4. ROUTE: TECHNICAL SEO ---
 
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸš€ SERVER STARTUP & GRACEFUL SHUTDOWN
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🚀 SERVER STARTUP & GRACEFUL SHUTDOWN
+// ═══════════════════════════════════════════════════════════════════
 
 // Graceful shutdown handler
 function gracefulShutdown(signal) {
-    console.log(`\nðŸ›‘ ${signal} received - Starting graceful shutdown...`);
+    console.log(`\n🛑 ${signal} received - Starting graceful shutdown...`);
     
     if (server) {
         server.close(() => {
-            console.log('âœ… HTTP server closed');
+            console.log('✅ HTTP server closed');
             
             // Cleanup resources
             cache.destroy();
-            console.log('âœ… Cache cleared');
+            console.log('✅ Cache cleared');
             
             // Log final metrics
-            console.log('\nðŸ“Š Final Metrics:');
+            console.log('\n📊 Final Metrics:');
             console.log(`   Total requests: ${METRICS.requests.total}`);
             console.log(`   Success rate: ${((METRICS.requests.success / METRICS.requests.total) * 100).toFixed(2)}%`);
             console.log(`   Uptime: ${formatDuration(Date.now() - METRICS.startTime)}`);
             console.log(`   Cache hit rate: ${cache.getStats().hitRate}`);
             
-            console.log('\nðŸ‘‹ Goodbye! Server shut down cleanly.\n');
+            console.log('\n👋 Goodbye! Server shut down cleanly.\n');
             process.exit(0);
         });
         
         // Force shutdown after 10 seconds
         setTimeout(() => {
-            console.error('âš ï¸  Forced shutdown after 10s timeout');
+            console.error('⚠️  Forced shutdown after 10s timeout');
             process.exit(1);
         }, 10000);
     } else {
@@ -21015,22 +21015,22 @@ if (require.main === module && process.env.WORKER_MODE !== 'true') {
 
 // Uncaught exception handler
 process.on('uncaughtException', (error) => {
-    console.error('ðŸ’¥ UNCAUGHT EXCEPTION:', error);
+    console.error('💥 UNCAUGHT EXCEPTION:', error);
     console.error(error.stack);
     gracefulShutdown('UNCAUGHT_EXCEPTION');
 });
 
 // Unhandled rejection handler
 process.on('unhandledRejection', (reason, promise) => {
-    console.error('ðŸ’¥ UNHANDLED REJECTION at:', promise);
+    console.error('💥 UNHANDLED REJECTION at:', promise);
     console.error('Reason:', reason);
 });
 
-// â”€â”€ Ã‰TAPE 2 : GÃ©nÃ©ration jsPDF Ã  partir du rapport backend â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── ÉTAPE 2 : Génération jsPDF à partir du rapport backend ──────────
 function buildPDFFromReport(R) {
 
   var jsPDFCls = window.jspdf && window.jspdf.jsPDF ? window.jspdf.jsPDF : window.jsPDF;
-  if (!jsPDFCls) throw new Error('jsPDF non chargÃ©');
+  if (!jsPDFCls) throw new Error('jsPDF non chargé');
 
   var doc = new jsPDFCls({ orientation:'portrait', unit:'mm', format:'a4', compress:true });
 
@@ -21046,7 +21046,7 @@ function buildPDFFromReport(R) {
     muted:[120,130,164],
   };
 
-  // â”€â”€ Sanitize â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Sanitize ──────────────────────────────────────────────────────
   function san(v, max) {
     max = max || 300;
     if (v == null) return '-';
@@ -21060,7 +21060,7 @@ function buildPDFFromReport(R) {
       .replace(/\s+/g,' ').trim().substring(0,max) || '-';
   }
 
-  // â”€â”€ Helpers dessin â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Helpers dessin ────────────────────────────────────────────────
   function fill(c)  { doc.setFillColor(c[0],c[1],c[2]); }
   function tc(c)    { doc.setTextColor(c[0],c[1],c[2]); }
   function dr(c)    { doc.setDrawColor(c[0],c[1],c[2]); }
@@ -21074,7 +21074,7 @@ function buildPDFFromReport(R) {
     fill(C.bg1); doc.rect(0,0,W,H,'F');
     var bw = CW/3;
     [C.blue,C.purple,C.cyan].forEach(function(c,i){ fill(c); doc.rect(ML+i*bw,0,bw,1.8,'F'); });
-    norm(6); tc(C.muted); doc.text('Daka â€” Rapport strategique', W/2, H-4, {align:'center'});
+    norm(6); tc(C.muted); doc.text('Daka — Rapport strategique', W/2, H-4, {align:'center'});
     y = 18;
   }
 
@@ -21177,9 +21177,9 @@ function buildPDFFromReport(R) {
     y += 5;
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
   // PAGE COVER
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
   newPage(); y=36;
   bold(26); tc(C.white);  doc.text('SEO GEN PRO', W/2, y, {align:'center'}); y+=10;
   bold(11); tc(C.purple); doc.text('RAPPORT COMPLET DAKA', W/2, y, {align:'center'}); y+=10;
@@ -21205,9 +21205,9 @@ function buildPDFFromReport(R) {
   norm(8); tc(C.muted);
   doc.text('Genere le ' + (R.meta && R.meta.date || new Date().toLocaleDateString('fr-FR')), W/2, y, {align:'center'});
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
   // SECTION SEO TECHNIQUE
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
   if (R.tech) {
     newPage();
     var T    = R.tech;
@@ -21229,8 +21229,8 @@ function buildPDFFromReport(R) {
     divider();
     secTitle('METADATA', C.cyan);
     if (T.balises) {
-      row('TITLE', san(T.balises.title,80)+' â€” '+(T.balises.titleLength||0)+' chars ['+san(T.balises.titleStatus,10)+']', T.balises.titleStatus==='OK'?C.green:C.orange);
-      row('DESCRIPTION', san(T.balises.description,120)+' â€” '+(T.balises.descLength||0)+' chars ['+san(T.balises.descStatus,10)+']', T.balises.descStatus==='OK'?C.green:C.orange);
+      row('TITLE', san(T.balises.title,80)+' — '+(T.balises.titleLength||0)+' chars ['+san(T.balises.titleStatus,10)+']', T.balises.titleStatus==='OK'?C.green:C.orange);
+      row('DESCRIPTION', san(T.balises.description,120)+' — '+(T.balises.descLength||0)+' chars ['+san(T.balises.descStatus,10)+']', T.balises.descStatus==='OK'?C.green:C.orange);
       rowI('CANONICAL',    T.balises.canonical||'-', C.muted);
       rowI('OG TITLE',     T.balises.ogTitle||'-',   C.muted);
       var h1list = T.balises.h1list || [];
@@ -21301,9 +21301,9 @@ function buildPDFFromReport(R) {
     }
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
   // SECTION CONCURRENTS
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
   if (R.biz) {
     newPage();
     var B = R.biz;
@@ -21409,16 +21409,16 @@ function buildPDFFromReport(R) {
     });
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
   // SECTION FUNNEL AIDA
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
   if (R.funnel) {
     newPage();
     var F = R.funnel;
     var gs   = F.scores && F.scores.global || 0;
     var gsCol= gs>=80?C.green:gs>=60?C.orange:C.red;
 
-    secTitle(isEn?'FUNNEL AIDA â€” LANDING SPY':'ANALYSE FUNNEL AIDA', C.green);
+    secTitle(isEn?'FUNNEL AIDA — LANDING SPY':'ANALYSE FUNNEL AIDA', C.green);
 
     check(14);
     fill(C.bgCard); doc.roundedRect(ML,y,CW,12,3,3,'F');
@@ -21448,7 +21448,7 @@ function buildPDFFromReport(R) {
       [
         {label:'Trafic/Mois',   value:F.financial.trafficStr||'---', color:C.blue},
         {label:'Panier Moyen',  value:F.financial.basketStr||'---',  color:C.orange},
-        {label:'MRR EstimÃ©',    value:F.financial.mrrStr||'---',     color:C.purple},
+        {label:'MRR Estimé',    value:F.financial.mrrStr||'---',     color:C.purple},
         {label:'CA Attaquable', value:F.financial.stealStr||'---',   color:C.pink},
       ].forEach(function(f,i){ kpiCard(f.label,f.value,ML+i*((CW-3*3)/4+3),(CW-3*3)/4,f.color); });
       y+=27;
@@ -21496,10 +21496,10 @@ function buildPDFFromReport(R) {
     if (F.aida) {
       divider();
       secTitle('FRAMEWORK AIDA', C.blue);
-      if (F.aida.headline)    hiBox('ATTENTION â€” Headline', F.aida.headline, C.red);
-      if (F.aida.mainBenefit) hiBox('INTERET â€” Benefice',   F.aida.mainBenefit, C.orange);
-      if (F.aida.usp)         hiBox('DESIR â€” USP',          F.aida.usp, C.blue);
-      if (F.aida.primaryCTA)  hiBox('ACTION â€” CTA',         F.aida.primaryCTA, C.green);
+      if (F.aida.headline)    hiBox('ATTENTION — Headline', F.aida.headline, C.red);
+      if (F.aida.mainBenefit) hiBox('INTERET — Benefice',   F.aida.mainBenefit, C.orange);
+      if (F.aida.usp)         hiBox('DESIR — USP',          F.aida.usp, C.blue);
+      if (F.aida.primaryCTA)  hiBox('ACTION — CTA',         F.aida.primaryCTA, C.green);
       if (F.aida.guarantee)   rowI('Garantie',    F.aida.guarantee);
       if (F.aida.scarcity)    rowI('Rarete',      F.aida.scarcity);
     }
@@ -21532,9 +21532,9 @@ function buildPDFFromReport(R) {
     }
   }
 
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
   // SECTION MOTS-CLES
-  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // ══════════════════════════════════════════════════════════════
   if (R.keywords) {
     newPage();
     var KW     = R.keywords;
@@ -21543,7 +21543,7 @@ function buildPDFFromReport(R) {
     var clusters = (KW.clusters||[]).slice(0,10);
     var paa      = (KW.paaQuestions||[]).slice(0,10);
 
-    secTitle(isEn?'KEYWORDS â€” STRATEGIC ANALYSIS':'MOTS-CLES â€” ANALYSE STRATEGIQUE', C.cyan);
+    secTitle(isEn?'KEYWORDS — STRATEGIC ANALYSIS':'MOTS-CLES — ANALYSE STRATEGIQUE', C.cyan);
     twoCol([
       {label:'Seed Keyword',     value:san(KW.seed||'---',40),                        color:C.purple},
       {label:'Target Languages', value:(KW.languages||[]).join(', ')||'---',          color:C.blue},
@@ -21610,7 +21610,7 @@ function buildPDFFromReport(R) {
 
     if (clusters.length) {
       newPage();
-      secTitle('CLUSTERS SEMANTIQUES â€” '+clusters.length, C.purple);
+      secTitle('CLUSTERS SEMANTIQUES — '+clusters.length, C.purple);
       clusters.forEach(function(cl){
         var kws = Array.isArray(cl.keywords)?cl.keywords.slice(0,5).join(', '):'';
         check(22);
@@ -21625,7 +21625,7 @@ function buildPDFFromReport(R) {
 
     if (paa.length) {
       divider();
-      secTitle('PEOPLE ALSO ASK â€” '+paa.length, C.cyan);
+      secTitle('PEOPLE ALSO ASK — '+paa.length, C.cyan);
       paa.forEach(function(q){
         var question = typeof q==='object'?san(q.question,80):san(q,80);
         check(10);
@@ -21637,7 +21637,7 @@ function buildPDFFromReport(R) {
     }
   }
 
-  // â”€â”€ Pagination â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Pagination ────────────────────────────────────────────────────
   var totalP = doc.internal.pages.length-1;
   for (var p=1; p<=totalP; p++) {
     doc.setPage(p);
@@ -21645,7 +21645,7 @@ function buildPDFFromReport(R) {
     doc.text('Page '+p+' / '+totalP, W-MR, H-4, {align:'right'});
   }
 
-  // â”€â”€ TÃ©lÃ©chargement â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Téléchargement ────────────────────────────────────────────────
   var cleanUrl = san(
     (R.meta && R.meta.clientUrl) || 'rapport', 80
   ).replace(/https?:\/\//,'').replace(/[^a-z0-9\-\.]/gi,'-').substring(0,40);
@@ -21666,7 +21666,7 @@ function buildPDFFromReport(R) {
   setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 10000);
 
   var isEn2 = STATE.currentLang === 'en';
-  toast.success(isEn2 ? 'PDF exported â€” '+totalP+' pages' : 'PDF exporte â€” '+totalP+' pages');
+  toast.success(isEn2 ? 'PDF exported — '+totalP+' pages' : 'PDF exporte — '+totalP+' pages');
 }
 
 const ALLOWED_ORIGINS = [
@@ -21681,49 +21681,49 @@ const ALLOWED_ORIGINS = [
 // Start server only for the Render API entry point, never when imported by the worker.
 if (require.main === module && process.env.WORKER_MODE !== 'true') {
 server = app.listen(PORT, '0.0.0.0', () => {
-    console.log('\n' + 'â•'.repeat(70));
-    console.log('ðŸš€ SEO GEN PRO API v3.0.0 - ULTRA COMPETITIVE MODE');
-    console.log('â•'.repeat(70));
-    console.log(`ðŸŒ Server running on: http://0.0.0.0:${PORT}`);
-    console.log(`ðŸ“¦ Environment: ${NODE_ENV}`);
-    console.log(`ðŸ”§ Node version: ${process.version}`);
-    console.log(`ðŸ’» Platform: ${process.platform}`);
-    console.log(`ðŸ§  Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
-    console.log(`â° Started at: ${new Date().toISOString()}`);
+    console.log('\n' + '═'.repeat(70));
+    console.log('🚀 SEO GEN PRO API v3.0.0 - ULTRA COMPETITIVE MODE');
+    console.log('═'.repeat(70));
+    console.log(`🌍 Server running on: http://0.0.0.0:${PORT}`);
+    console.log(`📦 Environment: ${NODE_ENV}`);
+    console.log(`🔧 Node version: ${process.version}`);
+    console.log(`💻 Platform: ${process.platform}`);
+    console.log(`🧠 Memory: ${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)}MB`);
+    console.log(`⏰ Started at: ${new Date().toISOString()}`);
     console.log('');
-    console.log('ðŸ“Š Available Endpoints:');
+    console.log('📊 Available Endpoints:');
     console.log('   GET  /              - API Info');
     console.log('   GET  /health        - Health Check');
     console.log('   GET  /metrics       - Performance Metrics');
     console.log('   POST /api/scrape    - Website Scraping');
     console.log('   POST /api/competitors - Competitor Analysis');
     console.log('   POST /api/generate  - AI Text Generation');
-    console.log('   POST /api/funnel    - ðŸ”¥ AIDA Funnel Generator (MAIN)');
+    console.log('   POST /api/funnel    - 🔥 AIDA Funnel Generator (MAIN)');
     console.log('');
-    console.log('ðŸ’¾ Cache System:');
+    console.log('💾 Cache System:');
     console.log(`   Max size: ${cache.maxSize} entries`);
     console.log(`   TTL: ${cache.ttl / 1000}s`);
-    console.log(`   Status: ${CONFIG.CACHE_ENABLED ? 'âœ… Enabled' : 'âŒ Disabled'}`);
+    console.log(`   Status: ${CONFIG.CACHE_ENABLED ? '✅ Enabled' : '❌ Disabled'}`);
     console.log('');
-    console.log('ðŸ¤– AI Models:');
-    console.log(`   Gemini 2.0: âœ… Priority`);
+    console.log('🤖 AI Models:');
+    console.log(`   Gemini 2.0: ✅ Priority`);
     console.log(`   Total models: ${AI_MODELS.gemini.length + AI_MODELS.premium.length + AI_MODELS.free.length}`);
-    console.log(`   Strategy: Gemini â†’ Premium â†’ Free`);
+    console.log(`   Strategy: Gemini → Premium → Free`);
     console.log('');
-    console.log('ðŸ”’ Security:');
-    console.log(`   Rate limiting: âœ… ${CONFIG.RATE_LIMIT_MAX_REQUESTS} req/min`);
+    console.log('🔒 Security:');
+    console.log(`   Rate limiting: ✅ ${CONFIG.RATE_LIMIT_MAX_REQUESTS} req/min`);
     console.log(`   CORS origins: ${CONFIG.CORS_ORIGINS.length} trusted domains`);
-    console.log(`   Helmet: âœ… OWASP protection`);
+    console.log(`   Helmet: ✅ OWASP protection`);
     console.log('');
-    console.log('ðŸŽ¯ Ready to CRUSH competitors! ðŸ”¥');
-    console.log('â•'.repeat(70));
+    console.log('🎯 Ready to CRUSH competitors! 🔥');
+    console.log('═'.repeat(70));
     console.log('');
 });
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ROUTE PDF â€” Structure les donnÃ©es pour jsPDF frontend
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════
+// ROUTE PDF — Structure les données pour jsPDF frontend
+// ═══════════════════════════════════════════════════════════════
 app.post('/api/prepare-global-report', async (req, res) => {
     const startTime = Date.now();
     try {
@@ -21732,7 +21732,7 @@ app.post('/api/prepare-global-report', async (req, res) => {
         if (!technical && !competitors && !funnel && !keywords) {
             return res.status(400).json({
                 success: false,
-                error: 'Aucune donnÃ©e fournie'
+                error: 'Aucune donnée fournie'
             });
         }
 
@@ -21929,11 +21929,11 @@ app.post('/api/prepare-global-report', async (req, res) => {
             },
         };
 
-        console.log(`âœ… /api/prepare-global-report â€” ${Date.now() - startTime}ms | tech:${!!report.tech} | biz:${!!report.biz} | funnel:${!!report.funnel} | kw:${!!report.keywords}`);
+        console.log(`✅ /api/prepare-global-report — ${Date.now() - startTime}ms | tech:${!!report.tech} | biz:${!!report.biz} | funnel:${!!report.funnel} | kw:${!!report.keywords}`);
         res.json({ success: true, report });
 
        } catch (error) {
-        console.error('âŒ /api/prepare-global-report:', error.message);
+        console.error('❌ /api/prepare-global-report:', error.message);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -21967,7 +21967,7 @@ function normalizeWordExportList(values, limit = 4) {
         const text = String(typeof value === 'object' ? (value.title || value.text || value.label || '') : value)
             .replace(/\s+/g, ' ')
             .trim();
-        if (!text || /^(?:â€”|-|n\/a|null|undefined)$/i.test(text)) return;
+        if (!text || /^(?:—|-|n\/a|null|undefined)$/i.test(text)) return;
         if (!list.some(item => item.toLowerCase() === text.toLowerCase())) list.push(text);
     };
     visit(values);
@@ -21985,8 +21985,8 @@ function inferWordExportBusinessContext(model = {}, sectionHtml = '') {
         JSON.stringify(model.weaknesses || []),
         String(sectionHtml || '').slice(0, 12000)
     ].join(' ').toLowerCase();
-    const serviceSignals = /(agence|agency|service|consulting|consultant|formation|training|saas|software|logiciel|plateforme|platform|audit|diagnostic|accompagnement|prestation|livrable|livrables|rÃ©vision|revision|support|coach|coaching|marketing|automation|automatisation|lead|crm|b2b|portfolio|case study|cas client|Ø®Ø¯Ù…Ø©|ÙˆÙƒØ§Ù„Ø©|Ø§Ø³ØªØ´Ø§Ø±Ø©|ØªÙƒÙˆÙŠÙ†|ØªØ¯Ø±ÙŠØ¨|Ù…Ù†ØµØ©|Ø¨Ø±Ù†Ø§Ù…Ø¬|Ø¯Ø¹Ù…|Ù…Ø±Ø§ÙÙ‚Ø©|ØªØ³Ù„ÙŠÙ…Ø§Øª|Ù…Ø´Ø±ÙˆØ¹)/i;
-    const productSignals = /(boutique|shop|store|produit|product|cart|panier|checkout|stock|livraison|delivery|shipping|retour|returns|garantie produit|sku|cod|cash on delivery|e-commerce|marketplace|commande|acheter|buy|Ù…Ù†ØªØ¬|Ù…ØªØ¬Ø±|Ù…Ø®Ø²ÙˆÙ†|ØªÙˆØµÙŠÙ„|Ø´Ø­Ù†|Ø¥Ø±Ø¬Ø§Ø¹|Ø·Ù„Ø¨|Ø´Ø±Ø§Ø¡)/i;
+    const serviceSignals = /(agence|agency|service|consulting|consultant|formation|training|saas|software|logiciel|plateforme|platform|audit|diagnostic|accompagnement|prestation|livrable|livrables|révision|revision|support|coach|coaching|marketing|automation|automatisation|lead|crm|b2b|portfolio|case study|cas client|خدمة|وكالة|استشارة|تكوين|تدريب|منصة|برنامج|دعم|مرافقة|تسليمات|مشروع)/i;
+    const productSignals = /(boutique|shop|store|produit|product|cart|panier|checkout|stock|livraison|delivery|shipping|retour|returns|garantie produit|sku|cod|cash on delivery|e-commerce|marketplace|commande|acheter|buy|منتج|متجر|مخزون|توصيل|شحن|إرجاع|طلب|شراء)/i;
     const serviceScore = (corpus.match(serviceSignals) || []).length;
     const productScore = (corpus.match(productSignals) || []).length;
     return serviceScore >= 2 && serviceScore >= productScore ? 'service' : 'product';
@@ -21995,16 +21995,16 @@ function inferWordExportBusinessContext(model = {}, sectionHtml = '') {
 function sanitizeWordBusinessVocabulary(text, offerType = 'product') {
     if (offerType !== 'service') return String(text || '');
     return String(text || '')
-        .replace(/\b(stock|stocks|inventaire|inventory)\b/gi, 'disponibilitÃ©s')
-        .replace(/\b(livraison|expÃ©dition|shipping|delivery)\b/gi, 'dÃ©lais de rÃ©alisation')
-        .replace(/\b(retours?|returns?)\b/gi, 'conditions de rÃ©vision')
+        .replace(/\b(stock|stocks|inventaire|inventory)\b/gi, 'disponibilités')
+        .replace(/\b(livraison|expédition|shipping|delivery)\b/gi, 'délais de réalisation')
+        .replace(/\b(retours?|returns?)\b/gi, 'conditions de révision')
         .replace(/\b(garantie produit|product warranty)\b/gi, 'garantie de prestation')
         .replace(/\b(produits?|products?)\b/gi, 'offres')
-        .replace(/Ø§Ù„Ù…Ø®Ø²ÙˆÙ†/g, 'ØªÙˆÙØ± Ø§Ù„ÙØ±ÙŠÙ‚')
-        .replace(/Ø§Ù„ØªÙˆØµÙŠÙ„|Ø§Ù„Ø´Ø­Ù†/g, 'Ø¢Ø¬Ø§Ù„ Ø§Ù„ØªÙ†ÙÙŠØ°')
-        .replace(/Ø§Ù„Ø¥Ø±Ø¬Ø§Ø¹|Ø§Ù„Ù…Ø±ØªØ¬Ø¹Ø§Øª/g, 'Ø´Ø±ÙˆØ· Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©')
-        .replace(/Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª/g, 'Ø§Ù„Ø¹Ø±ÙˆØ¶')
-        .replace(/Ø§Ù„Ù…Ù†ØªØ¬/g, 'Ø§Ù„Ø¹Ø±Ø¶')
+        .replace(/المخزون/g, 'توفر الفريق')
+        .replace(/التوصيل|الشحن/g, 'آجال التنفيذ')
+        .replace(/الإرجاع|المرتجعات/g, 'شروط المراجعة')
+        .replace(/المنتجات/g, 'العروض')
+        .replace(/المنتج/g, 'العرض')
         .replace(/stock/gi, 'availability')
         .replace(/shipping|delivery/gi, 'delivery timeline')
         .replace(/returns/gi, 'revision terms');
@@ -22012,23 +22012,23 @@ function sanitizeWordBusinessVocabulary(text, offerType = 'product') {
 
 function wordExportLabel(key, lang = 'fr') {
     const labels = {
-        hero: ['Ecran dâ€™accueil', 'Opening screen', 'Ø§Ù„Ø´Ø§Ø´Ø© Ø§Ù„Ø£ÙˆÙ„Ù‰'],
-        pricing: ['Offre et prix', 'Offer and pricing', 'Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ø³Ø¹Ø±'],
-        primary_cta: ['Bouton principal', 'Main action button', 'Ø²Ø± Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ'],
-        cta: ['Appel a lâ€™action', 'Call to action', 'Ø¯Ø¹ÙˆØ© Ù„Ø§ØªØ®Ø§Ø° Ø¥Ø¬Ø±Ø§Ø¡'],
-        product: ['Offre analysee', 'Analyzed offer', 'Ø§Ù„Ø¹Ø±Ø¶ Ù…Ø­Ù„ Ø§Ù„ØªØ­Ù„ÙŠÙ„'],
-        features: ['Caracteristiques utiles', 'Useful features', 'Ø§Ù„Ø®ØµØ§Ø¦Øµ Ø§Ù„Ù…ÙÙŠØ¯Ø©'],
-        returns: ['Conditions de retour', 'Return terms', 'Ø´Ø±ÙˆØ· Ø§Ù„Ø¥Ø±Ø¬Ø§Ø¹'],
-        social_proof: ['Preuves sociales', 'Social proof', 'Ø§Ù„Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ'],
-        testimonials: ['Temoignages clients', 'Customer testimonials', 'Ø´Ù‡Ø§Ø¯Ø§Øª Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡'],
-        trust: ['Confiance', 'Trust', 'Ø§Ù„Ø«Ù‚Ø©'],
-        faq: ['Questions frequentes', 'FAQ', 'Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø§Ø¦Ø¹Ø©'],
-        delivery: ['Livraison et delais', 'Delivery and timing', 'Ø§Ù„ØªØ³Ù„ÙŠÙ… ÙˆØ§Ù„Ø¢Ø¬Ø§Ù„'],
-        guarantee: ['Garantie', 'Guarantee', 'Ø§Ù„Ø¶Ù…Ø§Ù†'],
-        content: ['Contenu', 'Content', 'Ø§Ù„Ù…Ø­ØªÙˆÙ‰'],
-        high: ['Elevee', 'High', 'Ø¹Ø§Ù„ÙŠØ©'],
-        medium: ['Moyenne', 'Medium', 'Ù…ØªÙˆØ³Ø·Ø©'],
-        low: ['Faible', 'Low', 'Ø¶Ø¹ÙŠÙØ©'],
+        hero: ['Ecran d’accueil', 'Opening screen', 'الشاشة الأولى'],
+        pricing: ['Offre et prix', 'Offer and pricing', 'العرض والسعر'],
+        primary_cta: ['Bouton principal', 'Main action button', 'زر الإجراء الرئيسي'],
+        cta: ['Appel a l’action', 'Call to action', 'دعوة لاتخاذ إجراء'],
+        product: ['Offre analysee', 'Analyzed offer', 'العرض محل التحليل'],
+        features: ['Caracteristiques utiles', 'Useful features', 'الخصائص المفيدة'],
+        returns: ['Conditions de retour', 'Return terms', 'شروط الإرجاع'],
+        social_proof: ['Preuves sociales', 'Social proof', 'الإثبات الاجتماعي'],
+        testimonials: ['Temoignages clients', 'Customer testimonials', 'شهادات العملاء'],
+        trust: ['Confiance', 'Trust', 'الثقة'],
+        faq: ['Questions frequentes', 'FAQ', 'الأسئلة الشائعة'],
+        delivery: ['Livraison et delais', 'Delivery and timing', 'التسليم والآجال'],
+        guarantee: ['Garantie', 'Guarantee', 'الضمان'],
+        content: ['Contenu', 'Content', 'المحتوى'],
+        high: ['Elevee', 'High', 'عالية'],
+        medium: ['Moyenne', 'Medium', 'متوسطة'],
+        low: ['Faible', 'Low', 'ضعيفة'],
     };
     const value = labels[String(key || '').toLowerCase()];
     if (!value) return null;
@@ -22166,14 +22166,14 @@ function normalizeDocxActionItems(model = {}, lang = 'fr', offerType = 'product'
         rows.push({
             horizon,
             title,
-            impact: cleanDocxText(action.impact || action.justification || '', lang, offerType) || (lang === 'ar' ? 'Ø£Ø«Ø± Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªØ­Ù‚Ù‚' : lang === 'en' ? 'Measurable impact' : 'Impact mesurable'),
+            impact: cleanDocxText(action.impact || action.justification || '', lang, offerType) || (lang === 'ar' ? 'أثر قابل للتحقق' : lang === 'en' ? 'Measurable impact' : 'Impact mesurable'),
             effort: cleanDocxText(action.effort || action.priority || '', lang, offerType) || String(index + 1),
         });
     };
-    (model.actions || []).forEach((item, index) => push(item, lang === 'ar' ? 'Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ©' : lang === 'en' ? 'Priority' : 'PrioritÃ©', index));
-    (model.quickWins || []).forEach((item, index) => push(item, lang === 'ar' ? '7 Ø£ÙŠØ§Ù…' : lang === 'en' ? '7 days' : '7 jours', index));
-    (model.plan30 || []).forEach((item, index) => push(item, lang === 'ar' ? '30 ÙŠÙˆÙ…Ø§' : lang === 'en' ? '30 days' : '30 jours', index));
-    (model.after30 || []).forEach((item, index) => push(item, lang === 'ar' ? 'Ø¨Ø¹Ø¯ 30 ÙŠÙˆÙ…Ø§' : lang === 'en' ? 'After 30 days' : 'AprÃ¨s 30 jours', index));
+    (model.actions || []).forEach((item, index) => push(item, lang === 'ar' ? 'الأولوية' : lang === 'en' ? 'Priority' : 'Priorité', index));
+    (model.quickWins || []).forEach((item, index) => push(item, lang === 'ar' ? '7 أيام' : lang === 'en' ? '7 days' : '7 jours', index));
+    (model.plan30 || []).forEach((item, index) => push(item, lang === 'ar' ? '30 يوما' : lang === 'en' ? '30 days' : '30 jours', index));
+    (model.after30 || []).forEach((item, index) => push(item, lang === 'ar' ? 'بعد 30 يوما' : lang === 'en' ? 'After 30 days' : 'Après 30 jours', index));
     return rows.slice(0, 9);
 }
 
@@ -22187,7 +22187,7 @@ function createDocxCardCell(title, value, lang, offerType, fill, accent = '0369A
             after: 45,
             offerType,
         }),
-        createDocxParagraph(value || 'â€”', lang, {
+        createDocxParagraph(value || '—', lang, {
             bold: true,
             size: 22,
             color: '0F172A',
@@ -22213,7 +22213,7 @@ function createDocxCardCell(title, value, lang, offerType, fill, accent = '0369A
 function createDocxExecutiveDashboard(model, lang, offerType) {
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
-    const score = Number.isFinite(Number(model.score)) ? `${Number(model.score)}/100` : (isAr ? 'ØºÙŠØ± Ù…Ø­Ø³ÙˆØ¨' : isEn ? 'Not scored' : 'Non notÃ©');
+    const score = Number.isFinite(Number(model.score)) ? `${Number(model.score)}/100` : (isAr ? 'غير محسوب' : isEn ? 'Not scored' : 'Non noté');
     const decision = model.priorityDecision || model.verdict || '';
     const opportunity = normalizeWordExportList(model.opportunities, 1)[0] || '';
     const risk = normalizeWordExportList(model.weaknesses, 1)[0] || '';
@@ -22222,20 +22222,20 @@ function createDocxExecutiveDashboard(model, lang, offerType) {
         rows: [
             new TableRow({
                 children: [
-                    createDocxCardCell(isAr ? 'Ø§Ù„Ù†ØªÙŠØ¬Ø©' : isEn ? 'Score' : 'Score', score, lang, offerType, 'EFF6FF', '2563EB'),
-                    createDocxCardCell(isAr ? 'Ø§Ù„Ù‚Ø±Ø§Ø±' : isEn ? 'Decision' : 'DÃ©cision', decision, lang, offerType, 'ECFEFF', '0891B2'),
+                    createDocxCardCell(isAr ? 'النتيجة' : isEn ? 'Score' : 'Score', score, lang, offerType, 'EFF6FF', '2563EB'),
+                    createDocxCardCell(isAr ? 'القرار' : isEn ? 'Decision' : 'Décision', decision, lang, offerType, 'ECFEFF', '0891B2'),
                 ],
             }),
             new TableRow({
                 children: [
-                    createDocxCardCell(isAr ? 'ÙØ±ØµØ© ÙˆØ§Ø¶Ø­Ø©' : isEn ? 'Clear opportunity' : 'OpportunitÃ© claire', opportunity, lang, offerType, 'F0FDF4', '16A34A'),
-                    createDocxCardCell(isAr ? 'Ù†Ù‚Ø·Ø© Ø®Ø·Ø±' : isEn ? 'Risk point' : 'Point de risque', risk, lang, offerType, 'FFF7ED', 'C2410C'),
+                    createDocxCardCell(isAr ? 'فرصة واضحة' : isEn ? 'Clear opportunity' : 'Opportunité claire', opportunity, lang, offerType, 'F0FDF4', '16A34A'),
+                    createDocxCardCell(isAr ? 'نقطة خطر' : isEn ? 'Risk point' : 'Point de risque', risk, lang, offerType, 'FFF7ED', 'C2410C'),
                 ],
             }),
         ],
     });
     return [
-        createDocxHeading(isAr ? 'Ù„ÙˆØ­Ø© Ø§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„Ø³Ø±ÙŠØ¹Ø©' : isEn ? 'Decision dashboard' : 'Tableau de dÃ©cision', lang, 2, offerType),
+        createDocxHeading(isAr ? 'لوحة القرار السريعة' : isEn ? 'Decision dashboard' : 'Tableau de décision', lang, 2, offerType),
         table,
     ].filter(Boolean);
 }
@@ -22244,9 +22244,9 @@ function createDocxBranchSchema(model, lang, offerType) {
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
     const sourceBranches = Array.isArray(model.branches) && model.branches.length ? model.branches : [
-        { title: isAr ? 'Ø§Ù„Ø³ÙˆÙ‚' : isEn ? 'Market' : 'MarchÃ©', items: model.opportunities || [] },
-        { title: isAr ? 'Ø§Ù„Ø¹Ø±Ø¶' : isEn ? 'Offer' : 'Offre', items: [model.priorityDecision || model.verdict].filter(Boolean) },
-        { title: isAr ? 'Ø§Ù„Ø«Ù‚Ø©' : isEn ? 'Trust' : 'Confiance', items: model.weaknesses || [] },
+        { title: isAr ? 'السوق' : isEn ? 'Market' : 'Marché', items: model.opportunities || [] },
+        { title: isAr ? 'العرض' : isEn ? 'Offer' : 'Offre', items: [model.priorityDecision || model.verdict].filter(Boolean) },
+        { title: isAr ? 'الثقة' : isEn ? 'Trust' : 'Confiance', items: model.weaknesses || [] },
     ];
     const branches = sourceBranches.slice(0, 5).map(branch => ({
         title: cleanDocxText(branch.title || branch.key || '', lang, offerType),
@@ -22260,8 +22260,8 @@ function createDocxBranchSchema(model, lang, offerType) {
         rows: [new TableRow({ children: cells })],
     });
     return [
-        createDocxHeading(isAr ? 'Ø®Ø±ÙŠØ·Ø© Ø§Ù„Ù‚Ø±Ø§Ø±' : isEn ? 'Decision map' : 'Carte de dÃ©cision', lang, 2, offerType),
-        createDocxParagraph(isAr ? 'Ù…Ø®Ø·Ø· Ø®ÙÙŠÙ ÙŠØ±Ø¨Ø· Ø§Ù„Ø³ÙˆÙ‚ ÙˆØ§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ø«Ù‚Ø© ÙˆØ®Ø·ÙˆØ© Ø§Ù„ØªÙ†ÙÙŠØ°.' : isEn ? 'A light schema connecting market, offer, trust and execution.' : 'SchÃ©ma lÃ©ger reliant marchÃ©, offre, confiance et exÃ©cution.', lang, { size: 20, color: '475569', offerType }),
+        createDocxHeading(isAr ? 'خريطة القرار' : isEn ? 'Decision map' : 'Carte de décision', lang, 2, offerType),
+        createDocxParagraph(isAr ? 'مخطط خفيف يربط السوق والعرض والثقة وخطوة التنفيذ.' : isEn ? 'A light schema connecting market, offer, trust and execution.' : 'Schéma léger reliant marché, offre, confiance et exécution.', lang, { size: 20, color: '475569', offerType }),
         table,
     ].filter(Boolean);
 }
@@ -22272,7 +22272,7 @@ function createDocxActionMatrix(model, lang, offerType) {
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
     const headers = isAr
-        ? ['Ø§Ù„Ø£ÙÙ‚', 'Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡', 'Ø§Ù„Ø£Ø«Ø±', 'Ø§Ù„Ø¬Ù‡Ø¯ / Ø§Ù„Ø±ØªØ¨Ø©']
+        ? ['الأفق', 'الإجراء', 'الأثر', 'الجهد / الرتبة']
         : isEn
             ? ['Horizon', 'Action', 'Impact', 'Effort / rank']
             : ['Horizon', 'Action', 'Impact', 'Effort / rang'];
@@ -22311,7 +22311,7 @@ function createDocxActionMatrix(model, lang, offerType) {
         },
     });
     return [
-        createDocxHeading(isAr ? 'Ù…ØµÙÙˆÙØ© Ø§Ù„Ø¹Ù…Ù„' : isEn ? 'Action matrix' : 'Matrice dâ€™action', lang, 2, offerType),
+        createDocxHeading(isAr ? 'مصفوفة العمل' : isEn ? 'Action matrix' : 'Matrice d’action', lang, 2, offerType),
         table,
     ].filter(Boolean);
 }
@@ -22380,7 +22380,7 @@ function convertReportHtmlToDocxBlocks(sectionHtml, lang, offerType = 'product')
         }
         const text = $(el).text().replace(/\s+/g, ' ').trim();
         if (!text) return;
-        if (/^(voir les details|voir dÃ©tails|fermer|copier|ouvrir|exporter|share|download)$/i.test(text)) return;
+        if (/^(voir les details|voir détails|fermer|copier|ouvrir|exporter|share|download)$/i.test(text)) return;
         if (/^h[1-6]$/.test(tag)) {
             pushParagraph(text, { heading: true, level: Number(tag[1]) <= 2 ? 2 : 3 });
         } else if (tag === 'li') {
@@ -22407,7 +22407,7 @@ async function buildDakaDocxDocument(payload = {}) {
     const model = payload.model && typeof payload.model === 'object' ? payload.model : {};
     const sectionHtml = sanitizeWordExportFragment(payload.sectionHtml);
     const offerType = inferWordExportBusinessContext(model, sectionHtml);
-    const title = cleanDocxText(payload.title || (isAr ? 'ØªÙ‚Ø±ÙŠØ± Daka Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ' : isEn ? 'Daka Executive Report' : 'Rapport executif Daka'), lang, offerType).slice(0, 140);
+    const title = cleanDocxText(payload.title || (isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport executif Daka'), lang, offerType).slice(0, 140);
     const logoBuffer = loadDakaDocxLogoBuffer(payload.logoDataUrl);
     const children = [];
     if (logoBuffer) {
@@ -22420,29 +22420,29 @@ async function buildDakaDocxDocument(payload = {}) {
     children.push(createDocxParagraph('Daka Market Intelligence Spyer', lang, { center: true, bold: true, size: 23, color: '0369A1', after: 70, offerType }));
     children.push(createDocxHeading(title, lang, 1, offerType));
     children.push(createDocxParagraph(
-        isAr ? 'Ù…Ù„Ù ØªÙ†ÙÙŠØ°ÙŠ Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªØ­Ø±ÙŠØ±ØŒ Ù…Ø¨Ù†ÙŠ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù…ØªØ§Ø­Ø©ØŒ ÙˆÙ…Ù‡ÙŠÙƒÙ„ Ù„Ù„Ù‚Ø±Ø§Ø±.' :
+        isAr ? 'ملف تنفيذي قابل للتحرير، مبني على الأدلة المتاحة، ومهيكل للقرار.' :
             isEn ? 'Editable executive file, evidence-based and structured for decisions.' :
                 'Dossier executif editable, fonde sur les preuves disponibles et structure pour la decision.',
         lang,
         { center: true, size: 22, color: '475569', after: 220, offerType }
     ));
     const metaTable = createDocxMetaTable([
-        [isAr ? 'Ø§Ù„Ù…ÙˆÙ‚Ø¹' : isEn ? 'Website' : 'Site', model.siteTitle || model.domain || ''],
+        [isAr ? 'الموقع' : isEn ? 'Website' : 'Site', model.siteTitle || model.domain || ''],
         ['URL', model.reportUrl || model.domain || ''],
-        [isAr ? 'ØªØ§Ø±ÙŠØ® Ø§Ù„ØªÙ‚Ø±ÙŠØ±' : isEn ? 'Report date' : 'Date du rapport', model.date || new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR')],
-        [isAr ? 'Ù†ÙˆØ¹ Ø§Ù„Ø¹Ø±Ø¶' : isEn ? 'Offer type' : 'Type dâ€™offre', offerType === 'service' ? (isAr ? 'Ø®Ø¯Ù…Ø©' : isEn ? 'Service' : 'Service') : (isAr ? 'Ù…Ù†ØªØ¬ / ØªØ¬Ø§Ø±Ø©' : isEn ? 'Product / commerce' : 'Produit / commerce')],
-        [isAr ? 'Ø§Ù„Ù†ØªÙŠØ¬Ø©' : isEn ? 'Score' : 'Score', Number.isFinite(Number(model.score)) ? `${Number(model.score)}/100` : ''],
+        [isAr ? 'تاريخ التقرير' : isEn ? 'Report date' : 'Date du rapport', model.date || new Date().toLocaleDateString(lang === 'en' ? 'en-US' : 'fr-FR')],
+        [isAr ? 'نوع العرض' : isEn ? 'Offer type' : 'Type d’offre', offerType === 'service' ? (isAr ? 'خدمة' : isEn ? 'Service' : 'Service') : (isAr ? 'منتج / تجارة' : isEn ? 'Product / commerce' : 'Produit / commerce')],
+        [isAr ? 'النتيجة' : isEn ? 'Score' : 'Score', Number.isFinite(Number(model.score)) ? `${Number(model.score)}/100` : ''],
     ], lang);
     if (metaTable) children.push(metaTable);
     children.push(...createDocxExecutiveDashboard(model, lang, offerType));
-    children.push(createDocxHeading(isAr ? 'Ø§Ù„Ù…Ù„Ø®Øµ Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ' : isEn ? 'Executive summary' : 'Synthese executive', lang, 2, offerType));
+    children.push(createDocxHeading(isAr ? 'الملخص التنفيذي' : isEn ? 'Executive summary' : 'Synthese executive', lang, 2, offerType));
     children.push(createDocxParagraph(model.verdict || model.priorityDecision || '', lang, { bold: true, size: 24, color: '0F172A', offerType }));
-    children.push(...createDocxListBlock(isAr ? 'Ø£Ù‡Ù… Ø§Ù„ÙØ±Øµ' : isEn ? 'Top opportunities' : 'Principales opportunites', model.opportunities, lang, offerType));
-    children.push(...createDocxListBlock(isAr ? 'Ø£Ù‡Ù… Ø§Ù„Ù…Ø®Ø§Ø·Ø±' : isEn ? 'Top risks' : 'Principaux risques', model.weaknesses, lang, offerType));
+    children.push(...createDocxListBlock(isAr ? 'أهم الفرص' : isEn ? 'Top opportunities' : 'Principales opportunites', model.opportunities, lang, offerType));
+    children.push(...createDocxListBlock(isAr ? 'أهم المخاطر' : isEn ? 'Top risks' : 'Principaux risques', model.weaknesses, lang, offerType));
     children.push(...createDocxBranchSchema(model, lang, offerType));
     children.push(...createDocxActionMatrix(model, lang, offerType));
     children.push(createDocxParagraph(
-        isAr ? 'Ù‡Ø°Ø§ Ø§Ù„Ù…Ù„Ù Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªØ¹Ø¯ÙŠÙ„ ÙÙŠ Word. Ø±Ø§Ø¬Ø¹ Ø§Ù„Ø£Ø±Ù‚Ø§Ù… ÙˆØ§Ù„ÙˆØ¹ÙˆØ¯ Ø§Ù„ØªØ¬Ø§Ø±ÙŠØ© Ù‚Ø¨Ù„ Ø¥Ø±Ø³Ø§Ù„Ù‡ Ù„Ù„Ø¹Ù…ÙŠÙ„ Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠ.' :
+        isAr ? 'هذا الملف قابل للتعديل في Word. راجع الأرقام والوعود التجارية قبل إرساله للعميل النهائي.' :
             isEn ? 'This file is editable in Word. Review figures and commercial claims before sending it to the final client.' :
                 'Ce fichier est editable dans Word. Relisez les chiffres et promesses commerciales avant envoi au client final.',
         lang,
@@ -22450,11 +22450,11 @@ async function buildDakaDocxDocument(payload = {}) {
     ));
     const reportBlocks = convertReportHtmlToDocxBlocks(sectionHtml, lang, offerType);
     if (reportBlocks.length) {
-        children.push(createDocxHeading(isAr ? 'ØªÙØ§ØµÙŠÙ„ Ø§Ù„ØªÙ‚Ø±ÙŠØ±' : isEn ? 'Report details' : 'Details du rapport', lang, 1, offerType));
+        children.push(createDocxHeading(isAr ? 'تفاصيل التقرير' : isEn ? 'Report details' : 'Details du rapport', lang, 1, offerType));
         children.push(...reportBlocks);
     }
-    const headerText = isAr ? 'Daka - Ù…Ù„Ù Ø°ÙƒØ§Ø¡ Ø§Ù„Ø³ÙˆÙ‚' : isEn ? 'Daka - Market intelligence file' : 'Daka - Dossier intelligence marche';
-    const footerText = isAr ? 'ØªÙ… Ø¥Ø¹Ø¯Ø§Ø¯Ù‡ Ø¨ÙˆØ§Ø³Ø·Ø© ÙØ±Ù‚ Daka' : isEn ? 'Prepared by Daka teams' : 'Prepare par les equipes Daka';
+    const headerText = isAr ? 'Daka - ملف ذكاء السوق' : isEn ? 'Daka - Market intelligence file' : 'Daka - Dossier intelligence marche';
+    const footerText = isAr ? 'تم إعداده بواسطة فرق Daka' : isEn ? 'Prepared by Daka teams' : 'Prepare par les equipes Daka';
     const doc = new Document({
         creator: 'Daka Market Intelligence Spyer',
         title,
@@ -22508,7 +22508,7 @@ app.post('/api/export/word', async (req, res) => {
         res.setHeader('Cache-Control', 'no-store');
         res.send(buffer);
     } catch (error) {
-        console.error('âŒ /api/export/word docx:', error);
+        console.error('❌ /api/export/word docx:', error);
         res.status(500).json({ success: false, error: 'DOCX_EXPORT_FAILED' });
     }
 });
@@ -22533,7 +22533,7 @@ app.use((req, res) => {
 
 // Global Error Handler
 app.use((error, req, res, next) => {
-    console.error('ðŸ’¥ Unhandled error:', error);
+    console.error('💥 Unhandled error:', error);
 
     const statusCode = error.statusCode || 500;
 
@@ -22544,24 +22544,23 @@ app.use((error, req, res, next) => {
     });
 });
 
-console.log('âœ… Error handlers configured');
+console.log('✅ Error handlers configured');
 
 // Handle server errors
 if (server) server.on('error', (error) => {
     if (error.code === 'EADDRINUSE') {
-        console.error(`âŒ Port ${PORT} is already in use`);
+        console.error(`❌ Port ${PORT} is already in use`);
         process.exit(1);
     } else {
-        console.error('âŒ Server error:', error);
+        console.error('❌ Server error:', error);
         process.exit(1);
     }
 });
 
-console.log('âœ… PARTIE 5/5: Server startup complete - Ready to serve! ðŸš€');
+console.log('✅ PARTIE 5/5: Server startup complete - Ready to serve! 🚀');
 console.log('');
-console.log('ðŸŽ‰ðŸŽ‰ðŸŽ‰ ALL 5 PARTS LOADED SUCCESSFULLY! ðŸŽ‰ðŸŽ‰ðŸŽ‰');
-console.log('ðŸ’ª Your backend is now ULTRA-COMPETITIVE and ready to DOMINATE! ðŸ’ª');
+console.log('🎉🎉🎉 ALL 5 PARTS LOADED SUCCESSFULLY! 🎉🎉🎉');
+console.log('💪 Your backend is now ULTRA-COMPETITIVE and ready to DOMINATE! 💪');
 console.log('');
-
 
 

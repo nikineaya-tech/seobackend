@@ -1,37 +1,37 @@
-﻿// Daka main runtime served as a backend asset to prevent inline-code leakage in embedded hosts.
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // ðŸŒ CONFIGURATION GLOBALE
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// Daka main runtime served as a backend asset to prevent inline-code leakage in embedded hosts.
+// ═══════════════════════════════════════════════════════════════════
+        // 🌍 CONFIGURATION GLOBALE
+        // ═══════════════════════════════════════════════════════════════════
 
         const CONFIG = {
     API_BASE_URL: window.location.hostname.includes('localhost')
         ? 'http://localhost:10000'
-        : 'https://seobackend-f81n.onrender.com',  // ðŸ”¥ NOUVELLE URL
+        : 'https://seobackend-f81n.onrender.com',  // 🔥 NOUVELLE URL
     TIMEOUT_SHORT: 15000,
-    TIMEOUT_MEDIUM: 45000, // Passe Ã  45 secondes pour les analyses simples
+    TIMEOUT_MEDIUM: 45000, // Passe à 45 secondes pour les analyses simples
     TIMEOUT_LONG: 90000,
     MAX_RETRIES: 3,
     RETRY_DELAY: 2000,
     TOAST_DURATION: 5000,
     // ... reste identique
 };
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   STATE GLOBAL â€” V2 MAJ COMPLÃˆTE
+/* ═══════════════════════════════════════════════════════════════════
+   STATE GLOBAL — V2 MAJ COMPLÈTE
    Remplace l'ancien const STATE = { ... }
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+═══════════════════════════════════════════════════════════════════ */
 const STATE = {
-    /* â”€â”€ PrÃ©fÃ©rences â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Préférences ─────────────────────────────────────────────── */
     currentLang:          localStorage.getItem('preferredLang') || 'fr',
     currentTab:           'competitors',
     serverStatus:         'checking',
 
-    /* â”€â”€ RÃ©sultats des 4 analyses â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
-    lastAnalysisResults:  null,   // Tab 1 â€” Concurrents
-    lastFunnelResults:    null,   // Tab 2 â€” Funnel AIDA
-    lastTechnicalResults: null,   // Tab 3 â€” SEO Technique
+    /* ── Résultats des 4 analyses ────────────────────────────────── */
+    lastAnalysisResults:  null,   // Tab 1 — Concurrents
+    lastFunnelResults:    null,   // Tab 2 — Funnel AIDA
+    lastTechnicalResults: null,   // Tab 3 — SEO Technique
     lastKeywords:         null,   // Tab 4 - Keywords (objet complet)
 
-    /* â”€â”€ Inputs sauvegardÃ©s (utilisÃ©s par exportFullAnalysisToPDF) â”€â”€ */
+    /* ── Inputs sauvegardés (utilisés par exportFullAnalysisToPDF) ── */
     lastInputs: {
         keyword:     '',
         url:         '',
@@ -44,11 +44,11 @@ const STATE = {
         kwCount:     20,
     },
 
-    /* â”€â”€ MÃ©triques runtime â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Métriques runtime ───────────────────────────────────────── */
     requestsCount: 0,
     errors:        [],
 
-    /* â”€â”€ Flags UI (anti double-clic) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Flags UI (anti double-clic) ─────────────────────────────── */
     isExporting:   false,
     isAnalyzing:   false,
 };
@@ -160,12 +160,12 @@ function hydrateCompetitorCountrySelect(preferredValue = null, lang = null) {
         note.dir = locale === 'ar' ? 'rtl' : 'ltr';
     }
 }
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   PATCH â€” RESET COMPLET AVANT CHAQUE NOUVELLE ANALYSE
-   Ã€ ajouter une seule fois, juste aprÃ¨s la dÃ©finition du STATE
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════════════════════════════════════════════════
+   PATCH — RESET COMPLET AVANT CHAQUE NOUVELLE ANALYSE
+   À ajouter une seule fois, juste après la définition du STATE
+   ══════════════════════════════════════════════════════════════ */
 
-/* â”€â”€ Helper reset universel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── Helper reset universel ───────────────────────────────── */
 function resetAnalysis(type) {
     // 1. Vider STATE
     if (type === 'competitors' || type === 'all') {
@@ -212,13 +212,13 @@ function resetAnalysis(type) {
     }
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   AUTO-SYNC INPUTS â†’ STATE.lastInputs
-   Ã€ placer juste aprÃ¨s le STATE, avant les fonctions
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════════
+   AUTO-SYNC INPUTS → STATE.lastInputs
+   À placer juste après le STATE, avant les fonctions
+═══════════════════════════════════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
 
-    /* Sync champs texte / select â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* Sync champs texte / select ─────────────────────────────────── */
     const _inputMap = {
         'keywordInput':  'keyword',
         'urlInput':      'url',
@@ -235,13 +235,13 @@ document.addEventListener('DOMContentLoaded', () => {
     Object.entries(_inputMap).forEach(([id, key]) => {
         const el = document.getElementById(id);
         if (!el) return;
-        // Init depuis valeur actuelle si dÃ©jÃ  remplie
+        // Init depuis valeur actuelle si déjà remplie
         if (el.value?.trim()) STATE.lastInputs[key] = el.value.trim();
         el.addEventListener('input',  () => STATE.lastInputs[key] = el.value?.trim() || '');
         el.addEventListener('change', () => STATE.lastInputs[key] = el.value?.trim() || '');
     });
 
-    /* Sync checkboxes langues keywords â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* Sync checkboxes langues keywords ───────────────────────────── */
     const _syncKwLangs = () => {
         STATE.lastInputs.kwLangs = ['langFR', 'langAR', 'langEN']
             .filter(id => document.getElementById(id)?.checked)
@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     _syncKwLangs(); // Init au chargement
 
-    /* Sync all report language controls â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* Sync all report language controls ───────────────────────────── */
     const syncReportLanguage = (lang) => {
         if (!lang || !['fr', 'ar', 'en'].includes(lang)) return;
         STATE.currentLang = lang;
@@ -280,7 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    /* Persist lang dans localStorage â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* Persist lang dans localStorage ─────────────────────────────── */
     document.querySelectorAll('[data-lang-switch]').forEach(btn => {
         btn.addEventListener('click', () => {
             const l = btn.dataset.langSwitch;
@@ -292,10 +292,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   MAJ exportFullAnalysisToPDF â€” inject keywords dans payload
+/* ═══════════════════════════════════════════════════════════════════
+   MAJ exportFullAnalysisToPDF — inject keywords dans payload
    Remplace uniquement le bloc "1. APPEL BACKEND" dans ta fonction
-â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+═══════════════════════════════════════════════════════════════════ */
 // Dans exportFullAnalysisToPDF, remplace :
 // const resp = await api.post('/api/prepare-global-report', { ... })
 // Par :
@@ -358,7 +358,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.translateRuntimeChrome();
                 hydrateCompetitorCountrySelect(STATE.lastInputs?.country || null, lang);
 
-                if (CONFIG.DEBUG_MODE) console.log(`âœ… Language changed to: ${lang}`);
+                if (CONFIG.DEBUG_MODE) console.log(`✅ Language changed to: ${lang}`);
             }
 
             translateRuntimeChrome() {
@@ -367,13 +367,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (footer) {
                     const copy = lang === 'ar'
                         ? {
-                            powered: 'Ù…Ø´ØºÙ„ Ø¨ÙˆØ§Ø³Ø·Ø©',
-                            engine: 'Ù…Ø­Ø±Ùƒ Daka Ù„Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„ØªØ³ÙˆÙŠÙ‚ÙŠ',
-                            made: 'Ù…Ù† Ø·Ø±Ù',
-                            author: 'ÙØ±ÙŠÙ‚ Daka',
-                            rights: 'ÙƒÙ„ Ø§Ù„Ø­Ù‚ÙˆÙ‚ Ù…Ø­ÙÙˆØ¸Ø©',
-                            privacy: 'Ø§Ù„Ø®ØµÙˆØµÙŠØ©',
-                            terms: 'Ø§Ù„Ø´Ø±ÙˆØ·'
+                            powered: 'مشغل بواسطة',
+                            engine: 'محرك Daka للذكاء التسويقي',
+                            made: 'من طرف',
+                            author: 'فريق Daka',
+                            rights: 'كل الحقوق محفوظة',
+                            privacy: 'الخصوصية',
+                            terms: 'الشروط'
                         }
                         : lang === 'en'
                         ? {
@@ -386,12 +386,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             terms: 'Terms'
                         }
                         : {
-                            powered: 'PropulsÃ© par',
-                            engine: 'moteur Daka dâ€™intelligence marchÃ©',
-                            made: 'CrÃ©Ã© par',
+                            powered: 'Propulsé par',
+                            engine: 'moteur Daka d’intelligence marché',
+                            made: 'Créé par',
                             author: 'Daka Team',
-                            rights: 'Tous droits rÃ©servÃ©s',
-                            privacy: 'ConfidentialitÃ©',
+                            rights: 'Tous droits réservés',
+                            privacy: 'Confidentialité',
                             terms: 'Conditions'
                         };
 
@@ -453,71 +453,71 @@ document.addEventListener('DOMContentLoaded', () => {
             const premiumCopy = {
                 fr: {
                     appbadge: 'MARKET INTEL',
-                    tab1_title: 'Lecture du marchÃ©',
+                    tab1_title: 'Lecture du marché',
                     tab1_title_highlight: 'Concurrents',
-                    tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrÃ¨te peut vous faire prendre sa place.',
-                    label_keyword: 'MarchÃ©, niche ou requÃªte Ã  analyser',
+                    tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrète peut vous faire prendre sa place.',
+                    label_keyword: 'Marché, niche ou requête à analyser',
                     placeholder_keyword: 'Ex: SaaS marketing all-in-one Maroc',
                     label_url: 'Votre site pour benchmark direct',
                     placeholder_url: 'https://votre-site.com',
-                    label_country: 'Pays et marchÃ© cible',
+                    label_country: 'Pays et marché cible',
                     label_analysis_lang: 'Langue du rapport',
-                    btn_analyze: 'RÃ‰VÃ‰LER LES OPPORTUNITÃ‰S',
-                    loading_comp_title: 'Daka prÃ©pare votre avantage',
-                    loading_comp_sub: 'Le temps de votre cafÃ©, les signaux du marchÃ© deviennent des dÃ©cisions claires.',
-                    phase_comp_1: 'Top concurrents gÃ©o',
+                    btn_analyze: 'RÉVÉLER LES OPPORTUNITÉS',
+                    loading_comp_title: 'Daka prépare votre avantage',
+                    loading_comp_sub: 'Le temps de votre café, les signaux du marché deviennent des décisions claires.',
+                    phase_comp_1: 'Top concurrents géo',
                     phase_comp_2: 'Failles et objections',
-                    phase_comp_3: 'Plan de conquÃªte',
+                    phase_comp_3: 'Plan de conquête',
                     context_comp_title: 'Rendez le rapport 3x plus concret',
-                    context_comp_sub: 'Ajoutez votre offre, votre cible et votre objectif pour recevoir des actions adaptÃ©es Ã  votre vraie situation.',
-                    context_comp_badge: 'Optionnel - recommandÃ©',
+                    context_comp_sub: 'Ajoutez votre offre, votre cible et votre objectif pour recevoir des actions adaptées à votre vraie situation.',
+                    context_comp_badge: 'Optionnel - recommandé',
                     context_offer_label: 'Offre exacte',
-                    context_offer_ph: 'Ex: SaaS marketing + formation intÃ©grÃ©e',
-                    context_audience_label: 'Client idÃ©al',
-                    context_audience_ph: 'Ex: PME marocaines, coachs, e-commerÃ§ants',
+                    context_offer_ph: 'Ex: SaaS marketing + formation intégrée',
+                    context_audience_label: 'Client idéal',
+                    context_audience_ph: 'Ex: PME marocaines, coachs, e-commerçants',
                     context_objective_label: 'Objectif prioritaire',
-                    context_objective_ph: 'Ex: vendre, gÃ©nÃ©rer des leads, prendre des RDV',
+                    context_objective_ph: 'Ex: vendre, générer des leads, prendre des RDV',
                     context_price_label: 'Prix, panier ou budget',
                     context_price_ph: 'Ex: 499 DH/mois, panier 900 DH, budget 200 DH/j',
-                    context_known_comp_label: 'Concurrents dÃ©jÃ  connus',
+                    context_known_comp_label: 'Concurrents déjà connus',
                     context_known_comp_ph: 'Ex: site1.com, marque2, page Instagram',
-                    context_geo_label: 'Zone Ã  gagner',
+                    context_geo_label: 'Zone à gagner',
                     context_geo_ph: 'Ex: Maroc, Casablanca, MENA francophone',
                     tab2_title: 'Corriger une page qui vend',
-                    tab2_subtitle: 'Changements concrets, preuves observÃ©es et textes prÃªts Ã  tester.',
+                    tab2_subtitle: 'Changements concrets, preuves observées et textes prêts à tester.',
                     label_funnel_url: 'URL du site ou de la landing page',
                     placeholder_funnel_url: 'https://concurrent.com/landing-page',
                     label_funnel_style: 'Angle de recommandation',
                     funnel_power_engine: 'Analyse conversion active:',
                     btn_funnel: 'AUDITER LE FUNNEL',
-                    loading_funnel_title: 'Daka rÃ©vÃ¨le les points de friction',
-                    loading_funnel_sub: 'Pendant votre pause, les pertes invisibles deviennent des corrections concrÃ¨tes.',
+                    loading_funnel_title: 'Daka révèle les points de friction',
+                    loading_funnel_sub: 'Pendant votre pause, les pertes invisibles deviennent des corrections concrètes.',
                     context_funnel_title: 'Donnez le contexte de la page',
-                    context_funnel_sub: 'Plus vous prÃ©cisez lâ€™offre et lâ€™objectif, plus les corrections seront concrÃ¨tes: textes, preuves, prix, boutons et objections.',
-                    context_funnel_badge: 'Pour un plan rÃ©aliste',
+                    context_funnel_sub: 'Plus vous précisez l’offre et l’objectif, plus les corrections seront concrètes: textes, preuves, prix, boutons et objections.',
+                    context_funnel_badge: 'Pour un plan réaliste',
                     context_funnel_offer_label: 'Offre ou promesse',
                     context_funnel_offer_ph: 'Ex: audit marketing, formation, produit e-commerce',
-                    context_funnel_audience_label: 'Audience visÃ©e',
-                    context_funnel_audience_ph: 'Ex: entrepreneurs dÃ©butants, PME, agences',
+                    context_funnel_audience_label: 'Audience visée',
+                    context_funnel_audience_ph: 'Ex: entrepreneurs débutants, PME, agences',
                     context_funnel_objective_label: 'Action attendue',
-                    context_funnel_objective_ph: 'Ex: achat, appel, formulaire, WhatsApp, dÃ©mo',
+                    context_funnel_objective_ph: 'Ex: achat, appel, formulaire, WhatsApp, démo',
                     context_funnel_price_label: 'Prix ou fourchette actuelle',
                     context_funnel_price_ph: 'Ex: 149 MAD ou 179-199 MAD',
-                    context_funnel_known_comp_label: 'Pages Ã  comparer',
-                    context_funnel_known_comp_ph: 'Ex: concurrent.com, page de rÃ©fÃ©rence, marque',
-                    context_funnel_geo_label: 'MarchÃ© cible',
+                    context_funnel_known_comp_label: 'Pages à comparer',
+                    context_funnel_known_comp_ph: 'Ex: concurrent.com, page de référence, marque',
+                    context_funnel_geo_label: 'Marché cible',
                     context_funnel_geo_ph: 'Ex: Maroc, France, Casablanca, GCC',
-                    tab3_title: 'VÃ©rifier les bases du site',
-                    tab3_highlight: 'PrioritÃ©s claires',
-                    tab3_subtitle: 'DÃ©tectez ce qui bloque confiance, lecture, vitesse et structure.',
-                    label_tech_url: 'URL Ã  diagnostiquer',
+                    tab3_title: 'Vérifier les bases du site',
+                    tab3_highlight: 'Priorités claires',
+                    tab3_subtitle: 'Détectez ce qui bloque confiance, lecture, vitesse et structure.',
+                    label_tech_url: 'URL à diagnostiquer',
                     btn_technical: 'LANCER LE DIAGNOSTIC',
-                    tab4_title: 'IdÃ©es de recherche',
+                    tab4_title: 'Idées de recherche',
                     tab4_highlight: 'rentables',
-                    tab4_subtitle: 'Trouvez les demandes qui mÃ©langent intention, rentabilitÃ© et facilitÃ© dâ€™exÃ©cution.',
-                    label_seed: 'Mot-clÃ© de dÃ©part',
+                    tab4_subtitle: 'Trouvez les demandes qui mélangent intention, rentabilité et facilité d’exécution.',
+                    label_seed: 'Mot-clé de départ',
                     placeholder_seed: 'Ex: formation marketing SaaS',
-                    btn_keywords: 'TROUVER LES MOTS-CLÃ‰S GAGNANTS'
+                    btn_keywords: 'TROUVER LES MOTS-CLÉS GAGNANTS'
                 },
                 en: {
                     tab1_title: 'Market Intelligence',
@@ -588,63 +588,63 @@ document.addEventListener('DOMContentLoaded', () => {
                     btn_keywords: 'FIND WINNING KEYWORDS'
                 },
                 ar: {
-                    appbadge: 'Ø°ÙƒØ§Ø¡ Ø§Ù„Ø³ÙˆÙ‚',
-                    tab1_title: 'Ø°ÙƒØ§Ø¡ Ø§Ù„Ø³ÙˆÙ‚',
-                    tab1_title_highlight: 'Ø§Ù„Ù…Ù†Ø§ÙØ³ÙˆÙ†',
-                    tab1_subtitle: 'Ø§ÙÙ‡Ù… Ù…Ù† ÙŠØ±Ø¨Ø­ ÙÙŠ Ø§Ù„Ø³ÙˆÙ‚ØŒ Ù„Ù…Ø§Ø°Ø§ ÙŠØ±Ø¨Ø­ØŒ ÙˆÙ…Ø§ Ø§Ù„Ø­Ø±ÙƒØ© Ø§Ù„Ø¹Ù…Ù„ÙŠØ© Ø§Ù„ØªÙŠ ØªÙ‚Ø±Ø¨Ùƒ Ù…Ù†Ù‡.',
-                    label_keyword: 'Ø§Ù„Ø³ÙˆÙ‚ Ø£Ùˆ Ø§Ù„Ù…Ø¬Ø§Ù„ Ø£Ùˆ ÙƒÙ„Ù…Ø© Ø§Ù„Ø¨Ø­Ø«',
-                    placeholder_keyword: 'Ù…Ø«Ø§Ù„: SaaS marketing Maroc',
-                    label_url: 'Ù…ÙˆÙ‚Ø¹Ùƒ Ù„Ù„Ù…Ù‚Ø§Ø±Ù†Ø© Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø©',
-                    label_country: 'Ø§Ù„Ø¨Ù„Ø¯ ÙˆÙ†ØªØ§Ø¦Ø¬ Ø§Ù„Ø¨Ø­Ø« Ø§Ù„Ù…Ø³ØªÙ‡Ø¯ÙØ©',
-                    label_analysis_lang: 'Ù„ØºØ© Ø§Ù„ØªÙ‚Ø±ÙŠØ±',
-                    btn_analyze: 'Ø§ÙƒØ´Ù ÙØ±Øµ Ø§Ù„Ø³ÙˆÙ‚',
-                    tab2_title: 'ØµØ­Ø­ ØµÙØ­Ø© Ø§Ù„Ø¨ÙŠØ¹',
-                    tab2_subtitle: 'ØªØºÙŠÙŠØ±Ø§Øª Ø¹Ù…Ù„ÙŠØ©ØŒ Ø£Ø¯Ù„Ø© Ù…Ø±ØµÙˆØ¯Ø©ØŒ ÙˆÙ†ØµÙˆØµ Ø¬Ø§Ù‡Ø²Ø© Ù„Ù„Ø§Ø®ØªØ¨Ø§Ø±.',
-                    label_funnel_url: 'Ø±Ø§Ø¨Ø· Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ø£Ùˆ ØµÙØ­Ø© Ø§Ù„Ù‡Ø¨ÙˆØ·',
-                    label_funnel_style: 'Ø²Ø§ÙˆÙŠØ© Ø§Ù„ØªÙˆØµÙŠØ©',
-                    funnel_power_engine: 'ØªØ­Ù„ÙŠÙ„ Ø§Ù„ØªØ­ÙˆÙŠÙ„ Ù…ÙØ¹Ù„:',
-                    btn_funnel: 'ØªØ¯Ù‚ÙŠÙ‚ Ø§Ù„ÙØ§Ù†Ù„',
-                    tab3_title: 'Ø§ÙØ­Øµ Ø£Ø³Ø§Ø³ Ø§Ù„Ù…ÙˆÙ‚Ø¹',
-                    tab3_highlight: 'Ø£ÙˆÙ„ÙˆÙŠØ§Øª ÙˆØ§Ø¶Ø­Ø©',
-                    tab3_subtitle: 'Ø§Ø¹Ø±Ù Ù…Ø§ ÙŠØ¶Ø¹Ù Ø§Ù„Ø«Ù‚Ø© ÙˆØ§Ù„Ù‚Ø±Ø§Ø¡Ø© ÙˆØ§Ù„Ø³Ø±Ø¹Ø© ÙˆØ§Ù„Ø¨Ù†ÙŠØ©.',
-                    tab4_title: 'ÙØ±Øµ Ø§Ù„Ø¨Ø­Ø«',
-                    tab4_highlight: 'Ø§Ù„Ø±Ø§Ø¨Ø­Ø©',
-                    tab4_subtitle: 'Ø§ÙƒØªØ´Ù Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„ØªÙŠ ØªØ¬Ù…Ø¹ Ø¨ÙŠÙ† Ø§Ù„Ù†ÙŠØ©ØŒ Ø§Ù„Ø±Ø¨Ø­ÙŠØ©ØŒ ÙˆØ³Ù‡ÙˆÙ„Ø© Ø§Ù„ØªÙ†ÙÙŠØ°.',
-                    loading_comp_title: 'Ø¯Ø§ÙƒØ§ ÙŠØ¬Ù‡Ø² Ù…ÙŠØ²ØªÙƒ Ø§Ù„Ù‚Ø§Ø¯Ù…Ø©...',
-                    loading_comp_sub: 'Ø¨ÙŠÙ†Ù…Ø§ ØªØ³ØªÙ…ØªØ¹ Ø¨Ù‚Ù‡ÙˆØªÙƒØŒ ØªØªØ­ÙˆÙ„ Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø³ÙˆÙ‚ Ø¥Ù„Ù‰ Ù‚Ø±Ø§Ø±Ø§Øª ÙˆØ§Ø¶Ø­Ø©.',
-                    loading_funnel_title: 'Ø¯Ø§ÙƒØ§ ÙŠÙƒØ´Ù Ù†Ù‚Ø§Ø· Ø§Ù„Ø§Ø­ØªÙƒØ§Ùƒ...',
-                    loading_funnel_sub: 'Ø£Ø«Ù†Ø§Ø¡ Ø§Ø³ØªØ±Ø§Ø­ØªÙƒØŒ ØªØªØ­ÙˆÙ„ Ø§Ù„Ø®Ø³Ø§Ø¦Ø± Ø§Ù„Ø®ÙÙŠØ© Ø¥Ù„Ù‰ ØªØµØ­ÙŠØ­Ø§Øª Ø¹Ù…Ù„ÙŠØ©.',
-                    context_comp_title: 'Ø§Ø¬Ø¹Ù„ Ø§Ù„ØªÙ‚Ø±ÙŠØ± Ø£ÙƒØ«Ø± ÙˆØ§Ù‚Ø¹ÙŠØ© Ø¨Ø«Ù„Ø§Ø« Ù…Ø±Ø§Øª',
-                    context_comp_sub: 'Ø£Ø¶Ù Ø¹Ø±Ø¶ÙƒØŒ Ø¬Ù…Ù‡ÙˆØ±ÙƒØŒ ÙˆÙ‡Ø¯ÙÙƒ Ø­ØªÙ‰ ØªØ­ØµÙ„ Ø¹Ù„Ù‰ Ø®Ø·ÙˆØ§Øª Ù…Ù†Ø§Ø³Ø¨Ø© Ù„ÙˆØ¶Ø¹Ùƒ Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠ.',
-                    context_comp_badge: 'Ø§Ø®ØªÙŠØ§Ø±ÙŠ - Ù…ÙˆØµÙ‰ Ø¨Ù‡',
-                    context_offer_label: 'Ø§Ù„Ø¹Ø±Ø¶ Ø§Ù„Ø¯Ù‚ÙŠÙ‚',
-                    context_offer_ph: 'Ù…Ø«Ø§Ù„: Ø¨Ø±Ù†Ø§Ù…Ø¬ ØªØ³ÙˆÙŠÙ‚ Ù…Ø¹ ØªÙƒÙˆÙŠÙ† Ù…Ø¯Ù…Ø¬',
-                    context_audience_label: 'Ø§Ù„Ø¹Ù…ÙŠÙ„ Ø§Ù„Ù…Ø«Ø§Ù„ÙŠ',
-                    context_audience_ph: 'Ù…Ø«Ø§Ù„: Ø´Ø±ÙƒØ§Øª Ù…ØºØ±Ø¨ÙŠØ© ØµØºÙŠØ±Ø©ØŒ Ù…Ø¯Ø±Ø¨ÙˆÙ†ØŒ Ù…ØªØ§Ø¬Ø± Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠØ©',
-                    context_objective_label: 'Ø§Ù„Ù‡Ø¯Ù Ø§Ù„Ø£ÙˆÙ„',
-                    context_objective_ph: 'Ù…Ø«Ø§Ù„: Ø¨ÙŠØ¹ØŒ Ø¬Ù„Ø¨ Ø¹Ù…Ù„Ø§Ø¡ØŒ Ø­Ø¬Ø² Ù…ÙˆØ§Ø¹ÙŠØ¯',
-                    context_price_label: 'Ø§Ù„Ø³Ø¹Ø± Ø£Ùˆ Ø§Ù„Ù…ÙŠØ²Ø§Ù†ÙŠØ©',
-                    context_price_ph: 'Ù…Ø«Ø§Ù„: 499 Ø¯Ø±Ù‡Ù…/Ø´Ù‡Ø±ØŒ Ø³Ù„Ø© 900 Ø¯Ø±Ù‡Ù…ØŒ Ù…ÙŠØ²Ø§Ù†ÙŠØ© 200 Ø¯Ø±Ù‡Ù…/ÙŠÙˆÙ…',
-                    context_known_comp_label: 'Ù…Ù†Ø§ÙØ³ÙˆÙ† Ù…Ø¹Ø±ÙˆÙÙˆÙ†',
-                    context_known_comp_ph: 'Ù…Ø«Ø§Ù„: site1.comØŒ Ø¹Ù„Ø§Ù…Ø© ØªØ¬Ø§Ø±ÙŠØ©ØŒ ØµÙØ­Ø© Ø¥Ù†Ø³ØªØºØ±Ø§Ù…',
-                    context_geo_label: 'Ø§Ù„Ù…Ù†Ø·Ù‚Ø© Ø§Ù„Ù…Ø³ØªÙ‡Ø¯ÙØ©',
-                    context_geo_ph: 'Ù…Ø«Ø§Ù„: Ø§Ù„Ù…ØºØ±Ø¨ØŒ Ø§Ù„Ø¯Ø§Ø± Ø§Ù„Ø¨ÙŠØ¶Ø§Ø¡ØŒ Ø§Ù„Ø´Ø±Ù‚ Ø§Ù„Ø£ÙˆØ³Ø·',
-                    context_funnel_title: 'Ø£Ø¶Ù Ø³ÙŠØ§Ù‚ Ø§Ù„ØµÙØ­Ø©',
-                    context_funnel_sub: 'ÙƒÙ„Ù…Ø§ ÙƒØ§Ù† Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ù‡Ø¯Ù Ø£ÙˆØ¶Ø­ØŒ Ø£ØµØ¨Ø­Øª Ø§Ù„ØªÙˆØµÙŠØ§Øª Ø¹Ù…Ù„ÙŠØ© Ø£ÙƒØ«Ø±: Ù†ØµÙˆØµØŒ Ø«Ù‚Ø©ØŒ Ø³Ø¹Ø±ØŒ Ø£Ø²Ø±Ø§Ø±ØŒ ÙˆØ§Ø¹ØªØ±Ø§Ø¶Ø§Øª.',
-                    context_funnel_badge: 'Ù„Ø®Ø·Ø© ÙˆØ§Ù‚Ø¹ÙŠØ©',
-                    context_funnel_offer_label: 'Ø§Ù„Ø¹Ø±Ø¶ Ø£Ùˆ Ø§Ù„ÙˆØ¹Ø¯',
-                    context_funnel_offer_ph: 'Ù…Ø«Ø§Ù„: ØªØ¯Ù‚ÙŠÙ‚ ØªØ³ÙˆÙŠÙ‚ÙŠØŒ ØªÙƒÙˆÙŠÙ†ØŒ Ù…Ù†ØªØ¬ Ù…ØªØ¬Ø± Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ',
-                    context_funnel_audience_label: 'Ø§Ù„Ø¬Ù…Ù‡ÙˆØ± Ø§Ù„Ù…Ø³ØªÙ‡Ø¯Ù',
-                    context_funnel_audience_ph: 'Ù…Ø«Ø§Ù„: Ø±ÙˆØ§Ø¯ Ø£Ø¹Ù…Ø§Ù„ØŒ Ø´Ø±ÙƒØ§Øª ØµØºÙŠØ±Ø©ØŒ ÙˆÙƒØ§Ù„Ø§Øª',
-                    context_funnel_objective_label: 'Ø§Ù„ÙØ¹Ù„ Ø§Ù„Ù…Ø·Ù„ÙˆØ¨',
-                    context_funnel_objective_ph: 'Ù…Ø«Ø§Ù„: Ø´Ø±Ø§Ø¡ØŒ Ù…ÙƒØ§Ù„Ù…Ø©ØŒ Ù†Ù…ÙˆØ°Ø¬ØŒ ÙˆØ§ØªØ³Ø§Ø¨ØŒ Ø¹Ø±Ø¶ ØªØ¬Ø±ÙŠØ¨ÙŠ',
-                    context_funnel_price_label: 'Ø§Ù„Ø³Ø¹Ø± Ø£Ùˆ Ù†Ø·Ø§Ù‚ Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ø­Ø§Ù„ÙŠ',
-                    context_funnel_price_ph: 'Ù…Ø«Ø§Ù„: 149 Ø¯Ø±Ù‡Ù… Ø£Ùˆ 179-199 Ø¯Ø±Ù‡Ù…',
-                    context_funnel_known_comp_label: 'ØµÙØ­Ø§Øª Ù„Ù„Ù…Ù‚Ø§Ø±Ù†Ø©',
-                    context_funnel_known_comp_ph: 'Ù…Ø«Ø§Ù„: competitor.comØŒ ØµÙØ­Ø© Ù…Ø±Ø¬Ø¹ÙŠØ©ØŒ Ø¹Ù„Ø§Ù…Ø© ØªØ¬Ø§Ø±ÙŠØ©',
-                    context_funnel_geo_label: 'Ø§Ù„Ø³ÙˆÙ‚ Ø§Ù„Ù…Ø³ØªÙ‡Ø¯Ù',
-                    context_funnel_geo_ph: 'Ù…Ø«Ø§Ù„: Ø§Ù„Ù…ØºØ±Ø¨ØŒ ÙØ±Ù†Ø³Ø§ØŒ Ø§Ù„Ø¯Ø§Ø± Ø§Ù„Ø¨ÙŠØ¶Ø§Ø¡ØŒ Ø§Ù„Ø®Ù„ÙŠØ¬',
-                    btn_keywords: 'Ø§ÙƒØªØ´Ù Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ø±Ø§Ø¨Ø­Ø©'
+                    appbadge: 'ذكاء السوق',
+                    tab1_title: 'ذكاء السوق',
+                    tab1_title_highlight: 'المنافسون',
+                    tab1_subtitle: 'افهم من يربح في السوق، لماذا يربح، وما الحركة العملية التي تقربك منه.',
+                    label_keyword: 'السوق أو المجال أو كلمة البحث',
+                    placeholder_keyword: 'مثال: SaaS marketing Maroc',
+                    label_url: 'موقعك للمقارنة المباشرة',
+                    label_country: 'البلد ونتائج البحث المستهدفة',
+                    label_analysis_lang: 'لغة التقرير',
+                    btn_analyze: 'اكشف فرص السوق',
+                    tab2_title: 'صحح صفحة البيع',
+                    tab2_subtitle: 'تغييرات عملية، أدلة مرصودة، ونصوص جاهزة للاختبار.',
+                    label_funnel_url: 'رابط الموقع أو صفحة الهبوط',
+                    label_funnel_style: 'زاوية التوصية',
+                    funnel_power_engine: 'تحليل التحويل مفعل:',
+                    btn_funnel: 'تدقيق الفانل',
+                    tab3_title: 'افحص أساس الموقع',
+                    tab3_highlight: 'أولويات واضحة',
+                    tab3_subtitle: 'اعرف ما يضعف الثقة والقراءة والسرعة والبنية.',
+                    tab4_title: 'فرص البحث',
+                    tab4_highlight: 'الرابحة',
+                    tab4_subtitle: 'اكتشف الكلمات التي تجمع بين النية، الربحية، وسهولة التنفيذ.',
+                    loading_comp_title: 'داكا يجهز ميزتك القادمة...',
+                    loading_comp_sub: 'بينما تستمتع بقهوتك، تتحول إشارات السوق إلى قرارات واضحة.',
+                    loading_funnel_title: 'داكا يكشف نقاط الاحتكاك...',
+                    loading_funnel_sub: 'أثناء استراحتك، تتحول الخسائر الخفية إلى تصحيحات عملية.',
+                    context_comp_title: 'اجعل التقرير أكثر واقعية بثلاث مرات',
+                    context_comp_sub: 'أضف عرضك، جمهورك، وهدفك حتى تحصل على خطوات مناسبة لوضعك الحقيقي.',
+                    context_comp_badge: 'اختياري - موصى به',
+                    context_offer_label: 'العرض الدقيق',
+                    context_offer_ph: 'مثال: برنامج تسويق مع تكوين مدمج',
+                    context_audience_label: 'العميل المثالي',
+                    context_audience_ph: 'مثال: شركات مغربية صغيرة، مدربون، متاجر إلكترونية',
+                    context_objective_label: 'الهدف الأول',
+                    context_objective_ph: 'مثال: بيع، جلب عملاء، حجز مواعيد',
+                    context_price_label: 'السعر أو الميزانية',
+                    context_price_ph: 'مثال: 499 درهم/شهر، سلة 900 درهم، ميزانية 200 درهم/يوم',
+                    context_known_comp_label: 'منافسون معروفون',
+                    context_known_comp_ph: 'مثال: site1.com، علامة تجارية، صفحة إنستغرام',
+                    context_geo_label: 'المنطقة المستهدفة',
+                    context_geo_ph: 'مثال: المغرب، الدار البيضاء، الشرق الأوسط',
+                    context_funnel_title: 'أضف سياق الصفحة',
+                    context_funnel_sub: 'كلما كان العرض والهدف أوضح، أصبحت التوصيات عملية أكثر: نصوص، ثقة، سعر، أزرار، واعتراضات.',
+                    context_funnel_badge: 'لخطة واقعية',
+                    context_funnel_offer_label: 'العرض أو الوعد',
+                    context_funnel_offer_ph: 'مثال: تدقيق تسويقي، تكوين، منتج متجر إلكتروني',
+                    context_funnel_audience_label: 'الجمهور المستهدف',
+                    context_funnel_audience_ph: 'مثال: رواد أعمال، شركات صغيرة، وكالات',
+                    context_funnel_objective_label: 'الفعل المطلوب',
+                    context_funnel_objective_ph: 'مثال: شراء، مكالمة، نموذج، واتساب، عرض تجريبي',
+                    context_funnel_price_label: 'السعر أو نطاق السعر الحالي',
+                    context_funnel_price_ph: 'مثال: 149 درهم أو 179-199 درهم',
+                    context_funnel_known_comp_label: 'صفحات للمقارنة',
+                    context_funnel_known_comp_ph: 'مثال: competitor.com، صفحة مرجعية، علامة تجارية',
+                    context_funnel_geo_label: 'السوق المستهدف',
+                    context_funnel_geo_ph: 'مثال: المغرب، فرنسا، الدار البيضاء، الخليج',
+                    btn_keywords: 'اكتشف الكلمات الرابحة'
                 }
             };
 
@@ -660,28 +660,28 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.assign(TRANSLATIONS.fr, {
             appname: 'Daka Market Intelligence Spyer',
             appbadge: 'MARKET INTEL',
-            navkeywords: 'Demande marchÃ©',
+            navkeywords: 'Demande marché',
             navtechnical: 'Audit site',
-            tab1_title: 'Lecture du marchÃ©',
+            tab1_title: 'Lecture du marché',
             tab1_title_highlight: 'Concurrents',
-            tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrÃ¨te peut vous faire prendre sa place.',
+            tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrète peut vous faire prendre sa place.',
             tab2_title: 'Corriger une page qui vend',
-            tab3_title: 'VÃ©rifier les bases du site',
-            tab3_highlight: 'PrioritÃ©s claires',
-            tab4_title: 'OpportunitÃ©s de',
+            tab3_title: 'Vérifier les bases du site',
+            tab3_highlight: 'Priorités claires',
+            tab4_title: 'Opportunités de',
             tab4_highlight: 'recherche',
             label_analysis_lang: 'Langue du rapport',
             funnel_power_engine: 'Analyse active:',
-            loading_comp_title: 'Daka prÃ©pare votre avantage',
-            loading_comp_sub: 'Le temps de votre cafÃ©, les signaux du marchÃ© deviennent des dÃ©cisions claires.',
-            loading_funnel_title: 'Daka rÃ©vÃ¨le les points de friction',
-            loading_funnel_sub: 'Pendant votre pause, les pertes invisibles deviennent des corrections concrÃ¨tes.',
-            loading_tech_title: 'Daka sÃ©curise les fondations',
-            loading_tech_sub: 'Pendant que la sphÃ¨re analyse, les blocages se rangent par urgence.',
+            loading_comp_title: 'Daka prépare votre avantage',
+            loading_comp_sub: 'Le temps de votre café, les signaux du marché deviennent des décisions claires.',
+            loading_funnel_title: 'Daka révèle les points de friction',
+            loading_funnel_sub: 'Pendant votre pause, les pertes invisibles deviennent des corrections concrètes.',
+            loading_tech_title: 'Daka sécurise les fondations',
+            loading_tech_sub: 'Pendant que la sphère analyse, les blocages se rangent par urgence.',
             loading_kw_title: 'Daka fait remonter les meilleures demandes',
-            loading_kw_sub: 'Pendant que vous respirez, les demandes utiles remontent Ã  la surface.',
-            phase_tech_3: 'CompatibilitÃ© lecture',
-            btn_keywords: 'TROUVER LES MOTS-CLÃ‰S GAGNANTS'
+            loading_kw_sub: 'Pendant que vous respirez, les demandes utiles remontent à la surface.',
+            phase_tech_3: 'Compatibilité lecture',
+            btn_keywords: 'TROUVER LES MOTS-CLÉS GAGNANTS'
         });
         Object.assign(TRANSLATIONS.en, {
             appname: 'Daka Market Intelligence Spyer',
@@ -710,37 +710,37 @@ document.addEventListener('DOMContentLoaded', () => {
             btn_keywords: 'FIND WINNING KEYWORDS'
         });
         Object.assign(TRANSLATIONS.ar, {
-            appname: 'Ø¯Ø§ÙƒØ§ Ù„Ø§Ø³ØªØ®Ø¨Ø§Ø±Ø§Øª Ø§Ù„Ø³ÙˆÙ‚',
-            appbadge: 'Ø°ÙƒØ§Ø¡ Ø§Ù„Ø³ÙˆÙ‚',
-            navkeywords: 'Ø·Ù„Ø¨ Ø§Ù„Ø³ÙˆÙ‚',
-            navtechnical: 'ÙØ­Øµ Ø§Ù„Ù…ÙˆÙ‚Ø¹',
-            tab1_title: 'Ø°ÙƒØ§Ø¡ Ø§Ù„Ø³ÙˆÙ‚',
-            tab1_title_highlight: 'Ø§Ù„Ù…Ù†Ø§ÙØ³ÙˆÙ†',
-            tab1_subtitle: 'Ø§ÙÙ‡Ù… Ù…Ù† ÙŠØ±Ø¨Ø­ØŒ Ù„Ù…Ø§Ø°Ø§ ÙŠØ±Ø¨Ø­ØŒ ÙˆÙ…Ø§ Ø§Ù„Ø­Ø±ÙƒØ© Ø§Ù„Ø¹Ù…Ù„ÙŠØ© Ø§Ù„ØªÙŠ ØªÙ‚Ø±Ø¨Ùƒ Ù…Ù† Ø§Ù„Ø³ÙˆÙ‚.',
-            tab2_title: 'Ø¥ØµÙ„Ø§Ø­ ØµÙØ­Ø© Ø§Ù„Ø¨ÙŠØ¹',
-            tab3_title: 'ÙØ­Øµ Ø£Ø³Ø§Ø³ Ø§Ù„Ù…ÙˆÙ‚Ø¹',
-            tab3_highlight: 'Ø£ÙˆÙ„ÙˆÙŠØ§Øª ÙˆØ§Ø¶Ø­Ø©',
-            tab4_title: 'ÙØ±Øµ Ø§Ù„Ø¨Ø­Ø«',
-            tab4_highlight: 'Ø§Ù„Ø±Ø§Ø¨Ø­Ø©',
-            label_analysis_lang: 'Ù„ØºØ© Ø§Ù„ØªÙ‚Ø±ÙŠØ±',
-            funnel_power_engine: 'Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ù…ÙØ¹Ù„:',
-            loading_comp_title: 'Ø¯Ø§ÙƒØ§ ÙŠØ¬Ù‡Ø² Ù…ÙŠØ²ØªÙƒ Ø§Ù„Ù‚Ø§Ø¯Ù…Ø©',
-            loading_comp_sub: 'Ø¨ÙŠÙ†Ù…Ø§ ØªØ³ØªÙ…ØªØ¹ Ø¨Ù‚Ù‡ÙˆØªÙƒØŒ ØªØªØ­ÙˆÙ„ Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø³ÙˆÙ‚ Ø¥Ù„Ù‰ Ù‚Ø±Ø§Ø±Ø§Øª ÙˆØ§Ø¶Ø­Ø©.',
-            loading_funnel_title: 'Ø¯Ø§ÙƒØ§ ÙŠÙƒØ´Ù Ù†Ù‚Ø§Ø· Ø§Ù„Ø§Ø­ØªÙƒØ§Ùƒ',
-            loading_funnel_sub: 'Ø£Ø«Ù†Ø§Ø¡ Ø§Ø³ØªØ±Ø§Ø­ØªÙƒØŒ ØªØªØ­ÙˆÙ„ Ø§Ù„Ø®Ø³Ø§Ø¦Ø± Ø§Ù„Ø®ÙÙŠØ© Ø¥Ù„Ù‰ ØªØµØ­ÙŠØ­Ø§Øª Ø¹Ù…Ù„ÙŠØ©.',
-            loading_tech_title: 'Ø¯Ø§ÙƒØ§ ÙŠØ«Ø¨Øª Ø§Ù„Ø£Ø³Ø§Ø³',
-            loading_tech_sub: 'Ø¨ÙŠÙ†Ù…Ø§ ØªØªØ­Ø±Ùƒ Ø§Ù„ÙƒØ±Ø©ØŒ ØªÙØ±ØªÙ‘Ø¨ Ø§Ù„Ø¹ÙˆØ§Ø¦Ù‚ Ø­Ø³Ø¨ Ø¯Ø±Ø¬Ø© Ø§Ù„Ø§Ø³ØªØ¹Ø¬Ø§Ù„.',
-            loading_kw_title: 'Ø¯Ø§ÙƒØ§ ÙŠØ±ÙØ¹ Ø£ÙØ¶Ù„ Ø§Ù„Ø·Ù„Ø¨Ø§Øª',
-            loading_kw_sub: 'Ø¨ÙŠÙ†Ù…Ø§ ØªØ£Ø®Ø° Ù†ÙØ³Ø§ Ù‡Ø§Ø¯Ø¦Ø§ØŒ ØªØµØ¹Ø¯ Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ù…ÙÙŠØ¯Ø© Ø¥Ù„Ù‰ Ø§Ù„Ø³Ø·Ø­.',
-            phase_tech_3: 'ØªÙˆØ§ÙÙ‚ Ø§Ù„Ù‚Ø±Ø§Ø¡Ø©',
-            btn_keywords: 'Ø§ÙƒØªØ´Ù Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ø±Ø§Ø¨Ø­Ø©'
+            appname: 'داكا لاستخبارات السوق',
+            appbadge: 'ذكاء السوق',
+            navkeywords: 'طلب السوق',
+            navtechnical: 'فحص الموقع',
+            tab1_title: 'ذكاء السوق',
+            tab1_title_highlight: 'المنافسون',
+            tab1_subtitle: 'افهم من يربح، لماذا يربح، وما الحركة العملية التي تقربك من السوق.',
+            tab2_title: 'إصلاح صفحة البيع',
+            tab3_title: 'فحص أساس الموقع',
+            tab3_highlight: 'أولويات واضحة',
+            tab4_title: 'فرص البحث',
+            tab4_highlight: 'الرابحة',
+            label_analysis_lang: 'لغة التقرير',
+            funnel_power_engine: 'التحليل مفعل:',
+            loading_comp_title: 'داكا يجهز ميزتك القادمة',
+            loading_comp_sub: 'بينما تستمتع بقهوتك، تتحول إشارات السوق إلى قرارات واضحة.',
+            loading_funnel_title: 'داكا يكشف نقاط الاحتكاك',
+            loading_funnel_sub: 'أثناء استراحتك، تتحول الخسائر الخفية إلى تصحيحات عملية.',
+            loading_tech_title: 'داكا يثبت الأساس',
+            loading_tech_sub: 'بينما تتحرك الكرة، تُرتّب العوائق حسب درجة الاستعجال.',
+            loading_kw_title: 'داكا يرفع أفضل الطلبات',
+            loading_kw_sub: 'بينما تأخذ نفسا هادئا، تصعد الطلبات المفيدة إلى السطح.',
+            phase_tech_3: 'توافق القراءة',
+            btn_keywords: 'اكتشف الكلمات الرابحة'
         });
         deepRepairMojibake(TRANSLATIONS);
         i18n.setLanguage(i18n.currentLang || STATE.currentLang || 'fr');
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // ðŸž TOAST NOTIFICATION SYSTEM
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ═══════════════════════════════════════════════════════════════════
+        // 🍞 TOAST NOTIFICATION SYSTEM
+        // ═══════════════════════════════════════════════════════════════════
 
         class ToastManager {
             constructor() {
@@ -793,9 +793,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const toast = new ToastManager();
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // ðŸ”Œ API CLIENT - WITH RETRY LOGIC
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔌 API CLIENT - WITH RETRY LOGIC
+        // ═══════════════════════════════════════════════════════════════════
 
         class APIClient {
             constructor(baseURL) {
@@ -827,7 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 STATE.requestsCount++;
 
                 if (CONFIG.DEBUG_MODE) {
-                    console.log(`ðŸ”Œ API Request [${STATE.requestsCount}]:`, url, mergedOptions);
+                    console.log(`🔌 API Request [${STATE.requestsCount}]:`, url, mergedOptions);
                 }
 
                 try {
@@ -863,7 +863,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await response.json();
 
                     if (CONFIG.DEBUG_MODE) {
-                        console.log(`âœ… API Response [${STATE.requestsCount}]:`, data);
+                        console.log(`✅ API Response [${STATE.requestsCount}]:`, data);
                     }
 
                     this.retryCount = 0; // Reset on success
@@ -871,7 +871,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 } catch (error) {
                     if (CONFIG.DEBUG_MODE) {
-                        console.error(`âŒ API Error [${STATE.requestsCount}]:`, error);
+                        console.error(`❌ API Error [${STATE.requestsCount}]:`, error);
                     }
 
                     // Never replay analysis POST requests: the server may still be processing
@@ -887,7 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         isRetryableNetworkError) {
 
                         this.retryCount++;
-                        console.warn(`â³ Retry ${this.retryCount}/${CONFIG.MAX_RETRIES} for ${endpoint}`);
+                        console.warn(`⏳ Retry ${this.retryCount}/${CONFIG.MAX_RETRIES} for ${endpoint}`);
 
                         await new Promise(resolve =>
                             setTimeout(resolve, CONFIG.RETRY_DELAY * this.retryCount)
@@ -935,36 +935,36 @@ const authReady = new Promise(resolve => { resolveAuthReady = resolve; });
 function authCopy() {
     const lang = STATE.currentLang || 'fr';
     if (lang === 'ar') return {
-        login: 'ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„',
-        title: 'Ø§Ø­ØªÙØ¸ Ø¨ØªÙ‚Ø§Ø±ÙŠØ±Ùƒ Ø£ÙŠÙ†Ù…Ø§ ÙƒÙ†Øª',
-        subtitle: 'Ø³Ø¬Ù‘Ù„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ù„Ø¨Ø¯Ø¡ Ø§Ù„ØªØ­Ù„ÙŠÙ„ ÙˆØ­ÙØ¸ Ø§Ù„Ø³Ø¬Ù„ ÙˆÙ…Ø´Ø§Ø±ÙƒØ© Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±.',
-        google: 'Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø© Ø¨Ø§Ø³ØªØ®Ø¯Ø§Ù… Google',
-        email: 'Ø¥Ø±Ø³Ø§Ù„ Ø±Ø§Ø¨Ø· Ø§Ù„Ø¯Ø®ÙˆÙ„',
-        reports: 'ØªÙ‚Ø§Ø±ÙŠØ±Ùƒ',
-        reportsSub: 'Ø§Ù„Ø³Ø¬Ù„ ÙˆØªØªØ¨Ø¹ Ø§Ù„Ø£Ø³Ø¹Ø§Ø± ÙˆØ±ÙˆØ§Ø¨Ø· Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©.',
-        empty: 'Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙ‚Ø§Ø±ÙŠØ± Ù…Ø­ÙÙˆØ¸Ø© Ø¨Ø¹Ø¯.',
-        configuredError: 'ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„ ØºÙŠØ± Ù…ÙØ¹Ù‘Ù„ Ø¨Ø¹Ø¯.',
-        emailSent: 'ØªÙ… Ø¥Ø±Ø³Ø§Ù„ Ø±Ø§Ø¨Ø· Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø¥Ù„Ù‰ Ø¨Ø±ÙŠØ¯Ùƒ.',
-        saved: 'ØªÙ… Ø­ÙØ¸ Ø§Ù„ØªÙ‚Ø±ÙŠØ± ÙÙŠ Ø­Ø³Ø§Ø¨Ùƒ.',
-        saveError: 'ØªØ¹Ø°Ø± Ø­ÙØ¸ Ø§Ù„ØªÙ‚Ø±ÙŠØ±.',
-        view: 'Ø¹Ø±Ø¶ Ø§Ù„ØªÙ‚Ø±ÙŠØ±',
-        pdf: 'ØªÙ†Ø²ÙŠÙ„ DOCX',
-        share: 'Ù…Ø´Ø§Ø±ÙƒØ©',
-        shareCopied: 'ØªÙ… Ù†Ø³Ø® Ø±Ø§Ø¨Ø· Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©.',
-        shareUnavailable: 'ØªØ¹Ø°Ø± Ø¥Ù†Ø´Ø§Ø¡ Ø±Ø§Ø¨Ø· Ø§Ù„Ù…Ø´Ø§Ø±ÙƒØ©.',
-        loadingReport: 'Ø¬Ø§Ø±Ù ÙØªØ­ Ø§Ù„ØªÙ‚Ø±ÙŠØ±...',
-        groqTitle: 'Ø±Ø¨Ø· OpenRouter',
-        groqSubtitle: 'Ø£Ø¶Ù Ù…ÙØªØ§Ø­ OpenRouter Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… Ù…ÙˆÙ„Ø¯ code prompt Ø¹Ø¨Ø± Ø­ØµØªÙƒ Ø§Ù„Ø®Ø§ØµØ©.',
-        groqConnected: 'OpenRouter Ù…ØªØµÙ„',
-        groqDisconnected: 'OpenRouter ØºÙŠØ± Ù…ØªØµÙ„',
-        groqMask: 'ÙŠØ¨Ù‚Ù‰ Ø§Ù„Ù…ÙØªØ§Ø­ Ù…Ø´ÙØ±Ø§ Ø¹Ù„Ù‰ Ø§Ù„Ø®Ø§Ø¯Ù….',
-        groqLabel: 'Ù…ÙØªØ§Ø­ OpenRouter API',
-        groqSave: 'Ø­ÙØ¸ Ù…Ø´ÙØ±',
-        groqDelete: 'Ø­Ø°Ù',
-        groqNote: 'Ù„Ø§ ÙŠØ¹Ø±Ø¶ Daka Ù…ÙØªØ§Ø­Ùƒ Ø£Ø¨Ø¯Ø§. ÙŠØ³ØªØ®Ø¯Ù… ÙÙ‚Ø· ÙÙŠ Ø·Ù„Ø¨Ø§Øª OpenRouter Ø§Ù„ØªÙŠ ØªØ·Ù„Ù‚Ù‡Ø§.',
-        groqSaved: 'ØªÙ… Ø­ÙØ¸ Ù…ÙØªØ§Ø­ OpenRouter Ø¨Ø´ÙƒÙ„ Ù…Ø´ÙØ±.',
-        groqDeleted: 'ØªÙ… Ø­Ø°Ù Ù…ÙØªØ§Ø­ OpenRouter.',
-        groqInvalid: 'Ù…ÙØªØ§Ø­ OpenRouter ØºÙŠØ± ØµØ§Ù„Ø­.'
+        login: 'تسجيل الدخول',
+        title: 'احتفظ بتقاريرك أينما كنت',
+        subtitle: 'سجّل الدخول لبدء التحليل وحفظ السجل ومشاركة التقارير.',
+        google: 'المتابعة باستخدام Google',
+        email: 'إرسال رابط الدخول',
+        reports: 'تقاريرك',
+        reportsSub: 'السجل وتتبع الأسعار وروابط المشاركة.',
+        empty: 'لا توجد تقارير محفوظة بعد.',
+        configuredError: 'تسجيل الدخول غير مفعّل بعد.',
+        emailSent: 'تم إرسال رابط الدخول إلى بريدك.',
+        saved: 'تم حفظ التقرير في حسابك.',
+        saveError: 'تعذر حفظ التقرير.',
+        view: 'عرض التقرير',
+        pdf: 'تنزيل DOCX',
+        share: 'مشاركة',
+        shareCopied: 'تم نسخ رابط المشاركة.',
+        shareUnavailable: 'تعذر إنشاء رابط المشاركة.',
+        loadingReport: 'جارٍ فتح التقرير...',
+        groqTitle: 'ربط OpenRouter',
+        groqSubtitle: 'أضف مفتاح OpenRouter لاستخدام مولد code prompt عبر حصتك الخاصة.',
+        groqConnected: 'OpenRouter متصل',
+        groqDisconnected: 'OpenRouter غير متصل',
+        groqMask: 'يبقى المفتاح مشفرا على الخادم.',
+        groqLabel: 'مفتاح OpenRouter API',
+        groqSave: 'حفظ مشفر',
+        groqDelete: 'حذف',
+        groqNote: 'لا يعرض Daka مفتاحك أبدا. يستخدم فقط في طلبات OpenRouter التي تطلقها.',
+        groqSaved: 'تم حفظ مفتاح OpenRouter بشكل مشفر.',
+        groqDeleted: 'تم حذف مفتاح OpenRouter.',
+        groqInvalid: 'مفتاح OpenRouter غير صالح.'
     };
     if (lang === 'en') return {
         login: 'Sign in',
@@ -1001,34 +1001,34 @@ function authCopy() {
     return {
         login: 'Connexion',
         title: 'Retrouvez vos rapports partout',
-        subtitle: 'Connectez-vous pour lancer une analyse, conserver lâ€™historique et partager vos rapports.',
+        subtitle: 'Connectez-vous pour lancer une analyse, conserver l’historique et partager vos rapports.',
         google: 'Continuer avec Google',
         email: 'Recevoir un lien',
         reports: 'Vos rapports',
         reportsSub: 'Historique, suivi des prix et liens partageables.',
-        empty: 'Aucun rapport enregistrÃ© pour le moment.',
-        configuredError: 'La connexion nâ€™est pas encore configurÃ©e.',
-        emailSent: 'Un lien de connexion a Ã©tÃ© envoyÃ© par email.',
-        saved: 'Rapport enregistrÃ© dans votre compte.',
-        saveError: 'Le rapport nâ€™a pas pu Ãªtre enregistrÃ©.',
+        empty: 'Aucun rapport enregistré pour le moment.',
+        configuredError: 'La connexion n’est pas encore configurée.',
+        emailSent: 'Un lien de connexion a été envoyé par email.',
+        saved: 'Rapport enregistré dans votre compte.',
+        saveError: 'Le rapport n’a pas pu être enregistré.',
         view: 'Voir le rapport',
-        pdf: 'TÃ©lÃ©charger le DOCX',
+        pdf: 'Télécharger le DOCX',
         share: 'Partager',
-        shareCopied: 'Lien de partage copiÃ©.',
-        shareUnavailable: 'Impossible de crÃ©er le lien de partage.',
+        shareCopied: 'Lien de partage copié.',
+        shareUnavailable: 'Impossible de créer le lien de partage.',
         loadingReport: 'Ouverture du rapport...',
         groqTitle: 'Connecter OpenRouter',
-        groqSubtitle: 'Ajoutez votre clÃ© OpenRouter pour utiliser le prompt-to-code avec votre propre quota.',
-        groqConnected: 'OpenRouter connectÃ©',
-        groqDisconnected: 'OpenRouter non connectÃ©',
-        groqMask: 'Votre clÃ© reste chiffrÃ©e cÃ´tÃ© serveur.',
-        groqLabel: 'ClÃ© API OpenRouter',
-        groqSave: 'Enregistrer chiffrÃ©',
+        groqSubtitle: 'Ajoutez votre clé OpenRouter pour utiliser le prompt-to-code avec votre propre quota.',
+        groqConnected: 'OpenRouter connecté',
+        groqDisconnected: 'OpenRouter non connecté',
+        groqMask: 'Votre clé reste chiffrée côté serveur.',
+        groqLabel: 'Clé API OpenRouter',
+        groqSave: 'Enregistrer chiffré',
         groqDelete: 'Supprimer',
-        groqNote: 'Daka nâ€™affiche jamais votre clÃ©. Elle sert uniquement aux appels OpenRouter que vous dÃ©clenchez.',
-        groqSaved: 'ClÃ© OpenRouter enregistrÃ©e et chiffrÃ©e.',
-        groqDeleted: 'ClÃ© OpenRouter supprimÃ©e.',
-        groqInvalid: 'ClÃ© OpenRouter invalide.'
+        groqNote: 'Daka n’affiche jamais votre clé. Elle sert uniquement aux appels OpenRouter que vous déclenchez.',
+        groqSaved: 'Clé OpenRouter enregistrée et chiffrée.',
+        groqDeleted: 'Clé OpenRouter supprimée.',
+        groqInvalid: 'Clé OpenRouter invalide.'
     };
 }
 
@@ -1175,7 +1175,7 @@ async function refreshQuotaBadge(quotaOverride = null) {
     try {
         const quota = quotaOverride || (await api.get('/api/reports/quota', 15000))?.quota;
         const badge = document.getElementById('auth-quota');
-        if (badge && quota) badge.textContent = `${quota.used}/${quota.unlimited ? 'âˆž' : quota.limit}`;
+        if (badge && quota) badge.textContent = `${quota.used}/${quota.unlimited ? '∞' : quota.limit}`;
     } catch (error) {
         console.warn('[Reports] quota unavailable:', error.message);
     }
@@ -1282,7 +1282,7 @@ async function openReportDashboard() {
                 onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();displaySavedReport('${report.id}')}">
                 <div>
                     <strong>${escapeHtml(report.title || report.type)}</strong>
-                    <small>${escapeHtml(report.type)} Â· ${new Date(report.created_at).toLocaleDateString()}</small>
+                    <small>${escapeHtml(report.type)} · ${new Date(report.created_at).toLocaleDateString()}</small>
                 </div>
                 <div class="report-history-actions">
                     <button type="button" onclick="event.stopPropagation();displaySavedReport('${report.id}')" title="${escapeHtml(copy.view)}" aria-label="${escapeHtml(copy.view)}"><i class="fas fa-eye"></i></button>
@@ -1436,11 +1436,11 @@ function renderSharedReportGate(message, mode = 'login') {
     <main class="shared-report-gate" style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#020617;color:#f8fafc;font-family:Inter,Arial,sans-serif">
         <section style="width:min(760px,100%);padding:28px;border:1px solid rgba(125,211,252,.24);border-radius:24px;background:radial-gradient(circle at 8% 0%,rgba(34,211,238,.16),transparent 34%),linear-gradient(145deg,#0f172a,#050816);box-shadow:0 24px 72px rgba(0,0,0,.35)">
             <span style="display:block;color:#7dd3fc;font-size:.75rem;font-weight:950;letter-spacing:.1em;text-transform:uppercase">Daka Market Intelligence Spyer</span>
-            <h1 style="margin:12px 0 8px;font-size:clamp(1.7rem,4vw,3rem);line-height:1.08">${mode === 'subscribe' ? 'Rapport rÃ©servÃ© aux abonnÃ©s' : 'Connexion requise'}</h1>
-            <p style="margin:0;color:#cbd5e1;line-height:1.7">${escapeHtml(message || 'Connectez-vous avec un compte abonnÃ© pour consulter ce rapport partagÃ©.')}</p>
+            <h1 style="margin:12px 0 8px;font-size:clamp(1.7rem,4vw,3rem);line-height:1.08">${mode === 'subscribe' ? 'Rapport réservé aux abonnés' : 'Connexion requise'}</h1>
+            <p style="margin:0;color:#cbd5e1;line-height:1.7">${escapeHtml(message || 'Connectez-vous avec un compte abonné pour consulter ce rapport partagé.')}</p>
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:20px">
                 <button type="button" onclick="location.href='/'" style="min-height:44px;padding:10px 16px;border:0;border-radius:999px;background:linear-gradient(135deg,#22c55e,#06b6d4);color:#03111c;font-weight:950;cursor:pointer">${mode === 'subscribe' ? 'Voir les offres' : escapeHtml(copy.login)}</button>
-                <button type="button" onclick="location.href='/'" style="min-height:44px;padding:10px 16px;border:1px solid rgba(125,211,252,.24);border-radius:999px;background:#10213a;color:#e0f2fe;font-weight:900;cursor:pointer">Retour Ã  Daka</button>
+                <button type="button" onclick="location.href='/'" style="min-height:44px;padding:10px 16px;border:1px solid rgba(125,211,252,.24);border-radius:999px;background:#10213a;color:#e0f2fe;font-weight:900;cursor:pointer">Retour à Daka</button>
             </div>
         </section>
     </main>`;
@@ -1452,7 +1452,7 @@ async function initSharedReportRoute() {
     await Promise.race([authReady, new Promise(resolve => setTimeout(resolve, 3500))]);
     const accessToken = await getAuthAccessToken();
     if (!accessToken) {
-        renderSharedReportGate('Connectez-vous avec un compte abonnÃ© pour ouvrir ce rapport partagÃ©.', 'login');
+        renderSharedReportGate('Connectez-vous avec un compte abonné pour ouvrir ce rapport partagé.', 'login');
         return;
     }
     try {
@@ -1462,7 +1462,7 @@ async function initSharedReportRoute() {
         });
         const payload = await response.json().catch(() => ({}));
         if (response.status === 402) {
-            renderSharedReportGate(payload.message || 'Ce rapport partagÃ© est rÃ©servÃ© aux comptes abonnÃ©s Daka.', 'subscribe');
+            renderSharedReportGate(payload.message || 'Ce rapport partagé est réservé aux comptes abonnés Daka.', 'subscribe');
             return;
         }
         if (!response.ok || !payload.html) throw new Error(payload.message || 'Rapport indisponible.');
@@ -1470,7 +1470,7 @@ async function initSharedReportRoute() {
         document.write(payload.html);
         document.close();
     } catch (error) {
-        renderSharedReportGate(error.message || 'Impossible de charger ce rapport partagÃ©.', 'login');
+        renderSharedReportGate(error.message || 'Impossible de charger ce rapport partagé.', 'login');
     }
 }
 
@@ -1522,18 +1522,18 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
     if (existing && !window.dakaAnalysisCancelled) {
         ensureAnalysisLoader(endpoint);
         toast.info(STATE.currentLang === 'ar'
-            ? 'Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ù‚ÙŠØ¯ Ø§Ù„ØªÙ†ÙÙŠØ° Ø¨Ø§Ù„ÙØ¹Ù„.'
+            ? 'التحليل قيد التنفيذ بالفعل.'
             : STATE.currentLang === 'en'
                 ? 'This analysis is already running.'
-                : 'Cette analyse est dÃ©jÃ  en cours.');
+                : 'Cette analyse est déjà en cours.');
         return Promise.race([
             existing,
             new Promise((_, reject) => setTimeout(() => reject(new Error(
                 STATE.currentLang === 'ar'
-                    ? 'Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ø³Ø§Ø¨Ù‚ Ù„Ø§ ÙŠØ¬ÙŠØ¨. Ø£Ø¹Ø¯ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ø§Ù„Ø¢Ù†.'
+                    ? 'التحليل السابق لا يجيب. أعد المحاولة الآن.'
                     : STATE.currentLang === 'en'
                         ? 'The previous analysis stopped responding. Please try again now.'
-                        : 'Lâ€™analyse prÃ©cÃ©dente ne rÃ©pond plus. Relancez maintenant.'
+                        : 'L’analyse précédente ne répond plus. Relancez maintenant.'
             )), 125000))
         ]).then(data => {
             if (typeof resultsHandler === 'function' && data) resultsHandler(data);
@@ -1583,9 +1583,9 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
     if (!initial?.jobId) return deliver(initial);
 
     const stepsByLang = {
-        fr: ['Collecte des donnÃ©es...', 'Analyse du marchÃ©...', 'Construction du rapport...', 'Finalisation...'],
+        fr: ['Collecte des données...', 'Analyse du marché...', 'Construction du rapport...', 'Finalisation...'],
         en: ['Collecting data...', 'Analyzing the market...', 'Building the report...', 'Finalizing...'],
-        ar: ['Ø¬Ù…Ø¹ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª...', 'ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ø³ÙˆÙ‚...', 'Ø¥Ø¹Ø¯Ø§Ø¯ Ø§Ù„ØªÙ‚Ø±ÙŠØ±...', 'Ø§Ù„Ù„Ù…Ø³Ø§Øª Ø§Ù„Ø£Ø®ÙŠØ±Ø©...']
+        ar: ['جمع البيانات...', 'تحليل السوق...', 'إعداد التقرير...', 'اللمسات الأخيرة...']
     };
     const steps = stepsByLang[STATE.currentLang] || stepsByLang.fr;
     const startedAt = Date.now();
@@ -1610,10 +1610,10 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
 
     throw new Error(
         STATE.currentLang === 'ar'
-            ? 'Ø§Ù†ØªÙ‡Øª Ø§Ù„Ù…Ù‡Ù„Ø© â€” Ø£Ø¹Ø¯ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø© Ø¨Ø¹Ø¯ Ø¨Ø¶Ø¹ Ø«ÙˆØ§Ù†.'
+            ? 'انتهت المهلة — أعد المحاولة بعد بضع ثوان.'
             : STATE.currentLang === 'en'
-                ? 'Timeout â€” try again in a few seconds.'
-                : 'Timeout â€” rÃ©essaie dans quelques secondes.'
+                ? 'Timeout — try again in a few seconds.'
+                : 'Timeout — réessaie dans quelques secondes.'
     );
     })();
 
@@ -1721,7 +1721,7 @@ const DakaSound = (() => {
         const arpGain = c.createGain();
         arpGain.gain.value = LOADER_ARP_BUS_VOLUME;
         arpGain.connect(filter);
-        // Progression classique lente, pensÃ©e comme une ambiance d'Ã©tude discrÃ¨te.
+        // Progression classique lente, pensée comme une ambiance d'étude discrète.
         const arpNotes = [261.63, 329.63, 392, 493.88, 440, 349.23, 293.66, 220];
         let arpStep = 0;
         const arpTimer = setInterval(() => {
@@ -1799,9 +1799,9 @@ const DakaSound = (() => {
     return { click, loaderStart, loaderStop, setEnabled };
 })();
 window.DakaSound = DakaSound;
- // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸŽ¯ TAB MANAGEMENT - VERSION BLINDÃ‰E (DYNAMIQUE)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+ // ═══════════════════════════════════════════════════════════════════
+// 🎯 TAB MANAGEMENT - VERSION BLINDÉE (DYNAMIQUE)
+// ═══════════════════════════════════════════════════════════════════
 class TabManager {
     constructor() {
         this.navButtons = document.querySelectorAll('.nav-btn');
@@ -1823,8 +1823,8 @@ class TabManager {
         const targetTab = document.getElementById(safeTabName + 'Tab');
 
         if (!targetTab) {
-            console.error(`âŒ Onglet introuvable: ${safeTabName}Tab`);
-            if (typeof toast !== 'undefined') toast.error(STATE.currentLang === 'ar' ? 'Ø§Ù„Ù‚Ø³Ù… ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯' : 'Onglet introuvable.');
+            console.error(`❌ Onglet introuvable: ${safeTabName}Tab`);
+            if (typeof toast !== 'undefined') toast.error(STATE.currentLang === 'ar' ? 'القسم غير موجود' : 'Onglet introuvable.');
             return null;
         }
 
@@ -1843,7 +1843,7 @@ class TabManager {
             btn.setAttribute('aria-selected', 'false');
         });
 
-        // Activer l'onglet ciblÃ©
+        // Activer l'onglet ciblé
         targetTab.classList.add('active');
         targetTab.setAttribute('aria-hidden', 'false');
 
@@ -1870,9 +1870,9 @@ class TabManager {
 const tabManager = new TabManager();
 window.tabManager = tabManager;
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // ðŸ” SERVER STATUS CHECKER
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ═══════════════════════════════════════════════════════════════════
+        // 🔍 SERVER STATUS CHECKER
+        // ═══════════════════════════════════════════════════════════════════
 
         async function checkServerStatus() {
             const statusEl = document.getElementById('serverStatus');
@@ -1901,9 +1901,9 @@ window.tabManager = tabManager;
             }
         }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ›¸ MOTEUR DE CHARGEMENT DEEP INTEL (STEPS & PHASES DYNAMIQUES)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🛸 MOTEUR DE CHARGEMENT DEEP INTEL (STEPS & PHASES DYNAMIQUES)
+// ═══════════════════════════════════════════════════════════════════
 window.dakaCurrentAbortController = null;
 window.dakaAnalysisCancelled = false;
 window.dakaActiveAnalysisId = 0;
@@ -1914,26 +1914,26 @@ const DAKA_LOADER_COPY = {
   competitors: {
     kicker: 'Analyse concurrentielle',
     title: 'Daka cartographie vos vrais adversaires',
-    subtitle: 'Nous repÃ©rons les concurrents utiles, leurs angles faibles et les opportunitÃ©s Ã  exploiter.',
-    hooks: ['Concurrents rÃ©els', 'Angles dâ€™attaque', 'Plan de conquÃªte']
+    subtitle: 'Nous repérons les concurrents utiles, leurs angles faibles et les opportunités à exploiter.',
+    hooks: ['Concurrents réels', 'Angles d’attaque', 'Plan de conquête']
   },
   funnel: {
     kicker: 'Analyse funnel',
-    title: 'Daka rÃ©vÃ¨le les pertes invisibles',
+    title: 'Daka révèle les pertes invisibles',
     subtitle: 'Nous suivons le parcours, les frictions et les signaux qui bloquent la conversion.',
     hooks: ['Parcours client', 'Friction', 'Conversion']
   },
   technical: {
-    kicker: 'Audit de prÃ©sence digitale',
-    title: 'Daka inspecte les fondations de votre marchÃ©',
-    subtitle: 'Structure, performance et signaux de confiance sont classÃ©s selon leur impact business.',
-    hooks: ['Fondations', 'Confiance', 'PrioritÃ©s business']
+    kicker: 'Audit de présence digitale',
+    title: 'Daka inspecte les fondations de votre marché',
+    subtitle: 'Structure, performance et signaux de confiance sont classés selon leur impact business.',
+    hooks: ['Fondations', 'Confiance', 'Priorités business']
   },
   keywords: {
-    kicker: 'Lecture de la demande marchÃ©',
+    kicker: 'Lecture de la demande marché',
     title: 'Daka fait remonter les demandes rentables',
-    subtitle: 'Nous filtrons les intentions utiles pour rÃ©vÃ©ler les sujets qui peuvent attirer une audience qualifiÃ©e.',
-    hooks: ['Intentions', 'Demande utile', 'OpportunitÃ©s']
+    subtitle: 'Nous filtrons les intentions utiles pour révéler les sujets qui peuvent attirer une audience qualifiée.',
+    hooks: ['Intentions', 'Demande utile', 'Opportunités']
   }
 };
 
@@ -1998,7 +1998,7 @@ function cancelDakaAnalysis() {
   window.dakaFunnelAnalysisInFlight = null;
   window.dakaAnalysisInFlight?.clear();
   hideDakaLoader();
-  toast.info(STATE.currentLang === 'ar' ? 'ØªÙ… Ø¥Ù„ØºØ§Ø¡ Ø§Ù„ØªØ­Ù„ÙŠÙ„.' : STATE.currentLang === 'en' ? 'Analysis cancelled.' : 'Analyse annulÃ©e.');
+  toast.info(STATE.currentLang === 'ar' ? 'تم إلغاء التحليل.' : STATE.currentLang === 'en' ? 'Analysis cancelled.' : 'Analyse annulée.');
 }
 
 function dakaHasRequiredAnalysisInput(buttonId = '') {
@@ -2034,68 +2034,68 @@ function getLoaderTips(elementId) {
   const tips = {
     fr: {
       loadingState: [
-        'â˜• Le temps de savourer votre cafÃ©, Daka sÃ©pare le bruit du marchÃ© des vraies opportunitÃ©s.',
-        'âœ¨ Pendant que la sphÃ¨re respire, les forces concurrentes deviennent des choix clairs.',
-        'ðŸŽ¯ Dans quelques instants, vous verrez quoi garder, quoi corriger et quoi attaquer.'
+        '☕ Le temps de savourer votre café, Daka sépare le bruit du marché des vraies opportunités.',
+        '✨ Pendant que la sphère respire, les forces concurrentes deviennent des choix clairs.',
+        '🎯 Dans quelques instants, vous verrez quoi garder, quoi corriger et quoi attaquer.'
       ],
       loadingFunnel: [
-        'â˜• Pendant votre pause, Daka repÃ¨re les moments oÃ¹ le visiteur hÃ©site.',
-        'ðŸ’Ž Les preuves, les objections et les appels Ã  lâ€™action se remettent en ordre.',
-        'ðŸŽ¯ Vous rÃ©cupÃ©rez bientÃ´t des corrections simples Ã  tester sans deviner.'
+        '☕ Pendant votre pause, Daka repère les moments où le visiteur hésite.',
+        '💎 Les preuves, les objections et les appels à l’action se remettent en ordre.',
+        '🎯 Vous récupérez bientôt des corrections simples à tester sans deviner.'
       ],
       loadingTechnical: [
-        'â˜• Pendant votre cafÃ©, Daka inspecte les bases qui donnent confiance.',
-        'ðŸ›¡ï¸ Les blocages invisibles se rangent du plus urgent au plus utile.',
-        'âš¡ Vous obtenez bientÃ´t une liste courte pour rendre le site plus clair et plus fiable.'
+        '☕ Pendant votre café, Daka inspecte les bases qui donnent confiance.',
+        '🛡️ Les blocages invisibles se rangent du plus urgent au plus utile.',
+        '⚡ Vous obtenez bientôt une liste courte pour rendre le site plus clair et plus fiable.'
       ],
       loadingKeywords: [
-        'â˜• Pendant que vous respirez, Daka laisse remonter les demandes qui comptent.',
-        'ðŸ’¡ Les mots utiles montent Ã  la surface, le bruit redescend.',
-        'ðŸŽ¯ Vous verrez bientÃ´t les sujets que votre audience comprend dÃ©jÃ .'
+        '☕ Pendant que vous respirez, Daka laisse remonter les demandes qui comptent.',
+        '💡 Les mots utiles montent à la surface, le bruit redescend.',
+        '🎯 Vous verrez bientôt les sujets que votre audience comprend déjà.'
       ]
     },
     en: {
       loadingState: [
-        'â˜• While you enjoy your coffee, Daka separates market noise from real opportunity.',
-        'âœ¨ As the orb breathes, competitor signals become clearer choices.',
-        'ðŸŽ¯ In a moment, you will see what to keep, fix, and attack.'
+        '☕ While you enjoy your coffee, Daka separates market noise from real opportunity.',
+        '✨ As the orb breathes, competitor signals become clearer choices.',
+        '🎯 In a moment, you will see what to keep, fix, and attack.'
       ],
       loadingFunnel: [
-        'â˜• During your pause, Daka finds the moments where visitors hesitate.',
-        'ðŸ’Ž Proof, objections, and calls to action are being put back in order.',
-        'ðŸŽ¯ You will soon get simple fixes to test without guessing.'
+        '☕ During your pause, Daka finds the moments where visitors hesitate.',
+        '💎 Proof, objections, and calls to action are being put back in order.',
+        '🎯 You will soon get simple fixes to test without guessing.'
       ],
       loadingTechnical: [
-        'â˜• While your coffee cools, Daka checks the foundations that build trust.',
-        'ðŸ›¡ï¸ Hidden blockers are ranked from most urgent to most useful.',
-        'âš¡ You will soon get a short list to make the site clearer and more reliable.'
+        '☕ While your coffee cools, Daka checks the foundations that build trust.',
+        '🛡️ Hidden blockers are ranked from most urgent to most useful.',
+        '⚡ You will soon get a short list to make the site clearer and more reliable.'
       ],
       loadingKeywords: [
-        'â˜• While you take a breath, Daka lets the demand that matters rise.',
-        'ðŸ’¡ Useful words rise to the surface, noise falls away.',
-        'ðŸŽ¯ You will soon see topics your audience already understands.'
+        '☕ While you take a breath, Daka lets the demand that matters rise.',
+        '💡 Useful words rise to the surface, noise falls away.',
+        '🎯 You will soon see topics your audience already understands.'
       ]
     },
     ar: {
       loadingState: [
-        'â˜• Ø¨ÙŠÙ†Ù…Ø§ ØªØ³ØªÙ…ØªØ¹ Ø¨Ù‚Ù‡ÙˆØªÙƒØŒ ÙŠÙØµÙ„ Ø¯Ø§ÙƒØ§ Ø¶Ø¬ÙŠØ¬ Ø§Ù„Ø³ÙˆÙ‚ Ø¹Ù† Ø§Ù„ÙØ±Øµ Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠØ©.',
-        'âœ¨ ÙˆÙ…Ø¹ ØªÙ†ÙØ³ Ø§Ù„ÙƒØ±Ø©ØŒ ØªØªØ­ÙˆÙ„ Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ù…Ù†Ø§ÙØ³ÙŠÙ† Ø¥Ù„Ù‰ Ø§Ø®ØªÙŠØ§Ø±Ø§Øª Ø£ÙˆØ¶Ø­.',
-        'ðŸŽ¯ Ø¨Ø¹Ø¯ Ù„Ø­Ø¸Ø§Øª Ø³ØªØ±Ù‰ Ù…Ø§ ÙŠØ¬Ø¨ Ø§Ù„Ø­ÙØ§Ø¸ Ø¹Ù„ÙŠÙ‡ØŒ ØªØµØ­ÙŠØ­Ù‡ØŒ ÙˆØ§Ù„Ù‡Ø¬ÙˆÙ… Ø¹Ù„ÙŠÙ‡.'
+        '☕ بينما تستمتع بقهوتك، يفصل داكا ضجيج السوق عن الفرص الحقيقية.',
+        '✨ ومع تنفس الكرة، تتحول إشارات المنافسين إلى اختيارات أوضح.',
+        '🎯 بعد لحظات سترى ما يجب الحفاظ عليه، تصحيحه، والهجوم عليه.'
       ],
       loadingFunnel: [
-        'â˜• Ø£Ø«Ù†Ø§Ø¡ Ø§Ø³ØªØ±Ø§Ø­ØªÙƒØŒ ÙŠØ¨Ø­Ø« Ø¯Ø§ÙƒØ§ Ø¹Ù† Ù„Ø­Ø¸Ø§Øª ØªØ±Ø¯Ø¯ Ø§Ù„Ø²Ø§Ø¦Ø±.',
-        'ðŸ’Ž ÙŠØªÙ… ØªØ±ØªÙŠØ¨ Ø§Ù„Ø£Ø¯Ù„Ø© ÙˆØ§Ù„Ø§Ø¹ØªØ±Ø§Ø¶Ø§Øª ÙˆØ§Ù„Ø¯Ø¹ÙˆØ§Øª Ù„Ù„ÙØ¹Ù„ Ø¨Ù…Ø§ ÙŠÙ‚Ø±Ø¨ Ø§Ù„Ù‚Ø±Ø§Ø±.',
-        'ðŸŽ¯ Ø³ØªØ­ØµÙ„ Ù‚Ø±ÙŠØ¨Ø§ Ø¹Ù„Ù‰ ØªØµØ­ÙŠØ­Ø§Øª Ø¨Ø³ÙŠØ·Ø© ÙŠÙ…ÙƒÙ† Ø§Ø®ØªØ¨Ø§Ø±Ù‡Ø§ Ø¨Ø¯ÙˆÙ† ØªØ®Ù…ÙŠÙ†.'
+        '☕ أثناء استراحتك، يبحث داكا عن لحظات تردد الزائر.',
+        '💎 يتم ترتيب الأدلة والاعتراضات والدعوات للفعل بما يقرب القرار.',
+        '🎯 ستحصل قريبا على تصحيحات بسيطة يمكن اختبارها بدون تخمين.'
       ],
       loadingTechnical: [
-        'â˜• Ø¨ÙŠÙ†Ù…Ø§ Ù‚Ù‡ÙˆØªÙƒ Ø£Ù…Ø§Ù…ÙƒØŒ ÙŠÙØ­Øµ Ø¯Ø§ÙƒØ§ Ø§Ù„Ø£Ø³Ø§Ø³ Ø§Ù„Ø°ÙŠ ÙŠØµÙ†Ø¹ Ø§Ù„Ø«Ù‚Ø©.',
-        'ðŸ›¡ï¸ Ø§Ù„Ø¹ÙˆØ§Ø¦Ù‚ Ø§Ù„Ø®ÙÙŠØ© ØªÙØ±ØªÙ‘Ø¨ Ù…Ù† Ø§Ù„Ø£ÙƒØ«Ø± Ø§Ø³ØªØ¹Ø¬Ø§Ù„Ø§ Ø¥Ù„Ù‰ Ø§Ù„Ø£ÙƒØ«Ø± ÙØ§Ø¦Ø¯Ø©.',
-        'âš¡ Ø³ØªØ­ØµÙ„ Ù‚Ø±ÙŠØ¨Ø§ Ø¹Ù„Ù‰ Ù‚Ø§Ø¦Ù…Ø© Ù‚ØµÙŠØ±Ø© ØªØ¬Ø¹Ù„ Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ø£ÙˆØ¶Ø­ ÙˆØ£ÙƒØ«Ø± Ø«Ù‚Ø©.'
+        '☕ بينما قهوتك أمامك، يفحص داكا الأساس الذي يصنع الثقة.',
+        '🛡️ العوائق الخفية تُرتّب من الأكثر استعجالا إلى الأكثر فائدة.',
+        '⚡ ستحصل قريبا على قائمة قصيرة تجعل الموقع أوضح وأكثر ثقة.'
       ],
       loadingKeywords: [
-        'â˜• Ø¨ÙŠÙ†Ù…Ø§ ØªØ£Ø®Ø° Ù†ÙØ³Ø§ Ù‡Ø§Ø¯Ø¦Ø§ØŒ ÙŠØ±ÙØ¹ Ø¯Ø§ÙƒØ§ Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„ØªÙŠ ØªØ³ØªØ­Ù‚ Ø§Ù„Ø§Ù‡ØªÙ…Ø§Ù….',
-        'ðŸ’¡ Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ù…ÙÙŠØ¯Ø© ØªØµØ¹Ø¯ Ø¥Ù„Ù‰ Ø§Ù„Ø³Ø·Ø­ØŒ ÙˆØ§Ù„Ø¶Ø¬ÙŠØ¬ ÙŠÙ‡Ø¨Ø·.',
-        'ðŸŽ¯ Ø³ØªØ±Ù‰ Ù‚Ø±ÙŠØ¨Ø§ Ù…ÙˆØ§Ø¶ÙŠØ¹ ÙŠÙÙ‡Ù…Ù‡Ø§ Ø¬Ù…Ù‡ÙˆØ±Ùƒ Ø¨Ø§Ù„ÙØ¹Ù„.'
+        '☕ بينما تأخذ نفسا هادئا، يرفع داكا الطلبات التي تستحق الاهتمام.',
+        '💡 الكلمات المفيدة تصعد إلى السطح، والضجيج يهبط.',
+        '🎯 سترى قريبا مواضيع يفهمها جمهورك بالفعل.'
       ]
     }
   };
@@ -2123,7 +2123,7 @@ function hideLoading(elementId) {
   hideDakaLoader();
 }
 
-// Fonction utilisÃ©e par Funnel/Competitors/Tech pour avancer la barre selon l'API
+// Fonction utilisée par Funnel/Competitors/Tech pour avancer la barre selon l'API
 function setLoaderPhase(elementId, index) {
   const wrap = document.getElementById(elementId);
   if (!wrap) return;
@@ -2141,7 +2141,7 @@ function setLoaderPhase(elementId, index) {
 
 
 
-// Garde ton setLoaderPhase EXISTANT tel quel â€” il est correct
+// Garde ton setLoaderPhase EXISTANT tel quel — il est correct
 // Juste ajouter le reset steps quand on avance manuellement :
 function setLoaderPhase(elementId, index) {
   const wrap = document.getElementById(elementId);
@@ -2149,7 +2149,7 @@ function setLoaderPhase(elementId, index) {
   const phases = wrap.querySelectorAll('.loading-phase');
   const bar    = wrap.querySelector('.loading-progress-bar');
 
-  // Stoppe les timers auto des phases (on prend le contrÃ´le manuellement)
+  // Stoppe les timers auto des phases (on prend le contrôle manuellement)
   (_loaderTimers[elementId]?.phases || []).forEach(t => clearTimeout(t));
 
   phases.forEach((p, i) => {
@@ -2211,18 +2211,18 @@ function setLoaderPhase(elementId, index) {
             return 'badge-danger';
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // ðŸŽ¯ TAB 1: COMPETITORS ANALYSIS
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ═══════════════════════════════════════════════════════════════════
+        // 🎯 TAB 1: COMPETITORS ANALYSIS
+        // ═══════════════════════════════════════════════════════════════════
 
-      // Graphique Radar spÃ©cifique pour les 4 piliers AIDA
-// Graphique Radar spÃ©cifique pour les 4 piliers AIDA
+      // Graphique Radar spécifique pour les 4 piliers AIDA
+// Graphique Radar spécifique pour les 4 piliers AIDA
 
 
 // Graphique de Benchmark (Barres)
 function renderBenchmarkChart(data) {
     const ctx = document.getElementById('benchmarkChart')?.getContext('2d');
-    if (!ctx || typeof Chart === 'undefined') return; // ðŸ”¥ FIX SÃ‰CURITÃ‰
+    if (!ctx || typeof Chart === 'undefined') return; // 🔥 FIX SÉCURITÉ
 
     if (window.benchmarkChartInstance) window.benchmarkChartInstance.destroy();
 
@@ -2252,7 +2252,7 @@ function renderBenchmarkChart(data) {
 // Graphique de Flux
 function renderFunnelChart(flowData) {
     const canvas = document.getElementById('funnelChart');
-    if (!canvas || typeof Chart === 'undefined') return; // ðŸ”¥ FIX SÃ‰CURITÃ‰
+    if (!canvas || typeof Chart === 'undefined') return; // 🔥 FIX SÉCURITÉ
 
     if (window.funnelChartInstance) window.funnelChartInstance.destroy();
 
@@ -2263,10 +2263,10 @@ function renderFunnelChart(flowData) {
         type: 'bar',
         data: {
             labels: isAr
-                ? ['Ø§Ù„Ø²ÙˆØ§Ø±', 'Ø§Ù„Ø§Ù†ØªØ¨Ø§Ù‡', 'Ø§Ù„Ø§Ù‡ØªÙ…Ø§Ù…', 'Ø§Ù„Ø±ØºØ¨Ø©', 'Ø§Ù„Ø¹Ù…Ù„']
-                : ['Visiteurs', 'Attention', 'IntÃ©rÃªt', 'DÃ©sir', 'Action'],
+                ? ['الزوار', 'الانتباه', 'الاهتمام', 'الرغبة', 'العمل']
+                : ['Visiteurs', 'Attention', 'Intérêt', 'Désir', 'Action'],
             datasets: [{
-                label: 'Volume estimÃ©',
+                label: 'Volume estimé',
                 data: [flowData.visitors, flowData.attention, flowData.interest, flowData.desire, flowData.action],
                 backgroundColor: ['#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#10b981'],
                 borderRadius: 4
@@ -2284,22 +2284,22 @@ function renderFunnelChart(flowData) {
     });
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸŽ¯ TAB 1: COMPETITORS ANALYSIS â€” VERSION FIXÃ‰E + FILTRAGE V2
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🎯 TAB 1: COMPETITORS ANALYSIS — VERSION FIXÉE + FILTRAGE V2
+// ═══════════════════════════════════════════════════════════════════
 function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}) {
     const intel = data?.competitorIntelligence;
     if (!intel || typeof intel !== 'object') return '';
     const esc = typeof escapeHtml === 'function' ? escapeHtml : (v => String(v || ''));
     const dir = isAr ? 'rtl' : 'ltr';
     const labels = isAr ? {
-        kicker: 'Ù‚Ø±Ø§Ø± Ø§Ù„Ø³ÙˆÙ‚', verdict: 'Ù…Ù† ÙŠØªØµØ¯Ø± Ø§Ù„Ø³ÙˆÙ‚ ÙˆÙ„Ù…Ø§Ø°Ø§ØŸ', attack: 'Ø²Ø§ÙˆÙŠØ© Ø§Ù„Ù‡Ø¬ÙˆÙ… Ø§Ù„Ù…ÙˆØµÙ‰ Ø¨Ù‡Ø§',
-        actions: 'Ø®Ø·Ø© Ø§Ù„ØªÙ†ÙÙŠØ° Ø°Ø§Øª Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ©', week: 'Ù‡Ø°Ø§ Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹', month: 'Ø®Ù„Ø§Ù„ 30 ÙŠÙˆÙ…Ø§',
-        profiles: 'Ù…Ù„ÙØ§Øª Ø§Ù„Ù…Ù†Ø§ÙØ³ÙŠÙ† Ø§Ù„Ø®Ù…Ø³Ø© Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠÙŠÙ†', watch: 'Ù…Ø±Ø§Ù‚Ø¨Ø© Ø§Ù„Ø³ÙˆÙ‚',
-        observed: 'Ù…Ù„Ø§Ø­Ø¸', deduced: 'Ù…Ø³ØªÙ†ØªØ¬', recommended: 'Ù…ÙˆØµÙ‰ Ø¨Ù‡', confidence: 'Ø§Ù„Ø«Ù‚Ø©',
-        strengths: 'Ù†Ù‚Ø§Ø· Ø§Ù„Ù‚ÙˆØ© Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø©', weaknesses: 'Ø§Ù„Ø«ØºØ±Ø§Øª Ø§Ù„Ù…Ø³ØªÙ†ØªØ¬Ø©', missing: 'Ø§Ù„Ø£Ø¯Ù„Ø© ØºÙŠØ± Ø§Ù„ÙˆØ§Ø¶Ø­Ø©',
-        sell: 'Ù…Ø§ Ø§Ù„Ø°ÙŠ ÙŠØ¨ÙŠØ¹Ù‡', promise: 'ÙˆØ¹Ø¯Ù‡ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ', angle: 'ÙØ±ØµØ© Ø§Ù„Ù‡Ø¬ÙˆÙ…', proof: 'Ù…ØµØ§Ø¯Ø± Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ØªØ­Ù‚Ù‚',
-        position: 'Ø¹Ø¨Ø§Ø±Ø© Ø§Ù„ØªÙ…ÙˆØ¶Ø¹', answers: 'Ø§Ù„Ø¥Ø¬Ø§Ø¨Ø§Øª Ø§Ù„Ø­Ø§Ø³Ù…Ø© Ø§Ù„Ø³Ø¨Ø¹', study: 'Ø¯Ø±Ø§Ø³Ø© Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ø³ÙˆÙ‚ Ø§Ù„Ù…Ø­Ù„ÙŠ', demand: 'Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø·Ù„Ø¨', patterns: 'Ø£Ù†Ù…Ø§Ø· Ø§Ù„Ø¹Ø±ÙˆØ¶ Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø©', factors: 'Ø¹ÙˆØ§Ù…Ù„ Ù‚Ø±Ø§Ø± Ø§Ù„Ø´Ø±Ø§Ø¡', noData: 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª ÙƒØ§ÙÙŠØ©'
+        kicker: 'قرار السوق', verdict: 'من يتصدر السوق ولماذا؟', attack: 'زاوية الهجوم الموصى بها',
+        actions: 'خطة التنفيذ ذات الأولوية', week: 'هذا الأسبوع', month: 'خلال 30 يوما',
+        profiles: 'ملفات المنافسين الخمسة الرئيسيين', watch: 'مراقبة السوق',
+        observed: 'ملاحظ', deduced: 'مستنتج', recommended: 'موصى به', confidence: 'الثقة',
+        strengths: 'نقاط القوة الملاحظة', weaknesses: 'الثغرات المستنتجة', missing: 'الأدلة غير الواضحة',
+        sell: 'ما الذي يبيعه', promise: 'وعده الرئيسي', angle: 'فرصة الهجوم', proof: 'مصادر قابلة للتحقق',
+        position: 'عبارة التموضع', answers: 'الإجابات الحاسمة السبع', study: 'دراسة العرض والسوق المحلي', demand: 'إشارات الطلب', patterns: 'أنماط العروض المرصودة', factors: 'عوامل قرار الشراء', noData: 'لا توجد بيانات كافية'
     } : isEn ? {
         kicker: 'Market decision', verdict: 'Who leads the market, and why?', attack: 'Recommended attack angle',
         actions: 'Priority execution plan', week: 'This week', month: 'Next 30 days',
@@ -2314,7 +2314,7 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
         profiles: 'Fiches business des 5 concurrents principaux', watch: 'Surveillance du marche',
         observed: 'Observe', deduced: 'Deduit', recommended: 'Recommande', confidence: 'Confiance',
         strengths: 'Forces observees', weaknesses: 'Ouvertures deduites', missing: 'Preuves insuffisantes',
-        sell: 'Ce quâ€™il vend', promise: 'Promesse principale', angle: "Angle d'attaque", proof: 'Sources consultables',
+        sell: 'Ce qu’il vend', promise: 'Promesse principale', angle: "Angle d'attaque", proof: 'Sources consultables',
         position: 'Phrase de positionnement', answers: 'Les sept reponses decisives', study: "Etude de l'offre et du marche local", demand: 'Signaux de demande', patterns: "Formats d'offre observes", factors: "Facteurs de decision d'achat", noData: 'Donnees insuffisantes'
     };
     const list = (items, tone = 'observed') => {
@@ -2333,12 +2333,12 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
     const verdict = intel.marketVerdict || {};
     const whyDetails = Array.isArray(verdict.whyTheyWinDetails) ? verdict.whyTheyWinDetails : [];
     const categoryLabels = isAr
-        ? { positionnement:'Ø§Ù„ØªÙ…ÙˆØ¶Ø¹', preuve:'Ø§Ù„Ø¯Ù„ÙŠÙ„', offre:'Ø§Ù„Ø¹Ø±Ø¶', conversion:'Ø§Ù„ØªØ­ÙˆÙŠÙ„', acquisition:'Ø§Ù„Ø§ÙƒØªØ³Ø§Ø¨', confiance:'Ø§Ù„Ø«Ù‚Ø©' }
+        ? { positionnement:'التموضع', preuve:'الدليل', offre:'العرض', conversion:'التحويل', acquisition:'الاكتساب', confiance:'الثقة' }
         : isEn
             ? { positionnement:'Positioning', preuve:'Proof', offre:'Offer', conversion:'Conversion', acquisition:'Acquisition', confiance:'Trust' }
             : { positionnement:'Positionnement', preuve:'Preuve', offre:'Offre', conversion:'Conversion', acquisition:'Acquisition', confiance:'Confiance' };
     const scopeLabels = isAr
-        ? { brand_site:'Ø§Ù„Ù…ÙˆÙ‚Ø¹ ÙˆØ§Ù„Ø¹Ù„Ø§Ù…Ø©', market_visibility:'Ø§Ù„Ø­Ø¶ÙˆØ± ÙÙŠ Ø§Ù„Ø³ÙˆÙ‚', commercial_journey:'Ø§Ù„Ù…Ø³Ø§Ø± Ø§Ù„ØªØ¬Ø§Ø±ÙŠ' }
+        ? { brand_site:'الموقع والعلامة', market_visibility:'الحضور في السوق', commercial_journey:'المسار التجاري' }
         : isEn
             ? { brand_site:'Site and brand', market_visibility:'Market visibility', commercial_journey:'Commercial journey' }
             : { brand_site:'Site et marque', market_visibility:'Visibilite marche', commercial_journey:'Parcours commercial' };
@@ -2369,10 +2369,10 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
                 <div class="business-profile-angle"><span>${esc(labels.angle)}</span><strong>${esc(p.attackAngle || labels.noData)}</strong></div>
             </div>
             <details>
-                <summary>${esc(isAr ? 'Ø¹Ø±Ø¶ Ø§Ù„Ø£Ø¯Ù„Ø© ÙˆØ§Ù„ØªÙØ§ØµÙŠÙ„' : isEn ? 'View evidence and details' : 'Voir les preuves et details')}</summary>
+                <summary>${esc(isAr ? 'عرض الأدلة والتفاصيل' : isEn ? 'View evidence and details' : 'Voir les preuves et details')}</summary>
                 <div class="business-profile-details">
-                    <section><h5>${esc(labels.observed)} Â· ${esc(labels.strengths)}</h5>${list(p.observedStrengths, 'observed')}</section>
-                    <section><h5>${esc(labels.deduced)} Â· ${esc(labels.weaknesses)}</h5>${list(p.deducedWeaknesses, 'deduced')}</section>
+                    <section><h5>${esc(labels.observed)} · ${esc(labels.strengths)}</h5>${list(p.observedStrengths, 'observed')}</section>
+                    <section><h5>${esc(labels.deduced)} · ${esc(labels.weaknesses)}</h5>${list(p.deducedWeaknesses, 'deduced')}</section>
                     <section><h5>${esc(labels.missing)}</h5>${list(p.missingProofs, 'recommended')}</section>
                     ${evidence(p.evidenceLinks)}
                 </div>
@@ -2383,13 +2383,13 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
     const finalAnswers = intel.finalAnswers || {};
     const study = intel.productMarketStudy || {};
     const answerRows = [
-        [isAr ? 'Ù…Ù† ÙŠØªØµØ¯Ø±ØŸ' : isEn ? 'Who wins?' : 'Qui gagne ?', finalAnswers.whoWins],
-        [isAr ? 'Ù„Ù…Ø§Ø°Ø§ØŸ' : isEn ? 'Why do they win?' : 'Pourquoi ?', finalAnswers.whyTheyWin],
-        [isAr ? 'Ø£ÙŠÙ† Ù†Ù‚Ø§Ø· Ø§Ù„Ø¶Ø¹ÙØŸ' : isEn ? 'Where are the openings?' : 'Ou sont les faiblesses ?', finalAnswers.weaknesses],
-        [isAr ? 'Ù…Ø§ Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ø°ÙŠ ÙŠØ¬Ø¨ Ø§ØªØ®Ø§Ø°Ù‡ØŸ' : isEn ? 'What position should you take?' : 'Quelle position prendre ?', finalAnswers.positionToTake],
-        [isAr ? 'Ù…Ø§Ø°Ø§ ØªÙØ¹Ù„ Ù‡Ø°Ø§ Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹ØŸ' : isEn ? 'What should happen this week?' : 'Que faire cette semaine ?', (finalAnswers.thisWeek || []).map(x => x.action)],
-        [isAr ? 'Ù…Ø§Ø°Ø§ ØªØ¨Ù†ÙŠ Ø®Ù„Ø§Ù„ 30 ÙŠÙˆÙ…Ø§ØŸ' : isEn ? 'What should be built in 30 days?' : 'Que construire sous 30 jours ?', (finalAnswers.next30Days || []).map(x => x.action)],
-        [isAr ? 'Ù…Ø§ Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù†Ø§Ù‚ØµØ©ØŸ' : isEn ? 'Which proof is still missing?' : 'Quelles preuves manquent ?', finalAnswers.missingProofs]
+        [isAr ? 'من يتصدر؟' : isEn ? 'Who wins?' : 'Qui gagne ?', finalAnswers.whoWins],
+        [isAr ? 'لماذا؟' : isEn ? 'Why do they win?' : 'Pourquoi ?', finalAnswers.whyTheyWin],
+        [isAr ? 'أين نقاط الضعف؟' : isEn ? 'Where are the openings?' : 'Ou sont les faiblesses ?', finalAnswers.weaknesses],
+        [isAr ? 'ما الموقع الذي يجب اتخاذه؟' : isEn ? 'What position should you take?' : 'Quelle position prendre ?', finalAnswers.positionToTake],
+        [isAr ? 'ماذا تفعل هذا الأسبوع؟' : isEn ? 'What should happen this week?' : 'Que faire cette semaine ?', (finalAnswers.thisWeek || []).map(x => x.action)],
+        [isAr ? 'ماذا تبني خلال 30 يوما؟' : isEn ? 'What should be built in 30 days?' : 'Que construire sous 30 jours ?', (finalAnswers.next30Days || []).map(x => x.action)],
+        [isAr ? 'ما الأدلة الناقصة؟' : isEn ? 'Which proof is still missing?' : 'Quelles preuves manquent ?', finalAnswers.missingProofs]
     ];
     return `
     <section class="business-intel-shell" data-export-feature="summary" dir="${dir}">
@@ -2399,7 +2399,7 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
                 <span class="business-type business-type-deduced">${esc(labels.deduced)}</span>
                 <h2>${esc(labels.verdict)}</h2>
                 <strong class="business-leader">${esc(verdict.currentLeader || labels.noData)}</strong>
-                ${whyDetails.length ? `<div class="business-why-details">${whyDetails.map(item => `<article><span>${esc(scopeLabels[item.scope] || item.scope || labels.deduced)} Â· ${esc(item.confidence || 'LOW')}</span><p>${esc(item.reason || '')}</p></article>`).join('')}</div>` : list(verdict.whyTheyWin, 'observed')}
+                ${whyDetails.length ? `<div class="business-why-details">${whyDetails.map(item => `<article><span>${esc(scopeLabels[item.scope] || item.scope || labels.deduced)} · ${esc(item.confidence || 'LOW')}</span><p>${esc(item.reason || '')}</p></article>`).join('')}</div>` : list(verdict.whyTheyWin, 'observed')}
                 <p>${esc(verdict.marketPattern || '')}</p>
                 ${evidence(verdict.evidenceLinks)}
             ${hasVerdictCard ? `</article>` : ''}
@@ -2412,7 +2412,7 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
             ${hasAttackCard ? `</article>` : ''}
         ${(hasVerdictCard || hasAttackCard) ? `</div>` : ''}
         ${hasStudy ? `<article class="business-study-card">` : ''}
-            <header><span class="business-type business-type-deduced">${esc(labels.deduced)}</span><h3>${esc(labels.study)} Â· ${esc(study.subject || '')} Â· ${esc(study.geo || '')}</h3></header>
+            <header><span class="business-type business-type-deduced">${esc(labels.deduced)}</span><h3>${esc(labels.study)} · ${esc(study.subject || '')} · ${esc(study.geo || '')}</h3></header>
             <div class="business-study-grid">
                 <section><h5>${esc(labels.demand)}</h5>${list(study.observedDemandSignals, 'observed')}</section>
                 <section><h5>${esc(labels.patterns)}</h5>${list(study.observedOfferPatterns, 'observed')}</section>
@@ -2875,14 +2875,14 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
     esc: escapeHtml
 });
 
-    // â”€â”€â”€ HELPERS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const safe = (v, fallback = 'â€”') => {
+    // ─── HELPERS ───────────────────────────────────────────────────
+    const safe = (v, fallback = '—') => {
         if (v === null || v === undefined) return fallback;
-        if (typeof v === 'boolean') return v ? 'âœ“' : 'âœ—';
+        if (typeof v === 'boolean') return v ? '✓' : '✗';
         return String(v);
     };
 
-    const safeText = (v, fallback = 'â€”') => {
+    const safeText = (v, fallback = '—') => {
         const val = safe(v, fallback);
         return typeof val === 'string' ? val.trim() || fallback : val;
     };
@@ -2893,7 +2893,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
     const renderList = (items, color) => {
         const arr = Array.isArray(items) ? items.filter(Boolean) : [];
         if (arr.length === 0)
-            return `<li style="list-style:none;font-size:0.8rem;color:rgba(255,255,255,0.25);padding:2px 0;">â€”</li>`;
+            return `<li style="list-style:none;font-size:0.8rem;color:rgba(255,255,255,0.25);padding:2px 0;">—</li>`;
         return arr.map(item => `
             <li style="display:flex;align-items:flex-start;gap:8px;list-style:none;
                         margin-bottom:7px;font-size:0.82rem;color:#cbd5e1;line-height:1.5;">
@@ -2916,105 +2916,105 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             <i class="fas ${icon}" style="color:${color};font-size:1rem;"></i> ${text}
         </h3>`;
 
-    // â”€â”€â”€ LABELS I18N â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ─── LABELS I18N ───────────────────────────────────────────────
     const t = {
         // Titres de sections
-        battlePlan:        isAr ? 'Ø®Ø·Ø© Ø§Ù„Ù…Ø¹Ø±ÙƒØ© Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ©'  : (isEn ? 'STRATEGIC BATTLE PLAN'       : 'PLAN DE BATAILLE STRATÃ‰GIQUE'),
-        roadmap:           isAr ? 'Ø®Ø§Ø±Ø·Ø© Ø§Ù„Ù‡Ø¬ÙˆÙ…'              : (isEn ? 'ATTACK ROADMAP'               : "ROADMAP D'ATTAQUE"),
-        competitorsTitle:  isAr ? 'Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø£Ù‡Ø¯Ø§Ù (Ø§Ù„Ù…Ù†Ø§ÙØ³ÙˆÙ†)' : (isEn ? 'IDENTIFIED TARGETS'           : 'CIBLES IDENTIFIÃ‰ES'),
-        marketDyn:         isAr ? 'Ø¯ÙŠÙ†Ø§Ù…ÙŠÙƒÙŠØ§Øª Ø§Ù„Ø³ÙˆÙ‚'           : (isEn ? 'Market Dynamics (Porter)'     : 'Dynamiques de MarchÃ© (Porter)'),
-        gscTitle:          isAr ? 'Ø¨ÙŠØ§Ù†Ø§Øª Google Search Console': (isEn ? 'Google Search Console Data'  : 'DonnÃ©es Google Search Console'),
-        paaTitle:          isAr ? 'ÙŠØ³Ø£Ù„ Ø§Ù„Ù†Ø§Ø³ Ø£ÙŠØ¶Ø§Ù‹'           : (isEn ? 'People Also Ask'              : 'People Also Ask'),
-        relatedTitle:      isAr ? 'Ø¨Ø­Ø« Ø°Ø§Øª ØµÙ„Ø©'               : (isEn ? 'Related Searches'             : 'Recherches AssociÃ©es'),
-        gslTitle:          isAr ? 'Ù…Ø®Ø·Ø· Ø§Ù„Ø¹Ø±Ø¶ Ø§Ù„Ø°ÙŠ Ù„Ø§ ÙŠÙÙ‚Ø§ÙˆÙ…' : (isEn ? 'Grand Slam Offer Blueprint'   : 'Grand Slam Offer Blueprint'),
-        revEngTitle:       isAr ? 'Ù‡Ù†Ø¯Ø³Ø© Ø¹ÙƒØ³ÙŠØ© Top 3'          : (isEn ? 'Top 3 Reverse Engineering'    : 'Reverse Engineering Top 3'),
-        masterTitle:       isAr ? 'ØªÙ‚Ù†ÙŠØ§Øª Ø¥ØªÙ‚Ø§Ù† Ø§Ù„Ø³ÙˆÙ‚'         : (isEn ? 'Mastering Techniques'         : 'Techniques de MaÃ®trise MarchÃ©'),
-        moatTitle:         isAr ? 'ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ø­ØµÙ† Ø§Ù„Ø±Ù‚Ù…ÙŠ Ù„Ù„Ù‚Ø§Ø¦Ø¯' : (isEn ? 'Leader Digital Moat Analysis' : 'Analyse Moat du Leader'),
-        productKill:       isAr ? 'Ø§Ù„Ø¶Ø±Ø¨Ø© Ø§Ù„Ù‚Ø§Ø¶ÙŠØ© Ù„Ù„Ù…Ù†ØªØ¬'      : (isEn ? 'Product Kill Shot'            : 'Action produit decisive'),
-        powerBalance:      isAr ? 'Ù…ÙŠØ²Ø§Ù† Ø§Ù„Ù‚ÙˆÙ‰'                : (isEn ? 'Power Balance'                : 'Balance des Forces'),
-        swotTitle:         isAr ? 'ØªØ­Ù„ÙŠÙ„ SWOT'                 : (isEn ? 'SWOT Analysis'                : 'Analyse SWOT du Leader'),
-        kwTitle:           isAr ? 'ÙØ¬ÙˆØ© Ø§Ù„Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø°ÙƒÙŠØ©'        : (isEn ? 'Content Gap Intelligence'     : 'Content Gap Intelligence'),
-        duelTitle:         isAr ? 'âš”ï¸ Ø§Ù„Ù…ÙˆØ§Ø¬Ù‡Ø© Ø§Ù„Ù…Ø¨Ø§Ø´Ø±Ø©'       : (isEn ? 'âš”ï¸ STRATEGIC DIRECT DUEL'    : 'âš”ï¸ DUEL STRATÃ‰GIQUE INTÃ‰GRAL'),
+        battlePlan:        isAr ? 'خطة المعركة الاستراتيجية'  : (isEn ? 'STRATEGIC BATTLE PLAN'       : 'PLAN DE BATAILLE STRATÉGIQUE'),
+        roadmap:           isAr ? 'خارطة الهجوم'              : (isEn ? 'ATTACK ROADMAP'               : "ROADMAP D'ATTAQUE"),
+        competitorsTitle:  isAr ? 'قائمة الأهداف (المنافسون)' : (isEn ? 'IDENTIFIED TARGETS'           : 'CIBLES IDENTIFIÉES'),
+        marketDyn:         isAr ? 'ديناميكيات السوق'           : (isEn ? 'Market Dynamics (Porter)'     : 'Dynamiques de Marché (Porter)'),
+        gscTitle:          isAr ? 'بيانات Google Search Console': (isEn ? 'Google Search Console Data'  : 'Données Google Search Console'),
+        paaTitle:          isAr ? 'يسأل الناس أيضاً'           : (isEn ? 'People Also Ask'              : 'People Also Ask'),
+        relatedTitle:      isAr ? 'بحث ذات صلة'               : (isEn ? 'Related Searches'             : 'Recherches Associées'),
+        gslTitle:          isAr ? 'مخطط العرض الذي لا يُقاوم' : (isEn ? 'Grand Slam Offer Blueprint'   : 'Grand Slam Offer Blueprint'),
+        revEngTitle:       isAr ? 'هندسة عكسية Top 3'          : (isEn ? 'Top 3 Reverse Engineering'    : 'Reverse Engineering Top 3'),
+        masterTitle:       isAr ? 'تقنيات إتقان السوق'         : (isEn ? 'Mastering Techniques'         : 'Techniques de Maîtrise Marché'),
+        moatTitle:         isAr ? 'تحليل الحصن الرقمي للقائد' : (isEn ? 'Leader Digital Moat Analysis' : 'Analyse Moat du Leader'),
+        productKill:       isAr ? 'الضربة القاضية للمنتج'      : (isEn ? 'Product Kill Shot'            : 'Action produit decisive'),
+        powerBalance:      isAr ? 'ميزان القوى'                : (isEn ? 'Power Balance'                : 'Balance des Forces'),
+        swotTitle:         isAr ? 'تحليل SWOT'                 : (isEn ? 'SWOT Analysis'                : 'Analyse SWOT du Leader'),
+        kwTitle:           isAr ? 'فجوة المحتوى الذكية'        : (isEn ? 'Content Gap Intelligence'     : 'Content Gap Intelligence'),
+        duelTitle:         isAr ? '⚔️ المواجهة المباشرة'       : (isEn ? '⚔️ STRATEGIC DIRECT DUEL'    : '⚔️ DUEL STRATÉGIQUE INTÉGRAL'),
         // Labels champs
-        difficulty:        isAr ? 'ØµØ¹ÙˆØ¨Ø© Ø§Ù„Ø³ÙˆÙ‚'    : (isEn ? 'Market Difficulty' : 'DifficultÃ© MarchÃ©'),
-        volume:            isAr ? 'Ø­Ø¬Ù… Ø§Ù„Ø¨Ø­Ø«'       : (isEn ? 'Search Volume'     : 'Volume Recherche'),
-        coreKw:            isAr ? 'Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠØ©': (isEn ? 'Core Keywords'     : 'Mots-clÃ©s clÃ©s'),
-        serpIntent:        isAr ? 'Ù†ÙŠØ© Ø§Ù„Ø¹Ù…ÙŠÙ„'       : (isEn ? 'Buyer intent'       : 'Intention client'),
-        trend:             isAr ? 'Ø§Ù„Ø§ØªØ¬Ø§Ù‡'          : (isEn ? 'Trend'             : 'Tendance'),
-        sophistication:    isAr ? 'Ù…Ø³ØªÙˆÙ‰ Ø§Ù„ØªØ·ÙˆØ±'    : (isEn ? 'Sophistication Lvl' : 'Niveau Sophistication'),
-        awareness:         isAr ? 'Ù…Ø³ØªÙˆÙ‰ Ø§Ù„ÙˆØ¹ÙŠ'     : (isEn ? 'Awareness Level'   : "Niveau d'Awareness"),
-        porterVerdict:     isAr ? 'Ø­ÙƒÙ… Ø¨ÙˆØ±ØªØ±'       : (isEn ? 'Porter Verdict'    : 'Verdict Porter'),
-        threatLevel:       isAr ? 'Ù…Ø³ØªÙˆÙ‰ Ø§Ù„ØªÙ‡Ø¯ÙŠØ¯'   : (isEn ? 'Threat Level'      : 'Niveau de Menace'),
-        barrier:           isAr ? 'Ø­Ø§Ø¬Ø² Ø§Ù„Ø¯Ø®ÙˆÙ„'     : (isEn ? 'Barrier to Entry'  : "BarriÃ¨re Ã  l'EntrÃ©e"),
-        weakest:           isAr ? 'Ù†Ù‚Ø·Ø© Ø§Ù„Ø¶Ø¹Ù Ø§Ù„Ù‚Ø§ØªÙ„Ø©'     : (isEn ? "Competitor's Achilles Heel" : "Talon d'Achille Concurrent"),
-        killShot:          isAr ? 'Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ© Ø§Ù„Ù‡Ø¬ÙˆÙ…'     : (isEn ? 'Counter-Action'             : 'Action de Contournement'),
-        coreOffering:      isAr ? 'Ù…Ø§Ø°Ø§ ÙŠØ¨ÙŠØ¹ØŸ'             : (isEn ? 'What They Sell'            : "Ce Qu'il Vend"),
-        pricing:           isAr ? 'Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ© Ø§Ù„ØªØ³Ø¹ÙŠØ±'     : (isEn ? 'Pricing Strategy'          : 'StratÃ©gie de Prix'),
-        uvp:               isAr ? 'Ø¹Ø±Ø¶ Ø§Ù„Ù‚ÙŠÙ…Ø© Ø§Ù„ÙØ±ÙŠØ¯'      : (isEn ? 'Unique Value Prop.'        : 'Proposition de Valeur Unique'),
-        trafficSrc:        isAr ? 'Ù…ØµØ§Ø¯Ø± Ø§Ù„Ø­Ø±ÙƒØ©'           : (isEn ? 'Traffic Sources'           : 'Sources de Trafic'),
-        retention:         isAr ? 'Ø­Ù„Ù‚Ø© Ø§Ù„Ø§Ø­ØªÙØ§Ø¸'          : (isEn ? 'Retention Loop'            : 'Boucle de RÃ©tention'),
-        monetization:      isAr ? 'Ø§Ø®ØªØ±Ø§Ù‚ Ø§Ù„ØªØ­Ù‚ÙŠÙ‚ Ù…Ù† Ø§Ù„Ø¯Ø®Ù„': (isEn ? 'Monetization Hack'        : 'Hack de MonÃ©tisation'),
-        dreamOutcome:      isAr ? 'Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ù…Ø±ØºÙˆØ¨Ø©'        : (isEn ? 'Dream Outcome'            : 'RÃ©sultat de RÃªve'),
-        likelihood:        isAr ? 'Ø§Ù„Ø§Ø­ØªÙ…Ø§Ù„ Ø§Ù„Ù…ÙØ¯Ø±ÙŽÙƒ'       : (isEn ? 'Perceived Likelihood'     : 'ProbabilitÃ© PerÃ§ue'),
-        timeDelay:         isAr ? 'Ø§Ù„Ø¥Ø·Ø§Ø± Ø§Ù„Ø²Ù…Ù†ÙŠ'           : (isEn ? 'Time to Result'           : 'DÃ©lai de RÃ©sultat'),
-        effort:            isAr ? 'Ø§Ù„Ø¬Ù‡Ø¯ ÙˆØ§Ù„ØªØ¶Ø­ÙŠØ©'          : (isEn ? 'Effort & Sacrifice'       : 'Effort & Sacrifice'),
-        irresistible:      isAr ? 'Ø§Ù„Ø¹Ø±Ø¶ Ø§Ù„Ø°ÙŠ Ù„Ø§ ÙŠÙÙ‚Ø§ÙˆÙ…'   : (isEn ? 'The Irresistible Offer'   : "L'Offre IrrÃ©sistible"),
-        successFactors:    isAr ? 'Ø¹ÙˆØ§Ù…Ù„ Ø§Ù„Ù†Ø¬Ø§Ø­ Ø§Ù„Ù…Ø´ØªØ±ÙƒØ©'   : (isEn ? 'Common Success Factors'   : 'Facteurs de SuccÃ¨s Communs'),
-        weaknesses:        isAr ? 'Ù†Ù‚Ø§Ø· Ø§Ù„Ø¹Ù…Ù‰'              : (isEn ? 'Glaring Weaknesses'       : 'Angles Morts Flagrants'),
-        trafficGuess:      isAr ? 'Ø§Ø³ØªÙ†ØªØ§Ø¬ Ù‚Ù†Ø§Ø© Ø§Ù„Ø§ÙƒØªØ³Ø§Ø¨'  : (isEn ? 'Traffic Strategy Guess'   : "DÃ©duction Canal d'Acquisition"),
-        copyAll:           isAr ? 'Ù†Ø³Ø® Ø§Ù„ÙƒÙ„'                : (isEn ? 'Copy all'                 : 'Copier tout'),
-        dominance:         isAr ? 'Ø§Ù„Ù‡ÙŠÙ…Ù†Ø©'                 : (isEn ? 'DOMINANCE'                : 'DOMINANCE'),
-        spyFunnel:         isAr ? 'ÙØ­Øµ Ø§Ù„Ù‚Ù…Ø¹'               : (isEn ? 'Website & Funnel Audit Funnel'               : 'Website & Funnel Audit Funnel'),
-        spyTech:           isAr ? 'ÙØ­Øµ ØªÙ‚Ù†ÙŠ'                : (isEn ? 'Website & Funnel Audit Tech'                 : 'Website & Funnel Audit Tech'),
-        stepLabel:         isAr ? 'Ø§Ù„Ø®Ø·ÙˆØ©'                  : (isEn ? 'STEP'                     : 'Ã‰TAPE'),
-        him:               isAr ? 'Ø§Ù„Ù…Ù†Ø§ÙØ³'                 : (isEn ? 'The Leader'               : 'Le Leader'),
-        you:               isAr ? 'Ù…ÙˆÙ‚Ø¹Ùƒ'                   : (isEn ? 'Your Site'                : 'Ton Site'),
-        kill:              isAr ? 'ØªÙƒØªÙŠÙƒ Ø§Ù„Ø¶Ø±Ø¨Ø© Ø§Ù„Ù‚Ø§Ø¶ÙŠØ©'   : (isEn ? 'THE KILL SHOT'             : 'LE KILL SHOT'),
-        noKw:              isAr ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ ÙƒÙ„Ù…Ø§Øª Ù…ÙØªØ§Ø­ÙŠØ©'  : (isEn ? 'No keywords found'        : 'Aucun mot-clÃ© trouvÃ©'),
-        filterAll:         isAr ? 'Ø§Ù„ÙƒÙ„'     : (isEn ? 'All'      : 'Tous'),
-        filterPrimary:     isAr ? 'Ø±Ø¦ÙŠØ³ÙŠØ©'   : (isEn ? 'Primary'  : 'Primaires'),
-        filterLongTail:    isAr ? 'Ø°ÙŠÙ„ Ø·ÙˆÙŠÙ„' : (isEn ? 'Long Tail': 'Long Tail'),
-        filterGaps:        isAr ? 'ÙØ±Øµ'      : (isEn ? 'Gaps'     : 'OpportunitÃ©s'),
-        noComp:            isAr ? 'Ù„Ù… ÙŠØªÙ… Ø§Ù„Ø¹Ø«ÙˆØ± Ø¹Ù„Ù‰ Ù…Ù†Ø§ÙØ³ÙŠÙ†' : (isEn ? 'No competitors found' : 'Aucun concurrent trouvÃ©'),
-        targets:           isAr ? 'Ù‡Ø¯Ù' : (isEn ? 'targets' : 'cibles'),
-        kwLabel:           isAr ? 'ÙƒÙ„Ù…Ø©' : (isEn ? 'keywords' : 'mots-clÃ©s'),
-        totalClicks:       isAr ? 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù†Ù‚Ø±Ø§Øª'       : (isEn ? 'Total Clicks'      : 'Clics Totaux'),
-        totalImpr:         isAr ? 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø¸Ù‡ÙˆØ±'        : (isEn ? 'Total Impressions' : 'Impressions Totales'),
-        avgPos:            isAr ? 'Ù…ØªÙˆØ³Ø· Ø§Ù„ØªØ±ØªÙŠØ¨'        : (isEn ? 'Avg. Position'     : 'Position Moy.'),
-        query:             isAr ? 'Ø§Ù„Ø§Ø³ØªØ¹Ù„Ø§Ù…'             : (isEn ? 'Query'             : 'RequÃªte'),
-        pos:               isAr ? 'Ø§Ù„ØªØ±ØªÙŠØ¨' : (isEn ? 'Pos.' : 'Pos.'),
-        clicks:            isAr ? 'Ù†Ù‚Ø±Ø§Øª'   : (isEn ? 'Clicks' : 'Clics'),
+        difficulty:        isAr ? 'صعوبة السوق'    : (isEn ? 'Market Difficulty' : 'Difficulté Marché'),
+        volume:            isAr ? 'حجم البحث'       : (isEn ? 'Search Volume'     : 'Volume Recherche'),
+        coreKw:            isAr ? 'الكلمات الرئيسية': (isEn ? 'Core Keywords'     : 'Mots-clés clés'),
+        serpIntent:        isAr ? 'نية العميل'       : (isEn ? 'Buyer intent'       : 'Intention client'),
+        trend:             isAr ? 'الاتجاه'          : (isEn ? 'Trend'             : 'Tendance'),
+        sophistication:    isAr ? 'مستوى التطور'    : (isEn ? 'Sophistication Lvl' : 'Niveau Sophistication'),
+        awareness:         isAr ? 'مستوى الوعي'     : (isEn ? 'Awareness Level'   : "Niveau d'Awareness"),
+        porterVerdict:     isAr ? 'حكم بورتر'       : (isEn ? 'Porter Verdict'    : 'Verdict Porter'),
+        threatLevel:       isAr ? 'مستوى التهديد'   : (isEn ? 'Threat Level'      : 'Niveau de Menace'),
+        barrier:           isAr ? 'حاجز الدخول'     : (isEn ? 'Barrier to Entry'  : "Barrière à l'Entrée"),
+        weakest:           isAr ? 'نقطة الضعف القاتلة'     : (isEn ? "Competitor's Achilles Heel" : "Talon d'Achille Concurrent"),
+        killShot:          isAr ? 'استراتيجية الهجوم'     : (isEn ? 'Counter-Action'             : 'Action de Contournement'),
+        coreOffering:      isAr ? 'ماذا يبيع؟'             : (isEn ? 'What They Sell'            : "Ce Qu'il Vend"),
+        pricing:           isAr ? 'استراتيجية التسعير'     : (isEn ? 'Pricing Strategy'          : 'Stratégie de Prix'),
+        uvp:               isAr ? 'عرض القيمة الفريد'      : (isEn ? 'Unique Value Prop.'        : 'Proposition de Valeur Unique'),
+        trafficSrc:        isAr ? 'مصادر الحركة'           : (isEn ? 'Traffic Sources'           : 'Sources de Trafic'),
+        retention:         isAr ? 'حلقة الاحتفاظ'          : (isEn ? 'Retention Loop'            : 'Boucle de Rétention'),
+        monetization:      isAr ? 'اختراق التحقيق من الدخل': (isEn ? 'Monetization Hack'        : 'Hack de Monétisation'),
+        dreamOutcome:      isAr ? 'النتيجة المرغوبة'        : (isEn ? 'Dream Outcome'            : 'Résultat de Rêve'),
+        likelihood:        isAr ? 'الاحتمال المُدرَك'       : (isEn ? 'Perceived Likelihood'     : 'Probabilité Perçue'),
+        timeDelay:         isAr ? 'الإطار الزمني'           : (isEn ? 'Time to Result'           : 'Délai de Résultat'),
+        effort:            isAr ? 'الجهد والتضحية'          : (isEn ? 'Effort & Sacrifice'       : 'Effort & Sacrifice'),
+        irresistible:      isAr ? 'العرض الذي لا يُقاوم'   : (isEn ? 'The Irresistible Offer'   : "L'Offre Irrésistible"),
+        successFactors:    isAr ? 'عوامل النجاح المشتركة'   : (isEn ? 'Common Success Factors'   : 'Facteurs de Succès Communs'),
+        weaknesses:        isAr ? 'نقاط العمى'              : (isEn ? 'Glaring Weaknesses'       : 'Angles Morts Flagrants'),
+        trafficGuess:      isAr ? 'استنتاج قناة الاكتساب'  : (isEn ? 'Traffic Strategy Guess'   : "Déduction Canal d'Acquisition"),
+        copyAll:           isAr ? 'نسخ الكل'                : (isEn ? 'Copy all'                 : 'Copier tout'),
+        dominance:         isAr ? 'الهيمنة'                 : (isEn ? 'DOMINANCE'                : 'DOMINANCE'),
+        spyFunnel:         isAr ? 'فحص القمع'               : (isEn ? 'Website & Funnel Audit Funnel'               : 'Website & Funnel Audit Funnel'),
+        spyTech:           isAr ? 'فحص تقني'                : (isEn ? 'Website & Funnel Audit Tech'                 : 'Website & Funnel Audit Tech'),
+        stepLabel:         isAr ? 'الخطوة'                  : (isEn ? 'STEP'                     : 'ÉTAPE'),
+        him:               isAr ? 'المنافس'                 : (isEn ? 'The Leader'               : 'Le Leader'),
+        you:               isAr ? 'موقعك'                   : (isEn ? 'Your Site'                : 'Ton Site'),
+        kill:              isAr ? 'تكتيك الضربة القاضية'   : (isEn ? 'THE KILL SHOT'             : 'LE KILL SHOT'),
+        noKw:              isAr ? 'لا توجد كلمات مفتاحية'  : (isEn ? 'No keywords found'        : 'Aucun mot-clé trouvé'),
+        filterAll:         isAr ? 'الكل'     : (isEn ? 'All'      : 'Tous'),
+        filterPrimary:     isAr ? 'رئيسية'   : (isEn ? 'Primary'  : 'Primaires'),
+        filterLongTail:    isAr ? 'ذيل طويل' : (isEn ? 'Long Tail': 'Long Tail'),
+        filterGaps:        isAr ? 'فرص'      : (isEn ? 'Gaps'     : 'Opportunités'),
+        noComp:            isAr ? 'لم يتم العثور على منافسين' : (isEn ? 'No competitors found' : 'Aucun concurrent trouvé'),
+        targets:           isAr ? 'هدف' : (isEn ? 'targets' : 'cibles'),
+        kwLabel:           isAr ? 'كلمة' : (isEn ? 'keywords' : 'mots-clés'),
+        totalClicks:       isAr ? 'إجمالي النقرات'       : (isEn ? 'Total Clicks'      : 'Clics Totaux'),
+        totalImpr:         isAr ? 'إجمالي الظهور'        : (isEn ? 'Total Impressions' : 'Impressions Totales'),
+        avgPos:            isAr ? 'متوسط الترتيب'        : (isEn ? 'Avg. Position'     : 'Position Moy.'),
+        query:             isAr ? 'الاستعلام'             : (isEn ? 'Query'             : 'Requête'),
+        pos:               isAr ? 'الترتيب' : (isEn ? 'Pos.' : 'Pos.'),
+        clicks:            isAr ? 'نقرات'   : (isEn ? 'Clicks' : 'Clics'),
         ctr:               'CTR',
     };
     Object.assign(t, {
-        battlePlan: isAr ? 'Ø§Ù„Ø®Ù„Ø§ØµØ© Ø§Ù„Ø¹Ù…Ù„ÙŠØ©' : (isEn ? 'What matters now' : 'Ce qui compte maintenant'),
-        roadmap: isAr ? 'Ø®Ø·ÙˆØ§Øª Ø§Ù„ØªÙ†ÙÙŠØ°' : (isEn ? 'Execution steps' : 'Actions a executer'),
-        competitorsTitle: isAr ? 'Ø§Ù„Ù…Ù†Ø§ÙØ³ÙˆÙ† Ø§Ù„Ø°ÙŠÙ† ÙŠØ¬Ø¨ Ù…Ø±Ø§Ù‚Ø¨ØªÙ‡Ù…' : (isEn ? 'Competitors to watch' : 'Concurrents a surveiller'),
-        marketDyn: isAr ? 'Ø¶ØºØ· Ø§Ù„Ø³ÙˆÙ‚' : (isEn ? 'Market pressure' : 'Pression du marchÃ©'),
-        gslTitle: isAr ? 'Ø§Ù„Ø¹Ø±Ø¶ Ø§Ù„Ø°ÙŠ ÙŠÙ†ØªØ¸Ø±Ù‡ Ø§Ù„Ø³ÙˆÙ‚' : (isEn ? 'The offer people expect' : 'Lâ€™offre que le marchÃ© attend'),
-        revEngTitle: isAr ? 'Ù…Ø§ ÙŠÙ†Ø¬Ø­ Ø¹Ù†Ø¯ Ø§Ù„Ø§ÙØ¶Ù„' : (isEn ? 'What works for the best' : 'Ce qui marche chez les meilleurs'),
-        masterTitle: isAr ? 'ÙƒÙŠÙ ØªØ±Ø¨Ø­ Ø§Ù„Ø³ÙˆÙ‚' : (isEn ? 'How to win the market' : 'Comment gagner le marchÃ©'),
-        moatTitle: isAr ? 'Ù„Ù…Ø§Ø°Ø§ Ø§Ù„Ù‚Ø§Ø¦Ø¯ ÙŠØ±Ø¨Ø­' : (isEn ? 'Why the leader wins' : 'Pourquoi le leader gagne'),
-        productKill: isAr ? 'Ø§Ø¬Ø¹Ù„ Ø¹Ø±Ø¶Ùƒ Ø§Ù‚ÙˆÙ‰' : (isEn ? 'Make your offer stronger' : 'Rendre votre offre plus forte'),
-        powerBalance: isAr ? 'Ù…ÙŠØ²Ø§Ù† Ø§Ù„Ù‚ÙˆØ©' : (isEn ? 'Power balance' : 'Rapport de force'),
-        swotTitle: isAr ? 'ÙØ±Øµ ÙˆÙØ¬ÙˆØ§Øª' : (isEn ? 'Opportunities and gaps' : 'Opportunites et failles'),
-        kwTitle: isAr ? 'ÙƒÙ„Ù…Ø§Øª ÙŠØ³ØªØ®Ø¯Ù…Ù‡Ø§ Ø§Ù„Ø³ÙˆÙ‚' : (isEn ? 'Words your market uses' : 'Mots utilisÃ©s par le marchÃ©'),
-        duelTitle: isAr ? 'Ù…Ù‚Ø§Ø±Ù†Ø© Ù…Ø¨Ø§Ø´Ø±Ø©' : (isEn ? 'Direct comparison' : 'Comparaison directe'),
-        serpIntent: isAr ? 'Ù†ÙŠØ© Ø§Ù„Ø¹Ù…ÙŠÙ„' : (isEn ? 'Buyer intent' : 'Intention client'),
-        volume: isAr ? 'Ø·Ù„Ø¨ Ø§Ù„Ø³ÙˆÙ‚' : (isEn ? 'Market demand' : 'Demande marchÃ©'),
-        coreKw: isAr ? 'Ù„ØºØ© Ø§Ù„Ø³ÙˆÙ‚' : (isEn ? 'Market language' : 'Langage marchÃ©'),
-        spyFunnel: isAr ? 'Ø§ÙØ­Øµ ØµÙØ­Ø© Ø§Ù„Ø¨ÙŠØ¹' : (isEn ? 'Audit sales page' : 'Auditer la page'),
-        spyTech: isAr ? 'Ø§ÙØ­Øµ Ø§Ù„Ù…ÙˆÙ‚Ø¹' : (isEn ? 'Check site foundations' : 'Verifier le site'),
-        spyKeywords: isAr ? 'Ø§Ø³ØªØ®Ø±Ø¬ Ø§Ù„ÙƒÙ„Ù…Ø§Øª' : (isEn ? 'Generate keywords' : 'Generer les mots-cles')
+        battlePlan: isAr ? 'الخلاصة العملية' : (isEn ? 'What matters now' : 'Ce qui compte maintenant'),
+        roadmap: isAr ? 'خطوات التنفيذ' : (isEn ? 'Execution steps' : 'Actions a executer'),
+        competitorsTitle: isAr ? 'المنافسون الذين يجب مراقبتهم' : (isEn ? 'Competitors to watch' : 'Concurrents a surveiller'),
+        marketDyn: isAr ? 'ضغط السوق' : (isEn ? 'Market pressure' : 'Pression du marché'),
+        gslTitle: isAr ? 'العرض الذي ينتظره السوق' : (isEn ? 'The offer people expect' : 'L’offre que le marché attend'),
+        revEngTitle: isAr ? 'ما ينجح عند الافضل' : (isEn ? 'What works for the best' : 'Ce qui marche chez les meilleurs'),
+        masterTitle: isAr ? 'كيف تربح السوق' : (isEn ? 'How to win the market' : 'Comment gagner le marché'),
+        moatTitle: isAr ? 'لماذا القائد يربح' : (isEn ? 'Why the leader wins' : 'Pourquoi le leader gagne'),
+        productKill: isAr ? 'اجعل عرضك اقوى' : (isEn ? 'Make your offer stronger' : 'Rendre votre offre plus forte'),
+        powerBalance: isAr ? 'ميزان القوة' : (isEn ? 'Power balance' : 'Rapport de force'),
+        swotTitle: isAr ? 'فرص وفجوات' : (isEn ? 'Opportunities and gaps' : 'Opportunites et failles'),
+        kwTitle: isAr ? 'كلمات يستخدمها السوق' : (isEn ? 'Words your market uses' : 'Mots utilisés par le marché'),
+        duelTitle: isAr ? 'مقارنة مباشرة' : (isEn ? 'Direct comparison' : 'Comparaison directe'),
+        serpIntent: isAr ? 'نية العميل' : (isEn ? 'Buyer intent' : 'Intention client'),
+        volume: isAr ? 'طلب السوق' : (isEn ? 'Market demand' : 'Demande marché'),
+        coreKw: isAr ? 'لغة السوق' : (isEn ? 'Market language' : 'Langage marché'),
+        spyFunnel: isAr ? 'افحص صفحة البيع' : (isEn ? 'Audit sales page' : 'Auditer la page'),
+        spyTech: isAr ? 'افحص الموقع' : (isEn ? 'Check site foundations' : 'Verifier le site'),
+        spyKeywords: isAr ? 'استخرج الكلمات' : (isEn ? 'Generate keywords' : 'Generer les mots-cles')
     });
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§1 â€” MARKET INSIGHTS (Ã©tendu)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §1 — MARKET INSIGHTS (étendu)
+    // ══════════════════════════════════════════════════════════════
     let insightsHtml = '';
     if (data.marketInsights) {
         const mi    = data.marketInsights;
-        const vocab = Array.isArray(mi.vocabulary) ? mi.vocabulary.slice(0, 4).join(', ') : 'â€”';
+        const vocab = Array.isArray(mi.vocabulary) ? mi.vocabulary.slice(0, 4).join(', ') : '—';
 
         const threatColor = {
             Low: '#10b981', low: '#10b981',
@@ -3027,7 +3027,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:18px;margin-bottom:${mi.notes || mi.trend || mi.sophisticationLevel || mi.awarenessLevel ? '20px' : '0'}">
                 <div>
                     <small style="color:var(--accent-danger);font-weight:800;letter-spacing:1px;text-transform:uppercase;">${t.difficulty}</small>
-                    <div style="font-size:1.4rem;font-weight:900;color:white;margin-top:5px;">${safe(mi.difficulty, 'â€”')}</div>
+                    <div style="font-size:1.4rem;font-weight:900;color:white;margin-top:5px;">${safe(mi.difficulty, '—')}</div>
                 </div>
                 <div style="border-${bSide}:1px solid rgba(255,255,255,0.1);padding-${bSide}:18px;">
                     <small style="color:var(--accent-info);font-weight:800;letter-spacing:1px;text-transform:uppercase;">${t.volume}</small>
@@ -3062,7 +3062,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             <div style="margin-top:14px;padding:12px 16px;background:rgba(255,255,255,0.03);border-radius:10px;border-${bSide}:3px solid rgba(255,255,255,0.12);">
                 <small style="color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">
                     <i class="fas fa-robot" style="margin-${bSide === 'left' ? 'right' : 'left'}:5px;"></i>
-                    ${isAr ? 'Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„Ø³ÙˆÙ‚' : (isEn ? 'Market reading' : 'Lecture du marchÃ©')}
+                    ${isAr ? 'قراءة السوق' : (isEn ? 'Market reading' : 'Lecture du marché')}
                 </small>
                 <p style="font-size:0.88rem;color:#94a3b8;margin:0;line-height:1.7;" dir="auto">${safe(mi.notes)}</p>
             </div>` : ''}
@@ -3097,9 +3097,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         `, { bg: 'rgba(255,255,255,0.02)', mb: 18 });
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§1b â€” MARKET DYNAMICS (Porter) â€” NOUVEAU
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §1b — MARKET DYNAMICS (Porter) — NOUVEAU
+    // ══════════════════════════════════════════════════════════════
     let marketDynHtml = '';
     if (data.marketDynamics) {
         const md = data.marketDynamics;
@@ -3141,9 +3141,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         `, { borderColor: '#f59e0b', mb: 20 });
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§1c â€” GSC INSIGHTS â€” NOUVEAU
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §1c — GSC INSIGHTS — NOUVEAU
+    // ══════════════════════════════════════════════════════════════
     let gscHtml = '';
     if (data.gscInsights?.available && data.gscInsights.topQueries?.length > 0) {
         const gsc = data.gscInsights;
@@ -3160,7 +3160,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                     <small style="color:#64748b;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;">${t.totalImpr}</small>
                 </div>
                 <div style="text-align:center;padding:12px;background:rgba(245,158,11,0.06);border-radius:10px;border:1px solid rgba(245,158,11,0.12);">
-                    <div style="font-size:1.5rem;font-weight:900;color:#fcd34d;">${sum.avgPosition||'â€”'}</div>
+                    <div style="font-size:1.5rem;font-weight:900;color:#fcd34d;">${sum.avgPosition||'—'}</div>
                     <small style="color:#64748b;font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;">${t.avgPos}</small>
                 </div>
             </div>
@@ -3188,9 +3188,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         `, { borderColor: '#4ade80', mb: 20 });
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§2 â€” WINNING MOVE & ROADMAP
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §2 — WINNING MOVE & ROADMAP
+    // ══════════════════════════════════════════════════════════════
     let winningMoveHtml = '';
     if (data.winningMove) {
         const roadmapArr = Array.isArray(data.actionRoadmap) ? data.actionRoadmap : [];
@@ -3219,9 +3219,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         </div>`;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§2b â€” GRAND SLAM OFFER BLUEPRINT â€” NOUVEAU
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §2b — GRAND SLAM OFFER BLUEPRINT — NOUVEAU
+    // ══════════════════════════════════════════════════════════════
     let gslHtml = '';
     if (data.grandSlamOfferBlueprint) {
         const gsl = data.grandSlamOfferBlueprint;
@@ -3231,7 +3231,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             { key: 'timeDelay',           label: t.timeDelay,     icon: 'fa-bolt',        color: '#60a5fa' },
             { key: 'effortAndSacrifice',  label: t.effort,        icon: 'fa-fire',        color: '#f87171' },
             { key: 'theIrresistibleOffer',label: t.irresistible,  icon: 'fa-gem',         color: '#c084fc' },
-        ].filter(item => gsl[item.key] && gsl[item.key] !== 'â€”');
+        ].filter(item => gsl[item.key] && gsl[item.key] !== '—');
 
         if (gslItems.length > 0) {
             gslHtml = card(`
@@ -3252,36 +3252,36 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§3 â€” PRODUCT AUDIT (Ã©tendu)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §3 — PRODUCT AUDIT (étendu)
+    // ══════════════════════════════════════════════════════════════
     let productAuditHtml = '';
     let productOpportunitySummary = '';
     if (data.productServiceAudit) {
         const prod = data.productServiceAudit;
-        const weakness = prod.weakestProductFeature || 'â€”';
-        const counterMove = prod.killShotFeature || 'â€”';
-        const coreOffering = prod.coreOffering || 'â€”';
-        const pricing = prod.pricingStrategy || 'â€”';
-        const uvp = prod.uniqueValueProposition || 'â€”';
+        const weakness = prod.weakestProductFeature || '—';
+        const counterMove = prod.killShotFeature || '—';
+        const coreOffering = prod.coreOffering || '—';
+        const pricing = prod.pricingStrategy || '—';
+        const uvp = prod.uniqueValueProposition || '—';
 
         const productOpportunityTitle = isAr
-            ? 'Ø£ÙØ¶Ù„ ÙØ±ØµØ© Ù„Ø¯ÙŠÙƒ Ù„ØªØ¬Ø§ÙˆØ² Ù‡Ø°Ø§ Ø§Ù„Ù…Ù†Ø§ÙØ³'
+            ? 'أفضل فرصة لديك لتجاوز هذا المنافس'
             : isEn
                 ? 'Your strongest opening to pass this competitor'
-                : 'Votre meilleure ouverture pour dÃ©passer ce concurrent';
+                : 'Votre meilleure ouverture pour dépasser ce concurrent';
 
         const productOpportunityLead = isAr
-            ? `Ù†Ù‚Ø·Ø© Ø¶Ø¹ÙÙ‡ Ø­ÙˆÙ„ "${weakness}" ØªØ®Ù„Ù‚ ÙØ±ØµØ© Ù„ÙˆØ¶Ø¹ Ø¹Ø±Ø¶Ùƒ ÙƒØ­Ù„ Ø£Ø¨Ø³Ø·ØŒ Ø£ÙˆØ¶Ø­ØŒ ÙˆØ£Ø³Ù‡Ù„ ÙÙŠ Ø§Ù„ØªØ¨Ù†ÙŠ.`
+            ? `نقطة ضعفه حول "${weakness}" تخلق فرصة لوضع عرضك كحل أبسط، أوضح، وأسهل في التبني.`
             : isEn
                 ? `Their weakness around "${weakness}" creates an opening to position your offer as simpler, more connected, and easier to adopt.`
-                : `Sa faiblesse autour de "${weakness}" crÃ©e une opportunitÃ© pour positionner votre offre comme plus connectÃ©e, plus flexible et plus simple Ã  adopter.`;
+                : `Sa faiblesse autour de "${weakness}" crée une opportunité pour positionner votre offre comme plus connectée, plus flexible et plus simple à adopter.`;
 
         productOpportunitySummary = isAr
-            ? `Ù‡Ø°Ø§ Ø§Ù„Ù…Ù†Ø§ÙØ³ ÙŠØ¨ÙŠØ¹ ${coreOffering}. ØªØ¹ØªÙ…Ø¯ Ù‚ÙŠÙ…ØªÙ‡ Ø¹Ù„Ù‰ ${uvp}ØŒ Ù„ÙƒÙ† Ø­Ø¯Ù‘Ù‡ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ Ù‡Ùˆ ${weakness}. Ø²Ø§ÙˆÙŠØ© Ø§Ù„Ù‡Ø¬ÙˆÙ… Ø§Ù„Ø£Ù‚ÙˆÙ‰ Ù‡ÙŠ ${counterMove}.`
+            ? `هذا المنافس يبيع ${coreOffering}. تعتمد قيمته على ${uvp}، لكن حدّه الرئيسي هو ${weakness}. زاوية الهجوم الأقوى هي ${counterMove}.`
             : isEn
                 ? `This competitor sells ${coreOffering}. Their value relies on ${uvp}, but their main limit is ${weakness}. Your strongest attack angle is ${counterMove}.`
-                : `Ce concurrent vend ${coreOffering}. Sa valeur repose sur ${uvp}, mais sa limite principale concerne ${weakness}. Votre angle dâ€™attaque doit Ãªtre ${counterMove}.`;
+                : `Ce concurrent vend ${coreOffering}. Sa valeur repose sur ${uvp}, mais sa limite principale concerne ${weakness}. Votre angle d’attaque doit être ${counterMove}.`;
 
         const detailRows = [
             [t.weakest, weakness],
@@ -3289,7 +3289,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             [t.coreOffering, coreOffering],
             [t.pricing, pricing],
             [t.uvp, uvp]
-        ].filter(row => row[1] && row[1] !== 'â€”');
+        ].filter(row => row[1] && row[1] !== '—');
 
         productAuditHtml = card(`
             ${sectionTitle('fa-crosshairs', productOpportunityTitle, 'var(--accent-success)')}
@@ -3298,14 +3298,14 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             </p>
             <div style="padding:16px;border-radius:14px;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.18);margin-bottom:14px;">
                 <strong style="display:block;color:#34d399;font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">
-                    ${isAr ? 'Ø§Ù„Ø®Ù„Ø§ØµØ© Ø§Ù„Ø¹Ù…Ù„ÙŠØ©' : isEn ? 'Visible summary' : 'RÃ©sumÃ© visible'}
+                    ${isAr ? 'الخلاصة العملية' : isEn ? 'Visible summary' : 'Résumé visible'}
                 </strong>
                 <p style="margin:0;color:#e2e8f0;font-size:0.93rem;line-height:1.75;font-weight:650;" dir="auto">
                     ${safe(productOpportunitySummary)}
                 </p>
             </div>
             <details class="micro-details">
-                <summary>${isAr ? 'Ø¹Ø±Ø¶ Ø§Ù„ØªÙØ§ØµÙŠÙ„' : isEn ? 'View details' : 'Voir les dÃ©tails'}</summary>
+                <summary>${isAr ? 'عرض التفاصيل' : isEn ? 'View details' : 'Voir les détails'}</summary>
                 <ul style="list-style:none;margin:12px 0 0;padding:0;display:grid;gap:9px;">
                     ${detailRows.map(([label, value]) => `
                         <li style="padding:11px 12px;border-radius:10px;background:rgba(255,255,255,0.035);border:1px solid rgba(255,255,255,0.07);">
@@ -3318,9 +3318,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         `, { bg: 'rgba(239,68,68,0.02)', borderColor: 'var(--accent-danger)', mb: 20 });
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§3b â€” TOP 3 REVERSE ENGINEERING â€” NOUVEAU
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §3b — TOP 3 REVERSE ENGINEERING — NOUVEAU
+    // ══════════════════════════════════════════════════════════════
     let revEngHtml = '';
     if (data.top3ReverseEngineering) {
         const rev = data.top3ReverseEngineering;
@@ -3358,34 +3358,34 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§3c â€” MASTERING TECHNIQUES â€” NOUVEAU
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §3c — MASTERING TECHNIQUES — NOUVEAU
+    // ══════════════════════════════════════════════════════════════
     let masteringHtml = '';
     if (data.masteringTechniques) {
         const mt = data.masteringTechniques;
-        const hasData = (mt.trafficSources && mt.trafficSources !== 'â€”') ||
-                        (mt.retentionLoop   && mt.retentionLoop   !== 'â€”') ||
-                        (mt.monetizationHack && mt.monetizationHack !== 'â€”');
+        const hasData = (mt.trafficSources && mt.trafficSources !== '—') ||
+                        (mt.retentionLoop   && mt.retentionLoop   !== '—') ||
+                        (mt.monetizationHack && mt.monetizationHack !== '—');
         if (hasData) {
             masteringHtml = card(`
                 ${sectionTitle('fa-rocket', t.masterTitle, '#f87171')}
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
-                    ${mt.trafficSources && mt.trafficSources !== 'â€”' ? `
+                    ${mt.trafficSources && mt.trafficSources !== '—' ? `
                     <div style="padding:14px;border-radius:12px;background:rgba(248,113,113,0.05);border:1px solid rgba(248,113,113,0.12);">
                         <small style="color:#f87171;font-weight:800;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">
                             <i class="fas fa-satellite-dish"></i> ${t.trafficSrc}
                         </small>
                         <p style="font-size:0.86rem;color:#fca5a5;font-weight:600;margin:0;line-height:1.6;" dir="auto">${safe(mt.trafficSources)}</p>
                     </div>` : ''}
-                    ${mt.retentionLoop && mt.retentionLoop !== 'â€”' ? `
+                    ${mt.retentionLoop && mt.retentionLoop !== '—' ? `
                     <div style="padding:14px;border-radius:12px;background:rgba(34,211,238,0.05);border:1px solid rgba(34,211,238,0.12);">
                         <small style="color:#22d3ee;font-weight:800;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">
                             <i class="fas fa-sync-alt"></i> ${t.retention}
                         </small>
                         <p style="font-size:0.86rem;color:#67e8f9;font-weight:600;margin:0;line-height:1.6;" dir="auto">${safe(mt.retentionLoop)}</p>
                     </div>` : ''}
-                    ${mt.monetizationHack && mt.monetizationHack !== 'â€”' ? `
+                    ${mt.monetizationHack && mt.monetizationHack !== '—' ? `
                     <div style="padding:14px;border-radius:12px;background:rgba(250,204,21,0.05);border:1px solid rgba(250,204,21,0.12);">
                         <small style="color:#facc15;font-weight:800;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">
                             <i class="fas fa-coins"></i> ${t.monetization}
@@ -3397,9 +3397,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§4 â€” DUEL STRATÃ‰GIQUE (duelConfig Ã©tendu + fix valueLadder/uxTeardown)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §4 — DUEL STRATÉGIQUE (duelConfig étendu + fix valueLadder/uxTeardown)
+    // ══════════════════════════════════════════════════════════════
     let duelHtml = '';
     if (data.duelComparison && typeof data.duelComparison === 'object') {
         const duel = data.duelComparison;
@@ -3408,16 +3408,16 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         );
 
         if (validDuelKeys.length > 0) {
-            // FIX : ajout des 2 clÃ©s manquantes valueLadder + uxTeardown
+            // FIX : ajout des 2 clés manquantes valueLadder + uxTeardown
             const duelConfig = {
-                offerAndRisk:     { title: isAr ? 'Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ù…Ø®Ø§Ø·Ø±Ø©'         : (isEn ? 'Offer & Risk (Allan Dib)'   : 'Offre & Risque (Allan Dib)'),   icon: 'fa-shield-alt',    color: '#f59e0b' },
-                jtbdPsychology:   { title: isAr ? 'Ø¹Ù„Ù… Ø§Ù„Ù†ÙØ³ (JTBD)'        : (isEn ? 'Psychology (JTBD)'          : 'Psychologie (JTBD)'),            icon: 'fa-brain',         color: '#8b5cf6' },
-                kanoDelighter:    { title: isAr ? 'Ù…ÙŠØ²Ø© Ø§Ù„Ø¥Ø¨Ù‡Ø§Ø± (Kano)'     : (isEn ? 'Delighter (Kano)'           : 'Effet Wahou (Kano)'),            icon: 'fa-magic',         color: '#ec4899' },
-                activationAARRR:  { title: isAr ? 'Ø§Ù„Ø§Ø­ØªÙƒØ§Ùƒ (AARRR)'        : (isEn ? 'UX Friction (AARRR)'        : 'Friction UX (AARRR)'),           icon: 'fa-bolt',          color: '#06b6d4' },
-                flankingStrategy: { title: isAr ? 'Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ© Ø§Ù„ØªØ·ÙˆÙŠÙ‚'      : (isEn ? 'Flanking Strategy'          : 'Attaque de Flanc'),              icon: 'fa-chess-knight',  color: '#10b981' },
-                pricingBundling:  { title: isAr ? 'Ù‡Ù†Ø¯Ø³Ø© Ø§Ù„Ø£Ø³Ø¹Ø§Ø±'           : (isEn ? 'Pricing Architecture'       : 'Architecture Prix (Leurre)'),    icon: 'fa-tags',          color: '#3b82f6' },
-                valueLadder:      { title: isAr ? 'Ø³Ù„Ù… Ø§Ù„Ù‚ÙŠÙ…Ø©'              : (isEn ? 'Value Ladder (Upsell)'      : 'Value Ladder (Upsell)'),         icon: 'fa-layer-group',   color: '#a78bfa' },
-                uxTeardown:       { title: isAr ? 'ØªÙÙƒÙŠÙƒ ØªØ¬Ø±Ø¨Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…'   : (isEn ? 'UX Teardown'                : 'UX Teardown (Friction)'),        icon: 'fa-mobile-alt',    color: '#f472b6' },
+                offerAndRisk:     { title: isAr ? 'العرض والمخاطرة'         : (isEn ? 'Offer & Risk (Allan Dib)'   : 'Offre & Risque (Allan Dib)'),   icon: 'fa-shield-alt',    color: '#f59e0b' },
+                jtbdPsychology:   { title: isAr ? 'علم النفس (JTBD)'        : (isEn ? 'Psychology (JTBD)'          : 'Psychologie (JTBD)'),            icon: 'fa-brain',         color: '#8b5cf6' },
+                kanoDelighter:    { title: isAr ? 'ميزة الإبهار (Kano)'     : (isEn ? 'Delighter (Kano)'           : 'Effet Wahou (Kano)'),            icon: 'fa-magic',         color: '#ec4899' },
+                activationAARRR:  { title: isAr ? 'الاحتكاك (AARRR)'        : (isEn ? 'UX Friction (AARRR)'        : 'Friction UX (AARRR)'),           icon: 'fa-bolt',          color: '#06b6d4' },
+                flankingStrategy: { title: isAr ? 'استراتيجية التطويق'      : (isEn ? 'Flanking Strategy'          : 'Attaque de Flanc'),              icon: 'fa-chess-knight',  color: '#10b981' },
+                pricingBundling:  { title: isAr ? 'هندسة الأسعار'           : (isEn ? 'Pricing Architecture'       : 'Architecture Prix (Leurre)'),    icon: 'fa-tags',          color: '#3b82f6' },
+                valueLadder:      { title: isAr ? 'سلم القيمة'              : (isEn ? 'Value Ladder (Upsell)'      : 'Value Ladder (Upsell)'),         icon: 'fa-layer-group',   color: '#a78bfa' },
+                uxTeardown:       { title: isAr ? 'تفكيك تجربة المستخدم'   : (isEn ? 'UX Teardown'                : 'UX Teardown (Friction)'),        icon: 'fa-mobile-alt',    color: '#f472b6' },
             };
 
             const renderDuelCard = (key, dataObj) => {
@@ -3465,9 +3465,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§5 â€” WAR ROOM : Radar + SWOT + Blue Ocean COMPLET
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §5 — WAR ROOM : Radar + SWOT + Blue Ocean COMPLET
+    // ══════════════════════════════════════════════════════════════
     let warRoomHtml = '';
     if (data.swot || data.comparisonScores || data.blueOceanStrategy) {
         const swot         = data.swot || {};
@@ -3478,16 +3478,16 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
 
         const bo = data.blueOceanStrategy || {};
         const boFields = [
-            { key: 'eliminate',      label: isAr ? 'Ø­Ø°Ù'        : (isEn ? 'Eliminate'    : 'Ã‰liminer'),   color: '#ef4444' },
-            { key: 'reduce',         label: isAr ? 'ØªÙ‚Ù„ÙŠØµ'      : (isEn ? 'Reduce'       : 'RÃ©duire'),    color: '#f59e0b' },
-            { key: 'raise',          label: isAr ? 'Ø±ÙØ¹'        : (isEn ? 'Raise'        : 'Augmenter'),  color: '#3b82f6' },
-            { key: 'create',         label: isAr ? 'Ø§Ø¨ØªÙƒØ§Ø±'     : (isEn ? 'Create'       : 'CrÃ©er'),      color: '#10b981' },
-            { key: 'currentRedOcean',label: isAr ? 'Ø§Ù„Ù…Ø­ÙŠØ· Ø§Ù„Ø£Ø­Ù…Ø±': (isEn ? 'Red Ocean'  : 'OcÃ©an Rouge'),color: '#dc2626' },
-            { key: 'blueOceanMoves', label: isAr ? 'Ø­Ø±ÙƒØ© Ø§Ù„Ù…Ø­ÙŠØ· Ø§Ù„Ø£Ø²Ø±Ù‚': (isEn ? 'Blue Ocean Move': 'Mouvement Blue Ocean'), color: '#60a5fa' },
-            { key: 'positioningMap', label: isAr ? 'Ø®Ø±ÙŠØ·Ø© Ø§Ù„ØªÙ…ÙˆØ¶Ø¹': (isEn ? 'Positioning'  : 'Positionnement'), color: '#a78bfa' },
+            { key: 'eliminate',      label: isAr ? 'حذف'        : (isEn ? 'Eliminate'    : 'Éliminer'),   color: '#ef4444' },
+            { key: 'reduce',         label: isAr ? 'تقليص'      : (isEn ? 'Reduce'       : 'Réduire'),    color: '#f59e0b' },
+            { key: 'raise',          label: isAr ? 'رفع'        : (isEn ? 'Raise'        : 'Augmenter'),  color: '#3b82f6' },
+            { key: 'create',         label: isAr ? 'ابتكار'     : (isEn ? 'Create'       : 'Créer'),      color: '#10b981' },
+            { key: 'currentRedOcean',label: isAr ? 'المحيط الأحمر': (isEn ? 'Red Ocean'  : 'Océan Rouge'),color: '#dc2626' },
+            { key: 'blueOceanMoves', label: isAr ? 'حركة المحيط الأزرق': (isEn ? 'Blue Ocean Move': 'Mouvement Blue Ocean'), color: '#60a5fa' },
+            { key: 'positioningMap', label: isAr ? 'خريطة التموضع': (isEn ? 'Positioning'  : 'Positionnement'), color: '#a78bfa' },
         ].filter(f => {
             const v = bo[f.key];
-            return Array.isArray(v) ? v.length > 0 : (v && v !== 'â€”');
+            return Array.isArray(v) ? v.length > 0 : (v && v !== '—');
         });
 
         const boHasData = boFields.length > 0;
@@ -3511,21 +3511,21 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                 </h4>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div style="background:rgba(16,185,129,0.05);padding:12px;border-radius:10px;border:1px solid rgba(16,185,129,0.12);">
-                        <strong style="color:#10b981;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px;">ðŸ’ª ${isAr ? 'Ù†Ù‚Ø§Ø· Ø§Ù„Ù‚ÙˆØ©' : 'STRENGTHS'}</strong>
+                        <strong style="color:#10b981;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px;">💪 ${isAr ? 'نقاط القوة' : 'STRENGTHS'}</strong>
                         <ul style="margin:0;padding:0;">${renderList(strengths, '#10b981')}</ul>
                     </div>
                     <div style="background:rgba(239,68,68,0.05);padding:12px;border-radius:10px;border:1px solid rgba(239,68,68,0.12);">
-                        <strong style="color:#ef4444;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px;">ðŸ”´ ${isAr ? 'Ù†Ù‚Ø§Ø· Ø§Ù„Ø¶Ø¹Ù' : 'WEAKNESSES'}</strong>
+                        <strong style="color:#ef4444;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px;">🔴 ${isAr ? 'نقاط الضعف' : 'WEAKNESSES'}</strong>
                         <ul style="margin:0;padding:0;">${renderList(weaknesses, '#ef4444')}</ul>
                     </div>
                     ${opportunities.length > 0 ? `
                     <div style="background:rgba(59,130,246,0.05);padding:12px;border-radius:10px;border:1px solid rgba(59,130,246,0.12);">
-                        <strong style="color:#3b82f6;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px;">ðŸš€ ${isAr ? 'Ø§Ù„ÙØ±Øµ' : 'OPPORTUNITIES'}</strong>
+                        <strong style="color:#3b82f6;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px;">🚀 ${isAr ? 'الفرص' : 'OPPORTUNITIES'}</strong>
                         <ul style="margin:0;padding:0;">${renderList(opportunities, '#3b82f6')}</ul>
                     </div>` : ''}
                     ${threats.length > 0 ? `
                     <div style="background:rgba(245,158,11,0.05);padding:12px;border-radius:10px;border:1px solid rgba(245,158,11,0.12);">
-                        <strong style="color:#f59e0b;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px;">âš ï¸ ${isAr ? 'Ø§Ù„ØªÙ‡Ø¯ÙŠØ¯Ø§Øª' : 'THREATS'}</strong>
+                        <strong style="color:#f59e0b;font-size:0.68rem;letter-spacing:1px;text-transform:uppercase;display:block;margin-bottom:8px;">⚠️ ${isAr ? 'التهديدات' : 'THREATS'}</strong>
                         <ul style="margin:0;padding:0;">${renderList(threats, '#f59e0b')}</ul>
                     </div>` : ''}
                 </div>
@@ -3536,7 +3536,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         <div class="result-card fade-in-up" style="margin-bottom:20px;border-top:3px solid #60a5fa;">
             <h4 style="margin-bottom:16px;font-family:'Cairo';color:white;">
                 <i class="fas fa-water" style="color:#60a5fa;"></i>
-                ${isAr ? 'Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ© Ø§Ù„Ù…Ø­ÙŠØ· Ø§Ù„Ø£Ø²Ø±Ù‚ (ERRC)' : (isEn ? 'Blue Ocean Strategy (ERRC Grid)' : 'StratÃ©gie OcÃ©an Bleu (Grille ERRC)')}
+                ${isAr ? 'استراتيجية المحيط الأزرق (ERRC)' : (isEn ? 'Blue Ocean Strategy (ERRC Grid)' : 'Stratégie Océan Bleu (Grille ERRC)')}
             </h4>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
                 ${boFields.map(f => {
@@ -3561,9 +3561,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§5b â€” LEADER MOAT â€” NOUVEAU
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §5b — LEADER MOAT — NOUVEAU
+    // ══════════════════════════════════════════════════════════════
     let moatHtml = '';
     if (data.leaderMoat && typeof data.leaderMoat === 'object' && data.leaderMoat.status !== 'error') {
         const m  = data.leaderMoat;
@@ -3581,20 +3581,20 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                        style="color:#93c5fd;text-decoration:none;font-weight:800;display:inline-flex;align-items:center;gap:4px;margin-inline-end:7px;">
                         <i class="fas fa-arrow-up-right-from-square" style="font-size:.58rem;"></i>${escapeHtml(item.platform)}
                     </a>`).join('')
-                : `${ba.socialLinksCount || 0} ${isAr ? 'Ø±ÙˆØ§Ø¨Ø·' : (isEn ? 'links' : 'liens')}`;
+                : `${ba.socialLinksCount || 0} ${isAr ? 'روابط' : (isEn ? 'links' : 'liens')}`;
             const moatItems = [
-                { label: isAr ? 'Ø±ÙˆØ§Ø¨Ø· Wikipedia' : (isEn ? 'Wikipedia links' : 'Liens Wikipedia'), val: ba.hasWikipediaLinks,     icon: 'fa-wikipedia-w', color: '#94a3b8' },
-                { label: isAr ? 'Ø´Ø¨ÙƒØ§Øª Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ© Ù…ÙˆØ«Ù‚Ø©' : (isEn ? 'Verified social networks' : 'RÃ©seaux sociaux vÃ©rifiÃ©s'), val: verifiedSocialHtml, icon: 'fa-share-alt', color: '#60a5fa' },
+                { label: isAr ? 'روابط Wikipedia' : (isEn ? 'Wikipedia links' : 'Liens Wikipedia'), val: ba.hasWikipediaLinks,     icon: 'fa-wikipedia-w', color: '#94a3b8' },
+                { label: isAr ? 'شبكات اجتماعية موثقة' : (isEn ? 'Verified social networks' : 'Réseaux sociaux vérifiés'), val: verifiedSocialHtml, icon: 'fa-share-alt', color: '#60a5fa' },
                 { label: isAr ? 'Trustpilot/Avis'  : (isEn ? 'Reviews/Trustpilot' : 'Trustpilot/Avis'), val: ba.hasTrustpilotOrReviews, icon: 'fa-star',      color: '#fcd34d' },
                 { label: isAr ? 'Schema Markup'    : (isEn ? 'Schema tags'      : 'Balises Schema'),   val: (tm.schemaTagsCount||0) + ' tags',  icon: 'fa-code',      color: '#a78bfa' },
                 { label: isAr ? 'Section FAQ'      : (isEn ? 'FAQ section'      : 'Section FAQ'),      val: tm.hasFaqSection,      icon: 'fa-question-circle', color: '#34d399' },
-                { label: isAr ? 'Blog/ActualitÃ©s'  : (isEn ? 'Blog/News'        : 'Blog/ActualitÃ©s'),  val: cs.hasBlog,            icon: 'fa-newspaper',   color: '#fb923c' },
+                { label: isAr ? 'Blog/Actualités'  : (isEn ? 'Blog/News'        : 'Blog/Actualités'),  val: cs.hasBlog,            icon: 'fa-newspaper',   color: '#fb923c' },
             ].filter(i => i.val !== undefined && i.val !== null);
 
             const getValDisplay = (val) => {
                 if (typeof val === 'boolean') return val
-                    ? `<span style="color:#34d399;font-weight:800;">âœ“ ${isAr ? 'Ù†Ø¹Ù…' : 'Oui'}</span>`
-                    : `<span style="color:#ef4444;font-weight:600;">âœ— ${isAr ? 'Ù„Ø§' : 'Non'}</span>`;
+                    ? `<span style="color:#34d399;font-weight:800;">✓ ${isAr ? 'نعم' : 'Oui'}</span>`
+                    : `<span style="color:#ef4444;font-weight:600;">✗ ${isAr ? 'لا' : 'Non'}</span>`;
                 return `<span style="color:#cbd5e1;font-weight:700;">${val}</span>`;
             };
 
@@ -3613,7 +3613,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                 ${cs.semanticCloud ? `
                 <div style="margin-top:12px;padding:12px;border-radius:9px;background:rgba(251,146,60,0.04);border:1px solid rgba(251,146,60,0.12);">
                     <small style="color:#fb923c;font-weight:700;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">
-                        <i class="fas fa-cloud"></i> ${isAr ? 'Ø§Ù„Ø³Ø­Ø§Ø¨Ø© Ø§Ù„Ø¯Ù„Ø§Ù„ÙŠØ©' : (isEn ? 'Semantic Cloud' : 'Nuage SÃ©mantique')}
+                        <i class="fas fa-cloud"></i> ${isAr ? 'السحابة الدلالية' : (isEn ? 'Semantic Cloud' : 'Nuage Sémantique')}
                     </small>
                     <p style="font-size:0.78rem;color:#94a3b8;margin:0;line-height:1.7;font-style:italic;" dir="auto">${safe(cs.semanticCloud)}</p>
                 </div>` : ''}
@@ -3621,9 +3621,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§6 â€” KEYWORDS AVEC FILTRAGE
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §6 — KEYWORDS AVEC FILTRAGE
+    // ══════════════════════════════════════════════════════════════
     let keywordsHtml = '';
     if (data.keywordStrategy) {
         const ks = data.keywordStrategy;
@@ -3699,23 +3699,23 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,0.05);">
                 <span style="font-size:0.7rem;color:#64748b;">
                     <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#3b82f6;margin-${bSide}:4px;"></span>
-                    ${isAr ? 'Ø±Ø¦ÙŠØ³ÙŠØ©' : (isEn ? 'Primary (high volume)' : 'Primaires (fort volume)')}
+                    ${isAr ? 'رئيسية' : (isEn ? 'Primary (high volume)' : 'Primaires (fort volume)')}
                 </span>
                 <span style="font-size:0.7rem;color:#64748b;">
                     <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#8b5cf6;margin-${bSide}:4px;"></span>
-                    ${isAr ? 'Ø°ÙŠÙ„ Ø·ÙˆÙŠÙ„' : (isEn ? 'Long tail (conversion)' : 'Long tail (conversion)')}
+                    ${isAr ? 'ذيل طويل' : (isEn ? 'Long tail (conversion)' : 'Long tail (conversion)')}
                 </span>
                 <span style="font-size:0.7rem;color:#64748b;">
                     <span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#f59e0b;margin-${bSide}:4px;"></span>
-                    ${isAr ? 'ÙØ±Øµ ØºÙŠØ± Ù…Ø³ØªØºÙ„Ø©' : (isEn ? 'Untapped gaps' : 'Gaps non exploitÃ©s')}
+                    ${isAr ? 'فرص غير مستغلة' : (isEn ? 'Untapped gaps' : 'Gaps non exploités')}
                 </span>
             </div>
         `, { borderColor: 'var(--accent-info)', mb: 25 });
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§7 â€” LISTE CONCURRENTS
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §7 — LISTE CONCURRENTS
+    // ══════════════════════════════════════════════════════════════
     const competitors = Array.isArray(data.competitors) ? data.competitors : [];
     const competitorsList = competitors.map((comp, idx) => {
         const dom      = Math.min(100, Math.max(0, parseInt(comp.dominance) || 0));
@@ -3734,7 +3734,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                         </h4>
                     </div>
                     <p style="color:var(--text-secondary);font-size:0.85rem;line-height:1.6;margin-bottom:10px;" dir="auto">
-                        ${safe(comp.snippet, 'â€”')}
+                        ${safe(comp.snippet, '—')}
                     </p>
                     <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
                         ${comp.url ? `
@@ -3787,9 +3787,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         </div>`;
     }).join('');
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // Â§8 â€” KNOWLEDGE GRAPH â€” NOUVEAU (si disponible)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // §8 — KNOWLEDGE GRAPH — NOUVEAU (si disponible)
+    // ══════════════════════════════════════════════════════════════
     let kgHtml = '';
     if (data.knowledgeGraph && typeof data.knowledgeGraph === 'object') {
         const kg = data.knowledgeGraph;
@@ -3804,13 +3804,13 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                             <small style="color:#4ade80;font-weight:800;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;">Knowledge Graph</small>
                         </div>
                         <h4 style="margin:0;color:white;font-size:1rem;" dir="auto">${safe(kgTitle)}</h4>
-                        ${kg.type || kg.description ? `<p style="font-size:0.82rem;color:#94a3b8;margin:4px 0 0;line-height:1.5;" dir="auto">${safe(kg.type || '')}${kg.type && kg.description ? ' Â· ' : ''}${safe(kg.description||'').substring(0, 120)}${(kg.description||'').length > 120 ? 'â€¦' : ''}</p>` : ''}
+                        ${kg.type || kg.description ? `<p style="font-size:0.82rem;color:#94a3b8;margin:4px 0 0;line-height:1.5;" dir="auto">${safe(kg.type || '')}${kg.type && kg.description ? ' · ' : ''}${safe(kg.description||'').substring(0, 120)}${(kg.description||'').length > 120 ? '…' : ''}</p>` : ''}
                     </div>
                 </div>
             `, { bg: 'rgba(74,222,128,0.02)', mb: 20 });
         }
     }
-// 8.5 DECISION LAYER â€” RENDER ONLY
+// 8.5 DECISION LAYER — RENDER ONLY
 let decisionLayerHtml = '';
 
 const elite = data?.competitorIntelligence ? null : (data?.decisionLayer || null);
@@ -4071,7 +4071,7 @@ const reportLabels = getReportLabels({ isAr, isEn });
     container.classList.add('active');
     requestAnimationFrame(() => initCompetitorShowcaseMotion(container));
 
-    // â”€â”€ Radar chart (double rAF pour garantir le rendu DOM) â”€â”€â”€â”€â”€
+    // ── Radar chart (double rAF pour garantir le rendu DOM) ─────
     if (data.comparisonScores) {
         requestAnimationFrame(() => requestAnimationFrame(() => {
             if (typeof renderCompetitorRadar === 'function')
@@ -4079,14 +4079,14 @@ const reportLabels = getReportLabels({ isAr, isEn });
         }));
     }
 
-    // â”€â”€ Bouton export â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Bouton export ────────────────────────────────────────────
     const exportBtn = document.getElementById('btn-export-competitors');
     if (exportBtn) exportBtn.style.display = 'flex';
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ” FILTRE KEYWORDS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🔍 FILTRE KEYWORDS
+// ═══════════════════════════════════════════════════════════════════
 window._kwFilter = function(containerId, filterType, btnEl) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -4119,15 +4119,15 @@ window._kwFilter = function(containerId, filterType, btnEl) {
             emptyMsg.style.cssText = 'opacity:0.4;font-size:0.85rem;padding:10px;';
             container.appendChild(emptyMsg);
         }
-        emptyMsg.textContent = 'â€”';
+        emptyMsg.textContent = '—';
     } else {
         if (emptyMsg) emptyMsg.remove();
     }
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“‹ COPY COMPETITOR KEYWORDS
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 📋 COPY COMPETITOR KEYWORDS
+// ═══════════════════════════════════════════════════════════════════
 window.copyCompetitorKeywords = function(btnElement) {
     const allBadges = document.querySelectorAll('.kw-badge');
     const kws = [...allBadges]
@@ -4136,7 +4136,7 @@ window.copyCompetitorKeywords = function(btnElement) {
         .filter(Boolean);
 
     if (kws.length === 0) {
-        if (typeof toast !== 'undefined') toast.error('Aucun mot-clÃ© Ã  copier.');
+        if (typeof toast !== 'undefined') toast.error('Aucun mot-clé à copier.');
         return;
     }
 
@@ -4146,7 +4146,7 @@ window.copyCompetitorKeywords = function(btnElement) {
 
     const onSuccess = () => {
         if (btnElement) {
-            btnElement.innerHTML        = `<i class="fas fa-check"></i> ${isAr ? 'ØªÙ…!' : 'CopiÃ©!'}`;
+            btnElement.innerHTML        = `<i class="fas fa-check"></i> ${isAr ? 'تم!' : 'Copié!'}`;
             btnElement.style.background = 'rgba(16,185,129,0.2)';
             btnElement.style.color      = '#34d399';
             setTimeout(() => {
@@ -4157,8 +4157,8 @@ window.copyCompetitorKeywords = function(btnElement) {
         }
         if (typeof toast !== 'undefined')
             toast.success(isAr
-                ? `${kws.length} ÙƒÙ„Ù…Ø© ØªÙ… Ù†Ø³Ø®Ù‡Ø§!`
-                : `${kws.length} mots-clÃ©s copiÃ©s !`);
+                ? `${kws.length} كلمة تم نسخها!`
+                : `${kws.length} mots-clés copiés !`);
     };
 
     if (navigator.clipboard && window.isSecureContext) {
@@ -4180,7 +4180,7 @@ function renderCompetitorRadar(scores) {
 
     const ctx = canvas.getContext('2d');
 
-    // ðŸ›¡ï¸ Destruction propre de l'ancienne instance
+    // 🛡️ Destruction propre de l'ancienne instance
     if (window.compRadarInstance instanceof Chart) {
         window.compRadarInstance.destroy();
     }
@@ -4190,8 +4190,8 @@ function renderCompetitorRadar(scores) {
 
     // Labels dynamiques selon la langue
     const labels = scores.labels || (isAr
-        ? ['Ø§Ù„Ø³Ù„Ø·Ø©', 'Ø§Ù„Ù…Ø­ØªÙˆÙ‰', 'Ø§Ù„ØªÙ‚Ù†ÙŠ', 'Ø§Ù„ØªØ­ÙˆÙŠÙ„', 'ØªØ¬Ø±Ø¨Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…', 'Ø§Ù„Ø¸Ù‡ÙˆØ±']
-        : ['AutoritÃ©', 'Contenu', 'Technique', 'Conversion', 'UX', 'VisibilitÃ©']);
+        ? ['السلطة', 'المحتوى', 'التقني', 'التحويل', 'تجربة المستخدم', 'الظهور']
+        : ['Autorité', 'Contenu', 'Technique', 'Conversion', 'UX', 'Visibilité']);
 
     window.compRadarInstance = new Chart(ctx, {
         type: 'radar',
@@ -4199,11 +4199,11 @@ function renderCompetitorRadar(scores) {
             labels: labels,
           datasets: [
                 {
-                    label: isAr ? 'Ù…ÙˆÙ‚Ø¹Ùƒ' : (isEn ? 'Your Site' : 'Votre Site'),
+                    label: isAr ? 'موقعك' : (isEn ? 'Your Site' : 'Votre Site'),
                     data: scores.user || [],
                     backgroundColor: 'rgba(59, 130, 246, 0.25)', // Bleu plus profond
                     borderColor: '#3b82f6',
-                    pointBackgroundColor: '#0f172a', // Centre sombre (thÃ¨me dark)
+                    pointBackgroundColor: '#0f172a', // Centre sombre (thème dark)
                     pointBorderColor: '#3b82f6',     // Bordure lumineuse
                     pointBorderWidth: 2,
                     pointRadius: 4,                  // Points plus visibles
@@ -4212,7 +4212,7 @@ function renderCompetitorRadar(scores) {
                     fill: true
                 },
                 {
-                    label: isAr ? 'Ø§Ù„Ù…Ù†Ø§ÙØ³ Ø§Ù„Ù‚Ø§Ø¦Ø¯' : (isEn ? 'Market Leader' : 'Leader MarchÃ©'),
+                    label: isAr ? 'المنافس القائد' : (isEn ? 'Market Leader' : 'Leader Marché'),
                     data: scores.competitor || scores.leader || [],
                     backgroundColor: 'rgba(239, 68, 68, 0.15)', // Rouge un peu plus transparent pour laisser voir ton site
                     borderColor: '#ef4444',
@@ -4252,9 +4252,9 @@ function renderCompetitorRadar(scores) {
     });
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   ANALYZE COMPETITORS â€” Fix loader + Export button
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ══════════════════════════════════════════════════════════════
+   ANALYZE COMPETITORS — Fix loader + Export button
+   ══════════════════════════════════════════════════════════════ */
 async function analyzeCompetitors(e) {
     if (e) e.preventDefault();
     if (STATE.competitorAnalysisInFlight) return;
@@ -4270,16 +4270,16 @@ async function analyzeCompetitors(e) {
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
 
-    // â”€â”€ Validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Validation ────────────────────────────────────────────
     if (!keyword && !url) {
         return toast.warning(
-            isAr ? 'ÙŠØ±Ø¬Ù‰ Ù…Ù„Ø¡ Ø­Ù‚Ù„ ÙˆØ§Ø­Ø¯ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.'
+            isAr ? 'يرجى ملء حقل واحد على الأقل.'
             : isEn ? 'Please fill in at least one field.'
             : 'Remplissez au moins un champ.'
         );
     }
 
-    // â”€â”€ RESET complet avant nouvelle analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── RESET complet avant nouvelle analyse ──────────────────
     STATE.lastAnalysisResults = null;
     resetAnalysis('competitors');
 
@@ -4288,7 +4288,7 @@ async function analyzeCompetitors(e) {
     hideResults('resultsCompetitors');
     STATE.competitorAnalysisInFlight = true;
 
-    // â”€â”€ Cacher bouton export pendant l'analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Cacher bouton export pendant l'analyse ────────────────
     const exportBtn = document.getElementById('btn-export-competitors-pdf')
                    || document.getElementById('btn-export-competitors');
     if (exportBtn) exportBtn.style.display = 'none';
@@ -4304,13 +4304,13 @@ async function analyzeCompetitors(e) {
         });
 
         if (!response || !response.success) {
-            throw new Error(response?.error || 'Analyse Ã©chouÃ©e â€” rÃ©ponse invalide.');
+            throw new Error(response?.error || 'Analyse échouée — réponse invalide.');
         }
 
-        // â”€â”€ Patch 1 : binder la langue rÃ©elle du rÃ©sultat â”€â”€â”€â”€â”€â”€
+        // ── Patch 1 : binder la langue réelle du résultat ──────
         response.analysisLang = lang;
 
-        // â”€â”€ Patch 2 : enrichissement Decision Layer via API â”€â”€â”€â”€
+        // ── Patch 2 : enrichissement Decision Layer via API ────
         try {
             const dlResp = await api.post('/api/decision-layer', {
                 lang,
@@ -4333,7 +4333,7 @@ async function analyzeCompetitors(e) {
             console.warn('[decision-layer] fallback local render:', decisionErr);
         }
 
-        // â”€â”€ Persistance STATE complÃ¨te â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Persistance STATE complète ────────────────────────
         STATE.lastAnalysisResults   = response;
         STATE.lastInputs            = STATE.lastInputs || {};
         STATE.lastInputs.keyword    = keyword;
@@ -4341,18 +4341,18 @@ async function analyzeCompetitors(e) {
         STATE.lastInputs.country    = country;
         STATE.lastInputs.compLang   = lang;
 
-        // â”€â”€ Affichage rÃ©sultats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Affichage résultats ───────────────────────────────
         displayCompetitorsResults(response);
 
-        // â”€â”€ Afficher bouton export aprÃ¨s succÃ¨s â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Afficher bouton export après succès ───────────────
         if (exportBtn) exportBtn.style.display = 'inline-flex';
 
-        // â”€â”€ Toast succÃ¨s â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Toast succès ──────────────────────────────────────
         const total = response.totalFound || response.competitors?.length || 0;
         toast.success(
-            isAr ? `âœ… ØªÙ… ØªØ­Ù„ÙŠÙ„ ${total} Ù…Ù†Ø§ÙØ³ Ø¨Ù†Ø¬Ø§Ø­!`
-            : isEn ? `âœ… ${total} competitors analyzed successfully!`
-            : `âœ… ${total} concurrents analysÃ©s avec succÃ¨s !`
+            isAr ? `✅ تم تحليل ${total} منافس بنجاح!`
+            : isEn ? `✅ ${total} competitors analyzed successfully!`
+            : `✅ ${total} concurrents analysés avec succès !`
         );
 
     } catch (error) {
@@ -4360,7 +4360,7 @@ async function analyzeCompetitors(e) {
         console.error('[analyzeCompetitors]', error);
 
         toast.error(
-            isAr ? 'Ø®Ø·Ø£ ÙÙŠ Ø§Ù„ØªØ­Ù„ÙŠÙ„: ' + (error.message || 'Ø®Ø·Ø£ ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ')
+            isAr ? 'خطأ في التحليل: ' + (error.message || 'خطأ غير معروف')
             : isEn ? 'Analysis error: ' + (error.message || 'Unknown error')
             : 'Erreur analyse : ' + (error.message || 'Erreur inconnue')
         );
@@ -4374,15 +4374,15 @@ async function analyzeCompetitors(e) {
     }
 }
 // =================================================================
-// â˜¢ï¸ MODULE TECHNIQUE : GESTIONNAIRE DE SCAN ET GÃ‰NÃ‰RATION
+// ☢️ MODULE TECHNIQUE : GESTIONNAIRE DE SCAN ET GÉNÉRATION
 // =================================================================
 
-// Ã‰tat local pour les gÃ©nÃ©rateurs
+// État local pour les générateurs
 window.currentSeoContext = null;
 window.currentSeoUrl = null;
 
 // =================================================================
-// â˜¢ï¸ MODULE TECHNIQUE : GESTIONNAIRE DE SCAN ET GÃ‰NÃ‰RATION (DEEP)
+// ☢️ MODULE TECHNIQUE : GESTIONNAIRE DE SCAN ET GÉNÉRATION (DEEP)
 // =================================================================
 
 // Etat local persistant
@@ -4412,10 +4412,10 @@ async function analyzeTechnical(e) {
 
   if (!url)
     return toast.error(STATE.currentLang === 'ar'
-      ? 'Ø£Ø¯Ø®Ù„ URL Ø§Ù„Ù‡Ø¯Ù.'
+      ? 'أدخل URL الهدف.'
       : 'URL cible manquante.');
 
-  /* â”€â”€ RESET avant nouvelle analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── RESET avant nouvelle analyse ────────────────────────── */
   resetAnalysis('technical');
 
   setButtonLoading('technicalBtn', true);
@@ -4436,7 +4436,7 @@ async function analyzeTechnical(e) {
     });
 
     if (response.success) {
-      /* â”€â”€ Persistance STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+      /* ── Persistance STATE ──────────────────────────────── */
       STATE.lastTechnicalResults = response;
       STATE.lastInputs.techUrl   = url;
       STATE.currentLang          = lang;
@@ -4445,10 +4445,10 @@ async function analyzeTechnical(e) {
 
       displayTechnicalResults(response);
       toast.success(lang === 'ar'
-        ? 'âœ… Ø§ÙƒØªÙ…Ù„ Ø§Ù„ÙØ­Øµ Ø§Ù„ØªÙ‚Ù†ÙŠ!'
-        : 'âœ… Audit SEO technique terminÃ© !');
+        ? '✅ اكتمل الفحص التقني!'
+        : '✅ Audit SEO technique terminé !');
     } else {
-      throw new Error(response.error || 'Ã‰chec audit technique');
+      throw new Error(response.error || 'Échec audit technique');
     }
   } catch (err) {
     if (err?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
@@ -4470,9 +4470,9 @@ function normalizeText(str) {
         .replace(/[^\u0009\u000A\u000D\u0020-\u00FF]/g, '');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸª„ AFFICHEUR DES ASSETS GÃ‰NÃ‰RÃ‰S (100% MULTILINGUE)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🪄 AFFICHEUR DES ASSETS GÉNÉRÉS (100% MULTILINGUE)
+// ═══════════════════════════════════════════════════════════════════
 window.displayGeneratedAsset = function(data) {
     const outputArea = document.getElementById('tech-gen-output');
     if (!outputArea) return;
@@ -4483,16 +4483,16 @@ window.displayGeneratedAsset = function(data) {
     const isEn = STATE.currentLang === 'en';
     const ts   = Date.now();
 
-    // ðŸŒ Dictionnaire de traduction des Ã©tiquettes gÃ©nÃ©rÃ©es
+    // 🌍 Dictionnaire de traduction des étiquettes générées
     const labels = {
-        meta: isAr ? 'Ø­Ø²Ù…Ø© HTML Ø§Ù„Ù…ÙŠØªØ§ (Ø§Ù„Ø¹Ù„Ø§Ù…Ø§Øª Ø§Ù„ÙˆØµÙÙŠØ©)' : isEn ? 'META HTML PACK' : 'PACK MÃ‰TA HTML',
-        aeo:  isAr ? 'Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ© AEO (Ø¥Ø¬Ø§Ø¨Ø§Øª Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ)'   : isEn ? 'AEO STRATEGY'   : 'STRATÃ‰GIE AEO',
-        geo:  isAr ? 'Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ© GEO (Ù…Ø­Ø±ÙƒØ§Øª Ø§Ù„Ø¨Ø­Ø« Ø§Ù„ØªÙˆÙ„ÙŠØ¯ÙŠØ©)'   : isEn ? 'GEO STRATEGY'   : 'STRATÃ‰GIE GEO',
-        sys:  isAr ? 'Ù…Ù„ÙØ§Øª Ø§Ù„Ù†Ø¸Ø§Ù…'      : isEn ? 'SYSTEM FILES'   : 'FICHIERS SYSTÃˆME',
-        copy: isAr ? 'Ù†Ø³Ø® Ø§Ù„ÙƒÙˆØ¯'         : isEn ? 'COPY CODE'      : 'COPIER LE CODE',
-        verdict: isAr ? 'Ø±Ø£ÙŠ Ø§Ù„Ø®Ø¨ÙŠØ±' : isEn ? 'EXPERT VERDICT' : 'VERDICT EXPERT',
-        faqLabel: isAr ? '(Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø§Ø¦Ø¹Ø© JSON-LD)' : '(FAQ JSON-LD)',
-        sgeLabel: isAr ? '(Ù…Ø­ØªÙˆÙ‰ SGE)' : '(SGE Content)'
+        meta: isAr ? 'حزمة HTML الميتا (العلامات الوصفية)' : isEn ? 'META HTML PACK' : 'PACK MÉTA HTML',
+        aeo:  isAr ? 'استراتيجية AEO (إجابات الذكاء الاصطناعي)'   : isEn ? 'AEO STRATEGY'   : 'STRATÉGIE AEO',
+        geo:  isAr ? 'استراتيجية GEO (محركات البحث التوليدية)'   : isEn ? 'GEO STRATEGY'   : 'STRATÉGIE GEO',
+        sys:  isAr ? 'ملفات النظام'      : isEn ? 'SYSTEM FILES'   : 'FICHIERS SYSTÈME',
+        copy: isAr ? 'نسخ الكود'         : isEn ? 'COPY CODE'      : 'COPIER LE CODE',
+        verdict: isAr ? 'رأي الخبير' : isEn ? 'EXPERT VERDICT' : 'VERDICT EXPERT',
+        faqLabel: isAr ? '(الأسئلة الشائعة JSON-LD)' : '(FAQ JSON-LD)',
+        sgeLabel: isAr ? '(محتوى SGE)' : '(SGE Content)'
     };
 
     let blockId = '';
@@ -4503,7 +4503,7 @@ window.displayGeneratedAsset = function(data) {
     container.style.position = 'relative';
     container.dir = isAr ? 'rtl' : 'ltr';
 
-    // â”€â”€â”€ VERDICT EXPERT â”€â”€â”€
+    // ─── VERDICT EXPERT ───
     let verdictHtml = '';
     if (data.auditComment) {
         verdictHtml = `
@@ -4516,7 +4516,7 @@ window.displayGeneratedAsset = function(data) {
         `;
     }
 
-    // â”€â”€â”€ CAS 1 : META HTML â”€â”€â”€
+    // ─── CAS 1 : META HTML ───
     if (data.htmlHeader) {
         blockId = 'block-meta-pack';
         const uniqueId = `asset-meta-${ts}`;
@@ -4538,7 +4538,7 @@ window.displayGeneratedAsset = function(data) {
         setTimeout(() => document.getElementById(uniqueId).textContent = cleanHtml, 0);
     }
 
-    // â”€â”€â”€ CAS 2 : AEO + GEO â”€â”€â”€
+    // ─── CAS 2 : AEO + GEO ───
     else if (data.aeoCode || data.geoCode) {
         blockId = 'block-aeo-geo';
         const aeoId = `asset-aeo-${ts}`;
@@ -4576,7 +4576,7 @@ window.displayGeneratedAsset = function(data) {
         }, 0);
     }
 
-    // â”€â”€â”€ CAS 3 : FICHIERS SYSTÃˆME â”€â”€â”€
+    // ─── CAS 3 : FICHIERS SYSTÈME ───
     else {
         const key   = Object.keys(data).find(k => k !== 'auditComment') || 'file';
         const val   = data[key];
@@ -4587,7 +4587,7 @@ window.displayGeneratedAsset = function(data) {
 
         container.innerHTML = `
             ${verdictHtml}
-            <h4 style="color:#ec4899; margin-bottom:15px; font-family:'Cairo'; text-transform:uppercase;"><i class="fas fa-file-code"></i> ${labels.sys} â€” ${key}</h4>
+            <h4 style="color:#ec4899; margin-bottom:15px; font-family:'Cairo'; text-transform:uppercase;"><i class="fas fa-file-code"></i> ${labels.sys} — ${key}</h4>
             <div style="position: relative; background: #05071a; border: 1px solid #500732; border-radius: 12px; overflow: hidden;">
                 <button onclick="copyToClipboard('${sysId}', this)" style="position: absolute; top: 12px; ${isAr?'left':'right'}: 12px; background: #ec4899; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 0.7rem; font-weight: bold; cursor: pointer; z-index: 10;">
                     <i class="fas fa-copy"></i> ${labels.copy}
@@ -4598,7 +4598,7 @@ window.displayGeneratedAsset = function(data) {
         setTimeout(() => document.getElementById(sysId).textContent = val, 0);
     }
 
-    // â”€â”€â”€ REMPLACEMENT INTELLIGENT DU BLOC â”€â”€â”€
+    // ─── REMPLACEMENT INTELLIGENT DU BLOC ───
     if (blockId) container.id = blockId;
     const existing = document.getElementById(blockId);
 
@@ -4612,9 +4612,9 @@ window.displayGeneratedAsset = function(data) {
         container.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 100);
 };
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸš€ DÃ‰CLENCHEUR DES GÃ‰NÃ‰RATEURS (TRADUIT)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🚀 DÉCLENCHEUR DES GÉNÉRATEURS (TRADUIT)
+// ═══════════════════════════════════════════════════════════════════
 function buildDakaRecommendationReadiness(ctx = {}) {
     const extraction = ctx.extraction || {};
     const title = extraction.title || '';
@@ -4640,7 +4640,7 @@ function buildDakaRecommendationReadiness(ctx = {}) {
 function renderDakaReadinessSignal(signal, labels) {
     const state = signal.ready ? labels.ready : labels.todo;
     const cls = signal.ready ? 'is-ready' : 'is-todo';
-    return `<span class="daka-readiness-chip ${cls}"><i class="fas ${signal.ready ? 'fa-check' : 'fa-circle-exclamation'}"></i>${escapeHtml(labels[signal.key] || signal.key)} Â· ${state}</span>`;
+    return `<span class="daka-readiness-chip ${cls}"><i class="fas ${signal.ready ? 'fa-check' : 'fa-circle-exclamation'}"></i>${escapeHtml(labels[signal.key] || signal.key)} · ${state}</span>`;
 }
 
 function renderRealResultsEngine(ctx = {}, opts = {}) {
@@ -4649,53 +4649,53 @@ function renderRealResultsEngine(ctx = {}, opts = {}) {
     const dir = isAr ? 'rtl' : 'ltr';
     const readiness = buildDakaRecommendationReadiness(ctx);
     const labels = {
-        title: isAr ? 'Ù…Ø­Ø±Ùƒ Daka Real Results' : isEn ? 'Daka Real Results Engine' : 'Daka Real Results Engine',
-        subtitle: isAr ? 'Ø­ÙˆÙ‘Ù„ Ø£Ø¯Ù„Ø© Ø§Ù„ØµÙØ­Ø© Ø¥Ù„Ù‰ Ø¥Ø´Ø§Ø±Ø§Øª Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ÙÙ‡Ù… ÙˆØ§Ù„Ø§Ø³ØªØ´Ù‡Ø§Ø¯ ÙˆØ§Ù„ØªØ«Ø¨ÙŠØª.' : isEn ? 'Turn page evidence into installable, verifiable recommendation signals.' : 'Transformer les preuves de la page en signaux installables, vÃ©rifiables et recommandables.',
-        score: isAr ? 'Ø¬Ø§Ù‡Ø²ÙŠØ© ØªÙˆØµÙŠØ© Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ' : isEn ? 'AI recommendation readiness' : 'RecommandabilitÃ© IA',
-        ready: isAr ? 'Ø¬Ø§Ù‡Ø²' : isEn ? 'ready' : 'prÃªt',
-        todo: isAr ? 'Ù†Ø§Ù‚Øµ' : isEn ? 'missing' : 'Ã  renforcer',
-        identity: isAr ? 'Ù‡ÙˆÙŠØ© Ø§Ù„ØµÙØ­Ø©' : isEn ? 'Page identity' : 'IdentitÃ© page',
-        snippet: isAr ? 'Ù…Ù‚ØªØ·Ù Ø§Ù„Ø¨Ø­Ø«' : isEn ? 'Search snippet' : 'Snippet recherche',
-        entity: isAr ? 'ÙƒÙŠØ§Ù† Ø§Ù„Ø¹Ù„Ø§Ù…Ø©' : isEn ? 'Brand entity' : 'EntitÃ© marque',
-        schema: isAr ? 'Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ù†Ø¸Ù…Ø©' : isEn ? 'Structured proof' : 'Preuves structurÃ©es',
-        machine: isAr ? 'ÙˆØµÙˆÙ„ Ø§Ù„Ø¢Ù„Ø§Øª' : isEn ? 'Machine access' : 'AccÃ¨s machine',
-        proof: isAr ? 'Ø£Ø¯Ù„Ø© Ø«Ù‚Ø©' : isEn ? 'Trust proofs' : 'Preuves de confiance',
-        launch: isAr ? 'Ø¨Ù†Ø§Ø¡ Ø§Ù„Ø­Ø²Ù…Ø©' : isEn ? 'Build pack' : 'Construire le pack',
-        install: isAr ? 'Ù…ÙƒØ§Ù† Ø§Ù„ØªØ«Ø¨ÙŠØª' : isEn ? 'Install target' : 'Zone dâ€™installation',
-        verify: isAr ? 'Ø§Ù„ØªØ­Ù‚Ù‚' : isEn ? 'Validation' : 'Validation',
-        evidence: isAr ? 'Ø£Ø¯Ù„Ø© Ù…Ø³ØªØ®Ø¯Ù…Ø©' : isEn ? 'Evidence used' : 'Preuves utilisÃ©es'
+        title: isAr ? 'محرك Daka Real Results' : isEn ? 'Daka Real Results Engine' : 'Daka Real Results Engine',
+        subtitle: isAr ? 'حوّل أدلة الصفحة إلى إشارات قابلة للفهم والاستشهاد والتثبيت.' : isEn ? 'Turn page evidence into installable, verifiable recommendation signals.' : 'Transformer les preuves de la page en signaux installables, vérifiables et recommandables.',
+        score: isAr ? 'جاهزية توصية الذكاء الاصطناعي' : isEn ? 'AI recommendation readiness' : 'Recommandabilité IA',
+        ready: isAr ? 'جاهز' : isEn ? 'ready' : 'prêt',
+        todo: isAr ? 'ناقص' : isEn ? 'missing' : 'à renforcer',
+        identity: isAr ? 'هوية الصفحة' : isEn ? 'Page identity' : 'Identité page',
+        snippet: isAr ? 'مقتطف البحث' : isEn ? 'Search snippet' : 'Snippet recherche',
+        entity: isAr ? 'كيان العلامة' : isEn ? 'Brand entity' : 'Entité marque',
+        schema: isAr ? 'بيانات منظمة' : isEn ? 'Structured proof' : 'Preuves structurées',
+        machine: isAr ? 'وصول الآلات' : isEn ? 'Machine access' : 'Accès machine',
+        proof: isAr ? 'أدلة ثقة' : isEn ? 'Trust proofs' : 'Preuves de confiance',
+        launch: isAr ? 'بناء الحزمة' : isEn ? 'Build pack' : 'Construire le pack',
+        install: isAr ? 'مكان التثبيت' : isEn ? 'Install target' : 'Zone d’installation',
+        verify: isAr ? 'التحقق' : isEn ? 'Validation' : 'Validation',
+        evidence: isAr ? 'أدلة مستخدمة' : isEn ? 'Evidence used' : 'Preuves utilisées'
     };
     const cards = [
         {
             type: 'markdown',
             icon: 'fa-magnifying-glass-chart',
-            title: isAr ? 'Ø¥Ø´Ø§Ø±Ø© Ø§Ù„Ø¸Ù‡ÙˆØ± ÙˆØ§Ù„Ù‡ÙˆÙŠØ©' : isEn ? 'Search Snippet & Brand Signal' : 'Search Snippet & Brand Signal',
-            desc: isAr ? 'Ø¹Ù†ÙˆØ§Ù† ÙˆÙˆØµÙ ÙˆØ±ÙˆØ§Ø¨Ø· Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ© ØªØ¬Ø¹Ù„ Ø§Ù„ØµÙØ­Ø© Ù…ÙÙ‡ÙˆÙ…Ø© Ù‚Ø¨Ù„ Ø§Ù„Ø²ÙŠØ§Ø±Ø©.' : isEn ? 'Title, meta and social previews that make the offer clear before the click.' : 'Title, meta et aperÃ§us sociaux pour rendre lâ€™offre claire avant le clic.',
+            title: isAr ? 'إشارة الظهور والهوية' : isEn ? 'Search Snippet & Brand Signal' : 'Search Snippet & Brand Signal',
+            desc: isAr ? 'عنوان ووصف وروابط اجتماعية تجعل الصفحة مفهومة قبل الزيارة.' : isEn ? 'Title, meta and social previews that make the offer clear before the click.' : 'Title, meta et aperçus sociaux pour rendre l’offre claire avant le clic.',
             target: '<head>',
-            validation: isAr ? 'Ù…Ø¹Ø§ÙŠÙ†Ø© Ø§Ù„Ù…Ù‚ØªØ·Ù ÙˆØ§Ù„Ø¨Ø·Ø§Ù‚Ø§Øª Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ©' : isEn ? 'Snippet and social preview checks' : 'AperÃ§u snippet et cartes sociales'
+            validation: isAr ? 'معاينة المقتطف والبطاقات الاجتماعية' : isEn ? 'Snippet and social preview checks' : 'Aperçu snippet et cartes sociales'
         },
         {
             type: 'aeo_geo',
             icon: 'fa-robot',
-            title: isAr ? 'Ø¬Ø§Ù‡Ø²ÙŠØ© Ø¥Ø¬Ø§Ø¨Ø§Øª Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ' : isEn ? 'AI Answer & Citation Readiness' : 'AI Answer & Citation Readiness',
-            desc: isAr ? 'Ø£Ø³Ø¦Ù„Ø©ØŒ Ø£Ø¬ÙˆØ¨Ø© ÙˆÙƒØªÙ„ Ù…Ø±Ø¦ÙŠØ© ÙŠÙ…ÙƒÙ† Ù„Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ ÙÙ‡Ù…Ù‡Ø§ Ø¯ÙˆÙ† Ø§Ø®ØªØ±Ø§Ø¹.' : isEn ? 'Visible answers and FAQ schema that models can understand without guessing.' : 'RÃ©ponses visibles et FAQ schema que les modÃ¨les peuvent comprendre sans deviner.',
-            target: isAr ? 'Ù…Ø­ØªÙˆÙ‰ Ù…Ø±Ø¦ÙŠ + JSON-LD' : isEn ? 'Visible content + JSON-LD' : 'Contenu visible + JSON-LD',
-            validation: isAr ? 'Ø§Ù‚Ø±Ø£ Ø§Ù„Ù†Øµ ÙƒØ¹Ù…ÙŠÙ„ ÙˆØªØ­Ù‚Ù‚ Ù…Ù† ÙƒÙ„ ÙˆØ¹Ø¯' : isEn ? 'Read as a buyer and verify each claim' : 'Lire comme un acheteur et vÃ©rifier chaque promesse'
+            title: isAr ? 'جاهزية إجابات الذكاء الاصطناعي' : isEn ? 'AI Answer & Citation Readiness' : 'AI Answer & Citation Readiness',
+            desc: isAr ? 'أسئلة، أجوبة وكتل مرئية يمكن للذكاء الاصطناعي فهمها دون اختراع.' : isEn ? 'Visible answers and FAQ schema that models can understand without guessing.' : 'Réponses visibles et FAQ schema que les modèles peuvent comprendre sans deviner.',
+            target: isAr ? 'محتوى مرئي + JSON-LD' : isEn ? 'Visible content + JSON-LD' : 'Contenu visible + JSON-LD',
+            validation: isAr ? 'اقرأ النص كعميل وتحقق من كل وعد' : isEn ? 'Read as a buyer and verify each claim' : 'Lire comme un acheteur et vérifier chaque promesse'
         },
         {
             type: 'system',
             icon: 'fa-shield-halved',
-            title: isAr ? 'Ù…Ù„ÙØ§Øª Ø§Ù„ÙˆØµÙˆÙ„ ÙˆØ§Ù„Ø«Ù‚Ø©' : isEn ? 'Machine Access & Trust Files' : 'Machine Access & Trust Files',
-            desc: isAr ? 'robots.txt Ùˆ llms.txt Ùˆ security.txt Ø¨Ø¯ÙˆÙ† ÙˆØ¹ÙˆØ¯ ÙƒØ§Ø°Ø¨Ø© Ø£Ùˆ Ø¨ÙŠØ§Ù†Ø§Øª Ù…Ø®ØªØ±Ø¹Ø©.' : isEn ? 'robots.txt, llms.txt and security.txt without false claims or invented contacts.' : 'robots.txt, llms.txt et security.txt sans promesses ni contacts inventÃ©s.',
+            title: isAr ? 'ملفات الوصول والثقة' : isEn ? 'Machine Access & Trust Files' : 'Machine Access & Trust Files',
+            desc: isAr ? 'robots.txt و llms.txt و security.txt بدون وعود كاذبة أو بيانات مخترعة.' : isEn ? 'robots.txt, llms.txt and security.txt without false claims or invented contacts.' : 'robots.txt, llms.txt et security.txt sans promesses ni contacts inventés.',
             target: '/',
-            validation: isAr ? 'Ø§Ø®ØªØ¨Ø§Ø± URLs Ø§Ù„Ø¹Ø§Ù…Ø© ÙˆÙ‚Ø±Ø§Ø¡Ø© robots' : isEn ? 'Check public URLs and robots reading' : 'Tester URLs publiques et lecture robots'
+            validation: isAr ? 'اختبار URLs العامة وقراءة robots' : isEn ? 'Check public URLs and robots reading' : 'Tester URLs publiques et lecture robots'
         }
     ];
     return `
     <div class="daka-real-results no-print" dir="${dir}">
         <div class="daka-real-hero">
             <div>
-                <span class="daka-real-kicker">${isAr ? 'Ù†Ø¸Ø§Ù… ØªÙˆØµÙŠØ© Ø£Ø¨ÙŠØ¶ ÙˆØ¢Ù…Ù†' : isEn ? 'White-hat recommendation system' : 'SystÃ¨me de recommandation white-hat'}</span>
+                <span class="daka-real-kicker">${isAr ? 'نظام توصية أبيض وآمن' : isEn ? 'White-hat recommendation system' : 'Système de recommandation white-hat'}</span>
                 <h3>${labels.title}</h3>
                 <p>${labels.subtitle}</p>
             </div>
@@ -4708,7 +4708,7 @@ function renderRealResultsEngine(ctx = {}, opts = {}) {
             ${readiness.signals.map(signal => renderDakaReadinessSignal(signal, labels)).join('')}
         </div>
         <div class="daka-real-journey" aria-label="Real Results workflow">
-            ${(isAr ? ['Ø§ÙÙ‡Ù…', 'Ù†Ø¸Ù‘Ù…', 'Ø«Ø¨Ù‘Øª', 'ØªØ­Ù‚Ù‚'] : isEn ? ['Understand', 'Structure', 'Install', 'Verify'] : ['Comprendre', 'Structurer', 'Installer', 'VÃ©rifier']).map((step, i) => `
+            ${(isAr ? ['افهم', 'نظّم', 'ثبّت', 'تحقق'] : isEn ? ['Understand', 'Structure', 'Install', 'Verify'] : ['Comprendre', 'Structurer', 'Installer', 'Vérifier']).map((step, i) => `
                 <div class="daka-journey-step"><span>0${i + 1}</span><strong>${step}</strong></div>
             `).join('')}
         </div>
@@ -4740,14 +4740,14 @@ function renderRealResultsGeneratedAsset(data) {
     const isEn = STATE.currentLang === 'en';
     const dir = isAr ? 'rtl' : 'ltr';
     const labels = {
-        title: isAr ? 'Ø­Ø²Ù…Ø© Real Results Ø¬Ø§Ù‡Ø²Ø©' : isEn ? 'Real Results pack ready' : 'Pack Real Results prÃªt',
-        verdict: isAr ? 'Ù‚Ø±Ø§Ø± Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªÙ†ÙÙŠØ°' : isEn ? 'Actionable verdict' : 'Verdict exploitable',
-        copy: isAr ? 'Ù†Ø³Ø®' : isEn ? 'Copy' : 'Copier',
-        evidence: isAr ? 'Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…Ø©' : isEn ? 'Evidence used' : 'Preuves utilisÃ©es',
-        steps: isAr ? 'Ø®Ø·ÙˆØ§Øª Ø§Ù„ØªØ«Ø¨ÙŠØª ÙˆØ§Ù„ØªØ­Ù‚Ù‚' : isEn ? 'Install and validation steps' : 'Ã‰tapes dâ€™installation et de validation',
-        install: isAr ? 'Ù…ÙƒØ§Ù† Ø§Ù„ØªØ«Ø¨ÙŠØª' : isEn ? 'Install target' : 'Zone dâ€™installation',
-        validation: isAr ? 'Ø§Ù„ØªØ­Ù‚Ù‚' : isEn ? 'Validation' : 'Validation',
-        strengthen: isAr ? 'Ø£Ø¯Ù„Ø© ÙŠØ¬Ø¨ ØªÙ‚ÙˆÙŠØªÙ‡Ø§' : isEn ? 'Proofs to strengthen' : 'Preuves Ã  renforcer'
+        title: isAr ? 'حزمة Real Results جاهزة' : isEn ? 'Real Results pack ready' : 'Pack Real Results prêt',
+        verdict: isAr ? 'قرار قابل للتنفيذ' : isEn ? 'Actionable verdict' : 'Verdict exploitable',
+        copy: isAr ? 'نسخ' : isEn ? 'Copy' : 'Copier',
+        evidence: isAr ? 'الأدلة المستخدمة' : isEn ? 'Evidence used' : 'Preuves utilisées',
+        steps: isAr ? 'خطوات التثبيت والتحقق' : isEn ? 'Install and validation steps' : 'Étapes d’installation et de validation',
+        install: isAr ? 'مكان التثبيت' : isEn ? 'Install target' : 'Zone d’installation',
+        validation: isAr ? 'التحقق' : isEn ? 'Validation' : 'Validation',
+        strengthen: isAr ? 'أدلة يجب تقويتها' : isEn ? 'Proofs to strengthen' : 'Preuves à renforcer'
     };
     const ts = Date.now();
     const deliverables = data.deliverables || {};
@@ -4858,19 +4858,19 @@ function buildDakaClientTechnicalPack(url, type, ctx = {}) {
     const ctas = dakaClientAssetList(extraction.ctas || ctx.copyIntel?.realCTAs || [], 6);
     const proofs = dakaClientAssetList([ctx.decisionProofs, ctx.trustIntel, extraction.socialLinks, extraction.pricingSignals], 8);
     const offer = dakaClientAssetText(description || title || parts.domain, 180);
-    const questionIntro = isAr ? 'Ù…Ø§ Ø§Ù„Ø°ÙŠ ÙŠÙ‚Ø¯Ù…Ù‡ Ù‡Ø°Ø§ Ø§Ù„Ù…ÙˆÙ‚Ø¹ØŸ' : isEn ? 'What does this page offer?' : 'Que propose cette page ?';
-    const proofIntro = isAr ? 'Ù…Ø§ Ø§Ù„Ø¯Ù„ÙŠÙ„ Ø§Ù„Ù…ØªØ§Ø­ØŸ' : isEn ? 'What proof is available?' : 'Quelle preuve est disponible ?';
+    const questionIntro = isAr ? 'ما الذي يقدمه هذا الموقع؟' : isEn ? 'What does this page offer?' : 'Que propose cette page ?';
+    const proofIntro = isAr ? 'ما الدليل المتاح؟' : isEn ? 'What proof is available?' : 'Quelle preuve est disponible ?';
     const answer = isAr
-        ? `${parts.domain} ÙŠØ¹Ø±Ø¶ ${offer}. ÙŠØ¬Ø¨ Ø¥Ø¨Ù‚Ø§Ø¡ Ø£ÙŠ Ø³Ø¹Ø± Ø£Ùˆ Ø¶Ù…Ø§Ù† Ø£Ùˆ Ù†ØªÙŠØ¬Ø© ØºÙŠØ± Ù…Ø¤ÙƒØ¯Ø© Ø¨ØµÙŠØºØ© "Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªØ­Ù‚Ù‚".`
+        ? `${parts.domain} يعرض ${offer}. يجب إبقاء أي سعر أو ضمان أو نتيجة غير مؤكدة بصيغة "قابل للتحقق".`
         : isEn
             ? `${parts.domain} presents ${offer}. Any price, warranty or result not observed must stay marked as "to confirm".`
-            : `${parts.domain} prÃ©sente ${offer}. Tout prix, garantie ou rÃ©sultat non observÃ© doit rester indiquÃ© comme "Ã  confirmer".`;
+            : `${parts.domain} présente ${offer}. Tout prix, garantie ou résultat non observé doit rester indiqué comme "à confirmer".`;
     const schema = {
         '@context': 'https://schema.org',
         '@type': 'FAQPage',
         mainEntity: [
             { '@type': 'Question', name: questionIntro, acceptedAnswer: { '@type': 'Answer', text: answer } },
-            { '@type': 'Question', name: proofIntro, acceptedAnswer: { '@type': 'Answer', text: proofs[0] || (isAr ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø¯Ù„Ø© Ø¥Ø¶Ø§ÙÙŠØ© Ù…Ø¤ÙƒØ¯Ø© ÙÙŠ Ø§Ù„Ø³ÙŠØ§Ù‚.' : isEn ? 'No additional proof confirmed in the context.' : 'Aucune preuve additionnelle confirmÃ©e dans le contexte.') } }
+            { '@type': 'Question', name: proofIntro, acceptedAnswer: { '@type': 'Answer', text: proofs[0] || (isAr ? 'لا توجد أدلة إضافية مؤكدة في السياق.' : isEn ? 'No additional proof confirmed in the context.' : 'Aucune preuve additionnelle confirmée dans le contexte.') } }
         ]
     };
     const schemaJsonLd = `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`;
@@ -4888,7 +4888,7 @@ function buildDakaClientTechnicalPack(url, type, ctx = {}) {
         `<section class="daka-ai-answer-pack" aria-label="Daka verified answers">`,
         `  <h2>${escapeHtml(questionIntro)}</h2>`,
         `  <p>${escapeHtml(answer)}</p>`,
-        proofs.length ? `  <ul>${proofs.slice(0, 4).map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : `  <p>${escapeHtml(isAr ? 'Ø£Ø¶Ù Ø£Ø¯Ù„Ø© Ù…Ø¤ÙƒØ¯Ø© Ù‚Ø¨Ù„ Ø§Ù„Ù†Ø´Ø±.' : isEn ? 'Add verified proof before publishing.' : 'Ajoutez des preuves vÃ©rifiÃ©es avant publication.')}</p>`,
+        proofs.length ? `  <ul>${proofs.slice(0, 4).map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>` : `  <p>${escapeHtml(isAr ? 'أضف أدلة مؤكدة قبل النشر.' : isEn ? 'Add verified proof before publishing.' : 'Ajoutez des preuves vérifiées avant publication.')}</p>`,
         ctas.length ? `  <p><strong>CTA:</strong> ${escapeHtml(ctas.slice(0, 3).join(' | '))}</p>` : '',
         `</section>`
     ].filter(Boolean).join('\n');
@@ -4912,13 +4912,13 @@ function buildDakaClientTechnicalPack(url, type, ctx = {}) {
         success: true,
         type,
         source: 'client-deterministic-thinking',
-        auditComment: isAr ? 'ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø­Ø²Ù…Ø© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„Ù†Ø³Ø® Ù…Ù† Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù…ØªØ§Ø­Ø©.' : isEn ? 'Copy-ready pack generated from available evidence.' : 'Pack prÃªt Ã  coller gÃ©nÃ©rÃ© Ã  partir des preuves disponibles.',
+        auditComment: isAr ? 'تم إنشاء حزمة قابلة للنسخ من الأدلة المتاحة.' : isEn ? 'Copy-ready pack generated from available evidence.' : 'Pack prêt à coller généré à partir des preuves disponibles.',
         installTarget: type === 'system' ? 'Root files: /robots.txt, /llms.txt, /sitemap.xml' : type === 'markdown' ? '<head>' : 'Visible page block + JSON-LD',
-        validation: isAr ? 'ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ù†ØµÙˆØµ Ù‚Ø¨Ù„ Ø§Ù„Ù†Ø´Ø± ÙˆÙ„Ø§ ØªØ¶Ù Ø§Ø¯Ø¹Ø§Ø¡Ø§Øª ØºÙŠØ± Ù…Ø«Ø¨ØªØ©.' : isEn ? 'Review before publishing and keep unverified claims marked.' : 'Relire avant publication et garder les affirmations non vÃ©rifiÃ©es marquÃ©es.',
+        validation: isAr ? 'تحقق من النصوص قبل النشر ولا تضف ادعاءات غير مثبتة.' : isEn ? 'Review before publishing and keep unverified claims marked.' : 'Relire avant publication et garder les affirmations non vérifiées marquées.',
         readinessSteps: [
-            isAr ? 'Ø§Ù†Ø³Ø® Ø§Ù„ÙƒÙˆØ¯ ÙÙŠ Ø§Ù„Ù…ÙƒØ§Ù† Ø§Ù„Ù…Ù†Ø§Ø³Ø¨.' : isEn ? 'Copy the asset into the right target.' : 'Copier le livrable dans la bonne zone.',
-            isAr ? 'Ø§Ø®ØªØ¨Ø± Ø¹Ù†ÙˆØ§Ù† URL Ø§Ù„Ø¹Ø§Ù….' : isEn ? 'Test the public URL.' : 'Tester lâ€™URL publique.',
-            isAr ? 'ØªØ­Ù‚Ù‚ Ù…Ù† Ø¹Ø¯Ù… ÙˆØ¬ÙˆØ¯ ÙˆØ¹ÙˆØ¯ ØºÙŠØ± Ù…Ø«Ø¨ØªØ©.' : isEn ? 'Check that no unverified claim was added.' : 'VÃ©rifier quâ€™aucune promesse non prouvÃ©e nâ€™a Ã©tÃ© ajoutÃ©e.'
+            isAr ? 'انسخ الكود في المكان المناسب.' : isEn ? 'Copy the asset into the right target.' : 'Copier le livrable dans la bonne zone.',
+            isAr ? 'اختبر عنوان URL العام.' : isEn ? 'Test the public URL.' : 'Tester l’URL publique.',
+            isAr ? 'تحقق من عدم وجود وعود غير مثبتة.' : isEn ? 'Check that no unverified claim was added.' : 'Vérifier qu’aucune promesse non prouvée n’a été ajoutée.'
         ],
         evidenceUsed: proofs,
         htmlHeader: headCode,
@@ -4936,15 +4936,15 @@ function buildDakaClientTechnicalPack(url, type, ctx = {}) {
 
 window.triggerGenerator = async function(type, btnElement) {
     if (!window.currentSeoContext || !window.currentSeoUrl) {
-        return toast.warning(STATE.currentLang === 'ar' ? 'ÙŠØ±Ø¬Ù‰ ØªØ´ØºÙŠÙ„ Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ø§Ù„ØªÙ‚Ù†ÙŠ Ø£ÙˆÙ„Ø§Ù‹.' : 'Lancez d\'abord l\'analyse technique.');
+        return toast.warning(STATE.currentLang === 'ar' ? 'يرجى تشغيل التحليل التقني أولاً.' : 'Lancez d\'abord l\'analyse technique.');
     }
 
     const originalHTML = btnElement.innerHTML;
     const isAr = STATE.currentLang === 'ar';
     const isEn = STATE.currentLang === 'en';
 
-    // ðŸŒ Traduction du texte de chargement
-    const loadingText = isAr ? 'Ø¬Ø§Ø±ÙŠ Ø§Ù„ØªÙˆÙ„ÙŠØ¯...' : isEn ? 'Generating...' : 'Generation...';
+    // 🌍 Traduction du texte de chargement
+    const loadingText = isAr ? 'جاري التوليد...' : isEn ? 'Generating...' : 'Generation...';
 
     btnElement.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i> ${loadingText}`;
     btnElement.disabled = true;
@@ -4992,17 +4992,17 @@ window.triggerGenerator = async function(type, btnElement) {
                 outputArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
             window.displayGeneratedAsset(response.data || response);
-            toast.success(isAr ? 'âœ… ØªÙ… Ø§Ù„ØªÙˆÙ„ÙŠØ¯ Ø¨Ù†Ø¬Ø§Ø­!' : 'âœ… GÃ©nÃ©rÃ© avec succÃ¨s !');
+            toast.success(isAr ? '✅ تم التوليد بنجاح!' : '✅ Généré avec succès !');
         } else {
-            throw new Error(response?.error || 'RÃ©ponse invalide du serveur');
+            throw new Error(response?.error || 'Réponse invalide du serveur');
         }
     } catch (err) {
         console.error('triggerGenerator Error:', err);
         const fallback = buildDakaClientTechnicalPack(window.currentSeoUrl, type, window.currentSeoContext || {});
         window.displayGeneratedAsset(fallback);
-        toast.warning(isAr ? 'ØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ø­Ø²Ù…Ø© Ù…Ø­Ù„ÙŠØ© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„Ù†Ø³Ø®.' : isEn ? 'Local copy-ready pack generated.' : 'Pack local prÃªt Ã  coller gÃ©nÃ©rÃ©.');
+        toast.warning(isAr ? 'تم إنشاء حزمة محلية قابلة للنسخ.' : isEn ? 'Local copy-ready pack generated.' : 'Pack local prêt à coller généré.');
         return;
-        toast.error(isAr ? 'Ø®Ø·Ø£ ÙÙŠ Ø§Ù„ØªÙˆÙ„ÙŠØ¯: ' + err.message : 'Erreur de generation : ' + err.message);
+        toast.error(isAr ? 'خطأ في التوليد: ' + err.message : 'Erreur de generation : ' + err.message);
     } finally {
         btnElement.innerHTML = originalHTML;
         btnElement.disabled = false;
@@ -5010,9 +5010,9 @@ window.triggerGenerator = async function(type, btnElement) {
     }
 };
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// PARTIE 1/5 â€” DATA MAPPING V7 (lecture des bons champs)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// PARTIE 1/5 — DATA MAPPING V7 (lecture des bons champs)
+// ════════════════════════════════════════════════════════════════
 function renderBacklinkPortfolio(data = {}, opts = {}) {
     const isAr = !!opts.isAr;
     const isEn = !!opts.isEn;
@@ -5086,27 +5086,27 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
         broken: uniqueLinks(brokenSources, 'broken')
     };
     const labels = {
-        title: isAr ? 'Ø§Ù„Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ÙØ­Øµ ÙˆØ§Ù„Ø¹Ù…Ù„' : isEn ? 'Links ready to inspect and act on' : 'Liens visibles et directement exploitables',
+        title: isAr ? 'الروابط القابلة للفحص والعمل' : isEn ? 'Links ready to inspect and act on' : 'Liens visibles et directement exploitables',
         intro: isAr
-            ? 'Ø§ÙØªØ­ ÙƒÙ„ Ø±Ø§Ø¨Ø·ØŒ ØªØ­Ù‚Ù‚ Ù…Ù† Ù…ØµØ¯Ø±Ù‡ØŒ Ø«Ù… Ù†ÙÙ‘Ø° Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø§Ù„Ù…Ù‚ØªØ±Ø­. Ù„Ø§ Ù†Ø¹Ø±Ø¶ Ø£ÙŠ Ø±Ø§Ø¨Ø· ÙˆØ§Ø±Ø¯ Ù„Ù… ØªØªÙ… Ù…Ù„Ø§Ø­Ø¸ØªÙ‡.'
+            ? 'افتح كل رابط، تحقق من مصدره، ثم نفّذ الإجراء المقترح. لا نعرض أي رابط وارد لم تتم ملاحظته.'
             : isEn
                 ? 'Open each link, verify its source, then execute the recommended action. Unobserved inbound links are never invented.'
-                : 'Ouvrez chaque lien, vÃ©rifiez sa source, puis exÃ©cutez lâ€™action recommandÃ©e. Aucun lien entrant non observÃ© nâ€™est inventÃ©.',
-        inbound: isAr ? 'Ø±ÙˆØ§Ø¨Ø· ÙˆØ§Ø±Ø¯Ø© Ù…ÙˆØ«Ù‚Ø©' : isEn ? 'Verified inbound links' : 'Liens entrants vÃ©rifiÃ©s',
-        outbound: isAr ? 'Ø±ÙˆØ§Ø¨Ø· ØµØ§Ø¯Ø±Ø© Ù…Ù† Ø§Ù„Ù…ÙˆÙ‚Ø¹' : isEn ? 'Outbound links from the site' : 'Liens sortants du site',
-        broken: isAr ? 'Ø±ÙˆØ§Ø¨Ø· Ù…ÙƒØ³ÙˆØ±Ø© ÙŠØ¬Ø¨ Ø¥ØµÙ„Ø§Ø­Ù‡Ø§' : isEn ? 'Broken links to fix' : 'Liens cassÃ©s Ã  corriger',
-        open: isAr ? 'ÙØªØ­ Ø§Ù„Ø±Ø§Ø¨Ø·' : isEn ? 'Open link' : 'Consulter',
-        inboundAction: isAr ? 'ØªØ­Ù‚Ù‚ Ù…Ù† Ø¬ÙˆØ¯Ø© Ø§Ù„Ù…ØµØ¯Ø± ÙˆØ­Ø§ÙØ¸ Ø¹Ù„Ù‰ Ø§Ù„Ø±Ø§Ø¨Ø·.' : isEn ? 'Verify source quality and preserve the link.' : 'VÃ©rifier la qualitÃ© de la source et prÃ©server le lien.',
-        outboundAction: isAr ? 'ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„ØµÙ„Ø© ÙˆØ§Ù„ÙˆØ¬Ù‡Ø© ÙˆÙˆØ³Ù… Ø§Ù„Ø±Ø§Ø¨Ø·.' : isEn ? 'Verify relevance, destination and link attributes.' : 'VÃ©rifier la pertinence, la destination et les attributs du lien.',
-        brokenAction: isAr ? 'Ø§Ø³ØªØ¨Ø¯Ù„ Ø§Ù„Ø±Ø§Ø¨Ø· Ø£Ùˆ Ø£Ø¹Ø¯ ØªÙˆØ¬ÙŠÙ‡Ù‡ Ø£Ùˆ Ø§Ø­Ø°ÙÙ‡.' : isEn ? 'Replace, redirect or remove this link.' : 'Remplacer, rediriger ou supprimer ce lien.',
-        emptyInbound: isAr ? 'Ù„Ù… ÙŠØªÙ… Ø±ØµØ¯ Ø±Ø§Ø¨Ø· ÙˆØ§Ø±Ø¯ Ù…ÙˆØ«Ù‘Ù‚.' : isEn ? 'No verified inbound link observed.' : 'Aucun lien entrant vÃ©rifiÃ© observÃ©.',
-        emptyOutbound: isAr ? 'Ù„Ù… ÙŠØªÙ… Ø±ØµØ¯ Ø±Ø§Ø¨Ø· ØµØ§Ø¯Ø± Ù‚Ø§Ø¨Ù„ Ù„Ù„ÙØ­Øµ.' : isEn ? 'No reviewable outbound link observed.' : 'Aucun lien sortant consultable observÃ©.',
-        emptyBroken: isAr ? 'Ù„Ù… ÙŠØªÙ… ØªÙˆÙÙŠØ± Ø¹Ù†ÙˆØ§Ù† URL Ù…ÙƒØ³ÙˆØ± Ù‚Ø§Ø¨Ù„ Ù„Ù„ÙØ­Øµ.' : isEn ? 'No reviewable broken URL was provided.' : 'Aucune URL cassÃ©e consultable nâ€™a Ã©tÃ© fournie.',
-        source: isAr ? 'Ø§Ù„Ù…ØµØ¯Ø±' : isEn ? 'Source' : 'Source',
-        destination: isAr ? 'Ø§Ù„ÙˆØ¬Ù‡Ø©' : isEn ? 'Destination' : 'Destination',
-        attributes: isAr ? 'Ø®ØµØ§Ø¦Øµ Ø§Ù„Ø±Ø§Ø¨Ø·' : isEn ? 'Link attributes' : 'Attributs du lien',
-        status: isAr ? 'Ø§Ù„Ø­Ø§Ù„Ø©' : isEn ? 'Status' : 'Statut',
-        action: isAr ? 'Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡' : isEn ? 'Action' : 'Action'
+                : 'Ouvrez chaque lien, vérifiez sa source, puis exécutez l’action recommandée. Aucun lien entrant non observé n’est inventé.',
+        inbound: isAr ? 'روابط واردة موثقة' : isEn ? 'Verified inbound links' : 'Liens entrants vérifiés',
+        outbound: isAr ? 'روابط صادرة من الموقع' : isEn ? 'Outbound links from the site' : 'Liens sortants du site',
+        broken: isAr ? 'روابط مكسورة يجب إصلاحها' : isEn ? 'Broken links to fix' : 'Liens cassés à corriger',
+        open: isAr ? 'فتح الرابط' : isEn ? 'Open link' : 'Consulter',
+        inboundAction: isAr ? 'تحقق من جودة المصدر وحافظ على الرابط.' : isEn ? 'Verify source quality and preserve the link.' : 'Vérifier la qualité de la source et préserver le lien.',
+        outboundAction: isAr ? 'تحقق من الصلة والوجهة ووسم الرابط.' : isEn ? 'Verify relevance, destination and link attributes.' : 'Vérifier la pertinence, la destination et les attributs du lien.',
+        brokenAction: isAr ? 'استبدل الرابط أو أعد توجيهه أو احذفه.' : isEn ? 'Replace, redirect or remove this link.' : 'Remplacer, rediriger ou supprimer ce lien.',
+        emptyInbound: isAr ? 'لم يتم رصد رابط وارد موثّق.' : isEn ? 'No verified inbound link observed.' : 'Aucun lien entrant vérifié observé.',
+        emptyOutbound: isAr ? 'لم يتم رصد رابط صادر قابل للفحص.' : isEn ? 'No reviewable outbound link observed.' : 'Aucun lien sortant consultable observé.',
+        emptyBroken: isAr ? 'لم يتم توفير عنوان URL مكسور قابل للفحص.' : isEn ? 'No reviewable broken URL was provided.' : 'Aucune URL cassée consultable n’a été fournie.',
+        source: isAr ? 'المصدر' : isEn ? 'Source' : 'Source',
+        destination: isAr ? 'الوجهة' : isEn ? 'Destination' : 'Destination',
+        attributes: isAr ? 'خصائص الرابط' : isEn ? 'Link attributes' : 'Attributs du lien',
+        status: isAr ? 'الحالة' : isEn ? 'Status' : 'Statut',
+        action: isAr ? 'الإجراء' : isEn ? 'Action' : 'Action'
     };
     const groupMeta = {
         inbound: { title: labels.inbound, icon: 'fa-arrow-right-to-bracket', action: labels.inboundAction, empty: labels.emptyInbound },
@@ -5131,7 +5131,7 @@ function renderBacklinkPortfolio(data = {}, opts = {}) {
                             ${/^https?:\/\//i.test(item.source) && item.source !== item.url ? `<a class="backlink-source" href="${esc(item.source)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true">${labels.source}: ${esc(item.source)}</a>` : ''}
                             ${/^https?:\/\//i.test(item.target) && item.target !== item.url ? `<a class="backlink-source" href="${esc(item.target)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true">${labels.destination}: ${esc(item.target)}</a>` : ''}
                             ${item.context ? `<small dir="auto">${esc(item.context)}</small>` : ''}
-                            <small>${item.status ? `${labels.status}: ${esc(item.status)}${item.statusCode ? ` (${esc(item.statusCode)})` : ''} Â· ` : ''}${item.rel.length ? `${labels.attributes}: ${esc(item.rel.join(', '))} Â· ` : ''}${labels.action}: ${meta.action}</small>
+                            <small>${item.status ? `${labels.status}: ${esc(item.status)}${item.statusCode ? ` (${esc(item.statusCode)})` : ''} · ` : ''}${item.rel.length ? `${labels.attributes}: ${esc(item.rel.join(', '))} · ` : ''}${labels.action}: ${meta.action}</small>
                         </div>
                         <a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer" data-no-collapse="true" class="backlink-open" aria-label="${labels.open}">
                             <span>${labels.open}</span><i class="fas fa-arrow-up-right-from-square"></i>
@@ -5163,14 +5163,14 @@ function displayTechnicalResults(data) {
     const isAr = STATE.currentLang === 'ar';
     const isEn = STATE.currentLang === 'en';
 
-    // â”€â”€ V7 : seoAudit contient schema/images/links/security â”€â”€â”€â”€â”€â”€
+    // ── V7 : seoAudit contient schema/images/links/security ──────
     const seoAudit = data.seoAudit || {};
 
-    // â”€â”€ Mapping complet avec fallback double (V6 â†’ V7) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Mapping complet avec fallback double (V6 → V7) ───────────
     const extract   = data.extraction      || {};
     const report    = data.globalReport    || { score: 0, grade: 'N/A', verdict: '---', businessOpportunity: '---' };
 
-    // âœ… FIX V7 â€” h1check sans underscore
+    // ✅ FIX V7 — h1check sans underscore
     const audit = data.structureAudit || {};
     const h1Check        = audit.h1check        || audit.h1_check        || '---';
     const headingStruct  = audit.heading_structure || audit.headingStructure || '---';
@@ -5180,7 +5180,7 @@ function displayTechnicalResults(data) {
     const traffic   = data.traffic         || { monthlyTraffic: '---' };
     const metrics   = data.metrics         || { lcp: '---', tbt: '---', cls: '---', fcp: '---', ttfb: '---', speedIndex: '---' };
 
-    // â”€â”€ SEO Intelligence â€” vient de seoAudit.keywordDensity en V7 â”€
+    // ── SEO Intelligence — vient de seoAudit.keywordDensity en V7 ─
     const rawKw     = data.seoIntelligence?.topKeywords   || seoAudit.keywordDensity || [];
     const rawLsi    = data.seoIntelligence?.lsiKeywords   || [];
     const rawGaps   = data.seoIntelligence?.semanticGaps  || [];
@@ -5189,7 +5189,7 @@ function displayTechnicalResults(data) {
 
     const aeo = data.aeoScore || { overall: 0, breakdown: {} };
 
-    // âœ… FIX V7 â€” schema/images/links/security lus depuis seoAudit
+    // ✅ FIX V7 — schema/images/links/security lus depuis seoAudit
     const schema = seoAudit.schema   || data.schemaMarkup  || { exists: false, types: [] };
     const images = {
         total      : seoAudit.images?.total      ?? extract.totalImages  ?? 0,
@@ -5204,28 +5204,28 @@ function displayTechnicalResults(data) {
         csp   : seoAudit.security?.csp     ?? false,
     };
 
-    // â”€â”€ Tech stack â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Tech stack ────────────────────────────────────────────────
     const tech = data.techStack || seoAudit.techStack || {};
 
-    // â”€â”€ Issues â€” criticalIssues V7 ou issuesList seoAudit â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Issues — criticalIssues V7 ou issuesList seoAudit ─────────
     const issues = data.criticalIssues || seoAudit.issuesList || [];
 
-    // â”€â”€ Action Roadmap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Action Roadmap ────────────────────────────────────────────
     const roadmap = data.actionRoadmap || [];
 
-    // â”€â”€ Opportunities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Opportunities ─────────────────────────────────────────────
     const opportunities = data.seoOpportunities || {};
 
-    // â”€â”€ System files â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── System files ─────────────────────────────────────────────
     const llmsTxt    = data.llmsTxtContent  || data.llmsTxt   || null;
     const robotsTxt  = data.robotsTxtAdvice || data.robotsTxt || null;
 
-    // â”€â”€ Generated Assets â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Generated Assets ──────────────────────────────────────────
     const assets = data.generatedAssets || {};
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // PARTIE 2/5 â€” HELPERS
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ════════════════════════════════════════════════════════════════
+    // PARTIE 2/5 — HELPERS
+    // ════════════════════════════════════════════════════════════════
 
     const h1List     = Array.isArray(extract.h1all) ? extract.h1all
                      : Array.isArray(extract.h1_all) ? extract.h1_all
@@ -5237,20 +5237,20 @@ function displayTechnicalResults(data) {
     const sevColor = s => s==='HIGH'||s==='CRITIQUE' ? '#ef4444' : s==='MEDIUM' ? '#f59e0b' : '#3b82f6';
     const sevIcon  = s => s==='HIGH'||s==='CRITIQUE' ? 'fa-times-circle' : s==='MEDIUM' ? 'fa-exclamation-triangle' : 'fa-info-circle';
 
-    // âœ… FIX â€” nettoie les unitÃ©s avant parseFloat (Ã©vite CLS "0.56s" â†’ NaN)
+    // ✅ FIX — nettoie les unités avant parseFloat (évite CLS "0.56s" → NaN)
     const pf = v => parseFloat(String(v || '0').replace(/[^0-9.]/g, '')) || 0;
     const lcpColor = v => pf(v) <= 2.5 ? '#10b981' : pf(v) <= 4   ? '#f59e0b' : '#ef4444';
     const clsColor = v => pf(v) <= 0.1 ? '#10b981' : pf(v) <= 0.25? '#f59e0b' : '#ef4444';
     const tbtColor = v => pf(v) <= 200 ? '#10b981' : pf(v) <= 600  ? '#f59e0b' : '#ef4444';
 
-    const titleLen   = extract.titleLength  || (extract.title||'').replace('âŒ Manquant','').replace('âŒ Ù…ÙÙ‚ÙˆØ¯','').length || 0;
-    const descLen    = extract.descLength   || (extract.description||'').replace('âŒ Manquante','').replace('âŒ Ù…ÙÙ‚ÙˆØ¯Ø©','').length || 0;
+    const titleLen   = extract.titleLength  || (extract.title||'').replace('❌ Manquant','').replace('❌ مفقود','').length || 0;
+    const descLen    = extract.descLength   || (extract.description||'').replace('❌ Manquante','').replace('❌ مفقودة','').length || 0;
     const titleColor = titleLen > 65 ? '#ef4444' : titleLen < 30 ? '#f59e0b' : '#10b981';
     const descColor  = descLen  > 165? '#ef4444' : descLen  < 70 ? '#f59e0b' : '#10b981';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // PARTIE 3/5 â€” HTML SECTIONS (KPI, Verdict, Issues, Meta, Vitals, Headings)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ════════════════════════════════════════════════════════════════
+    // PARTIE 3/5 — HTML SECTIONS (KPI, Verdict, Issues, Meta, Vitals, Headings)
+    // ════════════════════════════════════════════════════════════════
 
     const sectionKPI = `
     <div class="result-card fade-in-up"
@@ -5261,7 +5261,7 @@ function displayTechnicalResults(data) {
 
             <div>
                 <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
-                    ðŸŽ¯ ${isAr ? 'Ø§Ù„Ù†ØªÙŠØ¬Ø©' : 'Score Global'}
+                    🎯 ${isAr ? 'النتيجة' : 'Score Global'}
                 </div>
                 <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
                     <div class="score-circle-mini" style="border-color:${scoreColor}; color:${scoreColor}; width:52px; height:52px; font-size:1.1rem;">
@@ -5275,17 +5275,17 @@ function displayTechnicalResults(data) {
 
             <div style="border-inline-start:1px solid rgba(255,255,255,0.08); padding-inline-start:20px;">
                 <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
-                    ðŸ“ˆ ${isAr ? 'Ø­Ø±ÙƒØ© Ø§Ù„Ù…Ø±ÙˆØ±' : 'Trafic Est.'}
+                    📈 ${isAr ? 'حركة المرور' : 'Trafic Est.'}
                 </div>
                 <div style="font-size:1.6rem; font-weight:900; color:#3b82f6;">
                     ${traffic.monthlyTraffic} <small style="font-size:0.7rem;">v/m</small>
                 </div>
-                ${traffic.seoMaturityScore ? `<div style="font-size:0.7rem; color:#64748b; margin-top:4px;">MaturitÃ© SEO: ${traffic.seoMaturityScore}/100</div>` : ''}
+                ${traffic.seoMaturityScore ? `<div style="font-size:0.7rem; color:#64748b; margin-top:4px;">Maturité SEO: ${traffic.seoMaturityScore}/100</div>` : ''}
             </div>
 
             <div style="border-inline-start:1px solid rgba(255,255,255,0.08); padding-inline-start:20px;">
                 <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
-                    ðŸ’° ${isAr ? 'Ù…ØªÙˆØ³Ø· Ø§Ù„Ø³Ù„Ø©' : 'Panier Moyen'}
+                    💰 ${isAr ? 'متوسط السلة' : 'Panier Moyen'}
                 </div>
                 <div style="font-size:1.6rem; font-weight:900; color:#10b981;">
                     ${extract.estimatedAOV || '---'} <small style="font-size:0.7rem;">MAD</small>
@@ -5295,7 +5295,7 @@ function displayTechnicalResults(data) {
 
             <div style="border-inline-start:1px solid rgba(255,255,255,0.08); padding-inline-start:20px;">
                 <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">
-                    ðŸš€ ${isAr ? 'ÙØ±ØµØ©' : 'OpportunitÃ©'}
+                    🚀 ${isAr ? 'فرصة' : 'Opportunité'}
                 </div>
                 <div style="font-size:0.88rem; color:#fcd34d; font-weight:800; margin-top:4px; line-height:1.4;" dir="auto">
                     ${report.businessOpportunity}
@@ -5313,7 +5313,7 @@ function displayTechnicalResults(data) {
             <div style="flex:1;">
                 <h4 style="color:#94a3b8; margin:0 0 8px 0; text-transform:uppercase; font-size:0.8rem; letter-spacing:1px;">
                     ${report.detectedEntity || 'SEO Analysis'}
-                    ${report.detectedNiche ? `<span style="color:#8b5cf6; margin-${isAr?'right':'left'}:8px;">Â· ${report.detectedNiche}</span>` : ''}
+                    ${report.detectedNiche ? `<span style="color:#8b5cf6; margin-${isAr?'right':'left'}:8px;">· ${report.detectedNiche}</span>` : ''}
                 </h4>
                 <p style="font-size:1rem; color:white; margin:0; line-height:1.6; font-style:italic;" dir="auto">
                     "${report.verdict}"
@@ -5331,13 +5331,13 @@ function displayTechnicalResults(data) {
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:20px;">
             ${report.topStrengths?.length > 0 ? `
             <div style="padding:12px; background:rgba(16,185,129,0.05); border-radius:10px; border:1px solid rgba(16,185,129,0.15);">
-                <div style="font-size:0.68rem; color:#10b981; text-transform:uppercase; margin-bottom:8px; font-weight:700;">âœ… Forces</div>
-                ${report.topStrengths.map(s => `<div style="font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;" dir="auto">Â· ${s}</div>`).join('')}
+                <div style="font-size:0.68rem; color:#10b981; text-transform:uppercase; margin-bottom:8px; font-weight:700;">✅ Forces</div>
+                ${report.topStrengths.map(s => `<div style="font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;" dir="auto">· ${s}</div>`).join('')}
             </div>` : ''}
             ${report.topWeaknesses?.length > 0 ? `
             <div style="padding:12px; background:rgba(239,68,68,0.05); border-radius:10px; border:1px solid rgba(239,68,68,0.15);">
-                <div style="font-size:0.68rem; color:#ef4444; text-transform:uppercase; margin-bottom:8px; font-weight:700;">âš ï¸ Faiblesses</div>
-                ${report.topWeaknesses.map(s => `<div style="font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;" dir="auto">Â· ${s}</div>`).join('')}
+                <div style="font-size:0.68rem; color:#ef4444; text-transform:uppercase; margin-bottom:8px; font-weight:700;">⚠️ Faiblesses</div>
+                ${report.topWeaknesses.map(s => `<div style="font-size:0.8rem; color:#cbd5e1; margin-bottom:4px;" dir="auto">· ${s}</div>`).join('')}
             </div>` : ''}
         </div>` : ''}
     </div>`;
@@ -5346,7 +5346,7 @@ function displayTechnicalResults(data) {
     <div class="result-card" style="border-top:4px solid #ef4444; margin-bottom:25px;">
         <h3 style="color:#ef4444; margin-bottom:18px; font-family:'Cairo'; font-size:1.1rem;">
             <i class="fas fa-bug"></i>
-            ${isAr ? 'Ø§Ù„Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„Ø­Ø±Ø¬Ø©' : isEn ? 'Critical Issues' : 'ProblÃ¨mes Critiques'}
+            ${isAr ? 'المشاكل الحرجة' : isEn ? 'Critical Issues' : 'Problèmes Critiques'}
             <span style="background:#ef444420; color:#ef4444; font-size:0.72rem; padding:3px 10px; border-radius:20px; margin-${isAr?'right':'left'}:10px;">
                 ${issues.length}
             </span>
@@ -5365,7 +5365,7 @@ function displayTechnicalResults(data) {
                                      border-radius:10px; margin-${isAr?'right':'left'}:8px;">
                             ${issue.severity}
                         </span>
-                        ${issue.effort ? `<span style="color:#64748b; font-size:0.68rem; margin-${isAr?'right':'left'}:6px;">â± ${issue.effort}</span>` : ''}
+                        ${issue.effort ? `<span style="color:#64748b; font-size:0.68rem; margin-${isAr?'right':'left'}:6px;">⏱ ${issue.effort}</span>` : ''}
                     </div>
                     <div style="font-size:0.83rem; color:#94a3b8; margin-top:4px;" dir="auto">${issue.issue || issue.message || ''}</div>
                     ${issue.fix ? `<div style="font-size:0.8rem; color:#10b981; margin-top:5px;" dir="auto">
@@ -5379,29 +5379,29 @@ function displayTechnicalResults(data) {
     <div class="result-card" style="border-top:4px solid #06b6d4; margin-bottom:25px;">
         <h3 style="color:#06b6d4; margin-bottom:15px; font-family:'Cairo'; font-size:1.1rem;">
             <i class="fas fa-align-left"></i>
-            ${isAr ? 'Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…ÙŠØªØ§' : 'Metadata Discovery'}
+            ${isAr ? 'بيانات الميتا' : 'Metadata Discovery'}
         </h3>
         <div style="display:grid; gap:12px;">
             <div class="diff-box">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <strong style="color:#3b82f6; font-size:0.72rem; text-transform:uppercase;">Title</strong>
-                    <span style="font-size:0.7rem; color:${titleColor};">${titleLen} chars Â· ${extract.titleStatus||'---'}</span>
+                    <span style="font-size:0.7rem; color:${titleColor};">${titleLen} chars · ${extract.titleStatus||'---'}</span>
                 </div>
                 <div style="font-weight:700; color:#e2e8f0; font-size:0.95rem;" dir="auto">${extract.title || '---'}</div>
                 ${assets.optimizedTitle ? `<div style="margin-top:8px; font-size:0.8rem; color:#10b981;" dir="auto">
                     <i class="fas fa-magic" style="margin-${isAr?'left':'right'}:5px;"></i>
-                    ${isAr?'Ù…Ù‚ØªØ±Ø­':'Suggestion'}: ${assets.optimizedTitle}</div>` : ''}
+                    ${isAr?'مقترح':'Suggestion'}: ${assets.optimizedTitle}</div>` : ''}
             </div>
 
             <div class="diff-box">
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                     <strong style="color:#10b981; font-size:0.72rem; text-transform:uppercase;">Meta Description</strong>
-                    <span style="font-size:0.7rem; color:${descColor};">${descLen} chars Â· ${extract.descStatus||'---'}</span>
+                    <span style="font-size:0.7rem; color:${descColor};">${descLen} chars · ${extract.descStatus||'---'}</span>
                 </div>
                 <div style="font-size:0.88rem; line-height:1.5; color:#cbd5e1;" dir="auto">${extract.description || '---'}</div>
                 ${assets.optimizedDescription ? `<div style="margin-top:8px; font-size:0.8rem; color:#10b981;" dir="auto">
                     <i class="fas fa-magic" style="margin-${isAr?'left':'right'}:5px;"></i>
-                    ${isAr?'Ù…Ù‚ØªØ±Ø­':'Suggestion'}: ${assets.optimizedDescription}</div>` : ''}
+                    ${isAr?'مقترح':'Suggestion'}: ${assets.optimizedDescription}</div>` : ''}
             </div>
 
             ${extract.canonical ? `
@@ -5414,9 +5414,9 @@ function displayTechnicalResults(data) {
             <div class="diff-box" style="border:1px solid rgba(59,130,246,0.15);">
                 <strong style="color:#3b82f6; font-size:0.72rem; text-transform:uppercase;">Open Graph</strong>
                 <div style="margin-top:8px; display:grid; gap:5px;">
-                    ${extract.ogTitle ? `<div style="font-size:0.82rem; color:#94a3b8;" dir="auto"><span style="color:#3b82f6;">og:title</span> â†’ ${extract.ogTitle}</div>` : ''}
-                    ${extract.ogDescription ? `<div style="font-size:0.82rem; color:#94a3b8;" dir="auto"><span style="color:#3b82f6;">og:desc</span> â†’ ${extract.ogDescription.substring(0,100)}</div>` : ''}
-                    <div style="font-size:0.82rem; color:#94a3b8;"><span style="color:#3b82f6;">og:image</span> â†’ ${extract.ogImage ? 'âœ…' : 'âŒ Absent'}</div>
+                    ${extract.ogTitle ? `<div style="font-size:0.82rem; color:#94a3b8;" dir="auto"><span style="color:#3b82f6;">og:title</span> → ${extract.ogTitle}</div>` : ''}
+                    ${extract.ogDescription ? `<div style="font-size:0.82rem; color:#94a3b8;" dir="auto"><span style="color:#3b82f6;">og:desc</span> → ${extract.ogDescription.substring(0,100)}</div>` : ''}
+                    <div style="font-size:0.82rem; color:#94a3b8;"><span style="color:#3b82f6;">og:image</span> → ${extract.ogImage ? '✅' : '❌ Absent'}</div>
                 </div>
             </div>` : ''}
         </div>
@@ -5426,13 +5426,13 @@ function displayTechnicalResults(data) {
     <div class="result-card" style="border-top:4px solid #8b5cf6; margin-bottom:25px;">
         <h3 style="color:#8b5cf6; margin-bottom:18px; font-family:'Cairo'; font-size:1.1rem;">
             <i class="fas fa-bolt"></i>
-            ${isAr ? 'Ù…Ù‚Ø§ÙŠÙŠØ³ Ø§Ù„Ø£Ø¯Ø§Ø¡' : 'Core Web Vitals'}
+            ${isAr ? 'مقاييس الأداء' : 'Core Web Vitals'}
         </h3>
         <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:12px;">
             ${[
-                { label:'LCP',   val: metrics.lcp,        color: lcpColor(metrics.lcp),  desc:'â‰¤2.5s âœ“' },
-                { label:'TBT',   val: metrics.tbt,        color: tbtColor(metrics.tbt),  desc:'â‰¤200ms âœ“' },
-                { label:'CLS',   val: metrics.cls,        color: clsColor(metrics.cls),  desc:'â‰¤0.1 âœ“' },
+                { label:'LCP',   val: metrics.lcp,        color: lcpColor(metrics.lcp),  desc:'≤2.5s ✓' },
+                { label:'TBT',   val: metrics.tbt,        color: tbtColor(metrics.tbt),  desc:'≤200ms ✓' },
+                { label:'CLS',   val: metrics.cls,        color: clsColor(metrics.cls),  desc:'≤0.1 ✓' },
                 { label:'FCP',   val: metrics.fcp,        color: '#3b82f6',              desc:'First Paint' },
                 { label:'TTFB',  val: metrics.ttfb,       color: '#06b6d4',              desc:'Server Speed' },
                 { label:'Speed', val: metrics.speedIndex, color: '#a855f7',              desc:'Speed Index' },
@@ -5450,12 +5450,12 @@ function displayTechnicalResults(data) {
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
             <h3 style="color:${h1Color}; margin:0; font-family:'Cairo'; font-size:1.1rem;">
                 <i class="fas fa-layer-group"></i>
-                ${isAr ? 'Ø¨Ù†ÙŠØ© Ø§Ù„Ø¹Ù†Ø§ÙˆÙŠÙ†' : isEn ? 'Heading Structure' : 'Structure des Titres'}
+                ${isAr ? 'بنية العناوين' : isEn ? 'Heading Structure' : 'Structure des Titres'}
             </h3>
             <span class="result-badge" style="background:${h1Color}20; color:${h1Color}; border:1px solid ${h1Color}40;">
                 ${extract.h1count || extract.h1_count || 0} H1
-                ${extract.h2count || extract.h2_count ? ` Â· ${extract.h2count||extract.h2_count} H2` : ''}
-                ${extract.h3count || extract.h3_count ? ` Â· ${extract.h3count||extract.h3_count} H3` : ''}
+                ${extract.h2count || extract.h2_count ? ` · ${extract.h2count||extract.h2_count} H2` : ''}
+                ${extract.h3count || extract.h3_count ? ` · ${extract.h3count||extract.h3_count} H3` : ''}
             </span>
         </div>
         <div style="display:grid; gap:8px; margin-bottom:15px;">
@@ -5465,7 +5465,7 @@ function displayTechnicalResults(data) {
                     <i class="fas fa-terminal" style="color:${h1Color}; font-size:0.72rem; opacity:0.5; flex-shrink:0;"></i>
                     <span style="font-size:0.92rem; color:#e2e8f0;" dir="auto">${h}</span>
                 </div>`).join('')
-                : '<p style="color:#ef4444; text-align:center; margin:0;">âŒ Aucun H1 dÃ©tectÃ©</p>'
+                : '<p style="color:#ef4444; text-align:center; margin:0;">❌ Aucun H1 détecté</p>'
             }
         </div>
 
@@ -5483,7 +5483,7 @@ function displayTechnicalResults(data) {
         ${quickWins.length > 0 ? `
         <div style="margin-top:12px; padding:14px; background:rgba(16,185,129,0.04); border-radius:10px; border:1px solid rgba(16,185,129,0.12);">
             <div style="font-size:0.68rem; color:#10b981; text-transform:uppercase; font-weight:700; margin-bottom:10px;">
-                âš¡ Quick Wins
+                ⚡ Quick Wins
             </div>
             ${quickWins.map(w => `<div style="font-size:0.82rem; color:#cbd5e1; margin-bottom:6px;" dir="auto">
                 <i class="fas fa-check-circle" style="color:#10b981; margin-${isAr?'left':'right'}:6px; font-size:0.72rem;"></i>${w}
@@ -5491,21 +5491,21 @@ function displayTechnicalResults(data) {
         </div>` : ''}
     </div>`;
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // PARTIE 4/5 â€” HTML SECTIONS (Keywords, AEO, Grid, Roadmap, Files)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ════════════════════════════════════════════════════════════════
+    // PARTIE 4/5 — HTML SECTIONS (Keywords, AEO, Grid, Roadmap, Files)
+    // ════════════════════════════════════════════════════════════════
 
     const sectionKeywords = (seo.topKeywords.length > 0 || seo.lsiKeywords.length > 0) ? `
     <div class="result-card" style="border-top:4px solid #10b981; margin-bottom:25px;">
         <h3 style="color:#10b981; margin-bottom:18px; font-family:'Cairo'; font-size:1.1rem;">
             <i class="fas fa-brain"></i>
-            ${isAr ? 'Ø°ÙƒØ§Ø¡ Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ù…ÙØªØ§Ø­ÙŠØ©' : isEn ? 'Site Intelligence' : 'Intelligence Mots-clÃ©s'}
+            ${isAr ? 'ذكاء الكلمات المفتاحية' : isEn ? 'Site Intelligence' : 'Intelligence Mots-clés'}
             ${seo.contentScore ? `<span style="color:#fcd34d; font-size:0.8rem; margin-${isAr?'right':'left'}:10px;">Score contenu: ${seo.contentScore}/100</span>` : ''}
         </h3>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px;">
             ${seo.topKeywords.length > 0 ? `
             <div>
-                <div style="font-size:0.72rem; color:#10b981; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">ðŸ”‘ Top Keywords</div>
+                <div style="font-size:0.72rem; color:#10b981; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">🔑 Top Keywords</div>
                 <div style="display:flex; flex-wrap:wrap; gap:7px;">
                     ${seo.topKeywords.slice(0,12).map(k => `
                     <span style="background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.25); color:#6ee7b7; padding:4px 12px; border-radius:20px; font-size:0.78rem; font-weight:600;" dir="auto">
@@ -5516,7 +5516,7 @@ function displayTechnicalResults(data) {
             </div>` : ''}
             ${seo.lsiKeywords.length > 0 ? `
             <div>
-                <div style="font-size:0.72rem; color:#8b5cf6; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">ðŸ§  LSI / SÃ©mantique</div>
+                <div style="font-size:0.72rem; color:#8b5cf6; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">🧠 LSI / Sémantique</div>
                 <div style="display:flex; flex-wrap:wrap; gap:7px;">
                     ${seo.lsiKeywords.slice(0,10).map(k => `
                     <span style="background:rgba(139,92,246,0.1); border:1px solid rgba(139,92,246,0.25); color:#c4b5fd; padding:4px 12px; border-radius:20px; font-size:0.78rem;" dir="auto">
@@ -5527,7 +5527,7 @@ function displayTechnicalResults(data) {
         </div>
         ${seo.semanticGaps.length > 0 ? `
         <div style="margin-top:18px; padding:14px; background:rgba(239,68,68,0.05); border-radius:12px; border:1px solid rgba(239,68,68,0.15);">
-            <div style="font-size:0.72rem; color:#ef4444; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">âš ï¸ Gaps SÃ©mantiques Manquants</div>
+            <div style="font-size:0.72rem; color:#ef4444; text-transform:uppercase; letter-spacing:1px; margin-bottom:10px;">⚠️ Gaps Sémantiques Manquants</div>
             <div style="display:flex; flex-wrap:wrap; gap:7px;">
                 ${seo.semanticGaps.slice(0,8).map(g => `
                 <span style="background:rgba(239,68,68,0.08); border:1px solid rgba(239,68,68,0.2); color:#fca5a5; padding:4px 12px; border-radius:20px; font-size:0.78rem;" dir="auto">${g}</span>`).join('')}
@@ -5539,7 +5539,7 @@ function displayTechnicalResults(data) {
     <div class="result-card" style="border-top:4px solid #f59e0b; margin-bottom:25px;">
         <h3 style="color:#f59e0b; margin-bottom:18px; font-family:'Cairo'; font-size:1.1rem;">
             <i class="fas fa-comments"></i>
-            AEO Score â€” ${isAr ? 'ØªØ­Ø³ÙŠÙ† Ù…Ø­Ø±ÙƒØ§Øª Ø§Ù„Ø¥Ø¬Ø§Ø¨Ø©' : 'Answer Engine Optimization'}
+            AEO Score — ${isAr ? 'تحسين محركات الإجابة' : 'Answer Engine Optimization'}
             <span style="background:#f59e0b20; color:#f59e0b; font-size:0.8rem; padding:3px 12px; border-radius:20px; margin-${isAr?'right':'left'}:10px;">
                 ${aeo.overall}/100
             </span>
@@ -5571,7 +5571,7 @@ function displayTechnicalResults(data) {
                 <i class="fas fa-code" style="margin-${isAr?'left':'right'}:6px;"></i>Schema Markup
             </div>
             <div style="font-size:1rem; font-weight:800; color:${schema.exists?'#10b981':'#ef4444'}; margin-bottom:8px;">
-                ${schema.exists ? 'âœ… PrÃ©sent' : 'âŒ Absent'}
+                ${schema.exists ? '✅ Présent' : '❌ Absent'}
             </div>
             ${schema.types?.length > 0 ? `
             <div style="display:flex; flex-wrap:wrap; gap:5px;">
@@ -5586,7 +5586,7 @@ function displayTechnicalResults(data) {
             <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:6px; text-align:center;">
                 ${[
                     { val: images.total,      label: 'Total',   color: '#3b82f6' },
-                    { val: images.missingAlt, label: 'ALT âŒ',  color: images.missingAlt > 0 ? '#f59e0b' : '#10b981' },
+                    { val: images.missingAlt, label: 'ALT ❌',  color: images.missingAlt > 0 ? '#f59e0b' : '#10b981' },
                     { val: images.lazy,       label: 'Lazy',    color: '#8b5cf6' },
                     { val: images.webp,       label: 'WebP',    color: '#06b6d4' },
                     { val: images.oversized,  label: 'Heavy',   color: images.oversized > 0 ? '#ef4444' : '#10b981' },
@@ -5612,7 +5612,7 @@ function displayTechnicalResults(data) {
                 ].map(s => `
                 <div style="display:flex; justify-content:space-between; font-size:0.78rem;">
                     <span style="color:#94a3b8;">${s.label}</span>
-                    <span style="color:${s.val ? '#10b981' : '#ef4444'}; font-weight:700;">${s.val ? 'âœ…' : 'âŒ'}</span>
+                    <span style="color:${s.val ? '#10b981' : '#ef4444'}; font-weight:700;">${s.val ? '✅' : '❌'}</span>
                 </div>`).join('')}
             </div>
         </div>
@@ -5622,7 +5622,7 @@ function displayTechnicalResults(data) {
     <div class="result-card" style="border-top:4px solid #8b5cf6; margin-bottom:25px;">
         <h3 style="color:#8b5cf6; margin-bottom:18px; font-family:'Cairo'; font-size:1.1rem;">
             <i class="fas fa-map-signs"></i>
-            ${isAr ? 'Ø®Ø§Ø±Ø·Ø© Ø§Ù„Ø·Ø±ÙŠÙ‚' : isEn ? 'Action Roadmap' : 'Plan d\'Action'}
+            ${isAr ? 'خارطة الطريق' : isEn ? 'Action Roadmap' : 'Plan d\'Action'}
         </h3>
         <div style="display:grid; gap:12px;">
             ${roadmap.map((step, i) => {
@@ -5633,10 +5633,10 @@ function displayTechnicalResults(data) {
                     <div style="flex:1;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; flex-wrap:wrap; gap:5px;">
                             <span style="background:${pColor}20; color:${pColor}; font-size:0.68rem; padding:2px 8px; border-radius:10px; font-weight:700;">${step.priority}</span>
-                            ${step.effort ? `<span style="color:#64748b; font-size:0.68rem;">â± ${step.effort}</span>` : ''}
+                            ${step.effort ? `<span style="color:#64748b; font-size:0.68rem;">⏱ ${step.effort}</span>` : ''}
                         </div>
                         <div style="font-size:0.88rem; color:#e2e8f0; font-weight:600; margin-bottom:4px;" dir="auto">${step.task}</div>
-                        ${step.roi ? `<div style="font-size:0.78rem; color:#10b981;" dir="auto">ðŸ“ˆ ${step.roi}</div>` : ''}
+                        ${step.roi ? `<div style="font-size:0.78rem; color:#10b981;" dir="auto">📈 ${step.roi}</div>` : ''}
                     </div>
                 </div>`;
             }).join('')}
@@ -5647,13 +5647,13 @@ function displayTechnicalResults(data) {
     <div class="result-card" style="border-top:4px solid #6366f1; margin-bottom:25px;">
         <h3 style="color:#6366f1; margin-bottom:15px; font-family:'Cairo'; font-size:1.1rem;">
             <i class="fas fa-microchip"></i>
-            ${isAr ? 'Ø§Ù„ØªÙ‚Ù†ÙŠØ§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…Ø©' : isEn ? 'Tech Stack' : 'Stack Technologique'}
+            ${isAr ? 'التقنيات المستخدمة' : isEn ? 'Tech Stack' : 'Stack Technologique'}
         </h3>
         <div style="display:flex; flex-wrap:wrap; gap:10px;">
             ${Object.entries(tech).flatMap(([cat, items]) =>
                 (Array.isArray(items) ? items : [items]).map(item => `
                 <span style="background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.25); color:#a5b4fc; padding:6px 14px; border-radius:20px; font-size:0.8rem; font-weight:600;">
-                    <span style="opacity:0.5; font-size:0.7rem;">${cat} Â·</span> ${item}
+                    <span style="opacity:0.5; font-size:0.7rem;">${cat} ·</span> ${item}
                 </span>`)
             ).join('')}
         </div>
@@ -5663,11 +5663,11 @@ function displayTechnicalResults(data) {
     <div class="result-card" style="border-top:4px solid #06b6d4; margin-bottom:25px;">
         <h3 style="color:#06b6d4; margin-bottom:15px; font-family:'Cairo'; font-size:1.1rem;">
             <i class="fas fa-file-code"></i>
-            ${isAr ? 'Ù…Ù„ÙØ§Øª Ø§Ù„Ù†Ø¸Ø§Ù… Ø§Ù„Ù…Ù‚ØªØ±Ø­Ø©' : 'Fichiers SystÃ¨me GÃ©nÃ©rÃ©s'}
+            ${isAr ? 'ملفات النظام المقترحة' : 'Fichiers Système Générés'}
         </h3>
         ${llmsTxt ? `
         <div style="margin-bottom:15px;">
-            <div style="font-size:0.72rem; color:#06b6d4; text-transform:uppercase; margin-bottom:8px; font-weight:700;">ðŸ¤– LLMs.txt</div>
+            <div style="font-size:0.72rem; color:#06b6d4; text-transform:uppercase; margin-bottom:8px; font-weight:700;">🤖 LLMs.txt</div>
             <div class="code-block-dark" style="max-height:180px; overflow-y:auto; position:relative;">
                 <button class="btn-copy-mini" onclick="navigator.clipboard.writeText(this.nextElementSibling.textContent)">Copy</button>
                 <pre style="margin:0;">${llmsTxt}</pre>
@@ -5675,7 +5675,7 @@ function displayTechnicalResults(data) {
         </div>` : ''}
         ${robotsTxt ? `
         <div>
-            <div style="font-size:0.72rem; color:#8b5cf6; text-transform:uppercase; margin-bottom:8px; font-weight:700;">ðŸ¤– Robots.txt Advice</div>
+            <div style="font-size:0.72rem; color:#8b5cf6; text-transform:uppercase; margin-bottom:8px; font-weight:700;">🤖 Robots.txt Advice</div>
             <div class="code-block-dark" style="max-height:180px; overflow-y:auto; position:relative;">
                 <button class="btn-copy-mini" onclick="navigator.clipboard.writeText(this.nextElementSibling.textContent)">Copy</button>
                 <pre style="margin:0;">${robotsTxt}</pre>
@@ -5694,15 +5694,15 @@ function displayTechnicalResults(data) {
     const backlinkPortfolioHtml = renderBacklinkPortfolio(data, { isAr, isEn });
     const techReportLabels = getReportLabels({ isAr, isEn });
 
-    // â”€â”€ Assemblage HTML complet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Assemblage HTML complet ───────────────────────────────────
     container.innerHTML = `
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:25px;" class="no-print">
         <h2 style="margin:0; font-family:'Cairo'; font-size:1.1rem; color:#3b82f6;">
             <i class="fas fa-microscope"></i>
-            ${isAr ? 'ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ø¹Ù…Ù‚ Ø§Ù„ØªÙ‚Ù†ÙŠ' : isEn ? 'DEEP TECHNICAL AUDIT' : 'AUDIT TECHNIQUE DEEP'}
+            ${isAr ? 'تحليل العمق التقني' : isEn ? 'DEEP TECHNICAL AUDIT' : 'AUDIT TECHNIQUE DEEP'}
         </h2>
         <span style="font-size:0.72rem; color:#64748b; font-weight:600;">
-            ${data.analyzedUrl || data.url || ''} Â· v${data.version || 'V7'} Â· ${data.meta?.processingMs ? data.meta.processingMs+'ms' : ''}
+            ${data.analyzedUrl || data.url || ''} · v${data.version || 'V7'} · ${data.meta?.processingMs ? data.meta.processingMs+'ms' : ''}
         </span>
     </div>
     ${renderExecutiveSummary(data, 'technical', { isAr, isEn })}
@@ -5723,8 +5723,8 @@ function displayTechnicalResults(data) {
 
     ${renderReportSection(
         'backlinks',
-        isAr ? 'Ø§Ù„Ø±ÙˆØ§Ø¨Ø· Ø§Ù„ÙˆØ§Ø±Ø¯Ø© ÙˆØ§Ù„ØµØ§Ø¯Ø±Ø© ÙˆØ§Ù„Ù…ÙƒØ³ÙˆØ±Ø©' : isEn ? 'Inbound, outbound and broken links' : 'Liens entrants, sortants et cassÃ©s',
-        isAr ? 'Ø±ÙˆØ§Ø¨Ø· Ù…Ø±Ø¦ÙŠØ© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ÙØ­Øµ Ù…Ø¹ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø§Ù„Ù…Ø·Ù„ÙˆØ¨ Ù„ÙƒÙ„ Ø±Ø§Ø¨Ø·.' : isEn ? 'Visible, reviewable links with the required action for each one.' : 'Des liens visibles et consultables, avec lâ€™action requise pour chacun.',
+        isAr ? 'الروابط الواردة والصادرة والمكسورة' : isEn ? 'Inbound, outbound and broken links' : 'Liens entrants, sortants et cassés',
+        isAr ? 'روابط مرئية قابلة للفحص مع الإجراء المطلوب لكل رابط.' : isEn ? 'Visible, reviewable links with the required action for each one.' : 'Des liens visibles et consultables, avec l’action requise pour chacun.',
         'fa-link',
         backlinkPortfolioHtml,
         { isAr, isEn }
@@ -5743,14 +5743,14 @@ function displayTechnicalResults(data) {
 
     showResults('resultsTechnical');
 
-    // â”€â”€ Event listeners boutons gÃ©nÃ©rateurs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Event listeners boutons générateurs ──────────────────────
     container.querySelectorAll('[data-gen-type]').forEach(btn => {
         btn.addEventListener('click', function () {
             const genType = this.getAttribute('data-gen-type');
             if (typeof window.triggerGenerator === 'function') {
                 window.triggerGenerator(genType, this);
             } else {
-                toast.error("Erreur d'initialisation des gÃ©nÃ©rateurs.");
+                toast.error("Erreur d'initialisation des générateurs.");
             }
         });
     });
@@ -5802,10 +5802,10 @@ function isDakaInsufficientExportText(value) {
     if (!text) return true;
     if (/^les positions exactes des sections peuvent necessiter une verification visuelle manuelle\.?$/.test(text)) return true;
     const exact = [
-        'donnees insuffisantes', 'donnÃ©e insuffisante', 'donnee insuffisante',
+        'donnees insuffisantes', 'donnée insuffisante', 'donnee insuffisante',
         'non disponible', 'aucune donnee', 'aucun resultat', 'n/a',
         'insufficient data', 'not available', 'no data', 'no results',
-        'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª ÙƒØ§ÙÙŠØ©', 'ØºÙŠØ± Ù…ØªÙˆÙØ±', 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬'
+        'لا توجد بيانات كافية', 'غير متوفر', 'لا توجد نتائج'
     ];
     return exact.some(function (label) {
         const normalized = label.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -5818,11 +5818,11 @@ function dakaPdfHumanLabel(value, lang = STATE.currentLang || 'fr') {
     const key = raw.toLowerCase();
     const labels = {
         ar: {
-            hero: 'Ø§Ù„Ø´Ø§Ø´Ø© Ø§Ù„Ø£ÙˆÙ„Ù‰', pricing: 'Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø¹Ø±Ø¶', price: 'Ø§Ù„Ø³Ø¹Ø±', primary_cta: 'Ø²Ø± Ø§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ',
-            cta: 'Ø²Ø± Ø§Ù„Ù‚Ø±Ø§Ø±', product: 'Ø§Ù„Ù…Ù†ØªØ¬', features: 'Ø§Ù„Ø®ØµØ§Ø¦Øµ', returns: 'Ø§Ù„Ø¥Ø±Ø¬Ø§Ø¹', delivery: 'Ø§Ù„ØªÙˆØµÙŠÙ„',
-            trust: 'Ø§Ù„Ø«Ù‚Ø©', social_proof: 'Ø§Ù„Ø¯Ù„ÙŠÙ„ Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ', testimonials: 'Ø¢Ø±Ø§Ø¡ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡', reviews: 'Ø¢Ø±Ø§Ø¡ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡',
-            faq: 'Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø§Ø¦Ø¹Ø©', guarantee: 'Ø§Ù„Ø¶Ù…Ø§Ù†', content: 'Ø§Ù„Ù…Ø­ØªÙˆÙ‰', product_visuals: 'ØµÙˆØ± Ø§Ù„Ù…Ù†ØªØ¬',
-            offer: 'Ø§Ù„Ø¹Ø±Ø¶', benefits: 'Ø§Ù„ÙÙˆØ§Ø¦Ø¯', footer: 'Ø§Ù„ØªØ°ÙŠÙŠÙ„', legal: 'Ø§Ù„ØµÙØ­Ø§Øª Ø§Ù„Ù‚Ø§Ù†ÙˆÙ†ÙŠØ©'
+            hero: 'الشاشة الأولى', pricing: 'السعر والعرض', price: 'السعر', primary_cta: 'زر القرار الرئيسي',
+            cta: 'زر القرار', product: 'المنتج', features: 'الخصائص', returns: 'الإرجاع', delivery: 'التوصيل',
+            trust: 'الثقة', social_proof: 'الدليل الاجتماعي', testimonials: 'آراء العملاء', reviews: 'آراء العملاء',
+            faq: 'الأسئلة الشائعة', guarantee: 'الضمان', content: 'المحتوى', product_visuals: 'صور المنتج',
+            offer: 'العرض', benefits: 'الفوائد', footer: 'التذييل', legal: 'الصفحات القانونية'
         },
         en: {
             hero: 'First screen', pricing: 'Price and offer', price: 'Price', primary_cta: 'Primary action button',
@@ -5832,11 +5832,11 @@ function dakaPdfHumanLabel(value, lang = STATE.currentLang || 'fr') {
             offer: 'Offer', benefits: 'Benefits', footer: 'Footer', legal: 'Legal pages'
         },
         fr: {
-            hero: 'Premier Ã©cran', pricing: 'Prix et offre', price: 'Prix', primary_cta: 'Bouton dâ€™action principal',
-            cta: 'Bouton dâ€™action', product: 'Produit', features: 'CaractÃ©ristiques produit', returns: 'Retours', delivery: 'Livraison',
-            trust: 'Preuves de confiance', social_proof: 'Preuve sociale', testimonials: 'TÃ©moignages clients', reviews: 'Avis clients',
+            hero: 'Premier écran', pricing: 'Prix et offre', price: 'Prix', primary_cta: 'Bouton d’action principal',
+            cta: 'Bouton d’action', product: 'Produit', features: 'Caractéristiques produit', returns: 'Retours', delivery: 'Livraison',
+            trust: 'Preuves de confiance', social_proof: 'Preuve sociale', testimonials: 'Témoignages clients', reviews: 'Avis clients',
             faq: 'FAQ', guarantee: 'Garantie', content: 'Contenu', product_visuals: 'Visuels produit',
-            offer: 'Offre', benefits: 'BÃ©nÃ©fices', footer: 'Pied de page', legal: 'Pages lÃ©gales'
+            offer: 'Offre', benefits: 'Bénéfices', footer: 'Pied de page', legal: 'Pages légales'
         }
     };
     return labels[lang]?.[key] || labels.fr[key] || raw;
@@ -5846,7 +5846,7 @@ function dakaPdfSanitizeClientText(value, lang = STATE.currentLang || 'fr') {
     let text = String(value || '').replace(/\s+/g, ' ').trim();
     if (!text) return '';
     text = text
-        .replace(/\b(?:click|cliquez|cliquer|voir les dÃ©tails|view details|open section|onclick|data-export-feature)\b/gi, ' ')
+        .replace(/\b(?:click|cliquez|cliquer|voir les détails|view details|open section|onclick|data-export-feature)\b/gi, ' ')
         .replace(/\b(?:primary_cta|social_proof|product_visuals)\b/gi, function (match) { return dakaPdfHumanLabel(match, lang); })
         .replace(/\b(?:hero|pricing|features|returns|delivery|trust|testimonials|reviews|faq|guarantee|product)\b/gi, function (match) {
             const human = dakaPdfHumanLabel(match, lang);
@@ -5865,7 +5865,7 @@ function dakaPdfPrepareSemanticText(value) {
         if (arabicChars >= 4 && arabicChars / Math.max(text.length, 1) > 0.18) {
             return STATE.currentLang === 'en'
                 ? 'Arabic source copy detected. Review the original wording in the web report.'
-                : 'Texte source en arabe dÃ©tectÃ©. Consulter la formulation originale dans le rapport web.';
+                : 'Texte source en arabe détecté. Consulter la formulation originale dans le rapport web.';
         }
     }
     return dakaPdfSanitizeClientText(text, STATE.currentLang || 'fr');
@@ -6187,9 +6187,9 @@ function createFixedPdfClone(el, exportOptions = {}) {
             }
         </style>
         <header style="margin-bottom:26px;padding:22px 24px;border-radius:12px;background:#071426;color:#fff;border-top:5px solid #06b6d4;">
-            <div style="font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#67e8f9;font-weight:800;">DAKA Â· DECISION REPORT</div>
+            <div style="font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#67e8f9;font-weight:800;">DAKA · DECISION REPORT</div>
             <h1 style="margin:7px 0 5px;font-size:25px;color:#fff;">${escapeHtml(reportTitle)}</h1>
-            <p style="margin:0;color:#cbd5e1;font-size:11px;">${STATE.currentLang === 'en' ? 'Evidence, decisions and actions selected for this delivery.' : 'Preuves, dÃ©cisions et actions sÃ©lectionnÃ©es pour cette livraison.'}</p>
+            <p style="margin:0;color:#cbd5e1;font-size:11px;">${STATE.currentLang === 'en' ? 'Evidence, decisions and actions selected for this delivery.' : 'Preuves, décisions et actions sélectionnées pour cette livraison.'}</p>
             ${chapterTitles.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:13px;">${chapterTitles.map(title => `<span style="padding:5px 8px;border:1px solid rgba(103,232,249,.25);border-radius:5px;color:#cffafe;font-size:8px;font-weight:700;">${escapeHtml(title)}</span>`).join('')}</div>` : ''}
         </header>
         ${cloneReportHtmlForExport(el, exportOptions)}`;
@@ -6294,7 +6294,7 @@ function createFixedPdfClone(el, exportOptions = {}) {
         const heading = chapter.querySelector('h1,h2,h3,.report-section-title,.executive-summary-kicker');
         const title = chapterTitlesByKey[key]
             || String(heading?.innerText || heading?.textContent || '').replace(/\s+/g, ' ').trim()
-            || (STATE.currentLang === 'en' ? 'Decision chapter' : 'Chapitre dÃ©cisionnel');
+            || (STATE.currentLang === 'en' ? 'Decision chapter' : 'Chapitre décisionnel');
         const label = document.createElement('div');
         label.className = 'daka-pdf-chapter-label';
         label.innerHTML = '<small>'
@@ -6435,7 +6435,7 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
     const selectedFeatures = exportOptions.features || {};
     const selectedModules = getDakaExportModules().filter(module => module.available && selectedSectionKeys.has(module.key));
     if (!selectedModules.length) {
-        return toast.warning(isAr ? 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ ØªÙ‚Ø±ÙŠØ± Ø¬Ø§Ù‡Ø² Ù„Ù„ØªØµØ¯ÙŠØ±.' : isEn ? 'No report is ready to export.' : 'Aucun rapport prÃªt Ã  exporter.');
+        return toast.warning(isAr ? 'لا يوجد تقرير جاهز للتصدير.' : isEn ? 'No report is ready to export.' : 'Aucun rapport prêt à exporter.');
     }
     const model = getDakaPdfDecisionModel(selectedModules);
     const sectionHtml = selectedModules.map(function (module) {
@@ -6451,9 +6451,9 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
             }) + '</section>';
     }).filter(Boolean).join('');
     if (!sectionHtml) {
-        return toast.warning(isAr ? 'Ø§Ù„Ù…Ø­ØªÙˆÙ‰ ØºÙŠØ± Ø¬Ø§Ù‡Ø² Ù„Ù„ØªØµØ¯ÙŠØ±.' : isEn ? 'Content is not ready to export.' : 'Le contenu nâ€™est pas prÃªt pour lâ€™export.');
+        return toast.warning(isAr ? 'المحتوى غير جاهز للتصدير.' : isEn ? 'Content is not ready to export.' : 'Le contenu n’est pas prêt pour l’export.');
     }
-    const title = isAr ? 'ØªÙ‚Ø±ÙŠØ± Daka Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ' : isEn ? 'Daka Executive Report' : 'Rapport exÃ©cutif Daka';
+    const title = isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport exécutif Daka';
     const slug = (model.domain || 'report').replace(/[^a-zA-Z0-9]/g, '-').substring(0, 34);
     const filename = 'Daka-Editable-Report-' + slug + '-' + Date.now() + '.docx';
     const response = await fetch(`${CONFIG.API_BASE_URL}/api/export/word`, {
@@ -6486,7 +6486,7 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
             sectionHtml
         })
     });
-    if (!response.ok) throw new Error(isAr ? 'ØªØ¹Ø°Ø± Ø¥Ù†Ø´Ø§Ø¡ Ù…Ù„Ù DOCX.' : isEn ? 'DOCX export failed.' : 'Export DOCX impossible.');
+    if (!response.ok) throw new Error(isAr ? 'تعذر إنشاء ملف DOCX.' : isEn ? 'DOCX export failed.' : 'Export DOCX impossible.');
     const fileData = await response.blob();
     const url = URL.createObjectURL(fileData);
     const a = document.createElement('a');
@@ -6496,7 +6496,7 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
     a.click();
     a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
-    toast.success(isAr ? 'ØªÙ… ØªØ­Ù…ÙŠÙ„ Ù…Ù„Ù DOCX.' : isEn ? 'DOCX file downloaded.' : 'Fichier DOCX tÃ©lÃ©chargÃ©.');
+    toast.success(isAr ? 'تم تحميل ملف DOCX.' : isEn ? 'DOCX file downloaded.' : 'Fichier DOCX téléchargé.');
 };
 
 function restorePdfExportDom(hiddenEls, openedDetails) {
@@ -6518,71 +6518,71 @@ function getDakaExportModules() {
         {
             key: 'competitors', id: 'resultsCompetitors', icon: 'fa-chess-queen',
             available: !!STATE.lastAnalysisResults,
-            title: isAr ? 'Ø§Ù„Ù…Ù†Ø§ÙØ³ÙˆÙ† ÙˆØ§Ù„Ø³ÙˆÙ‚' : isEn ? 'Competitors & Market' : 'Concurrents & marchÃ©',
-            subtitle: isAr ? 'Ø§Ù„ÙØ±Øµ ÙˆØ§Ù„ØªÙ‡Ø¯ÙŠØ¯Ø§Øª ÙˆØ®Ø·Ø© Ø§Ù„ØªÙ‚Ø¯Ù…' : isEn ? 'Opportunities, threats and attack plan' : 'OpportunitÃ©s, menaces et plan dâ€™attaque',
-            team: isAr ? 'ÙØ±ÙŠÙ‚ Daka Ù„Ø§Ø³ØªØ®Ø¨Ø§Ø±Ø§Øª Ø§Ù„Ø³ÙˆÙ‚' : isEn ? 'Daka Market Intelligence Team' : 'Ã‰quipe Daka Intelligence MarchÃ©',
+            title: isAr ? 'المنافسون والسوق' : isEn ? 'Competitors & Market' : 'Concurrents & marché',
+            subtitle: isAr ? 'الفرص والتهديدات وخطة التقدم' : isEn ? 'Opportunities, threats and attack plan' : 'Opportunités, menaces et plan d’attaque',
+            team: isAr ? 'فريق Daka لاستخبارات السوق' : isEn ? 'Daka Market Intelligence Team' : 'Équipe Daka Intelligence Marché',
             features: [
-                feature('summary', 'fa-gauge-high', 'RÃ©sumÃ© exÃ©cutif Â· lecture 3 minutes', 'Executive summary Â· 3-minute read', 'Ø§Ù„Ù…Ù„Ø®Øµ Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ Â· Ù‚Ø±Ø§Ø¡Ø© 3 Ø¯Ù‚Ø§Ø¦Ù‚'),
-                feature('market', 'fa-compass', 'Lecture du marchÃ© et preuves', 'Market reading and evidence', 'Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„Ø³ÙˆÙ‚ ÙˆØ§Ù„Ø£Ø¯Ù„Ø©'),
-                feature('plan', 'fa-list-check', 'Plan dâ€™attaque prioritaire', 'Priority attack plan', 'Ø®Ø·Ø© Ø§Ù„Ù‡Ø¬ÙˆÙ… Ø°Ø§Øª Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ©'),
-                feature('competitors', 'fa-crosshairs', 'Fiches des concurrents', 'Competitor profiles', 'Ù…Ù„ÙØ§Øª Ø§Ù„Ù…Ù†Ø§ÙØ³ÙŠÙ†'),
-                feature('proof', 'fa-link', 'Sources et liens Ã  consulter', 'Sources and links to review', 'Ø§Ù„Ù…ØµØ§Ø¯Ø± ÙˆØ§Ù„Ø±ÙˆØ§Ø¨Ø· Ù„Ù„ÙØ­Øµ')
+                feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
+                feature('market', 'fa-compass', 'Lecture du marché et preuves', 'Market reading and evidence', 'قراءة السوق والأدلة'),
+                feature('plan', 'fa-list-check', 'Plan d’attaque prioritaire', 'Priority attack plan', 'خطة الهجوم ذات الأولوية'),
+                feature('competitors', 'fa-crosshairs', 'Fiches des concurrents', 'Competitor profiles', 'ملفات المنافسين'),
+                feature('proof', 'fa-link', 'Sources et liens à consulter', 'Sources and links to review', 'المصادر والروابط للفحص')
             ]
         },
         {
             key: 'funnel', id: 'resultsFunnel', icon: 'fa-filter-circle-dollar',
             available: !!STATE.lastFunnelResults,
-            title: isAr ? 'Ø§Ù„Ø¹Ø±Ø¶ ÙˆÙ…Ø³Ø§Ø± Ø§Ù„ØªØ­ÙˆÙŠÙ„' : isEn ? 'Offer & Conversion Path' : 'Offre & parcours de conversion',
-            subtitle: isAr ? 'Ø§Ù„Ø«Ù‚Ø© ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆÙ†Ù‚Ø§Ø· ÙÙ‚Ø¯Ø§Ù† Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡' : isEn ? 'Trust, pricing and conversion leaks' : 'Confiance, prix et pertes de conversion',
-            team: isAr ? 'ÙØ±ÙŠÙ‚ Daka Ù„Ù„ØªØ­ÙˆÙŠÙ„ ÙˆØ§Ù„Ø¹Ø±Ø¶' : isEn ? 'Daka Conversion & Offer Team' : 'Ã‰quipe Daka Conversion & Offre',
+            title: isAr ? 'العرض ومسار التحويل' : isEn ? 'Offer & Conversion Path' : 'Offre & parcours de conversion',
+            subtitle: isAr ? 'الثقة والسعر ونقاط فقدان العملاء' : isEn ? 'Trust, pricing and conversion leaks' : 'Confiance, prix et pertes de conversion',
+            team: isAr ? 'فريق Daka للتحويل والعرض' : isEn ? 'Daka Conversion & Offer Team' : 'Équipe Daka Conversion & Offre',
             features: [
-                feature('summary', 'fa-gauge-high', 'RÃ©sumÃ© exÃ©cutif Â· lecture 3 minutes', 'Executive summary Â· 3-minute read', 'Ø§Ù„Ù…Ù„Ø®Øµ Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ Â· Ù‚Ø±Ø§Ø¡Ø© 3 Ø¯Ù‚Ø§Ø¦Ù‚'),
-                feature('page', 'fa-layer-group', 'Architecture de la page', 'Page architecture', 'Ø¨Ù†ÙŠØ© Ø§Ù„ØµÙØ­Ø©'),
-                feature('page-order', 'fa-arrow-down-1-9', 'Nouvel ordre recommandÃ©', 'Recommended page order', 'Ø§Ù„ØªØ±ØªÙŠØ¨ Ø§Ù„Ù…Ù‚ØªØ±Ø­ Ù„Ù„ØµÙØ­Ø©'),
-                feature('frictions', 'fa-triangle-exclamation', 'Frictions de conversion', 'Conversion blockers', 'Ø¹ÙˆØ§Ø¦Ù‚ Ø§Ù„ØªØ­ÙˆÙŠÙ„'),
-                feature('money', 'fa-hand-holding-dollar', 'Offre, prix et confiance', 'Offer, price and trust', 'Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø«Ù‚Ø©'),
-                feature('message', 'fa-bullseye', 'Message, promesse et CTA', 'Message, promise and CTA', 'Ø§Ù„Ø±Ø³Ø§Ù„Ø© ÙˆØ§Ù„ÙˆØ¹Ø¯ ÙˆCTA'),
-                feature('plan', 'fa-list-check', 'Plan de reconstruction', 'Reconstruction plan', 'Ø®Ø·Ø© Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø¨Ù†Ø§Ø¡'),
-                feature('details', 'fa-database', 'DonnÃ©es observÃ©es et limites', 'Observed data and limits', 'Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø© ÙˆØ§Ù„Ø­Ø¯ÙˆØ¯'),
-                feature('aida-journey', 'fa-route', 'Parcours AIDA', 'AIDA journey', 'Ù…Ø³Ø§Ø± AIDA'),
-                feature('customer-psychology', 'fa-brain', 'Psychologie client', 'Customer psychology', 'Ø³ÙŠÙƒÙˆÙ„ÙˆØ¬ÙŠØ© Ø§Ù„Ø¹Ù…ÙŠÙ„'),
-                feature('funnel-score', 'fa-gauge-high', 'Score stratÃ©gique', 'Strategic score', 'Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ©'),
-                feature('financial-cta', 'fa-coins', 'Prix, offre et CTA', 'Price, offer and CTA', 'Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø¹Ø±Ø¶ ÙˆCTA'),
-                feature('strategic-blueprint', 'fa-compass-drafting', 'Blueprint stratÃ©gique', 'Strategic blueprint', 'Ø§Ù„Ù…Ø®Ø·Ø· Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠ'),
-                feature('visual-identity', 'fa-palette', 'IdentitÃ© visuelle', 'Visual identity', 'Ø§Ù„Ù‡ÙˆÙŠØ© Ø§Ù„Ø¨ØµØ±ÙŠØ©'),
-                feature('technical-signals', 'fa-microchip', 'Signaux techniques', 'Technical signals', 'Ø§Ù„Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„ØªÙ‚Ù†ÙŠØ©'),
-                feature('copy-signals', 'fa-quote-left', 'Signaux copywriting', 'Copywriting signals', 'Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ù†Øµ'),
-                feature('page-metrics', 'fa-chart-column', 'MÃ©triques de page', 'Page metrics', 'Ù…Ù‚Ø§ÙŠÙŠØ³ Ø§Ù„ØµÙØ­Ø©'),
-                feature('attack-opportunities', 'fa-crosshairs', 'Angles dâ€™attaque', 'Attack angles', 'Ø²ÙˆØ§ÙŠØ§ Ø§Ù„Ù‡Ø¬ÙˆÙ…'),
-                feature('ready-copy', 'fa-pen-ruler', 'Textes prÃªts Ã  utiliser', 'Ready-to-use copy', 'Ù†ØµÙˆØµ Ø¬Ø§Ù‡Ø²Ø©'),
-                feature('trust-mobile', 'fa-shield-heart', 'Confiance et mobile', 'Trust and mobile', 'Ø§Ù„Ø«Ù‚Ø© ÙˆØ§Ù„Ù‡Ø§ØªÙ'),
-                feature('prioritized-actions', 'fa-list-check', 'Plan dâ€™action priorisÃ©', 'Prioritized action plan', 'Ø®Ø·Ø© Ø§Ù„Ø¹Ù…Ù„'),
-                feature('mega-redesign', 'fa-wand-magic-sparkles', 'Mega AI Redesign Prompt', 'Mega AI Redesign Prompt', 'Ø£Ù…Ø± Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªØµÙ…ÙŠÙ…')
+                feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
+                feature('page', 'fa-layer-group', 'Architecture de la page', 'Page architecture', 'بنية الصفحة'),
+                feature('page-order', 'fa-arrow-down-1-9', 'Nouvel ordre recommandé', 'Recommended page order', 'الترتيب المقترح للصفحة'),
+                feature('frictions', 'fa-triangle-exclamation', 'Frictions de conversion', 'Conversion blockers', 'عوائق التحويل'),
+                feature('money', 'fa-hand-holding-dollar', 'Offre, prix et confiance', 'Offer, price and trust', 'العرض والسعر والثقة'),
+                feature('message', 'fa-bullseye', 'Message, promesse et CTA', 'Message, promise and CTA', 'الرسالة والوعد وCTA'),
+                feature('plan', 'fa-list-check', 'Plan de reconstruction', 'Reconstruction plan', 'خطة إعادة البناء'),
+                feature('details', 'fa-database', 'Données observées et limites', 'Observed data and limits', 'البيانات المرصودة والحدود'),
+                feature('aida-journey', 'fa-route', 'Parcours AIDA', 'AIDA journey', 'مسار AIDA'),
+                feature('customer-psychology', 'fa-brain', 'Psychologie client', 'Customer psychology', 'سيكولوجية العميل'),
+                feature('funnel-score', 'fa-gauge-high', 'Score stratégique', 'Strategic score', 'النتيجة الاستراتيجية'),
+                feature('financial-cta', 'fa-coins', 'Prix, offre et CTA', 'Price, offer and CTA', 'السعر والعرض وCTA'),
+                feature('strategic-blueprint', 'fa-compass-drafting', 'Blueprint stratégique', 'Strategic blueprint', 'المخطط الاستراتيجي'),
+                feature('visual-identity', 'fa-palette', 'Identité visuelle', 'Visual identity', 'الهوية البصرية'),
+                feature('technical-signals', 'fa-microchip', 'Signaux techniques', 'Technical signals', 'الإشارات التقنية'),
+                feature('copy-signals', 'fa-quote-left', 'Signaux copywriting', 'Copywriting signals', 'إشارات النص'),
+                feature('page-metrics', 'fa-chart-column', 'Métriques de page', 'Page metrics', 'مقاييس الصفحة'),
+                feature('attack-opportunities', 'fa-crosshairs', 'Angles d’attaque', 'Attack angles', 'زوايا الهجوم'),
+                feature('ready-copy', 'fa-pen-ruler', 'Textes prêts à utiliser', 'Ready-to-use copy', 'نصوص جاهزة'),
+                feature('trust-mobile', 'fa-shield-heart', 'Confiance et mobile', 'Trust and mobile', 'الثقة والهاتف'),
+                feature('prioritized-actions', 'fa-list-check', 'Plan d’action priorisé', 'Prioritized action plan', 'خطة العمل'),
+                feature('mega-redesign', 'fa-wand-magic-sparkles', 'Mega AI Redesign Prompt', 'Mega AI Redesign Prompt', 'أمر إعادة التصميم')
             ]
         },
         {
             key: 'technical', id: 'resultsTechnical', icon: 'fa-gauge-high',
             available: !!STATE.lastTechnicalResults,
-            title: isAr ? 'Ø£Ø¯Ø§Ø¡ Ø§Ù„Ù…ÙˆÙ‚Ø¹' : isEn ? 'Site Performance' : 'Performance du site',
-            subtitle: isAr ? 'Ø§Ù„Ø£Ø³Ø§Ø³ Ø§Ù„ØªÙ‚Ù†ÙŠ ÙˆØ§Ù„Ø£ÙˆÙ„ÙˆÙŠØ§Øª Ø§Ù„Ø¹Ù…Ù„ÙŠØ©' : isEn ? 'Technical foundations and practical priorities' : 'Fondations techniques et prioritÃ©s pratiques',
-            team: isAr ? 'ÙØ±ÙŠÙ‚ Daka Ù„Ø£Ø¯Ø§Ø¡ Ø§Ù„Ù…ÙˆØ§Ù‚Ø¹' : isEn ? 'Daka Site Performance Team' : 'Ã‰quipe Daka Performance Site',
+            title: isAr ? 'أداء الموقع' : isEn ? 'Site Performance' : 'Performance du site',
+            subtitle: isAr ? 'الأساس التقني والأولويات العملية' : isEn ? 'Technical foundations and practical priorities' : 'Fondations techniques et priorités pratiques',
+            team: isAr ? 'فريق Daka لأداء المواقع' : isEn ? 'Daka Site Performance Team' : 'Équipe Daka Performance Site',
             features: [
-                feature('summary', 'fa-gauge-high', 'RÃ©sumÃ© exÃ©cutif Â· lecture 3 minutes', 'Executive summary Â· 3-minute read', 'Ø§Ù„Ù…Ù„Ø®Øµ Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ Â· Ù‚Ø±Ø§Ø¡Ø© 3 Ø¯Ù‚Ø§Ø¦Ù‚'),
-                feature('technical', 'fa-gauge-high', 'Diagnostic technique', 'Technical diagnosis', 'Ø§Ù„ØªØ´Ø®ÙŠØµ Ø§Ù„ØªÙ‚Ù†ÙŠ'),
-                feature('page', 'fa-file-lines', 'Contenu et structure de page', 'Page content and structure', 'Ù…Ø­ØªÙˆÙ‰ ÙˆØ¨Ù†ÙŠØ© Ø§Ù„ØµÙØ­Ø©'),
-                feature('backlinks', 'fa-link', 'Liens entrants, sortants et cassÃ©s', 'Inbound, outbound and broken links', 'Ø§Ù„Ø±ÙˆØ§Ø¨Ø· Ø§Ù„ÙˆØ§Ø±Ø¯Ø© ÙˆØ§Ù„ØµØ§Ø¯Ø±Ø© ÙˆØ§Ù„Ù…ÙƒØ³ÙˆØ±Ø©'),
-                feature('plan', 'fa-list-check', 'Plan dâ€™amÃ©lioration', 'Improvement plan', 'Ø®Ø·Ø© Ø§Ù„ØªØ­Ø³ÙŠÙ†')
+                feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
+                feature('technical', 'fa-gauge-high', 'Diagnostic technique', 'Technical diagnosis', 'التشخيص التقني'),
+                feature('page', 'fa-file-lines', 'Contenu et structure de page', 'Page content and structure', 'محتوى وبنية الصفحة'),
+                feature('backlinks', 'fa-link', 'Liens entrants, sortants et cassés', 'Inbound, outbound and broken links', 'الروابط الواردة والصادرة والمكسورة'),
+                feature('plan', 'fa-list-check', 'Plan d’amélioration', 'Improvement plan', 'خطة التحسين')
             ]
         },
         {
             key: 'keywords', id: 'resultsKeywords', icon: 'fa-key',
             available: Array.isArray(keywords) && keywords.length > 0,
-            title: isAr ? 'ÙØ±Øµ Ø§Ù„Ø·Ù„Ø¨' : isEn ? 'Demand Opportunities' : 'OpportunitÃ©s de demande',
-            subtitle: isAr ? 'Ø§Ù„Ø·Ù„Ø¨Ø§Øª ÙˆØ§Ù„Ù…ÙˆØ§Ø¶ÙŠØ¹ Ø°Ø§Øª Ø§Ù„Ù‚ÙŠÙ…Ø©' : isEn ? 'Valuable searches and topics' : 'Recherches et sujets Ã  forte valeur',
-            team: isAr ? 'ÙØ±ÙŠÙ‚ Daka Ù„Ø£Ø¨Ø­Ø§Ø« Ø§Ù„Ù†Ù…Ùˆ' : isEn ? 'Daka Growth Research Team' : 'Ã‰quipe Daka Recherche Croissance',
+            title: isAr ? 'فرص الطلب' : isEn ? 'Demand Opportunities' : 'Opportunités de demande',
+            subtitle: isAr ? 'الطلبات والمواضيع ذات القيمة' : isEn ? 'Valuable searches and topics' : 'Recherches et sujets à forte valeur',
+            team: isAr ? 'فريق Daka لأبحاث النمو' : isEn ? 'Daka Growth Research Team' : 'Équipe Daka Recherche Croissance',
             features: [
-                feature('summary', 'fa-gauge-high', 'RÃ©sumÃ© exÃ©cutif Â· lecture 3 minutes', 'Executive summary Â· 3-minute read', 'Ø§Ù„Ù…Ù„Ø®Øµ Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ Â· Ù‚Ø±Ø§Ø¡Ø© 3 Ø¯Ù‚Ø§Ø¦Ù‚'),
-                feature('keywords', 'fa-key', 'Mots-clÃ©s, intentions et potentiel', 'Keywords, intent and potential', 'Ø§Ù„ÙƒÙ„Ù…Ø§Øª ÙˆØ§Ù„Ù†ÙŠØ© ÙˆØ§Ù„Ø¥Ù…ÙƒØ§Ù†Ø§Øª')
+                feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
+                feature('keywords', 'fa-key', 'Mots-clés, intentions et potentiel', 'Keywords, intent and potential', 'الكلمات والنية والإمكانات')
             ]
         }
     ];
@@ -6603,7 +6603,7 @@ function handleDakaExportLogoUpload(event) {
     if (!file) return;
     if (!/^image\/(png|jpeg)$/.test(file.type) || file.size > 2_000_000) {
         event.target.value = '';
-        toast.warning(isAr ? 'Ø§Ø³ØªØ®Ø¯Ù… ØµÙˆØ±Ø© PNG Ø£Ùˆ JPG Ø£Ù‚Ù„ Ù…Ù† 2 Ù…ÙŠØºØ§Ø¨Ø§ÙŠØª.' : isEn ? 'Use a PNG or JPG image under 2 MB.' : 'Utilisez une image PNG ou JPG de moins de 2 Mo.');
+        toast.warning(isAr ? 'استخدم صورة PNG أو JPG أقل من 2 ميغابايت.' : isEn ? 'Use a PNG or JPG image under 2 MB.' : 'Utilisez une image PNG ou JPG de moins de 2 Mo.');
         return;
     }
     const reader = new FileReader();
@@ -6611,7 +6611,7 @@ function handleDakaExportLogoUpload(event) {
         window.dakaExportLogoDataUrl = String(reader.result || '');
         const preview = document.querySelector('#export-logo-preview img');
         if (preview && window.dakaExportLogoDataUrl) preview.src = window.dakaExportLogoDataUrl;
-        toast.success(isAr ? 'ØªÙ… ØªØ­Ø¯ÙŠØ« Ø´Ø¹Ø§Ø± Ø§Ù„ØªÙ‚Ø±ÙŠØ±.' : isEn ? 'Report logo updated.' : 'Logo du rapport mis Ã  jour.');
+        toast.success(isAr ? 'تم تحديث شعار التقرير.' : isEn ? 'Report logo updated.' : 'Logo du rapport mis à jour.');
     };
     reader.readAsDataURL(file);
 }
@@ -6652,7 +6652,7 @@ function openDakaExportStudio(preselect = null) {
                 <span class="export-pack-icon"><i class="fas ${module.icon}"></i></span>
                 <span class="export-pack-copy">
                     <strong>${module.title}</strong>
-                    <small>${module.available ? module.subtitle : (isAr ? 'Ø£Ø·Ù„Ù‚ Ù‡Ø°Ø§ Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ø£ÙˆÙ„Ø§Ù‹' : isEn ? 'Run this analysis first' : 'Lancez dâ€™abord cette analyse')}</small>
+                    <small>${module.available ? module.subtitle : (isAr ? 'أطلق هذا التحليل أولاً' : isEn ? 'Run this analysis first' : 'Lancez d’abord cette analyse')}</small>
                 </span>
                 <i class="fas fa-circle-check export-pack-check"></i>
             </label>
@@ -6682,19 +6682,19 @@ function openDakaExportStudio(preselect = null) {
             card?.classList.toggle('selected', anySelected);
         });
     });
-    document.getElementById('export-studio-title').textContent = isAr ? 'ÙƒÙˆÙ‘Ù† ØªÙ‚Ø±ÙŠØ±Ùƒ Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ' : isEn ? 'Build your decision report' : 'Composez votre dossier dÃ©cisionnel';
-    document.getElementById('export-studio-subtitle').textContent = isAr ? 'Ø§Ø®ØªØ± Ø§Ù„ÙˆØ­Ø¯Ø§Øª ÙˆØ§Ù„Ø´Ø¹Ø§Ø± Ù‚Ø¨Ù„ Ø¥Ù†Ø´Ø§Ø¡ Ù…Ù„Ù DOCX Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªØ­Ø±ÙŠØ±.' : isEn ? 'Choose modules and logo before generating the editable DOCX.' : 'Choisissez les modules et le logo avant de gÃ©nÃ©rer le DOCX Ã©ditable.';
+    document.getElementById('export-studio-title').textContent = isAr ? 'كوّن تقريرك التنفيذي' : isEn ? 'Build your decision report' : 'Composez votre dossier décisionnel';
+    document.getElementById('export-studio-subtitle').textContent = isAr ? 'اختر الوحدات والشعار قبل إنشاء ملف DOCX قابل للتحرير.' : isEn ? 'Choose modules and logo before generating the editable DOCX.' : 'Choisissez les modules et le logo avant de générer le DOCX éditable.';
     document.getElementById('export-feature-help').textContent = isAr
-        ? 'Ø§Ø®ØªØ± Ø§Ù„ÙØµÙˆÙ„ Ø§Ù„Ù…ÙÙŠØ¯Ø© ÙÙ‚Ø·. Ø³ÙŠØªÙ… Ø¥Ù†Ø´Ø§Ø¡ Ù…Ù„Ù Word Ø­Ø¯ÙŠØ« Ø¨ØµÙŠØºØ© DOCX.'
+        ? 'اختر الفصول المفيدة فقط. سيتم إنشاء ملف Word حديث بصيغة DOCX.'
         : isEn ? 'Select only useful chapters. A modern DOCX file will be generated.'
-            : 'Cochez uniquement les chapitres utiles. Un vrai fichier Word DOCX sera gÃ©nÃ©rÃ©.';
-    document.getElementById('export-confirm-label').textContent = isAr ? 'ØªØ£ÙƒÙŠØ¯ ÙˆØªØµØ¯ÙŠØ± DOCX' : isEn ? 'Confirm and export DOCX' : 'Valider et exporter DOCX';
+            : 'Cochez uniquement les chapitres utiles. Un vrai fichier Word DOCX sera généré.';
+    document.getElementById('export-confirm-label').textContent = isAr ? 'تأكيد وتصدير DOCX' : isEn ? 'Confirm and export DOCX' : 'Valider et exporter DOCX';
     const logoTitle = document.getElementById('export-logo-title');
     const logoHelp = document.getElementById('export-logo-help');
     const logoReset = document.getElementById('export-logo-reset-label');
-    if (logoTitle) logoTitle.textContent = isAr ? 'Ø´Ø¹Ø§Ø± Ø§Ù„ØªÙ‚Ø±ÙŠØ±' : isEn ? 'Report logo' : 'Logo du rapport';
-    if (logoHelp) logoHelp.textContent = isAr ? 'Ø§Ø±ÙØ¹ PNG/JPG Ù„ÙŠØ¸Ù‡Ø± ÙÙŠ Ù…Ù„Ù Word. Ø¥Ø°Ø§ Ù„Ù… ØªØ±ÙØ¹ Ø´ÙŠØ¦Ø§ Ø³Ù†Ø³ØªØ®Ø¯Ù… Ø´Ø¹Ø§Ø± Daka.' : isEn ? 'Upload a PNG/JPG for the Word file. If empty, Daka uses its official logo.' : 'Ajoutez un PNG/JPG pour le fichier Word. Sans image, Daka utilise son logo officiel.';
-    if (logoReset) logoReset.textContent = isAr ? 'Ø´Ø¹Ø§Ø± Daka' : isEn ? 'Daka logo' : 'Logo Daka';
+    if (logoTitle) logoTitle.textContent = isAr ? 'شعار التقرير' : isEn ? 'Report logo' : 'Logo du rapport';
+    if (logoHelp) logoHelp.textContent = isAr ? 'ارفع PNG/JPG ليظهر في ملف Word. إذا لم ترفع شيئا سنستخدم شعار Daka.' : isEn ? 'Upload a PNG/JPG for the Word file. If empty, Daka uses its official logo.' : 'Ajoutez un PNG/JPG pour le fichier Word. Sans image, Daka utilise son logo officiel.';
+    if (logoReset) logoReset.textContent = isAr ? 'شعار Daka' : isEn ? 'Daka logo' : 'Logo Daka';
     modal.classList.add('active');
     document.body.classList.add('modal-open');
 }
@@ -6702,7 +6702,7 @@ function openDakaExportStudio(preselect = null) {
 async function confirmDakaExportStudio(format = 'word') {
     const sections = [...document.querySelectorAll('#export-studio-sections input[data-export-section]:checked')].map(input => input.value);
     if (!sections.length) {
-        return toast.warning(STATE.currentLang === 'ar' ? 'Ø§Ø®ØªØ± Ù‚Ø³Ù…Ø§Ù‹ ÙˆØ§Ø­Ø¯Ø§Ù‹ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.' : STATE.currentLang === 'en' ? 'Select at least one section.' : 'SÃ©lectionnez au moins une section.');
+        return toast.warning(STATE.currentLang === 'ar' ? 'اختر قسماً واحداً على الأقل.' : STATE.currentLang === 'en' ? 'Select at least one section.' : 'Sélectionnez au moins une section.');
     }
     const features = {};
     sections.forEach(section => {
@@ -6710,7 +6710,7 @@ async function confirmDakaExportStudio(format = 'word') {
             .map(input => input.dataset.exportFeatureChoice);
     });
     if (!Object.values(features).some(items => items.length)) {
-        return toast.warning(STATE.currentLang === 'ar' ? 'Ø§Ø®ØªØ± ÙØµÙ„Ø§Ù‹ ÙˆØ§Ø­Ø¯Ø§Ù‹ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.' : STATE.currentLang === 'en' ? 'Select at least one chapter.' : 'SÃ©lectionnez au moins un chapitre.');
+        return toast.warning(STATE.currentLang === 'ar' ? 'اختر فصلاً واحداً على الأقل.' : STATE.currentLang === 'en' ? 'Select at least one chapter.' : 'Sélectionnez au moins un chapitre.');
     }
     const confirmButton = document.getElementById('export-studio-confirm');
     const confirmLabel = document.getElementById('export-confirm-label');
@@ -6723,8 +6723,8 @@ async function confirmDakaExportStudio(format = 'word') {
     if (confirmButton) confirmButton.disabled = true;
     if (confirmLabel) {
         confirmLabel.textContent = STATE.currentLang === 'ar'
-            ? 'Ø¬Ø§Ø±Ù Ø¥Ø¹Ø¯Ø§Ø¯ Ø§Ù„Ù…Ù„Ù...'
-            : STATE.currentLang === 'en' ? 'Preparing download...' : 'PrÃ©paration du tÃ©lÃ©chargement...';
+            ? 'جارٍ إعداد الملف...'
+            : STATE.currentLang === 'en' ? 'Preparing download...' : 'Préparation du téléchargement...';
     }
     closeDakaExportStudio();
     try {
@@ -6755,12 +6755,12 @@ function inferDakaReportOfferType() {
         STATE.lastAnalysisResults?.competitorIntelligence?.businessArchetype
     ].filter(Boolean).join(' ').toLowerCase();
     const serviceScore = [
-        /agence|agency|service|consulting|conseil|saas|software|logiciel|formation|marketing|ia|ai|b2b|prestation|accompagnement|audit|diagnostic|devis|rendez|livrable|rÃ©vision|revision|support|coaching/.test(source),
-        /portfolio|projet|client|campagne|automatisation|crÃ©ation|creation|design|dÃ©veloppement|developpement/.test(source),
+        /agence|agency|service|consulting|conseil|saas|software|logiciel|formation|marketing|ia|ai|b2b|prestation|accompagnement|audit|diagnostic|devis|rendez|livrable|révision|revision|support|coaching/.test(source),
+        /portfolio|projet|client|campagne|automatisation|création|creation|design|développement|developpement/.test(source),
         !/panier|checkout|stock|livraison produit|shipping|delivery|retour colis|fiche produit/.test(source)
     ].filter(Boolean).length;
     const productScore = [
-        /produit|product|e-?commerce|boutique|shop|store|retail|acheter|commande|panier|stock|livraison|delivery|retour|returns|cosmÃ©tique|serum|lampe|led|ordinateur|pc gamer|accessoire/.test(source),
+        /produit|product|e-?commerce|boutique|shop|store|retail|acheter|commande|panier|stock|livraison|delivery|retour|returns|cosmétique|serum|lampe|led|ordinateur|pc gamer|accessoire/.test(source),
         /prix|price/.test(source) && /acheter|commande|panier|stock|livraison|produit|product/.test(source)
     ].filter(Boolean).length;
     if (serviceScore >= 2 && serviceScore >= productScore) return 'service';
@@ -6772,20 +6772,20 @@ function sanitizeDakaBusinessVocabularyForContext(text) {
     let value = String(text || '').replace(/\s+/g, ' ').trim();
     if (!value || inferDakaReportOfferType() !== 'service') return value;
     value = value
-        .replace(/prix,\s*stock,\s*livraison,\s*retours?\s*et\s*preuve forte/gi, 'mÃ©thode de prix, pÃ©rimÃ¨tre, dÃ©lais, preuves client et prochaine action')
-        .replace(/prix,\s*stock,\s*livraison,\s*retours?\s*et\s*preuves?/gi, 'mÃ©thode de prix, pÃ©rimÃ¨tre, dÃ©lais et preuves client')
-        .replace(/stock,\s*livraison,\s*retours?/gi, 'pÃ©rimÃ¨tre, dÃ©lais et conditions de collaboration')
-        .replace(/livraison\s*\/\s*retours?/gi, 'livrables / dÃ©lais')
-        .replace(/\bstock\b/gi, 'capacitÃ© disponible')
-        .replace(/\blivraison\b/gi, 'dÃ©lai de rÃ©alisation')
-        .replace(/\bretours?\b/gi, 'rÃ©visions')
-        .replace(/Ø§Ù„Ù…Ø®Ø²ÙˆÙ† ÙˆØ§Ù„ØªÙˆØµÙŠÙ„ ÙˆØ§Ù„Ø¥Ø±Ø¬Ø§Ø¹ ÙˆØ§Ù„Ø£Ø¯Ù„Ø©/g, 'Ù†Ø·Ø§Ù‚ Ø§Ù„Ø¹Ù…Ù„ ÙˆØ§Ù„Ø¢Ø¬Ø§Ù„ ÙˆØ·Ø±ÙŠÙ‚Ø© Ø§Ù„ØªØ³Ø¹ÙŠØ± ÙˆØ§Ù„Ø£Ø¯Ù„Ø©')
-        .replace(/Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ù…Ø®Ø²ÙˆÙ† ÙˆØ§Ù„ØªÙˆØµÙŠÙ„ ÙˆØ§Ù„Ø¥Ø±Ø¬Ø§Ø¹ ÙˆØ§Ù„Ø£Ø¯Ù„Ø©/g, 'Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„ØªØ³Ø¹ÙŠØ± ÙˆÙ†Ø·Ø§Ù‚ Ø§Ù„Ø¹Ù…Ù„ ÙˆØ§Ù„Ø¢Ø¬Ø§Ù„ ÙˆØ§Ù„Ø£Ø¯Ù„Ø©')
-        .replace(/Ø§Ù„Ù…Ø®Ø²ÙˆÙ† ÙˆØ§Ù„ØªÙˆØµÙŠÙ„ ÙˆØ§Ù„Ø¶Ù…Ø§Ù†/g, 'Ù†Ø·Ø§Ù‚ Ø§Ù„Ø¹Ù…Ù„ ÙˆØ§Ù„Ø¢Ø¬Ø§Ù„ ÙˆØ´Ø±ÙˆØ· Ø§Ù„Ù…ØªØ§Ø¨Ø¹Ø©')
-        .replace(/Ø§Ù„ØªÙˆØµÙŠÙ„ ÙˆØ§Ù„Ø¥Ø±Ø¬Ø§Ø¹/g, 'Ø§Ù„Ø¢Ø¬Ø§Ù„ ÙˆØ§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø§Øª')
-        .replace(/Ø§Ù„Ù…Ø®Ø²ÙˆÙ†/g, 'Ø§Ù„Ù‚Ø¯Ø±Ø© Ø§Ù„Ù…ØªØ§Ø­Ø©')
-        .replace(/Ø§Ù„ØªÙˆØµÙŠÙ„/g, 'Ù…Ø¯Ø© Ø§Ù„Ø¥Ù†Ø¬Ø§Ø²')
-        .replace(/Ø§Ù„Ø¥Ø±Ø¬Ø§Ø¹/g, 'Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø§Øª')
+        .replace(/prix,\s*stock,\s*livraison,\s*retours?\s*et\s*preuve forte/gi, 'méthode de prix, périmètre, délais, preuves client et prochaine action')
+        .replace(/prix,\s*stock,\s*livraison,\s*retours?\s*et\s*preuves?/gi, 'méthode de prix, périmètre, délais et preuves client')
+        .replace(/stock,\s*livraison,\s*retours?/gi, 'périmètre, délais et conditions de collaboration')
+        .replace(/livraison\s*\/\s*retours?/gi, 'livrables / délais')
+        .replace(/\bstock\b/gi, 'capacité disponible')
+        .replace(/\blivraison\b/gi, 'délai de réalisation')
+        .replace(/\bretours?\b/gi, 'révisions')
+        .replace(/المخزون والتوصيل والإرجاع والأدلة/g, 'نطاق العمل والآجال وطريقة التسعير والأدلة')
+        .replace(/السعر والمخزون والتوصيل والإرجاع والأدلة/g, 'طريقة التسعير ونطاق العمل والآجال والأدلة')
+        .replace(/المخزون والتوصيل والضمان/g, 'نطاق العمل والآجال وشروط المتابعة')
+        .replace(/التوصيل والإرجاع/g, 'الآجال والمراجعات')
+        .replace(/المخزون/g, 'القدرة المتاحة')
+        .replace(/التوصيل/g, 'مدة الإنجاز')
+        .replace(/الإرجاع/g, 'المراجعات')
         .replace(/stock, delivery, returns?,? and proof/gi, 'scope, timeline, client proof, and next step')
         .replace(/price, stock, delivery, returns?/gi, 'pricing method, scope, timeline')
         .replace(/\bstock\b/gi, 'available capacity')
@@ -6839,7 +6839,7 @@ function getDakaPdfDecisionModel(selectedModules) {
     const reportUrl = getDakaPdfReportUrl();
     let domain = reportUrl;
     try { domain = new URL(reportUrl).hostname.replace(/^www\./, ''); } catch (_) {}
-    domain = domain || (isAr ? 'Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ù…Ø­Ù„ Ø§Ù„Ø¯Ø±Ø§Ø³Ø©' : isEn ? 'Analyzed site' : 'Site analysÃ©');
+    domain = domain || (isAr ? 'الموقع محل الدراسة' : isEn ? 'Analyzed site' : 'Site analysé');
 
     const moduleModels = selectedModules.map(function (module) {
         const data = getDakaPdfModuleData(module.key);
@@ -6858,7 +6858,7 @@ function getDakaPdfDecisionModel(selectedModules) {
     const actions = [];
     const meaningfulMeta = function (value) {
         const text = executiveText(value).trim();
-        return text && !/^(?:â€”|-|a confirmer|Ã  confirmer|a estimer|Ã  estimer|n\/a)$/i.test(text) ? text : '';
+        return text && !/^(?:—|-|a confirmer|à confirmer|a estimer|à estimer|n\/a)$/i.test(text) ? text : '';
     };
     moduleModels.forEach(function (entry) {
         (entry.summary.actions || []).forEach(function (action) {
@@ -6867,8 +6867,8 @@ function getDakaPdfDecisionModel(selectedModules) {
             if (actions.some(function (item) { return item.title.toLowerCase() === title.toLowerCase(); })) return;
             actions.push({
                 title: title,
-                impact: meaningfulMeta(action?.impact) || (isAr ? 'Ù…Ø±ØªÙØ¹' : isEn ? 'High' : 'Ã‰levÃ©'),
-                effort: meaningfulMeta(action?.effort) || (isAr ? 'Ù…ØªÙˆØ³Ø·' : isEn ? 'Medium' : 'Moyen'),
+                impact: meaningfulMeta(action?.impact) || (isAr ? 'مرتفع' : isEn ? 'High' : 'Élevé'),
+                effort: meaningfulMeta(action?.effort) || (isAr ? 'متوسط' : isEn ? 'Medium' : 'Moyen'),
                 priority: executiveText(action?.priority) || String(actions.length + 1)
             });
         });
@@ -6939,7 +6939,7 @@ function getDakaPdfDecisionModel(selectedModules) {
     const branches = [
         {
             key: 'market',
-            title: isAr ? 'Ø§Ù„Ø³ÙˆÙ‚' : isEn ? 'Market' : 'MarchÃ©',
+            title: isAr ? 'السوق' : isEn ? 'Market' : 'Marché',
             items: dakaPdfCleanList([
                 competitors.competitorIntelligence?.marketVerdict?.whyTheyWin,
                 competitors.competitorIntelligence?.marketVerdict?.marketPattern,
@@ -6949,39 +6949,39 @@ function getDakaPdfDecisionModel(selectedModules) {
         },
         {
             key: 'offer',
-            title: isAr ? 'Ø§Ù„Ø¹Ø±Ø¶' : isEn ? 'Offer' : 'Offre',
+            title: isAr ? 'العرض' : isEn ? 'Offer' : 'Offre',
             items: dakaPdfCleanList([
                 funnel.commerceExploration?.deduced?.offerType,
                 funnel.productServiceAudit?.uniqueValueProposition,
                 funnel.commerceExploration?.recommended?.pricingRationale,
-                actions.filter(function (a) { return /offre|offer|prix|price|produit|product|Ø¹Ø±Ø¶|Ø³Ø¹Ø±/i.test(a.title); }).map(function (a) { return a.title; })
+                actions.filter(function (a) { return /offre|offer|prix|price|produit|product|عرض|سعر/i.test(a.title); }).map(function (a) { return a.title; })
             ], 2)
         },
         {
             key: 'trust',
-            title: isAr ? 'Ø§Ù„Ø«Ù‚Ø©' : isEn ? 'Trust' : 'Confiance',
+            title: isAr ? 'الثقة' : isEn ? 'Trust' : 'Confiance',
             items: dakaPdfCleanList([
                 funnel.commerceExploration?.observed?.trustSignals,
                 funnel.commerceExploration?.recommended?.nextActions,
-                weaknesses.filter(function (item) { return /preuve|confiance|garantie|avis|trust|proof|review|Ø¶Ù…Ø§Ù†|Ø«Ù‚Ø©/i.test(item); })
+                weaknesses.filter(function (item) { return /preuve|confiance|garantie|avis|trust|proof|review|ضمان|ثقة/i.test(item); })
             ], 2)
         },
         {
             key: 'acquisition',
-            title: isAr ? 'Ø§Ù„Ø§ÙƒØªØ³Ø§Ø¨' : isEn ? 'Acquisition' : 'Acquisition',
+            title: isAr ? 'الاكتساب' : isEn ? 'Acquisition' : 'Acquisition',
             items: dakaPdfCleanList([
                 keywords.clusters,
                 keywords.paaQuestions,
-                actions.filter(function (a) { return /acquisition|visibil|demande|keyword|contenu|content|trafic|Ø·Ù„Ø¨|Ù…Ø­ØªÙˆÙ‰/i.test(a.title); }).map(function (a) { return a.title; })
+                actions.filter(function (a) { return /acquisition|visibil|demande|keyword|contenu|content|trafic|طلب|محتوى/i.test(a.title); }).map(function (a) { return a.title; })
             ], 2)
         },
         {
             key: 'conversion',
-            title: isAr ? 'Ø§Ù„ØªØ­ÙˆÙŠÙ„' : isEn ? 'Conversion' : 'Conversion',
+            title: isAr ? 'التحويل' : isEn ? 'Conversion' : 'Conversion',
             items: dakaPdfCleanList([
                 funnel.auditQuickWins,
                 funnel.quickWins,
-                actions.filter(function (a) { return /conversion|cta|parcours|funnel|friction|checkout|ØªØ­ÙˆÙŠÙ„/i.test(a.title); }).map(function (a) { return a.title; })
+                actions.filter(function (a) { return /conversion|cta|parcours|funnel|friction|checkout|تحويل/i.test(a.title); }).map(function (a) { return a.title; })
             ], 2)
         }
     ].filter(function (branch) { return branch.items.length; });
@@ -7046,7 +7046,7 @@ function dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, pageLabel) {
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(6.5);
     pdf.setTextColor(3, 105, 161);
-    pdf.text(model.isAr ? 'DAKA Â· ØªÙ‚Ø±ÙŠØ± Ù‚Ø±Ø§Ø±' : model.isEn ? 'DAKA Â· DECISION REPORT' : 'DAKA Â· RAPPORT DÃ‰CISIONNEL', margin, 11);
+    pdf.text(model.isAr ? 'DAKA · تقرير قرار' : model.isEn ? 'DAKA · DECISION REPORT' : 'DAKA · RAPPORT DÉCISIONNEL', margin, 11);
     pdf.setFont('helvetica', 'normal');
     pdf.setTextColor(100, 116, 139);
     pdf.text(String(model.domain || '').substring(0, 55), pageW - margin, 11, { align: 'right' });
@@ -7056,7 +7056,7 @@ function dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, pageLabel) {
     pdf.setTextColor(100, 116, 139);
     pdf.text(pageLabel || '', margin, pageH - 6);
     pdf.text(
-        (model.isAr ? 'Made by Daka Â· ' : 'Made by Daka Â· ') + String(pdf.internal.getCurrentPageInfo().pageNumber),
+        (model.isAr ? 'Made by Daka · ' : 'Made by Daka · ') + String(pdf.internal.getCurrentPageInfo().pageNumber),
         pageW - margin, pageH - 6, { align: 'right' }
     );
 }
@@ -7071,7 +7071,7 @@ function dakaPdfDrawWrappedText(pdf, text, x, y, width, options = {}) {
     let lines = pdf.splitTextToSize(safeText, width);
     if (lines.length > maxLines) {
         lines = lines.slice(0, maxLines);
-        lines[maxLines - 1] = String(lines[maxLines - 1]).replace(/[.,;:\s]+$/, '') + 'â€¦';
+        lines[maxLines - 1] = String(lines[maxLines - 1]).replace(/[.,;:\s]+$/, '') + '…';
     }
     pdf.setFont('helvetica', options.bold ? 'bold' : 'normal');
     pdf.setFontSize(options.size || 8);
@@ -7100,7 +7100,7 @@ function dakaPdfDrawListCard(pdf, title, items, x, y, width, height, accent) {
 }
 
 function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW, pageH, margin) {
-    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isAr ? 'Ø§Ù„Ù…Ù„Ø®Øµ Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ' : model.isEn ? 'Executive brief' : 'Fiche sommaire exÃ©cutive');
+    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isAr ? 'الملخص التنفيذي' : model.isEn ? 'Executive brief' : 'Fiche sommaire exécutive');
     if (logoDataUrl) {
         try { pdf.addImage(logoDataUrl, logoDataUrl.includes('image/png') ? 'PNG' : 'JPEG', margin, 17, 25, 25, undefined, 'FAST'); } catch (_) {}
     } else {
@@ -7117,12 +7117,12 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(model.isAr ? 'Ù…Ù„Ù Ø§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ' : model.isEn ? 'Executive Decision Brief' : 'Fiche sommaire dÃ©cisionnelle', margin + 32, 25);
+    pdf.text(model.isAr ? 'ملف القرار التنفيذي' : model.isEn ? 'Executive Decision Brief' : 'Fiche sommaire décisionnelle', margin + 32, 25);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(7.2);
     pdf.setTextColor(71, 85, 105);
     pdf.text(
-        model.isAr ? 'ØªÙ‚Ø±ÙŠØ± Ø£Ø¹Ø¯ØªÙ‡ ÙØ±Ù‚ Daka Ø§Ù„Ù…ØªØ®ØµØµØ©' : model.isEn ? 'Report prepared by Daka specialist teams' : 'Rapport prÃ©parÃ© par les Ã©quipes Daka',
+        model.isAr ? 'تقرير أعدته فرق Daka المتخصصة' : model.isEn ? 'Report prepared by Daka specialist teams' : 'Rapport préparé par les équipes Daka',
         margin + 32, 31
     );
     pdf.setFontSize(6.3);
@@ -7148,8 +7148,8 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(6);
     pdf.setTextColor(100, 116, 139);
-    pdf.text(model.isAr ? 'Ø§Ù„Ø³ÙˆÙ‚ / Ø§Ù„Ù„ØºØ©' : model.isEn ? 'MARKET / LANGUAGE' : 'MARCHÃ‰ / LANGUE', pageW - margin - 48, 58);
-    dakaPdfDrawWrappedText(pdf, [model.geo, model.lang.toUpperCase()].filter(Boolean).join(' Â· '), pageW - margin - 48, 66, 43, {
+    pdf.text(model.isAr ? 'السوق / اللغة' : model.isEn ? 'MARKET / LANGUAGE' : 'MARCHÉ / LANGUE', pageW - margin - 48, 58);
+    dakaPdfDrawWrappedText(pdf, [model.geo, model.lang.toUpperCase()].filter(Boolean).join(' · '), pageW - margin - 48, 66, 43, {
         size: 8, bold: true, color: [15, 23, 42], maxLines: 2
     });
 
@@ -7158,7 +7158,7 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(6.5);
     pdf.setTextColor(125, 211, 252);
-    pdf.text(model.isAr ? 'Ø§Ù„Ø®Ù„Ø§ØµØ© Ø§Ù„Ø¹Ø§Ù…Ø©' : model.isEn ? 'GLOBAL VERDICT' : 'VERDICT GLOBAL', margin + 8, 96);
+    pdf.text(model.isAr ? 'الخلاصة العامة' : model.isEn ? 'GLOBAL VERDICT' : 'VERDICT GLOBAL', margin + 8, 96);
     dakaPdfDrawWrappedText(pdf, model.verdict || model.priorityDecision, margin + 8, 105, pageW - margin * 2 - 48, {
         size: 10, bold: true, color: [255, 255, 255], maxLines: 3, lineHeight: 5
     });
@@ -7180,13 +7180,13 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     if (model.opportunities.length && model.weaknesses.length) {
         dakaPdfDrawListCard(
             pdf,
-            model.isAr ? 'Ø£Ù‡Ù… Ø§Ù„ÙØ±Øµ' : model.isEn ? 'Top opportunities' : 'Top 3 opportunitÃ©s',
+            model.isAr ? 'أهم الفرص' : model.isEn ? 'Top opportunities' : 'Top 3 opportunités',
             model.opportunities,
             margin, 130, cardW, 55, [5, 150, 105]
         );
         dakaPdfDrawListCard(
             pdf,
-            model.isAr ? 'Ù†Ù‚Ø§Ø· Ø§Ù„Ø®Ø·Ø±' : model.isEn ? 'Critical weaknesses' : 'Faiblesses critiques',
+            model.isAr ? 'نقاط الخطر' : model.isEn ? 'Critical weaknesses' : 'Faiblesses critiques',
             model.weaknesses,
             margin + cardW + gap, 130, cardW, 55, [220, 38, 38]
         );
@@ -7194,7 +7194,7 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
         const hasOpportunities = model.opportunities.length > 0;
         dakaPdfDrawListCard(
             pdf,
-            hasOpportunities ? (model.isAr ? 'Ø£Ù‡Ù… Ø§Ù„ÙØ±Øµ' : model.isEn ? 'Top opportunities' : 'Top opportunitÃ©s') : (model.isAr ? 'Ù†Ù‚Ø§Ø· Ø§Ù„Ø®Ø·Ø±' : model.isEn ? 'Critical weaknesses' : 'Faiblesses critiques'),
+            hasOpportunities ? (model.isAr ? 'أهم الفرص' : model.isEn ? 'Top opportunities' : 'Top opportunités') : (model.isAr ? 'نقاط الخطر' : model.isEn ? 'Critical weaknesses' : 'Faiblesses critiques'),
             hasOpportunities ? model.opportunities : model.weaknesses,
             margin, 130, pageW - margin * 2, 55, hasOpportunities ? [5, 150, 105] : [220, 38, 38]
         );
@@ -7208,7 +7208,7 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(7);
     pdf.setTextColor(146, 64, 14);
-    pdf.text(model.isAr ? 'Ø§Ù„Ù‚Ø±Ø§Ø± Ø°Ùˆ Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ©' : model.isEn ? 'PRIORITY DECISION' : 'DÃ‰CISION PRIORITAIRE', margin + 9, 202);
+    pdf.text(model.isAr ? 'القرار ذو الأولوية' : model.isEn ? 'PRIORITY DECISION' : 'DÉCISION PRIORITAIRE', margin + 9, 202);
     dakaPdfDrawWrappedText(pdf, model.priorityDecision, margin + 9, 211, pageW - margin * 2 - 18, {
         size: 9.2, bold: true, color: [15, 23, 42], maxLines: 3, lineHeight: 4.8
     });
@@ -7216,7 +7216,7 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(7);
     pdf.setTextColor(71, 85, 105);
-    pdf.text(model.isAr ? 'Ø§Ù„ÙØµÙˆÙ„ Ø§Ù„Ù…Ø¯Ø±Ø¬Ø© ÙÙŠ Ø§Ù„ØªÙ‚Ø±ÙŠØ±' : model.isEn ? 'INCLUDED EXPERTISES' : 'EXPERTISES INCLUSES', margin, 238);
+    pdf.text(model.isAr ? 'الفصول المدرجة في التقرير' : model.isEn ? 'INCLUDED EXPERTISES' : 'EXPERTISES INCLUSES', margin, 238);
     const links = [];
     validSections.slice(0, 4).forEach(function (section, index) {
         const col = index % 2;
@@ -7239,36 +7239,36 @@ function drawDakaPdfExecutivePage(pdf, model, validSections, logoDataUrl, pageW,
 function drawDakaPdfRoadmapPage(pdf, model, pageW, pageH, margin) {
     const phases = [
         {
-            label: model.isAr ? 'Ø§Ù„Ø¢Ù†' : model.isEn ? 'Now' : 'Maintenant',
+            label: model.isAr ? 'الآن' : model.isEn ? 'Now' : 'Maintenant',
             items: dakaPdfCleanList([model.priorityDecision], 1),
             accent: [202, 138, 4]
         },
         {
-            label: model.isAr ? '7 Ø£ÙŠØ§Ù…' : model.isEn ? '7 days' : '7 jours',
+            label: model.isAr ? '7 أيام' : model.isEn ? '7 days' : '7 jours',
             items: model.quickWins.slice(0, 2),
             accent: [5, 150, 105]
         },
         {
-            label: model.isAr ? '30 ÙŠÙˆÙ…Ø§' : model.isEn ? '30 days' : '30 jours',
+            label: model.isAr ? '30 يوما' : model.isEn ? '30 days' : '30 jours',
             items: model.plan30.slice(0, 2),
             accent: [3, 105, 161]
         },
         {
-            label: model.isAr ? 'Ø¨Ø¹Ø¯ 30 ÙŠÙˆÙ…Ø§' : model.isEn ? 'After 30 days' : 'AprÃ¨s 30 jours',
+            label: model.isAr ? 'بعد 30 يوما' : model.isEn ? 'After 30 days' : 'Après 30 jours',
             items: model.after30.slice(0, 2),
             accent: [71, 85, 105]
         }
     ].filter(function (phase) { return phase.items.length; });
     if (!phases.length) return false;
     pdf.addPage();
-    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isAr ? 'Ø®Ø·Ø© Ø§Ù„Ø¹Ù…Ù„' : model.isEn ? 'Action plan and roadmap' : 'Plan dâ€™action et roadmap');
+    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isAr ? 'خطة العمل' : model.isEn ? 'Action plan and roadmap' : 'Plan d’action et roadmap');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(model.isAr ? 'Ø®Ø·Ø© Ø§Ù„Ø¹Ù…Ù„ ÙˆØ§Ù„Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ø²Ù…Ù†ÙŠ' : model.isEn ? 'Action plan and roadmap' : 'Plan dâ€™action et roadmap', margin, 25);
+    pdf.text(model.isAr ? 'خطة العمل والجدول الزمني' : model.isEn ? 'Action plan and roadmap' : 'Plan d’action et roadmap', margin, 25);
     dakaPdfDrawWrappedText(
         pdf,
-        model.isAr ? 'Ø®Ø·Ø© Ù…Ø±ØªØ¨Ø© Ù…Ø¨Ù†ÙŠØ© ÙÙ‚Ø· Ø¹Ù„Ù‰ Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø§Ù„Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„Ø§Ø³ØªØ¹Ù…Ø§Ù„.' : model.isEn ? 'A sequenced plan built only from usable findings.' : 'Un plan sÃ©quencÃ© construit uniquement Ã  partir des constats exploitables.',
+        model.isAr ? 'خطة مرتبة مبنية فقط على الملاحظات القابلة للاستعمال.' : model.isEn ? 'A sequenced plan built only from usable findings.' : 'Un plan séquencé construit uniquement à partir des constats exploitables.',
         margin, 34, pageW - margin * 2, { size: 8, color: [71, 85, 105], maxLines: 2 }
     );
     const startY = 52;
@@ -7293,24 +7293,24 @@ function drawDakaPdfRoadmapPage(pdf, model, pageW, pageH, margin) {
         let cursor = y + 18;
         phase.items.forEach(function (item, itemIndex) {
             const matching = model.actions.find(function (action) { return action.title === item; }) || {
-                impact: model.isAr ? 'Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªØ£ÙƒÙŠØ¯' : model.isEn ? 'To confirm' : 'Ã€ confirmer',
-                effort: model.isAr ? 'Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªÙ‚Ø¯ÙŠØ±' : model.isEn ? 'To estimate' : 'Ã€ estimer',
+                impact: model.isAr ? 'قابل للتأكيد' : model.isEn ? 'To confirm' : 'À confirmer',
+                effort: model.isAr ? 'قابل للتقدير' : model.isEn ? 'To estimate' : 'À estimer',
                 priority: phase.label,
                 justification: model.weaknesses[itemIndex] || model.opportunities[itemIndex] || model.verdict
             };
             cursor = dakaPdfDrawWrappedText(pdf, (itemIndex + 1) + '. ' + item, margin + 27, cursor, pageW - margin * 2 - 48, {
                 size: 7.3, bold: true, color: [15, 23, 42], maxLines: 3, lineHeight: 3.8
             });
-            const meta = (model.isAr ? 'Ø§Ù„Ø£Ø«Ø±' : model.isEn ? 'Impact' : 'Impact') + ': ' + matching.impact + ' Â· ' +
-                (model.isAr ? 'Ø§Ù„Ø¬Ù‡Ø¯' : model.isEn ? 'Effort' : 'Effort') + ': ' + matching.effort + ' Â· ' +
-                (model.isAr ? 'Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ©' : model.isEn ? 'Priority' : 'PrioritÃ©') + ': ' + matching.priority;
+            const meta = (model.isAr ? 'الأثر' : model.isEn ? 'Impact' : 'Impact') + ': ' + matching.impact + ' · ' +
+                (model.isAr ? 'الجهد' : model.isEn ? 'Effort' : 'Effort') + ': ' + matching.effort + ' · ' +
+                (model.isAr ? 'الأولوية' : model.isEn ? 'Priority' : 'Priorité') + ': ' + matching.priority;
             cursor = dakaPdfDrawWrappedText(pdf, meta, margin + 31, cursor, pageW - margin * 2 - 39, {
                 size: 6.1, color: [100, 116, 139], maxLines: 1, lineHeight: 3.4
             }) + 2;
             if (matching?.justification) {
                 cursor = dakaPdfDrawWrappedText(
                     pdf,
-                    (model.isAr ? 'Ø§Ù„Ø³Ø¨Ø¨: ' : model.isEn ? 'Why: ' : 'Pourquoi : ') + matching.justification,
+                    (model.isAr ? 'السبب: ' : model.isEn ? 'Why: ' : 'Pourquoi : ') + matching.justification,
                     margin + 31,
                     cursor,
                     pageW - margin * 2 - 39,
@@ -7325,14 +7325,14 @@ function drawDakaPdfRoadmapPage(pdf, model, pageW, pageH, margin) {
 function drawDakaPdfMindMapPage(pdf, model, pageW, pageH, margin) {
     if (!model.branches.length) return false;
     pdf.addPage();
-    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isAr ? 'Ø§Ù„Ø®Ø±ÙŠØ·Ø© Ø§Ù„Ø°Ù‡Ù†ÙŠØ©' : model.isEn ? 'Strategic mind map' : 'Carte mentale stratÃ©gique');
+    dakaPdfDrawPageFrame(pdf, model, pageW, pageH, margin, model.isAr ? 'الخريطة الذهنية' : model.isEn ? 'Strategic mind map' : 'Carte mentale stratégique');
     pdf.setFont('helvetica', 'bold');
     pdf.setFontSize(18);
     pdf.setTextColor(15, 23, 42);
-    pdf.text(model.isAr ? 'Ø®Ø±ÙŠØ·Ø© Ø§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠ' : model.isEn ? 'Strategic decision tree' : 'Carte mentale stratÃ©gique', margin, 25);
+    pdf.text(model.isAr ? 'خريطة القرار الاستراتيجي' : model.isEn ? 'Strategic decision tree' : 'Carte mentale stratégique', margin, 25);
     dakaPdfDrawWrappedText(
         pdf,
-        model.isAr ? 'Ù‡Ø¯Ù Ù…Ø±ÙƒØ²ÙŠ ÙˆØ§Ø­Ø¯ ÙˆØ®Ù…Ø³Ø© Ù…Ø­Ø§ÙˆØ± Ù‚Ø±Ø§Ø±.' : model.isEn ? 'One objective, five decision branches.' : 'Un objectif central, cinq branches de dÃ©cision.',
+        model.isAr ? 'هدف مركزي واحد وخمسة محاور قرار.' : model.isEn ? 'One objective, five decision branches.' : 'Un objectif central, cinq branches de décision.',
         margin, 34, pageW - margin * 2, { size: 8, color: [71, 85, 105], maxLines: 1 }
     );
     const rootX = margin;
@@ -7390,29 +7390,29 @@ function buildDakaArabicDecisionPages(model) {
         return (items || []).map(function (item) { return '<li>' + safe(item) + '</li>'; }).join('');
     };
     const phases = [
-        { title: 'Ø§Ù„Ø¢Ù†', items: dakaPdfCleanList([model.priorityDecision], 1) },
-        { title: 'Ø®Ù„Ø§Ù„ 7 Ø£ÙŠØ§Ù…', items: model.quickWins.slice(0, 3) },
-        { title: 'Ø®Ù„Ø§Ù„ 30 ÙŠÙˆÙ…Ø§Ù‹', items: model.plan30.slice(0, 4) },
-        { title: 'Ø¨Ø¹Ø¯ 30 ÙŠÙˆÙ…Ø§Ù‹', items: model.after30.slice(0, 3) }
+        { title: 'الآن', items: dakaPdfCleanList([model.priorityDecision], 1) },
+        { title: 'خلال 7 أيام', items: model.quickWins.slice(0, 3) },
+        { title: 'خلال 30 يوماً', items: model.plan30.slice(0, 4) },
+        { title: 'بعد 30 يوماً', items: model.after30.slice(0, 3) }
     ].filter(function (phase) { return phase.items.length; });
     const insightCards = [
-        model.opportunities.length ? `<article><h2>Ø£Ù‡Ù… Ø§Ù„ÙØ±Øµ</h2><ul>${list(model.opportunities)}</ul></article>` : '',
-        model.weaknesses.length ? `<article><h2>Ù†Ù‚Ø§Ø· Ø§Ù„Ø¶Ø¹Ù Ø§Ù„Ø­Ø±Ø¬Ø©</h2><ul>${list(model.weaknesses)}</ul></article>` : ''
+        model.opportunities.length ? `<article><h2>أهم الفرص</h2><ul>${list(model.opportunities)}</ul></article>` : '',
+        model.weaknesses.length ? `<article><h2>نقاط الضعف الحرجة</h2><ul>${list(model.weaknesses)}</ul></article>` : ''
     ].filter(Boolean).join('');
     return `
         <section class="daka-ar-decision-page">
             <header class="daka-ar-report-brand">
                 <img src="assets/daka-loader-logo.jpg" alt="Daka">
-                <div><strong>Ø§Ù„Ù…Ù„Ù Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ Ù„Ø§ØªØ®Ø§Ø° Ø§Ù„Ù‚Ø±Ø§Ø±</strong><span>ØªÙ‚Ø±ÙŠØ± Ø£Ø¹Ø¯ØªÙ‡ ÙØ±Ù‚ Daka Ø§Ù„Ù…ØªØ®ØµØµØ©</span></div>
+                <div><strong>الملف التنفيذي لاتخاذ القرار</strong><span>تقرير أعدته فرق Daka المتخصصة</span></div>
             </header>
-            <div class="daka-ar-site-card"><strong>${safe(model.siteTitle)}</strong><span>${safe(model.reportUrl || model.domain)}</span><small>${safe([model.geo, model.date].filter(Boolean).join(' Â· '))}</small></div>
-            <div class="daka-ar-verdict"><small>Ø§Ù„Ø®Ù„Ø§ØµØ© Ø§Ù„Ø¹Ø§Ù…Ø©</small><strong>${safe(model.verdict || model.priorityDecision)}</strong>${model.score !== null ? `<b>${model.score}/100</b>` : ''}</div>
+            <div class="daka-ar-site-card"><strong>${safe(model.siteTitle)}</strong><span>${safe(model.reportUrl || model.domain)}</span><small>${safe([model.geo, model.date].filter(Boolean).join(' · '))}</small></div>
+            <div class="daka-ar-verdict"><small>الخلاصة العامة</small><strong>${safe(model.verdict || model.priorityDecision)}</strong>${model.score !== null ? `<b>${model.score}/100</b>` : ''}</div>
             ${insightCards ? `<div class="daka-ar-two-columns">${insightCards}</div>` : ''}
-            ${model.priorityDecision ? `<article class="daka-ar-priority"><h2>Ø§Ù„Ù‚Ø±Ø§Ø± Ø°Ùˆ Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ©</h2><p>${safe(model.priorityDecision)}</p></article>` : ''}
+            ${model.priorityDecision ? `<article class="daka-ar-priority"><h2>القرار ذو الأولوية</h2><p>${safe(model.priorityDecision)}</p></article>` : ''}
             <div class="daka-ar-modules">${model.modules.map(function (module) { return '<span>' + safe(module.title) + '</span>'; }).join('')}</div>
         </section>
-        ${phases.length ? `<section class="daka-ar-decision-page"><h1>Ø®Ø·Ø© Ø§Ù„Ø¹Ù…Ù„ ÙˆØ§Ù„Ø¬Ø¯ÙˆÙ„ Ø§Ù„Ø²Ù…Ù†ÙŠ</h1><div class="daka-ar-roadmap">${phases.map(function (phase) { return `<article><h2>${safe(phase.title)}</h2><ul>${list(phase.items)}</ul></article>`; }).join('')}</div></section>` : ''}
-        ${model.branches.length ? `<section class="daka-ar-decision-page"><h1>Ø§Ù„Ø®Ø±ÙŠØ·Ø© Ø§Ù„Ø°Ù‡Ù†ÙŠØ© Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ©</h1><div class="daka-ar-tree"><div class="daka-ar-tree-root">${safe(model.domain)}<small>${safe(model.objective)}</small></div><div class="daka-ar-tree-branches">${model.branches.map(function (branch) { return `<article><h2>${safe(branch.title)}</h2><ul>${list(branch.items)}</ul></article>`; }).join('')}</div></div></section>` : ''}
+        ${phases.length ? `<section class="daka-ar-decision-page"><h1>خطة العمل والجدول الزمني</h1><div class="daka-ar-roadmap">${phases.map(function (phase) { return `<article><h2>${safe(phase.title)}</h2><ul>${list(phase.items)}</ul></article>`; }).join('')}</div></section>` : ''}
+        ${model.branches.length ? `<section class="daka-ar-decision-page"><h1>الخريطة الذهنية الاستراتيجية</h1><div class="daka-ar-tree"><div class="daka-ar-tree-root">${safe(model.domain)}<small>${safe(model.objective)}</small></div><div class="daka-ar-tree-branches">${model.branches.map(function (branch) { return `<article><h2>${safe(branch.title)}</h2><ul>${list(branch.items)}</ul></article>`; }).join('')}</div></div></section>` : ''}
     `;
 }
 
@@ -7423,9 +7423,9 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
     }
     const isAr = STATE.currentLang === 'ar';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
     // GARDE-FOUS
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
     const hasSeo    = !!STATE.lastTechnicalResults;
     const hasComp   = !!STATE.lastAnalysisResults;
     const hasFunnel = !!STATE.lastFunnelResults;
@@ -7437,7 +7437,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
     if (!hasSeo && !hasComp && !hasFunnel && !hasKw) {
         return toast.warning(
             STATE.currentLang === 'ar'
-                ? 'Ø£Ø·Ù„Ù‚ ØªØ­Ù„ÙŠÙ„Ø§Ù‹ ÙˆØ§Ø­Ø¯Ø§Ù‹ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„ Ù‚Ø¨Ù„ Ø§Ù„ØªØµØ¯ÙŠØ±.'
+                ? 'أطلق تحليلاً واحداً على الأقل قبل التصدير.'
                 : STATE.currentLang === 'en'
                     ? 'Run at least one analysis before exporting.'
                     : 'Lancez au moins une analyse avant d\'exporter.'
@@ -7461,13 +7461,13 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
     const origHTML = btn ? btn.innerHTML : '';
     if (btn) {
         btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> '
-            + (STATE.currentLang === 'ar' ? 'Ø¬Ø§Ø±Ù Ø§Ù„ØªØµØ¯ÙŠØ±...' : STATE.currentLang === 'en' ? 'Exporting...' : 'Export en cours...');
+            + (STATE.currentLang === 'ar' ? 'جارٍ التصدير...' : STATE.currentLang === 'en' ? 'Exporting...' : 'Export en cours...');
         btn.disabled = true;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // CAS ARABE â€” window.print() dans popup (PATCH THEME DARK)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // CAS ARABE — window.print() dans popup (PATCH THEME DARK)
+    // ══════════════════════════════════════════════════════════════
     if (false && STATE.currentLang === 'ar') {
         try {
             var arSections = selectedModules
@@ -7480,7 +7480,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 .filter(Boolean);
 
             if (!arSections.length) {
-                toast.warning('Ø§Ù„ØªÙ‚Ø±ÙŠØ± ØºÙŠØ± Ø¬Ø§Ù‡Ø² Ù„Ù„ØªØµØ¯ÙŠØ± Ø¨Ø¹Ø¯.');
+                toast.warning('التقرير غير جاهز للتصدير بعد.');
                 return;
             }
 
@@ -7496,7 +7496,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
             var pw = window.open('', '_blank');
             if (!pw) {
-                toast.error('Popup bloquÃ© â€” autorisez les popups pour ce site.');
+                toast.error('Popup bloqué — autorisez les popups pour ce site.');
                 STATE.isExporting = false;
                 if (btn) { btn.innerHTML = origHTML; btn.disabled = false; }
                 return;
@@ -7513,7 +7513,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 'h1,h2,h3,h4,h5 { color:#0f172a !important; font-weight:800; line-height:1.35 !important; }',
                 'button, .btn, .btn-gen, .no-print, .nav-tabs, .header, .footer,',
                 '.export-bubble-wrapper, #btn-export-global, .loading-state,',
-                '.loading-orb, .toast-container, iframe,', /* âš ï¸ Le mot "canvas" a Ã©tÃ© retirÃ© d'ici pour afficher le Radar */
+                '.loading-orb, .toast-container, iframe,', /* ⚠️ Le mot "canvas" a été retiré d'ici pour afficher le Radar */
                 '.copy-badge, .btn-copy-mini, .btn-cosmic, .btn-cyber, .btn-system,',
                 '.generator-grid, #tech-gen-output, .kw-filter-btn, #kwFilterBar,',
                 '[data-gen-type], .btn-export-pdf, .expert-dock, .report-feature-nav { display:none !important; }',
@@ -7576,17 +7576,17 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 '<meta charset="UTF-8">',
                 '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
                 '<title>Daka Market Intelligence Spyer \u2014 \u062a\u0642\u0631\u064a\u0631 \u0634\u0627\u0645\u0644<\/title>',
-                // ðŸ”¥ CHANGEMENT 2 : RÃ©paration de la balise <link> de la police (erreur de syntaxe)
+                // 🔥 CHANGEMENT 2 : Réparation de la balise <link> de la police (erreur de syntaxe)
 
                 '<style>', cssRules, '<\/style>',
                 '<\/head>',
                 '<body>',
                 arDecisionPages,
                 '<div class="print-header">',
-                '  <h1 style="font-size:1.6rem;margin:0;color:#c4b5fd;">DAKA â€” ØªÙ‚Ø±ÙŠØ± Ø§Ø³ØªØ®Ø¨Ø§Ø±Ø§Øª Ø§Ù„Ø£Ø¹Ù…Ø§Ù„<\/h1>',
-                '  <p style="color:#94a3b8;margin:5px 0;font-size:0.9rem;">Ù‚Ø±Ø§Ø±Ø§Øª Ø¹Ù…Ù„ÙŠØ© Ø£Ø¹Ø¯ØªÙ‡Ø§ ÙØ±Ù‚ Daka Ø§Ù„Ù…ØªØ®ØµØµØ©<\/p>',
+                '  <h1 style="font-size:1.6rem;margin:0;color:#c4b5fd;">DAKA — تقرير استخبارات الأعمال<\/h1>',
+                '  <p style="color:#94a3b8;margin:5px 0;font-size:0.9rem;">قرارات عملية أعدتها فرق Daka المتخصصة<\/p>',
                 '  <p style="color:#64748b;font-size:0.75rem;margin:0;">' + arDate + '<\/p>',
-                '  <p style="color:#c4b5fd;font-size:0.72rem;margin:8px 0 0;">' + selectedModules.map(function (m) { return m.team; }).join(' Â· ') + '<\/p>',
+                '  <p style="color:#c4b5fd;font-size:0.72rem;margin:8px 0 0;">' + selectedModules.map(function (m) { return m.team; }).join(' · ') + '<\/p>',
                 '<\/div>',
                 arContent.length
                     ? arContent
@@ -7599,7 +7599,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             pw.document.write(htmlParts.join('\n'));
             pw.document.close();
 
-            // ðŸ”¥ CORRECTION RADAR CHART : Transforme le graphique en image PNG pour l'impression
+            // 🔥 CORRECTION RADAR CHART : Transforme le graphique en image PNG pour l'impression
             var originalCanvas = document.getElementById('competitorRadarChart');
             if (originalCanvas) {
                 var popupCanvasContainer = pw.document.getElementById('competitorRadarChart');
@@ -7617,7 +7617,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             // Script de lancement de l'impression...
             var fixScript = pw.document.createElement('script');
 
-            // ðŸ”¥ CHANGEMENT 3 : Suppression du script de "color/background replacement" qui rendait la page blanche
+            // 🔥 CHANGEMENT 3 : Suppression du script de "color/background replacement" qui rendait la page blanche
             var fixScript = pw.document.createElement('script');
             fixScript.textContent = [
                 'window.onload = function () {',
@@ -7638,24 +7638,24 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         return;
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // CAS FR / EN â€” document PDF natif jsPDF (100% client, zÃ©ro serveur)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════════════════
+    // CAS FR / EN — document PDF natif jsPDF (100% client, zéro serveur)
+    // ══════════════════════════════════════════════════════════════
     const isEn = STATE.currentLang === 'en';
 
-    // VÃ©rifier libs
+    // Vérifier libs
     if (typeof window.jspdf === 'undefined') {
         toast.error(
             isEn
                 ? 'PDF library is not loaded. Please reload the page.'
-                : 'La librairie PDF nâ€™est pas chargÃ©e. Rechargez la page.'
+                : 'La librairie PDF n’est pas chargée. Rechargez la page.'
         );
         STATE.isExporting = false;
         if (btn) { btn.innerHTML = origHTML; btn.disabled = false; }
         return;
     }
 
-    toast.info(isAr ? 'ÙŠØªÙ… Ø¨Ù†Ø§Ø¡ Ù…Ù„Ù PDF...' : isEn ? 'Building PDF â€” please wait...' : 'Construction du PDF â€” patientez...');
+    toast.info(isAr ? 'يتم بناء ملف PDF...' : isEn ? 'Building PDF — please wait...' : 'Construction du PDF — patientez...');
     await new Promise(function (r) { setTimeout(r, 120); });
 
     let hiddenEls = [];
@@ -7664,12 +7664,12 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
     try {
         const { jsPDF } = window.jspdf;
 
-        // â”€â”€ Sections Ã  exporter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Sections à exporter ───────────────────────────────────
         const sectionDefs = [
-            { key: 'competitors', id: 'resultsCompetitors', label: isAr ? 'Ø§Ù„Ù…Ù†Ø§ÙØ³Ø© ÙˆØ§Ù„Ø³ÙˆÙ‚' : isEn ? 'Competitor Report' : 'Concurrence', has: hasComp },
-            { key: 'funnel', id: 'resultsFunnel', label: isAr ? 'Ù…Ø³Ø§Ø± Ø§Ù„ØªØ­ÙˆÙŠÙ„' : isEn ? 'Conversion Path' : 'Parcours de conversion', has: hasFunnel },
-            { key: 'technical', id: 'resultsTechnical', label: isAr ? 'ØªØ¯Ù‚ÙŠÙ‚ Ø§Ù„Ù…ÙˆÙ‚Ø¹' : isEn ? 'Site Audit' : 'Audit site', has: hasSeo },
-            { key: 'keywords', id: 'resultsKeywords', label: isAr ? 'Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø·Ù„Ø¨' : isEn ? 'Demand signals' : 'Signaux de demande', has: hasKw },
+            { key: 'competitors', id: 'resultsCompetitors', label: isAr ? 'المنافسة والسوق' : isEn ? 'Competitor Report' : 'Concurrence', has: hasComp },
+            { key: 'funnel', id: 'resultsFunnel', label: isAr ? 'مسار التحويل' : isEn ? 'Conversion Path' : 'Parcours de conversion', has: hasFunnel },
+            { key: 'technical', id: 'resultsTechnical', label: isAr ? 'تدقيق الموقع' : isEn ? 'Site Audit' : 'Audit site', has: hasSeo },
+            { key: 'keywords', id: 'resultsKeywords', label: isAr ? 'إشارات الطلب' : isEn ? 'Demand signals' : 'Signaux de demande', has: hasKw },
         ];
 
         const validSections = sectionDefs
@@ -7693,10 +7693,10 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             .filter(Boolean);
 
         if (!validSections.length) {
-            throw new Error(isEn ? 'No visible results to export.' : 'Aucun rÃ©sultat visible Ã  exporter.');
+            throw new Error(isEn ? 'No visible results to export.' : 'Aucun résultat visible à exporter.');
         }
 
-        // â”€â”€ Ouvrir les dÃ©tails et masquer les Ã©lÃ©ments non imprimables â”€â”€
+        // ── Ouvrir les détails et masquer les éléments non imprimables ──
         openedDetails = [];
         validSections.forEach(function (section) {
             section.el.querySelectorAll('details').forEach(function (details) {
@@ -7725,7 +7725,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         });
         await new Promise(function (r) { requestAnimationFrame(function () { requestAnimationFrame(r); }); });
 
-        // â”€â”€ Init PDF A4 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Init PDF A4 ───────────────────────────────────────────
         const pdf     = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const pageW   = pdf.internal.pageSize.getWidth();   // 210
         const pageH   = pdf.internal.pageSize.getHeight();  // 297
@@ -7741,9 +7741,9 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         drawDakaPdfRoadmapPage(pdf, pdfDecisionModel, pageW, pageH, margin);
         drawDakaPdfMindMapPage(pdf, pdfDecisionModel, pageW, pageH, margin);
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // CAPTURE html2canvas â€” une page par section
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ════════════════════════════════════════════════════════
+        // CAPTURE html2canvas — une page par section
+        // ════════════════════════════════════════════════════════
         var capturedSections = 0;
         var sectionStartPages = [];
         for (var si = 0; si < validSections.length; si++) {
@@ -7752,10 +7752,10 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             // Each selected expertise starts directly with useful content.
             sectionStartPages[si] = pdf.internal.getNumberOfPages() + 1;
             var sectionColors = [
-                [108, 99, 255],   // Competitors â€” violet
-                [16,  185, 129],  // Funnel      â€” vert
-                [59,  130, 246],  // Technical   â€” bleu
-                [6,   182, 212],  // Keywords    â€” cyan
+                [108, 99, 255],   // Competitors — violet
+                [16,  185, 129],  // Funnel      — vert
+                [59,  130, 246],  // Technical   — bleu
+                [6,   182, 212],  // Keywords    — cyan
             ];
             var sc = sectionColors[si] || [108, 99, 255];
             // Build a stable document clone, then compose native PDF text.
@@ -7856,7 +7856,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                     currentY += 3;
                 }
             } catch (captureErr) {
-                console.warn('[PDF] Composition du document Ã©chouÃ©e pour ' + section.label, captureErr);
+                console.warn('[PDF] Composition du document échouée pour ' + section.label, captureErr);
             } finally {
                 fixedClone.remove();
             }
@@ -7864,10 +7864,10 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         }
 
         if (!capturedSections) {
-            throw new Error(isEn ? 'Report content is not ready for export.' : 'Le rapport nâ€™est pas encore prÃªt pour lâ€™export.');
+            throw new Error(isEn ? 'Report content is not ready for export.' : 'Le rapport n’est pas encore prêt pour l’export.');
         }
 
-        // Rendre le sommaire de couverture cliquable aprÃ¨s calcul des pages.
+        // Rendre le sommaire de couverture cliquable après calcul des pages.
         if (typeof pdf.link === 'function') {
             var lastContentPage = pdf.internal.getNumberOfPages();
             pdf.setPage(1);
@@ -7896,7 +7896,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         pdf.setFontSize(16);
         pdf.setTextColor(255, 255, 255);
         pdf.text(
-            isEn ? 'Summary & Top Keywords' : 'RÃ©capitulatif & Top Mots-ClÃ©s',
+            isEn ? 'Summary & Top Keywords' : 'Récapitulatif & Top Mots-Clés',
             pageW / 2, 22, { align: 'center' }
         );
 
@@ -7906,7 +7906,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
         var summaryY = 35;
 
-        // RÃ©cap sections analysÃ©es
+        // Récap sections analysées
         validSections.forEach(function (s, i) {
             pdf.setFillColor(20, 28, 50);
             pdf.setDrawColor(50, 60, 100);
@@ -7932,11 +7932,11 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             pdf.setFontSize(10);
             pdf.setTextColor(6, 182, 212);
             pdf.text(
-                isEn ? 'Top 20 Keywords' : 'Top 20 Mots-ClÃ©s',
+                isEn ? 'Top 20 Keywords' : 'Top 20 Mots-Clés',
                 margin, kwStartY
             );
 
-            // En-tÃªte tableau keywords
+            // En-tête tableau keywords
             var kwTableY = kwStartY + 8;
             var colKw    = margin;
             var colVol   = margin + 80;
@@ -7949,7 +7949,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             pdf.setFont('helvetica', 'bold');
             pdf.setFontSize(6.5);
             pdf.setTextColor(100, 116, 139);
-            pdf.text(isEn ? 'KEYWORD'  : 'MOT-CLÃ‰',  colKw  + 2, kwTableY + 5.5);
+            pdf.text(isEn ? 'KEYWORD'  : 'MOT-CLÉ',  colKw  + 2, kwTableY + 5.5);
             pdf.text('VOLUME',                         colVol + 2, kwTableY + 5.5);
             pdf.text('KD',                             colKd  + 2, kwTableY + 5.5);
             pdf.text('CPC',                            colCpc + 2, kwTableY + 5.5);
@@ -7961,7 +7961,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 var rowY  = kwTableY + 8 + ki * 8;
                 var isEven = ki % 2 === 0;
 
-                // Fond alternÃ©
+                // Fond alterné
                 pdf.setFillColor(isEven ? 15 : 20, isEven ? 22 : 28, isEven ? 42 : 52);
                 pdf.rect(margin, rowY, contentW, 8, 'F');
 
@@ -7996,7 +7996,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                     ? (vol / 1000000).toFixed(1) + 'M'
                     : vol >= 1000
                         ? (vol / 1000).toFixed(1) + 'K'
-                        : vol > 0 ? String(vol) : 'â€”';
+                        : vol > 0 ? String(vol) : '—';
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(7);
                 pdf.setTextColor(255, 255, 255);
@@ -8020,7 +8020,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(7);
                 pdf.setTextColor(148, 163, 184);
-                pdf.text(cpcVal > 0 ? '$' + cpcVal.toFixed(2) : 'â€”', colCpc + 2, rowY + 5.5);
+                pdf.text(cpcVal > 0 ? '$' + cpcVal.toFixed(2) : '—', colCpc + 2, rowY + 5.5);
 
                 // Intent badge
                 var intent = (kw.intent || 'Info').substring(0, 6);
@@ -8046,7 +8046,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             pdf.text(
                 (isEn ? 'Total: ' : 'Total : ')
                 + exportKeywords.length
-                + (isEn ? ' keywords extracted' : ' mots-clÃ©s extraits'),
+                + (isEn ? ' keywords extracted' : ' mots-clés extraits'),
                 margin, totalY
             );
 
@@ -8057,20 +8057,20 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
                 pdf.setFontSize(7);
                 pdf.setTextColor(16, 185, 129);
                 pdf.text(
-                    '\u26A1 ' + qwCount + (isEn ? ' Quick Wins identified' : ' Quick Wins identifiÃ©s'),
+                    '\u26A1 ' + qwCount + (isEn ? ' Quick Wins identified' : ' Quick Wins identifiés'),
                     margin, totalY + 8
                 );
             }
         }
 
-        // â”€â”€ Pied de page finale â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        // ── Pied de page finale ───────────────────────────────────
         pdf.setFillColor(108, 99, 255);
         pdf.rect(0, pageH - 4, pageW, 4, 'F');
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(7);
         pdf.setTextColor(100, 116, 139);
         pdf.text(
-            'Made by Daka  |  ' + (isEn ? 'Built for clearer decisions' : 'ConÃ§u pour dÃ©cider avec clartÃ©'),
+            'Made by Daka  |  ' + (isEn ? 'Built for clearer decisions' : 'Conçu pour décider avec clarté'),
             pageW / 2, pageH - 7, { align: 'center' }
         );
         }
@@ -8091,16 +8091,16 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
             }
         }
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // RESTAURER Ã©lÃ©ments masquÃ©s
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ════════════════════════════════════════════════════════
+        // RESTAURER éléments masqués
+        // ════════════════════════════════════════════════════════
         restorePdfExportDom(hiddenEls, openedDetails);
         hiddenEls = [];
         openedDetails = [];
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-        // TÃ‰LÃ‰CHARGEMENT
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ════════════════════════════════════════════════════════
+        // TÉLÉCHARGEMENT
+        // ════════════════════════════════════════════════════════
         var slug = reportUrl
             ? reportUrl.replace(/https?:\/\//i, '').replace(/[^a-zA-Z0-9]/g, '-').substring(0, 30)
             : 'report';
@@ -8110,10 +8110,10 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
         toast.success(
             isAr
-                ? '\u2705 ØªÙ… ØªØ­Ù…ÙŠÙ„ PDF Ø¨Ù†Ø¬Ø§Ø­!'
+                ? '\u2705 تم تحميل PDF بنجاح!'
                 : isEn
                 ? '\u2705 DOCX downloaded successfully!'
-                : '\u2705 DOCX tÃ©lÃ©chargÃ© avec succÃ¨s !'
+                : '\u2705 DOCX téléchargé avec succès !'
         );
 
     } catch (err) {
@@ -8127,7 +8127,7 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
         openedDetails = [];
 
         toast.error(
-            (isAr ? 'ÙØ´Ù„ ØªØµØ¯ÙŠØ± DOCX: ' : isEn ? 'DOCX export failed: ' : 'Export DOCX Ã©chouÃ© : ')
+            (isAr ? 'فشل تصدير DOCX: ' : isEn ? 'DOCX export failed: ' : 'Export DOCX échoué : ')
             + (err.message || 'Erreur inconnue')
         );
 
@@ -8141,22 +8141,22 @@ window.exportFullAnalysisToPDF = async function (exportOptions = null) {
 
 
 /**
- * ðŸš€ AFFICHAGE GÃ‰NÃ‰RATEURS (VERSION DEEP INTEL V5.9)
- * RÃ¨gle les erreurs d'ID/Name pour le PDF et sÃ©curise la copie multilingue.
+ * 🚀 AFFICHAGE GÉNÉRATEURS (VERSION DEEP INTEL V5.9)
+ * Règle les erreurs d'ID/Name pour le PDF et sécurise la copie multilingue.
  */
 
 window.copyToClipboard = function(elementId, btn) {
     const textElement = document.getElementById(elementId);
     if (!textElement || !btn) return;
 
-    // RÃ©cupÃ©ration du texte brut
+    // Récupération du texte brut
     const textToCopy = textElement.innerText || textElement.textContent;
     const isAr = STATE.currentLang === 'ar';
     const originalHtml = btn.innerHTML;
 
     // --- FONCTION DE SUCCESS UI ---
     const showSuccess = () => {
-        btn.innerHTML = `<i class="fas fa-check"></i> ${isAr ? 'ØªÙ… Ø§Ù„Ù†Ø³Ø®' : 'CopiÃ© !'}`;
+        btn.innerHTML = `<i class="fas fa-check"></i> ${isAr ? 'تم النسخ' : 'Copié !'}`;
         btn.style.background = "#10b981";
         btn.style.color = "white";
         setTimeout(() => {
@@ -8166,18 +8166,18 @@ window.copyToClipboard = function(elementId, btn) {
         }, 2000);
     };
 
-    // --- MÃ‰THODE 1 : API MODERNE (Si autorisÃ©e) ---
+    // --- MÉTHODE 1 : API MODERNE (Si autorisée) ---
     if (navigator.clipboard && window.isSecureContext) {
         navigator.clipboard.writeText(textToCopy)
             .then(showSuccess)
             .catch(() => fallbackCopy(textToCopy, showSuccess));
     } else {
-        // --- MÃ‰THODE 2 : FALLBACK (Navigateurs Internes / Non-sÃ©curisÃ©s) ---
+        // --- MÉTHODE 2 : FALLBACK (Navigateurs Internes / Non-sécurisés) ---
         fallbackCopy(textToCopy, showSuccess);
     }
 };
 
-// Fonction de secours qui crÃ©e un champ invisible pour copier
+// Fonction de secours qui crée un champ invisible pour copier
 function fallbackCopy(text, callback) {
     try {
         const textArea = document.createElement("textarea");
@@ -8201,13 +8201,13 @@ function fallbackCopy(text, callback) {
         if (successful) callback();
     } catch (err) {
         console.error('Erreur fatale de copie:', err);
-        alert("Action bloquÃ©e : veuillez copier le texte manuellement.");
+        alert("Action bloquée : veuillez copier le texte manuellement.");
     }
 }
 
 /**
- * ðŸš€ AFFICHAGE GÃ‰NÃ‰RATEURS (VERSION DEEP & PDF-READY)
- * RÃ¨gle les erreurs d'ID/Name pour le PDF et sÃ©curise la copie.
+ * 🚀 AFFICHAGE GÉNÉRATEURS (VERSION DEEP & PDF-READY)
+ * Règle les erreurs d'ID/Name pour le PDF et sécurise la copie.
  */
 
 window.exportTechToPDF = async function() {
@@ -8223,10 +8223,10 @@ window.exportTechToPDF = async function() {
 
     // 1. UI Feedback & Verrouillage
     btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-sync fa-spin"></i> GÃ©nÃ©ration...';
+    btn.innerHTML = '<i class="fas fa-sync fa-spin"></i> Génération...';
 
     try {
-        // 2. CrÃ©ation d'une zone de rendu temporaire
+        // 2. Création d'une zone de rendu temporaire
         const worker = document.createElement('div');
         worker.style.position = 'absolute';
         worker.style.left = '-9999px';
@@ -8237,13 +8237,13 @@ window.exportTechToPDF = async function() {
 
         // 3. Clone et Nettoyage
         const clone = auditContainer.cloneNode(true);
-        // Supprimer les Ã©lÃ©ments qui ne doivent pas Ãªtre dans le PDF (boutons, etc.)
+        // Supprimer les éléments qui ne doivent pas être dans le PDF (boutons, etc.)
         clone.querySelectorAll('button, .generator-grid, .no-print').forEach(el => el.remove());
 
         worker.appendChild(clone);
         document.body.appendChild(worker);
 
-        // 4. Conversion forcÃ©e des Canvas (Graphiques) en Images
+        // 4. Conversion forcée des Canvas (Graphiques) en Images
         // html2canvas rate souvent les canvas live, on les fige en PNG
         const originalCanvases = auditContainer.querySelectorAll('canvas');
         const clonedCanvases = worker.querySelectorAll('canvas');
@@ -8263,7 +8263,7 @@ window.exportTechToPDF = async function() {
             image: { type: 'jpeg', quality: 0.98 },
             html2canvas: {
                 scale: 2,
-                useCORS: true, // Crucial pour les icÃ´nes et fonts
+                useCORS: true, // Crucial pour les icônes et fonts
                 backgroundColor: '#0a0e27',
                 logging: false,
                 letterRendering: true
@@ -8271,18 +8271,18 @@ window.exportTechToPDF = async function() {
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
 
-        // 6. Lancement avec dÃ©lai pour laisser les polices se charger
+        // 6. Lancement avec délai pour laisser les polices se charger
         await html2pdf().set(opt).from(worker).toPdf().get('pdf').then(function (pdf) {
-            // Optionnel : ajouter des numÃ©ros de page ici
+            // Optionnel : ajouter des numéros de page ici
         }).save();
 
         // 7. Nettoyage final
         document.body.removeChild(worker);
-        toast.success("Rapport exportÃ© !");
+        toast.success("Rapport exporté !");
 
     } catch (err) {
         console.error("Erreur export legacy:", err);
-        toast.error("Erreur lors de la gÃ©nÃ©ration.");
+        toast.error("Erreur lors de la génération.");
     } finally {
         btn.disabled = false;
         btn.innerHTML = originalText;
@@ -8290,7 +8290,7 @@ window.exportTechToPDF = async function() {
 };
 /**
 /**
- * ðŸ› ï¸ RENDU DES CARTES DE FICHIERS SYSTÃˆMES (Version CorrigÃ©e)
+ * 🛠️ RENDU DES CARTES DE FICHIERS SYSTÈMES (Version Corrigée)
  */
 function renderSystemFileCard(title, id, content, icon, color, isAr) {
     return `
@@ -8302,7 +8302,7 @@ function renderSystemFileCard(title, id, content, icon, color, isAr) {
             <div id="${id}" style="height:140px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.05); border-radius:8px; padding:12px; font-family:monospace; font-size:0.75rem; color:${color}; overflow-y:auto; direction:ltr; text-align:left; white-space: pre-wrap;">${escapeHtml(content)}</div>
 
             <button onclick="copyToClipboard('${id}', this)" class="btn" style="width:100%; margin-top:12px; background:${color}; color:black; font-weight:bold; border:none; font-size:0.8rem; cursor:pointer;">
-                <i class="fas fa-copy"></i> ${isAr ? 'Ù†Ø³Ø® Ø§Ù„Ù…Ù„Ù' : 'COPIER LE FICHIER'}
+                <i class="fas fa-copy"></i> ${isAr ? 'نسخ الملف' : 'COPIER LE FICHIER'}
             </button>
         </div>
     `;
@@ -8310,9 +8310,9 @@ function renderSystemFileCard(title, id, content, icon, color, isAr) {
 
 
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   ðŸ› ï¸ 1. LE TEMPLATE (GÃ©nÃ¨re le HTML du rapport instantanÃ©ment)
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════════
+   🛠️ 1. LE TEMPLATE (Génère le HTML du rapport instantanément)
+   ═══════════════════════════════════════════════════════════════════ */
 function generateLocalReportHtml(data) {
     const keyword = STATE.lastInputs?.keyword || 'Analyse SEO';
     const date = new Date().toLocaleDateString('fr-FR', {
@@ -8323,15 +8323,15 @@ function generateLocalReportHtml(data) {
     <div style="font-family: sans-serif; background: #020617; color: white; padding: 30px; width: 750px;">
         <div style="background: linear-gradient(135deg, #6366f1, #a855f7); padding: 25px; border-radius: 12px; margin-bottom: 20px;">
             <h1 style="margin: 0; font-size: 22px;">SEO Intelligence Report</h1>
-            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 13px;">Mot-clÃ© : ${keyword} | ${date}</p>
+            <p style="margin: 5px 0 0; opacity: 0.8; font-size: 13px;">Mot-clé : ${keyword} | ${date}</p>
         </div>
 
         <div style="background: rgba(139, 92, 246, 0.1); border: 1px solid #8b5cf6; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-            <h2 style="color: #a78bfa; font-size: 14px; text-transform: uppercase; margin: 0 0 10px 0;">ðŸ’¡ StratÃ©gie Gagnante</h2>
+            <h2 style="color: #a78bfa; font-size: 14px; text-transform: uppercase; margin: 0 0 10px 0;">💡 Stratégie Gagnante</h2>
             <p style="font-style: italic; font-size: 15px; margin: 0; line-height: 1.5;">"${data.winningMove || 'Analyse en cours...'}"</p>
         </div>
 
-        <h2 style="color: #3b82f6; font-size: 18px; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">ðŸš€ Plan d'Action</h2>
+        <h2 style="color: #3b82f6; font-size: 18px; border-bottom: 1px solid #1e293b; padding-bottom: 8px;">🚀 Plan d'Action</h2>
         <div style="margin-top: 15px;">
             ${(data.actionRoadmap || []).map((step, i) => `
                 <div style="background: #0f172a; border: 1px solid #1e293b; padding: 12px; border-radius: 8px; margin-bottom: 8px; font-size: 13px;">
@@ -8341,7 +8341,7 @@ function generateLocalReportHtml(data) {
         </div>
 
         <div style="text-align: center; font-size: 10px; color: #475569; margin-top: 40px; border-top: 1px solid #1e293b; padding-top: 15px;">
-            GÃ©nÃ©rÃ© localement par Daka Market Intelligence Spyer
+            Généré localement par Daka Market Intelligence Spyer
         </div>
     </div>`;
 }
@@ -8352,14 +8352,14 @@ window.exportCompetitorsPDF = async function () {
     const results = STATE.lastAnalysisResults;
     if (!results) return toast.error("Lancez d'abord une analyse Concurrents.");
 
-    // âœ… FIX 1 : Feedback visuel pendant la gÃ©nÃ©ration
+    // ✅ FIX 1 : Feedback visuel pendant la génération
     const btn = document.getElementById('btn-export-global');
     const originalHtml = btn?.innerHTML;
     if (btn) {
         btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i>`;
         btn.disabled = true;
     }
-    toast.info("â³ GÃ©nÃ©ration PDF en cours (10-30s)...");
+    toast.info("⏳ Génération PDF en cours (10-30s)...");
 
     try {
         const response = await fetch(`${CONFIG.API_BASE_URL}/api/export/competitors-pro`, {
@@ -8371,7 +8371,7 @@ window.exportCompetitorsPDF = async function () {
             })
         });
 
-        // âœ… FIX 2 : VÃ©rification correcte avant blob()
+        // ✅ FIX 2 : Vérification correcte avant blob()
         if (!response.ok) {
             const errText = await response.text();
             throw new Error(`Erreur serveur ${response.status}: ${errText}`);
@@ -8379,7 +8379,7 @@ window.exportCompetitorsPDF = async function () {
 
         const contentType = response.headers.get('content-type');
         if (!contentType?.includes('application/pdf')) {
-            throw new Error("La rÃ©ponse n'est pas un PDF valide");
+            throw new Error("La réponse n'est pas un PDF valide");
         }
 
         const blob = await response.blob();
@@ -8391,16 +8391,16 @@ window.exportCompetitorsPDF = async function () {
         a.click();
         document.body.removeChild(a);
 
-        // âœ… FIX 3 : LibÃ©ration mÃ©moire
+        // ✅ FIX 3 : Libération mémoire
         setTimeout(() => window.URL.revokeObjectURL(url), 1000);
 
-        toast.success("âœ… Rapport DOCX tÃ©lÃ©chargÃ© !");
+        toast.success("✅ Rapport DOCX téléchargé !");
 
     } catch (err) {
         console.error("Legacy export error:", err);
-        toast.error(`Export Ã©chouÃ©: ${err.message}`);
+        toast.error(`Export échoué: ${err.message}`);
     } finally {
-        // âœ… FIX 4 : Toujours restaurer le bouton
+        // ✅ FIX 4 : Toujours restaurer le bouton
         if (btn) {
             btn.innerHTML = originalHtml;
             btn.disabled = false;
@@ -8408,9 +8408,9 @@ window.exportCompetitorsPDF = async function () {
     }
 };
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-   ðŸ› ï¸ UTILS & HELPERS
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+/* ═══════════════════════════════════════════════════════════════════
+   🛠️ UTILS & HELPERS
+   ═══════════════════════════════════════════════════════════════════ */
 
 // Chargement asynchrone de la librairie d'export
 async function ensureHtml2PdfLoaded() {
@@ -8424,7 +8424,7 @@ async function ensureHtml2PdfLoaded() {
     });
 }
 
-// SystÃ¨me de copie robuste (Fallback inclus)
+// Système de copie robuste (Fallback inclus)
 window.copyToClipboard = function(elementId, btn) {
     const textEl = document.getElementById(elementId);
     if (!textEl) return;
@@ -8432,7 +8432,7 @@ window.copyToClipboard = function(elementId, btn) {
 
     const originalHTML = btn.innerHTML;
     const success = () => {
-        btn.innerHTML = '<i class="fas fa-check"></i> CopiÃ© !';
+        btn.innerHTML = '<i class="fas fa-check"></i> Copié !';
         btn.style.background = "#10b981";
         setTimeout(() => {
             btn.innerHTML = originalHTML;
@@ -8468,7 +8468,7 @@ document.addEventListener('input', (e) => {
 
 
 /**
- * ðŸ“Š FONCTION CHART.JS TECHNIQUE
+ * 📊 FONCTION CHART.JS TECHNIQUE
  */
 function renderTechDoughnut(ctx, score, color) {
     new Chart(ctx, {
@@ -8512,11 +8512,11 @@ async function analyzeKeywords(e) {
   if (document.getElementById('langEN')?.checked) langs.push('en');
 
   if (!seed)
-    return toast.error(isAr ? 'Ø£Ø¯Ø®Ù„ ÙƒÙ„Ù…Ø© Ù…ÙØªØ§Ø­ÙŠØ©.' : 'Veuillez entrer un mot-clÃ© racine.');
+    return toast.error(isAr ? 'أدخل كلمة مفتاحية.' : 'Veuillez entrer un mot-clé racine.');
   if (!langs.length)
-    return toast.warning(isAr ? 'Ø§Ø®ØªØ± Ù„ØºØ© ÙˆØ§Ø­Ø¯Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø£Ù‚Ù„.' : 'Veuillez sÃ©lectionner au moins une langue.');
+    return toast.warning(isAr ? 'اختر لغة واحدة على الأقل.' : 'Veuillez sélectionner au moins une langue.');
 
-  /* â”€â”€ RESET avant nouvelle analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── RESET avant nouvelle analyse ────────────────────────── */
   resetAnalysis('keywords');
 
   setButtonLoading('kwBtn', true);
@@ -8532,7 +8532,7 @@ async function analyzeKeywords(e) {
     });
 
     if (response.success) {
-      /* â”€â”€ Persistance STATE COMPLÃˆTE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+      /* ── Persistance STATE COMPLÈTE ─────────────────────── */
       STATE.lastKeywords = {
         ...response,                    // toutes les data serveur
         seed,                           // input utilisateur
@@ -8545,20 +8545,20 @@ async function analyzeKeywords(e) {
       STATE.lastInputs.kwCount     = count;
       STATE.lastInputs.kwGeo       = geo;
 
-      displayKeywordsResults(response); // displayKeywordsResults gÃ¨re showResults en interne
+      displayKeywordsResults(response); // displayKeywordsResults gère showResults en interne
       const total = response.totalKeywords || response.keywords?.length || 0;
       toast.success(
-        isAr ? `âœ… ØªÙ… ØªÙˆÙ„ÙŠØ¯ ${total} ÙƒÙ„Ù…Ø© Ù…ÙØªØ§Ø­ÙŠØ©!`
-        : isEn ? `âœ… Found ${total} high-potential keywords.`
-        : `âœ… ${total} mots-clÃ©s stratÃ©giques extraits.`
+        isAr ? `✅ تم توليد ${total} كلمة مفتاحية!`
+        : isEn ? `✅ Found ${total} high-potential keywords.`
+        : `✅ ${total} mots-clés stratégiques extraits.`
       );
     } else {
-      throw new Error(response.error || 'GÃ©nÃ©ration Ã©chouÃ©e');
+      throw new Error(response.error || 'Génération échouée');
     }
   } catch (err) {
     if (err?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
     console.error('Keywords Engine Error:', err);
-    toast.error(err.message || 'Erreur lors de la gÃ©nÃ©ration.');
+    toast.error(err.message || 'Erreur lors de la génération.');
   } finally {
     setButtonLoading('kwBtn', false);
     hideLoading('loadingKeywords');
@@ -8575,27 +8575,27 @@ function displayKeywordsResults(data) {
     const dir  = isAr ? 'rtl' : 'ltr';
 
     const t = {
-        title:  isAr ? 'ðŸ“Š Ø¯Ø§ØªØ§ Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ù…ÙØªØ§Ø­ÙŠØ© Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ©' : (isEn ? 'ðŸ“Š Strategic Keyword Data' : 'ðŸ“Š Data Mots-clÃ©s StratÃ©giques'),
-        copy:   isAr ? 'Ù†Ø³Ø® Ø§Ù„ÙƒÙ„' : (isEn ? 'COPY ALL' : 'COPIER TOUT'),
-        kw:     isAr ? 'Ø§Ù„ÙƒÙ„Ù…Ø© Ø§Ù„Ù…ÙØªØ§Ø­ÙŠØ©' : 'Keyword',
-        intent: isAr ? 'Ø§Ù„Ù†ÙŠØ©' : 'Intent',
-        volume: isAr ? 'Ø­Ø¬Ù… Ø§Ù„Ø¨Ø­Ø«' : 'Volume',
-        kd:     isAr ? 'ØµØ¹ÙˆØ¨Ø© (KD)' : 'KD %',
-        cpc:    isAr ? 'Ø³Ø¹Ø± Ø§Ù„Ù†Ù‚Ø±Ø©' : 'CPC ($)',
-        trend:  isAr ? 'Ø§Ù„ØªØ±Ù†Ø¯' : 'Trend',
-        source: isAr ? 'Ø§Ù„Ù…ØµØ¯Ø±' : 'Source',
-        geo:    isAr ? 'Ø§Ù„Ø¨Ù„Ø¯' : 'Pays',
-        noData: isAr ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬' : (isEn ? 'No results' : 'Aucun rÃ©sultat')
+        title:  isAr ? '📊 داتا الكلمات المفتاحية الاستراتيجية' : (isEn ? '📊 Strategic Keyword Data' : '📊 Data Mots-clés Stratégiques'),
+        copy:   isAr ? 'نسخ الكل' : (isEn ? 'COPY ALL' : 'COPIER TOUT'),
+        kw:     isAr ? 'الكلمة المفتاحية' : 'Keyword',
+        intent: isAr ? 'النية' : 'Intent',
+        volume: isAr ? 'حجم البحث' : 'Volume',
+        kd:     isAr ? 'صعوبة (KD)' : 'KD %',
+        cpc:    isAr ? 'سعر النقرة' : 'CPC ($)',
+        trend:  isAr ? 'الترند' : 'Trend',
+        source: isAr ? 'المصدر' : 'Source',
+        geo:    isAr ? 'البلد' : 'Pays',
+        noData: isAr ? 'لا توجد نتائج' : (isEn ? 'No results' : 'Aucun résultat')
     };
 
     container.style.display = 'block';
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       MAJ 1 â€” Sauvegarde COMPLÃˆTE dans STATE
+    /* ══════════════════════════════════════════════════════
+       MAJ 1 — Sauvegarde COMPLÈTE dans STATE
        (seed, languages, geo, count en plus du tableau)
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    ══════════════════════════════════════════════════════ */
     STATE.lastKeywords = {
-        // DonnÃ©es brutes de la rÃ©ponse serveur
+        // Données brutes de la réponse serveur
         keywords:       data.keywords        || [],
         clusters:       data.clusters        || [],
         paaQuestions:   data.paaQuestions    || [],
@@ -8605,7 +8605,7 @@ function displayKeywordsResults(data) {
         geoResolved:    data.geoResolved     || '',
         generationTime: data.generationTime  || '',
         totalKeywords:  data.totalKeywords   || data.keywords?.length || 0,
-        // Inputs utilisateur au moment de la gÃ©nÃ©ration
+        // Inputs utilisateur au moment de la génération
         seed:           document.getElementById('seedKeyword')?.value?.trim() || '',
         languages:      ['langFR','langAR','langEN']
                             .filter(id => document.getElementById(id)?.checked)
@@ -8618,16 +8618,16 @@ function displayKeywordsResults(data) {
     const stats  = STATE.lastKeywords.stats;
     const geo    = (STATE.lastKeywords.geo || 'auto').toUpperCase();
 
-    /* â”€â”€ Breakdown par langue â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Breakdown par langue ─────────────────────────────────── */
     const byLang = kwList.reduce((acc, k) => {
         acc[k.language] = (acc[k.language] || 0) + 1;
         return acc;
     }, {});
     const langBreakdown = Object.entries(byLang)
-        .map(([l, n]) => `${l==='fr'?'ðŸ‡«ðŸ‡·':l==='ar'?'ðŸ‡¸ðŸ‡¦':'ðŸ‡¬ðŸ‡§'} <strong>${n}</strong>`)
+        .map(([l, n]) => `${l==='fr'?'🇫🇷':l==='ar'?'🇸🇦':'🇬🇧'} <strong>${n}</strong>`)
         .join('<span style="color:rgba(255,255,255,0.15);margin:0 6px;">|</span>');
 
-    /* â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Helpers ──────────────────────────────────────────────── */
     const getKdColor = (kd) => {
         const v = parseInt(kd) || 0;
         if (v <= 29) return { bg:'rgba(16,185,129,0.1)',  text:'#10b981', border:'rgba(16,185,129,0.3)'  };
@@ -8637,69 +8637,69 @@ function displayKeywordsResults(data) {
 
     const getIntentBadge = (intentStr) => {
         const i = (intentStr || '').toLowerCase();
-        if (i.includes('trans')) return `<span style="background:#10b98120;color:#10b981;padding:3px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;border:1px solid #10b98130;">${isAr?'Ø´Ø±Ø§Ø¡':'Trans.'}</span>`;
-        if (i.includes('comm'))  return `<span style="background:#3b82f620;color:#3b82f6;padding:3px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;border:1px solid #3b82f630;">${isAr?'ØªØ¬Ø§Ø±ÙŠ':'Comm.'}</span>`;
-        if (i.includes('nav'))   return `<span style="background:#8b5cf620;color:#a78bfa;padding:3px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;border:1px solid #8b5cf630;">${isAr?'ØªØµÙØ­':'Nav.'}</span>`;
-        return                          `<span style="background:#64748b20;color:#94a3b8;padding:3px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;border:1px solid #64748b30;">${isAr?'Ù…Ø¹Ù„ÙˆÙ…Ø©':'Info'}</span>`;
+        if (i.includes('trans')) return `<span style="background:#10b98120;color:#10b981;padding:3px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;border:1px solid #10b98130;">${isAr?'شراء':'Trans.'}</span>`;
+        if (i.includes('comm'))  return `<span style="background:#3b82f620;color:#3b82f6;padding:3px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;border:1px solid #3b82f630;">${isAr?'تجاري':'Comm.'}</span>`;
+        if (i.includes('nav'))   return `<span style="background:#8b5cf620;color:#a78bfa;padding:3px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;border:1px solid #8b5cf630;">${isAr?'تصفح':'Nav.'}</span>`;
+        return                          `<span style="background:#64748b20;color:#94a3b8;padding:3px 8px;border-radius:4px;font-size:0.7rem;font-weight:700;border:1px solid #64748b30;">${isAr?'معلومة':'Info'}</span>`;
     };
 
     const getTrendBadge = (trend, score) => {
         const s = parseInt(score) || 50;
-        if (trend === 'rising')    return `<span style="color:#10b981;font-size:0.75rem;font-weight:700;">ðŸ“ˆ ${s}</span>`;
-        if (trend === 'declining') return `<span style="color:#ef4444;font-size:0.75rem;font-weight:700;">ðŸ“‰ ${s}</span>`;
-        return                            `<span style="color:#64748b;font-size:0.75rem;">âž¡ï¸ ${s}</span>`;
+        if (trend === 'rising')    return `<span style="color:#10b981;font-size:0.75rem;font-weight:700;">📈 ${s}</span>`;
+        if (trend === 'declining') return `<span style="color:#ef4444;font-size:0.75rem;font-weight:700;">📉 ${s}</span>`;
+        return                            `<span style="color:#64748b;font-size:0.75rem;">➡️ ${s}</span>`;
     };
 
     const formatVol = (vol) => {
         const v = parseInt(vol) || 0;
         if (v >= 1000000) return (v/1000000).toFixed(1)+'M';
         if (v >= 1000)    return (v/1000).toFixed(1)+'K';
-        return v > 0 ? v : '<span style="color:rgba(255,255,255,0.2);">â€”</span>';
+        return v > 0 ? v : '<span style="color:rgba(255,255,255,0.2);">—</span>';
     };
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       MAJ 2 â€” Stats bar + seed affichÃ©
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* ══════════════════════════════════════════════════════
+       MAJ 2 — Stats bar + seed affiché
+    ══════════════════════════════════════════════════════ */
     const statsBadges = `
         <div style="display:flex;flex-wrap:wrap;gap:8px;padding:12px 20px;background:rgba(0,0,0,0.15);border-bottom:1px solid rgba(255,255,255,0.05);align-items:center;">
-            ${STATE.lastKeywords.seed ? `<span style="font-size:0.72rem;background:rgba(139,92,246,0.12);color:#a78bfa;border:1px solid rgba(139,92,246,0.25);padding:2px 10px;border-radius:20px;font-weight:700;">ðŸŒ± ${STATE.lastKeywords.seed}</span>` : ''}
+            ${STATE.lastKeywords.seed ? `<span style="font-size:0.72rem;background:rgba(139,92,246,0.12);color:#a78bfa;border:1px solid rgba(139,92,246,0.25);padding:2px 10px;border-radius:20px;font-weight:700;">🌱 ${STATE.lastKeywords.seed}</span>` : ''}
             <span style="font-size:0.72rem;color:#64748b;">${langBreakdown}</span>
             <span style="color:rgba(255,255,255,0.1);margin:0 4px;">|</span>
-            <span style="font-size:0.72rem;color:#94a3b8;">ðŸŒ ${geo}</span>
-            ${stats.avgKD !== undefined ? `<span style="color:rgba(255,255,255,0.1);margin:0 4px;">Â·</span><span style="font-size:0.72rem;color:#94a3b8;">Moy. KD <strong style="color:white;">${stats.avgKD}</strong></span>` : ''}
-            ${stats.avgVolume ? `<span style="color:rgba(255,255,255,0.1);margin:0 4px;">Â·</span><span style="font-size:0.72rem;color:#94a3b8;">Moy. Vol <strong style="color:white;">${formatVol(stats.avgVolume)}</strong></span>` : ''}
-            ${stats.risingCount ? `<span style="color:rgba(255,255,255,0.1);margin:0 4px;">Â·</span><span style="font-size:0.72rem;color:#10b981;">ðŸ“ˆ <strong>${stats.risingCount}</strong> rising</span>` : ''}
-            ${stats.quickWins ? `<span style="color:rgba(255,255,255,0.1);margin:0 4px;">Â·</span><span style="font-size:0.72rem;color:#10b981;">âš¡ <strong>${stats.quickWins}</strong> quick wins</span>` : ''}
-            ${STATE.lastKeywords.generationTime ? `<span style="color:rgba(255,255,255,0.1);margin:0 4px;">Â·</span><span style="font-size:0.72rem;color:#64748b;">âš¡ ${STATE.lastKeywords.generationTime}</span>` : ''}
+            <span style="font-size:0.72rem;color:#94a3b8;">🌍 ${geo}</span>
+            ${stats.avgKD !== undefined ? `<span style="color:rgba(255,255,255,0.1);margin:0 4px;">·</span><span style="font-size:0.72rem;color:#94a3b8;">Moy. KD <strong style="color:white;">${stats.avgKD}</strong></span>` : ''}
+            ${stats.avgVolume ? `<span style="color:rgba(255,255,255,0.1);margin:0 4px;">·</span><span style="font-size:0.72rem;color:#94a3b8;">Moy. Vol <strong style="color:white;">${formatVol(stats.avgVolume)}</strong></span>` : ''}
+            ${stats.risingCount ? `<span style="color:rgba(255,255,255,0.1);margin:0 4px;">·</span><span style="font-size:0.72rem;color:#10b981;">📈 <strong>${stats.risingCount}</strong> rising</span>` : ''}
+            ${stats.quickWins ? `<span style="color:rgba(255,255,255,0.1);margin:0 4px;">·</span><span style="font-size:0.72rem;color:#10b981;">⚡ <strong>${stats.quickWins}</strong> quick wins</span>` : ''}
+            ${STATE.lastKeywords.generationTime ? `<span style="color:rgba(255,255,255,0.1);margin:0 4px;">·</span><span style="font-size:0.72rem;color:#64748b;">⚡ ${STATE.lastKeywords.generationTime}</span>` : ''}
         </div>`;
 
-    /* â”€â”€ Experts utiles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Experts utiles ───────────────────────────────────────── */
     const assistantsBarHtml = `
         <div style="padding:10px 20px;border-bottom:1px solid rgba(255,255,255,0.06);background:rgba(15,23,42,0.9);display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
             <span style="font-size:0.72rem;color:#64748b;font-weight:700;text-transform:uppercase;">Experts pour aller + loin</span>
             <a href="https://chatgpt.com/g/g-JD4pcYCTP-max-content-planner-gpt" target="_blank" rel="noopener"
                style="font-size:0.72rem;color:#e5e7eb;background:rgba(37,99,235,0.18);border:1px solid rgba(37,99,235,0.4);padding:4px 10px;border-radius:999px;text-decoration:none;display:flex;align-items:center;gap:6px;">
                 <span style="width:6px;height:6px;border-radius:999px;background:#22c55e;"></span>
-                Max Â· Content Planner
+                Max · Content Planner
             </a>
             <a href="https://chatgpt.com/g/g-jqfRmKj9D-echo-pitch-perfect-gpt" target="_blank" rel="noopener"
                style="font-size:0.72rem;color:#e5e7eb;background:rgba(234,179,8,0.18);border:1px solid rgba(234,179,8,0.4);padding:4px 10px;border-radius:999px;text-decoration:none;display:flex;align-items:center;gap:6px;">
                 <span style="width:6px;height:6px;border-radius:999px;background:#facc15;"></span>
-                Echo Â· Pitch Perfect
+                Echo · Pitch Perfect
             </a>
             <a href="https://chatgpt.com/g/g-lUtrX9s5k-cody-copywriting-bot" target="_blank" rel="noopener"
                style="font-size:0.72rem;color:#e5e7eb;background:rgba(147,51,234,0.18);border:1px solid rgba(147,51,234,0.4);padding:4px 10px;border-radius:999px;text-decoration:none;display:flex;align-items:center;gap:6px;">
                 <span style="width:6px;height:6px;border-radius:999px;background:#a855f7;"></span>
-                Cody Â· Copywriting
+                Cody · Copywriting
             </a>
             <a href="https://chatgpt.com/g/g-S0N82XvQh-sebo-seo-optimisation-bot" target="_blank" rel="noopener"
                style="font-size:0.72rem;color:#e5e7eb;background:rgba(16,185,129,0.18);border:1px solid rgba(16,185,129,0.4);padding:4px 10px;border-radius:999px;text-decoration:none;display:flex;align-items:center;gap:6px;">
                 <span style="width:6px;height:6px;border-radius:999px;background:#10b981;"></span>
-                Sebo Â· SEO Optimisation
+                Sebo · SEO Optimisation
             </a>
         </div>`;
 
-    /* â”€â”€ Filter bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Filter bar ───────────────────────────────────────────── */
     const filterBarHtml = `
         <div id="kwFilterBar" style="padding:10px 20px;border-bottom:1px solid rgba(255,255,255,0.05);background:rgba(15,23,42,0.85);display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
             <!-- KD -->
@@ -8709,62 +8709,62 @@ function displayKeywordsResults(data) {
                     <button onclick="kwFilter('kd','all',this)" class="kw-filter-btn kw-filter-active" data-filter="kd" data-val="all"
                         style="padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.08);color:white;font-size:0.7rem;font-weight:700;cursor:pointer;">Tous</button>
                     <button onclick="kwFilter('kd','easy',this)" class="kw-filter-btn" data-filter="kd" data-val="easy"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(16,185,129,0.4);background:rgba(16,185,129,0.08);color:#10b981;font-size:0.7rem;font-weight:700;cursor:pointer;">â‰¤29</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(16,185,129,0.4);background:rgba(16,185,129,0.08);color:#10b981;font-size:0.7rem;font-weight:700;cursor:pointer;">≤29</button>
                     <button onclick="kwFilter('kd','medium',this)" class="kw-filter-btn" data-filter="kd" data-val="medium"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.08);color:#f59e0b;font-size:0.7rem;font-weight:700;cursor:pointer;">30â€“69</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(245,158,11,0.4);background:rgba(245,158,11,0.08);color:#f59e0b;font-size:0.7rem;font-weight:700;cursor:pointer;">30–69</button>
                     <button onclick="kwFilter('kd','hard',this)" class="kw-filter-btn" data-filter="kd" data-val="hard"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);color:#ef4444;font-size:0.7rem;font-weight:700;cursor:pointer;">â‰¥70</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(239,68,68,0.4);background:rgba(239,68,68,0.08);color:#ef4444;font-size:0.7rem;font-weight:700;cursor:pointer;">≥70</button>
                 </div>
             </div>
             <span style="color:rgba(255,255,255,0.08);font-size:1.1rem;">|</span>
             <!-- Lang -->
             <div style="display:flex;align-items:center;gap:6px;">
-                <span style="font-size:0.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">${isAr?'Ø§Ù„Ù„ØºØ©':'Lang'}</span>
+                <span style="font-size:0.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">${isAr?'اللغة':'Lang'}</span>
                 <div style="display:flex;gap:5px;flex-wrap:wrap;">
                     <button onclick="kwFilter('lang','all',this)" class="kw-filter-btn kw-filter-active" data-filter="lang" data-val="all"
                         style="padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.08);color:white;font-size:0.7rem;font-weight:700;cursor:pointer;">Tous</button>
                     <button onclick="kwFilter('lang','fr',this)" class="kw-filter-btn" data-filter="lang" data-val="fr"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#94a3b8;font-size:0.7rem;cursor:pointer;">ðŸ‡«ðŸ‡· FR</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#94a3b8;font-size:0.7rem;cursor:pointer;">🇫🇷 FR</button>
                     <button onclick="kwFilter('lang','ar',this)" class="kw-filter-btn" data-filter="lang" data-val="ar"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#94a3b8;font-size:0.7rem;cursor:pointer;">ðŸ‡¸ðŸ‡¦ AR</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#94a3b8;font-size:0.7rem;cursor:pointer;">🇸🇦 AR</button>
                     <button onclick="kwFilter('lang','en',this)" class="kw-filter-btn" data-filter="lang" data-val="en"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#94a3b8;font-size:0.7rem;cursor:pointer;">ðŸ‡¬ðŸ‡§ EN</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:transparent;color:#94a3b8;font-size:0.7rem;cursor:pointer;">🇬🇧 EN</button>
                 </div>
             </div>
             <span style="color:rgba(255,255,255,0.08);font-size:1.1rem;">|</span>
             <!-- Intent -->
             <div style="display:flex;align-items:center;gap:6px;">
-                <span style="font-size:0.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">${isAr?'Ø§Ù„Ù†ÙŠØ©':'Intent'}</span>
+                <span style="font-size:0.7rem;color:#64748b;font-weight:700;text-transform:uppercase;">${isAr?'النية':'Intent'}</span>
                 <div style="display:flex;gap:5px;flex-wrap:wrap;">
                     <button onclick="kwFilter('intent','all',this)" class="kw-filter-btn kw-filter-active" data-filter="intent" data-val="all"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.08);color:white;font-size:0.7rem;font-weight:700;cursor:pointer;">${isAr?'Ø§Ù„ÙƒÙ„':'Tous'}</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.08);color:white;font-size:0.7rem;font-weight:700;cursor:pointer;">${isAr?'الكل':'Tous'}</button>
                     <button onclick="kwFilter('intent','Transactional',this)" class="kw-filter-btn" data-filter="intent" data-val="Transactional"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(16,185,129,0.4);background:rgba(16,185,129,0.08);color:#10b981;font-size:0.7rem;font-weight:700;cursor:pointer;">ðŸ’° Trans.</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(16,185,129,0.4);background:rgba(16,185,129,0.08);color:#10b981;font-size:0.7rem;font-weight:700;cursor:pointer;">💰 Trans.</button>
                     <button onclick="kwFilter('intent','Commercial',this)" class="kw-filter-btn" data-filter="intent" data-val="Commercial"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(59,130,246,0.4);background:rgba(59,130,246,0.08);color:#3b82f6;font-size:0.7rem;font-weight:700;cursor:pointer;">ðŸ›’ Comm.</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(59,130,246,0.4);background:rgba(59,130,246,0.08);color:#3b82f6;font-size:0.7rem;font-weight:700;cursor:pointer;">🛒 Comm.</button>
                     <button onclick="kwFilter('intent','Informational',this)" class="kw-filter-btn" data-filter="intent" data-val="Informational"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(100,116,139,0.4);background:rgba(100,116,139,0.08);color:#94a3b8;font-size:0.7rem;font-weight:700;cursor:pointer;">â„¹ï¸ Info</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(100,116,139,0.4);background:rgba(100,116,139,0.08);color:#94a3b8;font-size:0.7rem;font-weight:700;cursor:pointer;">ℹ️ Info</button>
                     <button onclick="kwFilter('intent','Navigational',this)" class="kw-filter-btn" data-filter="intent" data-val="Navigational"
-                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(139,92,246,0.4);background:rgba(139,92,246,0.08);color:#a78bfa;font-size:0.7rem;font-weight:700;cursor:pointer;">ðŸ” Nav.</button>
+                        style="padding:3px 9px;border-radius:6px;border:1px solid rgba(139,92,246,0.4);background:rgba(139,92,246,0.08);color:#a78bfa;font-size:0.7rem;font-weight:700;cursor:pointer;">🔍 Nav.</button>
                 </div>
             </div>
             <span style="color:rgba(255,255,255,0.08);font-size:1.1rem;">|</span>
-            <!-- â•â• MAJ 3 â€” Filtre Quick Wins â•â• -->
+            <!-- ══ MAJ 3 — Filtre Quick Wins ══ -->
             <div style="display:flex;align-items:center;gap:6px;">
                 <button onclick="kwFilter('quickwin','true',this)" class="kw-filter-btn" data-filter="quickwin" data-val="true"
                     style="padding:3px 9px;border-radius:6px;border:1px solid rgba(16,185,129,0.4);background:rgba(16,185,129,0.08);color:#10b981;font-size:0.7rem;font-weight:700;cursor:pointer;">
-                    âš¡ Quick Wins seulement
+                    ⚡ Quick Wins seulement
                 </button>
             </div>
             <div style="margin-left:auto;font-size:0.75rem;color:#64748b;">
                 <span id="kwFilterCount" style="color:#22d3ee;font-weight:700;">${kwList.length}</span>
-                ${isAr?' Ù†ØªÙŠØ¬Ø©':' rÃ©sultats'}
+                ${isAr?' نتيجة':' résultats'}
             </div>
         </div>`;
 
-    /* â”€â”€ Rows â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Rows ─────────────────────────────────────────────────── */
     const listHtml = kwList.map((kw) => {
-        const langFlag = kw.language === 'fr' ? 'ðŸ‡«ðŸ‡·' : (kw.language === 'ar' ? 'ðŸ‡¸ðŸ‡¦' : 'ðŸ‡¬ðŸ‡§');
+        const langFlag = kw.language === 'fr' ? '🇫🇷' : (kw.language === 'ar' ? '🇸🇦' : '🇬🇧');
         const kdVal    = parseInt(kw.kd) || 0;
         const kdColors = getKdColor(kdVal);
         const cpcVal   = parseFloat(kw.cpc) || 0;
@@ -8783,9 +8783,9 @@ function displayKeywordsResults(data) {
                         <div style="display:flex;align-items:center;gap:6px;">
                             <strong style="color:#e2e8f0;font-size:0.95rem;font-family:'Almarai',sans-serif;word-break:break-word;">${kw.keyword}</strong>
                             ${isQuick ? '<span style="background:rgba(16,185,129,0.18);color:#10b981;padding:1px 6px;border-radius:4px;font-size:0.62rem;font-weight:800;">WIN</span>' : ''}
-                            ${kw.seasonality && kw.seasonality !== 'evergreen' ? `<span style="background:rgba(245,158,11,0.12);color:#f59e0b;padding:1px 6px;border-radius:4px;font-size:0.62rem;font-weight:700;">ðŸ“… ${kw.seasonality}</span>` : ''}
+                            ${kw.seasonality && kw.seasonality !== 'evergreen' ? `<span style="background:rgba(245,158,11,0.12);color:#f59e0b;padding:1px 6px;border-radius:4px;font-size:0.62rem;font-weight:700;">📅 ${kw.seasonality}</span>` : ''}
                         </div>
-                        ${kw.painPoint ? `<div style="font-size:0.7rem;color:#64748b;margin-top:2px;">ðŸ’Š ${kw.painPoint}</div>` : ''}
+                        ${kw.painPoint ? `<div style="font-size:0.7rem;color:#64748b;margin-top:2px;">💊 ${kw.painPoint}</div>` : ''}
                     </div>
                 </div>
             </td>
@@ -8796,7 +8796,7 @@ function displayKeywordsResults(data) {
             </td>
             <td style="padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:center;">${getTrendBadge(kw.trend, kw.trendScore)}</td>
             <td style="padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:center;color:#94a3b8;font-family:monospace;font-size:0.85rem;">
-                ${cpcVal > 0 ? '$' + cpcVal.toFixed(2) : '<span style="color:rgba(255,255,255,0.2);">â€”</span>'}
+                ${cpcVal > 0 ? '$' + cpcVal.toFixed(2) : '<span style="color:rgba(255,255,255,0.2);">—</span>'}
             </td>
             <td style="padding:12px;border-bottom:1px solid rgba(255,255,255,0.05);text-align:center;">
                 ${source === 'terrain'
@@ -8807,20 +8807,20 @@ function displayKeywordsResults(data) {
         </tr>`;
     }).join('');
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       MAJ 4 â€” Section Clusters PAA (si donnÃ©es disponibles)
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* ══════════════════════════════════════════════════════
+       MAJ 4 — Section Clusters PAA (si données disponibles)
+    ══════════════════════════════════════════════════════ */
     const clustersHtml = STATE.lastKeywords.clusters?.length ? `
         <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.1);">
             <div style="font-size:0.72rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:10px;">
-                ðŸ—‚ï¸ ${isAr ? 'Ø§Ù„Ù…Ø¬Ù…ÙˆØ¹Ø§Øª' : isEn ? 'Clusters' : 'Clusters SÃ©mantiques'} â€” ${STATE.lastKeywords.clusters.length}
+                🗂️ ${isAr ? 'المجموعات' : isEn ? 'Clusters' : 'Clusters Sémantiques'} — ${STATE.lastKeywords.clusters.length}
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:8px;">
                 ${STATE.lastKeywords.clusters.map(c => `
                     <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:10px;padding:8px 14px;max-width:260px;">
                         <div style="font-size:0.78rem;font-weight:700;color:#a78bfa;margin-bottom:4px;">${c.name || c.intent || 'Cluster'}</div>
                         <div style="font-size:0.7rem;color:#64748b;">${Array.isArray(c.keywords) ? c.keywords.slice(0,4).join(', ') : ''}</div>
-                        ${c.opportunity ? `<div style="font-size:0.65rem;color:#10b981;margin-top:3px;">ðŸ’¡ ${c.opportunity}</div>` : ''}
+                        ${c.opportunity ? `<div style="font-size:0.65rem;color:#10b981;margin-top:3px;">💡 ${c.opportunity}</div>` : ''}
                     </div>`).join('')}
             </div>
         </div>` : '';
@@ -8828,7 +8828,7 @@ function displayKeywordsResults(data) {
     const paaHtml = STATE.lastKeywords.paaQuestions?.length ? `
         <div style="padding:16px 20px;border-top:1px solid rgba(255,255,255,0.06);background:rgba(0,0,0,0.08);">
             <div style="font-size:0.72rem;color:#64748b;font-weight:700;text-transform:uppercase;margin-bottom:10px;">
-                â“ ${isAr ? 'Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ù†Ø§Ø³' : isEn ? 'People Also Ask' : 'Questions PAA'} â€” ${STATE.lastKeywords.paaQuestions.length}
+                ❓ ${isAr ? 'أسئلة الناس' : isEn ? 'People Also Ask' : 'Questions PAA'} — ${STATE.lastKeywords.paaQuestions.length}
             </div>
             <div style="display:flex;flex-direction:column;gap:6px;">
                 ${STATE.lastKeywords.paaQuestions.slice(0, 8).map(q => `
@@ -8840,7 +8840,7 @@ function displayKeywordsResults(data) {
             </div>
         </div>` : '';
 
-    /* â”€â”€ Container HTML final â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ── Container HTML final ─────────────────────────────────── */
     const keywordReportLabels = getReportLabels({ isAr, isEn });
     const keywordsCoreHtml = `
         <div class="result-card fade-in-up" style="border-top:3px solid var(--accent-info);padding:0;overflow:hidden;" dir="${dir}">
@@ -8853,7 +8853,7 @@ function displayKeywordsResults(data) {
                         ${t.title}
                         <span style="background:rgba(6,182,212,0.15);color:#22d3ee;padding:2px 8px;border-radius:20px;font-size:0.75rem;">${kwList.length}</span>
                     </h3>
-                    ${STATE.lastKeywords.seed ? `<div style="font-size:0.72rem;color:#64748b;margin-top:4px;">Seed : <strong style="color:#a78bfa;">${STATE.lastKeywords.seed}</strong> Â· ${STATE.lastKeywords.languages?.join(', ')} Â· ${STATE.lastKeywords.geoInput}</div>` : ''}
+                    ${STATE.lastKeywords.seed ? `<div style="font-size:0.72rem;color:#64748b;margin-top:4px;">Seed : <strong style="color:#a78bfa;">${STATE.lastKeywords.seed}</strong> · ${STATE.lastKeywords.languages?.join(', ')} · ${STATE.lastKeywords.geoInput}</div>` : ''}
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
                     <button class="btn btn-secondary" type="button" data-no-collapse="true" onclick="event.stopPropagation();window.copyKwsSafely()" style="padding:7px 14px;font-size:0.75rem;border-radius:8px;flex-shrink:0;">
@@ -8900,11 +8900,11 @@ function displayKeywordsResults(data) {
         ${renderExpertDock('social', { isAr, isEn })}
     `;
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       MAJ 5 â€” kwFilter : ajout du filtre quickwin + reset visuel
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* ══════════════════════════════════════════════════════
+       MAJ 5 — kwFilter : ajout du filtre quickwin + reset visuel
+    ══════════════════════════════════════════════════════ */
     window.kwFilter = function(type, val, btn) {
-        // â”€â”€ Mettre Ã  jour le bouton actif AVANT de filtrer (fix double-clic) â”€â”€
+        // ── Mettre à jour le bouton actif AVANT de filtrer (fix double-clic) ──
         document.querySelectorAll(`.kw-filter-btn[data-filter="${type}"]`).forEach(b => {
             b.classList.remove('kw-filter-active');
             b.style.background = 'transparent';
@@ -8918,7 +8918,7 @@ function displayKeywordsResults(data) {
             btn.style.fontWeight  = '800';
         }
 
-        // Lire l'Ã©tat actif maintenant que les classes sont Ã  jour
+        // Lire l'état actif maintenant que les classes sont à jour
         const activKd     = document.querySelector('.kw-filter-btn[data-filter="kd"].kw-filter-active')?.dataset.val     || 'all';
         const activLang   = document.querySelector('.kw-filter-btn[data-filter="lang"].kw-filter-active')?.dataset.val   || 'all';
         const activIntent = document.querySelector('.kw-filter-btn[data-filter="intent"].kw-filter-active')?.dataset.val || 'all';
@@ -8946,12 +8946,12 @@ function displayKeywordsResults(data) {
         if (countEl) countEl.textContent = visible;
     };
 
-    /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-       MAJ 6 â€” copyKwsSafely robuste (copie toutes les kws)
-    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+    /* ══════════════════════════════════════════════════════
+       MAJ 6 — copyKwsSafely robuste (copie toutes les kws)
+    ══════════════════════════════════════════════════════ */
     window.copyKwsSafely = function() {
         const kws = STATE.lastKeywords?.keywords || [];
-        if (!kws.length) return toast?.warning?.('Aucun mot-clÃ© Ã  copier') || alert('Aucun mot-clÃ©');
+        if (!kws.length) return toast?.warning?.('Aucun mot-clé à copier') || alert('Aucun mot-clé');
         const text = kws.map(k => k.keyword).filter(Boolean).join('\n');
         const fallback = () => {
             const ta = document.createElement('textarea');
@@ -8961,17 +8961,17 @@ function displayKeywordsResults(data) {
         };
         if (navigator.clipboard?.writeText) {
             navigator.clipboard.writeText(text).then(() => {
-                toast?.success?.(`${kws.length} mots-clÃ©s copiÃ©s !`);
+                toast?.success?.(`${kws.length} mots-clés copiés !`);
             }).catch(fallback);
-        } else { fallback(); toast?.success?.(`${kws.length} mots-clÃ©s copiÃ©s !`); }
+        } else { fallback(); toast?.success?.(`${kws.length} mots-clés copiés !`); }
     };
 
     if (typeof showResults === 'function') showResults('resultsKeywords');
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“‹ COPIE ENRICHIE â€” keyword | intent | volume
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 📋 COPIE ENRICHIE — keyword | intent | volume
+// ═══════════════════════════════════════════════════════════════════
 window.copyKwsSafely = function() {
     if (!STATE.lastKeywords?.length) return;
 
@@ -8985,15 +8985,15 @@ window.copyKwsSafely = function() {
     }).join('\n');
 
     navigator.clipboard.writeText(txt).then(() => {
-        const msg = isAr ? `ØªÙ… Ù†Ø³Ø® ${STATE.lastKeywords.length} ÙƒÙ„Ù…Ø©!`
+        const msg = isAr ? `تم نسخ ${STATE.lastKeywords.length} كلمة!`
                   : isEn ? `${STATE.lastKeywords.length} keywords copied!`
-                  :        `${STATE.lastKeywords.length} mots-clÃ©s copiÃ©s !`;
+                  :        `${STATE.lastKeywords.length} mots-clés copiés !`;
         if (typeof toast !== 'undefined') toast.success(msg);
 
         const btn = document.querySelector('button[onclick="window.copyKwsSafely()"]');
         if (btn) {
             const orig = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check"></i> âœ“';
+            btn.innerHTML = '<i class="fas fa-check"></i> ✓';
             btn.style.color = '#10b981';
             setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
         }
@@ -9003,12 +9003,12 @@ window.copyKwsSafely = function() {
 };
 
 // Nouvelle fonction de copie qui ne fait pas planter le navigateur
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“‹ COPIE SÃ‰CURISÃ‰E ET ANIMÃ‰E DES MOTS-CLÃ‰S
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 📋 COPIE SÉCURISÉE ET ANIMÉE DES MOTS-CLÉS
+// ═══════════════════════════════════════════════════════════════════
 
 window.copyKwsSafely = function() {
-    // 1. VÃ©rification de la prÃ©sence de donnÃ©es
+    // 1. Vérification de la présence de données
     if (!STATE.lastKeywords || STATE.lastKeywords.length === 0) {
         return;
     }
@@ -9016,15 +9016,15 @@ window.copyKwsSafely = function() {
     const isAr = STATE.currentLang === 'ar';
     const isEn = STATE.currentLang === 'en';
 
-    // 2. PrÃ©paration du texte (uniquement les mots-clÃ©s, un par ligne)
+    // 2. Préparation du texte (uniquement les mots-clés, un par ligne)
     const txt = STATE.lastKeywords.map(k => k.keyword).join('\n');
 
     // 3. Utilisation de l'API Clipboard
     navigator.clipboard.writeText(txt).then(() => {
         // A. Notification Toast Multilingue
         const successMsg = isAr
-            ? 'ØªÙ… Ù†Ø³Ø® Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø¨Ù†Ø¬Ø§Ø­!'
-            : (isEn ? 'Keyword list copied to clipboard!' : 'Liste de mots-clÃ©s copiÃ©e avec succÃ¨s !');
+            ? 'تم نسخ قائمة الكلمات بنجاح!'
+            : (isEn ? 'Keyword list copied to clipboard!' : 'Liste de mots-clés copiée avec succès !');
 
         if (typeof toast !== 'undefined') {
             toast.success(successMsg);
@@ -9036,12 +9036,12 @@ window.copyKwsSafely = function() {
             const originalHtml = btn.innerHTML;
             const originalBg = btn.style.background;
 
-            // Ã‰tat "SuccÃ¨s"
-            btn.innerHTML = `<i class="fas fa-check"></i> ${isAr ? 'ØªÙ… Ø§Ù„Ù†Ø³Ø®' : (isEn ? 'COPIED' : 'COPIÃ‰')}`;
+            // État "Succès"
+            btn.innerHTML = `<i class="fas fa-check"></i> ${isAr ? 'تم النسخ' : (isEn ? 'COPIED' : 'COPIÉ')}`;
             btn.style.background = 'var(--accent-success)';
-            btn.style.pointerEvents = 'none'; // Ã‰vite le double clic pendant l'animation
+            btn.style.pointerEvents = 'none'; // Évite le double clic pendant l'animation
 
-            // Retour Ã  l'Ã©tat initial aprÃ¨s 2.5 secondes
+            // Retour à l'état initial après 2.5 secondes
             setTimeout(() => {
                 btn.innerHTML = originalHtml;
                 btn.style.background = originalBg;
@@ -9049,8 +9049,8 @@ window.copyKwsSafely = function() {
             }, 2500);
         }
     }).catch(err => {
-        console.error('âŒ Erreur lors de la copie:', err);
-        const errorMsg = isAr ? 'Ø®Ø·Ø£ ÙÙŠ Ø§Ù„Ù†Ø³Ø®' : 'Erreur lors de la copie';
+        console.error('❌ Erreur lors de la copie:', err);
+        const errorMsg = isAr ? 'خطأ في النسخ' : 'Erreur lors de la copie';
         if (typeof toast !== 'undefined') toast.error(errorMsg);
     });
 };
@@ -9092,7 +9092,7 @@ window.exportKeywordsToExcel = function () {
     const isEn = lang === 'en';
     const rows = getDakaKeywordExportRows();
     if (!rows.length) {
-        return toast.warning(isAr ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ ÙƒÙ„Ù…Ø§Øª Ù„Ù„ØªØµØ¯ÙŠØ±.' : isEn ? 'No keywords to export.' : 'Aucun mot-clÃ© Ã  exporter.');
+        return toast.warning(isAr ? 'لا توجد كلمات للتصدير.' : isEn ? 'No keywords to export.' : 'Aucun mot-clé à exporter.');
     }
     const headers = [
         'Rank', 'Keyword', 'Language', 'Intent', 'Volume', 'KD', 'CPC',
@@ -9132,7 +9132,7 @@ tr:nth-child(even) td{background:#f8fafc}
 </head>
 <body>
 <h1>Daka Keywords Intelligence</h1>
-<p>${escapeExcelCell(isAr ? 'Ø¬Ø¯ÙˆÙ„ Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ù…ÙØªØ§Ø­ÙŠØ© Ù‚Ø§Ø¨Ù„ Ù„Ù„ÙØ±Ø² ÙˆØ§Ù„ØªØ­Ù„ÙŠÙ„.' : isEn ? 'Keyword table ready for sorting and analysis.' : 'Tableau mots-clÃ©s prÃªt pour tri et analyse.')}</p>
+<p>${escapeExcelCell(isAr ? 'جدول الكلمات المفتاحية قابل للفرز والتحليل.' : isEn ? 'Keyword table ready for sorting and analysis.' : 'Tableau mots-clés prêt pour tri et analyse.')}</p>
 <table>
 <thead><tr>${headers.map(h => `<th>${escapeExcelCell(h)}</th>`).join('')}</tr></thead>
 <tbody>${htmlRows}</tbody>
@@ -9152,18 +9152,18 @@ tr:nth-child(even) td{background:#f8fafc}
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-    toast.success(isAr ? 'ØªÙ… ØªØ­Ù…ÙŠÙ„ Ù…Ù„Ù Excel.' : isEn ? 'Excel file downloaded.' : 'Fichier Excel tÃ©lÃ©chargÃ©.');
+    toast.success(isAr ? 'تم تحميل ملف Excel.' : isEn ? 'Excel file downloaded.' : 'Fichier Excel téléchargé.');
 };
 
 window.copyKwsSafely = function() {
     const rows = getDakaKeywordExportRows();
-    if (!rows.length) return toast?.warning?.('Aucun mot-clÃ© Ã  copier') || alert('Aucun mot-clÃ© Ã  copier');
+    if (!rows.length) return toast?.warning?.('Aucun mot-clé à copier') || alert('Aucun mot-clé à copier');
     const text = rows.map(row => `${row.keyword}\t${row.intent}\t${row.volume}\t${row.kd}\t${row.cpc}`).join('\n');
     const successMsg = STATE.currentLang === 'ar'
-        ? `ØªÙ… Ù†Ø³Ø® ${rows.length} ÙƒÙ„Ù…Ø©.`
+        ? `تم نسخ ${rows.length} كلمة.`
         : STATE.currentLang === 'en'
             ? `${rows.length} keywords copied.`
-            : `${rows.length} mots-clÃ©s copiÃ©s.`;
+            : `${rows.length} mots-clés copiés.`;
     const done = () => toast?.success?.(successMsg);
     if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(text).then(done).catch(() => {
@@ -9216,7 +9216,7 @@ function cleanRenderedOutput(root) {
 
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
     const dirtyToken = /(\bnull\b|\bundefined\b|\bNaN\b|\[object Object\])/gi;
-    const emptyDash = /^\s*(?:[-â€“â€”:|/()\[\]{}.,;]+)?\s*$/;
+    const emptyDash = /^\s*(?:[-–—:|/()\[\]{}.,;]+)?\s*$/;
     const leakedRuntimePattern = /(const\s+blob\s*=\s*new\s+Blob|function\s+(?:animateLoadingSteps|getReportLabels|renderGroqCodePreview|renderOpenRouterCodePreview|getDakaExportModules)|window\.exportFullAnalysisTo(?:PDF|Word)|\$\{safe\(|\$\{model\.score|pulseItems\.map|dashboardItems\.map|mindItems\.map|const\s+headerHtml\s*=|Daka report runtime served by the backend|STATE GLOBAL|CONFIGURATION GLOBALE|ANALYZE COMPETITORS)/i;
     const textNodes = [];
 
@@ -9249,7 +9249,7 @@ function setButtonLoading(btnId, loading) {
 }
 
 
-// â”€â”€ Steps automatiques â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Steps automatiques ────────────────────────────────────────
 function animateLoadingSteps(loaderId, delays = [1200, 2800, 5000]) {
   if (!window._loadingTimers) window._loadingTimers = {};
   window._loadingTimers[loaderId] = [];
@@ -9270,7 +9270,7 @@ function animateLoadingSteps(loaderId, delays = [1200, 2800, 5000]) {
   });
 }
 
-// â”€â”€ Helpers rÃ©sultats â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Helpers résultats ──────────────────────────────────────────
 function showResults(id) {
   const el = document.getElementById(id);
   if (el) {
@@ -9284,7 +9284,7 @@ function hideResults(id) {
   if (el) el.style.display = 'none';
 }
 
-// â”€â”€ setLoaderPhase (phases depuis fetch) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── setLoaderPhase (phases depuis fetch) ──────────────────────
 function setLoaderPhase(elementId, index) {
   const wrap = document.getElementById(elementId);
   if (!wrap) return;
@@ -9303,32 +9303,32 @@ function getReportLabels(opts = {}) {
     const isAr = opts.isAr ?? STATE.currentLang === 'ar';
     const isEn = opts.isEn ?? STATE.currentLang === 'en';
     return isAr ? {
-        openHint: 'Ø¹Ø±Ø¶ Ø§Ù„ØªÙØ§ØµÙŠÙ„',
-        closeHint: 'Ø¥ØºÙ„Ø§Ù‚',
-        market: 'Ø§ÙÙ‡Ù… Ù„Ù…Ø§Ø°Ø§ ÙŠØ±Ø¨Ø­ Ø§Ù„Ù…Ù†Ø§ÙØ³ÙˆÙ† â€” ÙˆÙƒÙŠÙ ØªØªØ¬Ø§ÙˆØ²Ù‡Ù…',
-        marketSub: 'Ø§Ù„Ù‚ÙŠÙ…Ø© Ø§Ù„Ø£Ø³Ø§Ø³ÙŠØ© Ø¸Ø§Ù‡Ø±Ø© Ù‡Ù†Ø§ Ø£ÙˆÙ„Ø§ØŒ ÙˆØ§Ù„ØªÙØ§ØµÙŠÙ„ ØªØ¨Ù‚Ù‰ Ù…ØªØ§Ø­Ø© Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.',
-        plan: 'Ø§Ù„Ø®Ø·ÙˆØ© Ø§Ù„Ø£Ù‚ÙˆÙ‰ Ù„Ø¬Ø¹Ù„ Ø¹Ø±Ø¶Ùƒ Ø£ÙØ¶Ù„',
-        planSub: 'Ù…Ù„Ø®Øµ Ø¹Ù…Ù„ÙŠ Ù„Ù…Ø§ ÙŠØ¬Ø¨ ØªØºÙŠÙŠØ±Ù‡ ÙÙŠ Ø§Ù„Ø¹Ø±Ø¶ØŒ Ø§Ù„Ø±Ø³Ø§Ù„Ø©ØŒ ÙˆØ§Ù„Ø«Ù‚Ø©.',
-        competitors: 'Ø§Ù„Ù…Ù†Ø§ÙØ³ÙˆÙ† Ø§Ù„Ø°ÙŠÙ† ÙŠÙƒØ´ÙÙˆÙ† ÙØ±ØµØ© Ø§Ù„Ø³ÙˆÙ‚',
-        competitorsSub: 'Ù…Ù† ÙŠØ±Ø¨Ø­ Ø§Ù„Ø¢Ù†ØŒ Ø£ÙŠÙ† Ù‚ÙˆØªÙ‡ØŒ ÙˆØ£ÙŠÙ† ØªÙˆØ¬Ø¯ Ø§Ù„Ø«ØºØ±Ø© Ø§Ù„ØªÙŠ ÙŠÙ…ÙƒÙ†Ùƒ Ø§Ø³ØªØºÙ„Ø§Ù„Ù‡Ø§.',
-        proof: 'Ø§Ù„Ø£Ø¯Ù„Ø© ÙˆØ§Ù„Ù…ØµØ§Ø¯Ø±',
-        proofSub: 'Ø±ÙˆØ§Ø¨Ø· ÙˆØ¯Ø±Ø§Ø³Ø§Øª ØªØ³Ø§Ø¹Ø¯ Ø¹Ù„Ù‰ Ø§Ù„ØªØ­Ù‚Ù‚ ÙˆØ§Ù„ØªØ¹Ù…Ù‚.',
-        audit: 'ØªØ´Ø®ÙŠØµ Ø§Ù„ØµÙØ­Ø©',
-        auditSub: 'Ø§Ù„Ù†Ù‚Ø§Ø· Ø§Ù„Ù‚ÙˆÙŠØ©ØŒ Ø§Ù„Ø¶Ø¹ÙØŒ ÙˆØ§Ù„Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„ØªÙŠ ØªØ¤Ø«Ø± Ø¹Ù„Ù‰ Ø§Ù„Ù‚Ø±Ø§Ø±.',
-        money: 'Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø«Ù‚Ø©',
-        moneySub: 'Ù…Ø§ ÙŠØ¬Ø¹Ù„ Ø§Ù„Ø²Ø§Ø¦Ø± ÙŠÙ‚ØªÙ†Ø¹ Ø£Ùˆ ÙŠØªØ±Ø¯Ø¯ Ù‚Ø¨Ù„ Ø§ØªØ®Ø§Ø° Ø§Ù„Ù‚Ø±Ø§Ø±.',
-        page: 'Ø§Ù„Ø£Ù‚Ø³Ø§Ù… ÙˆØ§Ù„Ù†ØµÙˆØµ',
-        pageSub: 'Ù…Ø§ ÙŠØ¬Ø¨ ØªØºÙŠÙŠØ±Ù‡ ÙÙŠ Ø¨Ù†ÙŠØ© Ø§Ù„ØµÙØ­Ø© ÙˆØ§Ù„ÙƒÙ„Ù…Ø§Øª ÙˆØ§Ù„Ø£Ø²Ø±Ø§Ø±.',
-        technical: 'Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ§Øª Ø§Ù„ØªÙ‚Ù†ÙŠØ©',
-        technicalSub: 'Ø§Ù„Ù…Ø´Ø§ÙƒÙ„ Ø§Ù„ØªÙŠ ØªØ¤Ø«Ø± Ø¹Ù„Ù‰ Ø§Ù„Ø«Ù‚Ø©ØŒ Ø§Ù„Ù‚Ø±Ø§Ø¡Ø©ØŒ Ø§Ù„Ø³Ø±Ø¹Ø©ØŒ ÙˆØ§Ù„Ø¨Ù†ÙŠØ©.',
-        keywords: 'ÙØ±Øµ Ø§Ù„Ø¨Ø­Ø« ÙˆØ§Ù„Ù…Ø­ØªÙˆÙ‰',
-        keywordsSub: 'Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ø¬Ù…Ù‡ÙˆØ± ÙˆØ§Ù„Ø£Ø³Ø¦Ù„Ø© ÙˆØ§Ù„Ù…ÙˆØ§Ø¶ÙŠØ¹ Ø§Ù„ØªÙŠ ÙŠÙ…ÙƒÙ† ØªØ­ÙˆÙŠÙ„Ù‡Ø§ Ø¥Ù„Ù‰ Ù…Ø­ØªÙˆÙ‰.',
-        expertsSub: 'Ø§Ø®ØªØ± Ø®Ø¨ÙŠØ±Ø§ Ø­Ø³Ø¨ Ø­Ø§Ø¬ØªÙƒ: ØªÙ„Ø®ÙŠØµØŒ Ø²Ø§ÙˆÙŠØ© Ø³ÙˆÙ‚ØŒ ØµÙØ­Ø© Ø¨ÙŠØ¹ Ø£Ùˆ Ù…Ø­ØªÙˆÙ‰.',
-        openExpert: 'ÙØªØ­ Ø§Ù„Ø®Ø¨ÙŠØ±'
+        openHint: 'عرض التفاصيل',
+        closeHint: 'إغلاق',
+        market: 'افهم لماذا يربح المنافسون — وكيف تتجاوزهم',
+        marketSub: 'القيمة الأساسية ظاهرة هنا أولا، والتفاصيل تبقى متاحة عند الحاجة.',
+        plan: 'الخطوة الأقوى لجعل عرضك أفضل',
+        planSub: 'ملخص عملي لما يجب تغييره في العرض، الرسالة، والثقة.',
+        competitors: 'المنافسون الذين يكشفون فرصة السوق',
+        competitorsSub: 'من يربح الآن، أين قوته، وأين توجد الثغرة التي يمكنك استغلالها.',
+        proof: 'الأدلة والمصادر',
+        proofSub: 'روابط ودراسات تساعد على التحقق والتعمق.',
+        audit: 'تشخيص الصفحة',
+        auditSub: 'النقاط القوية، الضعف، والمشاكل التي تؤثر على القرار.',
+        money: 'العرض والسعر والثقة',
+        moneySub: 'ما يجعل الزائر يقتنع أو يتردد قبل اتخاذ القرار.',
+        page: 'الأقسام والنصوص',
+        pageSub: 'ما يجب تغييره في بنية الصفحة والكلمات والأزرار.',
+        technical: 'الأولويات التقنية',
+        technicalSub: 'المشاكل التي تؤثر على الثقة، القراءة، السرعة، والبنية.',
+        keywords: 'فرص البحث والمحتوى',
+        keywordsSub: 'طلبات الجمهور والأسئلة والمواضيع التي يمكن تحويلها إلى محتوى.',
+        expertsSub: 'اختر خبيرا حسب حاجتك: تلخيص، زاوية سوق، صفحة بيع أو محتوى.',
+        openExpert: 'فتح الخبير'
     } : isEn ? {
         openHint: 'View details',
         closeHint: 'Close',
-        market: 'Understand why competitors win â€” and how to pass them',
+        market: 'Understand why competitors win — and how to pass them',
         marketSub: 'The core value is visible first; deeper evidence stays one click away.',
         plan: 'Your strongest opening to improve the offer',
         planSub: 'A practical summary of what to change in offer, message, and trust.',
@@ -9349,28 +9349,28 @@ function getReportLabels(opts = {}) {
         expertsSub: 'Choose an expert for summary, market angle, sales page, or content.',
         openExpert: 'Open expert'
     } : {
-        openHint: 'Voir les dÃ©tails',
+        openHint: 'Voir les détails',
         closeHint: 'Fermer',
-        market: 'Comprenez pourquoi vos concurrents gagnent â€” et comment les dÃ©passer',
+        market: 'Comprenez pourquoi vos concurrents gagnent — et comment les dépasser',
         marketSub: 'La valeur principale est visible tout de suite; les preuves restent accessibles en un clic.',
-        plan: 'Votre meilleure ouverture pour rendre lâ€™offre plus forte',
-        planSub: 'Le rÃ©sumÃ© opÃ©rationnel de ce quâ€™il faut changer dans lâ€™offre, le message et la confiance.',
-        competitors: 'Les concurrents qui rÃ©vÃ¨lent votre opportunitÃ©',
-        competitorsSub: 'Qui gagne maintenant, oÃ¹ ils sont forts, et oÃ¹ vous pouvez attaquer.',
+        plan: 'Votre meilleure ouverture pour rendre l’offre plus forte',
+        planSub: 'Le résumé opérationnel de ce qu’il faut changer dans l’offre, le message et la confiance.',
+        competitors: 'Les concurrents qui révèlent votre opportunité',
+        competitorsSub: 'Qui gagne maintenant, où ils sont forts, et où vous pouvez attaquer.',
         proof: 'Preuves et sources',
-        proofSub: 'Liens et Ã©tudes pour vÃ©rifier et approfondir.',
+        proofSub: 'Liens et études pour vérifier et approfondir.',
         audit: 'Diagnostic de la page',
-        auditSub: 'Forces, faiblesses et problÃ¨mes qui influencent la dÃ©cision.',
+        auditSub: 'Forces, faiblesses et problèmes qui influencent la décision.',
         money: 'Offre, prix et confiance',
-        moneySub: 'Ce qui convainc ou fait hÃ©siter avant de passer Ã  lâ€™action.',
+        moneySub: 'Ce qui convainc ou fait hésiter avant de passer à l’action.',
         page: 'Sections et textes',
-        pageSub: 'Ce quâ€™il faut changer dans la structure, les mots et les boutons.',
-        technical: 'PrioritÃ©s techniques',
-        technicalSub: 'ProblÃ¨mes qui touchent confiance, lecture, vitesse et structure.',
-        keywords: 'OpportunitÃ©s de recherche et contenu',
-        keywordsSub: 'Demandes, questions et sujets du public Ã  transformer en contenu.',
-        expertsSub: 'Choisissez un expert pour rÃ©sumer, trouver lâ€™angle, corriger la page ou crÃ©er du contenu.',
-        openExpert: 'Ouvrir lâ€™expert'
+        pageSub: 'Ce qu’il faut changer dans la structure, les mots et les boutons.',
+        technical: 'Priorités techniques',
+        technicalSub: 'Problèmes qui touchent confiance, lecture, vitesse et structure.',
+        keywords: 'Opportunités de recherche et contenu',
+        keywordsSub: 'Demandes, questions et sujets du public à transformer en contenu.',
+        expertsSub: 'Choisissez un expert pour résumer, trouver l’angle, corriger la page ou créer du contenu.',
+        openExpert: 'Ouvrir l’expert'
     };
 }
 
@@ -9434,7 +9434,7 @@ function executiveFingerprint(value) {
 function executiveIsUsefulText(value) {
     const text = executiveText(value);
     if (!text) return false;
-    if (/^(?:â€”|-|_|n\/a|null|undefined|non trouvÃ©|not found|ØºÙŠØ± Ù…Ø¤ÙƒØ¯)$/i.test(text.trim())) return false;
+    if (/^(?:—|-|_|n\/a|null|undefined|non trouvé|not found|غير مؤكد)$/i.test(text.trim())) return false;
     if (/\b(?:html|css|script|class=|onclick|undefined|null)\b/i.test(text)) return false;
     return text.trim().length > 2;
 }
@@ -9521,10 +9521,10 @@ function executiveKeywordCloud(data, limit = 10) {
         data?.rawIntel?.headings?.map(item => item.text || item),
         data?.rawIntel?.ctas?.map(item => item.text || item)
     ].flat().filter(Boolean).join(' ');
-    const stop = new Set('le la les des de du un une et ou pour avec dans sur au aux ce cette ces est sont votre vos vous nous que qui plus moins now the and for with from this that are your vous votre Ø§Ù„ØµÙØ­Ø© Ø¹Ù„Ù‰ Ù…Ù† ÙÙŠ Ø§Ù„Ù‰ Ø¥Ù„Ù‰ Ù‡Ø°Ø§ Ù‡Ø°Ù‡ Ø§Ù„ØªÙŠ Ù…Ø§ Ø¹Ù† Ù…Ø¹'.split(/\s+/));
+    const stop = new Set('le la les des de du un une et ou pour avec dans sur au aux ce cette ces est sont votre vos vous nous que qui plus moins now the and for with from this that are your vous votre الصفحة على من في الى إلى هذا هذه التي ما عن مع'.split(/\s+/));
     const counts = new Map();
     String(raw || '')
-        .replace(/[^\p{L}\p{N}\s#â‚¬$%.-]/gu, ' ')
+        .replace(/[^\p{L}\p{N}\s#€$%.-]/gu, ' ')
         .split(/\s+/)
         .map(word => word.trim())
         .filter(word => word.length >= 3 && word.length <= 28 && !stop.has(word.toLowerCase()))
@@ -9542,21 +9542,21 @@ function buildFunnelExecutiveSummaryModel(data, lang = STATE.currentLang || 'fr'
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
     const t = isAr ? {
-        fallback: 'Ø§Ù„ØµÙØ­Ø© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ØªØ­ÙˆÙŠÙ„ØŒ Ù„ÙƒÙ† Ø§Ù„Ù‚Ø±Ø§Ø± ÙŠØ­ØªØ§Ø¬ ÙˆØ¶ÙˆØ­Ø§ Ø£Ù‚ÙˆÙ‰ ÙÙŠ Ø§Ù„ÙˆØ¹Ø¯ ÙˆØ§Ù„Ø¯Ù„ÙŠÙ„ ÙˆØ§Ù„Ø¥Ø¬Ø±Ø§Ø¡.',
-        verdictStrong: 'Ø§Ù„ØµÙØ­Ø© ØªÙ…Ù„Ùƒ Ø¥Ø´Ø§Ø±Ø§Øª Ø¨ÙŠØ¹ Ø­Ù‚ÙŠÙ‚ÙŠØ©ØŒ ÙˆØ§Ù„ÙØ±ØµØ© Ø§Ù„Ø¢Ù† Ù‡ÙŠ ØªØ­ÙˆÙŠÙ„Ù‡Ø§ Ø¥Ù„Ù‰ Ù…Ø³Ø§Ø± Ù‚Ø±Ø§Ø± Ø£Ø³Ø±Ø¹ ÙˆØ£ÙƒØ«Ø± Ø«Ù‚Ø©.',
-        verdictMedium: 'Ø§Ù„ØµÙØ­Ø© ØªØ¨ÙŠØ¹ Ø¬Ø²Ø¦ÙŠØ§ØŒ Ù„ÙƒÙ† Ø¨Ø¹Ø¶ Ø§Ù„Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø­Ø§Ø³Ù…Ø© Ù…Ø§ Ø²Ø§Ù„Øª ØªØ­ØªØ§Ø¬ ØªØ±ØªÙŠØ¨Ø§ Ø£Ùˆ Ø¯Ù„ÙŠÙ„Ø§ Ø£Ùˆ ÙˆØ¶ÙˆØ­Ø§ Ù‚Ø¨Ù„ Ø§Ù„Ø²Ø±.',
-        verdictRisk: 'Ø§Ù„Ù‚Ø±Ø§Ø¡Ø© ØºÙŠØ± ÙƒØ§ÙÙŠØ© Ù„Ù„Ø­ÙƒÙ… Ø§Ù„Ù†Ù‡Ø§Ø¦ÙŠ. ÙŠØ¬Ø¨ ØªÙ‚ÙˆÙŠØ© Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø© Ù‚Ø¨Ù„ Ø¥ØµØ¯Ø§Ø± Ù‚Ø±Ø§Ø± Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠ.',
-        observed: 'Ù…Ø§ ØªÙ… Ø¥Ø«Ø¨Ø§ØªÙ‡',
-        missing: 'Ù…Ø§ ÙŠÙ‡Ø¯Ø¯ Ø§Ù„Ù‚Ø±Ø§Ø±',
-        action: 'Ø§Ù„Ø­Ø±ÙƒØ© Ø§Ù„ØªØ§Ù„ÙŠØ©',
-        high: 'Ù…Ø±ØªÙØ¹',
-        medium: 'Ù…ØªÙˆØ³Ø·',
-        low: 'Ù…Ù†Ø®ÙØ¶',
-        rewrite: 'Ø­ÙˆÙ‘Ù„ Ø§Ù„Ø´Ø§Ø´Ø© Ø§Ù„Ø£ÙˆÙ„Ù‰ Ø¥Ù„Ù‰ ÙˆØ¹Ø¯ ÙˆØ§Ø¶Ø­ + Ø¯Ù„ÙŠÙ„ Ø³Ø±ÙŠØ¹ + Ø²Ø± Ù‚Ø±Ø§Ø± ÙˆØ§Ø­Ø¯.',
-        proof: 'Ø¶Ø¹ Ø£Ù‚ÙˆÙ‰ Ø¯Ù„ÙŠÙ„ Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ Ø£Ùˆ Ø¶Ù…Ø§Ù† Ù‚Ø¨Ù„ Ø£ÙˆÙ„ Ø²Ø± Ù‚Ø±Ø§Ø±.',
-        cta: 'ÙˆØ­Ù‘Ø¯ ÙØ¹Ù„ CTA ÙÙŠ Ø§Ù„Ø£Ø¹Ù„Ù‰ ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ù†Ù‡Ø§ÙŠØ© Ø­ØªÙ‰ Ù„Ø§ ÙŠØªØ±Ø¯Ø¯ Ø§Ù„Ø²Ø§Ø¦Ø±.',
-        order: 'Ø£Ø¹Ø¯ ØªØ±ØªÙŠØ¨ Ø§Ù„ØµÙØ­Ø©: ÙˆØ¹Ø¯ØŒ Ø¯Ù„ÙŠÙ„ØŒ Ø¹Ø±Ø¶ØŒ Ø³Ø¹Ø±ØŒ Ø§Ø¹ØªØ±Ø§Ø¶Ø§ØªØŒ Ø«Ù… CTA Ù†Ù‡Ø§Ø¦ÙŠ.',
-        verify: 'Ø«Ø¨Ù‘Øª ÙƒÙ„ Ø§Ø¯Ø¹Ø§Ø¡ Ø¨Ø¯Ù„ÙŠÙ„ Ù…Ø±Ø¦ÙŠ: ØªÙ‚ÙŠÙŠÙ…ØŒ ØµÙˆØ±Ø©ØŒ Ø¶Ù…Ø§Ù†ØŒ Ø³Ø¹Ø± Ø£Ùˆ Ø´Ø±Ø· ÙˆØ§Ø¶Ø­.'
+        fallback: 'الصفحة قابلة للتحويل، لكن القرار يحتاج وضوحا أقوى في الوعد والدليل والإجراء.',
+        verdictStrong: 'الصفحة تملك إشارات بيع حقيقية، والفرصة الآن هي تحويلها إلى مسار قرار أسرع وأكثر ثقة.',
+        verdictMedium: 'الصفحة تبيع جزئيا، لكن بعض الإشارات الحاسمة ما زالت تحتاج ترتيبا أو دليلا أو وضوحا قبل الزر.',
+        verdictRisk: 'القراءة غير كافية للحكم النهائي. يجب تقوية الأدلة المرصودة قبل إصدار قرار استراتيجي.',
+        observed: 'ما تم إثباته',
+        missing: 'ما يهدد القرار',
+        action: 'الحركة التالية',
+        high: 'مرتفع',
+        medium: 'متوسط',
+        low: 'منخفض',
+        rewrite: 'حوّل الشاشة الأولى إلى وعد واضح + دليل سريع + زر قرار واحد.',
+        proof: 'ضع أقوى دليل اجتماعي أو ضمان قبل أول زر قرار.',
+        cta: 'وحّد فعل CTA في الأعلى والسعر والنهاية حتى لا يتردد الزائر.',
+        order: 'أعد ترتيب الصفحة: وعد، دليل، عرض، سعر، اعتراضات، ثم CTA نهائي.',
+        verify: 'ثبّت كل ادعاء بدليل مرئي: تقييم، صورة، ضمان، سعر أو شرط واضح.'
     } : isEn ? {
         fallback: 'The page can convert, but the decision path needs stronger promise, proof, and action clarity.',
         verdictStrong: 'The page already has real selling signals. The opportunity is to turn them into a faster, more trusted decision path.',
@@ -9574,21 +9574,21 @@ function buildFunnelExecutiveSummaryModel(data, lang = STATE.currentLang || 'fr'
         order: 'Rebuild the sequence: promise, proof, offer, price, objections, final CTA.',
         verify: 'Attach each claim to visible proof: review, image, guarantee, price, or clear condition.'
     } : {
-        fallback: 'La page peut convertir, mais le chemin de dÃ©cision doit rendre la promesse, la preuve et lâ€™action plus Ã©videntes.',
-        verdictStrong: 'La page possÃ¨de dÃ©jÃ  de vrais signaux de vente. Lâ€™opportunitÃ© est de les transformer en parcours de dÃ©cision plus rapide et plus rassurant.',
-        verdictMedium: 'La page vend partiellement, mais les signaux dÃ©cisifs doivent Ãªtre mieux ordonnÃ©s, prouvÃ©s ou clarifiÃ©s avant le CTA.',
-        verdictRisk: 'La lecture nâ€™est pas assez solide pour un verdict stratÃ©gique dÃ©finitif. Les preuves doivent Ãªtre renforcÃ©es avant de trancher.',
-        observed: 'Ce qui est prouvÃ©',
-        missing: 'Ce qui menace la dÃ©cision',
+        fallback: 'La page peut convertir, mais le chemin de décision doit rendre la promesse, la preuve et l’action plus évidentes.',
+        verdictStrong: 'La page possède déjà de vrais signaux de vente. L’opportunité est de les transformer en parcours de décision plus rapide et plus rassurant.',
+        verdictMedium: 'La page vend partiellement, mais les signaux décisifs doivent être mieux ordonnés, prouvés ou clarifiés avant le CTA.',
+        verdictRisk: 'La lecture n’est pas assez solide pour un verdict stratégique définitif. Les preuves doivent être renforcées avant de trancher.',
+        observed: 'Ce qui est prouvé',
+        missing: 'Ce qui menace la décision',
         action: 'Mouvement suivant',
-        high: 'Ã‰levÃ©',
+        high: 'Élevé',
         medium: 'Moyen',
         low: 'Faible',
-        rewrite: 'Transformer le premier Ã©cran en promesse claire + preuve rapide + un seul CTA de dÃ©cision.',
-        proof: 'Placer la preuve sociale ou la garantie la plus forte avant le premier bouton de dÃ©cision.',
-        cta: 'Utiliser le mÃªme verbe CTA dans le hero, le prix et la fin de page.',
-        order: 'Reconstruire la sÃ©quence : promesse, preuve, offre, prix, objections, CTA final.',
-        verify: 'Attacher chaque promesse Ã  une preuve visible : avis, image, garantie, prix ou condition claire.'
+        rewrite: 'Transformer le premier écran en promesse claire + preuve rapide + un seul CTA de décision.',
+        proof: 'Placer la preuve sociale ou la garantie la plus forte avant le premier bouton de décision.',
+        cta: 'Utiliser le même verbe CTA dans le hero, le prix et la fin de page.',
+        order: 'Reconstruire la séquence : promesse, preuve, offre, prix, objections, CTA final.',
+        verify: 'Attacher chaque promesse à une preuve visible : avis, image, garantie, prix ou condition claire.'
     };
     const score = executiveScore(data, 'funnel');
     const source = data.funnelSurgery || data.funnelSectionSurgery || {};
@@ -9611,9 +9611,9 @@ function buildFunnelExecutiveSummaryModel(data, lang = STATE.currentLang || 'fr'
         normalized.add.map(item => item.section || item.sectionType || item.action),
         normalized.unconfirmed.map(item => item.section || item.sectionType || item.reason)
     ], 6);
-    const socialPresent = present.some(item => /testimonial|review|rating|avis|t[Ã©e]moignage|preuve sociale|social proof|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª/i.test(item));
-    const filteredWeak = weak.filter(item => !(socialPresent && /aucune preuve sociale|absence de preuve sociale|no social proof|missing social proof|Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø¯Ù„Ø© Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ©/i.test(item)));
-    const filteredMissing = missing.filter(item => !(socialPresent && /testimonial|review|avis|preuve sociale|social proof|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª/i.test(item)));
+    const socialPresent = present.some(item => /testimonial|review|rating|avis|t[ée]moignage|preuve sociale|social proof|تقييم|آراء|مراجعات|شهادات/i.test(item));
+    const filteredWeak = weak.filter(item => !(socialPresent && /aucune preuve sociale|absence de preuve sociale|no social proof|missing social proof|لا توجد أدلة اجتماعية/i.test(item)));
+    const filteredMissing = missing.filter(item => !(socialPresent && /testimonial|review|avis|preuve sociale|social proof|تقييم|آراء|مراجعات|شهادات/i.test(item)));
     const actions = executiveDedupList([
         normalized.improve.map(item => item.action || item.correction || item.improvement),
         normalized.add.map(item => item.action || item.recommendedSection?.title || item.suggestedContent?.title),
@@ -9718,29 +9718,29 @@ function renderExecutiveSummary(data, type, opts = {}) {
     const summaryLang = isAr ? 'ar' : isEn ? 'en' : 'fr';
     const model = buildExecutiveSummaryModel(data || {}, type, summaryLang);
     const safe = typeof escapeHtml === 'function' ? escapeHtml : String;
-    const fallback = isAr ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ù…ÙˆØ«ÙˆÙ‚Ø© ÙƒØ§ÙÙŠØ© Ø¨Ø¹Ø¯.' : isEn ? 'Not enough reliable data yet.' : 'DonnÃ©es fiables encore insuffisantes.';
+    const fallback = isAr ? 'لا توجد بيانات موثوقة كافية بعد.' : isEn ? 'Not enough reliable data yet.' : 'Données fiables encore insuffisantes.';
     const t = isAr ? {
-        kicker: 'Ø§Ù„Ù…Ù„Ø®Øµ Ø§Ù„ØªÙ†ÙÙŠØ°ÙŠ Â· Ù‚Ø±Ø§Ø¡Ø© 3 Ø¯Ù‚Ø§Ø¦Ù‚', title: 'Ù…Ø§ ÙŠØ¬Ø¨ Ù…Ø¹Ø±ÙØªÙ‡ ÙˆØ§ØªØ®Ø§Ø°Ù‡ Ø§Ù„Ø¢Ù†',
-        score: 'Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ø¹Ø§Ù…Ø©', opportunities: 'Ø£ÙØ¶Ù„ 3 ÙØ±Øµ', weaknesses: 'Ø£Ù‡Ù… 3 Ù†Ù‚Ø§Ø· Ø¶Ø¹Ù',
-        actions: '5 Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø°Ø§Øª Ø£ÙˆÙ„ÙˆÙŠØ©', quick: 'Ù…ÙƒØ§Ø³Ø¨ Ø³Ø±ÙŠØ¹Ø© Ø®Ù„Ø§Ù„ 7 Ø£ÙŠØ§Ù…', plan: 'Ø®Ø·Ø© 30 ÙŠÙˆÙ…Ø§',
-        summary: 'Ù…Ù„Ø®Øµ 3 Ø¯Ù‚Ø§Ø¦Ù‚', analysis: 'ØªØ­Ù„ÙŠÙ„ 30 Ø¯Ù‚ÙŠÙ‚Ø©', full: 'Ø¹Ø±Ø¶ Ø§Ù„Ù…Ù„Ù Ø§Ù„ÙƒØ§Ù…Ù„',
-        impact: 'Ø§Ù„Ø£Ø«Ø±', effort: 'Ø§Ù„Ø¬Ù‡Ø¯', priority: 'Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ©', keywords: 'ÙƒÙ„Ù…Ø§Øª Ø­Ù‚ÙŠÙ‚ÙŠØ© Ù…Ù† Ø§Ù„ØµÙØ­Ø©'
+        kicker: 'الملخص التنفيذي · قراءة 3 دقائق', title: 'ما يجب معرفته واتخاذه الآن',
+        score: 'النتيجة العامة', opportunities: 'أفضل 3 فرص', weaknesses: 'أهم 3 نقاط ضعف',
+        actions: '5 إجراءات ذات أولوية', quick: 'مكاسب سريعة خلال 7 أيام', plan: 'خطة 30 يوما',
+        summary: 'ملخص 3 دقائق', analysis: 'تحليل 30 دقيقة', full: 'عرض الملف الكامل',
+        impact: 'الأثر', effort: 'الجهد', priority: 'الأولوية', keywords: 'كلمات حقيقية من الصفحة'
     } : isEn ? {
-        kicker: 'Executive summary Â· 3-minute read', title: 'What to know and do now',
+        kicker: 'Executive summary · 3-minute read', title: 'What to know and do now',
         score: 'Global score', opportunities: 'Top 3 opportunities', weaknesses: 'Top 3 critical weaknesses',
-        actions: '5 priority actions', quick: 'Quick wins Â· 7 days', plan: '30-day plan',
+        actions: '5 priority actions', quick: 'Quick wins · 7 days', plan: '30-day plan',
         summary: '3-minute summary', analysis: '30-minute analysis', full: 'View full dossier',
         impact: 'Impact', effort: 'Effort', priority: 'Priority', keywords: 'Real words from the page'
     } : {
-        kicker: 'RÃ©sumÃ© exÃ©cutif Â· lecture 3 minutes', title: 'Ce quâ€™il faut comprendre et dÃ©cider maintenant',
-        score: 'Score global', opportunities: 'Top 3 opportunitÃ©s', weaknesses: 'Top 3 faiblesses critiques',
-        actions: '5 actions prioritaires', quick: 'Quick wins Â· 7 jours', plan: 'Plan 30 jours',
-        summary: 'RÃ©sumÃ© 3 min', analysis: 'Analyse 30 min', full: 'Voir le dossier complet',
-        impact: 'Impact', effort: 'Effort', priority: 'PrioritÃ©', keywords: 'Mots rÃ©els du site'
+        kicker: 'Résumé exécutif · lecture 3 minutes', title: 'Ce qu’il faut comprendre et décider maintenant',
+        score: 'Score global', opportunities: 'Top 3 opportunités', weaknesses: 'Top 3 faiblesses critiques',
+        actions: '5 actions prioritaires', quick: 'Quick wins · 7 jours', plan: 'Plan 30 jours',
+        summary: 'Résumé 3 min', analysis: 'Analyse 30 min', full: 'Voir le dossier complet',
+        impact: 'Impact', effort: 'Effort', priority: 'Priorité', keywords: 'Mots réels du site'
     };
     const list = (items) => `<ul>${(items.length ? items : [fallback]).map(item => `<li>${safe(executiveText(item))}</li>`).join('')}</ul>`;
-    const defaultImpact = isAr ? 'Ù…ØªÙˆØ³Ø·' : isEn ? 'Medium' : 'Moyen';
-    const defaultEffort = isAr ? 'Ù…Ù†Ø®ÙØ¶' : isEn ? 'Low' : 'Faible';
+    const defaultImpact = isAr ? 'متوسط' : isEn ? 'Medium' : 'Moyen';
+    const defaultEffort = isAr ? 'منخفض' : isEn ? 'Low' : 'Faible';
     const actions = (model.actions.length ? model.actions : [{ title: fallback, impact: defaultImpact, effort: defaultEffort, priority: '1' }])
         .map((action, index) => ({
             ...action,
@@ -9749,17 +9749,17 @@ function renderExecutiveSummary(data, type, opts = {}) {
             priority: executiveIsUsefulText(action.priority) ? action.priority : String(index + 1)
         }));
     const pulse = isAr ? {
-        verdict: 'Ø§Ù„Ù‚Ø±Ø§Ø±', leverage: 'Ø§Ù„Ø±Ø§ÙØ¹Ø© Ø§Ù„Ø£Ù‚ÙˆÙ‰', risk: 'Ø§Ù„Ø®Ø·Ø± Ø§Ù„ÙÙˆØ±ÙŠ', move: 'Ø§Ù„Ø®Ø·ÙˆØ© Ø§Ù„ØªØ§Ù„ÙŠØ©',
-        proof: 'Ø®Ù„Ø§ØµØ© Ù…Ø¨Ù†ÙŠØ© Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø© ÙÙŠ Ø§Ù„ØµÙØ­Ø©',
-        chart: 'Ù„ÙˆØ­Ø© Ø§Ù„Ù‚Ø±Ø§Ø±', mind: 'Ø®Ø±ÙŠØ·Ø© Ø§Ù„ØªÙÙƒÙŠØ±'
+        verdict: 'القرار', leverage: 'الرافعة الأقوى', risk: 'الخطر الفوري', move: 'الخطوة التالية',
+        proof: 'خلاصة مبنية على الأدلة المرصودة في الصفحة',
+        chart: 'لوحة القرار', mind: 'خريطة التفكير'
     } : isEn ? {
         verdict: 'Decision', leverage: 'Strongest lever', risk: 'Immediate risk', move: 'Next move',
         proof: 'A synthesis grounded in observed page evidence',
         chart: 'Decision dashboard', mind: 'Thinking map'
     } : {
-        verdict: 'DÃ©cision', leverage: 'Levier le plus fort', risk: 'Risque immÃ©diat', move: 'Prochaine action',
-        proof: 'Une synthÃ¨se fondÃ©e sur les preuves rÃ©ellement observÃ©es',
-        chart: 'Dashboard dÃ©cisionnel', mind: 'Carte mentale'
+        verdict: 'Décision', leverage: 'Levier le plus fort', risk: 'Risque immédiat', move: 'Prochaine action',
+        proof: 'Une synthèse fondée sur les preuves réellement observées',
+        chart: 'Dashboard décisionnel', mind: 'Carte mentale'
     };
     const pulseData = model.pulse || {};
     const pulseItems = [
@@ -9770,11 +9770,11 @@ function renderExecutiveSummary(data, type, opts = {}) {
     ];
     const dashboard = model.dashboard || {};
     const dashboardItems = [
-        ['fa-eye', isAr ? 'Ù…Ø±ØµÙˆØ¯' : isEn ? 'Observed' : 'ObservÃ©', dashboard.present],
-        ['fa-wand-magic-sparkles', isAr ? 'Ù„Ù„ØªÙ‚ÙˆÙŠØ©' : isEn ? 'To strengthen' : 'Ã€ renforcer', dashboard.weak],
-        ['fa-circle-question', isAr ? 'Ù„Ù„ØªØ­Ù‚Ù‚' : isEn ? 'To verify' : 'Ã€ vÃ©rifier', dashboard.missing],
-        ['fa-list-check', isAr ? 'Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª' : isEn ? 'Actions' : 'Actions', dashboard.actions],
-        ['fa-shield-halved', isAr ? 'Ø§Ù„Ø«Ù‚Ø©' : isEn ? 'Confidence' : 'Confiance', dashboard.confidence]
+        ['fa-eye', isAr ? 'مرصود' : isEn ? 'Observed' : 'Observé', dashboard.present],
+        ['fa-wand-magic-sparkles', isAr ? 'للتقوية' : isEn ? 'To strengthen' : 'À renforcer', dashboard.weak],
+        ['fa-circle-question', isAr ? 'للتحقق' : isEn ? 'To verify' : 'À vérifier', dashboard.missing],
+        ['fa-list-check', isAr ? 'إجراءات' : isEn ? 'Actions' : 'Actions', dashboard.actions],
+        ['fa-shield-halved', isAr ? 'الثقة' : isEn ? 'Confidence' : 'Confiance', dashboard.confidence]
     ].filter(([, , value]) => value !== null && value !== undefined && value !== '');
     const mindItems = [
         [pulse.verdict, pulseData.decision || model.verdict],
@@ -9791,7 +9791,7 @@ function renderExecutiveSummary(data, type, opts = {}) {
                 <h2>${safe(t.title)}</h2>
                 <p class="executive-verdict">${safe(model.verdict || fallback)}</p>
             </div>
-            <div class="executive-score"><strong>${model.score === null ? 'â€”' : `${model.score}/100`}</strong><small>${safe(t.score)}</small></div>
+            <div class="executive-score"><strong>${model.score === null ? '—' : `${model.score}/100`}</strong><small>${safe(t.score)}</small></div>
         </div>
         <div class="executive-decision-pulse">
             <p class="executive-proof-line"><i class="fas fa-circle-check"></i>${safe(pulse.proof)}</p>
@@ -9840,12 +9840,12 @@ function renderExecutiveSummary(data, type, opts = {}) {
 /* Daka report runtime moved to /assets/daka-report-runtime.js to avoid inline-code leakage. */
 
 function initEventListeners() {
-    // ðŸ”¥ FIX FORM SUBMITS - CENTRALISATION DES 4 MODULES (ZÃ©ro Refresh)
+    // 🔥 FIX FORM SUBMITS - CENTRALISATION DES 4 MODULES (Zéro Refresh)
 
     // 1. Module Concurrents
     const formCompetitors = document.getElementById('competitorsForm');
     if (formCompetitors) {
-        formCompetitors.removeEventListener('submit', analyzeCompetitors); // Nettoyage prÃ©ventif
+        formCompetitors.removeEventListener('submit', analyzeCompetitors); // Nettoyage préventif
         formCompetitors.addEventListener('submit', analyzeCompetitors);
     }
 
@@ -9870,7 +9870,7 @@ function initEventListeners() {
         formKeywords.addEventListener('submit', analyzeKeywords);
     }
 
-    // âŒ¨ï¸ Raccourcis Clavier Global (Ctrl+E / Cmd+E pour Export)
+    // ⌨️ Raccourcis Clavier Global (Ctrl+E / Cmd+E pour Export)
     document.addEventListener('keydown', (e) => {
         if ((e.ctrlKey || e.metaKey) && e.key === 'e') {
             e.preventDefault();
@@ -9878,7 +9878,7 @@ function initEventListeners() {
         }
     });
 
-    console.log('âœ… Event listeners OK - 4 forms cÃ¢blÃ©s & sÃ©curisÃ©s');
+    console.log('✅ Event listeners OK - 4 forms câblés & sécurisés');
 }
 
 
@@ -9899,7 +9899,7 @@ async function analyzeFunnel(e) {
 
   if (!url)
     return toast.warning(STATE.currentLang === 'ar'
-      ? 'Ø£Ø¯Ø®Ù„ URL Ø§Ù„Ù‡Ø¯Ù.'
+      ? 'أدخل URL الهدف.'
       : 'Entrez l\'URL de la cible.');
 
   // Validation URL
@@ -9909,7 +9909,7 @@ async function analyzeFunnel(e) {
     if (!elUrl.value.trim().includes('.')) throw new Error('Invalid');
   } catch {
     return toast.error(
-      STATE.currentLang === 'ar' ? 'URL ØºÙŠØ± ØµØ§Ù„Ø­'
+      STATE.currentLang === 'ar' ? 'URL غير صالح'
       : STATE.currentLang === 'en' ? 'Invalid URL format.'
       : 'Format URL invalide. Ex: https://concurrent.com'
     );
@@ -9928,17 +9928,17 @@ async function analyzeFunnel(e) {
   })();
   if (window.dakaFunnelAnalysisInFlight) {
     const message = STATE.currentLang === 'ar'
-      ? 'ØªØ­Ù„ÙŠÙ„ Funnel Ø¬Ø§Ø± Ø¨Ø§Ù„ÙØ¹Ù„. Ø§Ù†ØªØ¸Ø± Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø£Ùˆ Ø£Ù„Øº Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ø­Ø§Ù„ÙŠ.'
+      ? 'تحليل Funnel جار بالفعل. انتظر النتيجة أو ألغ التحليل الحالي.'
       : STATE.currentLang === 'en'
         ? 'A Funnel analysis is already running. Wait for it or cancel it first.'
-        : 'Une analyse Funnel est dÃ©jÃ  en cours. Attendez le rÃ©sultat ou annulez-la.';
+        : 'Une analyse Funnel est déjà en cours. Attendez le résultat ou annulez-la.';
     toast.info(message);
     return;
   }
   const runToken = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   window.dakaFunnelAnalysisInFlight = { token: runToken, requestKey, startedAt: Date.now() };
 
-  /* â”€â”€ RESET avant nouvelle analyse â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+  /* ── RESET avant nouvelle analyse ────────────────────────── */
   resetAnalysis('funnel');
 
   setButtonLoading('funnelBtn', true);
@@ -9955,13 +9955,13 @@ async function analyzeFunnel(e) {
     });
 
     if (!response || typeof response !== 'object')
-      throw new Error('RÃ©ponse serveur invalide');
+      throw new Error('Réponse serveur invalide');
 
     if (response.success) {
       response.analysisLang = lang;
       response.lang = response.lang || lang;
       response.userLang = response.userLang || lang;
-      /* â”€â”€ Persistance STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+      /* ── Persistance STATE ──────────────────────────────── */
       STATE.lastFunnelResults   = response;
       STATE.lastInputs.funnelUrl = url;
       STATE.lastInputs.funnelLang = lang;
@@ -9970,10 +9970,10 @@ async function analyzeFunnel(e) {
 
       displayFunnelResults(response);
       toast.success(STATE.currentLang === 'ar'
-        ? 'âœ… ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ù‚Ù…Ø¹ Ø§ÙƒØªÙ…Ù„!'
-        : 'âœ… Analyse Funnel AIDA terminÃ©e !');
+        ? '✅ تحليل القمع اكتمل!'
+        : '✅ Analyse Funnel AIDA terminée !');
     } else {
-      throw new Error(response.error || 'Ã‰chec analyse funnel');
+      throw new Error(response.error || 'Échec analyse funnel');
     }
   } catch (error) {
     if (error?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
@@ -9985,14 +9985,14 @@ async function analyzeFunnel(e) {
     const authError = status === 401 || /AUTH_REQUIRED|INVALID_SESSION|Connectez-vous/i.test(String(error?.message || ''));
     const quotaError = status === 429 || /QUOTA|quota/i.test(String(error?.message || ''));
     const title = authError
-      ? (isAr ? 'ÙŠØ¬Ø¨ ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„' : isEn ? 'Sign-in required' : 'Connexion requise')
+      ? (isAr ? 'يجب تسجيل الدخول' : isEn ? 'Sign-in required' : 'Connexion requise')
       : quotaError
-        ? (isAr ? 'ØªÙ… Ø¨Ù„ÙˆØº Ø­Ø¯ Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±' : isEn ? 'Report quota reached' : 'Quota de rapports atteint')
-        : (isAr ? 'ØªØ¹Ø°Ø± Ø¥ÙƒÙ…Ø§Ù„ Ø§Ù„ØªØ­Ù„ÙŠÙ„' : isEn ? 'Analysis could not be completed' : 'Lâ€™analyse nâ€™a pas pu Ãªtre terminÃ©e');
+        ? (isAr ? 'تم بلوغ حد التقارير' : isEn ? 'Report quota reached' : 'Quota de rapports atteint')
+        : (isAr ? 'تعذر إكمال التحليل' : isEn ? 'Analysis could not be completed' : 'L’analyse n’a pas pu être terminée');
     const message = String(
       error?.data?.message ||
       error?.message ||
-      (isAr ? 'ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„Ø§ØªØµØ§Ù„ Ø«Ù… Ø£Ø¹Ø¯ Ø§Ù„Ù…Ø­Ø§ÙˆÙ„Ø©.' : isEn ? 'Check the connection and try again.' : 'VÃ©rifiez la connexion puis relancez.')
+      (isAr ? 'تحقق من الاتصال ثم أعد المحاولة.' : isEn ? 'Check the connection and try again.' : 'Vérifiez la connexion puis relancez.')
     );
 
     const results = document.getElementById('resultsFunnel');
@@ -10003,7 +10003,7 @@ async function analyzeFunnel(e) {
           <strong>${escapeHtml(title)}</strong>
           <p dir="auto">${escapeHtml(message)}</p>
           ${authError ? `<button type="button" data-no-collapse="true" class="btn-primary" onclick="event.stopPropagation();openAuthModal()">
-            <i class="fas fa-right-to-bracket"></i> ${isAr ? 'ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯Ø®ÙˆÙ„' : isEn ? 'Sign in' : 'Se connecter'}
+            <i class="fas fa-right-to-bracket"></i> ${isAr ? 'تسجيل الدخول' : isEn ? 'Sign in' : 'Se connecter'}
           </button>` : ''}
         </div>
       </section>`;
@@ -10021,7 +10021,7 @@ async function analyzeFunnel(e) {
 }
 
 function renderBundleSuggested(bundleSuggested) {
-  if (!bundleSuggested) return '<div style="opacity:.6">â€”</div>';
+  if (!bundleSuggested) return '<div style="opacity:.6">—</div>';
 
   if (typeof bundleSuggested === 'string') {
     return `<div>${escapeHtml(bundleSuggested)}</div>`;
@@ -10037,7 +10037,7 @@ function renderBundleSuggested(bundleSuggested) {
         const name = item.name || item.title || `Bundle ${index + 1}`;
         const price = item.price !== undefined && item.price !== null && item.price !== ''
           ? `${escapeHtml(String(item.price))}`
-          : 'â€”';
+          : '—';
         const items = Array.isArray(item.items)
           ? item.items.map(x => `<li>${escapeHtml(String(x))}</li>`).join('')
           : '';
@@ -10056,7 +10056,7 @@ function renderBundleSuggested(bundleSuggested) {
       return '';
     }).join('');
 
-    return html || '<div style="opacity:.6">â€”</div>';
+    return html || '<div style="opacity:.6">—</div>';
   }
 
   if (typeof bundleSuggested === 'object') {
@@ -10071,10 +10071,10 @@ function renderBundleSuggested(bundleSuggested) {
 
   return `<div>${escapeHtml(String(bundleSuggested))}</div>`;
 }
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// PATCH FRONT A â€” Normalisation audit backend V12
-// Ã€ mettre en haut de displayFunnelResults(data)
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────
+// PATCH FRONT A — Normalisation audit backend V12
+// À mettre en haut de displayFunnelResults(data)
+// ─────────────────────────────────────────────
 // ===================== DATA TERRAIN UI (sans nom provider) =====================
 function getVerifiedSocialChannels(leaderMoat = {}) {
     const authority = leaderMoat?.brandAuthority || {};
@@ -10130,7 +10130,7 @@ function synchronizeLeaderSocialProof(data = {}) {
     data.proofModel = data.proofModel && typeof data.proofModel === 'object' ? data.proofModel : {};
     data.proofModel.observed = Array.isArray(data.proofModel.observed) ? data.proofModel.observed : [];
     data.proofModel.unavailable = Array.isArray(data.proofModel.unavailable) ? data.proofModel.unavailable : [];
-    const socialPattern = /(social proof links|verified social|social networks|rÃ©seaux sociaux|liens sociaux|Ø±ÙˆØ§Ø¨Ø· Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ©|Ø´Ø¨ÙƒØ§Øª Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ©)/i;
+    const socialPattern = /(social proof links|verified social|social networks|réseaux sociaux|liens sociaux|روابط اجتماعية|شبكات اجتماعية)/i;
     data.proofModel.unavailable = data.proofModel.unavailable.filter(item =>
         !socialPattern.test(String(typeof item === 'string' ? item : item?.title || item?.value || ''))
     );
@@ -10142,9 +10142,9 @@ function synchronizeLeaderSocialProof(data = {}) {
     } else {
         data.proofModel.observed.push({
             type: 'observed',
-            title: isAr ? 'Ø±ÙˆØ§Ø¨Ø· Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ© Ù…ÙˆØ«Ù‚Ø©' : isEn ? 'Verified social channels' : 'RÃ©seaux sociaux vÃ©rifiÃ©s',
+            title: isAr ? 'روابط اجتماعية موثقة' : isEn ? 'Verified social channels' : 'Réseaux sociaux vérifiés',
             value: channels.map(item => item.platform).join(', '),
-            source: isAr ? 'Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ø±Ø³Ù…ÙŠ Ù„Ù„Ù…ØªØµØ¯Ø±' : isEn ? 'Leader official website' : 'Site officiel du leader',
+            source: isAr ? 'الموقع الرسمي للمتصدر' : isEn ? 'Leader official website' : 'Site officiel du leader',
             confidence: 'HIGH',
             evidence: channels.map(item => ({ url: item.url, label: item.platform }))
         });
@@ -10220,7 +10220,7 @@ function buildFieldIntelModel(raw, leaderMoat = {}) {
 }
 
 function renderFieldLinksBlock(items = [], color = '#94a3b8', esc = escapeHtml) {
-    if (!items.length) return `<div style="font-size:.75rem;color:#64748b;">â€”</div>`;
+    if (!items.length) return `<div style="font-size:.75rem;color:#64748b;">—</div>`;
     return items.slice(0, 25).map((u, i) => `
         <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;">
             <span style="color:${color};font-size:.72rem;min-width:18px;">${i + 1}.</span>
@@ -10326,7 +10326,7 @@ function renderFieldGuideTop(model, { isAr = false, isEn = false, dir = 'ltr', e
 function renderFieldStudiesBottom(model, { isAr = false, isEn = false, dir = 'ltr', esc = escapeHtml } = {}) {
     if (!model || !model.triggered || !model.studiesBottom.length) return '';
 
-    const title = isAr ? 'Ø¯Ø±Ø§Ø³Ø§Øª ÙˆÙ…Ù„Ø§Ø­Ø¸Ø§Øª Ù…ÙŠØ¯Ø§Ù†ÙŠØ©' : isEn ? 'Field Studies' : 'Ã‰tudes Terrain';
+    const title = isAr ? 'دراسات وملاحظات ميدانية' : isEn ? 'Field Studies' : 'Études Terrain';
 
     return `
     <div class="result-card fade-in-up" style="margin-bottom:22px;border-left:4px solid #6366f1;" dir="${dir}">
@@ -10337,7 +10337,7 @@ function renderFieldStudiesBottom(model, { isAr = false, isEn = false, dir = 'lt
             ${model.studiesBottom.slice(0, 20).map((s, i) => `
                 <div style="padding:10px;border-radius:10px;background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);">
                     <div style="font-size:.66rem;color:#94a3b8;margin-bottom:5px;">
-                        #${i + 1} â€¢ ${esc(s.source || 'source')}
+                        #${i + 1} • ${esc(s.source || 'source')}
                     </div>
                     ${s.text ? `<div style="font-size:.79rem;color:#e2e8f0;line-height:1.55;margin-bottom:6px;" dir="auto">${esc(s.text)}</div>` : ''}
                     ${s.link ? `<a href="${esc(s.link)}" target="_blank" rel="noopener noreferrer" style="font-size:.75rem;color:#93c5fd;word-break:break-all;text-decoration:none;">${esc(s.link)}</a>` : ''}
@@ -10360,12 +10360,12 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
     const reliable = data.scrapeReliability || {};
     const concrete = Array.isArray(data.concreteActionPlan) ? data.concreteActionPlan : [];
 
-    const title = brief.title || (isAr ? 'Ù…Ø§ ÙŠØ¬Ø¨ ÙØ¹Ù„Ù‡ Ø§Ù„Ø¢Ù†' : isEn ? 'What to do now' : 'Ce qu il faut faire maintenant');
-    const proofTitle = proof.title || (isAr ? 'Ø£Ø¯Ù„Ø© Ø§Ù„Ù‚Ø±Ø§Ø±' : isEn ? 'Decision evidence' : 'Preuves de dÃ©cision');
-    const observedLabel = labels.observed || (isAr ? 'Ù…Ø±ØµÙˆØ¯' : isEn ? 'Observed' : 'Observe');
-    const deducedLabel = labels.deduced || (isAr ? 'Ù…Ø³ØªÙ†ØªØ¬' : isEn ? 'Deduced' : 'Deduit');
-    const recommendedLabel = labels.recommended || (isAr ? 'Ù…ÙˆØµÙ‰ Ø¨Ù‡' : isEn ? 'Recommended' : 'Recommande');
-    const unavailableLabel = labels.unavailable || (isAr ? 'ØºÙŠØ± Ù…ØªØ§Ø­' : isEn ? 'Unavailable' : 'Non disponible');
+    const title = brief.title || (isAr ? 'ما يجب فعله الآن' : isEn ? 'What to do now' : 'Ce qu il faut faire maintenant');
+    const proofTitle = proof.title || (isAr ? 'أدلة القرار' : isEn ? 'Decision evidence' : 'Preuves de décision');
+    const observedLabel = labels.observed || (isAr ? 'مرصود' : isEn ? 'Observed' : 'Observe');
+    const deducedLabel = labels.deduced || (isAr ? 'مستنتج' : isEn ? 'Deduced' : 'Deduit');
+    const recommendedLabel = labels.recommended || (isAr ? 'موصى به' : isEn ? 'Recommended' : 'Recommande');
+    const unavailableLabel = labels.unavailable || (isAr ? 'غير متاح' : isEn ? 'Unavailable' : 'Non disponible');
 
     const clean = (v, fallback = '') => {
         if (v === null || v === undefined) return fallback;
@@ -10383,7 +10383,7 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
                 </span>
             </div>
             <div style="color:#dbeafe;font-size:.84rem;line-height:1.5;margin-bottom:6px;" dir="auto">${esc(clean(fact.value, unavailableLabel))}</div>
-            ${fact.formula ? `<div style="color:#94a3b8;font-size:.72rem;line-height:1.45;"><b>${isAr ? 'Ø·Ø±ÙŠÙ‚Ø©:' : isEn ? 'Method:' : 'Methode:'}</b> ${esc(fact.formula)}</div>` : ''}
+            ${fact.formula ? `<div style="color:#94a3b8;font-size:.72rem;line-height:1.45;"><b>${isAr ? 'طريقة:' : isEn ? 'Method:' : 'Methode:'}</b> ${esc(fact.formula)}</div>` : ''}
             ${fact.source ? `<div style="color:#64748b;font-size:.7rem;margin-top:6px;">${esc(fact.source)}</div>` : ''}
             ${Array.isArray(fact.evidence) && fact.evidence.length ? `
                 <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">
@@ -10428,11 +10428,11 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
         <div style="padding:22px;border-bottom:1px solid rgba(255,255,255,.07);display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.9fr);gap:18px;align-items:stretch;">
             <div>
                 <div style="color:#a5b4fc;font-size:.68rem;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;margin-bottom:8px;">${esc(title)}</div>
-                <h2 style="margin:0 0 10px;color:white;font-size:clamp(1.25rem,2vw,1.85rem);line-height:1.22;font-family:Cairo,sans-serif;" dir="auto">${esc(clean(brief.priority, isAr ? 'Ø§Ø¨Ø¯Ø£ Ø¨Ø§Ù„ØªØ­Ø³ÙŠÙ† Ø§Ù„Ø§ÙƒØ«Ø± ØªØ£Ø«ÙŠØ±Ø§.' : isEn ? 'Start with the highest-impact improvement.' : 'Commencez par l amelioration la plus impactante.'))}</h2>
+                <h2 style="margin:0 0 10px;color:white;font-size:clamp(1.25rem,2vw,1.85rem);line-height:1.22;font-family:Cairo,sans-serif;" dir="auto">${esc(clean(brief.priority, isAr ? 'ابدأ بالتحسين الاكثر تأثيرا.' : isEn ? 'Start with the highest-impact improvement.' : 'Commencez par l amelioration la plus impactante.'))}</h2>
                 ${brief.why ? `<p style="margin:0;color:#94a3b8;line-height:1.65;font-size:.92rem;" dir="auto">${esc(brief.why)}</p>` : ''}
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;">
                     <span style="color:#c4b5fd;background:rgba(139,92,246,.12);border:1px solid rgba(139,92,246,.24);padding:5px 10px;border-radius:999px;font-size:.72rem;font-weight:800;">${esc(clean(brief.confidence, 'MEDIUM'))}</span>
-                    <span style="color:#93c5fd;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.22);padding:5px 10px;border-radius:999px;font-size:.72rem;font-weight:800;">${Number(brief.evidenceCount || 0)} ${isAr ? 'Ø¯Ù„ÙŠÙ„' : isEn ? 'proofs' : 'preuves'}</span>
+                    <span style="color:#93c5fd;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.22);padding:5px 10px;border-radius:999px;font-size:.72rem;font-weight:800;">${Number(brief.evidenceCount || 0)} ${isAr ? 'دليل' : isEn ? 'proofs' : 'preuves'}</span>
                 </div>
             </div>
             <div style="display:grid;gap:9px;">
@@ -10447,14 +10447,14 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
             ${renderFactGroup(deducedLabel, proof.deduced, '#f59e0b', 'fa-calculator')}
             ${renderFactGroup(recommendedLabel, proof.recommended, '#10b981', 'fa-list-check')}
             ${(proof.unavailable || []).length ? renderFactGroup(unavailableLabel, proof.unavailable, '#ef4444', 'fa-circle-exclamation') : ''}
-            ${integrity.counts ? `<div style="color:#64748b;font-size:.72rem;border-top:1px solid rgba(255,255,255,.06);padding-top:12px;">${isAr ? 'ÙØµÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª:' : isEn ? 'Data separation:' : 'Separation des donnees:'} ${observedLabel} ${integrity.counts.observed || 0} / ${deducedLabel} ${integrity.counts.deduced || 0} / ${recommendedLabel} ${integrity.counts.recommended || 0}</div>` : ''}
+            ${integrity.counts ? `<div style="color:#64748b;font-size:.72rem;border-top:1px solid rgba(255,255,255,.06);padding-top:12px;">${isAr ? 'فصل البيانات:' : isEn ? 'Data separation:' : 'Separation des donnees:'} ${observedLabel} ${integrity.counts.observed || 0} / ${deducedLabel} ${integrity.counts.deduced || 0} / ${recommendedLabel} ${integrity.counts.recommended || 0}</div>` : ''}
         </div>
     </section>`;
 }
 
 function repairFunnelSurgeryText(value) {
     const text = String(value ?? '');
-    if (!/[ÃƒÃ‚Ã˜Ã™]/.test(text)) return text;
+    if (!/[ÃÂØÙ]/.test(text)) return text;
     try { return decodeURIComponent(escape(text)); } catch (_) { return text; }
 }
 
@@ -10478,12 +10478,12 @@ function normalizeFunnelSurgeryForRender(data = {}) {
     const rowsFor = pattern => matrix.filter(row => pattern.test(repairFunnelSurgeryText(row?.decision).toLowerCase()));
     return {
         matrix,
-        keep: list(diagnosis.keep, source.keepSections, rowsFor(/garder|keep|Ø¥Ø¨Ù‚Ø§Ø¡/)),
-        improve: list(diagnosis.improve, source.improveSections, source.updateSections, source.sectionsToModify, rowsFor(/amÃ©liorer|ameliorer|improve|modify|modifier|ØªØ­Ø³ÙŠÙ†/)),
-        move: list(diagnosis.move, source.moveSections, rowsFor(/dÃ©placer|deplacer|move|Ù†Ù‚Ù„/)),
-        remove: list(diagnosis.removeOrMerge, source.removeOrMergeSections, source.sectionsToRemoveOrMerge, source.sectionsToRemove, rowsFor(/supprimer|fusionner|remove|merge|Ø­Ø°Ù|Ø¯Ù…Ø¬/)),
-        add: list(diagnosis.add, source.missingSections, source.sectionsToAdd, rowsFor(/ajouter|add|missing|Ø¥Ø¶Ø§ÙØ©/)),
-        unconfirmed: list(diagnosis.unconfirmed, source.unconfirmedSections, rowsFor(/non confirmÃ©|unconfirmed|ØºÙŠØ± Ù…Ø¤ÙƒØ¯/)),
+        keep: list(diagnosis.keep, source.keepSections, rowsFor(/garder|keep|إبقاء/)),
+        improve: list(diagnosis.improve, source.improveSections, source.updateSections, source.sectionsToModify, rowsFor(/améliorer|ameliorer|improve|modify|modifier|تحسين/)),
+        move: list(diagnosis.move, source.moveSections, rowsFor(/déplacer|deplacer|move|نقل/)),
+        remove: list(diagnosis.removeOrMerge, source.removeOrMergeSections, source.sectionsToRemoveOrMerge, source.sectionsToRemove, rowsFor(/supprimer|fusionner|remove|merge|حذف|دمج/)),
+        add: list(diagnosis.add, source.missingSections, source.sectionsToAdd, rowsFor(/ajouter|add|missing|إضافة/)),
+        unconfirmed: list(diagnosis.unconfirmed, source.unconfirmedSections, rowsFor(/non confirmé|unconfirmed|غير مؤكد/)),
         reconciliation: source.reconciliation || {}
     };
 }
@@ -10494,29 +10494,29 @@ function renderFunnelSectionSurgery(data, opts = {}) {
     const model = normalizeFunnelSurgeryForRender(data);
     if (!(model.matrix.length || model.keep.length || model.improve.length || model.move.length || model.remove.length || model.add.length)) return '';
     const copy = isAr ? {
-        eyebrow: 'ØªØ´Ø±ÙŠØ­ ØµÙØ­Ø© Ø§Ù„ØªØ­ÙˆÙŠÙ„', title: 'Ø¨Ù†ÙŠØ© Ø§Ù„ØµÙØ­Ø© Ø§Ù„Ù…ÙƒØªØ´ÙØ©', subtitle: 'Ù…Ø§ ÙŠØ¬Ø¨ Ø§Ù„Ø­ÙØ§Ø¸ Ø¹Ù„ÙŠÙ‡ Ø£Ùˆ ØªØ¹Ø¯ÙŠÙ„Ù‡ Ø£Ùˆ Ù†Ù‚Ù„Ù‡ Ø£Ùˆ Ø­Ø°ÙÙ‡ Ø£Ùˆ Ø¥Ø¶Ø§ÙØªÙ‡ØŒ Ø¨Ù†Ø§Ø¡ Ø¹Ù„Ù‰ Ø§Ù„Ø¹Ù†Ø§ØµØ± Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø©.',
-        keep: 'Ø£Ù‚Ø³Ø§Ù… ÙŠØ¬Ø¨ Ø§Ù„Ø­ÙØ§Ø¸ Ø¹Ù„ÙŠÙ‡Ø§', improve: 'Ø£Ù‚Ø³Ø§Ù… ÙŠØ¬Ø¨ ØªØ¹Ø¯ÙŠÙ„Ù‡Ø§', move: 'Ø£Ù‚Ø³Ø§Ù… ÙŠØ¬Ø¨ Ù†Ù‚Ù„Ù‡Ø§', remove: 'Ø£Ù‚Ø³Ø§Ù… ÙŠØ¬Ø¨ Ø­Ø°ÙÙ‡Ø§ Ø£Ùˆ Ø¯Ù…Ø¬Ù‡Ø§', add: 'Ø£Ù‚Ø³Ø§Ù… ØºØ§Ø¦Ø¨Ø© ÙŠØ¬Ø¨ Ø¥Ø¶Ø§ÙØªÙ‡Ø§',
-        evidence: 'Ø§Ù„Ø¯Ù„ÙŠÙ„ Ø§Ù„Ù…Ø±ØµÙˆØ¯', action: 'Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø§Ù„Ø¯Ù‚ÙŠÙ‚', confidence: 'Ø§Ù„Ø«Ù‚Ø©', problem: 'Ø§Ù„Ù…Ø´ÙƒÙ„Ø©', impact: 'Ø£Ø«Ø± Ø§Ù„ØªØ­ÙˆÙŠÙ„', source: 'Ù…ØµØ¯Ø± Ø§Ù„Ù‚Ø±Ø§Ø±', empty: 'Ù„Ø§ ØªÙˆØ¬Ø¯ ØªÙˆØµÙŠØ© Ù…ÙˆØ«ÙˆÙ‚Ø© ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„ÙØ¦Ø©.', checked: 'Ø¹Ù†ØµØ±Ø§ ØªÙ… ÙØ­ØµÙ‡', coverage: 'ØªØºØ·ÙŠØ© Ø§Ù„Ø£Ø¯Ù„Ø©', items: 'Ø¹Ù†Ø§ØµØ±'
+        eyebrow: 'تشريح صفحة التحويل', title: 'بنية الصفحة المكتشفة', subtitle: 'ما يجب الحفاظ عليه أو تعديله أو نقله أو حذفه أو إضافته، بناء على العناصر المرصودة.',
+        keep: 'أقسام يجب الحفاظ عليها', improve: 'أقسام يجب تعديلها', move: 'أقسام يجب نقلها', remove: 'أقسام يجب حذفها أو دمجها', add: 'أقسام غائبة يجب إضافتها',
+        evidence: 'الدليل المرصود', action: 'الإجراء الدقيق', confidence: 'الثقة', problem: 'المشكلة', impact: 'أثر التحويل', source: 'مصدر القرار', empty: 'لا توجد توصية موثوقة في هذه الفئة.', checked: 'عنصرا تم فحصه', coverage: 'تغطية الأدلة', items: 'عناصر'
     } : isEn ? {
         eyebrow: 'Conversion page surgery', title: 'Detected page architecture', subtitle: 'What to keep, modify, move, remove, merge, or add from observed page signals.',
         keep: 'Sections to keep', improve: 'Sections to modify', move: 'Sections to move', remove: 'Sections to remove or merge', add: 'Missing sections to add',
         evidence: 'Observed evidence', action: 'Exact action', confidence: 'Confidence', problem: 'Problem', impact: 'Conversion impact', source: 'Decision source', empty: 'No reliable recommendation in this category.', checked: 'items checked', coverage: 'Evidence coverage', items: 'items'
     } : {
-        eyebrow: 'Chirurgie de la page de vente', title: 'Architecture de page dÃ©tectÃ©e', subtitle: 'Ce quâ€™il faut garder, modifier, dÃ©placer, supprimer, fusionner ou ajouter Ã  partir des Ã©lÃ©ments observÃ©s.',
-        keep: 'Sections prÃ©sentes Ã  garder', improve: 'Sections prÃ©sentes Ã  modifier', move: 'Sections Ã  dÃ©placer', remove: 'Sections Ã  supprimer ou fusionner', add: 'Sections absentes Ã  ajouter',
-        evidence: 'Preuve observÃ©e', action: 'Action exacte', confidence: 'Confiance', problem: 'ProblÃ¨me', impact: 'Impact conversion', source: 'Source de dÃ©cision', empty: 'Aucune recommandation fiable dans cette catÃ©gorie.', checked: 'Ã©lÃ©ments vÃ©rifiÃ©s', coverage: 'Couverture des preuves', items: 'Ã©lÃ©ments'
+        eyebrow: 'Chirurgie de la page de vente', title: 'Architecture de page détectée', subtitle: 'Ce qu’il faut garder, modifier, déplacer, supprimer, fusionner ou ajouter à partir des éléments observés.',
+        keep: 'Sections présentes à garder', improve: 'Sections présentes à modifier', move: 'Sections à déplacer', remove: 'Sections à supprimer ou fusionner', add: 'Sections absentes à ajouter',
+        evidence: 'Preuve observée', action: 'Action exacte', confidence: 'Confiance', problem: 'Problème', impact: 'Impact conversion', source: 'Source de décision', empty: 'Aucune recommandation fiable dans cette catégorie.', checked: 'éléments vérifiés', coverage: 'Couverture des preuves', items: 'éléments'
     };
     const valueFor = (item, keys, fallback = '') => {
         for (const key of keys) {
             const value = item?.[key];
-            if (value !== null && value !== undefined && String(value).trim()) return repairFunnelSurgeryText(Array.isArray(value) ? value.join(' Â· ') : value).trim();
+            if (value !== null && value !== undefined && String(value).trim()) return repairFunnelSurgeryText(Array.isArray(value) ? value.join(' · ') : value).trim();
         }
         return fallback;
     };
     const definitions = [
         ['improve', copy.improve, 'fa-pen-ruler', '#f59e0b'], ['add', copy.add, 'fa-circle-plus', '#a78bfa'],
         ['move', copy.move, 'fa-arrows-up-down-left-right', '#38bdf8'], ['remove', copy.remove, 'fa-code-merge', '#fb7185'],
-        ['keep', copy.keep, 'fa-circle-check', '#22c55e'], ['unconfirmed', isAr ? 'Ø¹Ù†Ø§ØµØ± ØºÙŠØ± Ù…Ø¤ÙƒØ¯Ø©' : isEn ? 'Unconfirmed items' : 'Ã‰lÃ©ments non confirmÃ©s', 'fa-circle-question', '#60a5fa']
+        ['keep', copy.keep, 'fa-circle-check', '#22c55e'], ['unconfirmed', isAr ? 'عناصر غير مؤكدة' : isEn ? 'Unconfirmed items' : 'Éléments non confirmés', 'fa-circle-question', '#60a5fa']
     ];
     const renderItem = (item, index) => {
         const name = valueFor(item, ['section', 'sectionType', 'name', 'label'], `Section ${index + 1}`);
@@ -10604,11 +10604,11 @@ const auditSectionMap = Array.isArray(data.auditSectionMap) && data.auditSection
 const auditEvidence = data.auditEvidence || data.rawIntel?.evidence || {};
 const decisionProofHtml = renderDecisionProofPanel(data, { isAr, isEn, dir, esc: escapeHtml });
 const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // âœ… NORMALISATION V12 â†’ V9/V10 RÃ‰TRO-COMPAT
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // ✅ NORMALISATION V12 → V9/V10 RÉTRO-COMPAT
+    // ══════════════════════════════════════════════════
 
-    // â”€â”€ scoringMatrix â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── scoringMatrix ─────────────────────────────────
     // BUG-FIX : seo = breakdown.seo.score (et non neuromarketing)
     //           trust = breakdown.trust.score (et non neuromarketing.score)
     if (!data.scoringMatrix && data.globalScoring) {
@@ -10623,7 +10623,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         };
     }
 
-    // â”€â”€ projectIdentity â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── projectIdentity ───────────────────────────────
     if (!data.projectIdentity && data.rawIntel) {
         data.projectIdentity = {
             siteType        : data.rawIntel.techStack ? Object.keys(data.rawIntel.techStack).join(', ') : 'N/A',
@@ -10641,7 +10641,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         data.projectIdentity.siteType = data.projectIdentity.businessModel;
     }
 
-    // â”€â”€ strategicBlueprint â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── strategicBlueprint ────────────────────────────
     if (data.strategicBlueprint) {
         data.strategicBlueprint.killShotName     = data.strategicBlueprint.killShotName
                                                 || data.strategicBlueprint.killShot || null;
@@ -10657,14 +10657,14 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
                                                 || data.chainOfThought?.agent3?.fatalFlaws       || [];
         if (!data.strategicBlueprint.quickWins || !data.strategicBlueprint.quickWins.length) {
             data.strategicBlueprint.quickWins = (data.quickWins || [])
-                .map(qw => typeof qw === 'string' ? qw : `${qw.action} (${qw.effort} â€” +${qw.expectedGain})`);
+                .map(qw => typeof qw === 'string' ? qw : `${qw.action} (${qw.effort} — +${qw.expectedGain})`);
         } else if (typeof data.strategicBlueprint.quickWins[0] === 'object') {
             data.strategicBlueprint.quickWins = data.strategicBlueprint.quickWins
-                .map(qw => `${qw.action} (${qw.effort} â€” +${qw.expectedGain})`);
+                .map(qw => `${qw.action} (${qw.effort} — +${qw.expectedGain})`);
         }
     }
 
-    // â”€â”€ financialIntel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── financialIntel ────────────────────────────────
     if (!data.financialIntel) {
         const fp  = data.financialProjection || {};
         const fa  = data.financialAudit      || {};
@@ -10696,7 +10696,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         };
     }
 
-    // â”€â”€ deepScrapeData â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── deepScrapeData ────────────────────────────────
     if (!data.deepScrapeData) {
         const ri = data.rawIntel || {};
         data.deepScrapeData = {
@@ -10808,7 +10808,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         };
     }
 
-    // â”€â”€ psychTriggers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── psychTriggers ─────────────────────────────────
     if (!data.psychTriggers) {
         data.psychTriggers = {
             urgency     : [],
@@ -10822,8 +10822,8 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         };
     }
 
-    // â”€â”€ webCharte â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    // BUG-FIX : typography peut Ãªtre un string (ex: "Arial, sans-serif") â†’ normaliser en objet
+    // ── webCharte ─────────────────────────────────────
+    // BUG-FIX : typography peut être un string (ex: "Arial, sans-serif") → normaliser en objet
     if (!data.webCharte) {
         const ri = data.rawIntel || {};
         data.webCharte = {
@@ -10840,7 +10840,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
             designScore : 0,
         };
     } else {
-        // Patch typo string â†’ objet
+        // Patch typo string → objet
         if (typeof data.webCharte.typography === 'string') {
             const rawFont = data.webCharte.typography;
             data.webCharte.typography = {
@@ -10862,13 +10862,13 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         data.webCharte.colorPalette.allDetected = observedColors.length
             ? observedColors
             : (Array.isArray(data.webCharte.colorPalette.allDetected) ? data.webCharte.colorPalette.allDetected : []);
-        // Patch designScore Ã  0 â†’ essayer de le rÃ©cupÃ©rer depuis globalScoring
+        // Patch designScore à 0 → essayer de le récupérer depuis globalScoring
         if (!data.webCharte.designScore && data.globalScoring?.breakdown?.design?.score) {
             data.webCharte.designScore = data.globalScoring.breakdown.design.score;
         }
     }
 
-    // â”€â”€ pageArchitecture â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── pageArchitecture ──────────────────────────────
     // BUG-FIX CRITIQUE : backend retourne sectionsAudit, pas pageArchitecture.arborescence
    if (!data.pageArchitecture) {
     const sectionsSource =
@@ -10925,7 +10925,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
     };
 }
 
-    // â”€â”€ counter attack copy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── counter attack copy ───────────────────────────
     if (!data.funnel) {
         const rw = data.copywritingDeep?.rewriteSuggestions || {};
         data.funnel = {
@@ -10938,7 +10938,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         };
     }
 
-    // â”€â”€ competitiveCounterStrategy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── competitiveCounterStrategy ────────────────────
     if (!data.competitiveCounterStrategy) {
         data.competitiveCounterStrategy = {
             howToBeatThem  : data.strategicBlueprint?.howToBeatThem
@@ -10948,7 +10948,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         };
     }
 
-    // â”€â”€ copywritingAnalysis â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── copywritingAnalysis ───────────────────────────
     if (!data.copywritingAnalysis) {
         const cd = data.copywritingDeep || {};
         data.copywritingAnalysis = {
@@ -10968,7 +10968,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         };
     }
 
-    // â”€â”€ funnelDNA â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── funnelDNA ─────────────────────────────────────
     if (!data.funnelDNA) {
         data.funnelDNA = {
             funnelType            : data.funnelMapping?.funnelType           || null,
@@ -10979,30 +10979,30 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         };
     }
 
-    // â”€â”€ trustAndSocialProof â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── trustAndSocialProof ───────────────────────────
     if (!data.trustAndSocialProof) {
         data.trustAndSocialProof = {
             trustGaps: data.neuromarketing?.trustBuilding?.missing || [],
         };
     }
 
-    // â”€â”€ threatLevel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── threatLevel ───────────────────────────────────
     if (!data.threatLevel) {
         const g = data.globalScoring?.overall || data.scoringMatrix?.global || 0;
         data.threatLevel = g >= 80 ? 'CRITICAL' : g >= 60 ? 'HIGH' : g >= 40 ? 'MEDIUM' : 'LOW';
     }
 
-    // â”€â”€ analysisDepth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── analysisDepth ─────────────────────────────────
     if (!data.analysisDepth) {
-        data.analysisDepth = `V12 GOD TIER â€” ${data.meta?.agents || 5} Agents CoT`;
+        data.analysisDepth = `V12 GOD TIER — ${data.meta?.agents || 5} Agents CoT`;
     }
 
-    // â”€â”€ magicPrompt â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── magicPrompt ───────────────────────────────────
     data.magicPrompt = data.magicPrompt || data.aiRewritePrompt || null;
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // âœ… FIN NORMALISATION â€” Lecture des donnÃ©es unifiÃ©es
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // ✅ FIN NORMALISATION — Lecture des données unifiées
+    // ══════════════════════════════════════════════════
 
     const identity     = data.projectIdentity           || {};
     const scores       = data.scoringMatrix             || {};
@@ -11021,7 +11021,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
     const counterStrat = data.competitiveCounterStrategy || {};
     const magicPrompt  = data.magicPrompt || data.aiRewritePrompt || null;
 
-    // â”€â”€ NOUVELLES DONNÃ‰ES V12 perdues â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── NOUVELLES DONNÉES V12 perdues ─────────────────
     const aarrr      = data.aarrMetrics          || data.aarrr          || {};
     const pricing    = data.pricingPsychology    || {};
     const commerce   = data.commerceExploration || data.rawIntel?.commerceExploration || {};
@@ -11041,7 +11041,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
     const conv = ds.conversion       || {};
 
     // Scores
-    // BUG-FIX seoScore : lire depuis scoringMatrix.seo (clÃ© corrigÃ©e dans la normalisation)
+    // BUG-FIX seoScore : lire depuis scoringMatrix.seo (clé corrigée dans la normalisation)
     const score      = pickScore(scores.global, data.globalScore) || 0;
     const seoScore   = pickScore(scores.seo, data.globalScoring?.breakdown?.seo?.score);
     const trustScore = pickScore(scores.trust, tru.trustScore);
@@ -11075,7 +11075,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
     };
 
     // Design
-    // BUG-FIX : typography dÃ©jÃ  normalisÃ©e en objet ci-dessus, lecture sÃ©curisÃ©e
+    // BUG-FIX : typography déjà normalisée en objet ci-dessus, lecture sécurisée
     const typo = (typeof charte.typography === 'object' && charte.typography !== null)
                ? charte.typography : {};
     const design = {
@@ -11108,7 +11108,7 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
         visualHierarchy : neuro.visualHierarchy          || null,
     };
 
-    // Sections (BUG-FIX CRITIQUE : arch.arborescence alimentÃ© par sectionsAudit)
+    // Sections (BUG-FIX CRITIQUE : arch.arborescence alimenté par sectionsAudit)
     const sections      = arch.arborescence   || data.sections || [];
     const rawSections   = rawPW.detailedSections || [];
     const funnelFlow    = arch.funnelFlow     || null;
@@ -11127,176 +11127,176 @@ const funnelSurgeryHtml = renderFunnelSectionSurgery(data, { isAr, isEn });
     const pageGlobal    = rawPW.pageGlobal    || {};
     const vitals        = rawPW.vitals        || {};
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸŒ I18N â€” Labels multilingues FR / AR / EN
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // 🌍 I18N — Labels multilingues FR / AR / EN
+    // ══════════════════════════════════════════════════
     const i18n = {
         // Header
-        reportTitle      : isAr ? 'ØªÙ‚Ø±ÙŠØ± Ø§Ù„Ø§Ø³ØªØ®Ø¨Ø§Ø±Ø§Øª Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ©'
+        reportTitle      : isAr ? 'تقرير الاستخبارات الاستراتيجية'
                          : isEn ? 'Strategic Intelligence Report'
-                         :        'Rapport Intelligence StratÃ©gique',
+                         :        'Rapport Intelligence Stratégique',
         // Financial
-        financialTitle   : isAr ? 'Ø§Ù„Ø§Ø³ØªØ®Ø¨Ø§Ø±Ø§Øª Ø§Ù„Ù…Ø§Ù„ÙŠØ©'
+        financialTitle   : isAr ? 'الاستخبارات المالية'
                          : isEn ? 'Financial Intelligence'
                          :        'Financial Intelligence',
-        trafficLabel     : isAr ? 'Ø§Ù„Ø²ÙŠØ§Ø±Ø§Øª/Ø´Ù‡Ø±'   : isEn ? 'Traffic/Mo'      : 'Trafic/Mois',
-        basketLabel      : isAr ? 'Ù…ØªÙˆØ³Ø· Ø§Ù„Ø³Ù„Ø©'     : isEn ? 'Avg Basket'      : 'Panier Moy.',
-        marginLabel      : isAr ? 'Ø§Ù„Ù‡Ø§Ù…Ø´'          : isEn ? 'Margin'          : 'Marge',
-        mrrLabel         : isAr ? 'Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯Ø§Øª Ø§Ù„Ù…ØªÙƒØ±Ø±Ø©': isEn ? 'Est. MRR'      : 'MRR EstimÃ©',
-        stealLabel       : isAr ? 'Ø¥Ù…ÙƒØ§Ù†ÙŠØ© Ø§Ù„Ø³Ø±Ù‚Ø©'  : isEn ? 'Steal Potential' : 'Steal Potential',
-        annualLabel      : isAr ? 'Ø§Ù„Ø³Ù†ÙˆÙŠ'          : isEn ? 'Annual'          : 'Annuel',
-        confidenceLabel  : isAr ? 'Ø§Ù„Ø«Ù‚Ø©'           : isEn ? 'Confidence'      : 'Confiance',
-        reasoningLabel   : isAr ? 'Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ù…Ø§Ù„ÙŠ'  : isEn ? 'Financial Reasoning' : 'Raisonnement Financier',
-        crLabel          : isAr ? 'Ù…Ø¹Ø¯Ù„ Ø§Ù„ØªØ­ÙˆÙŠÙ„'    : isEn ? 'Conv. Rate'      : 'Taux Conv.',
+        trafficLabel     : isAr ? 'الزيارات/شهر'   : isEn ? 'Traffic/Mo'      : 'Trafic/Mois',
+        basketLabel      : isAr ? 'متوسط السلة'     : isEn ? 'Avg Basket'      : 'Panier Moy.',
+        marginLabel      : isAr ? 'الهامش'          : isEn ? 'Margin'          : 'Marge',
+        mrrLabel         : isAr ? 'الإيرادات المتكررة': isEn ? 'Est. MRR'      : 'MRR Estimé',
+        stealLabel       : isAr ? 'إمكانية السرقة'  : isEn ? 'Steal Potential' : 'Steal Potential',
+        annualLabel      : isAr ? 'السنوي'          : isEn ? 'Annual'          : 'Annuel',
+        confidenceLabel  : isAr ? 'الثقة'           : isEn ? 'Confidence'      : 'Confiance',
+        reasoningLabel   : isAr ? 'التحليل المالي'  : isEn ? 'Financial Reasoning' : 'Raisonnement Financier',
+        crLabel          : isAr ? 'معدل التحويل'    : isEn ? 'Conv. Rate'      : 'Taux Conv.',
         // AARRR
-        aarrTitle        : isAr ? 'Ù…Ù‚Ø§ÙŠÙŠØ³ AARRR'
+        aarrTitle        : isAr ? 'مقاييس AARRR'
                          : isEn ? 'AARRR Metrics'
-                         :        'MÃ©triques AARRR',
-        acquisitionLabel : isAr ? 'Ø§Ù„Ø§Ø³ØªØ­ÙˆØ§Ø°'       : isEn ? 'Acquisition'     : 'Acquisition',
-        activationLabel  : isAr ? 'Ø§Ù„ØªÙØ¹ÙŠÙ„'         : isEn ? 'Activation'      : 'Activation',
-        retentionLabel   : isAr ? 'Ø§Ù„Ø§Ø­ØªÙØ§Ø¸'        : isEn ? 'Retention'       : 'RÃ©tention',
-        revenueLabel     : isAr ? 'Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯'         : isEn ? 'Revenue'         : 'Revenue',
-        referralLabel    : isAr ? 'Ø§Ù„Ø¥Ø­Ø§Ù„Ø©'         : isEn ? 'Referral'        : 'Referral',
-        scoreLabel       : isAr ? 'Ù†Ù‚Ø§Ø·'            : isEn ? 'Score'           : 'Score',
-        issuesLabel      : isAr ? 'Ù…Ø´Ø§ÙƒÙ„'           : isEn ? 'Issues'          : 'ProblÃ¨mes',
-        fixLabel         : isAr ? 'Ø¥ØµÙ„Ø§Ø­'           : isEn ? 'Fix'             : 'Correction',
+                         :        'Métriques AARRR',
+        acquisitionLabel : isAr ? 'الاستحواذ'       : isEn ? 'Acquisition'     : 'Acquisition',
+        activationLabel  : isAr ? 'التفعيل'         : isEn ? 'Activation'      : 'Activation',
+        retentionLabel   : isAr ? 'الاحتفاظ'        : isEn ? 'Retention'       : 'Rétention',
+        revenueLabel     : isAr ? 'الإيراد'         : isEn ? 'Revenue'         : 'Revenue',
+        referralLabel    : isAr ? 'الإحالة'         : isEn ? 'Referral'        : 'Referral',
+        scoreLabel       : isAr ? 'نقاط'            : isEn ? 'Score'           : 'Score',
+        issuesLabel      : isAr ? 'مشاكل'           : isEn ? 'Issues'          : 'Problèmes',
+        fixLabel         : isAr ? 'إصلاح'           : isEn ? 'Fix'             : 'Correction',
         // Pricing Psychology
-        pricingTitle     : isAr ? 'Ø³ÙŠÙƒÙˆÙ„ÙˆØ¬ÙŠØ© Ø§Ù„ØªØ³Ø¹ÙŠØ±'
+        pricingTitle     : isAr ? 'سيكولوجية التسعير'
                          : isEn ? 'Pricing Psychology'
                          :        'Psychologie du Prix',
-        bundleLabel      : isAr ? 'Ø§Ù‚ØªØ±Ø§Ø­ Ø§Ù„Ø­Ø²Ù…Ø©'   : isEn ? 'Bundle Suggestion' : 'Bundle SuggÃ©rÃ©',
-        anchoringLabel   : isAr ? 'ØªØ«Ø¨ÙŠØª Ø§Ù„Ø³Ø¹Ø±'     : isEn ? 'Price Anchoring'   : 'Ancrage Prix',
-        verdictLabel     : isAr ? 'Ø­ÙƒÙ… Ø§Ù„Ø³Ø¹Ø±'       : isEn ? 'Price Verdict'     : 'Verdict Prix',
+        bundleLabel      : isAr ? 'اقتراح الحزمة'   : isEn ? 'Bundle Suggestion' : 'Bundle Suggéré',
+        anchoringLabel   : isAr ? 'تثبيت السعر'     : isEn ? 'Price Anchoring'   : 'Ancrage Prix',
+        verdictLabel     : isAr ? 'حكم السعر'       : isEn ? 'Price Verdict'     : 'Verdict Prix',
         // Blueprint
-        blueprintTitle   : isAr ? 'Ø§Ù„Ù…Ø®Ø·Ø· Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠ'
+        blueprintTitle   : isAr ? 'المخطط الاستراتيجي'
                          : isEn ? 'Strategic Blueprint'
-                         :        'Blueprint StratÃ©gique',
-        coreHookLabel    : isAr ? 'Ø§Ù„Ø®Ø·Ø§Ù Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ'  : isEn ? 'Core Hook'           : 'Core Hook',
-        execPlanLabel    : isAr ? 'Ø®Ø·Ø© Ø§Ù„ØªÙ†ÙÙŠØ°'     : isEn ? 'Execution Plan'      : "Plan d'ExÃ©cution",
-        unfairAdvLabel   : isAr ? 'Ø§Ù„Ù…ÙŠØ²Ø© ØºÙŠØ± Ø§Ù„Ø¹Ø§Ø¯Ù„Ø©': isEn ? 'Unfair Advantage'  : 'Avantage DÃ©loyal',
-        oppGapLabel      : isAr ? 'ÙØ¬ÙˆØ© Ø§Ù„ÙØ±ØµØ©'     : isEn ? 'Opportunity Gap'    : 'Opportunity Gap',
-        weakPointsLabel  : isAr ? 'Ù†Ù‚Ø§Ø· Ø§Ù„Ø¶Ø¹Ù'      : isEn ? 'Weak Points'        : 'Weak Points',
-        quickWinsLabel   : isAr ? 'Ø§Ù†ØªØµØ§Ø±Ø§Øª Ø³Ø±ÙŠØ¹Ø©'  : isEn ? 'Quick Wins'         : 'Quick Wins',
-        counterStratLabel: isAr ? 'Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ© Ø§Ù„Ù…ÙˆØ§Ø¬Ù‡Ø©': isEn ? 'Counter Strategy' : 'StratÃ©gie Concurrentielle',
+                         :        'Blueprint Stratégique',
+        coreHookLabel    : isAr ? 'الخطاف الأساسي'  : isEn ? 'Core Hook'           : 'Core Hook',
+        execPlanLabel    : isAr ? 'خطة التنفيذ'     : isEn ? 'Execution Plan'      : "Plan d'Exécution",
+        unfairAdvLabel   : isAr ? 'الميزة غير العادلة': isEn ? 'Unfair Advantage'  : 'Avantage Déloyal',
+        oppGapLabel      : isAr ? 'فجوة الفرصة'     : isEn ? 'Opportunity Gap'    : 'Opportunity Gap',
+        weakPointsLabel  : isAr ? 'نقاط الضعف'      : isEn ? 'Weak Points'        : 'Weak Points',
+        quickWinsLabel   : isAr ? 'انتصارات سريعة'  : isEn ? 'Quick Wins'         : 'Quick Wins',
+        counterStratLabel: isAr ? 'استراتيجية المواجهة': isEn ? 'Counter Strategy' : 'Stratégie Concurrentielle',
         // Neuro / Psych
-        neuroTitle       : isAr ? 'Ø§Ù„ØªØ³ÙˆÙŠÙ‚ Ø§Ù„Ø¹ØµØ¨ÙŠ ÙˆØ§Ù„Ù…Ø­ÙØ²Ø§Øª'
+        neuroTitle       : isAr ? 'التسويق العصبي والمحفزات'
                          : isEn ? 'Neuromarketing & Psych Triggers'
-                         :        'Neuromarketing & DÃ©clencheurs Psy',
-        biasesLabel      : isAr ? 'Ø§Ù„ØªØ­ÙŠØ²Ø§Øª Ø§Ù„Ù…Ø¹Ø±ÙÙŠØ©' : isEn ? 'Cognitive Biases'   : 'Biais Cognitifs',
-        readingLabel     : isAr ? 'Ù†Ù…Ø· Ø§Ù„Ù‚Ø±Ø§Ø¡Ø©'       : isEn ? 'Reading Pattern'    : 'Pattern Lecture',
-        colorPsyLabel    : isAr ? 'Ø³ÙŠÙƒÙˆÙ„ÙˆØ¬ÙŠØ© Ø§Ù„Ù„ÙˆÙ†'   : isEn ? 'Color Psychology'   : 'Psychologie Couleur',
-        hierarchyLabel   : isAr ? 'Ø§Ù„ØªØ³Ù„Ø³Ù„ Ø§Ù„Ø¨ØµØ±ÙŠ'    : isEn ? 'Visual Hierarchy'   : 'HiÃ©rarchie Visuelle',
-        psychTriggersLabel: isAr ? 'Ù…Ø­ÙØ²Ø§Øª Ù†ÙØ³ÙŠØ©'     : isEn ? 'Psych Triggers'    : 'DÃ©clencheurs Psy',
-        urgencyLabel     : isAr ? 'Ø§Ù„Ø¥Ù„Ø­Ø§Ø­'           : isEn ? 'Urgency'            : 'Urgence',
-        scarcityLabel    : isAr ? 'Ø§Ù„Ù†Ø¯Ø±Ø©'            : isEn ? 'Scarcity'           : 'RaretÃ©',
-        socialProofLabel : isAr ? 'Ø§Ù„Ø¯Ù„ÙŠÙ„ Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ'  : isEn ? 'Social Proof'       : 'Preuve Sociale',
-        authorityLabel   : isAr ? 'Ø§Ù„Ø³Ù„Ø·Ø©'            : isEn ? 'Authority'          : 'AutoritÃ©',
-        fearLossLabel    : isAr ? 'Ø§Ù„Ø®ÙˆÙ Ù…Ù† Ø§Ù„Ø®Ø³Ø§Ø±Ø©'  : isEn ? 'Fear of Loss'       : 'Peur de Perdre',
+                         :        'Neuromarketing & Déclencheurs Psy',
+        biasesLabel      : isAr ? 'التحيزات المعرفية' : isEn ? 'Cognitive Biases'   : 'Biais Cognitifs',
+        readingLabel     : isAr ? 'نمط القراءة'       : isEn ? 'Reading Pattern'    : 'Pattern Lecture',
+        colorPsyLabel    : isAr ? 'سيكولوجية اللون'   : isEn ? 'Color Psychology'   : 'Psychologie Couleur',
+        hierarchyLabel   : isAr ? 'التسلسل البصري'    : isEn ? 'Visual Hierarchy'   : 'Hiérarchie Visuelle',
+        psychTriggersLabel: isAr ? 'محفزات نفسية'     : isEn ? 'Psych Triggers'    : 'Déclencheurs Psy',
+        urgencyLabel     : isAr ? 'الإلحاح'           : isEn ? 'Urgency'            : 'Urgence',
+        scarcityLabel    : isAr ? 'الندرة'            : isEn ? 'Scarcity'           : 'Rareté',
+        socialProofLabel : isAr ? 'الدليل الاجتماعي'  : isEn ? 'Social Proof'       : 'Preuve Sociale',
+        authorityLabel   : isAr ? 'السلطة'            : isEn ? 'Authority'          : 'Autorité',
+        fearLossLabel    : isAr ? 'الخوف من الخسارة'  : isEn ? 'Fear of Loss'       : 'Peur de Perdre',
         // Technical Audit
-        techAuditTitle   : isAr ? 'Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø© Ø§Ù„ØªÙ‚Ù†ÙŠØ©'
+        techAuditTitle   : isAr ? 'المراجعة التقنية'
                          : isEn ? 'Technical SEO Audit'
                          :        'Audit Technique SEO',
         schemaLabel      : isAr ? 'Schema.org'        : isEn ? 'Schema.org'         : 'Schema.org',
-        criticalLabel    : isAr ? 'Ù…Ø´Ø§ÙƒÙ„ Ø­Ø±Ø¬Ø©'        : isEn ? 'Critical Issues'    : 'ProblÃ¨mes Critiques',
-        seoIssuesLabel   : isAr ? 'Ù…Ø´Ø§ÙƒÙ„ SEO'         : isEn ? 'SEO Issues'         : 'ProblÃ¨mes SEO',
+        criticalLabel    : isAr ? 'مشاكل حرجة'        : isEn ? 'Critical Issues'    : 'Problèmes Critiques',
+        seoIssuesLabel   : isAr ? 'مشاكل SEO'         : isEn ? 'SEO Issues'         : 'Problèmes SEO',
         // Design
-        designTitle      : isAr ? 'Ø§Ù„Ù‡ÙˆÙŠØ© Ø§Ù„Ø¨ØµØ±ÙŠØ©'
+        designTitle      : isAr ? 'الهوية البصرية'
                          : isEn ? 'Visual Identity'
-                         :        'IdentitÃ© Visuelle â€” Charte Web',
+                         :        'Identité Visuelle — Charte Web',
         // Performance
-        perfTitle        : isAr ? 'Ø§Ù„Ø£Ø¯Ø§Ø¡ØŒ Ø§Ù„Ø«Ù‚Ø© ÙˆØªÙ‚Ù†ÙŠØ© Ø§Ù„Ù…ÙˆÙ‚Ø¹'
+        perfTitle        : isAr ? 'الأداء، الثقة وتقنية الموقع'
                          : isEn ? 'Performance, Trust & Tech Stack'
                          :        'Performance, Trust & Tech Stack',
         // Copy
-        copyTitle        : isAr ? 'Ø§Ø³ØªØ®Ø¨Ø§Ø±Ø§Øª Ø§Ù„Ù†Øµ ÙˆØ§Ù„ØªØ³ÙˆÙŠÙ‚ Ø§Ù„Ø¹ØµØ¨ÙŠ'
+        copyTitle        : isAr ? 'استخبارات النص والتسويق العصبي'
                          : isEn ? 'Copy Intelligence & Neuromarketing'
                          :        'Copy Intelligence & Neuromarketing',
         // Indicators
-        indicatorsTitle  : isAr ? 'Ù…Ø¤Ø´Ø±Ø§Øª Ø§Ù„ØµÙØ­Ø©'    : isEn ? 'Page Indicators'    : 'Indicateurs de Page',
+        indicatorsTitle  : isAr ? 'مؤشرات الصفحة'    : isEn ? 'Page Indicators'    : 'Indicateurs de Page',
         // Autopsy
-        autopsyTitle     : isAr ? 'ØªØ´Ø±ÙŠØ­ Ø§Ù„ØµÙØ­Ø© â€” Ø®Ø±ÙŠØ·Ø© AIDA'
-                         : isEn ? 'Page Autopsy â€” AIDA Map'
+        autopsyTitle     : isAr ? 'تشريح الصفحة — خريطة AIDA'
+                         : isEn ? 'Page Autopsy — AIDA Map'
                          :        'Autopsie & Arborescence AIDA',
         // Counter Attack
-        counterTitle     : isAr ? 'Ù†Ø³Ø®Ø© Ø§Ù„Ù‡Ø¬ÙˆÙ… Ø§Ù„Ù…Ø¶Ø§Ø¯'
+        counterTitle     : isAr ? 'نسخة الهجوم المضاد'
                          : isEn ? 'Counter Attack Copy'
                          :        'Counter-Attack Copy',
-        adHeadlineLabel  : isAr ? 'Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ø¥Ø¹Ù„Ø§Ù†'    : isEn ? 'Ad Headline'        : 'Ad Headline',
-        whatsappLabel    : isAr ? 'ÙˆØ§ØªØ³Ø§Ø¨'            : isEn ? 'WhatsApp'           : 'WhatsApp',
-        emailLabel       : isAr ? 'Ù…ÙˆØ¶ÙˆØ¹ Ø§Ù„Ø¨Ø±ÙŠØ¯'      : isEn ? 'Email Subject'      : 'Email Subject',
-        smsLabel         : isAr ? 'Ø±Ø³Ø§Ù„Ø© SMS'         : isEn ? 'SMS'               : 'SMS',
+        adHeadlineLabel  : isAr ? 'عنوان الإعلان'    : isEn ? 'Ad Headline'        : 'Ad Headline',
+        whatsappLabel    : isAr ? 'واتساب'            : isEn ? 'WhatsApp'           : 'WhatsApp',
+        emailLabel       : isAr ? 'موضوع البريد'      : isEn ? 'Email Subject'      : 'Email Subject',
+        smsLabel         : isAr ? 'رسالة SMS'         : isEn ? 'SMS'               : 'SMS',
         // Magic Prompt
-        magicTitle       : isAr ? 'Ù…ÙˆØ¬Ù‡ Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªØµÙ…ÙŠÙ… Ø§Ù„Ø³Ø­Ø±ÙŠ'
+        magicTitle       : isAr ? 'موجه إعادة التصميم السحري'
                          : isEn ? 'Magic Redesign Prompt'
                          :        'Magic Redesign Prompt',
-        magicSub         : isAr ? 'Ø§Ù†Ø³Ø® Ø¥Ù„Ù‰ Ø£Ø¯Ø§Ø© Ø§Ù„ØªØ­Ø±ÙŠØ±'
+        magicSub         : isAr ? 'انسخ إلى أداة التحرير'
                          : isEn ? 'Copy to your editing tool'
                          :        'Copiez dans votre outil de generation',
-        copyBtn          : isAr ? 'Ù†Ø³Ø®'               : isEn ? 'Copy'              : 'Copier',
-        copiedBtn        : isAr ? 'ØªÙ… Ø§Ù„Ù†Ø³Ø®!'         : isEn ? 'Copied!'           : 'CopiÃ© !',
+        copyBtn          : isAr ? 'نسخ'               : isEn ? 'Copy'              : 'Copier',
+        copiedBtn        : isAr ? 'تم النسخ!'         : isEn ? 'Copied!'           : 'Copié !',
         // Sections
-        ctaLabel         : isAr ? 'Ø²Ø± Ø§Ù„Ø¯Ø¹ÙˆØ©'         : isEn ? 'CTA'               : 'CTA',
-        noCTALabel       : isAr ? 'Ø¨Ø¯ÙˆÙ† CTA'          : isEn ? 'no CTA'            : 'sans CTA',
-        highLabel        : isAr ? 'ØªØ£Ø«ÙŠØ± Ø¹Ø§Ù„Ù'        : isEn ? 'HIGH impact'       : 'HIGH impact',
-        weaknessLabel    : isAr ? 'Ù†Ù‚Ø·Ø© Ø¶Ø¹Ù'          : isEn ? 'Weakness'          : 'Faiblesse',
-        missingLabel     : isAr ? 'Ø¹Ù†ØµØ± Ù†Ø§Ù‚Øµ'         : isEn ? 'Missing'           : 'Manquant',
-        upgradeLabel     : isAr ? 'Ù†Ø³Ø®Ø© Ù…Ø­Ø³Ù‘Ù†Ø©'       : isEn ? 'Upgrade Copy'      : 'Upgrade Copy',
-        titleLabel       : isAr ? 'Ø§Ù„Ø¹Ù†ÙˆØ§Ù†'           : isEn ? 'Title'             : 'Titre',
+        ctaLabel         : isAr ? 'زر الدعوة'         : isEn ? 'CTA'               : 'CTA',
+        noCTALabel       : isAr ? 'بدون CTA'          : isEn ? 'no CTA'            : 'sans CTA',
+        highLabel        : isAr ? 'تأثير عالٍ'        : isEn ? 'HIGH impact'       : 'HIGH impact',
+        weaknessLabel    : isAr ? 'نقطة ضعف'          : isEn ? 'Weakness'          : 'Faiblesse',
+        missingLabel     : isAr ? 'عنصر ناقص'         : isEn ? 'Missing'           : 'Manquant',
+        upgradeLabel     : isAr ? 'نسخة محسّنة'       : isEn ? 'Upgrade Copy'      : 'Upgrade Copy',
+        titleLabel       : isAr ? 'العنوان'           : isEn ? 'Title'             : 'Titre',
         // AIDA phases
-        attentionLabel   : isAr ? 'Ø§Ù†ØªØ¨Ø§Ù‡'            : isEn ? 'Attention'         : 'Attention',
-        interestLabel    : isAr ? 'Ø§Ù‡ØªÙ…Ø§Ù…'            : isEn ? 'Interest'          : 'IntÃ©rÃªt',
-        desireLabel      : isAr ? 'Ø±ØºØ¨Ø©'              : isEn ? 'Desire'            : 'DÃ©sir',
-        actionLabel      : isAr ? 'ÙØ¹Ù„'               : isEn ? 'Action'            : 'Action',
-        aidaAttFix       : isAr ? 'Ø¥ØµÙ„Ø§Ø­ Ø§Ù„Ø§Ù†ØªØ¨Ø§Ù‡'   : isEn ? 'Attention Fix'      : 'Fix Attention',
-        aidaIntFix       : isAr ? 'Ø¥ØµÙ„Ø§Ø­ Ø§Ù„Ø§Ù‡ØªÙ…Ø§Ù…'   : isEn ? 'Interest Fix'       : 'Fix IntÃ©rÃªt',
-        aidaDesFix       : isAr ? 'Ø¥ØµÙ„Ø§Ø­ Ø§Ù„Ø±ØºØ¨Ø©'     : isEn ? 'Desire Fix'         : 'Fix DÃ©sir',
-        aidaActFix       : isAr ? 'Ø¥ØµÙ„Ø§Ø­ Ø§Ù„ÙØ¹Ù„'      : isEn ? 'Action Fix'         : 'Fix Action',
+        attentionLabel   : isAr ? 'انتباه'            : isEn ? 'Attention'         : 'Attention',
+        interestLabel    : isAr ? 'اهتمام'            : isEn ? 'Interest'          : 'Intérêt',
+        desireLabel      : isAr ? 'رغبة'              : isEn ? 'Desire'            : 'Désir',
+        actionLabel      : isAr ? 'فعل'               : isEn ? 'Action'            : 'Action',
+        aidaAttFix       : isAr ? 'إصلاح الانتباه'   : isEn ? 'Attention Fix'      : 'Fix Attention',
+        aidaIntFix       : isAr ? 'إصلاح الاهتمام'   : isEn ? 'Interest Fix'       : 'Fix Intérêt',
+        aidaDesFix       : isAr ? 'إصلاح الرغبة'     : isEn ? 'Desire Fix'         : 'Fix Désir',
+        aidaActFix       : isAr ? 'إصلاح الفعل'      : isEn ? 'Action Fix'         : 'Fix Action',
         // Score labels
-        nicheLabel       : isAr ? 'Ø§Ù„Ù…Ø¬Ø§Ù„'            : isEn ? 'Niche'             : 'Niche',
-        productLabel     : isAr ? 'Ø§Ù„Ù…Ù†ØªØ¬'            : isEn ? 'Product'           : 'Produit',
-        priceLabel       : isAr ? 'Ù†Ù‚Ø·Ø© Ø§Ù„Ø³Ø¹Ø±'        : isEn ? 'Price Point'       : 'Price Point',
-        marketLabel      : isAr ? 'Ø§Ù„Ø³ÙˆÙ‚'             : isEn ? 'Market'            : 'MarchÃ©',
+        nicheLabel       : isAr ? 'المجال'            : isEn ? 'Niche'             : 'Niche',
+        productLabel     : isAr ? 'المنتج'            : isEn ? 'Product'           : 'Produit',
+        priceLabel       : isAr ? 'نقطة السعر'        : isEn ? 'Price Point'       : 'Price Point',
+        marketLabel      : isAr ? 'السوق'             : isEn ? 'Market'            : 'Marché',
         // Trust
-        trustTitle       : isAr ? 'Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø«Ù‚Ø©'      : isEn ? 'Trust Signals'    : 'Trust Signals',
+        trustTitle       : isAr ? 'إشارات الثقة'      : isEn ? 'Trust Signals'    : 'Trust Signals',
         // Sections counter
-        sectionsLabel    : isAr ? 'Ø£Ù‚Ø³Ø§Ù…'             : isEn ? 'sections'          : 'sections',
-        wordsLabel       : isAr ? 'ÙƒÙ„Ù…Ø©'              : isEn ? 'words'             : 'mots',
+        sectionsLabel    : isAr ? 'أقسام'             : isEn ? 'sections'          : 'sections',
+        wordsLabel       : isAr ? 'كلمة'              : isEn ? 'words'             : 'mots',
         // Score levels
-        excellentLabel   : isAr ? 'Ù…Ù…ØªØ§Ø²'             : isEn ? 'Excellent'         : 'Excellent',
-        averageLabel     : isAr ? 'Ù…ØªÙˆØ³Ø·'             : isEn ? 'Average'           : 'Moyen',
-        weakLabel        : isAr ? 'Ø¶Ø¹ÙŠÙ'              : isEn ? 'Weak'              : 'Faible',
+        excellentLabel   : isAr ? 'ممتاز'             : isEn ? 'Excellent'         : 'Excellent',
+        averageLabel     : isAr ? 'متوسط'             : isEn ? 'Average'           : 'Moyen',
+        weakLabel        : isAr ? 'ضعيف'              : isEn ? 'Weak'              : 'Faible',
         // Funnel Flow
-        funnelFlowLabel  : isAr ? 'ØªØ¯ÙÙ‚ Ø§Ù„Ù‚Ù…Ø¹'        : isEn ? 'Funnel Flow'       : 'Funnel Flow',
-        funnelGapsLabel  : isAr ? 'Ø«ØºØ±Ø§Øª Ø§Ù„Ù‚Ù…Ø¹'       : isEn ? 'Funnel Gaps'       : 'Funnel Gaps',
+        funnelFlowLabel  : isAr ? 'تدفق القمع'        : isEn ? 'Funnel Flow'       : 'Funnel Flow',
+        funnelGapsLabel  : isAr ? 'ثغرات القمع'       : isEn ? 'Funnel Gaps'       : 'Funnel Gaps',
         // Copy
-        bigIdeaLabel     : isAr ? 'Ø§Ù„ÙÙƒØ±Ø© Ø§Ù„ÙƒØ¨Ø±Ù‰'     : isEn ? 'Big Idea'          : 'Big Idea',
-        copyScoresLabel  : isAr ? 'Ø¯Ø±Ø¬Ø§Øª Ø§Ù„Ù†Øµ'        : isEn ? 'Copy Scores'       : 'Copy Scores',
-        toneLabel        : isAr ? 'Ø§Ù„Ù†Ø¨Ø±Ø©'            : isEn ? 'Tone'              : 'Ton',
-        formulaLabel     : isAr ? 'Ø§Ù„ØµÙŠØºØ©'            : isEn ? 'Formula'           : 'Formule',
-        topCopyLabel     : isAr ? 'Ø£ÙØ¶Ù„ Ø¹Ø¨Ø§Ø±Ø§Øª Ø§Ù„Ù†Øµ'  : isEn ? 'Top Copy Lines'    : 'Top Copy Lines',
+        bigIdeaLabel     : isAr ? 'الفكرة الكبرى'     : isEn ? 'Big Idea'          : 'Big Idea',
+        copyScoresLabel  : isAr ? 'درجات النص'        : isEn ? 'Copy Scores'       : 'Copy Scores',
+        toneLabel        : isAr ? 'النبرة'            : isEn ? 'Tone'              : 'Ton',
+        formulaLabel     : isAr ? 'الصيغة'            : isEn ? 'Formula'           : 'Formule',
+        topCopyLabel     : isAr ? 'أفضل عبارات النص'  : isEn ? 'Top Copy Lines'    : 'Top Copy Lines',
         // Tech
-        techTitle        : isAr ? 'Ø§Ù„ØªÙ‚Ù†ÙŠØ§Øª Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…Ø©': isEn ? 'Tech Stack'        : 'Tech Stack',
-        noneDetected     : isAr ? 'Ù„Ù… ÙŠØªÙ… Ø§ÙƒØªØ´Ø§Ù Ø£ÙŠ Ø´ÙŠØ¡': isEn ? 'None detected'  : 'Aucun dÃ©tectÃ©',
+        techTitle        : isAr ? 'التقنيات المستخدمة': isEn ? 'Tech Stack'        : 'Tech Stack',
+        noneDetected     : isAr ? 'لم يتم اكتشاف أي شيء': isEn ? 'None detected'  : 'Aucun détecté',
         // Performance vitals
-        vitalsLabel      : isAr ? 'Ù…Ø¤Ø´Ø±Ø§Øª Ø§Ù„Ø£Ø¯Ø§Ø¡'    : isEn ? 'Vitals'            : 'Vitals',
-        topResLabel      : isAr ? 'Ø£Ø«Ù‚Ù„ Ø§Ù„Ù…ÙˆØ§Ø±Ø¯'      : isEn ? 'Top Resources'     : 'Top Ressources',
+        vitalsLabel      : isAr ? 'مؤشرات الأداء'    : isEn ? 'Vitals'            : 'Vitals',
+        topResLabel      : isAr ? 'أثقل الموارد'      : isEn ? 'Top Resources'     : 'Top Ressources',
         // Conversion signals
-        convSignalsLabel : isAr ? 'Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„ØªØ­ÙˆÙŠÙ„'    : isEn ? 'Conversion Signals': 'Conversion Signals',
+        convSignalsLabel : isAr ? 'إشارات التحويل'    : isEn ? 'Conversion Signals': 'Conversion Signals',
         // Keywords
-        topKwLabel       : isAr ? 'Ø£Ù‡Ù… Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ù…ÙØªØ§Ø­ÙŠØ©'
-                         : isEn ? 'Top Keywords â€” real frequency'
-                         :        'Top Keywords â€” frÃ©quence rÃ©elle',
+        topKwLabel       : isAr ? 'أهم الكلمات المفتاحية'
+                         : isEn ? 'Top Keywords — real frequency'
+                         :        'Top Keywords — fréquence réelle',
         // Public report labels
-        cotLabel         : isAr ? 'Ù…Ù†Ø·Ù‚ Ø§Ù„ØªÙ‚Ø±ÙŠØ±'       : isEn ? 'Report reasoning'       : 'Raisonnement du rapport',
-        agent1Label      : isAr ? 'Ù‡ÙˆÙŠØ© Ø§Ù„ØµÙØ­Ø©'         : isEn ? 'Page identity'           : 'Identite de la page',
-        agent2Label      : isAr ? 'Ù…Ø³Ø§Ø± Ø§Ù„Ø¨ÙŠØ¹'          : isEn ? 'Sales journey'           : 'Parcours de vente',
-        agent3Label      : isAr ? 'Ø®Ø·Ø© Ø§Ù„ØªØ­Ø³ÙŠÙ†'          : isEn ? 'Improvement plan'        : 'Plan d amelioration',
-        agent4Label      : isAr ? 'Ù…Ø­ÙØ²Ø§Øª Ø§Ù„Ù‚Ø±Ø§Ø±'      : isEn ? 'Decision triggers'       : 'Declencheurs de decision',
+        cotLabel         : isAr ? 'منطق التقرير'       : isEn ? 'Report reasoning'       : 'Raisonnement du rapport',
+        agent1Label      : isAr ? 'هوية الصفحة'         : isEn ? 'Page identity'           : 'Identite de la page',
+        agent2Label      : isAr ? 'مسار البيع'          : isEn ? 'Sales journey'           : 'Parcours de vente',
+        agent3Label      : isAr ? 'خطة التحسين'          : isEn ? 'Improvement plan'        : 'Plan d amelioration',
+        agent4Label      : isAr ? 'محفزات القرار'      : isEn ? 'Decision triggers'       : 'Declencheurs de decision',
     };
 
-        // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸŽ¨ COULEURS & HELPERS
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+        // ══════════════════════════════════════════════════
+    // 🎨 COULEURS & HELPERS
+    // ══════════════════════════════════════════════════
     const threatLevel  = data.threatLevel || 'MEDIUM';
     const threatColor  = threatLevel === 'CRITICAL' ? 'ef4444'
                        : threatLevel === 'HIGH'     ? 'f97316'
@@ -11344,10 +11344,10 @@ const fieldStudiesBottomHtml = renderFieldStudiesBottom(fieldIntelModel, { isAr,
 const colorPsychologyHtml =
     design.colorPsychology && typeof design.colorPsychology === 'object'
         ? renderKvObject(design.colorPsychology, [
-            { key: 'primary', label: isAr ? 'Ø§Ù„Ù„ÙˆÙ†' : isEn ? 'Primary' : 'Couleur', color: '#ec4899' },
-            { key: 'emotion', label: isAr ? 'Ø§Ù„Ø¹Ø§Ø·ÙØ©' : isEn ? 'Emotion' : 'Ã‰motion', color: '#ec4899' },
-            { key: 'conversionImpact', label: isAr ? 'Ø§Ù„Ø£Ø«Ø±' : isEn ? 'Impact' : 'Impact conversion', color: '#ec4899' },
-            { key: 'recommendation', label: isAr ? 'Ø§Ù„ØªÙˆØµÙŠØ©' : isEn ? 'Recommendation' : 'Recommandation', color: '#ec4899' },
+            { key: 'primary', label: isAr ? 'اللون' : isEn ? 'Primary' : 'Couleur', color: '#ec4899' },
+            { key: 'emotion', label: isAr ? 'العاطفة' : isEn ? 'Emotion' : 'Émotion', color: '#ec4899' },
+            { key: 'conversionImpact', label: isAr ? 'الأثر' : isEn ? 'Impact' : 'Impact conversion', color: '#ec4899' },
+            { key: 'recommendation', label: isAr ? 'التوصية' : isEn ? 'Recommendation' : 'Recommandation', color: '#ec4899' },
         ])
         : (design.colorPsychology ? `<div dir="auto">${esc(String(design.colorPsychology))}</div>` : '');
 
@@ -11355,21 +11355,21 @@ const visualHierarchyHtml =
     design.visualHierarchy && typeof design.visualHierarchy === 'object'
         ? renderKvObject(design.visualHierarchy, [
             { key: 'score', label: 'Score', color: '#06b6d4' },
-            { key: 'eyeFlow', label: isAr ? 'Ù…Ø³Ø§Ø± Ø§Ù„Ø¹ÙŠÙ†' : isEn ? 'Eye Flow' : 'Parcours visuel', color: '#06b6d4' },
-            { key: 'recommendation', label: isAr ? 'Ø§Ù„ØªÙˆØµÙŠØ©' : isEn ? 'Recommendation' : 'Recommandation', color: '#06b6d4' },
-            { key: 'ctaVisibility', label: isAr ? 'ÙˆØ¶ÙˆØ­ CTA' : isEn ? 'CTA Visibility' : 'VisibilitÃ© CTA', color: '#06b6d4' },
+            { key: 'eyeFlow', label: isAr ? 'مسار العين' : isEn ? 'Eye Flow' : 'Parcours visuel', color: '#06b6d4' },
+            { key: 'recommendation', label: isAr ? 'التوصية' : isEn ? 'Recommendation' : 'Recommandation', color: '#06b6d4' },
+            { key: 'ctaVisibility', label: isAr ? 'وضوح CTA' : isEn ? 'CTA Visibility' : 'Visibilité CTA', color: '#06b6d4' },
             { key: 'fix', label: isAr ? 'Correction' : isEn ? 'Fix' : 'Correction', color: '#06b6d4' },
         ])
         : (design.visualHierarchy ? `<div dir="auto">${esc(String(design.visualHierarchy))}</div>` : '');
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
     // Bloc raisonnement du rapport
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
     const cot     = data.chainOfThought || {};
     const cotHtml = (cot.agent1 || cot.agent2 || cot.agent3 || cot.agent4) ? `
     <div class="result-card fade-in-up" style="margin-bottom:22px;border-left:4px solid #6366f1;" dir="${dir}">
         <h3 style="margin-bottom:14px;font-family:Cairo;display:flex;align-items:center;gap:10px;color:white;font-size:1rem;">
             <i class="fas fa-brain" style="color:#6366f1"></i>
-            ${i18n.cotLabel} â€” V12 GOD TIER
+            ${i18n.cotLabel} — V12 GOD TIER
         </h3>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;">
             ${[
@@ -11395,9 +11395,9 @@ const visualHierarchyHtml =
         </div>
     </div>` : '';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸ“¦ BLOC 0 â€” HEADER DASHBOARD
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // 📦 BLOC 0 — HEADER DASHBOARD
+    // ══════════════════════════════════════════════════
     const headerHtml = `
     <div class="result-card fade-in-up" style="margin-bottom:22px;padding:26px;
          border-top:4px solid #${scoreColor};position:relative;overflow:hidden;" dir="${dir}">
@@ -11447,7 +11447,7 @@ const visualHierarchyHtml =
                         { label: i18n.productLabel, val: product   },
                         { label: i18n.priceLabel,   val: pricePoint},
                         { label: i18n.marketLabel,  val: targetMkt },
-                    ].filter(x => x.val && x.val !== 'â€”').map(x => `
+                    ].filter(x => x.val && x.val !== '—').map(x => `
                         <div style="font-size:0.72rem;color:#64748b;">
                             <span style="color:#94a3b8;font-weight:600;">${x.label}: </span>
                             ${esc(x.val)}
@@ -11459,10 +11459,10 @@ const visualHierarchyHtml =
                 <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:9px;">
                     ${phones[0] ? `<a href="tel:${phones[0]}"
                         style="font-size:0.68rem;color:#10b981;text-decoration:none;">
-                        ðŸ“ž ${phones[0]}</a>` : ''}
+                        📞 ${phones[0]}</a>` : ''}
                     ${emails[0] ? `<a href="mailto:${emails[0]}"
                         style="font-size:0.68rem;color:#3b82f6;text-decoration:none;">
-                        âœ‰ï¸ ${emails[0]}</a>` : ''}
+                        ✉️ ${emails[0]}</a>` : ''}
                     ${whatsappLinks[0] ? `<a href="${whatsappLinks[0]}" target="_blank"
                         style="font-size:0.68rem;color:#25d366;text-decoration:none;">
                         WhatsApp</a>` : ''}
@@ -11484,9 +11484,9 @@ const visualHierarchyHtml =
                         ${sectionsNoCTA.length} ${i18n.noCTALabel}
                     </span>
                     ${sectionsHigh.length ? `<span style="color:#f59e0b;font-weight:700;">
-                        â€” ${sectionsHigh.length} HIGH impact</span>` : ''}
+                        — ${sectionsHigh.length} HIGH impact</span>` : ''}
                     ${pageGlobal.wordCount ? `<span style="color:#64748b;">
-                        â€” ${pageGlobal.wordCount.toLocaleString()} ${i18n.wordsLabel}</span>` : ''}
+                        — ${pageGlobal.wordCount.toLocaleString()} ${i18n.wordsLabel}</span>` : ''}
                 </div>
             </div>
 
@@ -11501,8 +11501,8 @@ const visualHierarchyHtml =
             ${[
                 { label: 'SEO',    v: seoScore,   c: '#3b82f6' },
                 { label: 'Trust',  v: trustScore, c: '#10b981' },
-                { label: isAr ? 'ØªØ­ÙˆÙŠÙ„' : 'Conv.',  v: convScore, c: '#f59e0b' },
-                { label: isAr ? 'Ø£Ø¯Ø§Ø¡'  : 'Perf.',  v: perfScore, c: '#ef4444' },
+                { label: isAr ? 'تحويل' : 'Conv.',  v: convScore, c: '#f59e0b' },
+                { label: isAr ? 'أداء'  : 'Perf.',  v: perfScore, c: '#ef4444' },
                 { label: 'Funnel', v: funScore,   c: '#8b5cf6' },
                 { label: 'Global', v: score,      c: `#${scoreColor}` },
             ].map(s => `
@@ -11510,7 +11510,7 @@ const visualHierarchyHtml =
                     ${(() => {
                         const n = Number(s.v);
                         const hasScore = Number.isFinite(n);
-                        const label = hasScore ? n : (isAr ? 'Ù„Ù„ÙØ­Øµ' : isEn ? 'Check' : 'Ã€ vÃ©rifier');
+                        const label = hasScore ? n : (isAr ? 'للفحص' : isEn ? 'Check' : 'À vérifier');
                         const width = hasScore ? Math.max(0, Math.min(100, n)) : 0;
                         const color = hasScore ? s.c : '#64748b';
                         return `
@@ -11528,9 +11528,9 @@ const visualHierarchyHtml =
         </div>
     </div>`;
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸ’° BLOC 1 â€” FINANCIAL INTELLIGENCE (enrichi V12)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // 💰 BLOC 1 — FINANCIAL INTELLIGENCE (enrichi V12)
+    // ══════════════════════════════════════════════════
     const fKpis = [
         { label: i18n.trafficLabel, val: fin.traffic  ? fin.traffic.toLocaleString()                       : null, c: '#3b82f6', icon: 'fa-users'        },
         { label: i18n.basketLabel,  val: fin.basket   ? `${fin.basket} ${fin.currency}`                    : null, c: '#f59e0b', icon: 'fa-shopping-cart' },
@@ -11596,9 +11596,9 @@ const visualHierarchyHtml =
         </div>` : ''}
     </div>` : '';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸ“Š BLOC 1B â€” AARRR METRICS (NOUVEAU V12)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // 📊 BLOC 1B — AARRR METRICS (NOUVEAU V12)
+    // ══════════════════════════════════════════════════
     const hasAarrr = aarrr && (aarrr.acquisition || aarrr.activation || aarrr.retention
                             || aarrr.revenue     || aarrr.referral);
 
@@ -11723,29 +11723,29 @@ const userPriceRange = commerce.userContext?.userPriceRange || STATE.lastInputs?
 const commerceCurrency = commerceRecommended.currency || commerceStats.currency || pri.currency || fin.currency || '';
 const moneyValue = (v) => {
     const n = Number(v);
-    if (!Number.isFinite(n) || n <= 0) return 'â€”';
+    if (!Number.isFinite(n) || n <= 0) return '—';
     return `${n.toLocaleString(isAr ? 'ar-MA' : isEn ? 'en-US' : 'fr-FR')} ${commerceCurrency || ''}`.trim();
 };
 const rangeValue = (range) => {
-    if (!range || (!range.min && !range.max)) return 'â€”';
+    if (!range || (!range.min && !range.max)) return '—';
     return `${moneyValue(range.min)} - ${moneyValue(range.max)}`;
 };
 const trustSignalsList = [
-    [isAr ? 'Ø§ØªØµØ§Ù„ Ø¢Ù…Ù†' : isEn ? 'Secure access' : 'AccÃ¨s sÃ©curisÃ©', commerceTrust.hasSSL || tru.hasSSL],
+    [isAr ? 'اتصال آمن' : isEn ? 'Secure access' : 'Accès sécurisé', commerceTrust.hasSSL || tru.hasSSL],
     ['WhatsApp', commerceTrust.hasWhatsApp || tru.hasWhatsApp],
-    [isAr ? 'Ø¢Ø±Ø§Ø¡ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡' : isEn ? 'Customer reviews' : 'Avis clients', commerceTrust.hasReviews || tru.hasReviews],
-    [isAr ? 'Ø¶Ù…Ø§Ù†' : isEn ? 'Guarantee' : 'Garantie', commerceTrust.hasGuarantee || commerceTrust.hasMoneyBackGuarantee || tru.hasMoneyBackGuarantee],
-    [isAr ? 'ØªÙˆØµÙŠÙ„' : isEn ? 'Delivery' : 'Livraison', commerceTrust.hasDelivery || tru.hasCOD],
-    [isAr ? 'Ø£Ø³Ø¦Ù„Ø© Ø´Ø§Ø¦Ø¹Ø©' : isEn ? 'FAQ' : 'FAQ', commerceTrust.hasFAQ],
-    [isAr ? 'Ø§Ù„Ø¯ÙØ¹' : isEn ? 'Payment proof' : 'Preuves paiement', commerceTrust.hasPaymentLogos || tru.hasPaymentLogos]
+    [isAr ? 'آراء العملاء' : isEn ? 'Customer reviews' : 'Avis clients', commerceTrust.hasReviews || tru.hasReviews],
+    [isAr ? 'ضمان' : isEn ? 'Guarantee' : 'Garantie', commerceTrust.hasGuarantee || commerceTrust.hasMoneyBackGuarantee || tru.hasMoneyBackGuarantee],
+    [isAr ? 'توصيل' : isEn ? 'Delivery' : 'Livraison', commerceTrust.hasDelivery || tru.hasCOD],
+    [isAr ? 'أسئلة شائعة' : isEn ? 'FAQ' : 'FAQ', commerceTrust.hasFAQ],
+    [isAr ? 'الدفع' : isEn ? 'Payment proof' : 'Preuves paiement', commerceTrust.hasPaymentLogos || tru.hasPaymentLogos]
 ];
 const visibleTrustCount = trustSignalsList.filter(([, ok]) => ok).length;
 const offerSummary = (() => {
     const productName = commerceProducts[0]?.name || product || niche || siteType;
-    const priceText = commerceStats.count ? `${moneyValue(commerceStats.min)} - ${moneyValue(commerceStats.max)}` : (userPriceRange || 'â€”');
-    if (isAr) return `ØªÙ… Ø±ØµØ¯ ${commerceProducts.length || 0} Ù…Ù†ØªØ¬ Ø£Ùˆ Ø¹Ø±Ø¶ØŒ Ù…Ø¹ Ù†Ø·Ø§Ù‚ Ø³Ø¹Ø± ${priceText}. Ù…Ø³ØªÙˆÙ‰ Ø§Ù„Ø«Ù‚Ø© Ù…Ø¨Ù†ÙŠ Ø¹Ù„Ù‰ ${visibleTrustCount} Ø¥Ø´Ø§Ø±Ø§Øª Ø¸Ø§Ù‡Ø±Ø©.`;
+    const priceText = commerceStats.count ? `${moneyValue(commerceStats.min)} - ${moneyValue(commerceStats.max)}` : (userPriceRange || '—');
+    if (isAr) return `تم رصد ${commerceProducts.length || 0} منتج أو عرض، مع نطاق سعر ${priceText}. مستوى الثقة مبني على ${visibleTrustCount} إشارات ظاهرة.`;
     if (isEn) return `${commerceProducts.length || 0} product or offer signals were found, with a price range of ${priceText}. Confidence is based on ${visibleTrustCount} visible trust signals.`;
-    return `${commerceProducts.length || 0} produit ou offre dÃ©tectÃ©, avec une fourchette de prix ${priceText}. La confiance est basÃ©e sur ${visibleTrustCount} signaux visibles.`;
+    return `${commerceProducts.length || 0} produit ou offre détecté, avec une fourchette de prix ${priceText}. La confiance est basée sur ${visibleTrustCount} signaux visibles.`;
 })();
 const hasCommerceMoney = commerce.success || commerceProducts.length || commercePricingPages.length || commerceStats.count || userPriceRange || commerceRecommended.recommendedRange || pricing.priceVerdict;
 
@@ -11753,32 +11753,32 @@ const pricingHtml = hasCommerceMoney ? `
 <div class="result-card fade-in-up" style="margin-bottom:22px;border-left:4px solid #f59e0b;" dir="${dir}">
     <h3 style="margin-bottom:8px;font-family:Cairo;display:flex;align-items:center;gap:10px;color:white;font-size:1rem;">
         <i class="fas fa-hand-holding-dollar" style="color:#f59e0b"></i>
-        ${isAr ? 'Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø«Ù‚Ø©' : isEn ? 'Offer, price, and trust' : 'Offre, prix et confiance'}
+        ${isAr ? 'العرض والسعر والثقة' : isEn ? 'Offer, price, and trust' : 'Offre, prix et confiance'}
     </h3>
     <p style="margin:0 0 14px;color:#cbd5e1;font-size:0.88rem;line-height:1.7;" dir="auto">${esc(offerSummary)}</p>
 
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:14px;">
         <div style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.18);border-radius:12px;padding:13px;">
             <small style="display:block;color:#fbbf24;font-weight:900;font-size:.62rem;text-transform:uppercase;margin-bottom:6px;">
-                ${isAr ? 'Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ø°ÙŠ Ø£Ø¯Ø®Ù„ØªÙ‡' : isEn ? 'User price' : 'Prix utilisateur'}
+                ${isAr ? 'السعر الذي أدخلته' : isEn ? 'User price' : 'Prix utilisateur'}
             </small>
-            <strong style="color:white;font-size:.96rem;overflow-wrap:anywhere;">${esc(userPriceRange || 'â€”')}</strong>
+            <strong style="color:white;font-size:.96rem;overflow-wrap:anywhere;">${esc(userPriceRange || '—')}</strong>
         </div>
         <div style="background:rgba(6,182,212,0.07);border:1px solid rgba(6,182,212,0.18);border-radius:12px;padding:13px;">
             <small style="display:block;color:#67e8f9;font-weight:900;font-size:.62rem;text-transform:uppercase;margin-bottom:6px;">
-                ${isAr ? 'Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø©' : isEn ? 'Observed range' : 'Fourchette observÃ©e'}
+                ${isAr ? 'الأسعار المرصودة' : isEn ? 'Observed range' : 'Fourchette observée'}
             </small>
-            <strong style="color:white;font-size:.96rem;">${commerceStats.count ? `${moneyValue(commerceStats.min)} - ${moneyValue(commerceStats.max)}` : 'â€”'}</strong>
+            <strong style="color:white;font-size:.96rem;">${commerceStats.count ? `${moneyValue(commerceStats.min)} - ${moneyValue(commerceStats.max)}` : '—'}</strong>
         </div>
         <div style="background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.18);border-radius:12px;padding:13px;">
             <small style="display:block;color:#6ee7b7;font-weight:900;font-size:.62rem;text-transform:uppercase;margin-bottom:6px;">
-                ${isAr ? 'Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ù…ÙˆØµÙ‰ Ø¨Ù‡' : isEn ? 'Recommended range' : 'Prix recommandÃ©'}
+                ${isAr ? 'السعر الموصى به' : isEn ? 'Recommended range' : 'Prix recommandé'}
             </small>
             <strong style="color:white;font-size:.96rem;">${rangeValue(commerceRecommended.recommendedRange)}</strong>
         </div>
         <div style="background:rgba(139,92,246,0.07);border:1px solid rgba(139,92,246,0.18);border-radius:12px;padding:13px;">
             <small style="display:block;color:#c4b5fd;font-weight:900;font-size:.62rem;text-transform:uppercase;margin-bottom:6px;">
-                ${isAr ? 'Ù…Ø³ØªÙˆÙ‰ Ø§Ù„Ø«Ù‚Ø©' : isEn ? 'Confidence' : 'Confiance'}
+                ${isAr ? 'مستوى الثقة' : isEn ? 'Confidence' : 'Confiance'}
             </small>
             <strong style="color:white;font-size:.96rem;">${esc(commerceRecommended.confidence || commerceDeduced.pricingConfidence || 'LOW')}</strong>
         </div>
@@ -11787,21 +11787,21 @@ const pricingHtml = hasCommerceMoney ? `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-bottom:12px;">
         <div style="background:rgba(255,255,255,0.025);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:13px;">
             <small style="color:#fbbf24;font-weight:900;font-size:.62rem;text-transform:uppercase;display:block;margin-bottom:7px;">
-                ${isAr ? 'Ù‚Ø±Ø§Ø± Ø§Ù„Ø³Ø¹Ø±' : isEn ? 'Pricing decision' : 'DÃ©cision prix'}
+                ${isAr ? 'قرار السعر' : isEn ? 'Pricing decision' : 'Décision prix'}
             </small>
-            <p style="margin:0;color:#fde68a;font-size:.84rem;line-height:1.65;" dir="auto">${esc(commerceRecommended.pricingRationale || pricing.priceVerdict || (isAr ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¨ÙŠØ§Ù†Ø§Øª Ø³Ø¹Ø±ÙŠØ© ÙƒØ§ÙÙŠØ©.' : isEn ? 'Not enough reliable price data.' : 'DonnÃ©es prix fiables insuffisantes.'))}</p>
+            <p style="margin:0;color:#fde68a;font-size:.84rem;line-height:1.65;" dir="auto">${esc(commerceRecommended.pricingRationale || pricing.priceVerdict || (isAr ? 'لا توجد بيانات سعرية كافية.' : isEn ? 'Not enough reliable price data.' : 'Données prix fiables insuffisantes.'))}</p>
             <div style="margin-top:8px;color:#94a3b8;font-size:.72rem;line-height:1.5;" dir="auto">
-                ${esc(commerceRecommended.formula || (isAr ? 'Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ù…ÙˆØµÙ‰ = Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø© + Ø³Ø¹Ø± Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… + Ø§Ù„Ø«Ù‚Ø© + Ø§Ù„Ø¶Ù…Ø§Ù†/Ø§Ù„ØªÙˆØµÙŠÙ„' : isEn ? 'recommended price = observed median + optional user price + trust + guarantee/delivery' : 'prix recommandÃ© = mÃ©diane observÃ©e + prix utilisateur optionnel + confiance + garantie/livraison'))}
+                ${esc(commerceRecommended.formula || (isAr ? 'السعر الموصى = الأسعار المرصودة + سعر المستخدم + الثقة + الضمان/التوصيل' : isEn ? 'recommended price = observed median + optional user price + trust + guarantee/delivery' : 'prix recommandé = médiane observée + prix utilisateur optionnel + confiance + garantie/livraison'))}
             </div>
         </div>
         <div style="background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.12);border-radius:12px;padding:13px;">
             <small style="color:#6ee7b7;font-weight:900;font-size:.62rem;text-transform:uppercase;display:block;margin-bottom:8px;">
-                ${isAr ? 'Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø«Ù‚Ø©' : isEn ? 'Trust signals' : 'Signaux de confiance'}
+                ${isAr ? 'إشارات الثقة' : isEn ? 'Trust signals' : 'Signaux de confiance'}
             </small>
             <div style="display:flex;flex-wrap:wrap;gap:6px;">
                 ${trustSignalsList.map(([label, ok]) => `
                     <span style="border:1px solid rgba(${ok ? '16,185,129' : '148,163,184'},.22);background:rgba(${ok ? '16,185,129' : '148,163,184'},.07);color:${ok ? '#6ee7b7' : '#94a3b8'};padding:4px 8px;border-radius:999px;font-size:.68rem;font-weight:800;">
-                        ${ok ? 'âœ“' : 'â€¢'} ${esc(label)}
+                        ${ok ? '✓' : '•'} ${esc(label)}
                     </span>
                 `).join('')}
             </div>
@@ -11810,38 +11810,38 @@ const pricingHtml = hasCommerceMoney ? `
 
     <details class="report-details" style="border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:10px 12px;background:rgba(255,255,255,0.02);">
         <summary style="cursor:pointer;color:#c4b5fd;font-weight:900;font-size:.78rem;">
-            ${isAr ? 'Ø¹Ø±Ø¶ Ø§Ù„ØªÙØ§ØµÙŠÙ„ ÙˆØ§Ù„Ø£Ø¯Ù„Ø©' : isEn ? 'View details and proof' : 'Voir les dÃ©tails et preuves'}
+            ${isAr ? 'عرض التفاصيل والأدلة' : isEn ? 'View details and proof' : 'Voir les détails et preuves'}
         </summary>
         <div style="margin-top:12px;display:grid;gap:12px;">
             ${commerceProducts.length ? `
             <div>
-                <strong style="color:white;font-size:.82rem;">${isAr ? 'Ù…Ù†ØªØ¬Ø§Øª Ø£Ùˆ Ø¹Ø±ÙˆØ¶ Ù…Ø±ØµÙˆØ¯Ø©' : isEn ? 'Observed products or offers' : 'Produits ou offres observÃ©s'}</strong>
+                <strong style="color:white;font-size:.82rem;">${isAr ? 'منتجات أو عروض مرصودة' : isEn ? 'Observed products or offers' : 'Produits ou offres observés'}</strong>
                 <div style="display:grid;gap:8px;margin-top:8px;">
                     ${commerceProducts.slice(0,6).map(p => `
                     <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border-top:1px solid rgba(255,255,255,.06);padding-top:8px;">
                         <div style="min-width:0;">
-                            <div style="color:#e2e8f0;font-size:.78rem;font-weight:800;overflow-wrap:anywhere;">${esc(p.name || 'â€”')}</div>
+                            <div style="color:#e2e8f0;font-size:.78rem;font-weight:800;overflow-wrap:anywhere;">${esc(p.name || '—')}</div>
                             ${p.url ? `<a href="${esc(p.url)}" target="_blank" rel="noopener" style="color:#38bdf8;font-size:.68rem;overflow-wrap:anywhere;">${esc(p.url)}</a>` : ''}
                         </div>
-                        <strong style="color:#10b981;font-size:.76rem;">${p.price ? moneyValue(p.price) : 'â€”'}</strong>
+                        <strong style="color:#10b981;font-size:.76rem;">${p.price ? moneyValue(p.price) : '—'}</strong>
                     </div>`).join('')}
                 </div>
             </div>` : ''}
 
             ${commercePricingPages.length ? `
             <div>
-                <strong style="color:white;font-size:.82rem;">${isAr ? 'ØµÙØ­Ø§Øª Ø§Ù„Ø³Ø¹Ø± Ø§Ù„ØªÙŠ ØªÙ… ÙØ­ØµÙ‡Ø§' : isEn ? 'Pricing pages checked' : 'Pages prix vÃ©rifiÃ©es'}</strong>
+                <strong style="color:white;font-size:.82rem;">${isAr ? 'صفحات السعر التي تم فحصها' : isEn ? 'Pricing pages checked' : 'Pages prix vérifiées'}</strong>
                 ${commercePricingPages.map(p => `
                     <div style="margin-top:7px;color:#94a3b8;font-size:.72rem;">
                         <a href="${esc(p.url)}" target="_blank" rel="noopener" style="color:#38bdf8;">${esc(p.url)}</a>
-                        <span style="color:#fbbf24;"> Â· ${p.priceCount || 0} ${isAr ? 'Ø£Ø³Ø¹Ø§Ø±' : isEn ? 'prices' : 'prix'}</span>
+                        <span style="color:#fbbf24;"> · ${p.priceCount || 0} ${isAr ? 'أسعار' : isEn ? 'prices' : 'prix'}</span>
                     </div>
                 `).join('')}
             </div>` : ''}
 
             ${commerceEvidenceLinks.length ? `
             <div>
-                <strong style="color:white;font-size:.82rem;">${isAr ? 'Ø±ÙˆØ§Ø¨Ø· Ø§Ù„Ø£Ø¯Ù„Ø©' : isEn ? 'Proof links' : 'Liens de preuve'}</strong>
+                <strong style="color:white;font-size:.82rem;">${isAr ? 'روابط الأدلة' : isEn ? 'Proof links' : 'Liens de preuve'}</strong>
                 <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px;">
                     ${commerceEvidenceLinks.slice(0,10).map(l => `
                     <a href="${esc(l.url)}" target="_blank" rel="noopener" style="color:#93c5fd;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.16);padding:5px 9px;border-radius:999px;font-size:.68rem;text-decoration:none;">
@@ -11853,9 +11853,9 @@ const pricingHtml = hasCommerceMoney ? `
     </details>
 </div>` : '';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // â™Ÿï¸ BLOC 2 â€” STRATEGIC BLUEPRINT
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // ♟️ BLOC 2 — STRATEGIC BLUEPRINT
+    // ══════════════════════════════════════════════════
     const blueprintHtml = blueprint.killShotName || blueprint.executionPlan || blueprint.coreHook ? `
     <div class="magic-box fade-in-up" style="margin-bottom:22px;border-left:5px solid var(--accent-secondary);" dir="${dir}">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
@@ -11964,19 +11964,19 @@ const pricingHtml = hasCommerceMoney ? `
                 ${counterStrat.howToBeatThem ? `
                 <div style="font-size:0.8rem;color:#fca5a5;" dir="auto">
                     <strong style="color:#ef4444;">
-                        ${isAr ? 'ÙƒÙŠÙ ØªØªØºÙ„Ø¨' : 'Beat'}: </strong>
+                        ${isAr ? 'كيف تتغلب' : 'Beat'}: </strong>
                     ${esc(counterStrat.howToBeatThem)}
                 </div>` : ''}
                 ${counterStrat.yourPositioning ? `
                 <div style="font-size:0.8rem;color:#fde68a;" dir="auto">
                     <strong style="color:#f59e0b;">
-                        ${isAr ? 'ØªÙ…ÙˆØ¶Ø¹Ùƒ' : 'Position'}: </strong>
+                        ${isAr ? 'تموضعك' : 'Position'}: </strong>
                     ${esc(counterStrat.yourPositioning)}
                 </div>` : ''}
                 ${counterStrat.uniqueAngle ? `
                 <div style="font-size:0.8rem;color:#a5b4fc;" dir="auto">
                     <strong style="color:#818cf8;">
-                        ${isAr ? 'Ø§Ù„Ø²Ø§ÙˆÙŠØ©' : 'Angle'}: </strong>
+                        ${isAr ? 'الزاوية' : 'Angle'}: </strong>
                     ${esc(counterStrat.uniqueAngle)}
                 </div>` : ''}
             </div>
@@ -12001,9 +12001,9 @@ const renderObjectLines = (obj, fields = []) => {
 
     return lines || '';
 };
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸŽ¨ BLOC 3 â€” WEB CHARTE + COLOR PSYCHOLOGY (corrigÃ© UI/UX)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ══════════════════════════════════════════════════
+// 🎨 BLOC 3 — WEB CHARTE + COLOR PSYCHOLOGY (corrigé UI/UX)
+// ══════════════════════════════════════════════════
 
 const normalizeCssColor = (value) => {
     const raw = typeof value === 'object' && value
@@ -12050,18 +12050,18 @@ const allPalette = [...new Set([
 ].filter(Boolean))].slice(0, 10);
 
 const colorPsychologyBlock = visualObject(design.colorPsychology, [
-    { key: 'primary', label: isAr ? 'Ø§Ù„Ù„ÙˆÙ†' : isEn ? 'Primary' : 'Couleur', color: '#f472b6' },
-    { key: 'emotion', label: isAr ? 'Ø§Ù„Ø¹Ø§Ø·ÙØ©' : isEn ? 'Emotion' : 'Ã‰motion', color: '#f472b6' },
-    { key: 'conversionImpact', label: isAr ? 'Ø§Ù„Ø£Ø«Ø±' : isEn ? 'Impact' : 'Impact conversion', color: '#f472b6' },
-    { key: 'recommendation', label: isAr ? 'Ø§Ù„ØªÙˆØµÙŠØ©' : isEn ? 'Recommendation' : 'Recommandation', color: '#f472b6' },
+    { key: 'primary', label: isAr ? 'اللون' : isEn ? 'Primary' : 'Couleur', color: '#f472b6' },
+    { key: 'emotion', label: isAr ? 'العاطفة' : isEn ? 'Emotion' : 'Émotion', color: '#f472b6' },
+    { key: 'conversionImpact', label: isAr ? 'الأثر' : isEn ? 'Impact' : 'Impact conversion', color: '#f472b6' },
+    { key: 'recommendation', label: isAr ? 'التوصية' : isEn ? 'Recommendation' : 'Recommandation', color: '#f472b6' },
 ]);
 
 const visualHierarchyBlock = visualObject(design.visualHierarchy, [
     { key: 'score', label: 'Score', color: '#22d3ee' },
-    { key: 'eyeFlow', label: isAr ? 'Ù…Ø³Ø§Ø± Ø§Ù„Ø¹ÙŠÙ†' : isEn ? 'Eye Flow' : 'Parcours visuel', color: '#22d3ee' },
-    { key: 'ctaVisibility', label: isAr ? 'ÙˆØ¶ÙˆØ­ CTA' : isEn ? 'CTA Visibility' : 'VisibilitÃ© CTA', color: '#22d3ee' },
+    { key: 'eyeFlow', label: isAr ? 'مسار العين' : isEn ? 'Eye Flow' : 'Parcours visuel', color: '#22d3ee' },
+    { key: 'ctaVisibility', label: isAr ? 'وضوح CTA' : isEn ? 'CTA Visibility' : 'Visibilité CTA', color: '#22d3ee' },
     { key: 'fix', label: isAr ? 'Correction' : isEn ? 'Fix' : 'Correction', color: '#22d3ee' },
-    { key: 'recommendation', label: isAr ? 'Ø§Ù„ØªÙˆØµÙŠØ©' : isEn ? 'Recommendation' : 'Recommandation', color: '#22d3ee' },
+    { key: 'recommendation', label: isAr ? 'التوصية' : isEn ? 'Recommendation' : 'Recommandation', color: '#22d3ee' },
 ]);
 
 const designHtml = design.primary || design.fontMain || design.style ? `
@@ -12186,8 +12186,8 @@ const designHtml = design.primary || design.fontMain || design.style ? `
             <div class="vc-title" style="color:#a78bfa;">
                 <i class="fas fa-font"></i> Typography
             </div>
-            ${visualPair(isAr ? 'Ø§Ù„Ø®Ø· Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ' : isEn ? 'Primary Font' : 'Police principale', design.fontMain || 'Non dÃ©tectÃ©e', '#a78bfa')}
-            ${visualPair(isAr ? 'Ø®Ø· Ø«Ø§Ù†ÙˆÙŠ' : isEn ? 'Secondary Font' : 'Police secondaire', design.fontSec, '#a78bfa')}
+            ${visualPair(isAr ? 'الخط الرئيسي' : isEn ? 'Primary Font' : 'Police principale', design.fontMain || 'Non détectée', '#a78bfa')}
+            ${visualPair(isAr ? 'خط ثانوي' : isEn ? 'Secondary Font' : 'Police secondaire', design.fontSec, '#a78bfa')}
             ${design.googleFonts?.length ? visualPair('Google Fonts', design.googleFonts.slice(0, 4).join(', '), '#a78bfa') : ''}
         </div>
 
@@ -12195,9 +12195,9 @@ const designHtml = design.primary || design.fontMain || design.style ? `
             <div class="vc-title" style="color:#67e8f9;">
                 <i class="fas fa-layer-group"></i> Layout & Style
             </div>
-            ${visualPair(isAr ? 'Ø§Ù„Ø£Ø³Ù„ÙˆØ¨' : isEn ? 'Style' : 'Style', design.style || 'â€”', '#67e8f9')}
-            ${visualPair('Mobile', design.isMobile ? 'Oui âœ“' : 'Non âœ—', design.isMobile ? '#10b981' : '#ef4444')}
-            ${visualPair(isAr ? 'Ù†Ù‚Ø§Ø· Ø§Ù„ØªØµÙ…ÙŠÙ…' : isEn ? 'Design Score' : 'Design Score', `${design.score || 0}/100`, '#f59e0b')}
+            ${visualPair(isAr ? 'الأسلوب' : isEn ? 'Style' : 'Style', design.style || '—', '#67e8f9')}
+            ${visualPair('Mobile', design.isMobile ? 'Oui ✓' : 'Non ✗', design.isMobile ? '#10b981' : '#ef4444')}
+            ${visualPair(isAr ? 'نقاط التصميم' : isEn ? 'Design Score' : 'Design Score', `${design.score || 0}/100`, '#f59e0b')}
         </div>
 
         ${design.colorPsychology ? `
@@ -12241,10 +12241,10 @@ const designHtml = design.primary || design.fontMain || design.style ? `
     </div>` : ''}
 </div>` : '';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // âš¡ BLOC 4 â€” PERFORMANCE, TRUST & TECH STACK
+    // ══════════════════════════════════════════════════
+    // ⚡ BLOC 4 — PERFORMANCE, TRUST & TECH STACK
     //            + TECHNICAL SEO AUDIT (NOUVEAU V12)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
     const hasPerf     = prf && (prf.ttfb || prf.loadEvent || prf.totalElements);
     const hasTrust    = tru && Object.keys(tru).length > 0;
     const hasTracking = trk && Object.keys(trk).length > 0;
@@ -12275,7 +12275,7 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                         { label:'Load',      val: prf.loadEvent,     bad: v => parseInt(v) > 4000 },
                         { label:'Transfer',  val: prf.transferSize,  bad: () => false             },
                         { label:'Resources', val: prf.resourceCount, bad: v => v > 100            },
-                        { label: isAr ? 'Ø¹Ù†Ø§ØµØ± DOM' : 'DOM Size',
+                        { label: isAr ? 'عناصر DOM' : 'DOM Size',
                                              val: prf.totalElements ? `${prf.totalElements} els` : null,
                                              bad: () => prf.isHeavyPage                           },
                     ].filter(x => x.val).map(x => {
@@ -12296,7 +12296,7 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                     ${prf.heavyResources.slice(0,3).map(r => `
                     <div style="font-size:0.65rem;color:#64748b;margin-top:2px;
                          display:flex;justify-content:space-between;">
-                        <span style="color:#94a3b8;">${(r.name||'').split('/').pop()?.substring(0,25) || 'â€”'}</span>
+                        <span style="color:#94a3b8;">${(r.name||'').split('/').pop()?.substring(0,25) || '—'}</span>
                         <span style="color:${parseInt(r.size)>200?'#ef4444':'#64748b'};">${r.size}</span>
                     </div>`).join('')}
                 </div>` : ''}
@@ -12316,26 +12316,26 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                         ['SSL',          tru.hasSSL,                ''],
                         ['WhatsApp',     tru.hasWhatsApp,           ''],
                         ['COD',          tru.hasCOD,                ''],
-                        [isAr?'Ø¢Ø±Ø§Ø¡':'Avis',  tru.hasReviews,       ''],
+                        [isAr?'آراء':'Avis',  tru.hasReviews,       ''],
                         ['MoneyBack',    tru.hasMoneyBackGuarantee, ''],
-                        [isAr?'Ù‡Ø§ØªÙ':'Phone', tru.hasPhoneNumber,   ''],
+                        [isAr?'هاتف':'Phone', tru.hasPhoneNumber,   ''],
                         ['Email',        tru.hasEmail,              ''],
                         ['Chat',         tru.hasChatWidget,         ''],
-                        [isAr?'Ø¨Ø·Ø§Ù‚Ø©':'Carte', tru.hasPaymentLogos,''],
-                        [isAr?'Ù‚Ø§Ù†ÙˆÙ†ÙŠ':'LÃ©gal', tru.hasLegalPages,  ''],
-                        [isAr?'Ø´Ù‡Ø§Ø¯Ø©':'Certif', tru.hasCertifications,''],
+                        [isAr?'بطاقة':'Carte', tru.hasPaymentLogos,''],
+                        [isAr?'قانوني':'Légal', tru.hasLegalPages,  ''],
+                        [isAr?'شهادة':'Certif', tru.hasCertifications,''],
                         ['Map',          tru.hasMap,                ''],
                     ].map(([label, val]) => `
                     <span style="background:rgba(${val?'16,185,129':'239,68,68'},0.08);
                           color:${val?'#6ee7b7':'#94a3b8'};padding:3px 7px;border-radius:8px;
                           font-size:0.62rem;border:1px solid rgba(${val?'16,185,129':'239,68,68'},0.15);">
-                        ${val ? 'âœ“' : 'âœ—'} ${label}
+                        ${val ? '✓' : '✗'} ${label}
                     </span>`).join('')}
                 </div>
                 ${trustA.trustGaps?.length ? `
                 <div style="margin-top:9px;border-top:1px solid rgba(255,255,255,0.04);padding-top:7px;">
                     <small style="color:#ef4444;font-size:0.6rem;font-weight:700;">
-                        ${isAr ? 'Ø«ØºØ±Ø§Øª Ø§Ù„Ø«Ù‚Ø©' : 'Trust Gaps'}:
+                        ${isAr ? 'ثغرات الثقة' : 'Trust Gaps'}:
                     </small>
                     ${trustA.trustGaps.slice(0,2).map(g => `
                     <div style="font-size:0.72rem;color:#fca5a5;margin-top:3px;"
@@ -12377,7 +12377,7 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                 </div>
                 ${trk.cookieCount ? `
                 <div style="margin-top:7px;font-size:0.65rem;color:#64748b;">
-                    ${trk.cookieCount} cookies â€”
+                    ${trk.cookieCount} cookies —
                     localStorage: ${trk.localStorageKeys?.length || 0} cls
                 </div>` : ''}
             </div>` : ''}
@@ -12393,32 +12393,32 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                 <div style="display:flex;flex-wrap:wrap;gap:5px;">
                     ${[
                         [`${frm.count||0} Forms`,                    frm.count > 0,               ''],
-                        [isAr?'Ø¯ÙØ¹':'Checkout',                      frm.hasCheckout,             ''],
-                        [isAr?'Ù†Ø´Ø±Ø© Ø¨Ø±ÙŠØ¯ÙŠØ©':'Newsletter',            frm.hasNewsletter,           ''],
-                        [isAr?'Ø¹Ø¯Ø§Ø¯ ØªÙ†Ø§Ø²Ù„ÙŠ':'Countdown',             pageGlobal.hasCountdown,     ''],
-                        [isAr?'Ù†ÙŠØ© Ø§Ù„Ø®Ø±ÙˆØ¬':'Exit Intent',            pageGlobal.hasExitIntent,    ''],
-                        [isAr?'Ø±Ø£Ø³ Ø«Ø§Ø¨Øª':'Sticky Header',            pageGlobal.hasStickyHeader,  ''],
-                        [isAr?'Ø¯Ø±Ø¯Ø´Ø©':'Chat Widget',                 pageGlobal.hasChatWidget,    ''],
-                        [isAr?'Ù†Ø§ÙØ°Ø© Ù…Ù†Ø¨Ø«Ù‚Ø©':'Popup',                conv.hasPopup,               ''],
-                        [isAr?'ÙÙŠØ¯ÙŠÙˆ':'Video',                       med.hasVideo,                ''],
+                        [isAr?'دفع':'Checkout',                      frm.hasCheckout,             ''],
+                        [isAr?'نشرة بريدية':'Newsletter',            frm.hasNewsletter,           ''],
+                        [isAr?'عداد تنازلي':'Countdown',             pageGlobal.hasCountdown,     ''],
+                        [isAr?'نية الخروج':'Exit Intent',            pageGlobal.hasExitIntent,    ''],
+                        [isAr?'رأس ثابت':'Sticky Header',            pageGlobal.hasStickyHeader,  ''],
+                        [isAr?'دردشة':'Chat Widget',                 pageGlobal.hasChatWidget,    ''],
+                        [isAr?'نافذة منبثقة':'Popup',                conv.hasPopup,               ''],
+                        [isAr?'فيديو':'Video',                       med.hasVideo,                ''],
                     ].map(([label, val]) => `
                     <span style="background:rgba(${val?'245,158,11':'100,116,139'},0.08);
                           color:${val?'#fbbf24':'#64748b'};padding:3px 7px;border-radius:8px;
                           font-size:0.62rem;border:1px solid rgba(${val?'245,158,11':'100,116,139'},0.15);">
-                        ${val ? 'âœ“' : 'âœ—'} ${label}
+                        ${val ? '✓' : '✗'} ${label}
                     </span>`).join('')}
                 </div>
                 <div style="margin-top:8px;font-size:0.65rem;color:#64748b;
                      display:flex;gap:10px;flex-wrap:wrap;">
-                    ${med.totalImages     ? `<span>${med.totalImages} ${isAr?'ØµÙˆØ±Ø©':'imgs'}</span>` : ''}
+                    ${med.totalImages     ? `<span>${med.totalImages} ${isAr?'صورة':'imgs'}</span>` : ''}
                     ${med.missingAltCount ? `<span style="color:#ef4444;">
-                        ${med.missingAltCount} ${isAr?'Ø¨Ø¯ÙˆÙ† alt':'sans alt'}</span>` : ''}
+                        ${med.missingAltCount} ${isAr?'بدون alt':'sans alt'}</span>` : ''}
                     ${med.lazyLoadImages  ? `<span style="color:#10b981;">
                         ${med.lazyLoadImages} lazy</span>` : ''}
                     ${med.webpImages      ? `<span style="color:#3b82f6;">
                         ${med.webpImages} WebP</span>` : ''}
                     ${pageGlobal.totalLinks ? `<span>
-                        ${pageGlobal.totalLinks} ${isAr?'Ø±Ø§Ø¨Ø·':'liens'}</span>` : ''}
+                        ${pageGlobal.totalLinks} ${isAr?'رابط':'liens'}</span>` : ''}
                 </div>
             </div>` : ''}
 
@@ -12475,10 +12475,10 @@ const designHtml = design.primary || design.fontMain || design.style ? `
         </div>
     </div>` : '';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // âœï¸ BLOC 5 â€” COPY INTELLIGENCE + NEUROMARKETING
+    // ══════════════════════════════════════════════════
+    // ✍️ BLOC 5 — COPY INTELLIGENCE + NEUROMARKETING
     //             + PSYCH TRIGGERS (enrichi V12)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
     const hasCopy = copyA.overallTone || copyA.bigIdea ||
                     copyA.topCopyLines?.length || funnelDNA.funnelType;
     const hasNeuro = neuro && (neuro.cognitiveBiases?.length || neuro.readingPattern
@@ -12517,10 +12517,10 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                     ${i18n.copyScoresLabel}
                 </small>
                 ${[
-                    { label: isAr?'Ø§Ù„Ø¹Ù†ÙˆØ§Ù†':'Headline', val: copyA.headlineStrength, c: '#3b82f6' },
+                    { label: isAr?'العنوان':'Headline', val: copyA.headlineStrength, c: '#3b82f6' },
                     { label: 'CTA',                     val: copyA.ctaStrength,      c: '#10b981' },
-                    { label: isAr?'Ø¯Ù„ÙŠÙ„ Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ':'Proof', val: copyA.socialProofScore, c: '#f59e0b' },
-                    { label: isAr?'Ø¥Ù„Ø­Ø§Ø­':'Urgency',    val: copyA.urgencyScore,     c: '#ef4444' },
+                    { label: isAr?'دليل اجتماعي':'Proof', val: copyA.socialProofScore, c: '#f59e0b' },
+                    { label: isAr?'إلحاح':'Urgency',    val: copyA.urgencyScore,     c: '#ef4444' },
                 ].filter(x => x.val).map(x => `
                 <div style="margin-bottom:7px;">
                     <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
@@ -12571,14 +12571,14 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                 </div>` : ''}
                 <div style="display:flex;gap:5px;flex-wrap:wrap;">
                     ${[
-                        [isAr?'Ø¥Ø¹Ø§Ø¯Ø© Ø§Ø³ØªÙ‡Ø¯Ø§Ù':'Retargeting',  funnelDNA.retargeting           ],
-                        [isAr?'ØªØ³Ù„Ø³Ù„ Ø¨Ø±ÙŠØ¯':'Email Seq.',      funnelDNA.emailSequenceDetected ],
-                        [isAr?'Ø¯ÙØ¹':'Checkout',               funnelDNA.checkoutDetected       ],
+                        [isAr?'إعادة استهداف':'Retargeting',  funnelDNA.retargeting           ],
+                        [isAr?'تسلسل بريد':'Email Seq.',      funnelDNA.emailSequenceDetected ],
+                        [isAr?'دفع':'Checkout',               funnelDNA.checkoutDetected       ],
                     ].map(([label, val]) => `
                     <span style="font-size:0.62rem;color:${val?'#10b981':'#475569'};
                           background:rgba(${val?'16,185,129':'100,116,139'},0.08);
                           padding:2px 7px;border-radius:6px;">
-                        ${val ? 'âœ“' : 'âœ—'} ${label}
+                        ${val ? '✓' : '✗'} ${label}
                     </span>`).join('')}
                 </div>
             </div>` : ''}
@@ -12625,7 +12625,7 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                     <small style="color:#10b981;font-size:0.58rem;font-weight:700;
                            text-transform:uppercase;">Trust Present:</small>
                     <div style="font-size:0.7rem;color:#6ee7b7;margin-top:2px;" dir="auto">
-                        ${neuro.trustBuilding.present.slice(0,3).join(' Â· ')}
+                        ${neuro.trustBuilding.present.slice(0,3).join(' · ')}
                     </div>
                 </div>` : ''}
                 ${neuro.trustBuilding?.missing?.length ? `
@@ -12634,11 +12634,11 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                            text-transform:uppercase;">Trust Missing:</small>
                     ${neuro.trustBuilding.missing.slice(0,2).map(m => `
                     <div style="font-size:0.7rem;color:#fca5a5;margin-top:2px;" dir="auto">
-                        âœ— ${esc(m)}</div>`).join('')}
+                        ✗ ${esc(m)}</div>`).join('')}
                 </div>` : ''}
             </div>` : ''}
 
-            <!-- Psych Triggers (NOUVEAU V12 â€” Ã©tait ignorÃ©) -->
+            <!-- Psych Triggers (NOUVEAU V12 — était ignoré) -->
             ${hasPsychTriggers ? `
             <div style="background:rgba(236,72,153,0.05);border:1px solid rgba(236,72,153,0.2);
                  border-radius:11px;padding:12px;">
@@ -12651,9 +12651,9 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                     { key: 'scarcity',    label: i18n.scarcityLabel,    color: '#f97316', data: psych.scarcity    },
                     { key: 'socialproof', label: i18n.socialProofLabel, color: '#3b82f6', data: psych.socialproof },
                     { key: 'authority',   label: i18n.authorityLabel,   color: '#8b5cf6', data: psych.authority   },
-                    { key: 'guarantees',  label: isAr?'Ø¶Ù…Ø§Ù†Ø§Øª':'Guarantees', color: '#10b981', data: psych.guarantees },
+                    { key: 'guarantees',  label: isAr?'ضمانات':'Guarantees', color: '#10b981', data: psych.guarantees },
                     { key: 'fearloss',    label: i18n.fearLossLabel,    color: '#f43f5e', data: psych.fearloss    },
-                    { key: 'priceanchors',label: isAr?'ØªØ«Ø¨ÙŠØª Ø³Ø¹Ø±':'Price Anchors', color: '#f59e0b', data: psych.priceanchors },
+                    { key: 'priceanchors',label: isAr?'تثبيت سعر':'Price Anchors', color: '#f59e0b', data: psych.priceanchors },
                 ].filter(t => t.data?.length).map(t => {
                     const items = t.data.slice(0,2);
                     return `
@@ -12706,9 +12706,9 @@ const designHtml = design.primary || design.fontMain || design.style ? `
         </div>
     </div>` : '';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸ“Š BLOC 6 â€” CHART INDICATEURS
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // 📊 BLOC 6 — CHART INDICATEURS
+    // ══════════════════════════════════════════════════
     const ctaRatio = totalSections > 0
         ? Math.round((sectionsCTA.length / totalSections) * 100) : 0;
 
@@ -12723,15 +12723,15 @@ const designHtml = design.primary || design.fontMain || design.style ? `
             <div><canvas id="funnelBarChart" height="155"></canvas></div>
             <div style="display:grid;gap:10px;">
                 ${[
-                    { label: isAr?'ØªØºØ·ÙŠØ© CTA':'CTA Coverage',    val: ctaRatio,      suffix: '%',
+                    { label: isAr?'تغطية CTA':'CTA Coverage',    val: ctaRatio,      suffix: '%',
                       c: ctaRatio >= 60 ? '#10b981' : '#ef4444' },
-                    { label: isAr?'Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠØ©':'Global Score', val: score,     suffix: '/100',
+                    { label: isAr?'النتيجة الإجمالية':'Global Score', val: score,     suffix: '/100',
                       c: `#${scoreColor}` },
-                    { label: isAr?'Ù†ØªÙŠØ¬Ø© Ø§Ù„Ø«Ù‚Ø©':'Trust Score',   val: trustScore,    suffix: '/13',
+                    { label: isAr?'نتيجة الثقة':'Trust Score',   val: trustScore,    suffix: '/13',
                       c: '#3b82f6' },
-                    { label: isAr?'Ù†ØªÙŠØ¬Ø© Ø§Ù„ØªØ­ÙˆÙŠÙ„':'Conv. Score', val: convScore,     suffix: '/100',
+                    { label: isAr?'نتيجة التحويل':'Conv. Score', val: convScore,     suffix: '/100',
                       c: '#f59e0b' },
-                    { label: isAr?'Ù†ØªÙŠØ¬Ø© Ø§Ù„ØªØµÙ…ÙŠÙ…':'Design Score',val: design.score,  suffix: '/100',
+                    { label: isAr?'نتيجة التصميم':'Design Score',val: design.score,  suffix: '/100',
                       c: '#ec4899' },
                 ].map(b => `
                 <div>
@@ -12761,7 +12761,7 @@ const designHtml = design.primary || design.fontMain || design.style ? `
             </div>
             <div>
                 <div style="font-size:1.1rem;font-weight:900;color:#ec4899;">
-                    ${fin.netProfit ? fin.netProfit.toLocaleString() : 'â€”'}
+                    ${fin.netProfit ? fin.netProfit.toLocaleString() : '—'}
                 </div>
                 <div style="font-size:0.6rem;color:#64748b;text-transform:uppercase;">
                     Steal ${fin.currency}
@@ -12772,18 +12772,18 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                     ${med.totalImages || 0}
                 </div>
                 <div style="font-size:0.6rem;color:#64748b;text-transform:uppercase;">
-                    ${isAr ? 'ØµÙˆØ±' : 'Images'}
+                    ${isAr ? 'صور' : 'Images'}
                 </div>
             </div>
         </div>
     </div>`;
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸ”¬ BLOC 7 â€” AUTOPSIE AIDA + ARBORESCENCE
+    // ══════════════════════════════════════════════════
+    // 🔬 BLOC 7 — AUTOPSIE AIDA + ARBORESCENCE
     //             (BUG-FIX critique + enrichi aidaAnalysis)
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
 
-    // Extraction sÃ©curisÃ©e des fixes AIDA depuis aidaAnalysis
+    // Extraction sécurisée des fixes AIDA depuis aidaAnalysis
     const aidaFixes = {
         attention : aidaData.attention?.fix  || aidaData.attention?.recommendation  || null,
         interest  : aidaData.interest?.fix   || aidaData.interest?.weaknesses?.[0]  || null,
@@ -12927,7 +12927,7 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                             ${!isPresent ? `
                             <span style="background:rgba(100,116,139,0.12);color:#94a3b8;
                                   padding:1px 6px;border-radius:6px;font-size:0.55rem;font-weight:700;">
-                                ${isAr ? 'ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯' : isEn ? 'ABSENT' : 'ABSENT'}
+                                ${isAr ? 'غير موجود' : isEn ? 'ABSENT' : 'ABSENT'}
                             </span>` : ''}
                         </div>
 
@@ -12940,12 +12940,12 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                             <span style="background:rgba(${hasCTA ? '16,185,129' : '239,68,68'},0.1);
                                   color:${ctaC};padding:1px 7px;border-radius:6px;
                                   font-size:0.6rem;font-weight:700;">
-                                ${hasCTA ? `âœ“ ${i18n.ctaLabel}` : `âœ— ${i18n.noCTALabel}`}
+                                ${hasCTA ? `✓ ${i18n.ctaLabel}` : `✗ ${i18n.noCTALabel}`}
                             </span>
                             ${impact === 'HIGH' ? `
                             <span style="background:rgba(245,158,11,0.1);color:#f59e0b;
                                   padding:1px 6px;border-radius:6px;font-size:0.6rem;
-                                  font-weight:700;">âš¡ HIGH</span>` : ''}
+                                  font-weight:700;">⚡ HIGH</span>` : ''}
                         </div>
                     </div>
 
@@ -12957,7 +12957,7 @@ const designHtml = design.primary || design.fontMain || design.style ? `
 
                     ${s.content ? `
                     <div style="font-size:0.72rem;color:#94a3b8;line-height:1.5;margin-bottom:6px;" dir="auto">
-                        ${esc(s.content.substring(0,120))}${s.content.length > 120 ? 'â€¦' : ''}
+                        ${esc(s.content.substring(0,120))}${s.content.length > 120 ? '…' : ''}
                     </div>` : ''}
 
                     ${s.ctaText ? `
@@ -12965,7 +12965,7 @@ const designHtml = design.primary || design.fontMain || design.style ? `
                         <span style="background:rgba(16,185,129,0.1);color:#6ee7b7;
                               padding:2px 8px;border-radius:6px;font-size:0.65rem;
                               border:1px solid rgba(16,185,129,0.2);" dir="auto">
-                            â†’ ${esc(s.ctaText)}
+                            → ${esc(s.ctaText)}
                         </span>
                     </div>` : ''}
 
@@ -13008,9 +13008,9 @@ const designHtml = design.primary || design.fontMain || design.style ? `
         </div>
     </div>` : '';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸ“¡ BLOC 8 â€” COUNTER ATTACK COPY
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // 📡 BLOC 8 — COUNTER ATTACK COPY
+    // ══════════════════════════════════════════════════
     const hasCounter = counter.adHeadline || counter.whatsappMessage
                     || counter.emailSubject || counter.smsText;
 
@@ -13047,23 +13047,23 @@ const designHtml = design.primary || design.fontMain || design.style ? `
         </div>
     </div>` : '';
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸª„ MAGIC PROMPT
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // 🪄 MAGIC PROMPT
+    // ══════════════════════════════════════════════════
     const magicPromptText = data.aiRewritePrompt
                          || data.magicPrompt
                          || data.spyReport?.aiRewritePrompt
                          || data.strategicBlueprint?.aiRewritePrompt
                          || null;
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸ—ï¸ ASSEMBLAGE FINAL
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // 🏗️ ASSEMBLAGE FINAL
+    // ══════════════════════════════════════════════════
 
     const scorePill = (label, value, color) => {
         const n = Number(value);
         const hasScore = Number.isFinite(n);
-        const shown = hasScore ? `${Math.max(0, Math.min(100, Math.round(n)))}/100` : (isAr ? 'Ù„Ù„ÙØ­Øµ' : isEn ? 'To verify' : 'Ã€ vÃ©rifier');
+        const shown = hasScore ? `${Math.max(0, Math.min(100, Math.round(n)))}/100` : (isAr ? 'للفحص' : isEn ? 'To verify' : 'À vérifier');
         return `
 <div style="padding:12px;border-radius:12px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07)">
     <div style="font-size:0.72rem;color:#64748b;margin-bottom:6px;">${escapeHtml(label)}</div>
@@ -13101,13 +13101,13 @@ const auditSummaryHtml = `
         <div style="padding:14px;border:1px solid rgba(16,185,129,0.16);background:rgba(16,185,129,0.05);border-radius:12px;">
             <div style="font-size:0.72rem;color:#34d399;font-weight:800;margin-bottom:8px;">TOP STRENGTHS</div>
             ${(auditSummary.topStrengths || []).length
-                ? auditSummary.topStrengths.map(x => `<div style="color:#e2e8f0;font-size:0.82rem;margin-bottom:6px;">â€¢ ${escapeHtml(x)}</div>`).join('')
+                ? auditSummary.topStrengths.map(x => `<div style="color:#e2e8f0;font-size:0.82rem;margin-bottom:6px;">• ${escapeHtml(x)}</div>`).join('')
                 : `<div style="color:#64748b;font-size:0.82rem;">No strengths detected.</div>`}
         </div>
         <div style="padding:14px;border:1px solid rgba(239,68,68,0.16);background:rgba(239,68,68,0.05);border-radius:12px;">
             <div style="font-size:0.72rem;color:#f87171;font-weight:800;margin-bottom:8px;">TOP WEAKNESSES</div>
             ${(auditSummary.topWeaknesses || []).length
-                ? auditSummary.topWeaknesses.map(x => `<div style="color:#e2e8f0;font-size:0.82rem;margin-bottom:6px;">â€¢ ${escapeHtml(x)}</div>`).join('')
+                ? auditSummary.topWeaknesses.map(x => `<div style="color:#e2e8f0;font-size:0.82rem;margin-bottom:6px;">• ${escapeHtml(x)}</div>`).join('')
                 : `<div style="color:#64748b;font-size:0.82rem;">No weaknesses detected.</div>`}
         </div>
     </div>
@@ -13158,7 +13158,7 @@ const auditIssuesHtml = `
         ${(auditQuickWins || []).slice(0,5).map(win => `
             <div style="padding:14px;border-radius:12px;background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.12)">
                 <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
-                    <strong style="color:white;font-size:0.88rem;">#${win.priority || '-'} â€” ${escapeHtml(win.title || 'Quick Win')}</strong>
+                    <strong style="color:white;font-size:0.88rem;">#${win.priority || '-'} — ${escapeHtml(win.title || 'Quick Win')}</strong>
                     <span style="font-size:0.68rem;font-weight:800;padding:4px 10px;border-radius:999px;background:rgba(59,130,246,0.12);color:#93c5fd;">
                         ${escapeHtml(win.impact || 'MEDIUM')}
                     </span>
@@ -13208,7 +13208,7 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
 
     showResults('resultsFunnel');
 
-    // Injection Magic Prompt via fonction dÃ©diÃ©e
+    // Injection Magic Prompt via fonction dédiée
     if (magicPromptText) {
         if (typeof window.displayMagicPrompt === 'function') {
             window.displayMagicPrompt(magicPromptText);
@@ -13238,9 +13238,9 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
         }
     }
 
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-    // ðŸ“ˆ CHARTS
-    // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+    // ══════════════════════════════════════════════════
+    // 📈 CHARTS
+    // ══════════════════════════════════════════════════
     setTimeout(() => {
 
         // Donut Score Global
@@ -13301,8 +13301,8 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
                         tooltip: {
                             callbacks: {
                                 label: ctx => ctx.raw === 1
-                                    ? 'âœ“ CTA'
-                                    : isAr ? 'Ø¨Ø¯ÙˆÙ† CTA'
+                                    ? '✓ CTA'
+                                    : isAr ? 'بدون CTA'
                                     : isEn ? 'No CTA' : 'Pas de CTA'
                             }
                         }
@@ -13313,7 +13313,7 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
 
     }, 200);
 
-    // â”€â”€ STATE & EXPORT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── STATE & EXPORT ────────────────────────────────
     STATE.lastFunnelResults = data;
 
     if (typeof window.updateExportBadges === 'function') {
@@ -13321,9 +13321,9 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
     }
 
     toast.success(
-        isAr ? 'âœ… Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ù…ÙƒØªÙ…Ù„!'
-      : isEn ? 'âœ… Analysis complete!'
-      :        'âœ… Analyse complÃ¨te !'
+        isAr ? '✅ التحليل مكتمل!'
+      : isEn ? '✅ Analysis complete!'
+      :        '✅ Analyse complète !'
     );
 }
 function funnelV2Text(value, fallback = '') {
@@ -13332,7 +13332,7 @@ function funnelV2Text(value, fallback = '') {
         const text = repairFunnelSurgeryText(value).trim();
         return text && !/^(null|undefined|n\/a|na)$/i.test(text) ? text : fallback;
     }
-    if (Array.isArray(value)) return value.map(item => funnelV2Text(item)).filter(Boolean).join(' Â· ') || fallback;
+    if (Array.isArray(value)) return value.map(item => funnelV2Text(item)).filter(Boolean).join(' · ') || fallback;
     if (typeof value === 'object') {
         for (const key of ['action', 'title', 'summary', 'verdict', 'section', 'friction', 'name', 'value', 'text', 'label']) {
             const text = funnelV2Text(value[key]);
@@ -13357,27 +13357,27 @@ function funnelClientLabel(raw, opts = {}) {
     const isAr = opts.isAr;
     const isEn = opts.isEn;
     const source = funnelV2Text(raw, '').replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
-    if (!source) return isAr ? 'Ù‚Ø³Ù…' : isEn ? 'Section' : 'Section';
+    if (!source) return isAr ? 'قسم' : isEn ? 'Section' : 'Section';
     const key = source.toLowerCase();
     const label = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
     const rules = [
-        [/^(hero|h1|above the fold|first screen)$/i, label('Premier Ã©cran', 'First screen', 'Ø§Ù„Ø´Ø§Ø´Ø© Ø§Ù„Ø£ÙˆÙ„Ù‰')],
-        [/primary cta|cta principal|main cta/i, label('Bouton principal', 'Primary action button', 'Ø²Ø± Ø§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ')],
-        [/^(cta|button|call to action)$/i, label('Appel Ã  lâ€™action', 'Call to action', 'Ø¯Ø¹ÙˆØ© Ù„Ø§ØªØ®Ø§Ø° Ø¥Ø¬Ø±Ø§Ø¡')],
-        [/pricing|price|prix|tarif/i, label('Prix et offre', 'Price and offer', 'Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø¹Ø±Ø¶')],
-        [/offer|bundle|pack/i, label('Offre et pack', 'Offer and package', 'Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ø¨Ø§Ù‚Ø©')],
-        [/social proof|testimonial|review|avis|t[Ã©e]moignage|rating/i, label('Preuve sociale', 'Social proof', 'Ø§Ù„Ø¯Ù„ÙŠÙ„ Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ')],
-        [/features?|specs?|specification|caract[Ã©e]ristique/i, label('CaractÃ©ristiques utiles', 'Useful features', 'Ø§Ù„Ø®ØµØ§Ø¦Øµ Ø§Ù„Ù…Ù‡Ù…Ø©')],
-        [/product visuals?|media|images?|video|gallery/i, label('Visuels produit', 'Product visuals', 'ØµÙˆØ± Ø§Ù„Ù…Ù†ØªØ¬')],
-        [/product|produit/i, label('Produit ou service', 'Product or service', 'Ø§Ù„Ù…Ù†ØªØ¬ Ø£Ùˆ Ø§Ù„Ø®Ø¯Ù…Ø©')],
-        [/returns?|refund|retours?|remboursement/i, label('Retours et rÃ©assurance', 'Returns and reassurance', 'Ø§Ù„Ø¥Ø±Ø¬Ø§Ø¹ ÙˆØ§Ù„Ø·Ù…Ø£Ù†Ø©')],
-        [/delivery|shipping|livraison/i, label('Livraison', 'Delivery', 'Ø§Ù„ØªÙˆØµÙŠÙ„')],
-        [/trust|guarantee|warranty|garantie|preuve/i, label('Confiance et garanties', 'Trust and guarantees', 'Ø§Ù„Ø«Ù‚Ø© ÙˆØ§Ù„Ø¶Ù…Ø§Ù†Ø§Øª')],
-        [/faq|questions?/i, label('Questions avant dÃ©cision', 'Pre-purchase questions', 'Ø£Ø³Ø¦Ù„Ø© Ù‚Ø¨Ù„ Ø§Ù„Ù‚Ø±Ø§Ø±')],
-        [/content|copy|message|texte/i, label('Contenu de vente', 'Sales copy', 'Ù…Ø­ØªÙˆÙ‰ Ø§Ù„Ø¨ÙŠØ¹')],
-        [/payment|paiement/i, label('Paiement', 'Payment', 'Ø§Ù„Ø¯ÙØ¹')],
-        [/mission/i, label('Analyse spÃ©cialisÃ©e', 'Specialized analysis', 'ØªØ­Ù„ÙŠÙ„ Ù…ØªØ®ØµØµ')],
-        [/zone/i, label('Zone de page', 'Page area', 'Ù…Ù†Ø·Ù‚Ø© Ø§Ù„ØµÙØ­Ø©')]
+        [/^(hero|h1|above the fold|first screen)$/i, label('Premier écran', 'First screen', 'الشاشة الأولى')],
+        [/primary cta|cta principal|main cta/i, label('Bouton principal', 'Primary action button', 'زر القرار الرئيسي')],
+        [/^(cta|button|call to action)$/i, label('Appel à l’action', 'Call to action', 'دعوة لاتخاذ إجراء')],
+        [/pricing|price|prix|tarif/i, label('Prix et offre', 'Price and offer', 'السعر والعرض')],
+        [/offer|bundle|pack/i, label('Offre et pack', 'Offer and package', 'العرض والباقة')],
+        [/social proof|testimonial|review|avis|t[ée]moignage|rating/i, label('Preuve sociale', 'Social proof', 'الدليل الاجتماعي')],
+        [/features?|specs?|specification|caract[ée]ristique/i, label('Caractéristiques utiles', 'Useful features', 'الخصائص المهمة')],
+        [/product visuals?|media|images?|video|gallery/i, label('Visuels produit', 'Product visuals', 'صور المنتج')],
+        [/product|produit/i, label('Produit ou service', 'Product or service', 'المنتج أو الخدمة')],
+        [/returns?|refund|retours?|remboursement/i, label('Retours et réassurance', 'Returns and reassurance', 'الإرجاع والطمأنة')],
+        [/delivery|shipping|livraison/i, label('Livraison', 'Delivery', 'التوصيل')],
+        [/trust|guarantee|warranty|garantie|preuve/i, label('Confiance et garanties', 'Trust and guarantees', 'الثقة والضمانات')],
+        [/faq|questions?/i, label('Questions avant décision', 'Pre-purchase questions', 'أسئلة قبل القرار')],
+        [/content|copy|message|texte/i, label('Contenu de vente', 'Sales copy', 'محتوى البيع')],
+        [/payment|paiement/i, label('Paiement', 'Payment', 'الدفع')],
+        [/mission/i, label('Analyse spécialisée', 'Specialized analysis', 'تحليل متخصص')],
+        [/zone/i, label('Zone de page', 'Page area', 'منطقة الصفحة')]
     ];
     const found = rules.find(([pattern]) => pattern.test(key));
     if (found) return found[1];
@@ -13391,10 +13391,10 @@ function funnelPriorityLabel(value, opts = {}) {
     const isAr = opts.isAr;
     const isEn = opts.isEn;
     const raw = funnelV2Text(value, '').toUpperCase();
-    if (/CRITICAL|URGENT|HIGH|HAUTE|ELEV|Ã‰LEV/.test(raw)) return isAr ? 'Haute' : isEn ? 'High' : 'Haute';
-    if (/LOW|BASSE|FAIBLE/.test(raw)) return isAr ? 'Ù…Ù†Ø®ÙØ¶Ø©' : isEn ? 'Low' : 'Faible';
-    if (/MEDIUM|MOYEN|MOYENNE|Ù…ØªÙˆØ³Ø·/.test(raw)) return isAr ? 'Ù…ØªÙˆØ³Ø·Ø©' : isEn ? 'Medium' : 'Moyenne';
-    return funnelV2Text(value, isAr ? 'Ù…ØªÙˆØ³Ø·Ø©' : isEn ? 'Medium' : 'Moyenne');
+    if (/CRITICAL|URGENT|HIGH|HAUTE|ELEV|ÉLEV/.test(raw)) return isAr ? 'Haute' : isEn ? 'High' : 'Haute';
+    if (/LOW|BASSE|FAIBLE/.test(raw)) return isAr ? 'منخفضة' : isEn ? 'Low' : 'Faible';
+    if (/MEDIUM|MOYEN|MOYENNE|متوسط/.test(raw)) return isAr ? 'متوسطة' : isEn ? 'Medium' : 'Moyenne';
+    return funnelV2Text(value, isAr ? 'متوسطة' : isEn ? 'Medium' : 'Moyenne');
 }
 
 function renderFunnelV2Cards(items, opts = {}) {
@@ -13422,7 +13422,7 @@ function funnelLegacyHasData(value, depth = 0) {
     if (value === null || value === undefined) return false;
     if (typeof value === 'string') {
         const text = value.trim();
-        return Boolean(text) && !/^(?:null|undefined|n\/a|na|â€”|-)$/i.test(text);
+        return Boolean(text) && !/^(?:null|undefined|n\/a|na|—|-)$/i.test(text);
     }
     if (typeof value === 'number') return Number.isFinite(value);
     if (typeof value === 'boolean') return true;
@@ -13440,29 +13440,29 @@ function funnelLegacyLabel(key, opts = {}) {
     const isAr = opts.isAr;
     const isEn = opts.isEn;
     const labels = {
-        overall: isAr ? 'Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠØ©' : isEn ? 'Overall score' : 'Score global',
-        score: isAr ? 'Ø§Ù„Ù†ØªÙŠØ¬Ø©' : isEn ? 'Score' : 'Score',
-        verdict: isAr ? 'Ø§Ù„Ø®Ù„Ø§ØµØ©' : isEn ? 'Verdict' : 'Verdict',
-        strengths: isAr ? 'Ù†Ù‚Ø§Ø· Ø§Ù„Ù‚ÙˆØ©' : isEn ? 'Strengths' : 'Forces',
-        weaknesses: isAr ? 'Ù†Ù‚Ø§Ø· Ø§Ù„Ø¶Ø¹Ù' : isEn ? 'Weaknesses' : 'Faiblesses',
-        problems: isAr ? 'Ø§Ù„Ù…Ø´ÙƒÙ„Ø§Øª' : isEn ? 'Problems' : 'ProblÃ¨mes',
-        recommendations: isAr ? 'Ø§Ù„ØªÙˆØµÙŠØ§Øª' : isEn ? 'Recommendations' : 'Recommandations',
-        opportunities: isAr ? 'Ø§Ù„ÙØ±Øµ' : isEn ? 'Opportunities' : 'OpportunitÃ©s',
-        action: isAr ? 'Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡' : isEn ? 'Action' : 'Action',
-        impact: isAr ? 'Ø§Ù„Ø£Ø«Ø±' : isEn ? 'Impact' : 'Impact',
-        effort: isAr ? 'Ø§Ù„Ø¬Ù‡Ø¯' : isEn ? 'Effort' : 'Effort',
-        priority: isAr ? 'Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ©' : isEn ? 'Priority' : 'PrioritÃ©',
-        confidence: isAr ? 'Ø§Ù„Ø«Ù‚Ø©' : isEn ? 'Confidence' : 'Confiance',
-        primaryCta: isAr ? 'CTA Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ' : isEn ? 'Primary CTA' : 'CTA principal',
-        detectedCtas: isAr ? 'CTA Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø©' : isEn ? 'Detected CTAs' : 'CTA dÃ©tectÃ©s',
-        strongCtas: isAr ? 'CTA Ø§Ù„Ù‚ÙˆÙŠØ©' : isEn ? 'Strong CTAs' : 'CTA forts',
-        genericCtas: isAr ? 'CTA Ø§Ù„Ø¹Ø§Ù…Ø©' : isEn ? 'Generic CTAs' : 'CTA gÃ©nÃ©riques',
-        coverage: isAr ? 'ØªØºØ·ÙŠØ© CTA' : isEn ? 'CTA coverage' : 'Couverture CTA',
-        wordCount: isAr ? 'Ø¹Ø¯Ø¯ Ø§Ù„ÙƒÙ„Ù…Ø§Øª' : isEn ? 'Word count' : 'Nombre de mots',
-        sectionsDetected: isAr ? 'Ø§Ù„Ø£Ù‚Ø³Ø§Ù… Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø©' : isEn ? 'Detected sections' : 'Sections dÃ©tectÃ©es',
-        imagesCount: isAr ? 'Ø§Ù„ØµÙˆØ±' : isEn ? 'Images' : 'Images',
-        ctaCount: isAr ? 'Ø¹Ø¯Ø¯ CTA' : isEn ? 'CTA count' : 'Nombre de CTA',
-        socialProofsCount: isAr ? 'Ø£Ø¯Ù„Ø© Ø§Ù„Ø«Ù‚Ø©' : isEn ? 'Social proofs' : 'Preuves sociales',
+        overall: isAr ? 'النتيجة الإجمالية' : isEn ? 'Overall score' : 'Score global',
+        score: isAr ? 'النتيجة' : isEn ? 'Score' : 'Score',
+        verdict: isAr ? 'الخلاصة' : isEn ? 'Verdict' : 'Verdict',
+        strengths: isAr ? 'نقاط القوة' : isEn ? 'Strengths' : 'Forces',
+        weaknesses: isAr ? 'نقاط الضعف' : isEn ? 'Weaknesses' : 'Faiblesses',
+        problems: isAr ? 'المشكلات' : isEn ? 'Problems' : 'Problèmes',
+        recommendations: isAr ? 'التوصيات' : isEn ? 'Recommendations' : 'Recommandations',
+        opportunities: isAr ? 'الفرص' : isEn ? 'Opportunities' : 'Opportunités',
+        action: isAr ? 'الإجراء' : isEn ? 'Action' : 'Action',
+        impact: isAr ? 'الأثر' : isEn ? 'Impact' : 'Impact',
+        effort: isAr ? 'الجهد' : isEn ? 'Effort' : 'Effort',
+        priority: isAr ? 'الأولوية' : isEn ? 'Priority' : 'Priorité',
+        confidence: isAr ? 'الثقة' : isEn ? 'Confidence' : 'Confiance',
+        primaryCta: isAr ? 'CTA الرئيسي' : isEn ? 'Primary CTA' : 'CTA principal',
+        detectedCtas: isAr ? 'CTA المرصودة' : isEn ? 'Detected CTAs' : 'CTA détectés',
+        strongCtas: isAr ? 'CTA القوية' : isEn ? 'Strong CTAs' : 'CTA forts',
+        genericCtas: isAr ? 'CTA العامة' : isEn ? 'Generic CTAs' : 'CTA génériques',
+        coverage: isAr ? 'تغطية CTA' : isEn ? 'CTA coverage' : 'Couverture CTA',
+        wordCount: isAr ? 'عدد الكلمات' : isEn ? 'Word count' : 'Nombre de mots',
+        sectionsDetected: isAr ? 'الأقسام المرصودة' : isEn ? 'Detected sections' : 'Sections détectées',
+        imagesCount: isAr ? 'الصور' : isEn ? 'Images' : 'Images',
+        ctaCount: isAr ? 'عدد CTA' : isEn ? 'CTA count' : 'Nombre de CTA',
+        socialProofsCount: isAr ? 'أدلة الثقة' : isEn ? 'Social proofs' : 'Preuves sociales',
         hasSSL: 'SSL',
         hasWhatsApp: 'WhatsApp'
     };
@@ -13475,7 +13475,7 @@ function renderFunnelLegacyValue(value, opts = {}, depth = 0) {
     const safe = typeof escapeHtml === 'function' ? escapeHtml : text => String(text || '');
     if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
         const text = typeof value === 'boolean'
-            ? (opts.isAr ? (value ? 'Ù†Ø¹Ù…' : 'Ù„Ø§') : opts.isEn ? (value ? 'Yes' : 'No') : (value ? 'Oui' : 'Non'))
+            ? (opts.isAr ? (value ? 'نعم' : 'لا') : opts.isEn ? (value ? 'Yes' : 'No') : (value ? 'Oui' : 'Non'))
             : String(value);
         return '<p class="funnel-legacy-text" dir="auto">' + safe(text.slice(0, 2400)) + '</p>';
     }
@@ -13506,16 +13506,16 @@ function renderFunnelAidaJourney(value, opts = {}) {
     const safe = typeof escapeHtml === 'function' ? escapeHtml : text => String(text || '');
     const text = (fr, en, ar) => opts.isAr ? ar : opts.isEn ? en : fr;
     const phases = [
-        ['attention', text('Attention', 'Attention', 'Ø§Ù„Ø§Ù†ØªØ¨Ø§Ù‡'), 'fa-eye', '#22d3ee'],
-        ['interest', text('IntÃ©rÃªt', 'Interest', 'Ø§Ù„Ø§Ù‡ØªÙ…Ø§Ù…'), 'fa-lightbulb', '#60a5fa'],
-        ['desire', text('DÃ©sir', 'Desire', 'Ø§Ù„Ø±ØºØ¨Ø©'), 'fa-heart', '#a78bfa'],
-        ['action', text('Action', 'Action', 'Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡'), 'fa-bolt', '#22c55e']
+        ['attention', text('Attention', 'Attention', 'الانتباه'), 'fa-eye', '#22d3ee'],
+        ['interest', text('Intérêt', 'Interest', 'الاهتمام'), 'fa-lightbulb', '#60a5fa'],
+        ['desire', text('Désir', 'Desire', 'الرغبة'), 'fa-heart', '#a78bfa'],
+        ['action', text('Action', 'Action', 'الإجراء'), 'fa-bolt', '#22c55e']
     ];
-    const recommendationPattern = /fix|recommend|improv|suggest|correction|action|solution|recommand|am[Ã©e]lior|Ø§Ù‚ØªØ±Ø§Ø­|ØªÙˆØµÙŠ|Ø¥Ø¬Ø±Ø§Ø¡/i;
+    const recommendationPattern = /fix|recommend|improv|suggest|correction|action|solution|recommand|am[ée]lior|اقتراح|توصي|إجراء/i;
     const ignored = /^(?:score|chainOfThought)$/i;
     const renderRows = entries => entries.length
         ? `<div class="funnel-aida-rows">${entries.slice(0, 7).map(([key, item]) => `<div><small>${safe(funnelLegacyLabel(key, opts))}</small>${renderFunnelLegacyValue(item, opts, 1)}</div>`).join('')}</div>`
-        : `<p class="funnel-aida-empty">${safe(text('Aucun signal exploitable dans cette rÃ©ponse.', 'No usable signal in this response.', 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø¥Ø´Ø§Ø±Ø© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø§Ø³ØªØ¬Ø§Ø¨Ø©.'))}</p>`;
+        : `<p class="funnel-aida-empty">${safe(text('Aucun signal exploitable dans cette réponse.', 'No usable signal in this response.', 'لا توجد إشارة قابلة للاستخدام في هذه الاستجابة.'))}</p>`;
     const cards = phases.map(([key, label, icon, accent]) => {
         const phase = value[key];
         if (!funnelLegacyHasData(phase)) return '';
@@ -13526,10 +13526,10 @@ function renderFunnelAidaJourney(value, opts = {}) {
         const score = Number(source.score);
         const scoreHtml = Number.isFinite(score) ? `<span class="funnel-aida-score"><b>${Math.max(0, Math.min(100, Math.round(score)))}</b>/100</span>` : '';
         return `<article class="funnel-aida-card" style="--aida-accent:${accent}">
-            <header><span class="funnel-aida-icon"><i class="fas ${icon}"></i></span><div><small>${safe(text('Ã‰tape du parcours', 'Journey stage', 'Ù…Ø±Ø­Ù„Ø© Ø§Ù„Ù…Ø³Ø§Ø±'))}</small><h4>${safe(label)}</h4></div>${scoreHtml}</header>
+            <header><span class="funnel-aida-icon"><i class="fas ${icon}"></i></span><div><small>${safe(text('Étape du parcours', 'Journey stage', 'مرحلة المسار'))}</small><h4>${safe(label)}</h4></div>${scoreHtml}</header>
             <div class="funnel-aida-columns">
-                <section><h5><i class="fas fa-magnifying-glass"></i>${safe(text('ObservÃ©', 'Observed', 'Ù…Ø±ØµÙˆØ¯'))}</h5>${renderRows(observed)}</section>
-                <section class="recommended"><h5><i class="fas fa-wand-magic-sparkles"></i>${safe(text('RecommandÃ©', 'Recommended', 'Ù…ÙˆØµÙ‰ Ø¨Ù‡'))}</h5>${renderRows(recommended)}</section>
+                <section><h5><i class="fas fa-magnifying-glass"></i>${safe(text('Observé', 'Observed', 'مرصود'))}</h5>${renderRows(observed)}</section>
+                <section class="recommended"><h5><i class="fas fa-wand-magic-sparkles"></i>${safe(text('Recommandé', 'Recommended', 'موصى به'))}</h5>${renderRows(recommended)}</section>
             </div>
         </article>`;
     }).join('');
@@ -13551,23 +13551,23 @@ function renderFunnelVisualIdentity(value, opts = {}) {
         .filter(Boolean);
     const colors = [...new Set(candidates.map(color => color.toLowerCase()))].slice(0, 8);
     const roles = [
-        text('Primaire observÃ©e', 'Observed primary', 'Ø§Ù„Ù„ÙˆÙ† Ø§Ù„Ø£Ø³Ø§Ø³ÙŠ Ø§Ù„Ù…Ø±ØµÙˆØ¯'),
-        text('Secondaire observÃ©e', 'Observed secondary', 'Ø§Ù„Ù„ÙˆÙ† Ø§Ù„Ø«Ø§Ù†ÙˆÙŠ Ø§Ù„Ù…Ø±ØµÙˆØ¯'),
-        text('Accent observÃ©', 'Observed accent', 'Ù„ÙˆÙ† Ø§Ù„Ø¥Ø¨Ø±Ø§Ø² Ø§Ù„Ù…Ø±ØµÙˆØ¯'),
-        text('Fond observÃ©', 'Observed background', 'Ù„ÙˆÙ† Ø§Ù„Ø®Ù„ÙÙŠØ© Ø§Ù„Ù…Ø±ØµÙˆØ¯')
+        text('Primaire observée', 'Observed primary', 'اللون الأساسي المرصود'),
+        text('Secondaire observée', 'Observed secondary', 'اللون الثانوي المرصود'),
+        text('Accent observé', 'Observed accent', 'لون الإبراز المرصود'),
+        text('Fond observé', 'Observed background', 'لون الخلفية المرصود')
     ];
     const paletteHtml = colors.length ? `<section class="funnel-color-section">
-        <header><div><small>${safe(text('ADN VISUEL RÃ‰EL', 'REAL VISUAL DNA', 'Ø§Ù„Ù‡ÙˆÙŠØ© Ø§Ù„Ø¨ØµØ±ÙŠØ© Ø§Ù„ÙØ¹Ù„ÙŠØ©'))}</small><h4>${safe(text('Couleurs observÃ©es sur la page', 'Colors observed on the page', 'Ø§Ù„Ø£Ù„ÙˆØ§Ù† Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø© ÙÙŠ Ø§Ù„ØµÙØ­Ø©'))}</h4></div><span>${colors.length}</span></header>
+        <header><div><small>${safe(text('ADN VISUEL RÉEL', 'REAL VISUAL DNA', 'الهوية البصرية الفعلية'))}</small><h4>${safe(text('Couleurs observées sur la page', 'Colors observed on the page', 'الألوان المرصودة في الصفحة'))}</h4></div><span>${colors.length}</span></header>
         <div class="funnel-color-grid">${colors.map((color, index) => `<article class="funnel-color-swatch">
             <div class="funnel-color-preview" style="background:${safe(color)}"></div>
-            <div><small>${safe(roles[index] || text(`Couleur observÃ©e ${index + 1}`, `Observed color ${index + 1}`, `Ù„ÙˆÙ† Ù…Ø±ØµÙˆØ¯ ${index + 1}`))}</small><strong>${safe(color.toUpperCase())}</strong></div>
-            <button type="button" data-no-collapse="true" title="${safe(text('Copier la couleur', 'Copy color', 'Ù†Ø³Ø® Ø§Ù„Ù„ÙˆÙ†'))}" aria-label="${safe(text('Copier la couleur', 'Copy color', 'Ù†Ø³Ø® Ø§Ù„Ù„ÙˆÙ†'))}" onclick="event.stopPropagation();navigator.clipboard?.writeText('${safe(color)}')"><i class="fas fa-copy"></i></button>
+            <div><small>${safe(roles[index] || text(`Couleur observée ${index + 1}`, `Observed color ${index + 1}`, `لون مرصود ${index + 1}`))}</small><strong>${safe(color.toUpperCase())}</strong></div>
+            <button type="button" data-no-collapse="true" title="${safe(text('Copier la couleur', 'Copy color', 'نسخ اللون'))}" aria-label="${safe(text('Copier la couleur', 'Copy color', 'نسخ اللون'))}" onclick="event.stopPropagation();navigator.clipboard?.writeText('${safe(color)}')"><i class="fas fa-copy"></i></button>
         </article>`).join('')}</div>
-        <p><i class="fas fa-circle-info"></i>${safe(text('Palette extraite des styles rÃ©ellement rendus, sans couleur inventÃ©e.', 'Palette extracted from rendered styles, with no invented color.', 'ØªÙ… Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø§Ù„Ù„ÙˆØ­Ø© Ù…Ù† Ø§Ù„Ø£Ù†Ù…Ø§Ø· Ø§Ù„Ù…Ø¹Ø±ÙˆØ¶Ø© ÙØ¹Ù„ÙŠØ§ Ø¯ÙˆÙ† Ø§Ø®ØªØ±Ø§Ø¹ Ø£Ù„ÙˆØ§Ù†.'))}</p>
-    </section>` : `<p class="funnel-aida-empty">${safe(text('Aucune couleur fiable observÃ©e dans les pages accessibles.', 'No reliable color observed in accessible pages.', 'Ù„Ù… ÙŠØªÙ… Ø±ØµØ¯ Ù„ÙˆÙ† Ù…ÙˆØ«ÙˆÙ‚ ÙÙŠ Ø§Ù„ØµÙØ­Ø§Øª Ø§Ù„Ù…ØªØ§Ø­Ø©.'))}</p>`;
+        <p><i class="fas fa-circle-info"></i>${safe(text('Palette extraite des styles réellement rendus, sans couleur inventée.', 'Palette extracted from rendered styles, with no invented color.', 'تم استخراج اللوحة من الأنماط المعروضة فعليا دون اختراع ألوان.'))}</p>
+    </section>` : `<p class="funnel-aida-empty">${safe(text('Aucune couleur fiable observée dans les pages accessibles.', 'No reliable color observed in accessible pages.', 'لم يتم رصد لون موثوق في الصفحات المتاحة.'))}</p>`;
     const remainder = Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'colorPalette'));
     const details = funnelLegacyHasData(remainder) ? renderFunnelLegacyValue(remainder, opts) : '';
-    return `<div class="funnel-visual-identity">${paletteHtml}${details ? `<section class="funnel-visual-details"><h4>${safe(text('Lecture de la hiÃ©rarchie', 'Hierarchy reading', 'Ù‚Ø±Ø§Ø¡Ø© Ø§Ù„ØªØ³Ù„Ø³Ù„ Ø§Ù„Ø¨ØµØ±ÙŠ'))}</h4>${details}</section>` : ''}</div>`;
+    return `<div class="funnel-visual-identity">${paletteHtml}${details ? `<section class="funnel-visual-details"><h4>${safe(text('Lecture de la hiérarchie', 'Hierarchy reading', 'قراءة التسلسل البصري'))}</h4>${details}</section>` : ''}</div>`;
 }
 
 function renderFunnelPrioritizedActions(value, opts = {}) {
@@ -13582,7 +13582,7 @@ function renderFunnelPrioritizedActions(value, opts = {}) {
             const object = item && typeof item === 'object' ? item : { action: item };
             return {
                 index: index + 1,
-                zone: funnelClientLabel(object.zone || object.section || object.sectionType || object.area || object.title || text('Action', 'Action', 'Ø¥Ø¬Ø±Ø§Ø¡'), opts),
+                zone: funnelClientLabel(object.zone || object.section || object.sectionType || object.area || object.title || text('Action', 'Action', 'إجراء'), opts),
                 problem: funnelV2Text(object.problemObserved || object.problem || object.issue || object.why || object.observation || object.reason),
                 action: funnelV2Text(object.changeNow || object.action || object.fix || object.howTo || object.recommendation || object.task || object.title),
                 impact: funnelPriorityLabel(object.impact || object.expectedGain || object.roi, opts),
@@ -13596,19 +13596,19 @@ function renderFunnelPrioritizedActions(value, opts = {}) {
     if (!actions.length) return renderFunnelLegacyValue(value, opts);
     return `<div class="funnel-priority-actions">
         <div class="funnel-priority-lead">
-            <small>${safe(text('Plan lisible', 'Readable plan', 'Ø®Ø·Ø© ÙˆØ§Ø¶Ø­Ø©'))}</small>
-            <strong>${safe(text('Chaque carte dit quoi changer, pourquoi et avec quel effort.', 'Each card states what to change, why, and with what effort.', 'ÙƒÙ„ Ø¨Ø·Ø§Ù‚Ø© ØªÙˆØ¶Ø­ Ù…Ø§ ÙŠØ¬Ø¨ ØªØºÙŠÙŠØ±Ù‡ ÙˆÙ„Ù…Ø§Ø°Ø§ ÙˆØ¨Ø£ÙŠ Ø¬Ù‡Ø¯.'))}</strong>
+            <small>${safe(text('Plan lisible', 'Readable plan', 'خطة واضحة'))}</small>
+            <strong>${safe(text('Chaque carte dit quoi changer, pourquoi et avec quel effort.', 'Each card states what to change, why, and with what effort.', 'كل بطاقة توضح ما يجب تغييره ولماذا وبأي جهد.'))}</strong>
         </div>
         ${actions.map(item => `<article class="funnel-priority-card">
             <div class="funnel-priority-index">${safe(String(item.priority).padStart(2, '0'))}</div>
             <div class="funnel-priority-main">
                 <span>${safe(item.zone)}</span>
-                ${item.problem ? `<p class="funnel-priority-problem" dir="auto"><b>${safe(text('Constat', 'Observation', 'Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø©'))}</b>${safe(item.problem)}</p>` : ''}
-                ${item.action ? `<p class="funnel-priority-fix" dir="auto"><b>${safe(text('Ã€ faire', 'Change now', 'Ù…Ø§ ÙŠØ¬Ø¨ ÙØ¹Ù„Ù‡'))}</b>${safe(item.action)}</p>` : ''}
+                ${item.problem ? `<p class="funnel-priority-problem" dir="auto"><b>${safe(text('Constat', 'Observation', 'الملاحظة'))}</b>${safe(item.problem)}</p>` : ''}
+                ${item.action ? `<p class="funnel-priority-fix" dir="auto"><b>${safe(text('À faire', 'Change now', 'ما يجب فعله'))}</b>${safe(item.action)}</p>` : ''}
                 <div class="funnel-priority-meta">
-                    <em>${safe(text('Impact', 'Impact', 'Ø§Ù„Ø£Ø«Ø±'))}: ${safe(item.impact)}</em>
-                    <em>${safe(text('Effort', 'Effort', 'Ø§Ù„Ø¬Ù‡Ø¯'))}: ${safe(item.effort)}</em>
-                    <em>${safe(text('Confiance', 'Confidence', 'Ø§Ù„Ø«Ù‚Ø©'))}: ${safe(item.confidence)}</em>
+                    <em>${safe(text('Impact', 'Impact', 'الأثر'))}: ${safe(item.impact)}</em>
+                    <em>${safe(text('Effort', 'Effort', 'الجهد'))}: ${safe(item.effort)}</em>
+                    <em>${safe(text('Confiance', 'Confidence', 'الثقة'))}: ${safe(item.confidence)}</em>
                 </div>
             </div>
         </article>`).join('')}
@@ -13626,9 +13626,9 @@ function buildDakaMegaPromptPackage(rawPrompt, opts = {}) {
         .replace(/tu es un expert growth engineer[\s\S]{0,260}?(?=(mission|sources|objectif|contexte|$))/ig, '')
         .replace(/you are an expert growth engineer[\s\S]{0,260}?(?=(mission|sources|objective|context|$))/ig, '')
         .replace(/expert growth engineer/ig, 'expert UI/UX, CRO et frontend')
-        .replace(/\bSEO\b/g, 'visibilitÃ© marchÃ©')
-        .replace(/articles?\s+SEO/ig, 'pages dâ€™acquisition')
-        .replace(/mots-cl[eÃ©]s/ig, 'signaux de demande');
+        .replace(/\bSEO\b/g, 'visibilité marché')
+        .replace(/articles?\s+SEO/ig, 'pages d’acquisition')
+        .replace(/mots-cl[eé]s/ig, 'signaux de demande');
     const clip = (value, max = 900) => {
         const out = clean(value);
         return out.length > max ? `${out.slice(0, max).trim()}...` : out;
@@ -13653,25 +13653,25 @@ function buildDakaMegaPromptPackage(rawPrompt, opts = {}) {
     const proof = arr(primary.proofUsed, data.proofModel?.observed, data.funnelEvidenceSynthesis?.proofUsed).slice(0, 8);
     const offerType = clean(offer.offerType || data.offerType || data.projectIdentity?.offerType || data.projectIdentity?.businessModel || legacy.offerType || '');
     const offerContextText = `${offerType} ${url} ${h1} ${present.join(' ')} ${ctas.join(' ')}`.toLowerCase();
-    const isPhysicalProduct = /e-?commerce|shop|boutique|produit|product|panier|cart|checkout|livraison|stock|retour|serum|s[Ã©e]rum|lotion|huile|parapharmacie|cosm[eÃ©]tique/.test(offerContextText);
+    const isPhysicalProduct = /e-?commerce|shop|boutique|produit|product|panier|cart|checkout|livraison|stock|retour|serum|s[ée]rum|lotion|huile|parapharmacie|cosm[eé]tique/.test(offerContextText);
     const isServiceOffer = !isPhysicalProduct && /service|agence|consulting|formation|saas|software|logiciel|audit|devis|rdv|appointment|livrable|accompagnement/.test(offerContextText);
     const originalPrompt = clip(stripConflictingRoles(rawPrompt), 1800);
     const vocabularyRules = isPhysicalProduct
         ? text(
-            '- Vocabulaire adaptÃ© : produit, bÃ©nÃ©fices, ingrÃ©dients/composition, usage, prix, stock, livraison, retour, garantie, avis, preuve produit, sÃ©curitÃ© paiement.\n- Interdit ici sauf preuve : livrables, rÃ©visions, accompagnement, diagnostic, prestation.',
+            '- Vocabulaire adapté : produit, bénéfices, ingrédients/composition, usage, prix, stock, livraison, retour, garantie, avis, preuve produit, sécurité paiement.\n- Interdit ici sauf preuve : livrables, révisions, accompagnement, diagnostic, prestation.',
             '- Use product vocabulary: product, benefits, ingredients/composition, usage, price, stock, delivery, returns, guarantee, reviews, product proof, secure payment.\n- Do not use service vocabulary unless proven: deliverables, revisions, support package, diagnostic, consulting.',
-            '- Ø§Ø³ØªØ¹Ù…Ù„ Ù…ÙØ±Ø¯Ø§Øª Ø§Ù„Ù…Ù†ØªØ¬: Ø§Ù„Ù…Ù†ØªØ¬ØŒ Ø§Ù„ÙÙˆØ§Ø¦Ø¯ØŒ Ø§Ù„ØªØ±ÙƒÙŠØ¨Ø©ØŒ Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…ØŒ Ø§Ù„Ø³Ø¹Ø±ØŒ Ø§Ù„Ù…Ø®Ø²ÙˆÙ†ØŒ Ø§Ù„ØªÙˆØµÙŠÙ„ØŒ Ø§Ù„Ø¥Ø±Ø¬Ø§Ø¹ØŒ Ø§Ù„Ø¶Ù…Ø§Ù†ØŒ Ø§Ù„Ø¢Ø±Ø§Ø¡ØŒ Ø¯Ù„ÙŠÙ„ Ø§Ù„Ù…Ù†ØªØ¬ØŒ Ø£Ù…Ø§Ù† Ø§Ù„Ø¯ÙØ¹.\n- Ù„Ø§ ØªØ³ØªØ¹Ù…Ù„ Ù…ÙØ±Ø¯Ø§Øª Ø§Ù„Ø®Ø¯Ù…Ø§Øª Ø¥Ù„Ø§ Ø¨Ø¯Ù„ÙŠÙ„: Ù…Ø®Ø±Ø¬Ø§ØªØŒ Ù…Ø±Ø§Ø¬Ø¹Ø§ØªØŒ Ù…Ø±Ø§ÙÙ‚Ø©ØŒ ØªØ´Ø®ÙŠØµØŒ Ø§Ø³ØªØ´Ø§Ø±Ø©.'
+            '- استعمل مفردات المنتج: المنتج، الفوائد، التركيبة، طريقة الاستخدام، السعر، المخزون، التوصيل، الإرجاع، الضمان، الآراء، دليل المنتج، أمان الدفع.\n- لا تستعمل مفردات الخدمات إلا بدليل: مخرجات، مراجعات، مرافقة، تشخيص، استشارة.'
         )
         : isServiceOffer
             ? text(
-                '- Vocabulaire adaptÃ© : livrables, dÃ©lais, rÃ©visions, conditions de paiement, preuve rÃ©sultat, cas clients, accompagnement, support.\n- Nâ€™utilise pas livraison/retours/stock sauf si la page vend un produit physique.',
+                '- Vocabulaire adapté : livrables, délais, révisions, conditions de paiement, preuve résultat, cas clients, accompagnement, support.\n- N’utilise pas livraison/retours/stock sauf si la page vend un produit physique.',
                 '- Use service vocabulary: deliverables, timeline, revisions, payment terms, result proof, case studies, support.\n- Do not use delivery/returns/stock unless the page sells a physical product.',
-                '- Ø§Ø³ØªØ¹Ù…Ù„ Ù…ÙØ±Ø¯Ø§Øª Ø§Ù„Ø®Ø¯Ù…Ø©: Ø§Ù„Ù…Ø®Ø±Ø¬Ø§ØªØŒ Ø§Ù„Ù…Ø¯Ø©ØŒ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø§ØªØŒ Ø´Ø±ÙˆØ· Ø§Ù„Ø¯ÙØ¹ØŒ Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ù†ØªØ§Ø¦Ø¬ØŒ Ø­Ø§Ù„Ø§Øª Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ØŒ Ø§Ù„Ø¯Ø¹Ù….\n- Ù„Ø§ ØªØ³ØªØ¹Ù…Ù„ Ø§Ù„ØªÙˆØµÙŠÙ„ ÙˆØ§Ù„Ø¥Ø±Ø¬Ø§Ø¹ ÙˆØ§Ù„Ù…Ø®Ø²ÙˆÙ† Ø¥Ù„Ø§ Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø§Ù„ØµÙØ­Ø© ØªØ¨ÙŠØ¹ Ù…Ù†ØªØ¬Ø§ Ù…Ø§Ø¯ÙŠØ§.'
+                '- استعمل مفردات الخدمة: المخرجات، المدة، المراجعات، شروط الدفع، إثبات النتائج، حالات العملاء، الدعم.\n- لا تستعمل التوصيل والإرجاع والمخزون إلا إذا كانت الصفحة تبيع منتجا ماديا.'
             )
             : text(
-                '- Adapte le vocabulaire au modÃ¨le rÃ©ellement observÃ©. Si tu nâ€™es pas sÃ»r, marque â€œÃ  confirmerâ€.',
-                '- Adapt vocabulary to the actually observed business model. If unsure, mark â€œto confirmâ€.',
-                '- ÙƒÙŠÙ‘Ù Ø§Ù„Ù…ÙØ±Ø¯Ø§Øª Ø­Ø³Ø¨ Ù†Ù…ÙˆØ°Ø¬ Ø§Ù„Ø¹Ù…Ù„ Ø§Ù„Ù…Ø±ØµÙˆØ¯ ÙØ¹Ù„Ø§. Ø¥Ø°Ø§ Ù„Ù… ØªÙƒÙ† Ù…ØªØ£ÙƒØ¯Ø§ØŒ Ø§ÙƒØªØ¨ â€œÙŠØ¬Ø¨ Ø§Ù„ØªØ£ÙƒÙŠØ¯â€.'
+                '- Adapte le vocabulaire au modèle réellement observé. Si tu n’es pas sûr, marque “à confirmer”.',
+                '- Adapt vocabulary to the actually observed business model. If unsure, mark “to confirm”.',
+                '- كيّف المفردات حسب نموذج العمل المرصود فعلا. إذا لم تكن متأكدا، اكتب “يجب التأكيد”.'
             );
     const bullet = list => list.length ? list.map(item => `- ${item}`).join('\n') : '- A confirmer';
     const commonData = `
@@ -13738,7 +13738,7 @@ REGLES DE CODE
 - HTML/CSS/JS simple, sans framework sauf demande explicite.
 - Mobile-first, aucun scroll horizontal, boutons faciles a cliquer.
 - CSS lisible avec classes claires.
-- JS minimal : menu mobile, FAQ accordÃ©on, sticky CTA si utile, micro-interactions.
+- JS minimal : menu mobile, FAQ accordéon, sticky CTA si utile, micro-interactions.
 - Pas de dependances lourdes.
 - Code facile a coller dans un hebergeur simple.
 - Commente les sections importantes.
@@ -13813,60 +13813,60 @@ Answer in steps:
 
 EXPECTED OUTPUT
 Give clean usable code. If the answer is too long, split into parts and wait for my GO.`,
-`Ø£Ù†Øª Ø®Ø¨ÙŠØ± X10 ÙÙŠ UI/UX ÙˆCRO ÙˆÙƒØªØ§Ø¨Ø© Ø§Ù„Ø¥Ù‚Ù†Ø§Ø¹ ÙˆHTML/CSS/JS. Ù…Ù‡Ù…ØªÙƒ Ù…Ø³Ø§Ø¹Ø¯ØªÙŠ Ø¹Ù„Ù‰ ØªØ­Ø³ÙŠÙ† Ø£Ùˆ Ø¥Ø¹Ø§Ø¯Ø© Ø¨Ù†Ø§Ø¡ ØµÙØ­ØªÙŠ Ø§Ø¹ØªÙ…Ø§Ø¯Ø§ Ø¹Ù„Ù‰ Ø£Ø¯Ù„Ø© Funnel Ø§Ù„Ù…Ù‚Ø¯Ù…Ø©.
+`أنت خبير X10 في UI/UX وCRO وكتابة الإقناع وHTML/CSS/JS. مهمتك مساعدتي على تحسين أو إعادة بناء صفحتي اعتمادا على أدلة Funnel المقدمة.
 
-Ø§Ù„Ø³ÙŠØ§Ù‚
-Ø£Ø­ØªØ§Ø¬ ØµÙØ­Ø© ÙˆØ§Ø¶Ø­Ø©ØŒ Ù…ØªØ¬Ø§ÙˆØ¨Ø©ØŒ Ù…ÙˆØ«ÙˆÙ‚Ø© ÙˆÙ…ÙˆØ¬Ù‡Ø© Ù„Ù„ØªØ­ÙˆÙŠÙ„. Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… ØºÙŠØ± ØªÙ‚Ù†ÙŠØŒ Ù„Ø°Ù„Ùƒ Ø£Ø±Ø´Ø¯Ù†ÙŠ Ø®Ø·ÙˆØ© Ø¨Ø®Ø·ÙˆØ©.
+السياق
+أحتاج صفحة واضحة، متجاوبة، موثوقة وموجهة للتحويل. المستخدم غير تقني، لذلك أرشدني خطوة بخطوة.
 
-Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…ØªØ§Ø­Ø©
+البيانات المتاحة
 ${commonData}
 
-Ø£Ø³Ø¦Ù„Ø© Ø§Ù„ØªÙˆØ¶ÙŠØ­
-Ø­Ù„Ù„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø£ÙˆÙ„Ø§. Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ù…Ø¹Ù„ÙˆÙ…Ø© Ù†Ø§Ù‚ØµØ© Ø£Ùˆ Ù…ØªÙ†Ø§Ù‚Ø¶Ø©ØŒ Ø§Ø·Ø±Ø­ Ù…Ù† 3 Ø¥Ù„Ù‰ 7 Ø£Ø³Ø¦Ù„Ø© ÙÙ‚Ø·. Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ÙƒØ§ÙÙŠØ©ØŒ Ù‚Ù„ "Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ÙƒØ§ÙÙŠØ©" Ø«Ù… Ø§Ù†ØªÙ‚Ù„ Ø¥Ù„Ù‰ Ø§Ù„Ø®Ø·Ø©.
+أسئلة التوضيح
+حلل البيانات أولا. إذا كانت معلومة ناقصة أو متناقضة، اطرح من 3 إلى 7 أسئلة فقط. إذا كانت البيانات كافية، قل "البيانات كافية" ثم انتقل إلى الخطة.
 
-Ø®Ø·Ø© Ø§Ù„ØªÙ†ÙÙŠØ°
-1. Ø­Ù„Ù„ Ø§Ù„Ø£Ø¯Ù„Ø©.
-2. Ù„Ø®Øµ Ù…Ø§ ÙŠØ¬Ø¨ Ø§Ù„Ø­ÙØ§Ø¸ Ø¹Ù„ÙŠÙ‡ Ø£Ùˆ ØªØ­Ø³ÙŠÙ†Ù‡ Ø£Ùˆ Ø¥Ø¶Ø§ÙØªÙ‡ Ø£Ùˆ Ø­Ø°ÙÙ‡ Ø£Ùˆ Ø¯Ù…Ø¬Ù‡.
-3. Ø§Ù‚ØªØ±Ø­ Ø§Ù„ØªØ±ØªÙŠØ¨ Ø§Ù„Ù…Ø«Ø§Ù„ÙŠ Ù„Ù„ØµÙØ­Ø©.
-4. Ø£Ù†Ø´Ø¦ Ø§Ù„ÙƒÙˆØ¯ Ø¹Ù„Ù‰ Ø¯ÙØ¹Ø§Øª: HTML Ø«Ù… CSS Ø«Ù… JS.
-5. Ø¥Ø°Ø§ ÙƒØ§Ù† Ø§Ù„Ø³ÙŠØ§Ù‚ Ù…Ø­Ø¯ÙˆØ¯Ø§ØŒ Ù„Ø§ ØªÙˆÙ„Ø¯ ÙƒÙ„ Ø´ÙŠØ¡ ÙÙŠ Ø±Ø¯ ÙˆØ§Ø­Ø¯. Ø§Ø®ØªÙ… Ø¨Ø¹Ø¨Ø§Ø±Ø© "Ø§ÙƒØªØ¨ GO Ù„Ù„Ø­ØµÙˆÙ„ Ø¹Ù„Ù‰ Ø§Ù„Ø¬Ø²Ø¡ Ø§Ù„ØªØ§Ù„ÙŠ."
-6. Ø§Ø·Ù„Ø¨ Ø§Ù„ØªØ£ÙƒÙŠØ¯ Ù‚Ø¨Ù„ ØªØºÙŠÙŠØ± ÙƒØ¨ÙŠØ± ÙÙŠ Ø§Ù„Ù‡ÙŠÙƒÙ„.
+خطة التنفيذ
+1. حلل الأدلة.
+2. لخص ما يجب الحفاظ عليه أو تحسينه أو إضافته أو حذفه أو دمجه.
+3. اقترح الترتيب المثالي للصفحة.
+4. أنشئ الكود على دفعات: HTML ثم CSS ثم JS.
+5. إذا كان السياق محدودا، لا تولد كل شيء في رد واحد. اختم بعبارة "اكتب GO للحصول على الجزء التالي."
+6. اطلب التأكيد قبل تغيير كبير في الهيكل.
 
-Ù‚ÙˆØ§Ø¹Ø¯ Ù…Ù†Ø¹ Ø§Ù„Ù‡Ù„ÙˆØ³Ø©
-- Ù„Ø§ ØªØ®ØªØ±Ø¹ Ø¢Ø±Ø§Ø¡ Ø£Ùˆ ØªÙ‚ÙŠÙŠÙ…Ø§Øª Ø£Ùˆ Ù†ØªØ§Ø¦Ø¬ Ø£Ùˆ Ø´Ø¹Ø§Ø±Ø§Øª Ø£Ùˆ Ø´Ù‡Ø§Ø¯Ø§Øª Ø£Ùˆ Ø£Ø³Ø¹Ø§Ø±Ø§ Ø£Ùˆ ØªÙˆØµÙŠÙ„Ø§ Ø£Ùˆ Ø¶Ù…Ø§Ù†Ø§Øª Ø£Ùˆ Ù…Ø®Ø²ÙˆÙ†Ø§.
-- Ø¥Ø°Ø§ ÙƒØ§Ù† Ø§Ù„Ø¯Ù„ÙŠÙ„ Ù†Ø§Ù‚ØµØ§ Ø§ÙƒØªØ¨ "ÙŠØ¬Ø¨ Ø§Ù„ØªØ£ÙƒÙŠØ¯".
-- Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù…Ù‚Ø¯Ù…Ø© ÙÙ‚Ø·.
-- Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø§Ù„ØµÙØ­Ø© Ù‚ÙˆÙŠØ© ÙÙŠ Ù†Ù‚Ø·Ø© Ù…Ø§ ÙØ§Ø°ÙƒØ± Ø°Ù„Ùƒ ÙˆØ­Ø§ÙØ¸ Ø¹Ù„ÙŠÙ‡Ø§.
-- Ù„Ø§ ØªÙ‚Ø¯Ù… Ø§Ù„ØªÙˆØµÙŠØ© ÙƒØ­Ù‚ÙŠÙ‚Ø© Ù…Ø±ØµÙˆØ¯Ø©.
+قواعد منع الهلوسة
+- لا تخترع آراء أو تقييمات أو نتائج أو شعارات أو شهادات أو أسعارا أو توصيلا أو ضمانات أو مخزونا.
+- إذا كان الدليل ناقصا اكتب "يجب التأكيد".
+- استخدم الأدلة المقدمة فقط.
+- إذا كانت الصفحة قوية في نقطة ما فاذكر ذلك وحافظ عليها.
+- لا تقدم التوصية كحقيقة مرصودة.
 
-Ù‚ÙˆØ§Ø¹Ø¯ Ø§Ù„Ø§Ø³ØªÙ„Ù‡Ø§Ù… Ù…Ù† Ù…Ù†Ø§ÙØ³
-- Ù„Ø§ ØªÙ†Ø³Ø® Ø§Ù„Ø¹Ù„Ø§Ù…Ø© Ø£Ùˆ Ø§Ù„Ù†ØµÙˆØµ Ø§Ù„Ù…Ø­Ù…ÙŠØ© Ø£Ùˆ Ø§Ù„ØµÙˆØ± Ø§Ù„Ø®Ø§ØµØ© Ø£Ùˆ Ø§Ù„Ø´Ø¹Ø§Ø± Ø£Ùˆ Ø§Ù„ÙƒÙˆØ¯ Ø§Ù„Ù…Ù…Ù„ÙˆÙƒ.
-- Ø§Ø³ØªÙ„Ù‡Ù… ÙÙ‚Ø· Ø¨Ù†ÙŠØ© UX ÙˆÙ…Ù†Ø·Ù‚ Ø§Ù„Ø£Ù‚Ø³Ø§Ù… ÙˆØ£Ù†Ù…Ø§Ø· Ø§Ù„ØªØ­ÙˆÙŠÙ„.
-- Ø£Ù†Ø´Ø¦ Ù†Ø³Ø®Ø© Ø£ØµÙ„ÙŠØ© Ù…Ù†Ø§Ø³Ø¨Ø© Ù„Ù…Ù†ØªØ¬ÙŠ Ø£Ùˆ Ø®Ø¯Ù…ØªÙŠ.
+قواعد الاستلهام من منافس
+- لا تنسخ العلامة أو النصوص المحمية أو الصور الخاصة أو الشعار أو الكود المملوك.
+- استلهم فقط بنية UX ومنطق الأقسام وأنماط التحويل.
+- أنشئ نسخة أصلية مناسبة لمنتجي أو خدمتي.
 
-Ù‚ÙˆØ§Ø¹Ø¯ Ø§Ù„ÙƒÙˆØ¯
-- HTML/CSS/JS Ø¨Ø³ÙŠØ· Ø¯ÙˆÙ† Ø¥Ø·Ø§Ø± Ø¹Ù…Ù„ Ø¥Ù„Ø§ Ø¥Ø°Ø§ Ø·Ù„Ø¨Øª Ø°Ù„Ùƒ.
-- Mobile-firstØŒ Ø¯ÙˆÙ† ØªÙ…Ø±ÙŠØ± Ø£ÙÙ‚ÙŠØŒ ÙˆØ£Ø²Ø±Ø§Ø± Ø³Ù‡Ù„Ø© Ø§Ù„Ù†Ù‚Ø±.
-- Ø£Ø³Ù…Ø§Ø¡ CSS ÙˆØ§Ø¶Ø­Ø©.
-- JS Ù‚Ù„ÙŠÙ„ ÙˆÙ…ÙÙŠØ¯: Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù‡Ø§ØªÙØŒ FAQØŒ CTA Ø«Ø§Ø¨Øª Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©ØŒ ØªÙØ§Ø¹Ù„Ø§Øª Ø®ÙÙŠÙØ©.
-- Ù„Ø§ ØªØ¹ØªÙ…Ø¯ Ø¹Ù„Ù‰ Ù…ÙƒØªØ¨Ø§Øª Ø«Ù‚ÙŠÙ„Ø©.
-- Ø³Ù‡Ù„ Ø§Ù„Ù„ØµÙ‚ ÙÙŠ Ø§Ø³ØªØ¶Ø§ÙØ© Ø¨Ø³ÙŠØ·Ø©.
+قواعد الكود
+- HTML/CSS/JS بسيط دون إطار عمل إلا إذا طلبت ذلك.
+- Mobile-first، دون تمرير أفقي، وأزرار سهلة النقر.
+- أسماء CSS واضحة.
+- JS قليل ومفيد: قائمة الهاتف، FAQ، CTA ثابت عند الحاجة، تفاعلات خفيفة.
+- لا تعتمد على مكتبات ثقيلة.
+- سهل اللصق في استضافة بسيطة.
 
-Ø§Ù„Ø£Ù‚Ø³Ø§Ù… Ø§Ù„Ù…Ø·Ù„ÙˆØ¨Ø©
-Hero ÙˆØ§Ø¶Ø­ØŒ ÙÙˆØ§Ø¦Ø¯ØŒ Ø¯Ù„ÙŠÙ„ Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØŒ Ø¹Ø±Ø¶/Ø³Ø¹Ø±ØŒ Ø¶Ù…Ø§Ù†Ø§ØªØŒ FAQØŒ Ù…Ù‚Ø§Ø±Ù†Ø© Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©ØŒ Ù†Ø¯Ø±Ø© ÙÙ‚Ø· Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ù…Ø«Ø¨ØªØ©ØŒ CTA Ù†Ù‡Ø§Ø¦ÙŠØŒ CTA Ø«Ø§Ø¨Øª Ù„Ù„Ù‡Ø§ØªÙ Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.
+الأقسام المطلوبة
+Hero واضح، فوائد، دليل اجتماعي، عرض/سعر، ضمانات، FAQ، مقارنة عند الحاجة، ندرة فقط إذا كانت مثبتة، CTA نهائي، CTA ثابت للهاتف عند الحاجة.
 
-Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„ØªØ³Ù„ÙŠÙ…
-Ø£Ø¬Ø¨ Ø¨Ø§Ù„ØªØ±ØªÙŠØ¨:
-1. ØªØ´Ø®ÙŠØµ Ù‚ØµÙŠØ±.
-2. Ø£Ø³Ø¦Ù„Ø© Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.
-3. Ø®Ø·Ø© Ø§Ù„ØµÙØ­Ø©.
+طريقة التسليم
+أجب بالترتيب:
+1. تشخيص قصير.
+2. أسئلة عند الحاجة.
+3. خطة الصفحة.
 4. HTML.
 5. CSS.
 6. JS.
-7. Ù‚Ø§Ø¦Ù…Ø© Ø§Ø®ØªØ¨Ø§Ø± Ù„Ù„Ù‡Ø§ØªÙ.
+7. قائمة اختبار للهاتف.
 
-Ø§Ù„Ù…Ø®Ø±Ø¬Ø§Øª
-Ù‚Ø¯Ù… ÙƒÙˆØ¯Ø§ Ù†Ø¸ÙŠÙØ§ Ù‚Ø§Ø¨Ù„Ø§ Ù„Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…. Ø¥Ø°Ø§ ÙƒØ§Ù† Ø§Ù„Ø±Ø¯ Ø·ÙˆÙŠÙ„Ø§ØŒ Ù‚Ø³Ù…Ù‡ ÙˆØ§Ù†ØªØ¸Ø± GO.`
+المخرجات
+قدم كودا نظيفا قابلا للاستخدام. إذا كان الرد طويلا، قسمه وانتظر GO.`
 )}`.trim();
 
     const short = `${text(
@@ -13912,38 +13912,38 @@ OUTPUT
 5. CSS.
 6. JS.
 7. Mobile tests.`,
-`Ø£Ù†Øª Ø®Ø¨ÙŠØ± X10 ÙÙŠ UI/UX ÙˆCRO ÙˆHTML/CSS/JS. Ø­Ø³Ù‘Ù† Ø£Ùˆ Ø£Ø¹Ø¯ Ø¨Ù†Ø§Ø¡ Ø§Ù„ØµÙØ­Ø© Ø§Ø¹ØªÙ…Ø§Ø¯Ø§ Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø¯Ù„Ø© Ø£Ø¯Ù†Ø§Ù‡. Ø§ÙØ­Øµ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø£ÙˆÙ„Ø§ Ø«Ù… Ø§Ø·Ø±Ø­ 3 Ø¥Ù„Ù‰ 7 Ø£Ø³Ø¦Ù„Ø© Ø¥Ø°Ø§ Ù†Ù‚Øµ Ø´ÙŠØ¡. Ø¥Ø°Ø§ ÙƒØ§Ù†Øª ÙƒØ§ÙÙŠØ©ØŒ Ù‚Ø¯Ù… Ø®Ø·Ø© Ø«Ù… Ø§Ù„ÙƒÙˆØ¯ Ø¹Ù„Ù‰ Ø¯ÙØ¹Ø§Øª.
+`أنت خبير X10 في UI/UX وCRO وHTML/CSS/JS. حسّن أو أعد بناء الصفحة اعتمادا على الأدلة أدناه. افحص البيانات أولا ثم اطرح 3 إلى 7 أسئلة إذا نقص شيء. إذا كانت كافية، قدم خطة ثم الكود على دفعات.
 
-Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª
+البيانات
 ${commonData}
 
-Ø§Ù„Ù‚ÙˆØ§Ø¹Ø¯
-- Ù„Ø§ ØªØ®ØªØ±Ø¹ Ø¢Ø±Ø§Ø¡ Ø£Ùˆ Ø£Ø³Ø¹Ø§Ø±Ø§ Ø£Ùˆ Ø¶Ù…Ø§Ù†Ø§Øª Ø£Ùˆ ØªÙˆØµÙŠÙ„Ø§ Ø£Ùˆ Ù†ØªØ§Ø¦Ø¬ Ø£Ùˆ Ø´Ø¹Ø§Ø±Ø§Øª Ø£Ùˆ Ø´Ù‡Ø§Ø¯Ø§Øª.
-- Ø§ÙƒØªØ¨ "ÙŠØ¬Ø¨ Ø§Ù„ØªØ£ÙƒÙŠØ¯" Ø¹Ù†Ø¯ Ù†Ù‚Øµ Ø§Ù„Ø¯Ù„ÙŠÙ„.
-- Ø­Ø§ÙØ¸ ÙÙ‚Ø· Ø¹Ù„Ù‰ Ø§Ù„Ø¹Ù†Ø§ØµØ± Ø§Ù„Ù…Ø«Ø¨ØªØ©.
-- Ø¥Ø°Ø§ ÙƒØ§Ù† Ø§Ù„Ù†Ù…ÙˆØ°Ø¬ Ù…Ø­Ø¯ÙˆØ¯Ø§: Ø£Ø¹Ø· HTML Ø«Ù… Ø§Ù†ØªØ¸Ø± GO Ø«Ù… CSS Ø«Ù… JS.
-- ÙƒÙˆØ¯ Ø¨Ø³ÙŠØ· Ù…ØªØ¬Ø§ÙˆØ¨ØŒ Ø¯ÙˆÙ† Ø¥Ø·Ø§Ø± Ø¹Ù…Ù„ Ø£Ùˆ ØªØ¨Ø¹ÙŠØ§Øª Ø«Ù‚ÙŠÙ„Ø©.
-- Ø¹Ù†Ø¯ Ø§Ù„Ø§Ø³ØªÙ„Ù‡Ø§Ù… Ù…Ù† Ù…Ù†Ø§ÙØ³: Ù„Ø§ ØªÙ†Ø³Ø® Ø§Ù„Ø¹Ù„Ø§Ù…Ø© Ø£Ùˆ Ø§Ù„Ù†Øµ Ø£Ùˆ Ø§Ù„ØµÙˆØ± Ø£Ùˆ Ø§Ù„ÙƒÙˆØ¯.
+القواعد
+- لا تخترع آراء أو أسعارا أو ضمانات أو توصيلا أو نتائج أو شعارات أو شهادات.
+- اكتب "يجب التأكيد" عند نقص الدليل.
+- حافظ فقط على العناصر المثبتة.
+- إذا كان النموذج محدودا: أعط HTML ثم انتظر GO ثم CSS ثم JS.
+- كود بسيط متجاوب، دون إطار عمل أو تبعيات ثقيلة.
+- عند الاستلهام من منافس: لا تنسخ العلامة أو النص أو الصور أو الكود.
 
-Ø§Ù„Ù…Ø®Ø±Ø¬Ø§Øª
-1. ØªØ´Ø®ÙŠØµ Ù‚ØµÙŠØ±.
-2. Ø£Ø³Ø¦Ù„Ø© Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.
-3. ØªØ±ØªÙŠØ¨ Ø§Ù„Ø£Ù‚Ø³Ø§Ù….
+المخرجات
+1. تشخيص قصير.
+2. أسئلة عند الحاجة.
+3. ترتيب الأقسام.
 4. HTML.
 5. CSS.
 6. JS.
-7. Ø§Ø®ØªØ¨Ø§Ø± Ø§Ù„Ù‡Ø§ØªÙ.`
+7. اختبار الهاتف.`
 )}`.trim();
 
-    const htmlOnly = `${text('Genere uniquement le HTML semantique mobile-first pour cette page. Ne donne pas le CSS ni le JS maintenant. Utilise les preuves suivantes et marque les donnees manquantes "A confirmer".', 'Generate only the mobile-first semantic HTML for this page. Do not output CSS or JS yet. Use the following evidence and mark missing data as "To confirm".', 'Ø£Ù†Ø´Ø¦ HTML ÙÙ‚Ø· Ù„Ù„ØµÙØ­Ø© Ø¨Ø´ÙƒÙ„ semantic Ùˆmobile-first. Ù„Ø§ ØªÙƒØªØ¨ CSS Ø£Ùˆ JS Ø§Ù„Ø¢Ù†. Ø§Ø³ØªØ®Ø¯Ù… Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„ØªØ§Ù„ÙŠØ© ÙˆØ§ÙƒØªØ¨ "ÙŠØ¬Ø¨ Ø§Ù„ØªØ£ÙƒÙŠØ¯" Ø¹Ù†Ø¯ Ù†Ù‚Øµ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª.')}\n\n${commonData}`;
-    const cssOnly = `${text('Genere uniquement le CSS premium mobile-first pour le HTML de cette page. Aucun framework, aucune dependance lourde, aucun scroll horizontal. Structure les styles par section.', 'Generate only premium mobile-first CSS for this page HTML. No framework, no heavy dependency, no horizontal scroll. Organize styles by section.', 'Ø£Ù†Ø´Ø¦ CSS ÙÙ‚Ø· Ø¨ØªØµÙ…ÙŠÙ… premium Ùˆmobile-first. Ø¯ÙˆÙ† Ø¥Ø·Ø§Ø± Ø¹Ù…Ù„ Ø£Ùˆ ØªØ¨Ø¹ÙŠØ§Øª Ø«Ù‚ÙŠÙ„Ø© Ø£Ùˆ ØªÙ…Ø±ÙŠØ± Ø£ÙÙ‚ÙŠ. Ù†Ø¸Ù… Ø§Ù„Ø£Ù†Ù…Ø§Ø· Ø­Ø³Ø¨ Ø§Ù„Ø£Ù‚Ø³Ø§Ù….')}\n\n${commonData}`;
-    const jsOnly = `${text('Genere uniquement le JavaScript utile pour cette page : menu mobile, FAQ accordÃ©on, sticky CTA mobile si pertinent, micro-interactions. Pas de tracking agressif, aucune erreur console.', 'Generate only useful JavaScript: mobile menu, FAQ accordion, mobile sticky CTA if relevant, micro-interactions. No aggressive tracking, no console errors.', 'Ø£Ù†Ø´Ø¦ JavaScript Ø§Ù„Ù…ÙÙŠØ¯ ÙÙ‚Ø·: Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ù‡Ø§ØªÙØŒ FAQØŒ CTA Ø«Ø§Ø¨Øª Ù„Ù„Ù‡Ø§ØªÙ Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©ØŒ ÙˆØªÙØ§Ø¹Ù„Ø§Øª Ø®ÙÙŠÙØ©. Ø¯ÙˆÙ† ØªØªØ¨Ø¹ Ù…Ø²Ø¹Ø¬ ÙˆØ¯ÙˆÙ† Ø£Ø®Ø·Ø§Ø¡ console.')}\n\n${commonData}`;
-    const questions = `${text('Avant de coder, pose ces questions si les reponses ne sont pas dans les donnees :', 'Before coding, ask these questions if answers are not in the data:', 'Ù‚Ø¨Ù„ ÙƒØªØ§Ø¨Ø© Ø§Ù„ÙƒÙˆØ¯ØŒ Ø§Ø·Ø±Ø­ Ù‡Ø°Ù‡ Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø¥Ø°Ø§ Ù„Ù… ØªÙƒÙ† Ø§Ù„Ø¥Ø¬Ø§Ø¨Ø§Øª Ù…ÙˆØ¬ÙˆØ¯Ø© ÙÙŠ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª:')}
-1. ${text('Quel est lâ€™objectif principal : achat, lead, appel, WhatsApp, demo ?', 'What is the main goal: purchase, lead, call, WhatsApp, demo?', 'Ù…Ø§ Ø§Ù„Ù‡Ø¯Ù Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ: Ø´Ø±Ø§Ø¡ØŒ Ø¹Ù…ÙŠÙ„ Ù…Ø­ØªÙ…Ù„ØŒ Ù…ÙƒØ§Ù„Ù…Ø©ØŒ ÙˆØ§ØªØ³Ø§Ø¨ØŒ ØªØ¬Ø±Ø¨Ø©ØŸ')}
-2. ${text('Quelle langue exacte doit utiliser la page ?', 'What exact language should the page use?', 'Ù…Ø§ Ø§Ù„Ù„ØºØ© Ø§Ù„Ø¯Ù‚ÙŠÙ‚Ø© Ù„Ù„ØµÙØ­Ø©ØŸ')}
-3. ${text('Quel prix ou pack est confirme ?', 'Which price or package is confirmed?', 'Ù…Ø§ Ø§Ù„Ø³Ø¹Ø± Ø£Ùˆ Ø§Ù„Ø¨Ø§Ù‚Ø© Ø§Ù„Ù…Ø¤ÙƒØ¯Ø©ØŸ')}
-4. ${text('Quelles preuves sont reelles : avis, photos, garanties, livraison, resultats ?', 'Which proof is real: reviews, photos, guarantees, delivery, results?', 'Ù…Ø§ Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ø­Ù‚ÙŠÙ‚ÙŠØ©: Ø¢Ø±Ø§Ø¡ØŒ ØµÙˆØ±ØŒ Ø¶Ù…Ø§Ù†Ø§ØªØŒ ØªØ³Ù„ÙŠÙ…ØŒ Ù†ØªØ§Ø¦Ø¬ØŸ')}
-5. ${text('Quelles contraintes design ou marque faut-il respecter ?', 'What design or brand constraints must be respected?', 'Ù…Ø§ Ù‚ÙŠÙˆØ¯ Ø§Ù„ØªØµÙ…ÙŠÙ… Ø£Ùˆ Ø§Ù„Ø¹Ù„Ø§Ù…Ø© Ø§Ù„ØªÙŠ ÙŠØ¬Ø¨ Ø§Ø­ØªØ±Ø§Ù…Ù‡Ø§ØŸ')}`;
+    const htmlOnly = `${text('Genere uniquement le HTML semantique mobile-first pour cette page. Ne donne pas le CSS ni le JS maintenant. Utilise les preuves suivantes et marque les donnees manquantes "A confirmer".', 'Generate only the mobile-first semantic HTML for this page. Do not output CSS or JS yet. Use the following evidence and mark missing data as "To confirm".', 'أنشئ HTML فقط للصفحة بشكل semantic وmobile-first. لا تكتب CSS أو JS الآن. استخدم الأدلة التالية واكتب "يجب التأكيد" عند نقص البيانات.')}\n\n${commonData}`;
+    const cssOnly = `${text('Genere uniquement le CSS premium mobile-first pour le HTML de cette page. Aucun framework, aucune dependance lourde, aucun scroll horizontal. Structure les styles par section.', 'Generate only premium mobile-first CSS for this page HTML. No framework, no heavy dependency, no horizontal scroll. Organize styles by section.', 'أنشئ CSS فقط بتصميم premium وmobile-first. دون إطار عمل أو تبعيات ثقيلة أو تمرير أفقي. نظم الأنماط حسب الأقسام.')}\n\n${commonData}`;
+    const jsOnly = `${text('Genere uniquement le JavaScript utile pour cette page : menu mobile, FAQ accordéon, sticky CTA mobile si pertinent, micro-interactions. Pas de tracking agressif, aucune erreur console.', 'Generate only useful JavaScript: mobile menu, FAQ accordion, mobile sticky CTA if relevant, micro-interactions. No aggressive tracking, no console errors.', 'أنشئ JavaScript المفيد فقط: قائمة الهاتف، FAQ، CTA ثابت للهاتف عند الحاجة، وتفاعلات خفيفة. دون تتبع مزعج ودون أخطاء console.')}\n\n${commonData}`;
+    const questions = `${text('Avant de coder, pose ces questions si les reponses ne sont pas dans les donnees :', 'Before coding, ask these questions if answers are not in the data:', 'قبل كتابة الكود، اطرح هذه الأسئلة إذا لم تكن الإجابات موجودة في البيانات:')}
+1. ${text('Quel est l’objectif principal : achat, lead, appel, WhatsApp, demo ?', 'What is the main goal: purchase, lead, call, WhatsApp, demo?', 'ما الهدف الرئيسي: شراء، عميل محتمل، مكالمة، واتساب، تجربة؟')}
+2. ${text('Quelle langue exacte doit utiliser la page ?', 'What exact language should the page use?', 'ما اللغة الدقيقة للصفحة؟')}
+3. ${text('Quel prix ou pack est confirme ?', 'Which price or package is confirmed?', 'ما السعر أو الباقة المؤكدة؟')}
+4. ${text('Quelles preuves sont reelles : avis, photos, garanties, livraison, resultats ?', 'Which proof is real: reviews, photos, guarantees, delivery, results?', 'ما الأدلة الحقيقية: آراء، صور، ضمانات، تسليم، نتائج؟')}
+5. ${text('Quelles contraintes design ou marque faut-il respecter ?', 'What design or brand constraints must be respected?', 'ما قيود التصميم أو العلامة التي يجب احترامها؟')}`;
     return { full, short, htmlOnly, cssOnly, jsOnly, questions };
 }
 
@@ -13952,18 +13952,18 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
     const isAr = opts.isAr;
     const isEn = opts.isEn;
     const labels = {
-        full: isAr ? 'Ù†Ø³Ø® Ø§Ù„Ø¨Ø±ÙˆÙ…Ø¨Øª Ø§Ù„ÙƒØ§Ù…Ù„' : isEn ? 'Copy full Mega Prompt' : 'Copier Mega Prompt complet',
-        short: isAr ? 'Ù†Ø³Ø® Ø§Ù„Ù†Ø³Ø®Ø© Ø§Ù„Ù‚ØµÙŠØ±Ø©' : isEn ? 'Copy free trial short prompt' : 'Copier version courte free trial',
-        html: isAr ? 'Ù†Ø³Ø® HTML ÙÙ‚Ø·' : isEn ? 'Copy HTML only' : 'Copier prompt HTML seulement',
-        css: isAr ? 'Ù†Ø³Ø® CSS ÙÙ‚Ø·' : isEn ? 'Copy CSS only' : 'Copier prompt CSS seulement',
-        js: isAr ? 'Ù†Ø³Ø® JS ÙÙ‚Ø·' : isEn ? 'Copy JS only' : 'Copier prompt JS seulement',
-        q: isAr ? 'Ù†Ø³Ø® Ø§Ù„Ø£Ø³Ø¦Ù„Ø©' : isEn ? 'Copy clarification questions' : 'Copier questions de clarification',
-        toggle: isAr ? 'DÃ©plier / replier le prompt' : isEn ? 'Expand / collapse prompt' : 'DÃ©plier / replier le prompt'
+        full: isAr ? 'نسخ البرومبت الكامل' : isEn ? 'Copy full Mega Prompt' : 'Copier Mega Prompt complet',
+        short: isAr ? 'نسخ النسخة القصيرة' : isEn ? 'Copy free trial short prompt' : 'Copier version courte free trial',
+        html: isAr ? 'نسخ HTML فقط' : isEn ? 'Copy HTML only' : 'Copier prompt HTML seulement',
+        css: isAr ? 'نسخ CSS فقط' : isEn ? 'Copy CSS only' : 'Copier prompt CSS seulement',
+        js: isAr ? 'نسخ JS فقط' : isEn ? 'Copy JS only' : 'Copier prompt JS seulement',
+        q: isAr ? 'نسخ الأسئلة' : isEn ? 'Copy clarification questions' : 'Copier questions de clarification',
+        toggle: isAr ? 'Déplier / replier le prompt' : isEn ? 'Expand / collapse prompt' : 'Déplier / replier le prompt'
     };
     const help = isAr
-        ? 'Ø¨Ø±ÙˆÙ…Ø¨Øª Ø¹Ù…Ù„ÙŠ Ù‚Ø§Ø¨Ù„ Ù„Ù„Ù†Ø³Ø® Ù„Ù†Ù…Ø§Ø°Ø¬ Ø§Ù„ÙƒÙˆØ¯ ÙˆØ§Ù„ØªØµÙ…ÙŠÙ…ØŒ Ù…Ø¹ Ù‚ÙˆØ§Ø¹Ø¯ ØªÙ…Ù†Ø¹ Ø§Ø®ØªØ±Ø§Ø¹ Ø§Ù„Ø£Ø¯Ù„Ø©.'
+        ? 'برومبت عملي قابل للنسخ لنماذج الكود والتصميم، مع قواعد تمنع اختراع الأدلة.'
         : isEn ? 'A practical prompt for external code/design AIs, structured to avoid hallucinated proof.'
-        : 'Un vrai prompt de travail pour IA de code/design, structurÃ© pour Ã©viter les preuves inventÃ©es.';
+        : 'Un vrai prompt de travail pour IA de code/design, structuré pour éviter les preuves inventées.';
     const raw = String(value || '');
     const pack = buildDakaMegaPromptPackage(raw, opts);
     const suffix = Math.random().toString(36).slice(2, 8);
@@ -13998,34 +13998,34 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
     ).join('');
     const builderLabels = {
         title: isAr ? 'Daka AI Code Machine' : isEn ? 'Daka AI Code Machine' : 'Daka AI Code Machine',
-        sub: isAr ? 'Ø§Ø³ØªØ®Ø¯Ù… Ù…ÙØªØ§Ø­ OpenRouter Ø§Ù„Ù…ØªØµÙ„ Ù„ØªÙˆÙ„ÙŠØ¯ ÙƒÙˆØ¯ Ø¯Ø§Ø®Ù„ Daka.' : isEn ? 'Use your connected OpenRouter key to generate code inside Daka.' : 'Utilise ta clÃ© OpenRouter connectÃ©e pour gÃ©nÃ©rer du code directement dans Daka.',
+        sub: isAr ? 'استخدم مفتاح OpenRouter المتصل لتوليد كود داخل Daka.' : isEn ? 'Use your connected OpenRouter key to generate code inside Daka.' : 'Utilise ta clé OpenRouter connectée pour générer du code directement dans Daka.',
         note: isAr ? 'Describe the app, market, offer, CTA, trust, colors...' : isEn ? 'Describe what to build: market, offer, CTA, trust, colors, constraints...' : 'D?cris ce que tu veux construire : march?, offre, CTA, confiance, couleurs, contraintes...',
-        full: isAr ? 'ØªÙˆÙ„ÙŠØ¯ ØµÙØ­Ø© ÙƒØ§Ù…Ù„Ø©' : isEn ? 'Generate full page' : 'GÃ©nÃ©rer page HTML complÃ¨te',
-        html: isAr ? 'ØªÙˆÙ„ÙŠØ¯ HTML' : isEn ? 'Generate HTML' : 'GÃ©nÃ©rer HTML seul',
-        css: isAr ? 'ØªÙˆÙ„ÙŠØ¯ CSS' : isEn ? 'Generate CSS' : 'GÃ©nÃ©rer CSS seul',
-        js: isAr ? 'ØªÙˆÙ„ÙŠØ¯ JS' : isEn ? 'Generate JS' : 'GÃ©nÃ©rer JS seul',
+        full: isAr ? 'توليد صفحة كاملة' : isEn ? 'Generate full page' : 'Générer page HTML complète',
+        html: isAr ? 'توليد HTML' : isEn ? 'Generate HTML' : 'Générer HTML seul',
+        css: isAr ? 'توليد CSS' : isEn ? 'Generate CSS' : 'Générer CSS seul',
+        js: isAr ? 'توليد JS' : isEn ? 'Generate JS' : 'Générer JS seul',
         result: isAr ? 'Generated code' : isEn ? 'Generated code' : 'Code g?n?r?',
-        preview: isAr ? 'Ù…Ø¹Ø§ÙŠÙ†Ø© Ù…Ø¨Ø§Ø´Ø±Ø©' : isEn ? 'Live preview' : 'AperÃ§u live',
-        refreshPreview: isAr ? 'ØªØ­Ø¯ÙŠØ« Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø©' : isEn ? 'Refresh preview' : 'Actualiser aperÃ§u',
-        copy: isAr ? 'Ù†Ø³Ø® Ø§Ù„Ù†ØªÙŠØ¬Ø©' : isEn ? 'Copy result' : 'Copier le rÃ©sultat',
-        waiting: isAr ? 'Ø§Ø®ØªØ± Ù†ÙˆØ¹ Ø§Ù„ÙƒÙˆØ¯ Ø«Ù… Ø§Ø¶ØºØ· Ø¹Ù„Ù‰ ØªÙˆÙ„ÙŠØ¯.' : isEn ? 'Choose a code type, then generate.' : 'Choisis un type de code, puis lance la gÃ©nÃ©ration.',
-        previewWaiting: isAr ? 'ÙˆÙ„Ù‘Ø¯ ØµÙØ­Ø© HTML ÙƒØ§Ù…Ù„Ø© Ù„Ø±Ø¤ÙŠØ© Ø§Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ù‡Ù†Ø§.' : isEn ? 'Generate a full HTML page to see the preview here.' : 'GÃ©nÃ¨re une page HTML complÃ¨te pour voir lâ€™aperÃ§u ici.',
-        quotaReq: isAr ? 'Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ù…ØªØ¨Ù‚ÙŠØ©' : isEn ? 'Requests left' : 'RequÃªtes restantes',
-        quotaTokens: isAr ? 'Ø§Ù„ØªÙˆÙƒÙ†Ø§Øª Ø§Ù„Ù…ØªØ¨Ù‚ÙŠØ©' : isEn ? 'Tokens left' : 'Tokens restants',
-        quotaReset: isAr ? 'Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø¶Ø¨Ø·' : isEn ? 'Reset' : 'Reset',
-        quotaWaiting: isAr ? 'ÙŠØ¸Ù‡Ø± Ø¨Ø¹Ø¯ Ø£ÙˆÙ„ ØªÙˆÙ„ÙŠØ¯' : isEn ? 'Shown after first generation' : 'Visible aprÃ¨s la premiÃ¨re gÃ©nÃ©ration',
+        preview: isAr ? 'معاينة مباشرة' : isEn ? 'Live preview' : 'Aperçu live',
+        refreshPreview: isAr ? 'تحديث المعاينة' : isEn ? 'Refresh preview' : 'Actualiser aperçu',
+        copy: isAr ? 'نسخ النتيجة' : isEn ? 'Copy result' : 'Copier le résultat',
+        waiting: isAr ? 'اختر نوع الكود ثم اضغط على توليد.' : isEn ? 'Choose a code type, then generate.' : 'Choisis un type de code, puis lance la génération.',
+        previewWaiting: isAr ? 'ولّد صفحة HTML كاملة لرؤية المعاينة هنا.' : isEn ? 'Generate a full HTML page to see the preview here.' : 'Génère une page HTML complète pour voir l’aperçu ici.',
+        quotaReq: isAr ? 'الطلبات المتبقية' : isEn ? 'Requests left' : 'Requêtes restantes',
+        quotaTokens: isAr ? 'التوكنات المتبقية' : isEn ? 'Tokens left' : 'Tokens restants',
+        quotaReset: isAr ? 'إعادة الضبط' : isEn ? 'Reset' : 'Reset',
+        quotaWaiting: isAr ? 'يظهر بعد أول توليد' : isEn ? 'Shown after first generation' : 'Visible après la première génération',
         chat: isAr ? 'Builder chat' : isEn ? 'Builder chat' : 'Chat de construction',
-        chatIntro: isAr ? 'Ø§Ø³Ø£Ù„ Ø¹Ù† ØªØ¹Ø¯ÙŠÙ„ØŒ Ù‚Ø³Ù… Ø£Ù‚ÙˆÙ‰ØŒ Ø£Ùˆ ØªØ¨Ø³ÙŠØ· Ø§Ù„ÙƒÙˆØ¯ Ø§Ù„Ù†Ø§ØªØ¬.' : isEn ? 'Ask for a change, a stronger section, or simpler generated code.' : 'Pose une question, demande une variante ou fais modifier le code gÃ©nÃ©rÃ©.',
-        chatPlaceholder: isAr ? 'Ù…Ø«Ø§Ù„: Ø§Ø¬Ø¹Ù„ Ø§Ù„Ù‡ÙŠØ±Ùˆ Ø£Ù‚ÙˆÙ‰ ÙˆØ£Ø¹Ø·Ù†ÙŠ HTML/CSS ÙÙ‚Ø·...' : isEn ? 'Example: make the hero stronger and return only HTML/CSS...' : 'Exemple : rends le hero plus premium et donne seulement HTML/CSS...',
-        send: isAr ? 'Ø¥Ø±Ø³Ø§Ù„' : isEn ? 'Send' : 'Envoyer',
+        chatIntro: isAr ? 'اسأل عن تعديل، قسم أقوى، أو تبسيط الكود الناتج.' : isEn ? 'Ask for a change, a stronger section, or simpler generated code.' : 'Pose une question, demande une variante ou fais modifier le code généré.',
+        chatPlaceholder: isAr ? 'مثال: اجعل الهيرو أقوى وأعطني HTML/CSS فقط...' : isEn ? 'Example: make the hero stronger and return only HTML/CSS...' : 'Exemple : rends le hero plus premium et donne seulement HTML/CSS...',
+        send: isAr ? 'إرسال' : isEn ? 'Send' : 'Envoyer',
         step1: isAr ? '1. Prompt' : isEn ? '1. Prompt' : '1. Prompt',
         step2: isAr ? '2. Build' : isEn ? '2. Build' : '2. Build',
-        step3: isAr ? '3. Preview' : isEn ? '3. Preview' : '3. AperÃ§u',
-        step4: isAr ? '4. Iterate' : isEn ? '4. Iterate' : '4. ItÃ©rer',
-        quickHero: isAr ? 'Hero Ø£Ù‚ÙˆÙ‰' : isEn ? 'Stronger hero' : 'Hero plus fort',
+        step3: isAr ? '3. Preview' : isEn ? '3. Preview' : '3. Aperçu',
+        step4: isAr ? '4. Iterate' : isEn ? '4. Iterate' : '4. Itérer',
+        quickHero: isAr ? 'Hero أقوى' : isEn ? 'Stronger hero' : 'Hero plus fort',
         quickMobile: isAr ? 'Mobile premium' : isEn ? 'Premium mobile' : 'Mobile premium',
-        quickTrust: isAr ? 'Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø«Ù‚Ø©' : isEn ? 'Add trust' : 'Ajouter confiance',
-        quickShort: isAr ? 'Ø§Ø®ØªØµØ± Ø§Ù„ÙƒÙˆØ¯' : isEn ? 'Shorten code' : 'Raccourcir le code'
+        quickTrust: isAr ? 'إضافة الثقة' : isEn ? 'Add trust' : 'Ajouter confiance',
+        quickShort: isAr ? 'اختصر الكود' : isEn ? 'Shorten code' : 'Raccourcir le code'
     };
     return `<div class="funnel-mega-redesign">
         <header>
@@ -14035,9 +14035,9 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
             </button>
         </header>
         <div class="mega-copy-grid mega-copy-grid-single" data-no-collapse="true" onclick="event.stopPropagation()">
-            <span><i class="fas fa-shield-halved"></i>${safe(isAr ? 'Ù†Ø³Ø®Ø© ÙˆØ§Ø­Ø¯Ø© Ù†Ø¸ÙŠÙØ©ØŒ Ø¨Ù„Ø§ ØªÙƒØ±Ø§Ø±' : isEn ? 'One clean prompt, no duplicates' : 'Un seul prompt propre, sans doublons')}</span>
-            <span><i class="fas fa-code"></i>${safe(isAr ? 'Ø¬Ø§Ù‡Ø² Ù„Ù„ÙƒÙˆØ¯ HTML/CSS/JS' : isEn ? 'Ready for HTML/CSS/JS code' : 'PrÃªt pour coder HTML/CSS/JS')}</span>
-            <span><i class="fas fa-eye"></i>${safe(isAr ? 'ÙŠØ¹ØªÙ…Ø¯ ÙÙ‚Ø· Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø¯Ù„Ø©' : isEn ? 'Evidence-based only' : 'BasÃ© uniquement sur les preuves')}</span>
+            <span><i class="fas fa-shield-halved"></i>${safe(isAr ? 'نسخة واحدة نظيفة، بلا تكرار' : isEn ? 'One clean prompt, no duplicates' : 'Un seul prompt propre, sans doublons')}</span>
+            <span><i class="fas fa-code"></i>${safe(isAr ? 'جاهز للكود HTML/CSS/JS' : isEn ? 'Ready for HTML/CSS/JS code' : 'Prêt pour coder HTML/CSS/JS')}</span>
+            <span><i class="fas fa-eye"></i>${safe(isAr ? 'يعتمد فقط على الأدلة' : isEn ? 'Evidence-based only' : 'Basé uniquement sur les preuves')}</span>
         </div>
         <section class="groq-code-builder" data-no-collapse="true" onclick="event.stopPropagation()">
             <header>
@@ -14047,8 +14047,8 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                 </button>
             </header>
             <div id="${builderIds.quota}" class="groq-quota-strip" data-no-collapse="true">
-                <div><small>${safe(builderLabels.quotaReq)}</small><strong>â€”</strong></div>
-                <div><small>${safe(builderLabels.quotaTokens)}</small><strong>â€”</strong></div>
+                <div><small>${safe(builderLabels.quotaReq)}</small><strong>—</strong></div>
+                <div><small>${safe(builderLabels.quotaTokens)}</small><strong>—</strong></div>
                 <div><small>${safe(builderLabels.quotaReset)}</small><strong>${safe(builderLabels.quotaWaiting)}</strong></div>
             </div>
             <div class="groq-machine-steps" data-no-collapse="true">
@@ -14142,17 +14142,17 @@ function renderFunnelLegacyModules(data = {}, opts = {}) {
         ...(data.funnelPrimaryAnalysis?.present || []),
         ...(data.funnelEvidenceSynthesis?.present || [])
     ];
-    const socialProofObserved = observedEvidence.some(item => /testimonial|review|rating|avis|t[Ã©e]moignage|social.?proof|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª/i.test(
+    const socialProofObserved = observedEvidence.some(item => /testimonial|review|rating|avis|t[ée]moignage|social.?proof|تقييم|آراء|مراجعات|شهادات/i.test(
         funnelV2Text(item?.sectionType || item?.section || item?.name || item)
     ));
     const reconcileHistoricalSocialProof = value => {
         if (!socialProofObserved) return value;
         const replacement = text(
-            'Preuve sociale observÃ©e. Recommandation : rapprocher un tÃ©moignage vÃ©rifiable de lâ€™offre et du CTA.',
+            'Preuve sociale observée. Recommandation : rapprocher un témoignage vérifiable de l’offre et du CTA.',
             'Social proof observed. Recommendation: move one verified testimonial closer to the offer and CTA.',
-            'ØªÙ… Ø±ØµØ¯ Ø¯Ù„ÙŠÙ„ Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ. Ø§Ù„ØªÙˆØµÙŠØ©: ØªÙ‚Ø±ÙŠØ¨ Ø´Ù‡Ø§Ø¯Ø© Ø¹Ù…ÙŠÙ„ Ù…ÙˆØ«ÙˆÙ‚Ø© Ù…Ù† Ø§Ù„Ø¹Ø±Ø¶ ÙˆCTA.'
+            'تم رصد دليل اجتماعي. التوصية: تقريب شهادة عميل موثوقة من العرض وCTA.'
         );
-        const absencePattern = /(?:aucun(?:e)?|absence|absent(?:e)?|sans|non\s+d[Ã©e]tect[Ã©e]e?|no|missing|Ù„Ø§\s*(?:ÙŠÙˆØ¬Ø¯|ØªÙˆØ¬Ø¯|ÙˆØ¬ÙˆØ¯)).{0,55}(?:preuve\s*sociale|avis|t[Ã©e]moignages?|social\s*proof|reviews?|testimonials?|ØªÙ‚ÙŠÙŠÙ…Ø§Øª|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª)/i;
+        const absencePattern = /(?:aucun(?:e)?|absence|absent(?:e)?|sans|non\s+d[ée]tect[ée]e?|no|missing|لا\s*(?:يوجد|توجد|وجود)).{0,55}(?:preuve\s*sociale|avis|t[ée]moignages?|social\s*proof|reviews?|testimonials?|تقييمات|آراء|مراجعات|شهادات)/i;
         if (typeof value === 'string') return absencePattern.test(value) ? replacement : value;
         if (Array.isArray(value)) return value.map(reconcileHistoricalSocialProof);
         if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, reconcileHistoricalSocialProof(item)]));
@@ -14161,86 +14161,86 @@ function renderFunnelLegacyModules(data = {}, opts = {}) {
     const modules = [
         {
             key: 'aida-journey', icon: 'fa-route',
-            title: text('Funnel AIDA et parcours de conversion', 'AIDA funnel and conversion journey', 'Ù…Ø³Ø§Ø± AIDA ÙˆØ§Ù„ØªØ­ÙˆÙŠÙ„'),
-            subtitle: text('Attention, intÃ©rÃªt, dÃ©sir et action confrontÃ©s aux preuves de la page.', 'Attention, interest, desire and action mapped to page evidence.', 'ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ø§Ù†ØªØ¨Ø§Ù‡ ÙˆØ§Ù„Ø§Ù‡ØªÙ…Ø§Ù… ÙˆØ§Ù„Ø±ØºØ¨Ø© ÙˆØ§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø­Ø³Ø¨ Ø£Ø¯Ù„Ø© Ø§Ù„ØµÙØ­Ø©.'),
+            title: text('Funnel AIDA et parcours de conversion', 'AIDA funnel and conversion journey', 'مسار AIDA والتحويل'),
+            subtitle: text('Attention, intérêt, désir et action confrontés aux preuves de la page.', 'Attention, interest, desire and action mapped to page evidence.', 'تحليل الانتباه والاهتمام والرغبة والإجراء حسب أدلة الصفحة.'),
             value: reconcileHistoricalSocialProof(select(data.aidaAnalysis, legacy.aidaAnalysis, data.funnelMapping, legacy.funnelMapping, expert.journey))
         },
         {
             key: 'customer-psychology', icon: 'fa-brain',
-            title: text('Psychologie client, objections et freins', 'Customer psychology, objections and blockers', 'Ø³ÙŠÙƒÙˆÙ„ÙˆØ¬ÙŠØ© Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆØ§Ù„Ø§Ø¹ØªØ±Ø§Ø¶Ø§Øª ÙˆØ§Ù„Ø¹ÙˆØ§Ø¦Ù‚'),
-            subtitle: text('Ce qui rassure, ce qui crÃ©e le doute et ce qui retarde la dÃ©cision.', 'What reassures, creates doubt, or delays the decision.', 'Ù…Ø§ ÙŠØ·Ù…Ø¦Ù† Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆÙ…Ø§ ÙŠØ®Ù„Ù‚ Ø§Ù„Ø´Ùƒ Ø£Ùˆ ÙŠØ¤Ø®Ø± Ø§Ù„Ù‚Ø±Ø§Ø±.'),
+            title: text('Psychologie client, objections et freins', 'Customer psychology, objections and blockers', 'سيكولوجية العميل والاعتراضات والعوائق'),
+            subtitle: text('Ce qui rassure, ce qui crée le doute et ce qui retarde la décision.', 'What reassures, creates doubt, or delays the decision.', 'ما يطمئن العميل وما يخلق الشك أو يؤخر القرار.'),
             value: select(data.neuromarketing, legacy.neuromarketing, expert.customerPsychology, data.psychTriggers, legacy.psychTriggers)
         },
         {
             key: 'funnel-score', icon: 'fa-gauge-high',
-            title: text('Score stratÃ©gique Funnel', 'Strategic Funnel score', 'Ø§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠØ© Ù„Ù…Ø³Ø§Ø± Ø§Ù„ØªØ­ÙˆÙŠÙ„'),
-            subtitle: text('Lecture synthÃ©tique de la prÃ©paration Ã  convertir, avec ses facteurs.', 'Conversion readiness with the factors behind the score.', 'Ø¬Ø§Ù‡Ø²ÙŠØ© Ø§Ù„ØµÙØ­Ø© Ù„Ù„ØªØ­ÙˆÙŠÙ„ ÙˆØ§Ù„Ø¹ÙˆØ§Ù…Ù„ Ø§Ù„Ù…Ø¤Ø«Ø±Ø© ÙÙŠ Ø§Ù„Ù†ØªÙŠØ¬Ø©.'),
+            title: text('Score stratégique Funnel', 'Strategic Funnel score', 'النتيجة الاستراتيجية لمسار التحويل'),
+            subtitle: text('Lecture synthétique de la préparation à convertir, avec ses facteurs.', 'Conversion readiness with the factors behind the score.', 'جاهزية الصفحة للتحويل والعوامل المؤثرة في النتيجة.'),
             value: select(data.globalScoring, legacy.globalScoring, expert.readinessScore, data.auditScorecard, legacy.auditScorecard)
         },
         {
             key: 'financial-cta', icon: 'fa-coins',
-            title: text('Intelligence financiÃ¨re, offre et CTA', 'Financial, offer and CTA intelligence', 'Ø°ÙƒØ§Ø¡ Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø¹Ø±Ø¶ ÙˆCTA'),
-            subtitle: text('Prix observÃ©, valeur perÃ§ue, bundles et qualitÃ© du chemin dâ€™action.', 'Observed price, perceived value, bundles and action-path quality.', 'Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ù…Ø±ØµÙˆØ¯ ÙˆØ§Ù„Ù‚ÙŠÙ…Ø© ÙˆØ§Ù„Ø¨Ø§Ù‚Ø§Øª ÙˆØ¬ÙˆØ¯Ø© Ù…Ø³Ø§Ø± Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡.'),
+            title: text('Intelligence financière, offre et CTA', 'Financial, offer and CTA intelligence', 'ذكاء السعر والعرض وCTA'),
+            subtitle: text('Prix observé, valeur perçue, bundles et qualité du chemin d’action.', 'Observed price, perceived value, bundles and action-path quality.', 'السعر المرصود والقيمة والباقات وجودة مسار الإجراء.'),
             value: finance
         },
         {
             key: 'strategic-blueprint', icon: 'fa-compass-drafting',
-            title: text('Blueprint stratÃ©gique', 'Strategic blueprint', 'Ø§Ù„Ù…Ø®Ø·Ø· Ø§Ù„Ø§Ø³ØªØ±Ø§ØªÙŠØ¬ÙŠ'),
-            subtitle: text('Quoi garder, amÃ©liorer, dÃ©placer, ajouter ou supprimer.', 'What to keep, improve, move, add, or remove.', 'Ù…Ø§ ÙŠØ¬Ø¨ Ø§Ù„Ø­ÙØ§Ø¸ Ø¹Ù„ÙŠÙ‡ Ø£Ùˆ ØªØ­Ø³ÙŠÙ†Ù‡ Ø£Ùˆ Ù†Ù‚Ù„Ù‡ Ø£Ùˆ Ø¥Ø¶Ø§ÙØªÙ‡ Ø£Ùˆ Ø­Ø°ÙÙ‡.'),
+            title: text('Blueprint stratégique', 'Strategic blueprint', 'المخطط الاستراتيجي'),
+            subtitle: text('Quoi garder, améliorer, déplacer, ajouter ou supprimer.', 'What to keep, improve, move, add, or remove.', 'ما يجب الحفاظ عليه أو تحسينه أو نقله أو إضافته أو حذفه.'),
             value: select(data.strategicBlueprint, legacy.strategicBlueprint, expert.attackAngles, data.pageArchitecture, legacy.pageArchitecture)
         },
         {
             key: 'visual-identity', icon: 'fa-palette',
-            title: text('IdentitÃ© visuelle et hiÃ©rarchie', 'Visual identity and hierarchy', 'Ø§Ù„Ù‡ÙˆÙŠØ© Ø§Ù„Ø¨ØµØ±ÙŠØ© ÙˆØ§Ù„ØªØ³Ù„Ø³Ù„ Ø§Ù„Ù…Ø±Ø¦ÙŠ'),
-            subtitle: text('LisibilitÃ©, cohÃ©rence, couleurs, densitÃ© et capacitÃ© Ã  guider le regard.', 'Readability, consistency, color, density, and visual guidance.', 'Ø§Ù„ÙˆØ¶ÙˆØ­ ÙˆØ§Ù„Ø§ØªØ³Ø§Ù‚ ÙˆØ§Ù„Ø£Ù„ÙˆØ§Ù† ÙˆÙ‚Ø¯Ø±Ø© Ø§Ù„ØªØµÙ…ÙŠÙ… Ø¹Ù„Ù‰ ØªÙˆØ¬ÙŠÙ‡ Ø§Ù„Ù†Ø¸Ø±.'),
+            title: text('Identité visuelle et hiérarchie', 'Visual identity and hierarchy', 'الهوية البصرية والتسلسل المرئي'),
+            subtitle: text('Lisibilité, cohérence, couleurs, densité et capacité à guider le regard.', 'Readability, consistency, color, density, and visual guidance.', 'الوضوح والاتساق والألوان وقدرة التصميم على توجيه النظر.'),
             value: select(data.webCharte, legacy.webCharte, expert.visualIdentity)
         },
         {
             key: 'technical-signals', icon: 'fa-microchip',
-            title: text('Analyse technique orientÃ©e conversion', 'Conversion-focused technical analysis', 'Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ø§Ù„ØªÙ‚Ù†ÙŠ Ø§Ù„Ù…ÙˆØ¬Ù‡ Ù„Ù„ØªØ­ÙˆÙŠÙ„'),
-            subtitle: text('Performance, stabilitÃ©, sÃ©curitÃ© et obstacles techniques observÃ©s.', 'Performance, stability, security, and observed technical blockers.', 'Ø§Ù„Ø£Ø¯Ø§Ø¡ ÙˆØ§Ù„Ø§Ø³ØªÙ‚Ø±Ø§Ø± ÙˆØ§Ù„Ø£Ù…Ø§Ù† ÙˆØ§Ù„Ø¹ÙˆØ§Ø¦Ù‚ Ø§Ù„ØªÙ‚Ù†ÙŠØ© Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø©.'),
+            title: text('Analyse technique orientée conversion', 'Conversion-focused technical analysis', 'التحليل التقني الموجه للتحويل'),
+            subtitle: text('Performance, stabilité, sécurité et obstacles techniques observés.', 'Performance, stability, security, and observed technical blockers.', 'الأداء والاستقرار والأمان والعوائق التقنية المرصودة.'),
             value: select(data.technicalAudit, legacy.technicalAudit, expert.technicalSignals, data.performanceSignals, legacy.performanceSignals)
         },
         {
             key: 'copy-signals', icon: 'fa-quote-left',
-            title: text('Signaux textuels et copywriting', 'Copy signals and messaging', 'Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ù†Øµ ÙˆØ§Ù„Ø±Ø³Ø§Ø¦Ù„'),
-            subtitle: text('CTA, promesse, PAS, AIDA, bÃ©nÃ©fices et cohÃ©rence du message.', 'CTAs, promise, PAS, AIDA, benefits, and message consistency.', 'CTA ÙˆØ§Ù„ÙˆØ¹Ø¯ ÙˆPAS ÙˆAIDA ÙˆØ§Ù„ÙÙˆØ§Ø¦Ø¯ ÙˆØ§ØªØ³Ø§Ù‚ Ø§Ù„Ø±Ø³Ø§Ù„Ø©.'),
+            title: text('Signaux textuels et copywriting', 'Copy signals and messaging', 'إشارات النص والرسائل'),
+            subtitle: text('CTA, promesse, PAS, AIDA, bénéfices et cohérence du message.', 'CTAs, promise, PAS, AIDA, benefits, and message consistency.', 'CTA والوعد وPAS وAIDA والفوائد واتساق الرسالة.'),
             value: copyIntel
         },
         {
             key: 'page-metrics', icon: 'fa-chart-column',
-            title: text('MÃ©triques de page', 'Page metrics', 'Ù…Ù‚Ø§ÙŠÙŠØ³ Ø§Ù„ØµÙØ­Ø©'),
-            subtitle: text('Volume de contenu, sections, mÃ©dias, CTA et preuves mesurÃ©s.', 'Measured content, sections, media, CTAs, and proof.', 'Ù‚ÙŠØ§Ø³ Ø§Ù„Ù…Ø­ØªÙˆÙ‰ ÙˆØ§Ù„Ø£Ù‚Ø³Ø§Ù… ÙˆØ§Ù„ÙˆØ³Ø§Ø¦Ø· ÙˆCTA ÙˆØ£Ø¯Ù„Ø© Ø§Ù„Ø«Ù‚Ø©.'),
+            title: text('Métriques de page', 'Page metrics', 'مقاييس الصفحة'),
+            subtitle: text('Volume de contenu, sections, médias, CTA et preuves mesurés.', 'Measured content, sections, media, CTAs, and proof.', 'قياس المحتوى والأقسام والوسائط وCTA وأدلة الثقة.'),
             value: select(data.pageMetrics, legacy.pageMetrics, expert.pageMetrics, data.aarrMetrics, legacy.aarrMetrics)
         },
         {
             key: 'attack-opportunities', icon: 'fa-crosshairs',
-            title: text('Angles dâ€™attaque et opportunitÃ©s', 'Attack angles and opportunities', 'Ø²ÙˆØ§ÙŠØ§ Ø§Ù„Ù‡Ø¬ÙˆÙ… ÙˆØ§Ù„ÙØ±Øµ'),
-            subtitle: text('Les leviers diffÃ©renciants Ã  tester sans prÃ©senter une hypothÃ¨se comme un fait.', 'Differentiation levers to test without presenting hypotheses as facts.', 'Ø±Ø§ÙØ¹Ø§Øª Ø§Ù„ØªÙ…ÙŠØ² Ø§Ù„ØªÙŠ ÙŠØ¬Ø¨ Ø§Ø®ØªØ¨Ø§Ø±Ù‡Ø§ Ø¯ÙˆÙ† ØªÙ‚Ø¯ÙŠÙ… Ø§Ù„ÙØ±Ø¶ÙŠØ§Øª ÙƒØ­Ù‚Ø§Ø¦Ù‚.'),
+            title: text('Angles d’attaque et opportunités', 'Attack angles and opportunities', 'زوايا الهجوم والفرص'),
+            subtitle: text('Les leviers différenciants à tester sans présenter une hypothèse comme un fait.', 'Differentiation levers to test without presenting hypotheses as facts.', 'رافعات التميز التي يجب اختبارها دون تقديم الفرضيات كحقائق.'),
             value: select(data.attackAngles, legacy.attackAngles, expert.attackAngles, data.quickWins, legacy.quickWins)
         },
         {
             key: 'ready-copy', icon: 'fa-pen-ruler',
-            title: text('Copywriting prÃªt Ã  utiliser', 'Ready-to-use copywriting', 'Ù†ØµÙˆØµ Ø¬Ø§Ù‡Ø²Ø© Ù„Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…'),
-            subtitle: text('Titres, CTA, microcopy et blocs de rÃ©assurance directement exploitables.', 'Headlines, CTAs, microcopy, and reassurance blocks ready to use.', 'Ø¹Ù†Ø§ÙˆÙŠÙ† ÙˆCTA ÙˆÙ†ØµÙˆØµ Ø·Ù…Ø£Ù†Ø© Ø¬Ø§Ù‡Ø²Ø© Ù„Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù….'),
+            title: text('Copywriting prêt à utiliser', 'Ready-to-use copywriting', 'نصوص جاهزة للاستخدام'),
+            subtitle: text('Titres, CTA, microcopy et blocs de réassurance directement exploitables.', 'Headlines, CTAs, microcopy, and reassurance blocks ready to use.', 'عناوين وCTA ونصوص طمأنة جاهزة للاستخدام.'),
             value: copyIntel.readyToUseCopy
         },
         {
             key: 'trust-mobile', icon: 'fa-shield-heart',
-            title: text('Confiance, mobile et risques de dÃ©cision', 'Trust, mobile, and decision risks', 'Ø§Ù„Ø«Ù‚Ø© ÙˆØªØ¬Ø±Ø¨Ø© Ø§Ù„Ù‡Ø§ØªÙ ÙˆÙ…Ø®Ø§Ø·Ø± Ø§Ù„Ù‚Ø±Ø§Ø±'),
-            subtitle: text('Preuves, objections, expÃ©rience mobile et fiabilitÃ© des conclusions.', 'Proof, objections, mobile experience, and conclusion reliability.', 'Ø§Ù„Ø£Ø¯Ù„Ø© ÙˆØ§Ù„Ø§Ø¹ØªØ±Ø§Ø¶Ø§Øª ÙˆØªØ¬Ø±Ø¨Ø© Ø§Ù„Ù‡Ø§ØªÙ ÙˆÙ…ÙˆØ«ÙˆÙ‚ÙŠØ© Ø§Ù„Ø§Ø³ØªÙ†ØªØ§Ø¬Ø§Øª.'),
+            title: text('Confiance, mobile et risques de décision', 'Trust, mobile, and decision risks', 'الثقة وتجربة الهاتف ومخاطر القرار'),
+            subtitle: text('Preuves, objections, expérience mobile et fiabilité des conclusions.', 'Proof, objections, mobile experience, and conclusion reliability.', 'الأدلة والاعتراضات وتجربة الهاتف وموثوقية الاستنتاجات.'),
             value: trustMobile
         },
         {
             key: 'prioritized-actions', icon: 'fa-list-check',
-            title: text('Plan dâ€™action priorisÃ©', 'Prioritized action plan', 'Ø®Ø·Ø© Ø§Ù„Ø¹Ù…Ù„ Ø­Ø³Ø¨ Ø§Ù„Ø£ÙˆÙ„ÙˆÙŠØ©'),
-            subtitle: text('Actions ordonnÃ©es par impact, effort et horizon dâ€™exÃ©cution.', 'Actions ordered by impact, effort, and execution horizon.', 'Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ù…Ø±ØªØ¨Ø© Ø­Ø³Ø¨ Ø§Ù„Ø£Ø«Ø± ÙˆØ§Ù„Ø¬Ù‡Ø¯ ÙˆØ§Ù„Ø£ÙÙ‚ Ø§Ù„Ø²Ù…Ù†ÙŠ.'),
+            title: text('Plan d’action priorisé', 'Prioritized action plan', 'خطة العمل حسب الأولوية'),
+            subtitle: text('Actions ordonnées par impact, effort et horizon d’exécution.', 'Actions ordered by impact, effort, and execution horizon.', 'إجراءات مرتبة حسب الأثر والجهد والأفق الزمني.'),
             value: select(data.concreteActionPlan, legacy.concreteActionPlan, data.prioritizedActionPlan, legacy.prioritizedActionPlan, expert.prioritizedPlan)
         },
         {
             key: 'mega-redesign', icon: 'fa-wand-magic-sparkles',
-            title: text('Mega AI Redesign Prompt', 'Mega AI Redesign Prompt', 'Ø£Ù…Ø± Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„ØªØµÙ…ÙŠÙ… Ø§Ù„Ø´Ø§Ù…Ù„ Ø¨Ø§Ù„Ø°ÙƒØ§Ø¡ Ø§Ù„Ø§ØµØ·Ù†Ø§Ø¹ÙŠ'),
-            subtitle: text('Brief final structurÃ© pour reconstruire la page sans perdre les preuves.', 'Structured final brief to rebuild the page without losing evidence.', 'Ù…ÙˆØ¬Ù‘Ù‡ Ù†Ù‡Ø§Ø¦ÙŠ Ù…Ù†Ø¸Ù… Ù„Ø¥Ø¹Ø§Ø¯Ø© Ø¨Ù†Ø§Ø¡ Ø§Ù„ØµÙØ­Ø© Ø¯ÙˆÙ† ÙÙ‚Ø¯Ø§Ù† Ø§Ù„Ø£Ø¯Ù„Ø©.'),
+            title: text('Mega AI Redesign Prompt', 'Mega AI Redesign Prompt', 'أمر إعادة التصميم الشامل بالذكاء الاصطناعي'),
+            subtitle: text('Brief final structuré pour reconstruire la page sans perdre les preuves.', 'Structured final brief to rebuild the page without losing evidence.', 'موجّه نهائي منظم لإعادة بناء الصفحة دون فقدان الأدلة.'),
             value: select(data.aiRewritePrompt, legacy.megaRedesignPrompt, legacy.aiRewritePrompt)
         }
     ];
@@ -14266,16 +14266,16 @@ function renderFunnelLegacyModules(data = {}, opts = {}) {
 function renderFunnelPrimaryEvidence(data = {}, { isAr = false, isEn = false } = {}) {
     const primary = data.funnelPrimaryAnalysis || data.funnelEvidenceSynthesis || {};
     const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
-    const sourceLabel = isAr ? 'Ø¯Ù„ÙŠÙ„ Ø¹Ø§Ù…' : isEn ? 'Global evidence' : 'Preuve globale';
+    const sourceLabel = isAr ? 'دليل عام' : isEn ? 'Global evidence' : 'Preuve globale';
     const fallbackLabel = isAr
-        ? 'ØªÙ… Ø§Ø³ØªØ®Ø¯Ø§Ù… Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ø¹Ø§Ù…Ø© Ø¹Ù†Ø¯Ù…Ø§ Ù„Ù… ØªØªÙˆÙØ± Ù…Ø·Ø§Ø¨Ù‚Ø© Ù…ØªØ®ØµØµØ©.'
+        ? 'تم استخدام الأدلة العامة عندما لم تتوفر مطابقة متخصصة.'
         : isEn ? 'Global evidence was used when no specialized match was available.'
-        : 'Les preuves globales ont Ã©tÃ© utilisÃ©es lorsquâ€™aucune correspondance spÃ©cialisÃ©e nâ€™Ã©tait disponible.';
+        : 'Les preuves globales ont été utilisées lorsqu’aucune correspondance spécialisée n’était disponible.';
     const groups = [
-        ['present', isAr ? 'Ø£Ù‚Ø³Ø§Ù… Ù…Ø«Ø¨ØªØ©' : isEn ? 'Observed sections' : 'Sections observÃ©es', '#22c55e', 'fa-circle-check'],
-        ['weak', isAr ? 'Ø£Ù‚Ø³Ø§Ù… ØªØ­ØªØ§Ø¬ ØªØ­Ø³ÙŠÙ†' : isEn ? 'Sections to improve' : 'Sections Ã  amÃ©liorer', '#f59e0b', 'fa-wand-magic-sparkles'],
-        ['missing', isAr ? 'Ø£Ù‚Ø³Ø§Ù… ØºØ§Ø¦Ø¨Ø© Ù…Ø¤ÙƒØ¯Ø©' : isEn ? 'Confirmed missing sections' : 'Sections absentes confirmÃ©es', '#fb7185', 'fa-circle-minus'],
-        ['unconfirmed', isAr ? 'Ø¹Ù†Ø§ØµØ± ØªØ­ØªØ§Ø¬ ØªØ­Ù‚Ù‚' : isEn ? 'Items to confirm' : 'Ã‰lÃ©ments Ã  confirmer', '#60a5fa', 'fa-circle-question']
+        ['present', isAr ? 'أقسام مثبتة' : isEn ? 'Observed sections' : 'Sections observées', '#22c55e', 'fa-circle-check'],
+        ['weak', isAr ? 'أقسام تحتاج تحسين' : isEn ? 'Sections to improve' : 'Sections à améliorer', '#f59e0b', 'fa-wand-magic-sparkles'],
+        ['missing', isAr ? 'أقسام غائبة مؤكدة' : isEn ? 'Confirmed missing sections' : 'Sections absentes confirmées', '#fb7185', 'fa-circle-minus'],
+        ['unconfirmed', isAr ? 'عناصر تحتاج تحقق' : isEn ? 'Items to confirm' : 'Éléments à confirmer', '#60a5fa', 'fa-circle-question']
     ];
     const html = groups.map(([key, title, accent, icon]) => {
         const items = Array.isArray(primary[key]) ? primary[key].slice(0, 8) : [];
@@ -14285,7 +14285,7 @@ function renderFunnelPrimaryEvidence(data = {}, { isAr = false, isEn = false } =
             ${items.map(item => {
                 const rawLabel = funnelV2Text(item.sectionType || item.section || item.name || item.title || item.text, 'Section');
                 const label = /^mission$/i.test(rawLabel)
-                    ? (isAr ? 'ØªØ­Ù„ÙŠÙ„ Ù…ØªØ®ØµØµ' : isEn ? 'Specialized analysis' : 'Analyse spÃ©cialisÃ©e')
+                    ? (isAr ? 'تحليل متخصص' : isEn ? 'Specialized analysis' : 'Analyse spécialisée')
                     : funnelClientLabel(rawLabel, { isAr, isEn });
                 const detail = funnelV2Text(item.detectedText || item.reason || item.problem || item.verdict || item.status, '');
                 return `<article class="funnel-v2-action-card"><div><strong dir="auto">${safe(label)}</strong>${item.evidenceSource === 'global-corpus-fallback' ? `<small>${safe(sourceLabel)}</small>` : ''}</div>${detail ? `<p dir="auto">${safe(detail)}</p>` : ''}</article>`;
@@ -14293,7 +14293,7 @@ function renderFunnelPrimaryEvidence(data = {}, { isAr = false, isEn = false } =
         </section>`;
     }).join('');
     const proofs = Array.isArray(primary.proofUsed) ? primary.proofUsed.slice(0, 8) : [];
-    const proofTitle = isAr ? 'Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ù†ØµÙŠØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…Ø©' : isEn ? 'Text evidence used' : 'Preuves textuelles utilisÃ©es';
+    const proofTitle = isAr ? 'الأدلة النصية المستخدمة' : isEn ? 'Text evidence used' : 'Preuves textuelles utilisées';
     return `<div class="funnel-primary-evidence-shell">
         ${primary.evidenceFallbackUsed ? `<p class="funnel-primary-fallback"><i class="fas fa-layer-group"></i>${safe(fallbackLabel)}</p>` : ''}
         <div class="funnel-v2-plan funnel-primary-evidence-grid">${html}</div>
@@ -14305,14 +14305,14 @@ function renderFunnelPipelineDiagnostic(data = {}, { isAr = false, isEn = false 
     const debug = data.debugFunnelPipeline || {};
     const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
     const message = isAr
-        ? 'Ø§Ù„Ø£Ø¯Ù„Ø© ØºÙŠØ± ÙƒØ§ÙÙŠØ©: Ù„Ø§ ÙŠÙ…ÙƒÙ† Ø§Ù„Ø­ÙƒÙ… Ø¹Ù„Ù‰ Ù‡Ø°Ù‡ Ø§Ù„ØµÙØ­Ø© Ø¨Ø´ÙƒÙ„ Ù…ÙˆØ«ÙˆÙ‚.'
+        ? 'الأدلة غير كافية: لا يمكن الحكم على هذه الصفحة بشكل موثوق.'
         : isEn ? 'Insufficient evidence: this page cannot be judged reliably.'
         : 'Preuves insuffisantes : impossible de juger correctement cette page.';
     const rows = [
-        [isAr ? 'Ø§Ù„Ù†Øµ Ø§Ù„Ù…Ù‚Ø±ÙˆØ¡' : isEn ? 'Readable text' : 'Texte exploitable', debug.bodyTextLength],
-        [isAr ? 'Ø§Ù„Ø£Ø¯Ù„Ø©' : isEn ? 'Evidence' : 'Preuves', debug.evidenceBlocksCount],
-        [isAr ? 'Ø§Ù„Ø£Ù‚Ø³Ø§Ù…' : isEn ? 'Sections' : 'Sections', debug.sectionRawBlocksCount],
-        [isAr ? 'Ø§Ù„ØµÙØ­Ø§Øª' : isEn ? 'Pages' : 'Pages', debug.pagesExploredCount],
+        [isAr ? 'النص المقروء' : isEn ? 'Readable text' : 'Texte exploitable', debug.bodyTextLength],
+        [isAr ? 'الأدلة' : isEn ? 'Evidence' : 'Preuves', debug.evidenceBlocksCount],
+        [isAr ? 'الأقسام' : isEn ? 'Sections' : 'Sections', debug.sectionRawBlocksCount],
+        [isAr ? 'الصفحات' : isEn ? 'Pages' : 'Pages', debug.pagesExploredCount],
         ['CTA', debug.ctaCount]
     ].filter(([, value]) => value !== null && value !== undefined && value !== '');
     return `<section class="funnel-v2-render-error funnel-pipeline-diagnostic" dir="${isAr ? 'rtl' : 'ltr'}">
@@ -14326,22 +14326,22 @@ function funnelOrderHumanLabel(raw, { isAr = false, isEn = false } = {}) {
     const value = funnelV2Text(raw).replace(/[_-]+/g, ' ').trim();
     const lower = value.toLowerCase();
     const map = [
-        [/hero|h1|above.?the.?fold|premier/i, ['Premier Ã©cran', 'First screen', 'Ø§Ù„Ø´Ø§Ø´Ø© Ø§Ù„Ø£ÙˆÙ„Ù‰', 'Promesse principale + preuve rapide', 'Main promise + fast proof', 'Ø§Ù„ÙˆØ¹Ø¯ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ + Ø¯Ù„ÙŠÙ„ Ø³Ø±ÙŠØ¹']],
-        [/cta|button|bouton|action/i, ['Bouton dâ€™action', 'Action button', 'Ø²Ø± Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡', 'Ce que le visiteur doit faire', 'What the visitor must do', 'Ù…Ø§ ÙŠØ¬Ø¨ Ø£Ù† ÙŠÙØ¹Ù„Ù‡ Ø§Ù„Ø²Ø§Ø¦Ø±']],
-        [/benefit|bÃ©nÃ©fice|benefice|avantage/i, ['BÃ©nÃ©fices', 'Benefits', 'Ø§Ù„ÙÙˆØ§Ø¦Ø¯', 'Pourquoi câ€™est utile maintenant', 'Why it is useful now', 'Ù„Ù…Ø§Ø°Ø§ ÙŠÙÙŠØ¯ Ø§Ù„Ø¢Ù†']],
-        [/feature|fonction|caractÃ©ristique|spec|specification/i, ['FonctionnalitÃ©s', 'Features', 'Ø§Ù„Ø®ØµØ§Ø¦Øµ', 'Ce que le produit/service contient', 'What the product/service includes', 'Ù…Ø§ ÙŠØ­ØªÙˆÙŠÙ‡ Ø§Ù„Ù…Ù†ØªØ¬ Ø£Ùˆ Ø§Ù„Ø®Ø¯Ù…Ø©']],
-        [/pricing|price|prix|tarif|offre|pack|bundle/i, ['Prix et offre', 'Price and offer', 'Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø¹Ø±Ø¶', 'Ce que le client reÃ§oit et paie', 'What the customer gets and pays', 'Ù…Ø§ ÙŠØ­ØµÙ„ Ø¹Ù„ÙŠÙ‡ Ø§Ù„Ø¹Ù…ÙŠÙ„ ÙˆÙ…Ø§ ÙŠØ¯ÙØ¹Ù‡']],
-        [/trust|proof|preuve|avis|review|testimonial|social/i, ['Preuves de confiance', 'Trust proof', 'Ø£Ø¯Ù„Ø© Ø§Ù„Ø«Ù‚Ø©', 'Ce qui rassure avant dÃ©cision', 'What reassures before decision', 'Ù…Ø§ ÙŠØ·Ù…Ø¦Ù† Ù‚Ø¨Ù„ Ø§Ù„Ù‚Ø±Ø§Ø±']],
-        [/faq|question|objection/i, ['Questions frÃ©quentes', 'FAQ', 'Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø§Ø¦Ø¹Ø©', 'RÃ©ponses aux doutes avant achat', 'Answers to doubts before purchase', 'Ø¥Ø¬Ø§Ø¨Ø§Øª Ø¹Ù„Ù‰ Ø§Ù„Ø´ÙƒÙˆÙƒ Ù‚Ø¨Ù„ Ø§Ù„Ø´Ø±Ø§Ø¡']],
-        [/delivery|livraison|shipping|retour|return|garantie|warranty/i, ['Livraison / garantie', 'Delivery / guarantee', 'Ø§Ù„ØªØ³Ù„ÙŠÙ… / Ø§Ù„Ø¶Ù…Ø§Ù†', 'Conditions qui rÃ©duisent le risque', 'Conditions that reduce risk', 'Ø´Ø±ÙˆØ· ØªÙ‚Ù„Ù„ Ø§Ù„Ù…Ø®Ø§Ø·Ø±']],
-        [/demo|screenshot|image|visual|media|video|galerie/i, ['DÃ©monstration visuelle', 'Visual demo', 'Ø¹Ø±Ø¶ Ù…Ø±Ø¦ÙŠ', 'Voir le rÃ©sultat avant de dÃ©cider', 'See the result before deciding', 'Ø±Ø¤ÙŠØ© Ø§Ù„Ù†ØªÙŠØ¬Ø© Ù‚Ø¨Ù„ Ø§Ù„Ù‚Ø±Ø§Ø±']],
-        [/case|usage|use.?case/i, ['Cas dâ€™usage', 'Use cases', 'Ø­Ø§Ù„Ø§Øª Ø§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…', 'Ã€ quoi Ã§a sert concrÃ¨tement', 'What it is used for concretely', 'ÙÙŠÙ… ÙŠØ³ØªØ®Ø¯Ù… Ø¨Ø´ÙƒÙ„ ÙˆØ§Ø¶Ø­']],
-        [/footer|legal|contact|whatsapp|form/i, ['Contact et lÃ©gal', 'Contact and legal', 'Ø§Ù„Ø§ØªØµØ§Ù„ ÙˆØ§Ù„Ù‚Ø§Ù†ÙˆÙ†ÙŠ', 'Derniers repÃ¨res de confiance', 'Final trust markers', 'Ø¢Ø®Ø± Ù…Ø¤Ø´Ø±Ø§Øª Ø§Ù„Ø«Ù‚Ø©']]
+        [/hero|h1|above.?the.?fold|premier/i, ['Premier écran', 'First screen', 'الشاشة الأولى', 'Promesse principale + preuve rapide', 'Main promise + fast proof', 'الوعد الرئيسي + دليل سريع']],
+        [/cta|button|bouton|action/i, ['Bouton d’action', 'Action button', 'زر الإجراء', 'Ce que le visiteur doit faire', 'What the visitor must do', 'ما يجب أن يفعله الزائر']],
+        [/benefit|bénéfice|benefice|avantage/i, ['Bénéfices', 'Benefits', 'الفوائد', 'Pourquoi c’est utile maintenant', 'Why it is useful now', 'لماذا يفيد الآن']],
+        [/feature|fonction|caractéristique|spec|specification/i, ['Fonctionnalités', 'Features', 'الخصائص', 'Ce que le produit/service contient', 'What the product/service includes', 'ما يحتويه المنتج أو الخدمة']],
+        [/pricing|price|prix|tarif|offre|pack|bundle/i, ['Prix et offre', 'Price and offer', 'السعر والعرض', 'Ce que le client reçoit et paie', 'What the customer gets and pays', 'ما يحصل عليه العميل وما يدفعه']],
+        [/trust|proof|preuve|avis|review|testimonial|social/i, ['Preuves de confiance', 'Trust proof', 'أدلة الثقة', 'Ce qui rassure avant décision', 'What reassures before decision', 'ما يطمئن قبل القرار']],
+        [/faq|question|objection/i, ['Questions fréquentes', 'FAQ', 'الأسئلة الشائعة', 'Réponses aux doutes avant achat', 'Answers to doubts before purchase', 'إجابات على الشكوك قبل الشراء']],
+        [/delivery|livraison|shipping|retour|return|garantie|warranty/i, ['Livraison / garantie', 'Delivery / guarantee', 'التسليم / الضمان', 'Conditions qui réduisent le risque', 'Conditions that reduce risk', 'شروط تقلل المخاطر']],
+        [/demo|screenshot|image|visual|media|video|galerie/i, ['Démonstration visuelle', 'Visual demo', 'عرض مرئي', 'Voir le résultat avant de décider', 'See the result before deciding', 'رؤية النتيجة قبل القرار']],
+        [/case|usage|use.?case/i, ['Cas d’usage', 'Use cases', 'حالات الاستخدام', 'À quoi ça sert concrètement', 'What it is used for concretely', 'فيم يستخدم بشكل واضح']],
+        [/footer|legal|contact|whatsapp|form/i, ['Contact et légal', 'Contact and legal', 'الاتصال والقانوني', 'Derniers repères de confiance', 'Final trust markers', 'آخر مؤشرات الثقة']]
     ];
     const found = map.find(([pattern]) => pattern.test(lower));
     if (!found) return {
-        label: value || (isAr ? 'Ù‚Ø³Ù…' : isEn ? 'Section' : 'Section'),
-        helper: isAr ? 'Ø¯ÙˆØ±Ù‡ ÙÙŠ Ù‚Ø±Ø§Ø± Ø§Ù„Ø¹Ù…ÙŠÙ„' : isEn ? 'Its role in the customer decision' : 'Son rÃ´le dans la dÃ©cision client'
+        label: value || (isAr ? 'قسم' : isEn ? 'Section' : 'Section'),
+        helper: isAr ? 'دوره في قرار العميل' : isEn ? 'Its role in the customer decision' : 'Son rôle dans la décision client'
     };
     return {
         label: isAr ? found[1][2] : isEn ? found[1][1] : found[1][0],
@@ -14354,14 +14354,14 @@ function funnelOrderRank(raw) {
     const value = funnelV2Text(raw).toLowerCase();
     const rules = [
         [/hero|h1|above.?the.?fold|premier/, 10],
-        [/problem|probl[eÃ¨]me|dÃ©sir|desir|pain|need|besoin|objection/, 18],
+        [/problem|probl[eè]me|désir|desir|pain|need|besoin|objection/, 18],
         [/case|usage|use.?case|audience|cible/, 24],
         [/trust|proof|preuve|avis|review|testimonial|rating|social/, 30],
-        [/benefit|bÃ©nÃ©fice|benefice|avantage|result|rÃ©sultat/, 38],
+        [/benefit|bénéfice|benefice|avantage|result|résultat/, 38],
         [/demo|screenshot|image|visual|media|video|galerie/, 44],
-        [/feature|fonction|caract[Ã©e]ristique|spec|specification/, 52],
+        [/feature|fonction|caract[ée]ristique|spec|specification/, 52],
         [/pricing|price|prix|tarif|offre|pack|bundle|value|valeur/, 62],
-        [/delivery|livraison|shipping|retour|return|garantie|warranty|payment|paiement|security|sÃ©curitÃ©/, 72],
+        [/delivery|livraison|shipping|retour|return|garantie|warranty|payment|paiement|security|sécurité/, 72],
         [/faq|question|objection/, 82],
         [/cta|button|bouton|action|whatsapp|contact|form/, 92],
         [/footer|legal|privacy|terms|mentions/, 98]
@@ -14386,11 +14386,11 @@ function prioritizeFunnelRecommendedOrder(items = []) {
 function renderFunnelOrderInsights(surgery = {}, { isAr = false, isEn = false } = {}) {
     const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
     const labels = isAr ? {
-        title: 'Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø§Ù„ØªÙŠ ØªØºÙŠØ± ØªØ±ØªÙŠØ¨ Ø§Ù„ØµÙØ­Ø©',
-        add: 'Ø£Ø¶Ù',
-        move: 'Ø§Ù†Ù‚Ù„',
-        improve: 'Ù‚ÙˆÙ‘',
-        remove: 'Ø§Ø®ØªØµØ±'
+        title: 'الملاحظات التي تغير ترتيب الصفحة',
+        add: 'أضف',
+        move: 'انقل',
+        improve: 'قوّ',
+        remove: 'اختصر'
     } : isEn ? {
         title: 'Observations that change the page order',
         add: 'Add',
@@ -14398,9 +14398,9 @@ function renderFunnelOrderInsights(surgery = {}, { isAr = false, isEn = false } 
         improve: 'Strengthen',
         remove: 'Simplify'
     } : {
-        title: 'Observations qui changent lâ€™ordre de la page',
+        title: 'Observations qui changent l’ordre de la page',
         add: 'Ajouter',
-        move: 'DÃ©placer',
+        move: 'Déplacer',
         improve: 'Renforcer',
         remove: 'Simplifier'
     };
@@ -14420,10 +14420,10 @@ function renderFunnelOrderInsights(surgery = {}, { isAr = false, isEn = false } 
 function renderFunnelOrderColumn(title, items, { isAr = false, isEn = false, recommended = false } = {}) {
     const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
     const visible = items.slice(0, 12);
-    const empty = isAr ? 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ ØªØ±ØªÙŠØ¨ Ù…ÙˆØ«ÙˆÙ‚.' : isEn ? 'No reliable order available.' : 'Aucun ordre fiable disponible.';
+    const empty = isAr ? 'لا يوجد ترتيب موثوق.' : isEn ? 'No reliable order available.' : 'Aucun ordre fiable disponible.';
     const caption = recommended
-        ? (isAr ? 'Ø§Ù„Ù…Ø³Ø§Ø± Ø§Ù„Ø°ÙŠ ÙŠÙ‚Ù„Ù„ Ø§Ù„ØªØ±Ø¯Ø¯ ÙˆÙŠØ¯ÙØ¹ Ù†Ø­Ùˆ Ø§Ù„Ù‚Ø±Ø§Ø±.' : isEn ? 'The path that reduces hesitation and moves toward action.' : 'Le parcours qui rÃ©duit lâ€™hÃ©sitation et rapproche du passage Ã  lâ€™action.')
-        : (isAr ? 'Ù…Ø§ ÙŠØ±Ø§Ù‡ Ø§Ù„Ø²Ø§Ø¦Ø± Ø­Ø§Ù„ÙŠØ§ØŒ Ù…Ø¹ Ù†Ù‚Ø§Ø· Ø§Ù„Ù‚ÙˆØ© ÙˆÙØ±Ø§ØºØ§Øª Ø§Ù„Ù‚Ø±Ø§Ø¡Ø©.' : isEn ? 'What visitors currently see, with strengths and reading gaps.' : 'Ce que le visiteur voit aujourdâ€™hui, avec les forces et les trous de lecture.');
+        ? (isAr ? 'المسار الذي يقلل التردد ويدفع نحو القرار.' : isEn ? 'The path that reduces hesitation and moves toward action.' : 'Le parcours qui réduit l’hésitation et rapproche du passage à l’action.')
+        : (isAr ? 'ما يراه الزائر حاليا، مع نقاط القوة وفراغات القراءة.' : isEn ? 'What visitors currently see, with strengths and reading gaps.' : 'Ce que le visiteur voit aujourd’hui, avec les forces et les trous de lecture.');
     const itemHtml = visible.map((item, index) => {
         const label = funnelOrderHumanLabel(item, { isAr, isEn });
         return `<li style="--order-step:${index + 1}">
@@ -14460,13 +14460,13 @@ function displayFunnelResults(data = {}) {
     container.setAttribute('lang', resultLang);
     const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
     const copy = isAr ? {
-        kicker: 'Ù‚Ø±Ø§Ø± Ø§Ù„ØªØ­ÙˆÙŠÙ„', title: 'Ù…Ø§ Ø§Ù„Ø°ÙŠ ÙŠÙ…Ù†Ø¹ Ø§Ù„ØµÙØ­Ø© Ù…Ù† Ø§Ù„Ø¨ÙŠØ¹ Ø§Ù„Ø¢Ù†ØŸ', partial: 'ØªÙ… Ø§Ø³ØªÙ„Ø§Ù… Ø¨ÙŠØ§Ù†Ø§Øª Ø¬Ø²Ø¦ÙŠØ©. ÙŠØ¹Ø±Ø¶ Daka ÙÙ‚Ø· Ø§Ù„Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ØªØ­Ù‚Ù‚.',
-        checked: 'Ù‚Ø³Ù… ØªÙ… ÙØ­ØµÙ‡', fixes: 'Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª Ø°Ø§Øª Ø£ÙˆÙ„ÙˆÙŠØ©', confidence: 'Ø§Ù„Ø«Ù‚Ø©', architecture: 'Ù‡Ù†Ø¯Ø³Ø© Ø§Ù„ØµÙØ­Ø©', architectureSub: 'Ø§Ù„Ø£Ù‚Ø³Ø§Ù… Ø§Ù„Ù…ÙˆØ¬ÙˆØ¯Ø© ÙˆØ§Ù„Ù†Ø§Ù‚ØµØ© ÙˆÙ…Ø§ ÙŠØ¬Ø¨ ØªØºÙŠÙŠØ±Ù‡.',
-        order: 'Ø§Ù„ØªØ±ØªÙŠØ¨ Ø§Ù„Ø¬Ø¯ÙŠØ¯ Ù„Ù„ØµÙØ­Ø©', orderSub: 'ØªØ³Ù„Ø³Ù„ ÙŠÙ‚Ù„Ù„ Ø§Ù„ØªØ±Ø¯Ø¯ Ù‚Ø¨Ù„ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ.', current: 'Ø§Ù„ØªØ±ØªÙŠØ¨ Ø§Ù„Ù…Ø±ØµÙˆØ¯', recommended: 'Ø§Ù„ØªØ±ØªÙŠØ¨ Ø§Ù„Ù…Ù‚ØªØ±Ø­',
-        frictions: 'Ø§Ù„Ø¹ÙˆØ§Ø¦Ù‚ Ø§Ù„ØªÙŠ ØªÙ…Ù†Ø¹ Ø§Ù„ØªØ­ÙˆÙŠÙ„', frictionsSub: 'Ù…Ø´ÙƒÙ„Ø§Øª Ù…Ø«Ø¨ØªØ© ÙˆØªØ£Ø«ÙŠØ±Ù‡Ø§ ÙˆØ§Ù„Ø¥ØµÙ„Ø§Ø­ Ø§Ù„Ø¯Ù‚ÙŠÙ‚.', offer: 'Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø«Ù‚Ø©', offerSub: 'ÙˆØ¶ÙˆØ­ Ø§Ù„Ù‚ÙŠÙ…Ø© ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„ØªÙŠ ØªÙ‚Ù„Ù„ Ø§Ù„Ù…Ø®Ø§Ø·Ø±.',
-        message: 'Ø§Ù„Ø±Ø³Ø§Ù„Ø© ÙˆØ§Ù„ÙˆØ¹Ø¯ ÙˆCTA', messageSub: 'Ø§Ù„Ù†ØµÙˆØµ Ø§Ù„Ø­Ø§Ø³Ù…Ø© Ø§Ù„ØªÙŠ ÙŠØ¬Ø¨ Ø¹Ø±Ø¶Ù‡Ø§ Ù‚Ø¨Ù„ Ø§Ù„Ù‚Ø±Ø§Ø±.', plan: 'Ø®Ø·Ø© Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø¨Ù†Ø§Ø¡', planSub: 'Ø§Ù„Ø¢Ù†ØŒ Ø®Ù„Ø§Ù„ 7 Ø£ÙŠØ§Ù…ØŒ ÙˆØ®Ù„Ø§Ù„ 30 ÙŠÙˆÙ…Ø§.',
-        now: 'Ø§Ù„Ø¢Ù†', seven: 'Ø®Ù„Ø§Ù„ 7 Ø£ÙŠØ§Ù…', thirty: 'Ø®Ù„Ø§Ù„ 30 ÙŠÙˆÙ…Ø§', observed: 'Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø©', action: 'Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡', details: 'Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø© ÙˆØ§Ù„Ø­Ø¯ÙˆØ¯', detailsSub: 'Ø¬ÙˆØ¯Ø© Ø§Ù„ØªØ´Ø®ÙŠØµ ÙˆÙ…Ø³ØªÙˆÙ‰ Ø§Ù„Ø«Ù‚Ø© ÙˆÙ…Ø§ ÙŠØ¬Ø¨ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù†Ù‡.',
-        noData: 'Ù„Ù… ØªØµÙ„ Ø¨Ù†ÙŠØ© Ø£Ù‚Ø³Ø§Ù… ÙƒØ§ÙÙŠØ© ÙÙŠ Ù‡Ø°Ù‡ Ø§Ù„Ø§Ø³ØªØ¬Ø§Ø¨Ø©. Ø£Ø¹Ø¯ Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ø¨Ø¹Ø¯ ÙØªØ­ Ø§Ù„ØµÙØ­Ø© Ø¨Ø§Ù„ÙƒØ§Ù…Ù„.', expert: 'Ø®Ø¨ÙŠØ± Funnel'
+        kicker: 'قرار التحويل', title: 'ما الذي يمنع الصفحة من البيع الآن؟', partial: 'تم استلام بيانات جزئية. يعرض Daka فقط الإشارات القابلة للتحقق.',
+        checked: 'قسم تم فحصه', fixes: 'إجراءات ذات أولوية', confidence: 'الثقة', architecture: 'هندسة الصفحة', architectureSub: 'الأقسام الموجودة والناقصة وما يجب تغييره.',
+        order: 'الترتيب الجديد للصفحة', orderSub: 'تسلسل يقلل التردد قبل الإجراء الرئيسي.', current: 'الترتيب المرصود', recommended: 'الترتيب المقترح',
+        frictions: 'العوائق التي تمنع التحويل', frictionsSub: 'مشكلات مثبتة وتأثيرها والإصلاح الدقيق.', offer: 'العرض والسعر والثقة', offerSub: 'وضوح القيمة والسعر والأدلة التي تقلل المخاطر.',
+        message: 'الرسالة والوعد وCTA', messageSub: 'النصوص الحاسمة التي يجب عرضها قبل القرار.', plan: 'خطة إعادة البناء', planSub: 'الآن، خلال 7 أيام، وخلال 30 يوما.',
+        now: 'الآن', seven: 'خلال 7 أيام', thirty: 'خلال 30 يوما', observed: 'الملاحظة', action: 'الإجراء', details: 'البيانات المرصودة والحدود', detailsSub: 'جودة التشخيص ومستوى الثقة وما يجب التحقق منه.',
+        noData: 'لم تصل بنية أقسام كافية في هذه الاستجابة. أعد التحليل بعد فتح الصفحة بالكامل.', expert: 'خبير Funnel'
     } : isEn ? {
         kicker: 'Conversion decision', title: 'What prevents this page from selling now?', partial: 'Partial data received. Daka shows only verifiable signals.',
         checked: 'sections checked', fixes: 'priority fixes', confidence: 'Confidence', architecture: 'Page architecture', architectureSub: 'What exists, what is missing, and what must change.',
@@ -14476,13 +14476,13 @@ function displayFunnelResults(data = {}) {
         now: 'Now', seven: 'Within 7 days', thirty: 'Within 30 days', observed: 'Observation', action: 'Action', details: 'Observed data and limits', detailsSub: 'Diagnosis quality, confidence, and useful checks.',
         noData: 'No reliable section architecture arrived in this response. Run the analysis again after opening the page fully.', expert: 'Funnel expert'
     } : {
-        kicker: 'DÃ©cision conversion', title: 'Ce qui empÃªche cette page de vendre maintenant', partial: 'DonnÃ©es partielles reÃ§ues. Daka affiche uniquement les signaux vÃ©rifiables.',
-        checked: 'sections vÃ©rifiÃ©es', fixes: 'corrections prioritaires', confidence: 'Confiance', architecture: 'Architecture de la page', architectureSub: 'Ce qui existe, ce qui manque et ce quâ€™il faut changer.',
-        order: 'Nouvel ordre recommandÃ©', orderSub: 'Un parcours qui rÃ©duit lâ€™hÃ©sitation avant lâ€™action principale.', current: 'Ordre observÃ©', recommended: 'Ordre recommandÃ©',
-        frictions: 'Frictions qui bloquent la conversion', frictionsSub: 'ProblÃ¨mes observÃ©s, impact et correction exacte.', offer: 'Offre, prix et confiance', offerSub: 'ClartÃ© de la valeur, prix et preuves qui rÃ©duisent le risque.',
-        message: 'Message, promesse et CTA', messageSub: 'Les textes dÃ©cisifs Ã  placer avant lâ€™action.', plan: 'Plan de reconstruction', planSub: 'Maintenant, sous 7 jours et sous 30 jours.',
-        now: 'Maintenant', seven: 'Sous 7 jours', thirty: 'Sous 30 jours', observed: 'Observation', action: 'Action', details: 'DonnÃ©es observÃ©es et limites', detailsSub: 'QualitÃ© du diagnostic, confiance et vÃ©rifications utiles.',
-        noData: 'Aucune architecture fiable de sections nâ€™est arrivÃ©e dans cette rÃ©ponse. Relancez aprÃ¨s ouverture complÃ¨te de la page.', expert: 'Expert Funnel'
+        kicker: 'Décision conversion', title: 'Ce qui empêche cette page de vendre maintenant', partial: 'Données partielles reçues. Daka affiche uniquement les signaux vérifiables.',
+        checked: 'sections vérifiées', fixes: 'corrections prioritaires', confidence: 'Confiance', architecture: 'Architecture de la page', architectureSub: 'Ce qui existe, ce qui manque et ce qu’il faut changer.',
+        order: 'Nouvel ordre recommandé', orderSub: 'Un parcours qui réduit l’hésitation avant l’action principale.', current: 'Ordre observé', recommended: 'Ordre recommandé',
+        frictions: 'Frictions qui bloquent la conversion', frictionsSub: 'Problèmes observés, impact et correction exacte.', offer: 'Offre, prix et confiance', offerSub: 'Clarté de la valeur, prix et preuves qui réduisent le risque.',
+        message: 'Message, promesse et CTA', messageSub: 'Les textes décisifs à placer avant l’action.', plan: 'Plan de reconstruction', planSub: 'Maintenant, sous 7 jours et sous 30 jours.',
+        now: 'Maintenant', seven: 'Sous 7 jours', thirty: 'Sous 30 jours', observed: 'Observation', action: 'Action', details: 'Données observées et limites', detailsSub: 'Qualité du diagnostic, confiance et vérifications utiles.',
+        noData: 'Aucune architecture fiable de sections n’est arrivée dans cette réponse. Relancez après ouverture complète de la page.', expert: 'Expert Funnel'
     };
 
     try {
@@ -14512,11 +14512,11 @@ function displayFunnelResults(data = {}) {
             ...(data.funnelPrimaryAnalysis?.present || []),
             ...(data.funnelEvidenceSynthesis?.present || [])
         ];
-        const socialProofObserved = observedSections.some(item => /testimonial|review|rating|avis|t[Ã©e]moignage|social.?proof|ØªÙ‚ÙŠÙŠÙ…|Ø¢Ø±Ø§Ø¡|Ù…Ø±Ø§Ø¬Ø¹Ø§Øª|Ø´Ù‡Ø§Ø¯Ø§Øª/i.test(
+        const socialProofObserved = observedSections.some(item => /testimonial|review|rating|avis|t[ée]moignage|social.?proof|تقييم|آراء|مراجعات|شهادات/i.test(
             funnelV2Text(item?.sectionType || item?.section || item?.name || item)
         ));
         const frictions = funnelV2Array(surgerySource.frictions, data.auditIssues, data.conversionFriction?.frictions)
-            .filter(item => !(socialProofObserved && /preuve sociale absente|aucune preuve sociale|no social proof|missing social proof|Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø¯Ù„Ø© Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ©/i.test(funnelV2Text(item))));
+            .filter(item => !(socialProofObserved && /preuve sociale absente|aucune preuve sociale|no social proof|missing social proof|لا توجد أدلة اجتماعية/i.test(funnelV2Text(item))));
         const offer = surgerySource.offerPriceValue || {};
         const offerDetected = surgerySource.offerDetected || {};
         const message = surgerySource.messagePromiseCta || {};
@@ -14533,29 +14533,29 @@ function displayFunnelResults(data = {}) {
             </div>` : `<p class="funnel-v2-empty">${safe(copy.noData)}</p>`;
 
         const offerRows = [
-            [isAr ? 'Ù†ÙˆØ¹ Ø§Ù„Ø¹Ø±Ø¶' : isEn ? 'Offer type' : 'Type dâ€™offre', offerDetected.offerType],
-            [isAr ? 'H1 Ø§Ù„Ù…Ø±ØµÙˆØ¯' : isEn ? 'Observed H1' : 'H1 observÃ©', offerDetected.h1 || message.currentH1],
-            [isAr ? 'Ø§Ù„Ø³Ø¹Ø±' : isEn ? 'Price' : 'Prix', offer.price ? `${offer.price} ${offer.currency || ''}` : (isAr ? 'ØºÙŠØ± Ù…Ø¤ÙƒØ¯' : isEn ? 'Unconfirmed' : 'Non confirmÃ©')],
-            [isAr ? 'ÙˆØ¶ÙˆØ­ Ø§Ù„Ø¹Ø±Ø¶' : isEn ? 'Offer clarity' : 'ClartÃ© de lâ€™offre', offer.offerClarity],
-            [isAr ? 'Ø§Ù„Ù‚ÙŠÙ…Ø© Ø§Ù„Ù…Ø¯Ø±ÙƒØ©' : isEn ? 'Perceived value' : 'Valeur perÃ§ue', offer.valuePerception],
-            [isAr ? 'Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡' : isEn ? 'Action' : 'Action', offer.action]
+            [isAr ? 'نوع العرض' : isEn ? 'Offer type' : 'Type d’offre', offerDetected.offerType],
+            [isAr ? 'H1 المرصود' : isEn ? 'Observed H1' : 'H1 observé', offerDetected.h1 || message.currentH1],
+            [isAr ? 'السعر' : isEn ? 'Price' : 'Prix', offer.price ? `${offer.price} ${offer.currency || ''}` : (isAr ? 'غير مؤكد' : isEn ? 'Unconfirmed' : 'Non confirmé')],
+            [isAr ? 'وضوح العرض' : isEn ? 'Offer clarity' : 'Clarté de l’offre', offer.offerClarity],
+            [isAr ? 'القيمة المدركة' : isEn ? 'Perceived value' : 'Valeur perçue', offer.valuePerception],
+            [isAr ? 'الإجراء' : isEn ? 'Action' : 'Action', offer.action]
         ].filter(([, value]) => funnelV2Text(value));
         const offerHtml = `<div class="funnel-v2-facts">${offerRows.map(([label, value]) => `<div><small>${safe(label)}</small><strong dir="auto">${safe(funnelV2Text(value))}</strong></div>`).join('')}</div>
             ${(proof.present?.length || proof.weak?.length || proof.missing?.length) ? `<div class="funnel-v2-proof-row">${funnelV2Array(proof.present, proof.weak, proof.missing).slice(0, 8).map(item => `<span>${safe(funnelV2Text(item))}</span>`).join('')}</div>` : ''}`;
         const messageRows = [
-            [isAr ? 'H1 Ù…Ù‚ØªØ±Ø­' : isEn ? 'Proposed H1' : 'H1 proposÃ©', message.proposedH1],
-            [isAr ? 'Ø§Ù„Ø¹Ù†ÙˆØ§Ù† Ø§Ù„ÙØ±Ø¹ÙŠ' : isEn ? 'Proposed subtitle' : 'Sous-titre proposÃ©', message.proposedSubtitle],
+            [isAr ? 'H1 مقترح' : isEn ? 'Proposed H1' : 'H1 proposé', message.proposedH1],
+            [isAr ? 'العنوان الفرعي' : isEn ? 'Proposed subtitle' : 'Sous-titre proposé', message.proposedSubtitle],
             ['CTA', message.proposedCta],
             ['Microcopy', message.microcopy],
-            [isAr ? 'Ø·Ù…Ø£Ù†Ø©' : isEn ? 'Reassurance' : 'RÃ©assurance', message.reassurance]
+            [isAr ? 'طمأنة' : isEn ? 'Reassurance' : 'Réassurance', message.reassurance]
         ].filter(([, value]) => funnelV2Text(value));
         const messageHtml = messageRows.length ? `<div class="funnel-v2-copy-stack">${messageRows.map(([label, value]) => `<div><small>${safe(label)}</small><p dir="auto">${safe(funnelV2Text(value))}</p></div>`).join('')}</div>` : `<p class="funnel-v2-empty">${safe(copy.noData)}</p>`;
-        const planColumn = (title, items, accent) => `<div class="funnel-v2-plan-column" style="--funnel-v2-accent:${accent}"><h4>${safe(title)}</h4>${renderFunnelV2Cards(items, { accent, limit: 3, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">â€”</p>`}</div>`;
+        const planColumn = (title, items, accent) => `<div class="funnel-v2-plan-column" style="--funnel-v2-accent:${accent}"><h4>${safe(title)}</h4>${renderFunnelV2Cards(items, { accent, limit: 3, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">—</p>`}</div>`;
         const planHtml = `<div class="funnel-v2-plan">${planColumn(copy.now, funnelV2Array(plan.now), '#fb7185')}${planColumn(copy.seven, funnelV2Array(plan.sevenDays), '#f59e0b')}${planColumn(copy.thirty, funnelV2Array(plan.thirtyDays), '#22c55e')}</div>`;
         const detailRows = [
-            [isAr ? 'Ø§Ù„ØµÙØ­Ø§Øª Ø§Ù„Ù…Ø­Ù„Ù„Ø©' : isEn ? 'Pages analyzed' : 'Pages analysÃ©es', limits.pagesAnalyzed],
+            [isAr ? 'الصفحات المحللة' : isEn ? 'Pages analyzed' : 'Pages analysées', limits.pagesAnalyzed],
             [copy.confidence, limits.confidence || confidence],
-            [isAr ? 'Ø§Ù„Ø³Ø¹Ø± Ù…Ø¤ÙƒØ¯' : isEn ? 'Price confirmed' : 'Prix confirmÃ©', limits.priceConfirmed === true ? (isAr ? 'Ù†Ø¹Ù…' : isEn ? 'Yes' : 'Oui') : (isAr ? 'Ù„Ø§' : isEn ? 'No' : 'Non')]
+            [isAr ? 'السعر مؤكد' : isEn ? 'Price confirmed' : 'Prix confirmé', limits.priceConfirmed === true ? (isAr ? 'نعم' : isEn ? 'Yes' : 'Oui') : (isAr ? 'لا' : isEn ? 'No' : 'Non')]
         ].filter(([, value]) => value !== null && value !== undefined && value !== '');
         const detailsHtml = `<div class="funnel-v2-facts">${detailRows.map(([label, value]) => `<div><small>${safe(label)}</small><strong dir="auto">${safe(funnelV2Text(value))}</strong></div>`).join('')}</div>
             ${funnelV2Array(limits.limits, limits.inaccessibleElements).length ? `<ul class="funnel-v2-limit-list">${funnelV2Array(limits.limits, limits.inaccessibleElements).map(item => `<li>${safe(funnelV2Text(item))}</li>`).join('')}</ul>` : ''}`;
@@ -14574,7 +14574,7 @@ function displayFunnelResults(data = {}) {
             ${renderReportSection('money', copy.offer, copy.offerSub, 'fa-tags', offerHtml, { isAr, isEn })}
             ${renderReportSection('frictions', copy.frictions, copy.frictionsSub, 'fa-triangle-exclamation', renderFunnelV2Cards(frictions, { accent: '#fb7185', limit: 5, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">${safe(copy.partial)}</p>`, { isAr, isEn })}
             ${renderReportSection('plan', copy.plan, copy.planSub, 'fa-list-check', planHtml, { isAr, isEn })}
-            ${primaryEvidenceHtml ? renderReportSection('funnel-primary-evidence', isAr ? 'Ø§Ù„ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ù‚Ø§Ø¦Ù… Ø¹Ù„Ù‰ Ø§Ù„Ø£Ø¯Ù„Ø©' : isEn ? 'Evidence-first analysis' : 'Analyse fondÃ©e sur les preuves', isAr ? 'Ù…Ø§ ØªÙ… Ø±ØµØ¯Ù‡ ÙØ¹Ù„ÙŠØ§ Ù‚Ø¨Ù„ Ø£ÙŠ ØªÙˆØµÙŠØ©.' : isEn ? 'What was actually observed before any recommendation.' : 'Ce qui a rÃ©ellement Ã©tÃ© observÃ© avant toute recommandation.', 'fa-magnifying-glass-chart', primaryEvidenceHtml, { isAr, isEn }) : ''}
+            ${primaryEvidenceHtml ? renderReportSection('funnel-primary-evidence', isAr ? 'التحليل القائم على الأدلة' : isEn ? 'Evidence-first analysis' : 'Analyse fondée sur les preuves', isAr ? 'ما تم رصده فعليا قبل أي توصية.' : isEn ? 'What was actually observed before any recommendation.' : 'Ce qui a réellement été observé avant toute recommandation.', 'fa-magnifying-glass-chart', primaryEvidenceHtml, { isAr, isEn }) : ''}
             ${renderReportSection('details', copy.details, copy.detailsSub, 'fa-database', detailsHtml, { isAr, isEn })}
             ${legacyModulesHtml}
             ${renderExpertDock('funnel', { isAr, isEn })}
@@ -14590,15 +14590,15 @@ function displayFunnelResults(data = {}) {
         STATE.lastFunnelResults = data;
     }
 }
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
 // MAGIC PROMPT - Redesign Prompt Display
-// (dÃ©finie AVANT displayFunnelResults)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// (définie AVANT displayFunnelResults)
+// ════════════════════════════════════════════════════════════════
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ESCAPE HTML â€” utilitaire sÃ©curitÃ© (si pas dÃ©jÃ  prÃ©sent)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ════════════════════════════════════════════════════════════════
+// ESCAPE HTML — utilitaire sécurité (si pas déjà présent)
+// ════════════════════════════════════════════════════════════════
 
 function escapeHtml(str) {
     if (str === null || str === undefined) return '';
@@ -14624,16 +14624,16 @@ function escapeHtml(str) {
 
 
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 // HELPER : Copy to clipboard universel
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ─────────────────────────────────────────────────────
 function copyToClipboard(text, btn) {
     const sourceNode = typeof text === 'string' ? document.getElementById(text) : null;
     if (sourceNode) text = 'value' in sourceNode ? sourceNode.value : sourceNode.innerText || sourceNode.textContent || '';
     const original = btn?.innerHTML;
     const success = () => {
-        if (btn) { btn.innerHTML = '<i class="fas fa-check"></i> CopiÃ© !'; btn.style.background='#10b981'; }
-        toast.success('CopiÃ© !');
+        if (btn) { btn.innerHTML = '<i class="fas fa-check"></i> Copié !'; btn.style.background='#10b981'; }
+        toast.success('Copié !');
         setTimeout(() => { if(btn){btn.innerHTML=original;btn.style.background='';} }, 2000);
     };
     if (navigator.clipboard && window.isSecureContext) {
@@ -14655,11 +14655,11 @@ function updateOpenRouterQuotaUI(quotaId, payload = {}) {
     const rate = payload?.rateLimit || payload || {};
     const usage = payload?.usage || {};
     const labels = lang === 'ar'
-        ? { req: 'Ø§Ù„Ø·Ù„Ø¨Ø§Øª Ø§Ù„Ù…ØªØ¨Ù‚ÙŠØ©', tokens: 'Ø§Ù„ØªÙˆÙƒÙ†Ø§Øª Ø§Ù„Ù…ØªØ¨Ù‚ÙŠØ©', reset: 'Ø¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø¶Ø¨Ø·', unknown: 'ØºÙŠØ± Ù…ØªØ§Ø­', used: 'Ù…Ø³ØªØ®Ø¯Ù…Ø©' }
+        ? { req: 'الطلبات المتبقية', tokens: 'التوكنات المتبقية', reset: 'إعادة الضبط', unknown: 'غير متاح', used: 'مستخدمة' }
         : lang === 'en'
             ? { req: 'Requests left', tokens: 'Tokens left', reset: 'Reset', unknown: 'Not exposed', used: 'used' }
-            : { req: 'RequÃªtes restantes', tokens: 'Tokens restants', reset: 'Reset', unknown: 'Non exposÃ©', used: 'utilisÃ©s' };
-    const clean = value => (value !== null && value !== undefined && String(value).trim() !== '') ? String(value).trim() : 'â€”';
+            : { req: 'Requêtes restantes', tokens: 'Tokens restants', reset: 'Reset', unknown: 'Non exposé', used: 'utilisés' };
+    const clean = value => (value !== null && value !== undefined && String(value).trim() !== '') ? String(value).trim() : '—';
     const requestValue = clean(rate.remainingRequests || rate.requestsRemaining);
     const tokenValue = clean(rate.remainingTokens || rate.tokensRemaining || (usage.total_tokens ? `${usage.total_tokens} ${labels.used}` : null));
     const resetValue = clean(rate.resetRequests || rate.resetTokens || rate.retryAfter || labels.unknown);
@@ -14687,10 +14687,10 @@ function setOpenRouterBuilderInstruction(customId, text) {
     const instruction = String(text || '').trim();
     const map = {
         fr: {
-            'Hero plus fort': 'Rends le hero plus premium, plus clair et plus orientÃ© conversion. Ne repose pas de questions si les donnÃ©es sont suffisantes.',
-            'Mobile premium': 'Optimise la version mobile : sections courtes, CTA visible, textes lisibles, aucune largeur qui dÃ©borde.',
-            'Ajouter confiance': 'Ajoute une couche confiance : preuves visibles, garantie si elle est fournie, FAQ objections, sans inventer dâ€™avis.',
-            'Raccourcir le code': 'Rends le code plus court, propre, commentÃ© par sections, sans framework lourd.'
+            'Hero plus fort': 'Rends le hero plus premium, plus clair et plus orienté conversion. Ne repose pas de questions si les données sont suffisantes.',
+            'Mobile premium': 'Optimise la version mobile : sections courtes, CTA visible, textes lisibles, aucune largeur qui déborde.',
+            'Ajouter confiance': 'Ajoute une couche confiance : preuves visibles, garantie si elle est fournie, FAQ objections, sans inventer d’avis.',
+            'Raccourcir le code': 'Rends le code plus court, propre, commenté par sections, sans framework lourd.'
         },
         en: {
             'Stronger hero': 'Make the hero more premium, clearer, and more conversion-focused. Do not ask more questions if the data is sufficient.',
@@ -14699,10 +14699,10 @@ function setOpenRouterBuilderInstruction(customId, text) {
             'Shorten code': 'Make the code shorter, clean, section-commented, without heavy frameworks.'
         },
         ar: {
-            'Hero Ø£Ù‚ÙˆÙ‰': 'Ø§Ø¬Ø¹Ù„ Ù‚Ø³Ù… Hero Ø£Ù‚ÙˆÙ‰ ÙˆØ£ÙƒØ«Ø± ÙˆØ¶ÙˆØ­Ø§ ÙˆÙ…ÙˆØ¬Ù‡Ø§ Ù„Ù„ØªØ­ÙˆÙŠÙ„. Ù„Ø§ ØªØ¹ÙŠØ¯ Ø·Ø±Ø­ Ø§Ù„Ø£Ø³Ø¦Ù„Ø© Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª ÙƒØ§ÙÙŠØ©.',
-            'Mobile premium': 'Ø­Ø³Ù† ØªØ¬Ø±Ø¨Ø© Ø§Ù„Ù‡Ø§ØªÙ: Ø£Ù‚Ø³Ø§Ù… Ù‚ØµÙŠØ±Ø©ØŒ CTA ÙˆØ§Ø¶Ø­ØŒ Ù†ØµÙˆØµ Ù…Ù‚Ø±ÙˆØ¡Ø©ØŒ Ø¨Ø¯ÙˆÙ† ØªØ¬Ø§ÙˆØ² Ø¹Ø±Ø¶ Ø§Ù„Ø´Ø§Ø´Ø©.',
-            'Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø«Ù‚Ø©': 'Ø£Ø¶Ù Ø·Ø¨Ù‚Ø© Ø«Ù‚Ø©: Ø£Ø¯Ù„Ø© ÙˆØ§Ø¶Ø­Ø©ØŒ Ø¶Ù…Ø§Ù† ÙÙ‚Ø· Ø¥Ø°Ø§ ÙƒØ§Ù† Ù…Ø°ÙƒÙˆØ±Ø§ØŒ FAQ Ù„Ù„Ø§Ø¹ØªØ±Ø§Ø¶Ø§ØªØŒ Ø¨Ø¯ÙˆÙ† Ø§Ø®ØªØ±Ø§Ø¹ ØªÙ‚ÙŠÙŠÙ…Ø§Øª.',
-            'Ø§Ø®ØªØµØ± Ø§Ù„ÙƒÙˆØ¯': 'Ø§Ø®ØªØµØ± Ø§Ù„ÙƒÙˆØ¯ ÙˆØ§Ø¬Ø¹Ù„Ù‡ Ù†Ø¸ÙŠÙØ§ ÙˆÙ…Ù‚Ø³Ù…Ø§ Ø¨ØªØ¹Ù„ÙŠÙ‚Ø§ØªØŒ Ø¨Ø¯ÙˆÙ† frameworks Ø«Ù‚ÙŠÙ„Ø©.'
+            'Hero أقوى': 'اجعل قسم Hero أقوى وأكثر وضوحا وموجها للتحويل. لا تعيد طرح الأسئلة إذا كانت البيانات كافية.',
+            'Mobile premium': 'حسن تجربة الهاتف: أقسام قصيرة، CTA واضح، نصوص مقروءة، بدون تجاوز عرض الشاشة.',
+            'إضافة الثقة': 'أضف طبقة ثقة: أدلة واضحة، ضمان فقط إذا كان مذكورا، FAQ للاعتراضات، بدون اختراع تقييمات.',
+            'اختصر الكود': 'اختصر الكود واجعله نظيفا ومقسما بتعليقات، بدون frameworks ثقيلة.'
         }
     };
     const resolved = map[lang]?.[instruction] || instruction;
@@ -14740,10 +14740,10 @@ function renderOpenRouterCodePreview(outputId, previewId, emptyId) {
         if (empty) {
             empty.style.display = 'grid';
             empty.textContent = STATE.currentLang === 'ar'
-                ? 'Ù„Ø§ ØªÙˆØ¬Ø¯ ØµÙØ­Ø© HTML ÙƒØ§Ù…Ù„Ø© Ù„Ù„Ù…Ø¹Ø§ÙŠÙ†Ø© Ø¨Ø¹Ø¯.'
+                ? 'لا توجد صفحة HTML كاملة للمعاينة بعد.'
                 : STATE.currentLang === 'en'
                     ? 'No complete HTML page available for preview yet.'
-                    : 'Aucune page HTML complÃ¨te disponible pour lâ€™aperÃ§u.';
+                    : 'Aucune page HTML complète disponible pour l’aperçu.';
         }
         iframe.style.display = 'none';
         return;
@@ -14763,11 +14763,11 @@ async function runOpenRouterCodeBuilder(kind, promptId, outputId, customId, quot
     const lang = STATE.currentLang || 'fr';
     const labels = lang === 'ar'
         ? {
-            login: 'Ø³Ø¬Ù„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø£ÙˆÙ„Ø§.',
-            running: 'OpenRouter ÙŠÙƒØªØ¨ Ø§Ù„ÙƒÙˆØ¯...',
-            ready: 'ØªÙ… ØªÙˆÙ„ÙŠØ¯ Ø§Ù„ÙƒÙˆØ¯.',
-            connect: 'Ø§Ø±Ø¨Ø· Ù…ÙØªØ§Ø­ OpenRouter Ø£ÙˆÙ„Ø§.',
-            empty: 'Ù„Ø§ ÙŠÙˆØ¬Ø¯ prompt ÙƒØ§Ù Ù„Ù„ØªÙˆÙ„ÙŠØ¯.'
+            login: 'سجل الدخول أولا.',
+            running: 'OpenRouter يكتب الكود...',
+            ready: 'تم توليد الكود.',
+            connect: 'اربط مفتاح OpenRouter أولا.',
+            empty: 'لا يوجد prompt كاف للتوليد.'
         }
         : lang === 'en'
             ? {
@@ -14778,11 +14778,11 @@ async function runOpenRouterCodeBuilder(kind, promptId, outputId, customId, quot
                 empty: 'No prompt available for generation.'
             }
             : {
-                login: 'Connecte-toi dâ€™abord.',
-                running: 'OpenRouter Ã©crit le code...',
-                ready: 'Code gÃ©nÃ©rÃ©.',
-                connect: 'Connecte ta clÃ© OpenRouter dâ€™abord.',
-                empty: 'Aucun prompt suffisant pour gÃ©nÃ©rer.'
+                login: 'Connecte-toi d’abord.',
+                running: 'OpenRouter écrit le code...',
+                ready: 'Code généré.',
+                connect: 'Connecte ta clé OpenRouter d’abord.',
+                empty: 'Aucun prompt suffisant pour générer.'
             };
     if (!currentAuthUser) {
         toast.warning(labels.login);
@@ -14801,7 +14801,7 @@ MODE DAKA CODE BUILDER LIGHT :
 ${taskLine}
 ${extra ? `\nINSTRUCTION UTILISATEUR SUPPLEMENTAIRE :\n${extra}` : ''}
 
-RÃ©ponds directement avec le livrable demandÃ©, sans blabla inutile.`;
+Réponds directement avec le livrable demandé, sans blabla inutile.`;
     try {
         if (btn) {
             btn.disabled = true;
@@ -14855,10 +14855,10 @@ async function sendOpenRouterCodeBuilderMessage(promptId, outputId, chatId, inpu
         .join('\n\n');
     const lang = STATE.currentLang || 'fr';
     const labels = lang === 'ar'
-        ? { login: 'Ø³Ø¬Ù„ Ø§Ù„Ø¯Ø®ÙˆÙ„ Ø£ÙˆÙ„Ø§.', empty: 'Ø§ÙƒØªØ¨ Ø±Ø³Ø§Ù„ØªÙƒ Ø£ÙˆÙ„Ø§.', running: 'OpenRouter ÙŠÙÙƒØ±...', connect: 'Ø§Ø±Ø¨Ø· Ù…ÙØªØ§Ø­ OpenRouter Ø£ÙˆÙ„Ø§.' }
+        ? { login: 'سجل الدخول أولا.', empty: 'اكتب رسالتك أولا.', running: 'OpenRouter يفكر...', connect: 'اربط مفتاح OpenRouter أولا.' }
         : lang === 'en'
             ? { login: 'Sign in first.', empty: 'Write your message first.', running: 'OpenRouter is thinking...', connect: 'Connect your OpenRouter key first.' }
-            : { login: 'Connecte-toi dâ€™abord.', empty: 'Ã‰cris ton message dâ€™abord.', running: 'OpenRouter rÃ©flÃ©chit...', connect: 'Connecte ta clÃ© OpenRouter dâ€™abord.' };
+            : { login: 'Connecte-toi d’abord.', empty: 'Écris ton message d’abord.', running: 'OpenRouter réfléchit...', connect: 'Connecte ta clé OpenRouter d’abord.' };
     if (!currentAuthUser) {
         toast.warning(labels.login);
         return openAuthModal();
@@ -14869,7 +14869,7 @@ async function sendOpenRouterCodeBuilderMessage(promptId, outputId, chatId, inpu
     const prompt = `${basePrompt}
 
 DAKA CODE BUILDER - CHAT DE TRAVAIL :
-L'utilisateur veut continuer Ã  travailler le code dans l'interface Daka.
+L'utilisateur veut continuer à travailler le code dans l'interface Daka.
 
 HISTORIQUE RECENT DU CHAT :
 ${chatHistory}
@@ -14881,15 +14881,15 @@ CODE OU REPONSE ACTUELLE A AMELIORER :
 ${currentCode.slice(0, 14000)}
 
 REGLES SPECIALES IMPORTANTES :
-- Si le message utilisateur contient des rÃ©ponses Ã  tes questions prÃ©cÃ©dentes, considÃ¨re ces rÃ©ponses comme les donnÃ©es manquantes.
-- Ne repose pas les mÃªmes questions si l'utilisateur vient d'y rÃ©pondre.
-- Si les rÃ©ponses sont suffisantes, passe directement au plan ou au code demandÃ©.
-- Si une rÃ©ponse est courte comme "Libye, 48h, logo trust, COD", transforme-la en contraintes de projet exploitables.
-- Si tu dois encore poser des questions, pose uniquement les questions rÃ©ellement bloquantes, maximum 3.
+- Si le message utilisateur contient des réponses à tes questions précédentes, considère ces réponses comme les données manquantes.
+- Ne repose pas les mêmes questions si l'utilisateur vient d'y répondre.
+- Si les réponses sont suffisantes, passe directement au plan ou au code demandé.
+- Si une réponse est courte comme "Libye, 48h, logo trust, COD", transforme-la en contraintes de projet exploitables.
+- Si tu dois encore poser des questions, pose uniquement les questions réellement bloquantes, maximum 3.
 
-RÃ©ponds en ${lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'franÃ§ais'}.
+Réponds en ${lang === 'ar' ? 'arabe' : lang === 'en' ? 'anglais' : 'français'}.
 Si tu fournis du code, utilise uniquement des blocs Markdown nomm?s html, css ou javascript.
-Si une information manque, pose les questions nÃ©cessaires avant d'inventer.`;
+Si une information manque, pose les questions nécessaires avant d'inventer.`;
     try {
         if (btn) {
             btn.disabled = true;
@@ -14931,9 +14931,9 @@ Si une information manque, pose les questions nÃ©cessaires avant d'inventer.`;
 }
 
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ§© COMPOSANTS MANQUANTS (Ã€ AJOUTER POUR Ã‰VITER LES CRASHS)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🧩 COMPOSANTS MANQUANTS (À AJOUTER POUR ÉVITER LES CRASHS)
+// ═══════════════════════════════════════════════════════════════════
 
 // 1. Le constructeur des blocs AIDA
 
@@ -14983,7 +14983,7 @@ if (CONFIG.DEBUG_MODE) {
         api,
         toast,
         i18n,
-        // ðŸ”¥ FIX : J'ai supprimÃ© "exportResults" qui faisait crasher l'initialisation
+        // 🔥 FIX : J'ai supprimé "exportResults" qui faisait crasher l'initialisation
         checkServerStatus
     };
     console.log('DAKA MARKET INTELLIGENCE SPYER READY - ON ECRASE GEMINI !');
@@ -15002,21 +15002,21 @@ function buildUpscaledMegaRedesignPrompt(rawPrompt) {
         lastData.targetUrl ||
         STATE.lastInputs?.funnelUrl ||
         STATE.lastInputs?.competitorUrl ||
-        'URL Ã€ COLLER ICI';
+        'URL À COLLER ICI';
 
     const offerType =
         lastData.funnelSectionSurgery?.offerDetected?.offerType ||
         lastData.sectionSurgery?.offerDetected?.offerType ||
         lastData.offerDetected?.offerType ||
         lastData.spyReport?.siteType ||
-        'DonnÃ©e non confirmÃ©e';
+        'Donnée non confirmée';
 
     const price =
         lastData.funnelSectionSurgery?.offerDetected?.price ||
         lastData.sectionSurgery?.offerDetected?.price ||
         lastData.priceIntel?.primaryPrice ||
         lastData.detectedPrice ||
-        'DonnÃ©e non confirmÃ©e';
+        'Donnée non confirmée';
 
     const currency =
         lastData.funnelSectionSurgery?.offerDetected?.currency ||
@@ -15030,70 +15030,70 @@ function buildUpscaledMegaRedesignPrompt(rawPrompt) {
         lastData.sectionSurgery?.offerDetected?.h1 ||
         lastData.h1 ||
         lastData.siteData?.h1 ||
-        'Non dÃ©tectÃ© dans les pages accessibles';
+        'Non détecté dans les pages accessibles';
 
     const basePrompt = String(rawPrompt || '').trim();
 
     const intro = isAr
-        ? `Ø£Ù†Øª Senior UI/UX Designer Ùˆ Growth Engineer Ùˆ Front-End Engineer Ùˆ Conversion Strategist Ù…ØªØ®ØµØµ ÙÙŠ Market Intelligence Spyer.`
+        ? `أنت Senior UI/UX Designer و Growth Engineer و Front-End Engineer و Conversion Strategist متخصص في Market Intelligence Spyer.`
         : isEn
             ? `You are a Senior UI/UX Designer, Growth Engineer, Front-End Engineer and Conversion Strategist specialized in Market Intelligence Spyer.`
-            : `Tu es un Senior UI/UX Designer, Growth Engineer, Front-End Engineer et Conversion Strategist spÃ©cialisÃ© Market Intelligence Spyer.`;
+            : `Tu es un Senior UI/UX Designer, Growth Engineer, Front-End Engineer et Conversion Strategist spécialisé Market Intelligence Spyer.`;
 
     const langInstruction = isAr
-        ? `Ø§ÙƒØªØ¨ Ø§Ù„ØµÙØ­Ø© Ø¨Ù„ØºØ© Ø§Ù„Ø³ÙˆÙ‚ Ø§Ù„Ù…Ø³ØªÙ‡Ø¯Ù ÙÙ‚Ø·. Ø¥Ø°Ø§ ÙƒØ§Ù†Øª Ø§Ù„ØµÙØ­Ø© Ø¹Ø±Ø¨ÙŠØ© ÙÙƒÙ„ Ø§Ù„Ø¹Ù†Ø§ÙˆÙŠÙ† ÙˆØ§Ù„Ø´Ø±Ø­ Ø¨Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©ØŒ Ù…Ø¹ Ø§Ù„Ø­ÙØ§Ø¸ Ø¹Ù„Ù‰ Ø£Ø³Ù…Ø§Ø¡ Ø§Ù„Ù…Ù†ØªØ¬Ø§Øª Ø£Ùˆ Ø§Ù„Ù…ØµØ·Ù„Ø­Ø§Øª Ø§Ù„Ø£ØµÙ„ÙŠØ© Ø¹Ù†Ø¯ Ø§Ù„Ø¶Ø±ÙˆØ±Ø©.`
+        ? `اكتب الصفحة بلغة السوق المستهدف فقط. إذا كانت الصفحة عربية فكل العناوين والشرح بالعربية، مع الحفاظ على أسماء المنتجات أو المصطلحات الأصلية عند الضرورة.`
         : isEn
             ? `Write the page strictly in the target market language. Keep product names or original terms only when necessary.`
-            : `RÃ©dige la page strictement dans la langue du marchÃ© cible. Garde les noms de produits ou termes originaux seulement quand c'est utile.`;
+            : `Rédige la page strictement dans la langue du marché cible. Garde les noms de produits ou termes originaux seulement quand c'est utile.`;
 
     return `
-MEGA AI REDESIGN PROMPT â€” MARKET INTELLIGENCE SPYER
-URL + IMAGE JOINTE + RAPPORT DAKA + CODE HTML/CSS/JS PRÃŠT Ã€ HÃ‰BERGER
+MEGA AI REDESIGN PROMPT — MARKET INTELLIGENCE SPYER
+URL + IMAGE JOINTE + RAPPORT DAKA + CODE HTML/CSS/JS PRÊT À HÉBERGER
 
 ${intro}
 
 MISSION :
-Reconstruire la page fournie comme une vraie page de vente premium, moderne, crÃ©dible et orientÃ©e conversion.
+Reconstruire la page fournie comme une vraie page de vente premium, moderne, crédible et orientée conversion.
 Tu peux travailler sur :
 - mon site actuel ;
 - une page concurrente ou adverse ;
-- une capture d'Ã©cran jointe ;
+- une capture d'écran jointe ;
 - une page inspirationnelle.
 
 IMPORTANT :
-Si la page est celle d'un concurrent, ne copie jamais sa marque, ses textes protÃ©gÃ©s ni ses assets privÃ©s. Utilise uniquement sa structure comme inspiration stratÃ©gique.
+Si la page est celle d'un concurrent, ne copie jamais sa marque, ses textes protégés ni ses assets privés. Utilise uniquement sa structure comme inspiration stratégique.
 
 SOURCES OBLIGATOIRES :
-1. URL de la page Ã  analyser :
+1. URL de la page à analyser :
 ${url}
 
-2. Image / capture dâ€™Ã©cran jointe :
-Analyse obligatoirement lâ€™image jointe. Ne te base pas uniquement sur lâ€™URL.
-La capture montre lâ€™Ã©tat rÃ©el de la page, le design actuel, la hiÃ©rarchie visuelle, les frictions UX, les sections visibles, la confiance perÃ§ue et les problÃ¨mes dâ€™interface.
+2. Image / capture d’écran jointe :
+Analyse obligatoirement l’image jointe. Ne te base pas uniquement sur l’URL.
+La capture montre l’état réel de la page, le design actuel, la hiérarchie visuelle, les frictions UX, les sections visibles, la confiance perçue et les problèmes d’interface.
 
-3. DonnÃ©es issues du rapport Daka :
-- Type dâ€™offre dÃ©tectÃ© : ${offerType}
+3. Données issues du rapport Daka :
+- Type d’offre détecté : ${offerType}
 - H1 actuel : ${h1}
-- Prix dÃ©tectÃ© ou statut prix : ${price}${currency ? ' ' + currency : ''}
+- Prix détecté ou statut prix : ${price}${currency ? ' ' + currency : ''}
 - Recommandations existantes :
-${basePrompt || 'DonnÃ©e non confirmÃ©e'}
+${basePrompt || 'Donnée non confirmée'}
 
 OBJECTIF BUSINESS :
-CrÃ©er une page qui donne envie, rassure vite, explique clairement l'offre, rend le risque faible, fait monter le dÃ©sir et pousse vers l'action.
-La page doit donner une impression de produit bien vendu : esthÃ©tique, copywriting tendu, preuve visible, CTA clair, objections traitÃ©es.
+Créer une page qui donne envie, rassure vite, explique clairement l'offre, rend le risque faible, fait monter le désir et pousse vers l'action.
+La page doit donner une impression de produit bien vendu : esthétique, copywriting tendu, preuve visible, CTA clair, objections traitées.
 
 IMPORTANT :
-Ne te base pas uniquement sur lâ€™URL.
-Compare lâ€™URL, lâ€™image jointe et les informations du rapport Daka.
-Si lâ€™URL et lâ€™image montrent des informations diffÃ©rentes, considÃ¨re lâ€™image comme preuve visuelle importante.
+Ne te base pas uniquement sur l’URL.
+Compare l’URL, l’image jointe et les informations du rapport Daka.
+Si l’URL et l’image montrent des informations différentes, considère l’image comme preuve visuelle importante.
 
-RÃˆGLES DE VÃ‰RITÃ‰ :
-- Ne pas inventer de tÃ©moignages, notes, clients, logos, garanties, prix ou rÃ©sultats.
-- Si une preuve manque, crÃ©er un emplacement propre marquÃ© "Ã€ remplacer par une preuve rÃ©elle".
-- Si un prix est non confirmÃ©, Ã©crire "Prix Ã  confirmer" et ne pas l'utiliser comme preuve.
-- Si une garantie est recommandÃ©e mais non observÃ©e, Ã©crire clairement "Recommandation : ajouter une garantie".
-- Garder les preuves observÃ©es : CTA, prix, bÃ©nÃ©fices, avis, villes, livraison, specs, images, FAQ, conditions.
-- Ne jamais transformer une hypothÃ¨se en fait.
+RÈGLES DE VÉRITÉ :
+- Ne pas inventer de témoignages, notes, clients, logos, garanties, prix ou résultats.
+- Si une preuve manque, créer un emplacement propre marqué "À remplacer par une preuve réelle".
+- Si un prix est non confirmé, écrire "Prix à confirmer" et ne pas l'utiliser comme preuve.
+- Si une garantie est recommandée mais non observée, écrire clairement "Recommandation : ajouter une garantie".
+- Garder les preuves observées : CTA, prix, bénéfices, avis, villes, livraison, specs, images, FAQ, conditions.
+- Ne jamais transformer une hypothèse en fait.
 
 LIVRABLE ATTENDU :
 Fournis du code front-end directement exploitable en :
@@ -15102,9 +15102,9 @@ Fournis du code front-end directement exploitable en :
 - JavaScript
 
 Format prioritaire :
-Un seul fichier HTML complet avec CSS et JS intÃ©grÃ©s.
+Un seul fichier HTML complet avec CSS et JS intégrés.
 
-Format alternatif si demandÃ© :
+Format alternatif si demandé :
 - index.html
 - style.css
 - script.js
@@ -15113,71 +15113,71 @@ Contraintes techniques :
 - Pas de React.
 - Pas de Vue.
 - Pas de backend obligatoire.
-- Pas de dÃ©pendance complexe.
-- Code prÃªt Ã  hÃ©berger sur un simple serveur HTML/CSS/JS.
+- Pas de dépendance complexe.
+- Code prêt à héberger sur un simple serveur HTML/CSS/JS.
 - Aucune erreur console.
 - Responsive mobile-first.
 - Aucun overflow horizontal.
 - Boutons larges et cliquables.
 - CTA visible rapidement.
-- Design premium, crÃ©dible et non gÃ©nÃ©rique.
-- Score Lighthouse visÃ© : rapide, propre, accessible.
-- Aucun texte cachÃ© derriÃ¨re un composant non utilisable sur mobile.
+- Design premium, crédible et non générique.
+- Score Lighthouse visé : rapide, propre, accessible.
+- Aucun texte caché derrière un composant non utilisable sur mobile.
 
-SI UNE SEULE RÃ‰PONSE NE SUFFIT PAS :
-Si le code est trop long pour une seule rÃ©ponse, dÃ©coupe-le en plusieurs parties.
+SI UNE SEULE RÉPONSE NE SUFFIT PAS :
+Si le code est trop long pour une seule réponse, découpe-le en plusieurs parties.
 
-RÃ¨gle stricte :
-Ã€ la fin de chaque partie, Ã©cris exactement :
-â€œTape GO pour recevoir la suite.â€
+Règle stricte :
+À la fin de chaque partie, écris exactement :
+“Tape GO pour recevoir la suite.”
 
 La partie suivante ne doit commencer que lorsque je tape :
 GO
 
-Chaque partie doit continuer exactement oÃ¹ la prÃ©cÃ©dente sâ€™est arrÃªtÃ©e.
-Ne recommence pas depuis zÃ©ro.
+Chaque partie doit continuer exactement où la précédente s’est arrêtée.
+Ne recommence pas depuis zéro.
 Ne saute pas de code.
-Ne rÃ©sume pas.
+Ne résume pas.
 
-DÃ©coupage recommandÃ© :
-- Partie 1 : diagnostic + stratÃ©gie + dÃ©but HTML.
+Découpage recommandé :
+- Partie 1 : diagnostic + stratégie + début HTML.
 - Partie 2 : suite HTML + CSS principal.
 - Partie 3 : CSS responsive + animations.
 - Partie 4 : JavaScript + interactions + finalisation.
-- Partie 5 si nÃ©cessaire : instructions dâ€™intÃ©gration.
+- Partie 5 si nécessaire : instructions d’intégration.
 
-ANALYSE Ã€ FAIRE AVANT CODAGE :
+ANALYSE À FAIRE AVANT CODAGE :
 Avant de coder, fais un mini diagnostic :
-1. Ce que montre lâ€™image.
-2. Ce que montre lâ€™URL.
-3. Ce que vend rÃ©ellement la page.
-4. Les problÃ¨mes UI/UX visibles.
-5. Les sections prÃ©sentes Ã  garder.
-6. Les sections prÃ©sentes Ã  amÃ©liorer.
-7. Les sections absentes Ã  ajouter.
-8. Les sections Ã  supprimer ou fusionner.
-9. Le nouvel ordre recommandÃ© de la page.
+1. Ce que montre l’image.
+2. Ce que montre l’URL.
+3. Ce que vend réellement la page.
+4. Les problèmes UI/UX visibles.
+5. Les sections présentes à garder.
+6. Les sections présentes à améliorer.
+7. Les sections absentes à ajouter.
+8. Les sections à supprimer ou fusionner.
+9. Le nouvel ordre recommandé de la page.
 10. Le positionnement de conversion.
 
-ARCHITECTURE OBLIGATOIRE Ã€ PRODUIRE :
+ARCHITECTURE OBLIGATOIRE À PRODUIRE :
 1. Header simple, lisible, non envahissant.
-2. Hero : rÃ©sultat promis + produit/service + preuve rapide + CTA principal.
-3. Ligne de rÃ©assurance : livraison, garantie, paiement, contact, avis ou preuve disponible.
-4. ProblÃ¨me / dÃ©sir client : ce que l'utilisateur veut Ã©viter ou obtenir.
-5. BÃ©nÃ©fices principaux : 3 Ã  5 bÃ©nÃ©fices concrets, pas des slogans.
-6. DÃ©monstration visuelle : images, vidÃ©o, galerie ou simulation.
-7. CaractÃ©ristiques / livrables : specs produit ou livrables service.
-8. Offre : pack, prix, ce que l'utilisateur reÃ§oit, bonus Ã©ventuels.
+2. Hero : résultat promis + produit/service + preuve rapide + CTA principal.
+3. Ligne de réassurance : livraison, garantie, paiement, contact, avis ou preuve disponible.
+4. Problème / désir client : ce que l'utilisateur veut éviter ou obtenir.
+5. Bénéfices principaux : 3 à 5 bénéfices concrets, pas des slogans.
+6. Démonstration visuelle : images, vidéo, galerie ou simulation.
+7. Caractéristiques / livrables : specs produit ou livrables service.
+8. Offre : pack, prix, ce que l'utilisateur reçoit, bonus éventuels.
 9. Preuves de confiance : avis, cas clients, badges, villes, photos, conditions.
 10. Objections / FAQ : questions avant achat ou prise de contact.
 11. CTA final : rappel de la promesse + action simple.
-12. Footer propre : contact, lÃ©gal, rÃ©seaux, conditions.
+12. Footer propre : contact, légal, réseaux, conditions.
 
-ORDRE PSYCHOLOGIQUE Ã€ RESPECTER :
+ORDRE PSYCHOLOGIQUE À RESPECTER :
 - D'abord faire comprendre.
-- Ensuite faire ressentir le problÃ¨me ou le dÃ©sir.
+- Ensuite faire ressentir le problème ou le désir.
 - Ensuite montrer la preuve.
-- Ensuite rendre l'offre concrÃ¨te.
+- Ensuite rendre l'offre concrète.
 - Ensuite enlever le risque.
 - Enfin demander l'action.
 
@@ -15187,60 +15187,60 @@ EXIGENCES DESIGN :
 - Lisible.
 - Premium.
 - Contraste fort.
-- HiÃ©rarchie visuelle claire.
+- Hiérarchie visuelle claire.
 - Espacement propre.
-- Animations lÃ©gÃ¨res.
-- Pas de design gÃ©nÃ©rique.
-- Pas de rendu â€œfait par IAâ€.
+- Animations légères.
+- Pas de design générique.
+- Pas de rendu “fait par IA”.
 - Pas de surcharge visuelle.
-- Pas de faux tÃ©moignages trompeurs.
+- Pas de faux témoignages trompeurs.
 - Interface 360px, 390px, 430px impeccable.
-- Cards stables : aucun texte ne doit dÃ©border.
-- Ã‰viter les gros blocs fatigants : utiliser cartes, bandeaux, tableaux courts, Ã©tapes, preuves et schÃ©mas simples.
-- Utiliser un style premium adaptÃ© au marchÃ© : SaaS, e-commerce, service, formation ou produit physique.
+- Cards stables : aucun texte ne doit déborder.
+- Éviter les gros blocs fatigants : utiliser cartes, bandeaux, tableaux courts, étapes, preuves et schémas simples.
+- Utiliser un style premium adapté au marché : SaaS, e-commerce, service, formation ou produit physique.
 
 EXIGENCES COPYWRITING :
-- H1 orientÃ© bÃ©nÃ©fice.
+- H1 orienté bénéfice.
 - Sous-titre clair.
 - CTA principal fort.
 - Microcopy rassurante sous CTA.
 - FAQ utile.
 - Texte naturel.
-- Promesses rÃ©alistes.
-- Langage adaptÃ© au pays cible.
-- Ã‰viter les phrases vagues comme â€œamÃ©liorer votre expÃ©rienceâ€.
+- Promesses réalistes.
+- Langage adapté au pays cible.
+- Éviter les phrases vagues comme “améliorer votre expérience”.
 - Chaque section doit avoir un but commercial.
-- Chaque CTA doit Ãªtre spÃ©cifique : acheter, commander, rÃ©server, demander un devis, lancer l'audit, discuter sur WhatsApp.
-- Pour un produit physique : parler prix, stock, livraison, retour, garantie, paiement, avis, photos rÃ©elles.
-- Pour un service : parler livrables, dÃ©lai, rÃ©sultat attendu, accompagnement, rÃ©visions, preuve client, appel dÃ©couverte.
-- Pour SaaS : parler dÃ©monstration, cas d'usage, onboarding, intÃ©grations, sÃ©curitÃ©, pricing.
+- Chaque CTA doit être spécifique : acheter, commander, réserver, demander un devis, lancer l'audit, discuter sur WhatsApp.
+- Pour un produit physique : parler prix, stock, livraison, retour, garantie, paiement, avis, photos réelles.
+- Pour un service : parler livrables, délai, résultat attendu, accompagnement, révisions, preuve client, appel découverte.
+- Pour SaaS : parler démonstration, cas d'usage, onboarding, intégrations, sécurité, pricing.
 
 ${langInstruction}
 
 EXIGENCES JAVASCRIPT :
 Inclure seulement le JS utile :
-- menu mobile si nÃ©cessaire ;
-- FAQ accordÃ©on ;
+- menu mobile si nécessaire ;
+- FAQ accordéon ;
 - sticky CTA mobile si utile ;
 - scroll doux ;
 - micro-interactions ;
 - aucune erreur console.
 
 IMAGES :
-Utilise lâ€™image jointe comme rÃ©fÃ©rence visuelle.
+Utilise l’image jointe comme référence visuelle.
 Si elle contient le produit, reprends son esprit dans le design.
-Si une image produit doit Ãªtre remplacÃ©e plus tard, utilise un chemin clair comme :
+Si une image produit doit être remplacée plus tard, utilise un chemin clair comme :
 assets/product-main.jpg
 
-SCHÃ‰MAS / SECTIONS VISUELLES Ã€ INCLURE :
-- Une section "Pourquoi cette page doit convertir" avec 3 cartes : dÃ©sir, preuve, action.
+SCHÉMAS / SECTIONS VISUELLES À INCLURE :
+- Une section "Pourquoi cette page doit convertir" avec 3 cartes : désir, preuve, action.
 - Une mini roadmap visuelle du parcours utilisateur.
-- Une section "Avant / AprÃ¨s" si la page actuelle est confuse.
-- Une section FAQ en accordÃ©on.
+- Une section "Avant / Après" si la page actuelle est confuse.
+- Une section FAQ en accordéon.
 - Un sticky CTA mobile discret si pertinent.
 
-ACCESSIBILITÃ‰ ET QUALITÃ‰ :
-- Balises sÃ©mantiques.
+ACCESSIBILITÉ ET QUALITÉ :
+- Balises sémantiques.
 - Boutons accessibles au clavier.
 - Focus visible.
 - Alt text sur les images.
@@ -15249,23 +15249,23 @@ ACCESSIBILITÃ‰ ET QUALITÃ‰ :
 - Pas d'animations lourdes.
 
 SORTIE ATTENDUE :
-RÃ©pondre dans cet ordre :
+Répondre dans cet ordre :
 1. Mini diagnostic URL + image.
-2. Nouvelle stratÃ©gie de page.
+2. Nouvelle stratégie de page.
 3. Code complet HTML/CSS/JS.
 
 PHRASE DIRECTRICE :
-Redesign = Market Intelligence + preuve rÃ©elle + psychologie commerciale + UI/UX premium + code HTML/CSS/JS prÃªt Ã  hÃ©berger.
+Redesign = Market Intelligence + preuve réelle + psychologie commerciale + UI/UX premium + code HTML/CSS/JS prêt à héberger.
 `.trim();
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// âœ¨ MAGIC PROMPT RENDERER (VERSION BLINDÃ‰E ANTI-CRASH)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// ✨ MAGIC PROMPT RENDERER (VERSION BLINDÉE ANTI-CRASH)
+// ═══════════════════════════════════════════════════════════════════
 window.displayMagicPrompt = function(promptText) {
     let container = document.getElementById('magicPromptPlaceholder');
 
-    // ðŸ›¡ï¸ SÃ‰CURITÃ‰ : Si le innerHTML a Ã©crasÃ© la div, on la recrÃ©e Ã  la volÃ©e !
+    // 🛡️ SÉCURITÉ : Si le innerHTML a écrasé la div, on la recrée à la volée !
     if (!container) {
         container = document.createElement('div');
         container.id = 'magicPromptPlaceholder';
@@ -15279,14 +15279,14 @@ promptText = buildUpscaledMegaRedesignPrompt(promptText);
     const isEn = STATE.currentLang === 'en';
 
     const title   = 'Mega Redesign Prompt';
-    const copyBtn = isAr ? 'Ù†Ø³Ø®' : (isEn ? 'COPY' : 'COPIER');
+    const copyBtn = isAr ? 'نسخ' : (isEn ? 'COPY' : 'COPIER');
 const subText = isAr
-    ? 'Ø¨Ø±ÙˆÙ…Ø¨Øª ÙƒØ§Ù…Ù„ ÙŠØ³ØªØ¹Ù…Ù„ Ø§Ù„Ø±Ø§Ø¨Ø· ÙˆØ§Ù„ØµÙˆØ±Ø© Ø§Ù„Ù…Ø±ÙÙ‚Ø© ÙˆØªÙ‚Ø±ÙŠØ± Daka Ù„ØªÙˆÙ„ÙŠØ¯ ØµÙØ­Ø© HTML/CSS/JS.'
+    ? 'برومبت كامل يستعمل الرابط والصورة المرفقة وتقرير Daka لتوليد صفحة HTML/CSS/JS.'
     : isEn
     ? 'Complete prompt using the URL, attached screenshot and Daka report to generate HTML/CSS/JS.'
-    : 'Prompt complet basÃ© sur URL + image jointe + rapport Daka pour gÃ©nÃ©rer du HTML/CSS/JS.';
+    : 'Prompt complet basé sur URL + image jointe + rapport Daka pour générer du HTML/CSS/JS.';
 
-    // ðŸ“Š Calcul des statistiques du prompt
+    // 📊 Calcul des statistiques du prompt
     const lineCount  = (promptText.match(/\n/g) || []).length + 1;
     const wordCount  = promptText.trim().split(/\s+/).length;
 
@@ -15301,7 +15301,7 @@ const subText = isAr
                         <i class="fas fa-wand-magic-sparkles" style="color:white"></i>
                     </div>
                     ${title}
-                    <span style="background:rgba(139,92,246,0.2); color:#c4b5fd; border:1px solid rgba(139,92,246,0.3); padding:2px 8px; border-radius:6px; font-size:0.6rem; font-weight:800;">GÃ‰NÃ‰RÃ‰</span>
+                    <span style="background:rgba(139,92,246,0.2); color:#c4b5fd; border:1px solid rgba(139,92,246,0.3); padding:2px 8px; border-radius:6px; font-size:0.6rem; font-weight:800;">GÉNÉRÉ</span>
                 </h3>
                 <p style="color:#64748b; font-size:0.75rem; margin:0;">${subText}</p>
             </div>
@@ -15322,9 +15322,9 @@ const subText = isAr
         </div>
     </div>`;
 };
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ§± COMPOSANT : GÃ‰NÃ‰RATEUR DE BLOC PHASE AIDA
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 🧱 COMPOSANT : GÉNÉRATEUR DE BLOC PHASE AIDA
+// ═══════════════════════════════════════════════════════════════════
 function copyCounterText(btn) {
     const text = btn.closest('[data-copy]')?.dataset.copy || '';
     navigator.clipboard.writeText(text)
@@ -15332,7 +15332,7 @@ function copyCounterText(btn) {
             btn.innerHTML = '<i class="fas fa-check"></i>';
             btn.style.color = '#34d399';
             setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i>'; btn.style.color = ''; }, 2000);
-            if (typeof toast !== 'undefined') toast.success('CopiÃ© !');
+            if (typeof toast !== 'undefined') toast.success('Copié !');
         })
         .catch(() => {
             const ta = document.createElement('textarea');
@@ -15341,31 +15341,31 @@ function copyCounterText(btn) {
             ta.select();
             document.execCommand('copy');
             document.body.removeChild(ta);
-            if (typeof toast !== 'undefined') toast.success('CopiÃ© !');
+            if (typeof toast !== 'undefined') toast.success('Copié !');
         });
 }
 
 function renderPhaseBlock(label, phase, icon) {
-    // 1. SÃ©curitÃ© et Fallback (CONSERVÃ‰)
+    // 1. Sécurité et Fallback (CONSERVÉ)
     if (!phase) phase = { score: 0 };
 
-    // 2. DÃ©termination de la couleur (Stricte cohÃ©rence avec l'UI - CONSERVÃ‰)
+    // 2. Détermination de la couleur (Stricte cohérence avec l'UI - CONSERVÉ)
     const score = phase.score || 0;
     const scoreColor = score >= 80 ? 'var(--accent-success)' : (score >= 50 ? 'var(--accent-warning)' : 'var(--accent-danger)');
 
-    // 3. I18n & Contextuel (CONSERVÃ‰ + EXTENSION DEEP)
+    // 3. I18n & Contextuel (CONSERVÉ + EXTENSION DEEP)
     const isAr = STATE.currentLang === 'ar';
     const isEn = STATE.currentLang === 'en';
 
     const t = {
-        critique: isAr ? 'ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ø®Ø¨ÙŠØ±' : (isEn ? 'Expert Critique' : 'Critique de l\'Expert'),
-        solution: isAr ? 'ØªÙˆØµÙŠØ§Øª Ø§Ù„ØªØ­Ø³ÙŠÙ†' : (isEn ? 'Strategic Solutions' : 'Solutions StratÃ©giques'),
-        empty: isAr ? 'ØªØ­Ù„ÙŠÙ„ Ø£Ø¹Ù…Ù‚ Ù…Ø·Ù„ÙˆØ¨' : 'Analyse approfondie requise',
-        bias: isAr ? 'Ø§Ù„Ø¹Ø§Ù…Ù„ Ø§Ù„Ù†ÙØ³ÙŠ' : (isEn ? 'Psychological Trigger' : 'Levier Psychologique'),
-        friction: isAr ? 'Ø¹Ø§Ø¦Ù‚ Ø§Ù„ØªØ­ÙˆÙŠÙ„' : (isEn ? 'Conversion Friction' : 'Point de Friction')
+        critique: isAr ? 'تحليل الخبير' : (isEn ? 'Expert Critique' : 'Critique de l\'Expert'),
+        solution: isAr ? 'توصيات التحسين' : (isEn ? 'Strategic Solutions' : 'Solutions Stratégiques'),
+        empty: isAr ? 'تحليل أعمق مطلوب' : 'Analyse approfondie requise',
+        bias: isAr ? 'العامل النفسي' : (isEn ? 'Psychological Trigger' : 'Levier Psychologique'),
+        friction: isAr ? 'عائق التحويل' : (isEn ? 'Conversion Friction' : 'Point de Friction')
     };
 
-    // 4. Extraction intelligente du contenu (Multi-clÃ©s backend - CONSERVÃ‰ + PAS SUPPORT)
+    // 4. Extraction intelligente du contenu (Multi-clés backend - CONSERVÉ + PAS SUPPORT)
     // On ajoute le support pour .problem, .agitation, .solution si c'est un bloc PAS
     const critiqueText = phase.headlineCritique || phase.ctaCritique || phase.urgencyHack || phase.problem || phase.agitation || t.empty;
     const proposals = phase.proposedProHeadlines || phase.proposedBenefits || phase.proposedCTAs || (phase.solution ? [phase.solution] : []);
@@ -15378,15 +15378,15 @@ function renderPhaseBlock(label, phase, icon) {
             </li>`).join('')
         : `<li style="opacity:0.5;">${t.empty}</li>`;
 
-    // --- [NOUVEAUTÃ‰ DEEP] : Badge de Biais Cognitif ---
-    // Si le moteur renvoie un biais spÃ©cifique utilisÃ© (ex: Aversion Ã  la perte), on l'affiche
+    // --- [NOUVEAUTÉ DEEP] : Badge de Biais Cognitif ---
+    // Si le moteur renvoie un biais spécifique utilisé (ex: Aversion à la perte), on l'affiche
     const biasTag = phase.detectedBias ? `
         <div style="margin-top: 10px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(139, 92, 246, 0.3); border-radius: 6px; font-size: 0.7rem; color: #c4b5fd;">
             <i class="fas fa-brain"></i> <strong>${t.bias}:</strong> ${phase.detectedBias}
         </div>
     ` : '';
 
-    // 5. Rendu HTML Premium (CONSERVÃ‰ + DESIGN DEEP)
+    // 5. Rendu HTML Premium (CONSERVÉ + DESIGN DEEP)
     return `
         <div class="result-card" style="border-top: 4px solid ${scoreColor}; display: flex; flex-direction: column; height: 100%; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative; overflow: hidden;">
 
@@ -15434,11 +15434,11 @@ function renderPhaseBlock(label, phase, icon) {
     `;
 }
 
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ•µï¸â€â™‚ï¸ ESPIONNAGE CROISÃ‰ (INTERCONNECTIVITÃ‰ DES ONGLETS)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“‹ COPIE DES FICHIERS GÃ‰NÃ‰RÃ‰S (LLMS.TXT / ROBOTS.TXT / META)
+// ═══════════════════════════════════════════════════════════════════
+// 🕵️‍♂️ ESPIONNAGE CROISÉ (INTERCONNECTIVITÉ DES ONGLETS)
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// 📋 COPIE DES FICHIERS GÉNÉRÉS (LLMS.TXT / ROBOTS.TXT / META)
 
 
 
@@ -15485,7 +15485,7 @@ function afterTabVisible(tabKey, callback) {
 function openCompetitorAudit(tabKey, inputId, rawUrl) {
     const targetUrl = String(rawUrl || '').trim();
     if (!targetUrl) {
-        if (typeof toast !== 'undefined') toast.warning(STATE.currentLang === 'ar' ? 'Ø±Ø§Ø¨Ø· Ø§Ù„Ù…Ù†Ø§ÙØ³ ØºÙŠØ± Ù…ÙˆØ¬ÙˆØ¯.' : 'URL concurrent manquante.');
+        if (typeof toast !== 'undefined') toast.warning(STATE.currentLang === 'ar' ? 'رابط المنافس غير موجود.' : 'URL concurrent manquante.');
         return;
     }
 
@@ -15506,12 +15506,12 @@ function openCompetitorAudit(tabKey, inputId, rawUrl) {
 
 window.spyOnCompetitorFunnel = function(url) {
     openCompetitorAudit('funnel', 'funnelUrl', url);
-    if (typeof toast !== 'undefined') toast.info(STATE.currentLang === 'ar' ? 'Ø¬Ø§Ù‡Ø² Ù„ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ù‚Ù…Ø¹ Ø§Ù„Ø®Ø§Øµ Ø¨Ù‡Ù…!' : 'PrÃªt Ã  analyser leur Funnel ! Cliquez sur Lancer.');
+    if (typeof toast !== 'undefined') toast.info(STATE.currentLang === 'ar' ? 'جاهز لتحليل القمع الخاص بهم!' : 'Prêt à analyser leur Funnel ! Cliquez sur Lancer.');
 };
 
 window.spyOnCompetitorTech = function(url) {
     openCompetitorAudit('technical', 'techUrl', url);
-    if (typeof toast !== 'undefined') toast.info(STATE.currentLang === 'ar' ? 'Ø¬Ø§Ù‡Ø² Ù„Ù„ØªØ¯Ù‚ÙŠÙ‚ Ø§Ù„ØªÙ‚Ù†ÙŠ!' : 'PrÃªt pour l\'audit technique ! Cliquez sur Lancer.');
+    if (typeof toast !== 'undefined') toast.info(STATE.currentLang === 'ar' ? 'جاهز للتدقيق التقني!' : 'Prêt pour l\'audit technique ! Cliquez sur Lancer.');
 };
 
 window.generateCompetitorKeywords = function(url, domain = '', title = '') {
@@ -15561,7 +15561,7 @@ window.generateCompetitorKeywords = function(url, domain = '', title = '') {
 
     if (typeof toast !== 'undefined') {
         toast.info(
-            isAr ? 'ØªÙ… ØªØ¬Ù‡ÙŠØ² Ù…ÙˆÙ„Ø¯ Ø§Ù„ÙƒÙ„Ù…Ø§Øª Ù„Ù‡Ø°Ø§ Ø§Ù„Ù…Ù†Ø§ÙØ³. Ø§Ø¶ØºØ· Ø¹Ù„Ù‰ Ø²Ø± Ø§Ù„ØªÙˆÙ„ÙŠØ¯.'
+            isAr ? 'تم تجهيز مولد الكلمات لهذا المنافس. اضغط على زر التوليد.'
             : isEn ? 'Keyword generator is ready for this competitor. Click generate.'
             : 'Le generateur de mots-cles est pret pour ce concurrent. Cliquez sur generer.'
         );
@@ -15586,18 +15586,18 @@ document.addEventListener('click', (event) => {
         window.generateCompetitorKeywords(url, btn.dataset.domain || '', btn.dataset.title || '');
     }
 }, true);
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// ðŸ“± MEGA PATCH MOBILE (JS UX)
-// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// ═══════════════════════════════════════════════════════════════════
+// 📱 MEGA PATCH MOBILE (JS UX)
+// ═══════════════════════════════════════════════════════════════════
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    // 1. Auto-scroll intelligent vers les rÃ©sultats
+    // 1. Auto-scroll intelligent vers les résultats
     // On intercepte ta fonction showResults pour y ajouter le scroll
     const originalShowResults = window.showResults;
 
     window.showResults = function(elementId) {
-        // ExÃ©cuter le code d'origine (afficher la div)
+        // Exécuter le code d'origine (afficher la div)
         if(originalShowResults) {
             originalShowResults(elementId);
         } else {
@@ -15605,12 +15605,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (el) el.classList.add('active');
         }
 
-        // Si on est sur mobile, on scroll doucement vers les rÃ©sultats
+        // Si on est sur mobile, on scroll doucement vers les résultats
         if (window.innerWidth <= 768) {
             setTimeout(() => {
                 const resultsDiv = document.getElementById(elementId);
                 if (resultsDiv) {
-                    // Petit dÃ©calage pour tenir compte du header sticky
+                    // Petit décalage pour tenir compte du header sticky
                     const y = resultsDiv.getBoundingClientRect().top + window.scrollY - 80;
                     window.scrollTo({ top: y, behavior: 'smooth' });
                 }
@@ -15618,16 +15618,16 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // 2. Anti-Zoom iOS (Ã‰vite que l'iPhone zoom sur la page quand on clique sur un input)
+    // 2. Anti-Zoom iOS (Évite que l'iPhone zoom sur la page quand on clique sur un input)
     const inputs = document.querySelectorAll('input[type="text"], input[type="url"], select, textarea');
     inputs.forEach(input => {
         input.addEventListener('focus', () => {
             if (window.innerWidth <= 480) {
-                // Force la dÃ©sactivation du zoom temporairement
+                // Force la désactivation du zoom temporairement
                 const metaViewport = document.querySelector('meta[name=viewport]');
                 if(metaViewport) {
                     metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0');
-                    // RÃ©tablit le comportement normal Ã  la sortie du champ
+                    // Rétablit le comportement normal à la sortie du champ
                     setTimeout(() => {
                         metaViewport.setAttribute('content', 'width=device-width, initial-scale=1.0');
                     }, 100);
@@ -15636,7 +15636,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    console.log("ðŸ“± Mobile Patch UI/UX InjectÃ© avec succÃ¨s !");
+    console.log("📱 Mobile Patch UI/UX Injecté avec succès !");
 });
 
 
