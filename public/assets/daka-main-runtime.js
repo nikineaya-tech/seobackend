@@ -2383,13 +2383,13 @@ function getCompetitorRenderLabels(langCode = 'fr') {
             whereAttack: '\u0623\u064a\u0646 \u0646\u0636\u0631\u0628\u061f',
             whatNow: '\u0645\u0627\u0630\u0627 \u0646\u0641\u0639\u0644 \u0627\u0644\u0622\u0646\u061f',
             verdict: '\u0645\u0646 \u064a\u062a\u0635\u062f\u0631 \u0627\u0644\u0633\u0648\u0642\u061f',
-            attack: '\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a \u0627\u0644\u0645\u0648\u0635\u0649 \u0628\u0647',
+            attack: '\u0627\u0644\u062a\u0645\u0648\u0636\u0639 \u0627\u0644\u0645\u0642\u062a\u0631\u062d',
             study: '\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0633\u0648\u0642',
             actions: '\u062e\u0637\u0629 \u0627\u0644\u0647\u062c\u0648\u0645 \u0627\u0644\u0623\u0648\u0644\u0648\u064a\u0629',
             profiles: '\u0627\u0644\u0645\u0646\u0627\u0641\u0633\u0648\u0646 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0648\u0646',
             sources: '\u0627\u0644\u0645\u0635\u0627\u062f\u0631 \u0648\u0627\u0644\u0642\u0646\u0648\u0627\u062a',
-            answers: '\u0627\u0644\u0625\u062c\u0627\u0628\u0627\u062a \u0627\u0644\u062d\u0627\u0633\u0645\u0629',
-            positioning: '\u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0630\u064a \u0646\u0648\u0635\u064a \u0628\u0627\u062d\u062a\u0644\u0627\u0644\u0647',
+            answers: '\u0627\u0644\u062e\u0644\u0627\u0635\u0629 \u0627\u0644\u0646\u0647\u0627\u0626\u064a\u0629',
+            positioning: '\u0627\u0644\u062a\u0645\u0648\u0636\u0639 \u0627\u0644\u0630\u064a \u0646\u0646\u0635\u062d \u0628\u0647',
             demand: '\u0625\u0634\u0627\u0631\u0627\u062a \u0627\u0644\u0637\u0644\u0628',
             patterns: '\u0623\u0646\u0645\u0627\u0637 \u0627\u0644\u0639\u0631\u0636',
             factors: '\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u0642\u0631\u0627\u0631',
@@ -2676,8 +2676,8 @@ function renderCompetitorDecisionLayerV2(data, { isAr = false, isEn = false } = 
 
     const geoNote = normalizeText(intel.geoInterpretation?.mismatchNote || '');
     const positioningText = normalizeText(intel.positioning || attack.positioningStatement || finalAnswers.positionToTake || '');
-    const editorialTitle = normalizeText(intel.editorialTitle || verdict.currentLeader || finalAnswers.whoWins || data.keyword || labels.verdict);
-    const editorialSubtitle = normalizeText(intel.editorialSubtitle || attack.promiseToMake || verdict.marketPattern || study.subject || labels.openingSub);
+    const editorialTitle = normalizeText(intel.editorialTitle || verdict.currentLeader || finalAnswers.whoWins || [data.keyword, intel.geoInterpretation?.market].filter(Boolean).join(' ? ') || labels.verdict);
+    const editorialSubtitle = normalizeText(intel.editorialSubtitle || verdict.marketPattern || cleanItems(study.observedDemandSignals, 1)[0] || cleanItems(study.buyerDecisionFactors, 1)[0] || attack.promiseToMake || study.subject || labels.openingSub);
 
     const actionCard = (item) => {
         if (!item || !isUseful(item.action)) return '';
@@ -3753,7 +3753,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
 // 8.5 DECISION LAYER â€” RENDER ONLY
 let decisionLayerHtml = '';
 
-const elite = data?.decisionLayer || null;
+const elite = data?.competitorIntelligence ? null : (data?.decisionLayer || null);
 
 if (elite) {
   const proofItems = Array.isArray(elite.proofItems)
@@ -10167,36 +10167,39 @@ function renderFieldGuideTop(model, { isAr = false, isEn = false, dir = 'ltr', e
     if (!model || !model.triggered) return '';
 
     const t = {
-        title: isAr ? 'Ø®Ø·Ø© Ø§Ù„ØªÙ†ÙÙŠØ° Ø§Ù„Ø¹Ù…Ù„ÙŠØ©' : isEn ? 'Action Plan' : 'Plan dâ€™Action Concret',
-        links: isAr ? 'ØªØ¹Ù„ÙŠÙ‚Ø§Øª ÙˆØ±ÙˆØ§Ø¨Ø· Ù…ÙŠØ¯Ø§Ù†ÙŠØ©' : isEn ? 'Social comment proof' : 'Preuves commentaires sociaux',
-        comments: isAr ? 'ØªØ¹Ù„ÙŠÙ‚Ø§Øª Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡' : isEn ? 'Customer comments' : 'Commentaires clients'
+        title: isAr ? '\u0627\u0644\u062F\u0644\u064A\u0644 \u0627\u0644\u0639\u0645\u0644\u064A' : isEn ? 'Concrete guide' : 'Guide concret',
+        links: isAr ? 'تعليقات وروابط ميدانية' : isEn ? 'Field links and comments' : 'Commentaires et liens terrain',
+        comments: isAr ? 'تعليقات العملاء' : isEn ? 'Customer comments' : 'Commentaires clients',
+        voice: isAr ? 'صوت السوق' : isEn ? 'Market voice' : 'Voix du marché',
+        search: isAr ? 'خطة البحث' : isEn ? 'Search plan' : 'Plan de recherche'
     };
 
-    const steps = Array.isArray(model.guideTop?.steps) ? model.guideTop.steps : [];
+    const steps = Array.isArray(model.guideTop?.steps) ? model.guideTop.steps.filter(Boolean).slice(0, 5) : [];
     const verdict = model.customerVoiceVerdict || {};
     const social = model.socialListeningIntel || {};
     const postsIntel = social.postsIntel || {};
     const commentsIntel = social.commentsIntel || {};
     const languageBank = social.marketLanguageBank || {};
+    const commentLinks = Array.isArray(model?.links?.comments) ? model.links.comments.filter(Boolean) : [];
     const line = (label, value, color = '#94a3b8') => value ? `
         <div style="font-size:.78rem;color:#cbd5e1;line-height:1.55;margin-bottom:6px;" dir="auto">
             <strong style="color:${color};">${esc(label)}:</strong> ${esc(Array.isArray(value) ? value.slice(0, 4).join(' | ') : value)}
         </div>
     ` : '';
     const intelSummaryHtml = [
-        line(isAr ? 'Ø§Ù„Ø£Ù„Ù… Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ' : isEn ? 'Main pain' : 'Douleur principale', verdict.mainPain, '#ef4444'),
-        line(isAr ? 'Ø§Ù„Ø§Ø¹ØªØ±Ø§Ø¶ Ø§Ù„Ø±Ø¦ÙŠØ³ÙŠ' : isEn ? 'Main objection' : 'Objection principale', verdict.mainObjection, '#f59e0b'),
-        line(isAr ? 'Ø²Ø§ÙˆÙŠØ© Ø§Ù„Ø¥Ø¹Ù„Ø§Ù†' : isEn ? 'Ad hook' : 'Hook ads', verdict.adHook || verdict.copyAngle, '#3b82f6'),
-        line(isAr ? 'ØªØµØ­ÙŠØ­ Ø§Ù„Ø¹Ø±Ø¶' : isEn ? 'Offer fix' : 'Correction offre', verdict.offerFix, '#10b981'),
-        line(isAr ? 'Ù…ÙˆØ§Ø¶ÙŠØ¹ Ù…ØªÙƒØ±Ø±Ø©' : isEn ? 'Dominant topics' : 'Sujets dominants', postsIntel.dominantTopics, '#a78bfa'),
-        line(isAr ? 'Ø£Ø³Ø¦Ù„Ø© Ø§Ù„Ø´Ø±Ø§Ø¡' : isEn ? 'Purchase questions' : 'Questions achat', commentsIntel.purchaseQuestions, '#ec4899'),
-        line(isAr ? 'Ø¹Ø¨Ø§Ø±Ø§Øª Ù„Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù…' : isEn ? 'Phrases to reuse' : 'Phrases Ã  rÃ©utiliser', languageBank.phrasesToUseInAds || languageBank.objectionPhrases, '#22c55e')
+        line(isAr ? 'الألم الرئيسي' : isEn ? 'Main pain' : 'Douleur principale', verdict.mainPain, '#ef4444'),
+        line(isAr ? 'الاعتراض الرئيسي' : isEn ? 'Main objection' : 'Objection principale', verdict.mainObjection, '#f59e0b'),
+        line(isAr ? 'زاوية الإعلان' : isEn ? 'Ad hook' : 'Hook ads', verdict.adHook || verdict.copyAngle, '#3b82f6'),
+        line(isAr ? 'تصحيح العرض' : isEn ? 'Offer fix' : 'Correction offre', verdict.offerFix, '#10b981'),
+        line(isAr ? 'مواضيع متكررة' : isEn ? 'Dominant topics' : 'Sujets dominants', postsIntel.dominantTopics, '#a78bfa'),
+        line(isAr ? 'أسئلة الشراء' : isEn ? 'Purchase questions' : 'Questions achat', commentsIntel.purchaseQuestions, '#ec4899'),
+        line(isAr ? 'عبارات للاستخدام' : isEn ? 'Phrases to reuse' : 'Phrases à réutiliser', languageBank.phrasesToUseInAds || languageBank.objectionPhrases, '#22c55e')
     ].join('');
-    const searchTerms = Array.isArray(model.searchPlan?.variants) ? model.searchPlan.variants.slice(0, 8) : [];
+    const searchTerms = Array.isArray(model.searchPlan?.variants) ? model.searchPlan.variants.filter(Boolean).slice(0, 8) : [];
     const searchPlanHtml = searchTerms.length ? `
         <div style="margin-bottom:12px;background:rgba(59,130,246,.035);border:1px solid rgba(59,130,246,.12);border-radius:10px;padding:10px;">
             <div style="font-size:.68rem;color:#93c5fd;font-weight:800;text-transform:uppercase;margin-bottom:8px;">
-                ${isAr ? 'Ø®Ø·Ø© Ø§Ù„Ø¨Ø­Ø«' : isEn ? 'Search plan' : 'Plan de recherche'}
+                ${t.search}
             </div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;">
                 ${searchTerms.map(term => `
@@ -10208,6 +10211,19 @@ function renderFieldGuideTop(model, { isAr = false, isEn = false, dir = 'ltr', e
         </div>
     ` : '';
 
+    const commentsHtml = commentLinks.length ? `
+        <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px;">
+            <div style="font-size:.68rem;color:#94a3b8;font-weight:800;text-transform:uppercase;margin-bottom:8px;">
+                ${t.links}
+            </div>
+            <div style="display:grid;grid-template-columns:1fr;gap:10px;">
+                <div><small style="color:#ec4899;font-weight:700;">${t.comments} (${commentLinks.length})</small>${renderFieldLinksBlock(commentLinks, '#ec4899', esc)}</div>
+            </div>
+        </div>
+    ` : '';
+
+    if (!steps.length && !intelSummaryHtml && !searchPlanHtml && !commentsHtml) return '';
+
     return `
     <div class="result-card fade-in-up" style="margin-bottom:22px;border-left:4px solid #22c55e;" dir="${dir}">
         <h3 style="margin-bottom:12px;color:white;font-size:1rem;display:flex;align-items:center;gap:10px;">
@@ -10217,7 +10233,7 @@ function renderFieldGuideTop(model, { isAr = false, isEn = false, dir = 'ltr', e
 
         ${steps.length ? `
         <div style="margin-bottom:12px;">
-            ${steps.slice(0, 5).map((s, i) => `
+            ${steps.map((s, i) => `
                 <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:6px;">
                     <span style="color:#22c55e;font-weight:800;font-size:.78rem;">${i + 1}.</span>
                     <span style="color:#e2e8f0;font-size:.82rem;line-height:1.55;" dir="auto">${esc(s)}</span>
@@ -10228,21 +10244,13 @@ function renderFieldGuideTop(model, { isAr = false, isEn = false, dir = 'ltr', e
         ${intelSummaryHtml ? `
         <div style="margin-bottom:12px;background:rgba(34,197,94,.035);border:1px solid rgba(34,197,94,.12);border-radius:10px;padding:10px;">
             <div style="font-size:.68rem;color:#86efac;font-weight:800;text-transform:uppercase;margin-bottom:8px;">
-                ${isAr ? 'ØµÙˆØª Ø§Ù„Ø³ÙˆÙ‚' : isEn ? 'Market Voice' : 'Voix du marchÃ©'}
+                ${t.voice}
             </div>
             ${intelSummaryHtml}
         </div>` : ''}
 
         ${searchPlanHtml}
-
-        <div style="background:rgba(255,255,255,.02);border:1px solid rgba(255,255,255,.06);border-radius:10px;padding:10px;">
-            <div style="font-size:.68rem;color:#94a3b8;font-weight:800;text-transform:uppercase;margin-bottom:8px;">
-                ${t.links}
-            </div>
-            <div style="display:grid;grid-template-columns:1fr;gap:10px;">
-                <div><small style="color:#ec4899;font-weight:700;">${t.comments} (${model.links.comments.length})</small>${renderFieldLinksBlock(model.links.comments, '#ec4899', esc)}</div>
-            </div>
-        </div>
+        ${commentsHtml}
     </div>`;
 }
 
@@ -15564,6 +15572,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     
+
 
 
 

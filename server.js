@@ -1,4 +1,4 @@
-﻿// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // Daka Market Intelligence Spyer API v5.2.1 - PRODUCTION ULTRA-GRADE
 // DevOps Level: LEGENDARY | Bttle-tested | Scale: 100K+ req/day
 // Architecture: Microservices-ready | Event-driven | Zero-downtime
@@ -7221,31 +7221,63 @@ function compactBusinessText(value, max = 220) {
 
 function competitorBusinessLabels(lang = 'fr') {
     if (lang === 'ar') return {
-        fallbackSell: 'Ø¹Ø±Ø¶ ØªØ¬Ø§Ø±ÙŠ Ù…Ø±ØªØ¨Ø· Ø¨Ø·Ù„Ø¨ Ø§Ù„Ø³ÙˆÙ‚',
-        weakTrust: 'Ø§Ù„Ø£Ø¯Ù„Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø«Ù‚Ø© ÙˆØ§Ù„Ø¶Ù…Ø§Ù†Ø§Øª ØºÙŠØ± ÙˆØ§Ø¶Ø­Ø© ÙÙŠ Ø§Ù„ØµÙØ­Ø© Ø§Ù„ØªÙŠ ØªÙ…Øª Ù…Ø¹Ø§ÙŠÙ†ØªÙ‡Ø§',
-        weakPrice: 'Ø§Ù„Ø£Ø³Ø¹Ø§Ø± ÙˆØ´Ø±ÙˆØ· Ø§Ù„Ø¯ÙØ¹ ØºÙŠØ± ÙˆØ§Ø¶Ø­Ø© ÙÙŠ Ø§Ù„ØµÙØ­Ø© Ø§Ù„ØªÙŠ ØªÙ…Øª Ù…Ø¹Ø§ÙŠÙ†ØªÙ‡Ø§',
-        weakDelivery: 'Ø§Ù„ØªØ³Ù„ÙŠÙ… ÙˆØ§Ù„Ø¥Ø±Ø¬Ø§Ø¹ ØºÙŠØ± Ù…ÙˆØ¶Ø­ÙŠÙ† Ø¨Ù…Ø§ ÙŠÙƒÙÙŠ ÙÙŠ Ø§Ù„ØµÙØ­Ø© Ø§Ù„ØªÙŠ ØªÙ…Øª Ù…Ø¹Ø§ÙŠÙ†ØªÙ‡Ø§',
-        attack: 'Ø§Ø¬Ø¹Ù„ Ø¹Ø±Ø¶Ùƒ Ø£ÙˆØ¶Ø­ ÙˆØ£ÙƒØ«Ø± Ù‚Ø§Ø¨Ù„ÙŠØ© Ù„Ù„Ø¥Ø«Ø¨Ø§Øª ÙˆØ£Ø³Ù‡Ù„ ÙÙŠ Ø§Ù„Ù…Ù‚Ø§Ø±Ù†Ø©',
-        proof: 'Ø£Ø¶Ù Ø£Ø¯Ù„Ø© Ø¹Ù…Ù„Ø§Ø¡ ÙˆØ´Ø±ÙˆØ·Ø§ ÙˆØ§Ø¶Ø­Ø© ÙˆØ¶Ù…Ø§Ù†Ø§ Ù‚Ø§Ø¨Ù„Ø§ Ù„Ù„ØªØ­Ù‚Ù‚'
+        fallbackSell: 'عرض تجاري تم رصده على هذه الطلبات ويحتاج إلى توصيف أوضح.',
+        weakTrust: 'عناصر الثقة أو الضمان لا تظهر بوضوح في الصفحة المعاينة.',
+        weakPrice: 'السعر أو شروط الدفع غير مؤكدة بما يكفي في الصفحة المعاينة.',
+        weakDelivery: 'معلومات التوصيل أو الإرجاع أو التنفيذ ليست واضحة بما يكفي في الصفحة المعاينة.',
+        attack: 'اجعل عرضك أوضح، أسهل مقارنة، وأكثر قابلية للتحقق.',
+        proof: 'أضف أدلة عملاء، شروطا واضحة، وعنصر طمأنة يمكن التحقق منه.'
     };
     if (lang === 'en') return {
-        fallbackSell: 'Commercial offer related to the observed market demand',
-        weakTrust: 'Trust proof and guarantees are not clear on the inspected page',
-        weakPrice: 'Pricing and payment terms are not clear on the inspected page',
-        weakDelivery: 'Delivery and returns are not sufficiently explained on the inspected page',
-        attack: 'Make your offer clearer, easier to prove, and easier to compare',
-        proof: 'Add customer proof, clear terms, and a verifiable guarantee'
+        fallbackSell: 'A commercial offer was observed on this demand and needs clearer qualification.',
+        weakTrust: 'Trust elements or guarantees are not clearly visible on the inspected page.',
+        weakPrice: 'Price or payment terms are not confirmed clearly enough on the inspected page.',
+        weakDelivery: 'Delivery, returns, or execution details are not clear enough on the inspected page.',
+        attack: 'Make your offer clearer, easier to compare, and easier to verify.',
+        proof: 'Add customer proof, clear terms, and one verifiable reassurance element.'
     };
     return {
-        fallbackSell: 'Offre commerciale liee a la demande observee',
-        weakTrust: "Les preuves de confiance et garanties ne sont pas claires sur la page inspectee",
-        weakPrice: "Les prix et conditions de paiement ne sont pas clairs sur la page inspectee",
-        weakDelivery: "La livraison et les retours ne sont pas assez expliques sur la page inspectee",
-        attack: "Rendre l'offre plus claire, plus prouvable et plus facile a comparer",
-        proof: "Ajouter des preuves client, des conditions claires et une garantie verifiable"
+        fallbackSell: 'Une offre commerciale a été repérée sur cette demande et doit être mieux qualifiée.',
+        weakTrust: 'Les éléments de confiance ou de garantie ne sont pas assez visibles sur la page analysée.',
+        weakPrice: 'Le prix ou les conditions de paiement ne sont pas confirmés assez clairement sur la page analysée.',
+        weakDelivery: 'Les informations de livraison, de retour ou d’exécution ne sont pas assez claires sur la page analysée.',
+        attack: "Rends l’offre plus claire, plus simple à comparer et plus facile à vérifier.",
+        proof: 'Ajoute des preuves clients, des conditions claires et un élément de réassurance vérifiable.'
     };
 }
-
+function localizeCompetitorMarketName(geo = '', lang = 'fr') {
+    const locale = ['fr', 'en', 'ar'].includes(lang) ? lang : 'fr';
+    const raw = String(geo || '').trim();
+    const key = raw.toLowerCase();
+    const markets = {
+        'morocco': { fr: 'Maroc', en: 'Morocco', ar: '\u0627\u0644\u0645\u063A\u0631\u0628' },
+        'libya': { fr: 'Libye', en: 'Libya', ar: '\u0644\u064A\u0628\u064A\u0627' },
+        'tunisia': { fr: 'Tunisie', en: 'Tunisia', ar: '\u062A\u0648\u0646\u0633' },
+        'algeria': { fr: 'Alg\u00E9rie', en: 'Algeria', ar: '\u0627\u0644\u062C\u0632\u0627\u0626\u0631' },
+        'egypt': { fr: '\u00C9gypte', en: 'Egypt', ar: '\u0645\u0635\u0631' },
+        'saudi arabia': { fr: 'Arabie saoudite', en: 'Saudi Arabia', ar: '\u0627\u0644\u0633\u0639\u0648\u062F\u064A\u0629' },
+        'united arab emirates': { fr: '\u00C9mirats arabes unis', en: 'United Arab Emirates', ar: '\u0627\u0644\u0625\u0645\u0627\u0631\u0627\u062A' },
+        'qatar': { fr: 'Qatar', en: 'Qatar', ar: '\u0642\u0637\u0631' },
+        'kuwait': { fr: 'Kowe\u00EFt', en: 'Kuwait', ar: '\u0627\u0644\u0643\u0648\u064A\u062A' },
+        'bahrain': { fr: 'Bahre\u00EFn', en: 'Bahrain', ar: '\u0627\u0644\u0628\u062D\u0631\u064A\u0646' },
+        'oman': { fr: 'Oman', en: 'Oman', ar: '\u0639\u0645\u0627\u0646' },
+        'jordan': { fr: 'Jordanie', en: 'Jordan', ar: '\u0627\u0644\u0623\u0631\u062F\u0646' },
+        'lebanon': { fr: 'Liban', en: 'Lebanon', ar: '\u0644\u0628\u0646\u0627\u0646' },
+        'france': { fr: 'France', en: 'France', ar: '\u0641\u0631\u0646\u0633\u0627' },
+        'united states': { fr: '\u00C9tats-Unis', en: 'United States', ar: '\u0627\u0644\u0648\u0644\u0627\u064A\u0627\u062A \u0627\u0644\u0645\u062A\u062D\u062F\u0629' },
+        'global english': { fr: 'March\u00E9 global anglophone', en: 'Global English', ar: '\u0627\u0644\u0625\u0646\u062C\u0644\u064A\u0632\u064A\u0629 \u0627\u0644\u0639\u0627\u0644\u0645\u064A\u0629' }
+    };
+    const found = markets[key];
+    if (found) return found[locale] || found.fr;
+    if (!raw) return locale === 'ar' ? '\u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641' : locale === 'en' ? 'target market' : 'march\u00E9 cible';
+    return raw;
+}
+function competitorMarketPhrase(geo = '', lang = 'fr') {
+    const market = localizeCompetitorMarketName(geo, lang);
+    if (lang === 'ar') return `\u0641\u064a \u0633\u0648\u0642 ${market}`;
+    if (lang === 'en') return `for the ${market} market`;
+    return `pour le march\u00E9 ${market}`;
+}
 async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
     const labels = competitorBusinessLabels(lang);
     const cacheKey = String(competitor.url || competitor.domain || '').toLowerCase();
@@ -7440,663 +7472,13 @@ function dedupeBusinessActions(actions = []) {
 }
 
 function buildStrategicPosition({ leader = {}, query = '', geo = '', lang = 'fr' } = {}) {
-    const isMarketplace = Boolean(leader.signals?.hasMarketplaceModel);
-    if (lang === 'ar') {
-        return isMarketplace
-            ? `ØªÙ…ÙˆØ¶Ø¹ ÙƒØ¨Ø¯ÙŠÙ„ Ù…ØªØ®ØµØµ ÙÙŠ "${query}" Ø¯Ø§Ø®Ù„ ${geo}: Ù†ØµÙŠØ­Ø© Ø£ÙˆØ¶Ø­ ÙˆØ¶Ù…Ø§Ù†Ø§Øª Ø£Ù‚ÙˆÙ‰ ÙˆØ®Ø¯Ù…Ø© Ù…Ø§ Ø¨Ø¹Ø¯ Ø§Ù„Ø¨ÙŠØ¹ Ø£ÙƒØ«Ø± Ù‚Ø±Ø¨Ø§ Ù…Ù† Ø§Ù„Ø³ÙˆÙ‚ Ø§Ù„Ø¹Ø§Ù….`
-            : `ØªÙ…ÙˆØ¶Ø¹ ÙƒØ¹Ø±Ø¶ Ø£ÙƒØ«Ø± ÙˆØ¶ÙˆØ­Ø§ ÙˆÙ‚Ø§Ø¨Ù„ÙŠØ© Ù„Ù„Ø¥Ø«Ø¨Ø§Øª ÙÙŠ "${query}" Ø¯Ø§Ø®Ù„ ${geo} Ù…Ø¹ Ø´Ø±ÙˆØ· ÙˆØ¶Ù…Ø§Ù†Ø§Øª ÙˆÙ†ØªØ§Ø¦Ø¬ ÙŠØ³Ù‡Ù„ Ù…Ù‚Ø§Ø±Ù†ØªÙ‡Ø§.`;
-    }
-    if (lang === 'en') {
-        return isMarketplace
-            ? `Position as the specialist alternative for "${query}" in ${geo}: clearer guidance, stronger guarantees, and closer support than a general marketplace.`
-            : `Position as the clearest and easiest-to-prove offer for "${query}" in ${geo}, with comparable terms, guarantees, and outcomes.`;
-    }
-    return isMarketplace
-        ? `Se positionner comme l'alternative specialisee sur "${query}" au ${geo} : conseil plus clair, garanties plus fortes et accompagnement plus proche qu'une marketplace generaliste.`
-        : `Se positionner comme l'offre la plus claire et la plus facile a prouver sur "${query}" au ${geo}, avec conditions, garanties et resultats comparables.`;
+    const archetype = detectCompetitorBusinessArchetype(query, [leader]);
+    return archetypeBusinessCopy(archetype, query, geo, lang).position;
 }
-
 function buildStrategicPromise({ leader = {}, query = '', geo = '', lang = 'fr' } = {}) {
-    const isMarketplace = Boolean(leader.signals?.hasMarketplaceModel);
-    if (lang === 'ar') {
-        return isMarketplace
-            ? `Ø§Ø­ØµÙ„ Ø¹Ù„Ù‰ "${query}" ÙÙŠ ${geo} Ù…Ø¹ Ù†ØµÙŠØ­Ø© ÙˆØ§Ø¶Ø­Ø©ØŒ ÙˆØ¶Ù…Ø§Ù† Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªØ­Ù‚Ù‚ØŒ ÙˆØ¯Ø¹Ù… Ø­Ù‚ÙŠÙ‚ÙŠ Ø¨Ø¹Ø¯ Ø§Ù„Ø´Ø±Ø§Ø¡.`
-            : `Ø§Ø®ØªØ± "${query}" Ø¨Ø«Ù‚Ø© Ø¨ÙØ¶Ù„ Ø³Ø¹Ø± Ø¥Ø¬Ù…Ø§Ù„ÙŠ ÙˆØ§Ø¶Ø­ØŒ ÙˆØ¶Ù…Ø§Ù† Ù…ÙˆØ«Ù‚ØŒ ÙˆØ´Ø±ÙˆØ· ØªØ³Ù„ÙŠÙ… ÙˆØ¥Ø±Ø¬Ø§Ø¹ Ø³Ù‡Ù„Ø© Ø§Ù„ÙÙ‡Ù….`;
-    }
-    if (lang === 'en') {
-        return isMarketplace
-            ? `Get "${query}" in ${geo} with clear guidance, a verifiable guarantee, and real after-sales support.`
-            : `Choose "${query}" with confidence through clear total pricing, verified guarantees, and understandable delivery and return terms.`;
-    }
-    return isMarketplace
-        ? `Obtenez "${query}" au ${geo} avec un conseil clair, une garantie verifiable et un vrai accompagnement apres l'achat.`
-        : `Choisissez "${query}" en confiance grace a un prix total clair, des garanties verifiables et des conditions de livraison et retour faciles a comprendre.`;
+    const archetype = detectCompetitorBusinessArchetype(query, [leader]);
+    return archetypeBusinessCopy(archetype, query, geo, lang).promise;
 }
-
-function buildDeterministicBusinessActions({ leader = {}, query = '', geo = '', proofs = [], weaknesses = [], lang = 'fr' } = {}) {
-    const leaderName = leader.domain || (lang === 'en' ? 'the leader' : lang === 'ar' ? 'Ø§Ù„Ù…ØªØµØ¯Ø±' : 'le leader');
-    const fr = [
-        { category: 'positionnement', action: `Publier une page comparative "${query}" expliquant clairement pourquoi choisir votre offre plutot que ${leaderName}.`, why: 'Transformer la comparaison naturelle des acheteurs en avantage lisible.', impact: 'HIGH', effort: 'MEDIUM', horizon: '7_DAYS' },
-        { category: 'preuve', action: `Ajouter des preuves verifiables adaptees au ${geo} : avis, photos reelles, garantie et conditions de retour.`, why: proofs[0] || 'Reduire le risque percu avant achat.', impact: 'HIGH', effort: 'LOW', horizon: '7_DAYS' },
-        { category: 'offre', action: `Clarifier prix total, livraison, retours et garantie pour "${query}" dans un seul bloc facile a comparer.`, why: weaknesses[0] || 'Rendre la decision plus simple que chez les concurrents generalistes.', impact: 'HIGH', effort: 'LOW', horizon: '7_DAYS' },
-        { category: 'conversion', action: `Construire un parcours court : choisir, verifier la livraison au ${geo}, payer ou contacter en moins de trois etapes.`, why: 'Reduire la friction commerciale.', impact: 'HIGH', effort: 'MEDIUM', horizon: '7_DAYS' },
-        { category: 'acquisition', action: `Creer des pages d'acquisition par besoin, usage et ville autour de "${query}" au ${geo}.`, why: 'Couvrir des demandes precises que les grandes plateformes traitent de facon generale.', impact: 'MEDIUM', effort: 'HIGH', horizon: '30_DAYS' },
-        { category: 'confiance', action: `Mettre en place un systeme continu de collecte d'avis et de preuves apres chaque vente.`, why: 'Construire un avantage de confiance cumulatif.', impact: 'HIGH', effort: 'MEDIUM', horizon: '30_DAYS' },
-        { category: 'offre', action: `Lancer une offre specialisee avec conseil, garantie et support apres-vente clairement superieurs a ${leaderName}.`, why: 'Eviter une guerre de catalogue ou de prix face au leader.', impact: 'HIGH', effort: 'HIGH', horizon: '30_DAYS' }
-    ];
-    if (lang === 'en') return fr.map(x => ({ ...x, action: ({
-        positionnement: `Publish a "${query}" comparison page explaining why buyers should choose your offer over ${leaderName}.`,
-        preuve: `Add verifiable proof for ${geo}: reviews, real photos, guarantee, and return terms.`,
-        offre: x.horizon === '7_DAYS' ? `Clarify total price, delivery, returns, and guarantee for "${query}" in one comparable block.` : `Launch a specialist offer with advice, guarantees, and after-sales support clearly stronger than ${leaderName}.`,
-        conversion: `Build a short journey: choose, verify delivery in ${geo}, and pay or contact in under three steps.`,
-        acquisition: `Create acquisition pages by need, use case, and city around "${query}" in ${geo}.`,
-        confiance: `Create a continuous post-purchase review and proof collection system.`
-    })[x.category], why: ({
-        positionnement: 'Turn natural buyer comparison into a clear advantage.',
-        preuve: 'Reduce perceived risk before purchase.',
-        offre: 'Make the decision simpler than on generalist competitors.',
-        conversion: 'Reduce commercial friction.',
-        acquisition: 'Cover precise demand that large platforms address broadly.',
-        confiance: 'Build a cumulative trust advantage.'
-    })[x.category] }));
-    if (lang === 'ar') return fr.map(x => ({ ...x, action: ({
-        positionnement: `Ø£Ù†Ø´Ø¦ ØµÙØ­Ø© Ù…Ù‚Ø§Ø±Ù†Ø© Ø­ÙˆÙ„ "${query}" ØªØ´Ø±Ø­ Ù„Ù…Ø§Ø°Ø§ ÙŠØ®ØªØ§Ø± Ø§Ù„Ø¹Ù…ÙŠÙ„ Ø¹Ø±Ø¶Ùƒ Ø¨Ø¯Ù„Ø§ Ù…Ù† ${leaderName}.`,
-        preuve: `Ø£Ø¶Ù Ø£Ø¯Ù„Ø© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ØªØ­Ù‚Ù‚ ÙÙŠ ${geo}: Ø¢Ø±Ø§Ø¡ ÙˆØµÙˆØ± Ø­Ù‚ÙŠÙ‚ÙŠØ© ÙˆØ¶Ù…Ø§Ù† ÙˆØ´Ø±ÙˆØ· Ø¥Ø±Ø¬Ø§Ø¹.`,
-        offre: x.horizon === '7_DAYS' ? `ÙˆØ¶Ø­ Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ ÙˆØ§Ù„ØªØ³Ù„ÙŠÙ… ÙˆØ§Ù„Ø¥Ø±Ø¬Ø§Ø¹ ÙˆØ§Ù„Ø¶Ù…Ø§Ù† Ù„Ø¹Ø±Ø¶ "${query}" ÙÙŠ ÙƒØªÙ„Ø© ÙˆØ§Ø­Ø¯Ø© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„Ù…Ù‚Ø§Ø±Ù†Ø©.` : `Ø£Ø·Ù„Ù‚ Ø¹Ø±Ø¶Ø§ Ù…ØªØ®ØµØµØ§ Ù…Ø¹ Ù†ØµÙŠØ­Ø© ÙˆØ¶Ù…Ø§Ù† ÙˆØ¯Ø¹Ù… Ø¨Ø¹Ø¯ Ø§Ù„Ø¨ÙŠØ¹ Ø£Ù‚ÙˆÙ‰ Ø¨ÙˆØ¶ÙˆØ­ Ù…Ù† ${leaderName}.`,
-        conversion: `Ø§Ø¨Ù† Ù…Ø³Ø§Ø±Ø§ Ù‚ØµÙŠØ±Ø§: Ø§Ù„Ø§Ø®ØªÙŠØ§Ø± ÙˆØ§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„ØªØ³Ù„ÙŠÙ… ÙÙŠ ${geo} ÙˆØ§Ù„Ø¯ÙØ¹ Ø£Ùˆ Ø§Ù„ØªÙˆØ§ØµÙ„ ÙÙŠ Ø£Ù‚Ù„ Ù…Ù† Ø«Ù„Ø§Ø« Ø®Ø·ÙˆØ§Øª.`,
-        acquisition: `Ø£Ù†Ø´Ø¦ ØµÙØ­Ø§Øª Ø§ÙƒØªØ³Ø§Ø¨ Ø­Ø³Ø¨ Ø§Ù„Ø­Ø§Ø¬Ø© ÙˆØ§Ù„Ø§Ø³ØªØ®Ø¯Ø§Ù… ÙˆØ§Ù„Ù…Ø¯ÙŠÙ†Ø© Ø­ÙˆÙ„ "${query}" ÙÙŠ ${geo}.`,
-        confiance: `Ø£Ù†Ø´Ø¦ Ù†Ø¸Ø§Ù…Ø§ Ù…Ø³ØªÙ…Ø±Ø§ Ù„Ø¬Ù…Ø¹ Ø§Ù„Ø¢Ø±Ø§Ø¡ ÙˆØ§Ù„Ø£Ø¯Ù„Ø© Ø¨Ø¹Ø¯ ÙƒÙ„ Ø¹Ù…Ù„ÙŠØ© Ø¨ÙŠØ¹.`
-    })[x.category], why: ({
-        positionnement: 'Ø­ÙˆÙ‘Ù„ Ù…Ù‚Ø§Ø±Ù†Ø© Ø§Ù„Ù…Ø´ØªØ±ÙŠ Ø§Ù„Ø·Ø¨ÙŠØ¹ÙŠØ© Ø¥Ù„Ù‰ Ù…ÙŠØ²Ø© ÙˆØ§Ø¶Ø­Ø©.',
-        preuve: 'Ù‚Ù„Ù„ Ø§Ù„Ù…Ø®Ø§Ø·Ø± Ø§Ù„Ù…ØªØµÙˆØ±Ø© Ù‚Ø¨Ù„ Ø§Ù„Ø´Ø±Ø§Ø¡.',
-        offre: 'Ø§Ø¬Ø¹Ù„ Ø§Ù„Ù‚Ø±Ø§Ø± Ø£Ø¨Ø³Ø· Ù…Ù† Ø§Ù„Ù…Ù†Ø§ÙØ³ÙŠÙ† Ø§Ù„Ø¹Ø§Ù…ÙŠÙ†.',
-        conversion: 'Ù‚Ù„Ù„ Ø§Ù„Ø§Ø­ØªÙƒØ§Ùƒ Ø§Ù„ØªØ¬Ø§Ø±ÙŠ.',
-        acquisition: 'ØºØ· Ø·Ù„Ø¨Ø§Øª Ø¯Ù‚ÙŠÙ‚Ø© ØªØ¹Ø§Ù„Ø¬Ù‡Ø§ Ø§Ù„Ù…Ù†ØµØ§Øª Ø§Ù„ÙƒØ¨Ø±Ù‰ Ø¨Ø´ÙƒÙ„ Ø¹Ø§Ù….',
-        confiance: 'Ø§Ø¨Ù† Ù…ÙŠØ²Ø© Ø«Ù‚Ø© ØªØ±Ø§ÙƒÙ…ÙŠØ©.'
-    })[x.category] }));
-    return fr;
-}
-
-function buildCompetitorDecisionIntelligence({ competitors = [], marketSources = [], mergedData = {}, lang = 'fr', query = '', geo = '' } = {}) {
-    const isAr = lang === 'ar', isEn = lang === 'en';
-    const profiles = competitors.slice(0, 5).map(c => ({
-        domain: c.domain, title: c.title, url: c.url, position: c.position, competitorType: c.competitorType, sitelinks: c.sitelinks,
-        dominance: c.dominance, commercialIntentScore: c.commercialIntentScore, geoMatched: c.geoMatched,
-        whatTheySell: c.businessProfile?.whatTheySell || c.snippet,
-        primaryPromise: c.businessProfile?.primaryPromise || c.title,
-        observedStrengths: c.businessProfile?.observedStrengths || [],
-        structuralStrengths: c.businessProfile?.structuralStrengths || [],
-        productSignals: c.businessProfile?.productSignals || [],
-        siteLevelEvidence: c.businessProfile?.siteLevelEvidence || null,
-        productLevelEvidence: c.businessProfile?.productLevelEvidence || null,
-        signals: c.businessProfile?.signals || {},
-        deducedWeaknesses: c.businessProfile?.deducedWeaknesses || [],
-        missingProofs: c.businessProfile?.missingProofs || [],
-        attackAngle: c.businessProfile?.attackAngle || mergedData.winningMove,
-        evidenceLinks: c.businessProfile?.evidenceLinks || [c.url].filter(Boolean),
-        confidence: c.businessProfile?.confidence || 'LOW'
-    }));
-    const leader = profiles[0] || {};
-    const evidenceLinks = [...new Set(profiles.flatMap(p => (p.evidenceLinks || []).map(x => x?.url || x)).filter(Boolean))].slice(0, 12);
-    const allWeaknesses = [...new Set(profiles.flatMap(p => p.deducedWeaknesses || []))].slice(0, 8);
-    const allProofs = [...new Set(profiles.flatMap(p => p.missingProofs || []))].slice(0, 8);
-    const leaderReasons = [...(leader.structuralStrengths || [])];
-    const leaderReasonDetails = leaderReasons.map(reason => ({
-        reason,
-        scope: 'brand_site',
-        type: 'observed',
-        confidence: leader.confidence || 'LOW',
-        evidenceLinks: [leader.siteLevelEvidence?.url || leader.url].filter(Boolean)
-    }));
-    if (leader.geoMatched) {
-        const reason = isAr ? 'Ø­Ø¶ÙˆØ± Ù‚ÙˆÙŠ ÙˆÙ…Ù„Ø§Ø¦Ù… Ø¬ØºØ±Ø§ÙÙŠØ§ Ù„Ù„Ø³ÙˆÙ‚ Ø§Ù„Ù…Ø³ØªÙ‡Ø¯Ù' : isEn ? 'Strong geographic relevance in the target market' : 'Forte pertinence geographique sur le marche cible';
-        leaderReasons.push(reason);
-        leaderReasonDetails.push({ reason, scope: 'market_visibility', type: 'deduced', confidence: 'MEDIUM', evidenceLinks: [leader.url].filter(Boolean) });
-    }
-    if (Number(leader.commercialIntentScore || 0) >= 50) {
-        const reason = isAr ? 'Ù…Ø³Ø§Ø± ØªØ¬Ø§Ø±ÙŠ ÙˆØ§Ø¶Ø­ ÙŠØ³Ø§Ø¹Ø¯ Ø§Ù„Ø²Ø§Ø¦Ø± Ø¹Ù„Ù‰ Ø§Ù„Ø´Ø±Ø§Ø¡' : isEn ? 'Clear commercial journey that helps visitors buy' : "Parcours commercial clair aidant le visiteur a acheter";
-        leaderReasons.push(reason);
-        leaderReasonDetails.push({ reason, scope: 'commercial_journey', type: 'deduced', confidence: 'MEDIUM', evidenceLinks: [leader.url].filter(Boolean) });
-    }
-    if (Number(leader.sitelinks || 0) > 0) {
-        const reason = isAr ? 'ØªØ¸Ù‡Ø± Ù„Ù‡ Ø¹Ø¯Ø© ØµÙØ­Ø§Øª Ù…Ù‡Ù…Ø© Ù…Ø¨Ø§Ø´Ø±Ø©ØŒ Ù…Ø§ ÙŠØ¹ÙƒØ³ Ø­Ø¶ÙˆØ±Ø§ Ù…Ù†Ø¸Ù…Ø§ ÙˆÙˆØ§Ø³Ø¹Ø§' : isEn ? 'Multiple important pages are surfaced directly, indicating broad and structured visibility' : 'Plusieurs pages importantes remontent directement, signe dâ€™une visibilite large et structuree';
-        leaderReasons.push(reason);
-        leaderReasonDetails.push({ reason, scope: 'market_visibility', type: 'observed', confidence: 'MEDIUM', evidenceLinks: [leader.url].filter(Boolean) });
-    }
-    if (!leaderReasons.length && leader.domain) {
-        const reason = isAr ? 'ÙŠØªØµØ¯Ø± Ø§Ù„Ù†ØªØ§Ø¦Ø¬ Ø§Ù„ØªØ¬Ø§Ø±ÙŠØ© Ø§Ù„Ù…Ø±ØµÙˆØ¯Ø©ØŒ Ù„ÙƒÙ† Ø£Ø³Ø¨Ø§Ø¨ ØªÙÙˆÙ‚ Ø§Ù„Ø¹Ù„Ø§Ù…Ø© ØªØ­ØªØ§Ø¬ Ø£Ø¯Ù„Ø© Ø¥Ø¶Ø§ÙÙŠØ©' : isEn ? 'Leads the observed commercial results, but its brand advantage needs more evidence' : 'Occupe la premiere place commerciale observee, mais son avantage de marque demande davantage de preuves';
-        leaderReasons.push(reason);
-        leaderReasonDetails.push({ reason, scope: 'market_visibility', type: 'deduced', confidence: 'LOW', evidenceLinks: [leader.url].filter(Boolean) });
-    }
-    const rawActions = buildDeterministicBusinessActions({ leader, query, geo, proofs: allProofs, weaknesses: allWeaknesses, lang }).map((item, index) => ({
-        ...item,
-        type: 'recommended',
-        confidence: profiles.length ? 'MEDIUM' : 'LOW',
-        evidenceLinks: evidenceLinks.slice(0, 4)
-    }));
-    const priorityActions = dedupeBusinessActions(rawActions);
-    const marketPattern = mergedData.marketDynamics?.porterVerdict || mergedData.marketInsights?.notes || mergedData.marketInsights?.serpIntent;
-    const positionToTake = buildStrategicPosition({ leader, query, geo, lang });
-    const promiseToMake = buildStrategicPromise({ leader, query, geo, lang });
-    const demandSignals = [
-        ...(mergedData.marketInsights?.vocabulary || []),
-        ...(mergedData.marketInsights?.relatedSearches || []).map(x => x?.query || x)
-    ].filter(Boolean).slice(0, 8);
-    const buyerDecisionFactors = [
-        profiles.some(p => p.signals?.hasPrice) ? (lang === 'ar' ? 'Ø§Ù„Ø³Ø¹Ø± ÙˆÙˆØ¶ÙˆØ­ Ø§Ù„ØªÙƒÙ„ÙØ©' : lang === 'en' ? 'Price and total-cost clarity' : 'Prix et clarte du cout total') : null,
-        profiles.some(p => p.signals?.brandHasDelivery) ? (lang === 'ar' ? 'Ø§Ù„ØªØ³Ù„ÙŠÙ… ÙˆØ§Ù„ØªØºØ·ÙŠØ©' : lang === 'en' ? 'Delivery and coverage' : 'Livraison et couverture') : null,
-        profiles.some(p => p.signals?.brandHasReturns) ? (lang === 'ar' ? 'Ø§Ù„Ø¥Ø±Ø¬Ø§Ø¹ ÙˆØªÙ‚Ù„ÙŠÙ„ Ø§Ù„Ù…Ø®Ø§Ø·Ø±' : lang === 'en' ? 'Returns and risk reduction' : 'Retours et reduction du risque') : null,
-        profiles.some(p => p.signals?.hasReviews) ? (lang === 'ar' ? 'Ø§Ù„Ø¢Ø±Ø§Ø¡ ÙˆØ§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠØ©' : lang === 'en' ? 'Reviews and social proof' : 'Avis et preuves sociales') : null
-    ].filter(Boolean);
-    return {
-        productMarketStudy: {
-            subject: query,
-            geo,
-            observedDemandSignals: demandSignals,
-            observedOfferPatterns: [...new Set(profiles.map(p => p.whatTheySell).filter(Boolean))].slice(0, 5),
-            buyerDecisionFactors,
-            exploitableOpenings: allWeaknesses.slice(0, 5),
-            type: 'deduced',
-            confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW',
-            evidenceLinks
-        },
-        marketVerdict: {
-            currentLeader: leader.domain || null,
-            whoWins: leader.domain || null,
-            whyTheyWin: leaderReasons,
-            whyTheyWinDetails: leaderReasonDetails,
-            marketPattern,
-            type: 'deduced',
-            confidence: leader.confidence || 'LOW',
-            evidenceLinks: leader.evidenceLinks || []
-        },
-        competitorProfiles: profiles,
-        recommendedAttackAngle: {
-            whatCompetitorsSell: [...new Set(profiles.map(p => p.whatTheySell).filter(Boolean))].slice(0, 4),
-            whatTheyDoNotProve: allProofs,
-            promiseToMake,
-            positioningStatement: positionToTake,
-            proofsToAdd: allProofs,
-            type: 'recommended',
-            confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW',
-            evidenceLinks
-        },
-        priorityActions,
-        surveillance: {
-            competitors: competitors.slice(5, 10).map(x => ({
-                ...x,
-                role: lang === 'ar' ? 'Ù…Ù†Ø§ÙØ³ ØªØ¬Ø§Ø±ÙŠ Ù„Ù„Ù…Ø±Ø§Ù‚Ø¨Ø©' : lang === 'en' ? 'Commercial competitor to monitor' : 'Concurrent commercial a surveiller',
-                recommendedUse: lang === 'ar' ? 'Ù‚Ø§Ø±Ù† Ø¹Ø±Ø¶Ù‡ ÙˆØ£Ø³Ø¹Ø§Ø±Ù‡ ÙˆØ£Ø¯Ù„ØªÙ‡ ÙˆÙ…Ø³Ø§Ø± Ø§Ù„Ø´Ø±Ø§Ø¡.' : lang === 'en' ? 'Compare its offer, pricing, proof, and purchase journey.' : "Comparer son offre, ses prix, ses preuves et son parcours d'achat."
-            })),
-            marketSources: marketSources.slice(0, 10).map(x => ({
-                ...x,
-                role: lang === 'ar' ? 'Ù…ØµØ¯Ø± Ù„ÙÙ‡Ù… Ø§Ù„Ø³ÙˆÙ‚ ÙˆÙ„ÙŠØ³ Ù…Ù†Ø§ÙØ³Ø§ Ù…Ø¨Ø§Ø´Ø±Ø§' : lang === 'en' ? 'Market-learning source, not a direct competitor' : 'Source pour comprendre le marche, pas un concurrent direct',
-                recommendedUse: lang === 'ar' ? 'Ø§Ø³ØªØ®Ø¯Ù…Ù‡ Ù„ÙÙ‡Ù… Ù„ØºØ© Ø§Ù„Ø³ÙˆÙ‚ ÙˆØ§Ù„Ø£Ø³Ø¦Ù„Ø© ÙˆØ§Ù„Ø·Ù„Ø¨ØŒ ÙˆÙ„ÙŠØ³ ÙƒÙ†Ù…ÙˆØ°Ø¬ Ù…Ù†Ø§ÙØ³.' : lang === 'en' ? 'Use it to understand market language, questions, and demand, not as a competitor model.' : 'Utiliser pour comprendre le langage, les questions et la demande du marche, pas comme modele concurrent.'
-            }))
-        },
-        finalAnswers: {
-            whoWins: leader.domain || null,
-            whyTheyWin: leaderReasons,
-            whyTheyWinDetails: leaderReasonDetails,
-            weaknesses: allWeaknesses,
-            positionToTake,
-            thisWeek: priorityActions.filter(x => x.horizon === '7_DAYS'),
-            next30Days: priorityActions.filter(x => x.horizon === '30_DAYS'),
-            missingProofs: allProofs
-        }
-    };
-}
-
-// Competitor Intelligence V2: business-first classification and decision layer.
-const MARKETPLACE_HOST_PATTERNS = [
-    'amazon.', 'jumia.', 'aliexpress.', 'ebay.', 'etsy.', 'walmart.', 'noon.'
-];
-const SOCIAL_SOURCE_HOST_PATTERNS = [
-    'instagram.com', 'facebook.com', 'tiktok.com', 'youtube.com', 'youtu.be',
-    'linkedin.com', 'pinterest.com', 'x.com', 'twitter.com', 'snapchat.com'
-];
-
-function cleanCompetitorBusinessText(value, max = 260) {
-    const iconWords = /\b(?:arrow_right_alt|arrow_forward|location_on|open_in_new|chevron_right|expand_more|menu|search|close|home|shopping_cart|person|login|logout|favorite|share|more_vert)\b/gi;
-    const source = String(value || '');
-    if (/(?:Ãƒ.|Ã˜.|Ã™.|Ã¢.){2,}/.test(source)) return '';
-    return source
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/\b(?:class|style|onclick|aria-label|data-[\w-]+)\s*=\s*["'][^"']*["']/gi, ' ')
-        .replace(iconWords, ' ')
-        .replace(/\bCHAPITRE\b/gi, ' ')
-        .replace(/\s*([|Â·â€¢])\s*/g, ' Â· ')
-        .replace(/(?:\s*Â·\s*){2,}/g, ' Â· ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, max);
-}
-
-function dedupeBusinessInsights(items = [], limit = 5) {
-    const accepted = [];
-    const fingerprints = [];
-    for (const item of items) {
-        const clean = cleanCompetitorBusinessText(typeof item === 'string' ? item : item?.action || item?.reason || item?.title, 320);
-        if (!clean) continue;
-        const fingerprint = clean.toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^\p{L}\p{N}\s]/gu, ' ')
-            .replace(/\b(?:les|des|une|pour|avec|dans|the|and|with|that|this|Ø¹Ù„Ù‰|ÙÙŠ|Ù…Ù†|Ù…Ø¹)\b/gu, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-        if (!fingerprint || fingerprints.some(x => x.includes(fingerprint) || fingerprint.includes(x))) continue;
-        fingerprints.push(fingerprint);
-        accepted.push(typeof item === 'string' ? clean : { ...item, action: item.action ? clean : item.action, reason: item.reason ? clean : item.reason });
-        if (accepted.length >= limit) break;
-    }
-    return accepted;
-}
-
-function localizeCompetitorMarketName(geo = '', lang = 'fr') {
-    const raw = String(geo || '').trim();
-    const normalized = raw.toLowerCase();
-    const country = normalized.includes('global') || normalized.includes('worldwide')
-        ? 'global'
-        : normalized.includes('morocco') || normalized.includes('maroc') ? 'morocco'
-        : normalized.includes('libya') || normalized.includes('libye') || normalized.includes('\u0644\u064a\u0628\u064a\u0627') ? 'libya'
-        : normalized.includes('tunisia') || normalized.includes('tunisie') || normalized.includes('\u062a\u0648\u0646\u0633') ? 'tunisia'
-        : normalized.includes('algeria') || normalized.includes('alg\u00e9rie') || normalized.includes('algerie') || normalized.includes('\u0627\u0644\u062c\u0632\u0627\u0626\u0631') ? 'algeria'
-        : normalized.includes('egypt') || normalized.includes('\u00e9gypte') || normalized.includes('egypte') || normalized.includes('\u0645\u0635\u0631') ? 'egypt'
-        : normalized.includes('saudi') || normalized.includes('arabie saoudite') || normalized.includes('\u0627\u0644\u0633\u0639\u0648\u062f\u064a\u0629') ? 'saudi'
-        : normalized.includes('united arab emirates') || normalized.includes('emirates') || normalized.includes('uae') || normalized.includes('\u00e9mirats') || normalized.includes('emirats') || normalized.includes('\u0627\u0644\u0625\u0645\u0627\u0631\u0627\u062a') ? 'uae'
-        : normalized.includes('qatar') || normalized.includes('\u0642\u0637\u0631') ? 'qatar'
-        : normalized.includes('kuwait') || normalized.includes('kowe\u00eft') || normalized.includes('koweit') || normalized.includes('\u0627\u0644\u0643\u0648\u064a\u062a') ? 'kuwait'
-        : normalized.includes('bahrain') || normalized.includes('bahre\u00efn') || normalized.includes('bahrein') || normalized.includes('\u0627\u0644\u0628\u062d\u0631\u064a\u0646') ? 'bahrain'
-        : normalized.includes('oman') || normalized.includes('\u0639\u0645\u0627\u0646') ? 'oman'
-        : normalized.includes('jordan') || normalized.includes('jordanie') || normalized.includes('\u0627\u0644\u0623\u0631\u062f\u0646') ? 'jordan'
-        : normalized.includes('lebanon') || normalized.includes('liban') || normalized.includes('\u0644\u0628\u0646\u0627\u0646') ? 'lebanon'
-        : normalized.includes('france') || normalized.includes('\u0641\u0631\u0646\u0633\u0627') ? 'france'
-        : normalized.includes('united states') || normalized.includes('usa') || normalized.includes('u.s.') || normalized.includes('\u0627\u0644\u0648\u0644\u0627\u064a\u0627\u062a \u0627\u0644\u0645\u062a\u062d\u062f\u0629') ? 'usa'
-        : null;
-    const names = {
-        fr: {
-            global: 'march\u00e9 global anglophone',
-            morocco: 'Maroc',
-            libya: 'Libye',
-            tunisia: 'Tunisie',
-            algeria: 'Alg\u00e9rie',
-            egypt: '\u00c9gypte',
-            saudi: 'Arabie saoudite',
-            uae: '\u00c9mirats arabes unis',
-            qatar: 'Qatar',
-            kuwait: 'Kowe\u00eft',
-            bahrain: 'Bahre\u00efn',
-            oman: 'Oman',
-            jordan: 'Jordanie',
-            lebanon: 'Liban',
-            france: 'France',
-            usa: '\u00c9tats-Unis'
-        },
-        en: {
-            global: 'Global English market',
-            morocco: 'Morocco',
-            libya: 'Libya',
-            tunisia: 'Tunisia',
-            algeria: 'Algeria',
-            egypt: 'Egypt',
-            saudi: 'Saudi Arabia',
-            uae: 'United Arab Emirates',
-            qatar: 'Qatar',
-            kuwait: 'Kuwait',
-            bahrain: 'Bahrain',
-            oman: 'Oman',
-            jordan: 'Jordan',
-            lebanon: 'Lebanon',
-            france: 'France',
-            usa: 'United States'
-        },
-        ar: {
-            global: '\u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0639\u0627\u0644\u0645\u064a \u0628\u0627\u0644\u0625\u0646\u062c\u0644\u064a\u0632\u064a\u0629',
-            morocco: '\u0627\u0644\u0645\u063a\u0631\u0628',
-            libya: '\u0644\u064a\u0628\u064a\u0627',
-            tunisia: '\u062a\u0648\u0646\u0633',
-            algeria: '\u0627\u0644\u062c\u0632\u0627\u0626\u0631',
-            egypt: '\u0645\u0635\u0631',
-            saudi: '\u0627\u0644\u0633\u0639\u0648\u062f\u064a\u0629',
-            uae: '\u0627\u0644\u0625\u0645\u0627\u0631\u0627\u062a',
-            qatar: '\u0642\u0637\u0631',
-            kuwait: '\u0627\u0644\u0643\u0648\u064a\u062a',
-            bahrain: '\u0627\u0644\u0628\u062d\u0631\u064a\u0646',
-            oman: '\u0639\u0645\u0627\u0646',
-            jordan: '\u0627\u0644\u0623\u0631\u062f\u0646',
-            lebanon: '\u0644\u0628\u0646\u0627\u0646',
-            france: '\u0641\u0631\u0646\u0633\u0627',
-            usa: '\u0627\u0644\u0648\u0644\u0627\u064a\u0627\u062a \u0627\u0644\u0645\u062a\u062d\u062f\u0629'
-        }
-    };
-    return names[lang]?.[country] || raw || names[lang]?.global || 'Global English market';
-}
-
-function competitorMarketPhrase(geo = '', lang = 'fr') {
-    const name = localizeCompetitorMarketName(geo, lang);
-    if (lang === 'ar') return `\u0641\u064a ${name}`;
-    if (lang === 'en') return name === 'Global English market' ? 'in the Global English market' : `in ${name}`;
-    if (name === 'Maroc') return 'au Maroc';
-    if (name === '\u00c9mirats arabes unis') return 'aux \u00c9mirats arabes unis';
-    if (name === '\u00c9tats-Unis') return 'aux \u00c9tats-Unis';
-    if (name === 'march\u00e9 global anglophone') return 'sur le march\u00e9 global anglophone';
-    return `en ${name}`;
-}
-
-function competitorGeoMismatchNote(query = '', geo = '', lang = 'fr') {
-    const isGlobal = /global|worldwide/i.test(String(geo || ''));
-    const mentionsMorocco = /morocco|maroc|Ø§Ù„Ù…ØºØ±Ø¨/i.test(String(query || ''));
-    if (!isGlobal || !mentionsMorocco) return null;
-    if (lang === 'ar') return 'ØªØ­ØªÙˆÙŠ Ø¹Ø¨Ø§Ø±Ø© Ø§Ù„Ø¨Ø­Ø« Ø¹Ù„Ù‰ MoroccoØŒ Ù„ÙƒÙ† Ø§Ù„Ø³ÙˆÙ‚ Ø§Ù„Ù…Ø®ØªØ§Ø± Ù‡Ùˆ Global English. ÙŠØ¬Ø¨ Ø§Ø¹ØªØ¨Ø§Ø± Ø§Ù„Ù†ØªØ§Ø¦Ø¬ Ø¥Ø´Ø§Ø±Ø§Øª Ø¹Ø§Ù…Ø© Ù…Ø¹ Ø¶Ø±ÙˆØ±Ø© Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ø­Ù„ÙŠØ§.';
-    if (lang === 'en') return 'The query mentions Morocco, but the selected target is Global English. Treat these as global signals that still require local verification.';
-    return 'La requÃªte mentionne Morocco, mais le ciblage sÃ©lectionnÃ© est Global English. Les rÃ©sultats doivent Ãªtre interprÃ©tÃ©s comme signaux globaux avec vÃ©rification locale nÃ©cessaire.';
-}
-
-function detectCompetitorBusinessArchetype(query = '', competitors = []) {
-    const blob = `${query} ${competitors.map(x => `${x.title || ''} ${x.snippet || ''} ${x.competitorType || ''}`).join(' ')}`.toLowerCase();
-    if (/compl[eÃ©]ment|vitamin|caf[eÃ©]ine|caffeine|ginseng|mineraux|min[eÃ©]raux|effervescent|fatigue|concentration|energy|[Ã©e]nergie|nutrition|sant[eÃ©]/i.test(blob)) return 'supplement';
-    const serviceScore = [
-        /agence|agency|service|consulting|conseil|saas|software|logiciel|formation|marketing|intelligence artificielle|\bia\b|\bai\b|b2b|prestation|accompagnement|audit|diagnostic|devis|rendez[-\s]?vous|livrable|rÃ©vision|revision|support|coaching|course|cours|cabinet|studio/.test(blob),
-        /client|cas client|portfolio|projet|stratÃ©gie|strategie|campagne|automatisation|crÃ©ation|creation|design|dÃ©veloppement|developpement/.test(blob),
-        !/panier|checkout|add to cart|ajouter au panier|stock|expÃ©dition|shipping|delivery|livraison produit/.test(blob)
-    ].filter(Boolean).length;
-    const productScore = [
-        /e-?commerce|boutique|shop|store|produit|product|retail|marketplace|acheter|buy|commande|panier|cart|checkout|stock|mad|dh|cosm[eÃ©]tique|serum|s[eÃ©]rum|shampo|huile|cr[eÃ¨]me|lampe|led|ordinateur|pc gamer|fruit|l[eÃ©]gume|vetement|vÃªtement|accessoire/.test(blob),
-        /livraison|delivery|shipping|retour|returns|garantie produit|photo produit|fiche produit/.test(blob),
-        /prix|price/.test(blob) && /acheter|commande|panier|stock|livraison|produit|product/.test(blob)
-    ].filter(Boolean).length;
-    if (serviceScore >= 2 && serviceScore >= productScore) return 'service';
-    if (productScore >= 1) return 'physical_product';
-    return 'generic';
-}
-
-function marketResultLabelsV2(category = 'market_source', lang = 'fr') {
-    const all = {
-        fr: {
-            direct_competitor: ['Concurrent direct', 'Ã€ battre commercialement', 'Comparer son offre, ses preuves et son parcours de dÃ©cision.'],
-            competitor_brand: ['Marque concurrente', 'Alternative choisie par le client', 'Comparer promesse, composition, disponibilitÃ©, prix et preuves.'],
-            reseller: ['Revendeur / canal de distribution', 'Canal de distribution', 'Comparer prix, disponibilitÃ©, avis et prÃ©sentation de lâ€™offre.'],
-            marketplace: ['Marketplace / canal de distribution', 'Canal de distribution', 'Comparer prix, popularitÃ©, avis et standards de prÃ©sentation.'],
-            social_source: ['Source sociale', 'Signal marchÃ©', 'Comprendre les contenus, commentaires, tendances et mots des clients.'],
-            educational_content: ['Contenu Ã©ducatif', 'Source marchÃ©', 'Comprendre les questions, objections et attentes du marchÃ©.'],
-            media_blog: ['MÃ©dia / blog', 'Source marchÃ©', 'Observer les thÃ¨mes visibles et le vocabulaire employÃ©.'],
-            directory_comparator: ['Annuaire / comparateur', 'Source marchÃ©', 'RepÃ©rer des acteurs et comparer leur prÃ©sence, sans le traiter comme concurrent direct.'],
-            market_source: ['Source marchÃ©', 'Signal marchÃ©', 'Utiliser cette source pour comprendre la demande, pas comme modÃ¨le concurrent.']
-        },
-        en: {
-            direct_competitor: ['Direct competitor', 'Commercial competitor to beat', 'Compare its offer, proof, and decision journey.'],
-            competitor_brand: ['Competing brand', 'Customer alternative', 'Compare promise, composition, availability, pricing, and proof.'],
-            reseller: ['Reseller / distribution channel', 'Distribution channel', 'Compare pricing, availability, reviews, and offer presentation.'],
-            marketplace: ['Marketplace / distribution channel', 'Distribution channel', 'Compare pricing, popularity, reviews, and presentation standards.'],
-            social_source: ['Social source', 'Market signal', 'Understand content, comments, trends, and customer language.'],
-            educational_content: ['Educational content', 'Market source', 'Understand questions, objections, and market expectations.'],
-            media_blog: ['Media / blog', 'Market source', 'Observe visible topics and language.'],
-            directory_comparator: ['Directory / comparator', 'Market source', 'Discover actors without treating the source as a direct competitor.'],
-            market_source: ['Market source', 'Market signal', 'Use this source to understand demand, not as a competitor model.']
-        },
-        ar: {
-            direct_competitor: ['Ù…Ù†Ø§ÙØ³ Ù…Ø¨Ø§Ø´Ø±', 'Ù…Ù†Ø§ÙØ³ ØªØ¬Ø§Ø±ÙŠ ÙŠØ¬Ø¨ Ø§Ù„ØªÙÙˆÙ‚ Ø¹Ù„ÙŠÙ‡', 'Ù‚Ø§Ø±Ù† Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ø£Ø¯Ù„Ø© ÙˆÙ…Ø³Ø§Ø± Ø§ØªØ®Ø§Ø° Ø§Ù„Ù‚Ø±Ø§Ø±.'],
-            competitor_brand: ['Ø¹Ù„Ø§Ù…Ø© Ù…Ù†Ø§ÙØ³Ø©', 'Ø¨Ø¯ÙŠÙ„ ÙŠØ®ØªØ§Ø±Ù‡ Ø§Ù„Ø¹Ù…ÙŠÙ„', 'Ù‚Ø§Ø±Ù† Ø§Ù„ÙˆØ¹Ø¯ ÙˆØ§Ù„ØªØ±ÙƒÙŠØ¨Ø© ÙˆØ§Ù„ØªÙˆÙØ± ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø£Ø¯Ù„Ø©.'],
-            reseller: ['Ø¨Ø§Ø¦Ø¹ / Ù‚Ù†Ø§Ø© ØªÙˆØ²ÙŠØ¹', 'Ù‚Ù†Ø§Ø© ØªÙˆØ²ÙŠØ¹', 'Ù‚Ø§Ø±Ù† Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„ØªÙˆÙØ± ÙˆØ§Ù„Ø¢Ø±Ø§Ø¡ ÙˆØ·Ø±ÙŠÙ‚Ø© Ø¹Ø±Ø¶ Ø§Ù„Ù…Ù†ØªØ¬.'],
-            marketplace: ['Ø³ÙˆÙ‚ Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ / Ù‚Ù†Ø§Ø© ØªÙˆØ²ÙŠØ¹', 'Ù‚Ù†Ø§Ø© ØªÙˆØ²ÙŠØ¹', 'Ù‚Ø§Ø±Ù† Ø§Ù„Ø£Ø³Ø¹Ø§Ø± ÙˆØ§Ù„Ø´Ø¹Ø¨ÙŠØ© ÙˆØ§Ù„Ø¢Ø±Ø§Ø¡ ÙˆÙ…Ø¹Ø§ÙŠÙŠØ± Ø¹Ø±Ø¶ Ø§Ù„Ù…Ù†ØªØ¬.'],
-            social_source: ['Ù…ØµØ¯Ø± Ø§Ø¬ØªÙ…Ø§Ø¹ÙŠ', 'Ø¥Ø´Ø§Ø±Ø© Ø³ÙˆÙ‚', 'Ø§ÙÙ‡Ù… Ø§Ù„Ù…Ø­ØªÙˆÙ‰ ÙˆØ§Ù„ØªØ¹Ù„ÙŠÙ‚Ø§Øª ÙˆØ§Ù„Ø§ØªØ¬Ø§Ù‡Ø§Øª ÙˆÙ„ØºØ© Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡.'],
-            educational_content: ['Ù…Ø­ØªÙˆÙ‰ ØªØ¹Ù„ÙŠÙ…ÙŠ', 'Ù…ØµØ¯Ø± Ù„ÙÙ‡Ù… Ø§Ù„Ø³ÙˆÙ‚', 'Ø§ÙÙ‡Ù… Ø§Ù„Ø£Ø³Ø¦Ù„Ø© ÙˆØ§Ù„Ø§Ø¹ØªØ±Ø§Ø¶Ø§Øª ÙˆØªÙˆÙ‚Ø¹Ø§Øª Ø§Ù„Ø³ÙˆÙ‚.'],
-            media_blog: ['Ø¥Ø¹Ù„Ø§Ù… / Ù…Ø¯ÙˆÙ†Ø©', 'Ù…ØµØ¯Ø± Ù„ÙÙ‡Ù… Ø§Ù„Ø³ÙˆÙ‚', 'Ø±Ø§Ù‚Ø¨ Ø§Ù„Ù…ÙˆØ§Ø¶ÙŠØ¹ Ø§Ù„Ø¸Ø§Ù‡Ø±Ø© ÙˆØ§Ù„Ù„ØºØ© Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…Ø©.'],
-            directory_comparator: ['Ø¯Ù„ÙŠÙ„ / Ù…ÙˆÙ‚Ø¹ Ù…Ù‚Ø§Ø±Ù†Ø©', 'Ù…ØµØ¯Ø± Ù„ÙÙ‡Ù… Ø§Ù„Ø³ÙˆÙ‚', 'Ø§ÙƒØªØ´Ù Ø§Ù„ÙØ§Ø¹Ù„ÙŠÙ† Ø¯ÙˆÙ† Ø§Ø¹ØªØ¨Ø§Ø±Ù‡ Ù…Ù†Ø§ÙØ³Ø§ Ù…Ø¨Ø§Ø´Ø±Ø§.'],
-            market_source: ['Ù…ØµØ¯Ø± Ù„ÙÙ‡Ù… Ø§Ù„Ø³ÙˆÙ‚', 'Ø¥Ø´Ø§Ø±Ø© Ø³ÙˆÙ‚', 'Ø§Ø³ØªØ®Ø¯Ù…Ù‡ Ù„ÙÙ‡Ù… Ø§Ù„Ø·Ù„Ø¨ ÙˆÙ„ÙŠØ³ ÙƒÙ†Ù…ÙˆØ°Ø¬ Ù…Ù†Ø§ÙØ³.']
-        }
-    };
-    const selected = all[lang]?.[category] || all[lang]?.market_source || all.en.market_source;
-    return { typeLabel: selected[0], role: selected[1], recommendedUse: selected[2] };
-}
-
-function classifyMarketResultV2({ url = '', title = '', snippet = '', query = '', lang = 'fr' } = {}) {
-    const host = safeHostname(url);
-    const path = safePath(url);
-    const blob = `${host} ${path} ${title} ${snippet}`.toLowerCase();
-    const queryBlob = String(query || '').toLowerCase();
-    const queryTokens = queryBlob.split(/[^\p{L}\p{N}]+/u).filter(x => x.length >= 4);
-    const relevantMatches = queryTokens.filter(token => blob.includes(token)).length;
-    const shallowCommercialPage = path.split('/').filter(Boolean).length <= 2 && relevantMatches >= 1;
-    const commercialScore = commercialIntentScore(url, title, snippet);
-    let category = 'market_source';
-    let isRealCompetitor = false;
-    let sourceGroup = 'marketSources';
-    let rejectionReason = 'insufficient_commercial_signals';
-
-    if (!host) {
-        category = 'market_source'; rejectionReason = 'invalid_url';
-    } else if (SOCIAL_SOURCE_HOST_PATTERNS.some(x => host.includes(x))) {
-        category = 'social_source'; sourceGroup = 'socialSources'; rejectionReason = 'social_signal_not_competitor';
-    } else if (MARKETPLACE_HOST_PATTERNS.some(x => host.includes(x)) || /marketplace|place de march[eÃ©]/i.test(blob)) {
-        category = 'marketplace'; sourceGroup = 'distributionChannels'; rejectionReason = 'distribution_channel_not_direct_competitor';
-        if (/marketplace|place de march[eÃ©]|marketplace platform/i.test(queryBlob)) {
-            isRealCompetitor = true; sourceGroup = 'competitors'; rejectionReason = null;
-        }
-    } else if (/pharmacie|parapharmacie|pharmacy|revendeur|retailer|distributeur|distributor|cocooncenter/i.test(blob)) {
-        category = 'reseller'; sourceGroup = 'distributionChannels'; rejectionReason = 'reseller_not_direct_competitor';
-        if (/pharmacie|parapharmacie|revendeur|retailer|e-?commerce/i.test(queryBlob)) {
-            isRealCompetitor = true; sourceGroup = 'competitors'; rejectionReason = null;
-        }
-    } else if (/wikipedia|encyclop[eÃ©]die|forum|reddit|quora/i.test(blob)) {
-        category = 'educational_content'; rejectionReason = 'educational_source';
-    } else if (/\/(?:blog|news|article|guide|actualite|magazine)\b|blog|article|guide|news|magazine|m[eÃ©]dia/i.test(blob)) {
-        category = 'media_blog'; rejectionReason = 'informational_source';
-    } else if (/annuaire|directory|comparateur|comparison|classement|top\s+\d+/i.test(blob)) {
-        category = 'directory_comparator'; rejectionReason = 'directory_or_comparator';
-    } else if (commercialScore >= 25 || shallowCommercialPage || /officiel|official|marque|brand|service|solution|produit|product|saas|logiciel|software|agence|agency/i.test(blob)) {
-        const productBrandSignal = /compl[eÃ©]ment|vitamin|caf[eÃ©]ine|ginseng|nutrition|cosm[eÃ©]tique|produit|product/i.test(`${queryBlob} ${blob}`);
-        category = /marque|brand|officiel|official|laboratoire|lab\b/i.test(blob) || productBrandSignal ? 'competitor_brand' : 'direct_competitor';
-        isRealCompetitor = true;
-        sourceGroup = 'competitors';
-        rejectionReason = null;
-    }
-
-    const labels = marketResultLabelsV2(category, lang);
-    return { category, isRealCompetitor, sourceGroup, rejectionReason, commercialScore, ...labels };
-}
-
-function marketProductSourceText(lang = 'fr') {
-    const copy = {
-        fr: {
-            directCompetitor: 'Concurrent direct identifie dans les resultats accessibles.',
-            sameProductPage: 'Page qui semble vendre ou presenter le meme produit ou une offre tres proche.',
-            marketplaceProduct: 'Marketplace, shopping ou canal de distribution utile pour comparer prix, disponibilite et presentation.',
-            youtubeVideo: 'Video YouTube liee au produit ou a la demande detectee.',
-            contentProof: 'Source utile pour verifier le vocabulaire, les objections ou les preuves du marche.',
-            weakOrUnconfirmed: 'Signal detecte mais pas assez confirme pour le classer fortement.',
-            serp: 'Resultat observe dans la recherche Google accessible.',
-            shopping: 'Resultat observe dans Google Shopping accessible.'
-        },
-        en: {
-            directCompetitor: 'Direct competitor identified in accessible results.',
-            sameProductPage: 'Page that appears to sell or present the same product or a very close offer.',
-            marketplaceProduct: 'Marketplace, shopping, or distribution channel useful for comparing price, availability, and presentation.',
-            youtubeVideo: 'YouTube video related to the product or detected demand.',
-            contentProof: 'Useful source for verifying market language, objections, or proof.',
-            weakOrUnconfirmed: 'Detected signal, but not confirmed enough for a strong classification.',
-            serp: 'Observed in accessible Google search results.',
-            shopping: 'Observed in accessible Google Shopping results.'
-        },
-        ar: {
-            directCompetitor: 'Ù…Ù†Ø§ÙØ³ Ù…Ø¨Ø§Ø´Ø± ØªÙ… Ø±ØµØ¯Ù‡ ÙÙŠ Ø§Ù„Ù†ØªØ§Ø¦Ø¬ Ø§Ù„Ù…ØªØ§Ø­Ø©.',
-            sameProductPage: 'ØµÙØ­Ø© ØªØ¨Ø¯Ùˆ ÙƒØ£Ù†Ù‡Ø§ ØªØ¨ÙŠØ¹ Ø£Ùˆ ØªØ¹Ø±Ø¶ Ù†ÙØ³ Ø§Ù„Ù…Ù†ØªØ¬ Ø£Ùˆ Ø¹Ø±Ø¶Ø§ Ù‚Ø±ÙŠØ¨Ø§ Ø¬Ø¯Ø§.',
-            marketplaceProduct: 'Ø³ÙˆÙ‚ Ø£Ùˆ Ù‚Ù†Ø§Ø© ØªÙˆØ²ÙŠØ¹ Ù…ÙÙŠØ¯Ø© Ù„Ù…Ù‚Ø§Ø±Ù†Ø© Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„ØªÙˆÙØ± ÙˆØ·Ø±ÙŠÙ‚Ø© Ø§Ù„Ø¹Ø±Ø¶.',
-            youtubeVideo: 'ÙÙŠØ¯ÙŠÙˆ YouTube Ù…Ø±ØªØ¨Ø· Ø¨Ø§Ù„Ù…Ù†ØªØ¬ Ø£Ùˆ Ø¨Ø§Ù„Ø·Ù„Ø¨ Ø§Ù„Ù…Ø±ØµÙˆØ¯.',
-            contentProof: 'Ù…ØµØ¯Ø± Ù…ÙÙŠØ¯ Ù„Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ù„ØºØ© Ø§Ù„Ø³ÙˆÙ‚ Ø£Ùˆ Ø§Ù„Ø§Ø¹ØªØ±Ø§Ø¶Ø§Øª Ø£Ùˆ Ø§Ù„Ø£Ø¯Ù„Ø©.',
-            weakOrUnconfirmed: 'Ø¥Ø´Ø§Ø±Ø© Ù…Ø±ØµÙˆØ¯Ø© Ù„ÙƒÙ†Ù‡Ø§ ØºÙŠØ± Ù…Ø¤ÙƒØ¯Ø© Ø¨Ù…Ø§ ÙŠÙƒÙÙŠ.',
-            serp: 'Ù†ØªÙŠØ¬Ø© Ù…Ø±ØµÙˆØ¯Ø© ÙÙŠ Ø¨Ø­Ø« Google Ø§Ù„Ù…ØªØ§Ø­.',
-            shopping: 'Ù†ØªÙŠØ¬Ø© Ù…Ø±ØµÙˆØ¯Ø© ÙÙŠ Google Shopping Ø§Ù„Ù…ØªØ§Ø­.'
-        }
-    };
-    return copy[lang] || copy.fr;
-}
-
-function marketProductSourceUrl(item = {}) {
-    return item.url || item.link || item.productLink || item.product_link ||
-        item.sourceUrl || item.source_url || item.serpapi_link || item.googleProductLink ||
-        item.google_product_link || item.offerLink || item.offer_link || item.merchantLink || '';
-}
-
-function marketProductSourceTitle(item = {}) {
-    return cleanCompetitorBusinessText(
-        item.title || item.name || item.productTitle || item.product_title ||
-        item.sourceTitle || item.merchant || item.seller || item.domain || item.url || item.link,
-        140
-    );
-}
-
-function buildCompetitorMarketProductSources({
-    assessedCompetitors = [],
-    enrichedCompetitors = [],
-    marketSources = [],
-    shoppingProducts = [],
-    scrapeDoSerpData = null,
-    query = '',
-    lang = 'fr'
-} = {}) {
-    const copy = marketProductSourceText(lang);
-    const groups = {
-        directCompetitor: [],
-        sameProductPage: [],
-        marketplaceProduct: [],
-        youtubeVideo: [],
-        contentProof: [],
-        weakOrUnconfirmed: []
-    };
-
-    const push = (type, raw = {}, extra = {}) => {
-        const url = marketProductSourceUrl(raw) || extra.url || '';
-        if (!isPublicHttpUrl(url)) return;
-        const title = marketProductSourceTitle(raw) || safeHostname(url) || url;
-        const snippet = cleanCompetitorBusinessText(raw.snippet || raw.description || raw.text || extra.evidence, 220);
-        const bucket = groups[type] ? type : 'weakOrUnconfirmed';
-        groups[bucket].push({
-            title,
-            url,
-            domain: safeHostname(url),
-            sourceType: type,
-            type,
-            whyRelevant: extra.whyRelevant || copy[type] || copy.weakOrUnconfirmed,
-            observedEvidence: extra.observedEvidence || snippet || copy.serp,
-            confidence: extra.confidence || 'MEDIUM',
-            source: extra.source || raw.source || 'serp',
-            category: raw.category || extra.category || type
-        });
-    };
-
-    const allSearchSources = uniqueByKey([
-        ...assessedCompetitors.map(x => ({
-            ...x,
-            url: x.url,
-            link: x.url,
-            source: x.raw?.source || 'serp',
-            title: x.title,
-            snippet: x.snippet
-        })),
-        ...marketSources,
-        ...(Array.isArray(scrapeDoSerpData?.organic) ? scrapeDoSerpData.organic.map(x => ({
-            ...x,
-            url: x.link || x.url,
-            source: 'scrape.do/google'
-        })) : [])
-    ], item => marketProductSourceUrl(item));
-
-    for (const comp of enrichedCompetitors.slice(0, 6)) {
-        push('directCompetitor', comp, {
-            confidence: comp.businessProfile?.confidence || 'MEDIUM',
-            observedEvidence: comp.snippet || copy.serp,
-            source: 'serp'
-        });
-    }
-
-    for (const source of allSearchSources) {
-        const url = marketProductSourceUrl(source);
-        const host = safeHostname(url);
-        const blob = `${host} ${safePath(url)} ${source.title || ''} ${source.snippet || ''} ${query}`.toLowerCase();
-        const isYoutube = /youtube\.com|youtu\.be/.test(host);
-        const isMarketplace = MARKETPLACE_HOST_PATTERNS.some(pattern => host.includes(pattern)) ||
-            source.category === 'marketplace' || source.category === 'reseller' ||
-            /marketplace|shopping|shop|store|boutique|acheter|buy|product|produit|prix|price/.test(blob);
-        const isProductPage = /\/(p|product|produit|shop|store|boutique|item|dp|gp\/product)\b|acheter|buy|prix|price|livraison|delivery/.test(blob) ||
-            Number(source.commercialIntentScore || source.commercialScore || 0) >= 25;
-
-        if (isYoutube) {
-            push('youtubeVideo', source, {
-                confidence: 'MEDIUM',
-                observedEvidence: source.snippet || copy.serp,
-                source: source.source || 'serp'
-            });
-        } else if (isMarketplace) {
-            push('marketplaceProduct', source, {
-                confidence: isProductPage ? 'HIGH' : 'MEDIUM',
-                observedEvidence: source.snippet || copy.serp,
-                source: source.source || 'serp'
-            });
-        }
-
-        if (!isYoutube && isProductPage) {
-            push('sameProductPage', source, {
-                confidence: source.isRealCompetitor ? 'HIGH' : 'MEDIUM',
-                observedEvidence: source.snippet || copy.serp,
-                source: source.source || 'serp'
-            });
-        } else if (!isYoutube && !isMarketplace && !source.isRealCompetitor) {
-            push('contentProof', source, {
-                confidence: 'LOW',
-                observedEvidence: source.snippet || copy.serp,
-                source: source.source || 'serp'
-            });
-        }
-    }
-
-    for (const product of shoppingProducts.slice(0, 12)) {
-        const url = marketProductSourceUrl(product);
-        if (!url) continue;
-        const price = product.price || product.extracted_price || product.price_value || '';
-        push('marketplaceProduct', product, {
-            confidence: 'HIGH',
-            observedEvidence: [copy.shopping, price ? `Price: ${price}` : null].filter(Boolean).join(' | '),
-            source: 'google-shopping',
-            category: 'shopping'
-        });
-    }
-
-    for (const key of Object.keys(groups)) {
-        groups[key] = uniqueByKey(groups[key], item => item.url).slice(0, key === 'directCompetitor' ? 6 : 8);
-    }
-
-    const items = uniqueByKey(Object.values(groups).flat(), item => item.url);
-    return {
-        version: 'market-product-sources-v1',
-        groups,
-        items,
-        competitorLinks: groups.directCompetitor.map(x => x.url),
-        productLinks: uniqueByKey([...groups.sameProductPage, ...groups.marketplaceProduct], item => item.url).map(x => x.url),
-        proofLinks: items.map(x => x.url),
-        youtubeLinks: groups.youtubeVideo.map(x => x.url),
-        observedUrls: items.map(x => x.url),
-        pagesExplored: items.map(x => x.url),
-        counts: Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, value.length]))
-    };
-}
-
-function competitorConfidenceExplanation(confidence = 'LOW', lang = 'fr') {
-    if (confidence === 'HIGH') {
-        return lang === 'ar' ? 'Ø§Ù„Ø«Ù‚Ø© Ù…Ø±ØªÙØ¹Ø©: ØªÙ… Ø§Ø³ØªÙƒØ´Ø§Ù Ø§Ù„ØµÙØ­Ø©ØŒ ÙˆØ§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ø¶Ø­ØŒ ÙˆØªÙˆØ¬Ø¯ Ø¹Ø¯Ø© Ø¥Ø´Ø§Ø±Ø§Øª ØªØ¬Ø§Ø±ÙŠØ© ÙˆØ£Ø¯Ù„Ø© Ù…Ø±Ø¦ÙŠØ©.'
-            : lang === 'en' ? 'High confidence: the page was explored, the offer is clear, and several commercial signals and proofs are visible.'
-            : 'Confiance Ã©levÃ©e : page explorÃ©e, offre claire, signaux commerciaux visibles et plusieurs preuves dÃ©tectÃ©es.';
-    }
-    if (confidence === 'MEDIUM') {
-        return lang === 'ar' ? 'Ø§Ù„Ø«Ù‚Ø© Ù…ØªÙˆØ³Ø·Ø©: ØªÙˆØ¬Ø¯ Ø¥Ø´Ø§Ø±Ø§Øª Ù…Ø±ØµÙˆØ¯Ø© Ø¹Ù„Ù‰ Ø§Ù„ØµÙØ­Ø©ØŒ Ù„ÙƒÙ† Ø¨Ø¹Ø¶ Ø§Ù„Ø£Ø³Ø¹Ø§Ø± Ø£Ùˆ Ø£Ø¯Ù„Ø© Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ Ù…Ø§ Ø²Ø§Ù„Øª ØºÙŠØ± ÙˆØ§Ø¶Ø­Ø©.'
-            : lang === 'en' ? 'Medium confidence: page signals were observed, but some pricing or customer proof remains unclear.'
-            : 'Confiance moyenne : signaux observÃ©s sur la page, mais certaines donnÃ©es tarifaires ou preuves clients restent peu claires.';
-    }
-    return lang === 'ar' ? 'Ø§Ù„Ø«Ù‚Ø© Ø¶Ø¹ÙŠÙØ©: ØªÙ… Ø±ØµØ¯ Ø§Ù„Ù†ØªÙŠØ¬Ø©ØŒ Ù„ÙƒÙ† Ù„Ù… ÙŠØªÙ… ØªØ£ÙƒÙŠØ¯ Ø§Ù„ØªÙˆÙØ± Ø§Ù„Ù…Ø­Ù„ÙŠ Ø£Ùˆ Ø§Ø³ØªØ®Ø±Ø§Ø¬ Ø£Ø¯Ù„Ø© ÙƒØ§ÙÙŠØ© Ù…Ù† Ø§Ù„ØµÙØ­Ø©.'
-        : lang === 'en' ? 'Low confidence: the result was detected, but local availability or sufficient page evidence could not be confirmed.'
-        : 'Confiance faible : rÃ©sultat dÃ©tectÃ©, mais page peu explorÃ©e ou disponibilitÃ© locale non confirmÃ©e.';
-}
-
 function archetypeBusinessCopy(archetype, query, geo, lang = 'fr') {
     const market = competitorMarketPhrase(geo, lang);
     const cleanQuery = cleanCompetitorBusinessText(query, 100);
@@ -8143,42 +7525,42 @@ function archetypeBusinessCopy(archetype, query, geo, lang = 'fr') {
         },
         physical_product: {
             fr: {
-                sell: `Produit vendu en ligne autour de Â« ${cleanQuery} Â».`,
-                proof: ['Prix total et preuve de stock', 'Livraison, retours et garantie', 'Avis clients et photos rÃ©elles'],
-                position: `Devenir lâ€™offre la plus simple Ã  comparer et la plus rassurante ${market}, avec prix, stock, livraison, retours et preuves visibles.`,
-                promise: 'Prix total, stock, livraison, garantie et preuves visibles avant la commande.'
+                sell: `Produit ou solution vendu(e) en ligne autour de "${cleanQuery}".`,
+                proof: ['Ce qui est vendu exactement et ce qui est inclus', 'Prix confirme, disponibilite et conditions d achat', 'Livraison, retour, garantie et preuve visuelle credible'],
+                position: `Rends "${cleanQuery}" plus credible ${market} : explique ce qui est vendu, ce qui est inclus, a quel prix confirme et dans quelles conditions l acheteur peut commander.`,
+                promise: 'Une offre lisible avant commande : contenu exact, prix confirme, disponibilite, conditions et preuve visible au meme endroit.'
             },
             en: {
-                sell: `Online product offer related to â€œ${cleanQuery}â€.`,
-                proof: ['Total price and stock proof', 'Delivery, returns, and guarantee', 'Customer reviews and real photos'],
-                position: `Become the easiest offer to compare and trust ${market}, with visible pricing, stock, delivery, returns, and proof.`,
-                promise: 'Total pricing, stock, delivery, guarantee, and proof visible before ordering.'
+                sell: `Online offer around "${cleanQuery}".`,
+                proof: ['Exactly what is sold and what is included', 'Confirmed price, availability, and buying conditions', 'Delivery, returns, guarantee, and credible visual proof'],
+                position: `Make "${cleanQuery}" more credible ${market}: explain what is sold, what is included, at what confirmed price, and under which conditions people can buy.`,
+                promise: 'A clearer offer before checkout: exact contents, confirmed price, availability, conditions, and visible proof in one place.'
             },
             ar: {
-                sell: `Ù…Ù†ØªØ¬ ÙŠØ¨Ø§Ø¹ Ø¹Ø¨Ø± Ø§Ù„Ø¥Ù†ØªØ±Ù†Øª Ù…Ø±ØªØ¨Ø· Ø¨Ø·Ù„Ø¨ Â«${cleanQuery}Â».`,
-                proof: ['Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ ÙˆØ¥Ø«Ø¨Ø§Øª Ø§Ù„Ù…Ø®Ø²ÙˆÙ†', 'Ø§Ù„ØªÙˆØµÙŠÙ„ ÙˆØ§Ù„Ø¥Ø±Ø¬Ø§Ø¹ ÙˆØ§Ù„Ø¶Ù…Ø§Ù†', 'Ø¢Ø±Ø§Ø¡ Ø§Ù„Ø¹Ù…Ù„Ø§Ø¡ ÙˆØµÙˆØ± Ø­Ù‚ÙŠÙ‚ÙŠØ©'],
-                position: `Ø¨Ù†Ø§Ø¡ Ø§Ù„Ø¹Ø±Ø¶ Ø§Ù„Ø£Ø³Ù‡Ù„ Ù…Ù‚Ø§Ø±Ù†Ø© ÙˆØ§Ù„Ø£ÙƒØ«Ø± Ø·Ù…Ø£Ù†ÙŠÙ†Ø© ${market} Ù…Ø¹ Ø¥Ø¸Ù‡Ø§Ø± Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ù…Ø®Ø²ÙˆÙ† ÙˆØ§Ù„ØªÙˆØµÙŠÙ„ ÙˆØ§Ù„Ø¥Ø±Ø¬Ø§Ø¹ ÙˆØ§Ù„Ø£Ø¯Ù„Ø©.`,
-                promise: 'Ø§Ù„Ø³Ø¹Ø± Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ ÙˆØ§Ù„Ù…Ø®Ø²ÙˆÙ† ÙˆØ§Ù„ØªÙˆØµÙŠÙ„ ÙˆØ§Ù„Ø¶Ù…Ø§Ù† ÙˆØ§Ù„Ø£Ø¯Ù„Ø© Ø¸Ø§Ù‡Ø±Ø© Ù‚Ø¨Ù„ Ø§Ù„Ø·Ù„Ø¨.'
+                sell: `عرض أو منتج يُباع عبر الإنترنت حول "${cleanQuery}".`,
+                proof: ['توضيح ما الذي يباع فعلا وما الذي يتضمنه العرض', 'السعر المؤكد والتوفر وشروط الشراء', 'التوصيل أو الإرجاع أو الضمان مع دليل مرئي مقنع'],
+                position: `اجعل "${cleanQuery}" أوضح ${market}: اشرح ما الذي يباع فعلا، ماذا يتضمن السعر، وكيف يشتري العميل تحت شروط مؤكدة.`,
+                promise: 'عرض مفهوم قبل الطلب: المحتوى الفعلي، السعر المؤكد، التوفر، الشروط، والدليل المرئي في نفس الشاشة.'
             }
         },
         generic: {
             fr: {
-                sell: `Offre observÃ©e autour de Â« ${cleanQuery} Â», Ã  qualifier avec les preuves rÃ©ellement visibles.`,
-                proof: ['Clarifier ce qui est vendu et Ã  qui', 'Afficher prix, conditions et preuves seulement sâ€™ils sont vÃ©rifiables', 'Transformer les signaux marchÃ© en actions concrÃ¨tes sans supposer le modÃ¨le Ã©conomique'],
-                position: `Se positionner ${market} avec une offre vÃ©rifiable: promesse claire, preuves visibles, conditions explicites et CTA cohÃ©rent.`,
-                promise: 'Une offre plus lisible, plus vÃ©rifiable et plus simple Ã  comparer, sans affirmation non prouvÃ©e.'
+                sell: `Offre observee autour de "${cleanQuery}", a qualifier uniquement avec les preuves reellement visibles.`,
+                proof: ['Dire clairement ce qui est vendu et pour qui', 'N afficher prix, conditions et garanties que lorsqu ils sont verifies', 'Transformer les signaux du marche en decision sans inventer le modele economique'],
+                position: `Clarifie "${cleanQuery}" ${market} avec un angle verifiable : promesse simple, preuves visibles, conditions explicites et prochain pas coherent.`,
+                promise: 'Une offre plus nette, plus verifiable et plus facile a juger sans affirmation non prouvee.'
             },
             en: {
-                sell: `Observed offer around â€œ${cleanQuery}â€, to be qualified only with visible evidence.`,
-                proof: ['Clarify what is sold and for whom', 'Show pricing, conditions, and proof only when verified', 'Turn market signals into concrete actions without assuming the business model'],
-                position: `Position ${market} with a verifiable offer: clear promise, visible proof, explicit conditions, and consistent CTA.`,
-                promise: 'A clearer, more verifiable, easier-to-compare offer without unsupported claims.'
+                sell: `Observed offer around "${cleanQuery}", qualified only through visible evidence.`,
+                proof: ['State clearly what is sold and for whom', 'Only show pricing, conditions, and guarantees when verified', 'Turn market signals into decisions without inventing the business model'],
+                position: `Clarify "${cleanQuery}" ${market} with a verifiable angle: simple promise, visible proof, explicit conditions, and one coherent next step.`,
+                promise: 'A cleaner, more verifiable, easier-to-judge offer without unsupported claims.'
             },
             ar: {
-                sell: `Ø¹Ø±Ø¶ Ù…Ø±ØµÙˆØ¯ Ø­ÙˆÙ„ Â«${cleanQuery}Â» ÙŠØ¬Ø¨ ØªØ£Ù‡ÙŠÙ„Ù‡ ÙÙ‚Ø· Ø¨Ø§Ù„Ø£Ø¯Ù„Ø© Ø§Ù„Ø¸Ø§Ù‡Ø±Ø© ÙØ¹Ù„Ø§.`,
-                proof: ['ØªÙˆØ¶ÙŠØ­ Ù…Ø§ Ø§Ù„Ø°ÙŠ ÙŠØ¨Ø§Ø¹ ÙˆÙ„Ù…Ù†', 'Ø¥Ø¸Ù‡Ø§Ø± Ø§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø´Ø±ÙˆØ· ÙˆØ§Ù„Ø£Ø¯Ù„Ø© ÙÙ‚Ø· Ø¹Ù†Ø¯ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù†Ù‡Ø§', 'ØªØ­ÙˆÙŠÙ„ Ø¥Ø´Ø§Ø±Ø§Øª Ø§Ù„Ø³ÙˆÙ‚ Ø¥Ù„Ù‰ Ø®Ø·ÙˆØ§Øª Ø¹Ù…Ù„ÙŠØ© Ø¯ÙˆÙ† Ø§ÙØªØ±Ø§Ø¶ Ù†Ù…ÙˆØ°Ø¬ Ø§Ù„Ø¹Ù…Ù„'],
-                position: `Ø§Ù„ØªÙ…ÙˆØ¶Ø¹ ${market} Ø¨Ø¹Ø±Ø¶ Ù‚Ø§Ø¨Ù„ Ù„Ù„ØªØ­Ù‚Ù‚: ÙˆØ¹Ø¯ ÙˆØ§Ø¶Ø­ØŒ Ø£Ø¯Ù„Ø© Ù…Ø±Ø¦ÙŠØ©ØŒ Ø´Ø±ÙˆØ· ØµØ±ÙŠØ­Ø© ÙˆØ¯Ø¹ÙˆØ© ÙØ¹Ù„ Ù…ØªÙ†Ø§Ø³Ù‚Ø©.`,
-                promise: 'Ø¹Ø±Ø¶ Ø£ÙˆØ¶Ø­ ÙˆØ£Ø³Ù‡Ù„ Ù…Ù‚Ø§Ø±Ù†Ø© ÙˆØ£ÙƒØ«Ø± Ù‚Ø§Ø¨Ù„ÙŠØ© Ù„Ù„ØªØ­Ù‚Ù‚ Ø¯ÙˆÙ† Ø§Ø¯Ø¹Ø§Ø¡Ø§Øª ØºÙŠØ± Ù…Ø«Ø¨ØªØ©.'
+                sell: `عرض مرصود حول "${cleanQuery}" لا يجب توصيفه إلا بما هو ظاهر فعلا في الأدلة.`,
+                proof: ['توضيح ما الذي يباع ولمن', 'عدم إظهار السعر أو الشروط أو الضمان إلا بعد التحقق', 'تحويل إشارات السوق إلى قرار عملي دون افتراض نموذج العمل'],
+                position: `وضّح "${cleanQuery}" ${market} بزاوية قابلة للتحقق: وعد بسيط، أدلة ظاهرة، شروط صريحة، وخطوة تالية منطقية.`,
+                promise: 'عرض أوضح وأسهل حكما وأكثر قابلية للتحقق دون ادعاءات غير مثبتة.'
             }
         }
     };
@@ -8187,32 +7569,38 @@ function archetypeBusinessCopy(archetype, query, geo, lang = 'fr') {
 
 function buildContextualBusinessPosition({ archetype = 'generic', query = '', geo = '', lang = 'fr', leader = {}, missingProofs = [] } = {}) {
     const market = competitorMarketPhrase(geo, lang);
-    const cleanQuery = cleanCompetitorBusinessText(query, 110) || (lang === 'ar' ? 'Ù‡Ø°Ø§ Ø§Ù„Ø¹Ø±Ø¶' : lang === 'en' ? 'this offer' : 'cette offre');
+    const cleanQuery = cleanCompetitorBusinessText(query, 110) || (lang === 'ar' ? 'هذا العرض' : lang === 'en' ? 'this offer' : 'cette offre');
     const leaderName = cleanCompetitorBusinessText(leader.domain || leader.title || '', 70);
-    const firstGap = cleanCompetitorBusinessText((missingProofs || [])[0], 110);
-    const versus = leaderName
-        ? (lang === 'ar' ? `Ù…Ù‚Ø§Ø±Ù†Ø© Ø¨Ù€ ${leaderName}` : lang === 'en' ? `against ${leaderName}` : `face Ã  ${leaderName}`)
-        : (lang === 'ar' ? 'Ù…Ù‚Ø§Ø±Ù†Ø© Ø¨Ø§Ù„Ø³ÙˆÙ‚ Ø§Ù„Ù…Ø±ØµÙˆØ¯' : lang === 'en' ? 'against the observed market' : 'face au marchÃ© observÃ©');
+    const firstGap = cleanCompetitorBusinessText((missingProofs || [])[0], 120);
+    const isIndirect = Boolean(leaderName) && (!leader.geoMatched || Boolean(leader.signals?.hasMarketplaceModel));
+    const reference = leaderName
+        ? (isIndirect
+            ? (lang === 'ar' ? `باستعمال ${leaderName} كمرجع مقارن لا كحكم محلي` : lang === 'en' ? `using ${leaderName} as a benchmark, not as the local verdict` : `en utilisant ${leaderName} comme benchmark, pas comme verdict local`)
+            : (lang === 'ar' ? `مقارنة مباشرة مع ${leaderName}` : lang === 'en' ? `in direct comparison with ${leaderName}` : `en comparaison directe avec ${leaderName}`))
+        : (lang === 'ar' ? 'بناء على الإشارات المرصودة في السوق' : lang === 'en' ? 'based on observed market signals' : 'à partir des signaux observés du marché');
+    const gapTail = firstGap
+        ? (lang === 'ar' ? ` أول عنصر يحتاج إلى إثبات أوضح: ${firstGap}.` : lang === 'en' ? ` First point to tighten: ${firstGap}.` : ` Premier point à verrouiller : ${firstGap}.`)
+        : '';
+
     if (archetype === 'service') {
-        if (lang === 'ar') return `Ø­ÙˆÙ‘Ù„ Â«${cleanQuery}Â» Ø¥Ù„Ù‰ Ù‚Ø±Ø§Ø± Ø®Ø¯Ù…Ø© Ù…ÙÙ‡ÙˆÙ… ${market}: Ø§Ø¨Ø¯Ø£ Ø¨Ù†Ø·Ø§Ù‚ Ø§Ù„Ø¹Ù…Ù„ ÙˆØ§Ù„Ù†ØªÙŠØ¬Ø© Ø§Ù„Ù…ØªÙˆÙ‚Ø¹Ø© ${versus}ØŒ Ø«Ù… Ø§Ø¹Ø±Ø¶ Ø§Ù„Ø¯Ù„ÙŠÙ„ØŒ Ø§Ù„Ø¢Ø¬Ø§Ù„ØŒ Ø·Ø±ÙŠÙ‚Ø© Ø§Ù„ØªØ³Ø¹ÙŠØ± ÙˆØ§Ù„Ø®Ø·ÙˆØ© Ø§Ù„ØªØ§Ù„ÙŠØ© ÙÙŠ Ù†ÙØ³ Ø§Ù„Ù…Ø³Ø§Ø±.`;
-        if (lang === 'en') return `Turn â€œ${cleanQuery}â€ into an easy service decision ${market}: lead with scope and expected outcome ${versus}, then show proof, timeline, pricing method, and next step in the same path.`;
-        return `Transformer Â« ${cleanQuery} Â» en dÃ©cision de service lisible ${market} : ouvrir sur le pÃ©rimÃ¨tre et le rÃ©sultat attendu ${versus}, puis afficher preuve, dÃ©lais, mÃ©thode de prix et prochaine action dans le mÃªme parcours.`;
+        if (lang === 'ar') return `قدّم «${cleanQuery}» كخدمة واضحة ${market}: اشرح النطاق، المخرجات، الآجال والخطوة التالية ${reference}.${gapTail}`;
+        if (lang === 'en') return `Present “${cleanQuery}” as a clear service ${market}: show scope, deliverables, timing, and next step ${reference}.${gapTail}`;
+        return `Présente « ${cleanQuery} » comme un service clair ${market} : montre le périmètre, les livrables, les délais et la prochaine étape ${reference}.${gapTail}`;
     }
     if (archetype === 'supplement') {
-        if (lang === 'ar') return `Ø§Ø¬Ø¹Ù„ Â«${cleanQuery}Â» Ø¹Ø±Ø¶Ø§ ØµØ­ÙŠØ§ Ù‚Ø§Ø¨Ù„Ø§ Ù„Ù„Ø«Ù‚Ø© ${market}: Ù‚Ø¯Ù‘Ù… Ø§Ù„ØªØ±ÙƒÙŠØ¨Ø© ÙˆØ§Ù„Ø¬Ø±Ø¹Ø© ÙˆØ§Ù„Ø§Ø­ØªÙŠØ§Ø·Ø§Øª Ù‚Ø¨Ù„ Ø§Ù„Ø³Ø¹Ø±ØŒ Ø«Ù… Ø§Ø±Ø¨Ø·Ù‡Ø§ Ø¨Ø¢Ø±Ø§Ø¡ Ù…ÙˆØ«Ù‚Ø© ÙˆØªÙˆÙØ± Ù…Ø­Ù„ÙŠ ${versus}.`;
-        if (lang === 'en') return `Make â€œ${cleanQuery}â€ a trustable health offer ${market}: show composition, dosage, and precautions before price, then connect them to verified reviews and local availability ${versus}.`;
-        return `Faire de Â« ${cleanQuery} Â» une offre santÃ© vÃ©rifiable ${market} : montrer composition, dosage et prÃ©cautions avant le prix, puis les relier aux avis vÃ©rifiables et Ã  la disponibilitÃ© locale ${versus}.`;
+        if (lang === 'ar') return `قدّم «${cleanQuery}» كحل موثوق ${market}: وضّح التركيبة، الاستخدام، الاحتياطات وما هو مثبت فعلا ${reference}.${gapTail}`;
+        if (lang === 'en') return `Present “${cleanQuery}” as a trustable care offer ${market}: clarify composition, use, precautions, and what is actually proven ${reference}.${gapTail}`;
+        return `Présente « ${cleanQuery} » comme une offre de soin crédible ${market} : clarifie la composition, l’usage, les précautions et ce qui est réellement prouvé ${reference}.${gapTail}`;
     }
     if (archetype === 'physical_product') {
-        if (lang === 'ar') return `Ø¨Ø¯Ù„Ø§ Ù…Ù† Ø¹Ø±Ø¶ Ø¹Ø§Ù…ØŒ Ø§Ø¬Ø¹Ù„ Â«${cleanQuery}Â» Ù‚Ø±Ø§Ø± Ø´Ø±Ø§Ø¡ Ø³Ø±ÙŠØ¹ ${market}: ÙˆØ¶Ù‘Ø­ Ø§Ù„ÙØ±Ù‚ ${versus}ØŒ Ø«Ù… Ø§Ø¬Ù…Ø¹ Ø§Ù„Ø³Ø¹Ø±ØŒ Ø§Ù„Ù…Ø®Ø²ÙˆÙ†ØŒ Ø§Ù„ØªÙˆØµÙŠÙ„ØŒ Ø§Ù„Ø¥Ø±Ø¬Ø§Ø¹ ÙˆØ§Ù„Ø¯Ù„ÙŠÙ„ Ø§Ù„Ø£Ù‚ÙˆÙ‰ ÙÙŠ Ø´Ø§Ø´Ø© Ù‚Ø±Ø§Ø± ÙˆØ§Ø­Ø¯Ø©.${firstGap ? ` Ø§Ù„Ø«ØºØ±Ø© Ø§Ù„Ø£ÙˆÙ„Ù‰ Ø§Ù„ØªÙŠ ÙŠØ¬Ø¨ Ø¥ØºÙ„Ø§Ù‚Ù‡Ø§: ${firstGap}.` : ''}`;
-        if (lang === 'en') return `Do not present â€œ${cleanQuery}â€ as a generic product; make it a fast buying decision ${market}: clarify the difference ${versus}, then group price, stock, delivery, returns, and strongest proof in one decision screen.${firstGap ? ` First gap to close: ${firstGap}.` : ''}`;
-        return `Ne pas prÃ©senter Â« ${cleanQuery} Â» comme un produit gÃ©nÃ©rique ; en faire une dÃ©cision dâ€™achat rapide ${market} : clarifier lâ€™Ã©cart ${versus}, puis rÃ©unir prix, stock, livraison, retours et preuve forte dans un seul Ã©cran de dÃ©cision.${firstGap ? ` PremiÃ¨re faille Ã  fermer : ${firstGap}.` : ''}`;
+        if (lang === 'ar') return `اجعل «${cleanQuery}» قرار شراء واضح ${market}: وضّح ما الذي يباع، السعر المؤكد، التوفر، التوصيل، الإرجاع والدليل الأقوى ${reference}.${gapTail}`;
+        if (lang === 'en') return `Turn “${cleanQuery}” into a clear buying decision ${market}: state what is sold, confirmed price, availability, delivery, returns, and strongest proof ${reference}.${gapTail}`;
+        return `Fais de « ${cleanQuery} » une décision d’achat claire ${market} : précise ce qui est vendu, le prix confirmé, la disponibilité, la livraison, le retour et la preuve la plus forte ${reference}.${gapTail}`;
     }
-    if (lang === 'ar') return `Positionne Â«${cleanQuery}Â» avec une preuve claire ${market}: expliquer ce qui est vendu, pourquoi câ€™est diffÃ©rent ${versus}, et quels Ã©lÃ©ments restent Ã  confirmer avant de promettre plus.`;
-    if (lang === 'en') return `Position â€œ${cleanQuery}â€ with clear proof ${market}: explain what is sold, why it differs ${versus}, and what still needs confirmation before making stronger claims.`;
-    return `Positionner Â« ${cleanQuery} Â» avec une preuve claire ${market} : expliquer ce qui est vendu, pourquoi câ€™est diffÃ©rent ${versus}, et ce qui reste Ã  confirmer avant toute promesse forte.`;
+    if (lang === 'ar') return `ابنِ عرض «${cleanQuery}» بطريقة أوضح ${market}: قل ما الذي يباع، لمن، كيف يختلف، وما الذي ما زال يحتاج إلى تحقق ${reference}.${gapTail}`;
+    if (lang === 'en') return `Build a clearer business read for "${cleanQuery}" ${market}: say what is sold, for whom, how it differs, and what still needs verification ${reference}.${gapTail}`;
+    return `Construis une lecture plus claire de « ${cleanQuery} » ${market} : dis ce qui est vendu, pour qui, ce qui différencie l’offre et ce qu’il faut encore vérifier ${reference}.${gapTail}`;
 }
-
 async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', query = '', geo = '', userContext = {} } = {}) {
     const archetypeContext = [query, userContext?.offer, userContext?.audience].filter(Boolean).join(' ');
     const archetype = detectCompetitorBusinessArchetype(archetypeContext, competitors);
@@ -8226,18 +7614,18 @@ async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', q
             ...(raw?.observedStrengths || [])
         ], 3);
         const observedText = cleanCompetitorBusinessText(raw?.whatTheySell, 220);
-        const tooGeneric = !observedText || /offre commerciale|commercial offer|Ø¹Ø±Ø¶ ØªØ¬Ø§Ø±ÙŠ|demande observ|market demand/i.test(observedText);
+        const tooGeneric = !observedText || /offre commerciale|commercial offer|demande observ|market demand/i.test(observedText);
         const proofGaps = [...generic.proof];
         const removeProofGap = pattern => {
             const proofIndex = proofGaps.findIndex(x => pattern.test(x));
             if (proofIndex >= 0) proofGaps.splice(proofIndex, 1);
         };
-        if (signals.hasReviews) removeProofGap(/avis|review|Ø¢Ø±Ø§Ø¡/i);
-        if (signals.hasPrice) removeProofGap(/prix|pricing|price|Ø§Ù„Ø³Ø¹Ø±/i);
+        if (signals.hasReviews) removeProofGap(/avis|review|\u0622\u0631\u0627\u0621|\u0634\u0647\u0627\u062F\u0627\u062A/i);
+        if (signals.hasPrice) removeProofGap(/prix|pricing|price|\u0627\u0644\u0633\u0639\u0631/i);
         const missingProofs = dedupeBusinessInsights([...(raw?.missingProofs || []), ...proofGaps].filter(Boolean), 3);
         const weaknesses = dedupeBusinessInsights([
             ...(raw?.deducedWeaknesses || []),
-            ...missingProofs.map(x => lang === 'ar' ? `ÙØ±ØµØ© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„ØªØ­Ù‚Ù‚: ${x}` : lang === 'en' ? `Verifiable opening: ${x}` : `Ouverture Ã  vÃ©rifier : ${x}`)
+            ...missingProofs.map(x => lang === 'ar' ? `ثغرة قابلة للاستغلال: ${x}` : lang === 'en' ? `Exploitable gap: ${x}` : `Faille exploitable : ${x}`)
         ], 3);
         const confidence = raw?.confidence || 'LOW';
         return {
@@ -8249,7 +7637,7 @@ async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', q
             deducedWeaknesses: weaknesses,
             missingProofs,
             attackAngle: cleanCompetitorBusinessText(weaknesses[0] || generic.position, 260),
-            concreteAction: cleanCompetitorBusinessText(generic.proof.join(' Â· '), 300),
+            concreteAction: cleanCompetitorBusinessText(generic.proof.join(' · '), 300),
             confidence,
             confidenceExplanation: competitorConfidenceExplanation(confidence, lang),
             archetype,
@@ -8260,25 +7648,104 @@ async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', q
 }
 
 function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = '', lang = 'fr', archetype = 'generic', missingProofs = [] } = {}) {
-    const baseGeneric = archetypeBusinessCopy(archetype, query, geo, lang);
-    const generic = {
-        ...baseGeneric,
-        position: buildContextualBusinessPosition({ archetype, query, geo, lang, leader, missingProofs })
+    const generic = archetypeBusinessCopy(archetype, query, geo, lang);
+    const leaderName = cleanCompetitorBusinessText(leader.domain || leader.title || '', 80) || (lang === 'ar' ? 'المرجع المرصود' : lang === 'en' ? 'the observed benchmark' : 'le benchmark observé');
+    const actionsByType = {
+        service: lang === 'ar' ? [
+            `???? ???? ?? ???? ???? ????? ??? ????? ????? ?? ${leaderName}: ??????? ????????? ??????? ?????? ?????.`,
+            '???? ???? ???? ?? ????? ????? ?????? ??? ???? ??????? ?? ?????.',
+            '???? ????????? ????? ???????? ?????? ????? ?????????? ?? ??? ?????.',
+            '??? ???? ?????? ????? ??????? ?? ???? ?????? ???? ?????.',
+            '???? ???? ??????? ???????? ?????? ?????? ??????? ??????? ?? ???? ????.'
+        ] : lang === 'en' ? [
+            `Publish a practical comparison page with ${leaderName}, covering scope, deliverables, timing, and your difference.`,
+            'Show verifiable client outcomes before the contact CTA.',
+            'Clarify deliverables, pricing method, revisions, and payment terms in one section.',
+            'Add a low-risk first step or revision guarantee to raise trust.',
+            'Unify your main contact CTA, WhatsApp CTA, and next-step copy.'
+        ] : [
+            `Publie une page ou un bloc qui montre clairement comment ton service se distingue de ${leaderName} : perimetre, livrables, delais et methode.`,
+            'Affiche un cas client verifiable ou un resultat concret avant le CTA de contact ou de reservation.',
+            'Clarifie livrables, methode de prix, conditions de paiement et revisions dans un meme bloc.',
+            'Ajoute une premiere etape faible risque ou une garantie de revision pour renforcer la confiance.',
+            'Unifie le CTA principal, le CTA WhatsApp et la prochaine etape dans un seul parcours.'
+        ],
+        supplement: lang === 'ar' ? [
+            `???? ???? ???? ????? ????? ????? ?????? ????? ??? ${leaderName}: ????????? ?????????? ??????????? ??? ???? ???? ???????.`,
+            '???? ????????? ??????? ?????????? ??? ?? ???? ???? ??? ????? ?? ?????.',
+            '??? ???? ????? ?????? ?? ??? ??????? ?? ???? ????? ????.',
+            '???? ????? ?????? ??????? ??? ???? ?? ??? ????? ??? ????? ??? ?? ??? ???.',
+            '??? FAQ ????? ?? ???????? ?????????? ?????? ?????? ????????.'
+        ] : lang === 'en' ? [
+            `Build an offer block that explains why buyers should pick your product over ${leaderName}: composition, usage, precautions, and proof of outcome.`,
+            'Show composition, dosage, warnings, and what is proven before price or CTA.',
+            'Add verifiable reviews, usage visuals, or visible outcome proof.',
+            'Show local price, availability, and what still needs confirmation before promising results.',
+            'Add a short FAQ covering safety, use, duration, and fit.'
+        ] : [
+            `Construis un bloc d'offre qui explique pourquoi l'acheteur devrait choisir ton produit plutot que ${leaderName} : composition, usage, precautions et preuve de resultat.`,
+            'Affiche composition, dosage, avertissements et elements prouves avant le prix ou le CTA.',
+            'Ajoute des avis verifiables, des visuels d usage ou une preuve de resultat visible.',
+            'Montre le prix local, la disponibilite et ce qui reste a confirmer avant toute promesse forte.',
+            'Ajoute une FAQ courte sur la securite, l usage, la duree et le profil concerne.'
+        ],
+        physical_product: lang === 'ar' ? [
+            `???? ???? ???? ????? ????? ????? ?????? ???? ??? ${leaderName}: ?? ???? ???? ?? ?????? ?? ????? ??? ???? ???? ?????? ????.`,
+            '???? ????? ??????? ??????? ???????? ???????? ??????? ?? ???? ???? ?????.',
+            '??? ???? ?????? ?? ???? ?? ????? ???? ?? ???? ??? ???? ??????.',
+            '???? ?? ???? ???? ??????? ????? ???????? ??? ???? ???? ?? ?????.',
+            '??? FAQ ????? ?? ?????? ?????? ??????? ??? ??? ?????.'
+        ] : lang === 'en' ? [
+            `Build a decision screen that shows why buyers should choose your offer over ${leaderName}: what is included, what it costs, and what actually proves quality.`,
+            'Group confirmed price, availability, delivery, returns, and guarantee on one decision screen.',
+            'Add real reviews, photos, or demo proof showing what customers actually receive.',
+            'Clarify exactly what is sold, which variants exist, and what is included in the price.',
+            'Add a short FAQ on shipping, payment, guarantee, and post-purchase questions.'
+        ] : [
+            `Construis un ecran de decision qui montre pourquoi l'acheteur devrait choisir ton offre plutot que ${leaderName} : ce qui est inclus, le prix, et ce qui prouve reellement la qualite.`,
+            'Reunis prix confirme, disponibilite, livraison, retour et garantie sur un seul ecran de decision.',
+            'Ajoute des avis reels, des photos ou une demonstration montrant ce que le client recoit.',
+            'Precise exactement ce qui est vendu, quelles variantes existent et ce qui est inclus dans le prix.',
+            'Ajoute une FAQ courte sur la livraison, le paiement, la garantie et l apres-achat.'
+        ],
+        generic: lang === 'ar' ? [
+            `???? ?????? ????? ????? ?? ${leaderName} ???? ?????? ?????? ??????? ??? ???? ??? ?????.`,
+            '???? ?? ???? ????? ???? ??? ???? ???? ????? ????.',
+            '???? ??? ????? ?? ?????? ?? ???????? ???? ?? ?????? ????.',
+            '???? ?????? ?????? ????? ????? ??????? ?? ??? ??????.',
+            '???? ?? ??? ?? ????? ???? ???? ?? ??????.'
+        ] : lang === 'en' ? [
+            `Create a comparison section with ${leaderName} using simple, verifiable language.`,
+            'State what is sold, for whom, and what actually proves the difference.',
+            'Only show price, terms, or guarantees that are confirmed.',
+            'Bring proof, reassurance, and CTA into one short path.',
+            'Remove any promise that lacks visible support on the page.'
+        ] : [
+            `Cree un bloc comparatif simple face a ${leaderName} avec une formulation claire, verifiable, et sans promesse gratuite.`,
+            'Dis ce qui est vendu, pour qui, et ce qui prouve reellement la difference.',
+            'N affiche que les prix, conditions ou garanties effectivement confirmes.',
+            'Reunis la preuve, la reassurance et le CTA dans un meme parcours court.',
+            'Supprime toute promesse qui n est pas soutenue par un signal visible.'
+        ]
     };
-    const leaderName = leader.domain || (lang === 'ar' ? 'Ø§Ù„Ù…ØªØµØ¯Ø±' : lang === 'en' ? 'the leader' : 'le leader');
-    const pageComparison = lang === 'ar' ? `Ø£Ù†Ø´Ø¦ ØµÙØ­Ø© Ù…Ù‚Ø§Ø±Ù†Ø© ÙˆØ§Ø¶Ø­Ø© Ù…Ø¹ ${leaderName} ØªØ´Ø±Ø­ Ø§Ù„ÙØ±ÙˆÙ‚ ÙÙŠ Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ø³Ø¹Ø± ÙˆØ§Ù„Ø£Ø¯Ù„Ø©.`
-        : lang === 'en' ? `Publish a clear comparison page against ${leaderName}, covering offer, pricing, and proof.`
-        : `Publier une page comparative claire face Ã  ${leaderName}, couvrant lâ€™offre, le prix et les preuves.`;
-    const actions = [
-        { category: 'positionnement', action: pageComparison, why: generic.position, impact: 'HIGH', effort: 'MEDIUM', horizon: '7_DAYS' },
-        { category: 'preuve', action: generic.proof[0], why: missingProofs[0] || generic.promise, impact: 'HIGH', effort: 'LOW', horizon: '7_DAYS' },
-        { category: 'offre', action: generic.proof[1], why: missingProofs[1] || generic.position, impact: 'HIGH', effort: 'LOW', horizon: '7_DAYS' },
-        { category: 'confiance', action: generic.proof[2], why: missingProofs[2] || generic.promise, impact: 'HIGH', effort: 'MEDIUM', horizon: '30_DAYS' },
-        { category: 'conversion', action: generic.promise, why: generic.position, impact: 'HIGH', effort: 'MEDIUM', horizon: '30_DAYS' }
+    const picked = actionsByType[archetype] || actionsByType.generic;
+    const whys = [
+        buildContextualBusinessPosition({ archetype, query, geo, lang, leader, missingProofs }),
+        missingProofs[0] || generic.promise,
+        missingProofs[1] || generic.position,
+        missingProofs[2] || generic.promise,
+        generic.promise
     ];
+    const actions = picked.map((action, index) => ({
+        category: ['positionnement', 'preuve', 'offre', 'confiance', 'conversion'][index] || 'positionnement',
+        action,
+        why: whys[index] || generic.promise,
+        impact: 'HIGH',
+        effort: index <= 1 ? 'LOW' : 'MEDIUM',
+        horizon: index <= 2 ? '7_DAYS' : '30_DAYS'
+    }));
     return dedupeBusinessActions(actions).slice(0, 6);
 }
-
 function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources = [], mergedData = {}, lang = 'fr', query = '', geo = '', userContext = {} } = {}) {
     const archetypeContext = [query, userContext?.offer, userContext?.audience].filter(Boolean).join(' ');
     const archetype = detectCompetitorBusinessArchetype(archetypeContext, competitors);
@@ -8294,7 +7761,7 @@ function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources
             deducedWeaknesses: dedupeBusinessInsights(profile.deducedWeaknesses || [], 3),
             missingProofs: dedupeBusinessInsights(profile.missingProofs || [], 3),
             attackAngle: cleanCompetitorBusinessText(profile.attackAngle || generic.position, 250),
-            concreteAction: cleanCompetitorBusinessText(profile.concreteAction || generic.proof.join(' Â· '), 300),
+            concreteAction: cleanCompetitorBusinessText(profile.concreteAction || generic.proof.join(' · '), 300),
             evidenceLinks: (profile.evidenceLinks || [c.url]).filter(Boolean).slice(0, 5),
             confidence: profile.confidence || 'LOW',
             confidenceExplanation: profile.confidenceExplanation || competitorConfidenceExplanation(profile.confidence || 'LOW', lang),
@@ -8310,15 +7777,15 @@ function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources
     const contextualPosition = buildContextualBusinessPosition({ archetype, query, geo, lang, leader, missingProofs });
     const reasons = dedupeBusinessInsights([
         ...(leader.observedStrengths || []),
-        leader.geoMatched ? (lang === 'ar' ? 'Ø­Ø¶ÙˆØ± ÙˆØ§Ø¶Ø­ ÙˆÙ…Ù„Ø§Ø¦Ù… Ù„Ù„Ø³ÙˆÙ‚ Ø§Ù„Ù…Ø³ØªÙ‡Ø¯Ù.' : lang === 'en' ? 'Clear relevance and presence in the target market.' : 'PrÃ©sence claire et pertinente sur le marchÃ© ciblÃ©.') : null,
-        Number(leader.commercialIntentScore || 0) >= 50 ? (lang === 'ar' ? 'Ù…Ø³Ø§Ø± ØªØ¬Ø§Ø±ÙŠ ÙˆØ§Ø¶Ø­ ÙŠØ³Ø§Ø¹Ø¯ Ø§Ù„Ø²Ø§Ø¦Ø± Ø¹Ù„Ù‰ ÙÙ‡Ù… Ø§Ù„Ø¹Ø±Ø¶ ÙˆØ§ØªØ®Ø§Ø° Ù‚Ø±Ø§Ø±.' : lang === 'en' ? 'A clear commercial journey helps visitors understand the offer and decide.' : 'Un parcours commercial clair aide le visiteur Ã  comprendre lâ€™offre et dÃ©cider.') : null
+        leader.geoMatched ? (lang === 'ar' ? '\u062D\u0636\u0648\u0631 \u0648\u0627\u0636\u062D \u0648\u0645\u0644\u0627\u0626\u0645 \u0644\u0644\u0633\u0648\u0642 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641.' : lang === 'en' ? 'Clear relevance and presence in the target market.' : 'Présence claire et pertinente sur le marché ciblé.') : null,
+        Number(leader.commercialIntentScore || 0) >= 50 ? (lang === 'ar' ? '\u0645\u0633\u0627\u0631 \u062A\u062C\u0627\u0631\u064A \u0648\u0627\u0636\u062D \u064A\u0633\u0627\u0639\u062F \u0627\u0644\u0632\u0627\u0626\u0631 \u0639\u0644\u0649 \u0641\u0647\u0645 \u0627\u0644\u0639\u0631\u0636 \u0648\u0627\u062A\u062E\u0627\u0630 \u0642\u0631\u0627\u0631.' : lang === 'en' ? 'A clear commercial journey helps visitors understand the offer and decide.' : 'Un parcours commercial clair aide le visiteur à comprendre l’offre et à décider.') : null
     ].filter(Boolean), 3);
     if (!reasons.length && leader.domain) {
         reasons.push(lang === 'ar'
-            ? 'Ù‡Ùˆ Ø£ÙˆÙ„ Ù…Ù†Ø§ÙØ³ ØªØ¬Ø§Ø±ÙŠ Ù…Ø¨Ø§Ø´Ø± ØªÙ… Ø±ØµØ¯Ù‡ØŒ Ù„ÙƒÙ† Ø³Ø¨Ø¨ ØªÙÙˆÙ‚Ù‡ ÙŠØ­ØªØ§Ø¬ Ø¥Ù„Ù‰ Ø£Ø¯Ù„Ø© Ø¥Ø¶Ø§ÙÙŠØ© Ù‚Ø¨Ù„ Ø§Ø¹ØªØ¨Ø§Ø±Ù‡ Ø­Ù‚ÙŠÙ‚Ø©.'
+            ? '\u0647\u0648 \u0623\u0648\u0644 \u0645\u0646\u0627\u0641\u0633 \u062A\u062C\u0627\u0631\u064A \u0645\u0628\u0627\u0634\u0631 \u062A\u0645 \u0631\u0635\u062F\u0647\u060C \u0644\u0643\u0646 \u0633\u0628\u0628 \u062A\u0641\u0648\u0642\u0647 \u064A\u062D\u062A\u0627\u062C \u0625\u0644\u0649 \u0623\u062F\u0644\u0629 \u0625\u0636\u0627\u0641\u064A\u0629 \u0642\u0628\u0644 \u0627\u0639\u062A\u0628\u0627\u0631\u0647 \u062D\u0642\u064A\u0642\u0629.'
             : lang === 'en'
                 ? 'It is the first observed direct commercial competitor, but its advantage still requires additional evidence.'
-                : 'Il est le premier concurrent commercial direct observÃ©, mais son avantage doit encore Ãªtre confirmÃ© par des preuves supplÃ©mentaires.');
+                : 'Il est le premier concurrent commercial direct observé, mais son avantage doit encore être confirmé par des preuves supplémentaires.');
     }
     const reasonDetails = reasons.map(reason => ({
         reason, scope: 'brand_site', type: 'observed', confidence: leader.confidence || 'LOW',
@@ -8342,20 +7809,20 @@ function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources
         ...(mergedData.marketInsights?.relatedSearches || []).map(x => x?.query || x)
     ], 5);
     const mismatchNote = competitorGeoMismatchNote(query, geo, lang);
-    const noDirectCompetitor = lang === 'ar' ? 'Ù„Ù… ÙŠØªÙ… ØªØ£ÙƒÙŠØ¯ Ù…Ù†Ø§ÙØ³ Ù…Ø¨Ø§Ø´Ø±' : lang === 'en' ? 'No direct competitor confirmed' : 'Aucun concurrent direct confirmÃ©';
+    const noDirectCompetitor = lang === 'ar' ? 'لم يتم تأكيد منافس مباشر' : lang === 'en' ? 'No direct competitor confirmed' : 'Aucun concurrent direct confirmé';
     const marketPattern = profiles.length >= 3
-        ? (lang === 'ar' ? 'Ø§Ù„Ø³ÙˆÙ‚ ÙŠØ¶Ù… Ø¹Ø¯Ø© Ø¹Ø±ÙˆØ¶ ØªØ¬Ø§Ø±ÙŠØ© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„Ù…Ù‚Ø§Ø±Ù†Ø©Ø› Ø§Ù„ØªÙÙˆÙ‚ ÙŠØªØ·Ù„Ø¨ ÙˆØ¹Ø¯Ø§ Ø£ÙˆØ¶Ø­ ÙˆØ£Ø¯Ù„Ø© Ø£Ù‚ÙˆÙ‰.'
-            : lang === 'en' ? 'The market contains several comparable commercial offers; winning requires a clearer promise and stronger proof.'
-            : 'Le marchÃ© contient plusieurs offres commerciales comparables ; gagner exige une promesse plus claire et des preuves plus fortes.')
-        : (lang === 'ar' ? 'Ø¹Ø¯Ø¯ Ø§Ù„Ù…Ù†Ø§ÙØ³ÙŠÙ† Ø§Ù„Ù…Ø¨Ø§Ø´Ø±ÙŠÙ† Ø§Ù„Ù…Ø¤ÙƒØ¯ÙŠÙ† Ù…Ø­Ø¯ÙˆØ¯Ø› ÙŠØ¬Ø¨ Ø§Ù„ØªØ­Ù‚Ù‚ Ù…Ù† Ø§Ù„ÙØ±ØµØ© Ù…Ø­Ù„ÙŠØ§ Ù‚Ø¨Ù„ Ø§Ù„Ø§Ø³ØªØ«Ù…Ø§Ø±.'
-            : lang === 'en' ? 'Few direct competitors are confirmed; validate the opportunity locally before investing.'
-            : 'Peu de concurrents directs sont confirmÃ©s ; valider lâ€™opportunitÃ© localement avant dâ€™investir.');
+        ? (lang === 'ar' ? 'السوق يضم عدة عروض قابلة للمقارنة؛ الفوز يحتاج إلى عرض أوضح وأدلة أقوى.'
+            : lang === 'en' ? 'The market contains several comparable offers; winning requires a clearer offer and stronger proof.'
+            : 'Le marché contient plusieurs offres comparables ; gagner exige une offre plus claire et des preuves plus fortes.')
+        : (lang === 'ar' ? 'عدد المنافسين المباشرين المؤكدين ما زال محدودا؛ يجب التحقق محليا قبل استثمار كبير.'
+            : lang === 'en' ? 'Few direct competitors are confirmed; validate the opportunity locally before major investment.'
+            : 'Peu de concurrents directs sont confirmés ; valide l’opportunité localement avant un investissement important.');
     return {
         positioning: lang === 'ar'
-            ? 'Daka Ù„Ø§Ø³ØªØ®Ø¨Ø§Ø±Ø§Øª Ø§Ù„Ø³ÙˆÙ‚ â€” Ù…Ø­Ø±Ùƒ Ù„ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ø³ÙˆÙ‚ ÙˆØ§Ù„Ù…Ù†Ø§ÙØ³Ø© ÙˆØ§Ù„Ø·Ù„Ø¨ ÙˆØ§Ù„Ø¹Ø±Ø¶ ÙˆØ§Ù„Ù‚Ø±Ø§Ø± Ø§Ù„ØªØ¬Ø§Ø±ÙŠ.'
+            ? 'Daka Market Insight Intelligence — محرك لتحليل السوق والمنافسة والطلب والعرض والقرار التجاري.'
             : lang === 'en'
-                ? 'Daka Market Insight Intelligence â€” market, competition, demand, offer, and business decision engine.'
-                : 'Daka Market Insight Intelligence â€” moteur dâ€™analyse marchÃ©, concurrence, demande, offre et dÃ©cision business.',
+                ? 'Daka Market Insight Intelligence — engine for market, competition, demand, offer, and business decision analysis.'
+                : "Daka Market Insight Intelligence — moteur d'analyse marché, concurrence, demande, offre et décision business.",
         geoInterpretation: { market: localizeCompetitorMarketName(geo, lang), mismatchNote },
         productMarketStudy: {
             subject: query, geo: localizeCompetitorMarketName(geo, lang), archetype,
@@ -11558,34 +11025,34 @@ const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
       actionsLabel: 'What To Do Next',
       actionsTitle: 'Start with these 3 moves',
       actionsMicro: 'These actions are prioritized for speed, leverage, and execution ease.',
-      closingDivider: 'â€” Strategic Snapshot Complete â€”',
+      closingDivider: '— Strategic Snapshot Complete —',
       closingText: 'You now have a clearer path to compete without guessing.',
       proofItems,
       actionItems
     } : {
       topLabel: 'INTELLIGENCE CONCURRENTIELLE',
-      title: 'Ta position stratÃ©gique sur ce marchÃ©',
-      subtitle: `Comprends qui domine sur "${keyword || 'ce marchÃ©'}", pourquoi il gagne, et oÃ¹ tu peux percer.`,
-      snapshot: 'PHOTO STRATÃ‰GIQUE',
-      verdictLabel: 'Verdict du marchÃ©',
-      verdictMain: `Ce marchÃ© est ${difficulty} et portÃ© par ${primaryIntent}.`,
+      title: 'Ta position stratégique sur ce marché',
+      subtitle: `Comprends qui domine sur "${keyword || 'ce marché'}", pourquoi il gagne, et où tu peux percer.`,
+      snapshot: 'PHOTO STRATÉGIQUE',
+      verdictLabel: 'Verdict du marché',
+      verdictMain: `Ce marché est ${difficulty} et porté par ${primaryIntent}.`,
       verdictSub: `Pour gagner, il faut ${compact(dominantSuccessFactor, 'un positionnement intelligent')}, pas seulement un meilleur produit.`,
-      verdictMicro: 'Cette lecture repose sur lâ€™intensitÃ© concurrentielle, lâ€™intention de recherche et la maturitÃ© du marchÃ©.',
+      verdictMicro: 'Cette lecture repose sur l’intensité concurrentielle, l’intention de recherche et la maturité du marché.',
       leaderLabel: 'Pourquoi le leader gagne',
-      leaderMain: `Le leader domine grÃ¢ce Ã  ${compact(coreMoat, 'lâ€™autoritÃ©, la confiance et lâ€™exÃ©cution')}.`,
-      leaderMicro: 'Câ€™est le systÃ¨me qui protÃ¨ge sa place, pas seulement des qualitÃ©s visibles.',
+      leaderMain: `Le leader domine grâce à ${compact(coreMoat, 'l’autorité, la confiance et l’exécution')}.`,
+      leaderMicro: 'C’est le système qui protège sa place, pas seulement des qualités visibles.',
       gapLabel: 'Faille la plus exploitable',
-      gapMain: `Son point faible principal est ${compact(weakness, 'une faiblesse claire dans lâ€™exÃ©cution')}.`,
+      gapMain: `Son point faible principal est ${compact(weakness, 'une faiblesse claire dans l’exécution')}.`,
       gapSub: `Cela te donne une ouverture pour capter ${compact(underservedSegment, 'une demande encore mal servie')}.`,
-      gapMicro: 'Commence ici. Lâ€™attaquer sur ses forces coÃ»tera plus cher.',
-      moveLabel: 'Meilleur angle dâ€™attaque',
-      moveMain: `Positionne-toi autour de ${compact(strategicAngle, 'un angle diffÃ©renciant')} plutÃ´t quâ€™en confrontation directe.`,
-      moveSub: 'Cette approche Ã©vite ses forces et vise une demande mal couverte.',
-      moveMicro: 'Le but est dâ€™obtenir plus dâ€™impact avec moins de friction.',
+      gapMicro: 'Commence ici. L’attaquer sur ses forces coûtera plus cher.',
+      moveLabel: 'Meilleur angle d’attaque',
+      moveMain: `Travaille autour de ${compact(strategicAngle, 'un angle différenciant')} plutôt qu’en confrontation directe.`,
+      moveSub: 'Cette approche évite ses forces et vise une demande mal couverte.',
+      moveMicro: 'Le but est d’obtenir plus d’impact avec moins de friction.',
       actionsLabel: 'Quoi faire maintenant',
       actionsTitle: 'Commence par ces 3 actions',
-      actionsMicro: 'Ces actions sont priorisÃ©es pour la vitesse, lâ€™impact et la simplicitÃ© dâ€™exÃ©cution.',
-      closingDivider: 'â€” InstantanÃ© stratÃ©gique terminÃ© â€”',
+      actionsMicro: 'Ces actions sont priorisées pour la vitesse, l’impact et la simplicité d’exécution.',
+      closingDivider: '— Instantané stratégique terminé —',
       closingText: 'Tu as maintenant une voie plus claire pour concurrencer sans deviner.',
       proofItems,
       actionItems
