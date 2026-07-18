@@ -7462,6 +7462,69 @@ function compactBusinessText(value, max = 220) {
     return String(value || '').replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
+function cleanCompetitorBusinessText(value, max = 260) {
+    const iconWords = /\b(?:arrow_right_alt|arrow_forward|location_on|open_in_new|chevron_right|expand_more|menu|search|close|home|shopping_cart|person|login|logout|favorite|share|more_vert)\b/gi;
+    const source = String(value || '');
+    if (/(?:Ã.|Ø.|Ù.|â.){2,}/.test(source)) return '';
+    return source
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/\b(?:class|style|onclick|aria-label|data-[\w-]+)\s*=\s*["'][^"']*["']/gi, ' ')
+        .replace(iconWords, ' ')
+        .replace(/\bCHAPITRE\b/gi, ' ')
+        .replace(/\s*([|·•])\s*/g, ' · ')
+        .replace(/(?:\s*·\s*){2,}/g, ' · ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, max);
+}
+
+function dedupeBusinessInsights(items = [], limit = 5) {
+    const accepted = [];
+    const fingerprints = [];
+    for (const item of Array.isArray(items) ? items : []) {
+        const clean = cleanCompetitorBusinessText(
+            typeof item === 'string' ? item : item?.action || item?.reason || item?.title,
+            320
+        );
+        if (!clean) continue;
+        const fingerprint = clean.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+            .replace(/\b(?:les|des|une|pour|avec|dans|the|and|with|that|this|\u0639\u0644\u0649|\u0641\u064a|\u0645\u0646|\u0645\u0639)\b/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        if (!fingerprint || fingerprints.some(x => x.includes(fingerprint) || fingerprint.includes(x))) continue;
+        fingerprints.push(fingerprint);
+        accepted.push(typeof item === 'string'
+            ? clean
+            : { ...item, action: item.action ? clean : item.action, reason: item.reason ? clean : item.reason });
+        if (accepted.length >= limit) break;
+    }
+    return accepted;
+}
+
+function competitorConfidenceExplanation(confidence = 'LOW', lang = 'fr') {
+    if (confidence === 'HIGH') {
+        return lang === 'ar'
+            ? '\u0627\u0644\u062b\u0642\u0629 \u0645\u0631\u062a\u0641\u0639\u0629: \u062a\u0645 \u0627\u0633\u062a\u0643\u0634\u0627\u0641 \u0627\u0644\u0635\u0641\u062d\u0629\u060c \u0648\u0627\u0644\u0639\u0631\u0636 \u0648\u0627\u0636\u062d\u060c \u0648\u062a\u0645 \u0631\u0635\u062f \u0625\u0634\u0627\u0631\u0627\u062a \u062a\u062c\u0627\u0631\u064a\u0629 \u0648\u0623\u062f\u0644\u0629 \u0645\u0631\u0626\u064a\u0629.'
+            : lang === 'en'
+                ? 'High confidence: the page was explored, the offer is clear, and several commercial signals and proofs are visible.'
+                : 'Confiance élevée : page explorée, offre claire, signaux commerciaux visibles et plusieurs preuves détectées.';
+    }
+    if (confidence === 'MEDIUM') {
+        return lang === 'ar'
+            ? '\u0627\u0644\u062b\u0642\u0629 \u0645\u062a\u0648\u0633\u0637\u0629: \u062a\u0645 \u0631\u0635\u062f \u0625\u0634\u0627\u0631\u0627\u062a \u0641\u064a \u0627\u0644\u0635\u0641\u062d\u0629\u060c \u0644\u0643\u0646 \u0628\u0639\u0636 \u0627\u0644\u0623\u0633\u0639\u0627\u0631 \u0623\u0648 \u0623\u062f\u0644\u0629 \u0627\u0644\u0639\u0645\u0644\u0627\u0621 \u0645\u0627 \u0632\u0627\u0644\u062a \u063a\u064a\u0631 \u0648\u0627\u0636\u062d\u0629.'
+            : lang === 'en'
+                ? 'Medium confidence: page signals were observed, but some pricing or customer proof remains unclear.'
+                : 'Confiance moyenne : signaux observés sur la page, mais certaines données tarifaires ou preuves clients restent peu claires.';
+    }
+    return lang === 'ar'
+        ? '\u0627\u0644\u062b\u0642\u0629 \u0636\u0639\u064a\u0641\u0629: \u062a\u0645 \u0631\u0635\u062f \u0627\u0644\u0646\u062a\u064a\u062c\u0629\u060c \u0644\u0643\u0646 \u0644\u0645 \u064a\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0627\u0644\u062a\u0648\u0641\u0631 \u0627\u0644\u0645\u062d\u0644\u064a \u0623\u0648 \u0627\u0633\u062a\u062e\u0631\u0627\u062c \u0623\u062f\u0644\u0629 \u0643\u0627\u0641\u064a\u0629.'
+        : lang === 'en'
+            ? 'Low confidence: the result was detected, but local availability or sufficient page evidence could not be confirmed.'
+            : 'Confiance faible : résultat détecté, mais page peu explorée ou disponibilité locale non confirmée.';
+}
+
 function competitorBusinessLabels(lang = 'fr') {
     if (lang === 'ar') return {
         fallbackSell: 'عرض تجاري تم رصده على هذه الطلبات ويحتاج إلى توصيف أوضح.',
@@ -22603,4 +22666,3 @@ console.log('');
 console.log('🎉🎉🎉 ALL 5 PARTS LOADED SUCCESSFULLY! 🎉🎉🎉');
 console.log('💪 Your backend is now ULTRA-COMPETITIVE and ready to DOMINATE! 💪');
 console.log('');
-
