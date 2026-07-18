@@ -290,7 +290,7 @@
     }
   };
 
-  const STATE = { inFlight: false };
+  const STATE = { inFlight: false, renderToken: null };
 
   function lang() {
     const value = document.getElementById('analysisLang')?.value || window.STATE?.currentLang || 'fr';
@@ -1211,7 +1211,9 @@
       return;
     }
 
+    const runToken = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     STATE.inFlight = true;
+    STATE.renderToken = runToken;
     if (window.STATE) window.STATE.competitorAnalysisInFlight = true;
     const button = document.getElementById('analyzeBtn');
     const exportButton = document.getElementById('btn-export-competitors-pdf');
@@ -1226,6 +1228,8 @@
       if (container) {
         container.style.display = 'block';
         container.dir = lang() === 'ar' ? 'rtl' : 'ltr';
+        container.replaceChildren();
+        container.dataset.renderer = MODULE_ID;
         container.innerHTML = `<section class="daka-comp-executive"><span class="daka-comp-kicker">${esc(copy('opening'))}</span><h3>${esc(copy('loading'))}</h3></section>`;
       }
       if (exportButton) exportButton.style.display = 'none';
@@ -1255,17 +1259,20 @@
         window.STATE.lastInputs.compLang = lang();
       }
 
+      if (STATE.renderToken !== runToken) return;
       renderCompetitorReport(response);
       if (exportButton) exportButton.style.display = 'inline-flex';
       window.toast?.success(copy('reportReady'));
     } catch (error) {
       console.error('[competitor-refonte]', error);
+      if (STATE.renderToken !== runToken) return;
       if (container) {
         container.style.display = 'block';
         container.innerHTML = `<section class="daka-comp-executive"><span class="daka-comp-kicker">${esc(copy('opening'))}</span><h3>${esc(copy('errorPrefix'))}</h3><p>${esc(fixText(error?.message || 'Unknown error'))}</p></section>`;
       }
       window.toast?.error(`${copy('errorPrefix')}: ${fixText(error?.message || 'Unknown error')}`);
     } finally {
+      if (STATE.renderToken !== runToken) return;
       STATE.inFlight = false;
       if (window.STATE) window.STATE.competitorAnalysisInFlight = false;
       if (typeof window.hideDakaLoader === 'function') window.hideDakaLoader();
@@ -1292,6 +1299,8 @@
 
     window.displayCompetitorsResults = renderCompetitorReport;
     window.analyzeCompetitors = handleSubmit;
+    window.__dakaCompetitorRefonteRender = renderCompetitorReport;
+    window.__dakaCompetitorRefonteSubmit = handleSubmit;
   }
 
   if (document.readyState === 'loading') {
