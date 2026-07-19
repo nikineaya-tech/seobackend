@@ -84,6 +84,7 @@ function getDakaCountryHelperText(lang = 'fr') {
 }
 
 function looksLikeMojibake(value = '') {
+    if (/(?:\u00c3.|\u00c2.|\u00e2.|\u00f0.|\u00d8.|\u00d9.)/.test(String(value || ''))) return true;
     return /(?:Ã|Â|â|Ø|Ù|ð|œ|ƒ)/.test(String(value || ''));
 }
 
@@ -15652,4 +15653,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     
-

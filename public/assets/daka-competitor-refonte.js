@@ -305,13 +305,25 @@
       grandSlam: 'Architecture de l offre',
       productAudit: 'Audit produit ou service',
       mastering: 'Techniques d acquisition et de retention',
-      duel: 'Duel strategique',
+      duel: 'Duel strategique, JTBD, Kano et AARRR',
       swot: 'SWOT offensif',
       blueOcean: 'Strategie Blue Ocean et matrice ERRC',
       comparison: 'Rapport de forces',
       semantic: 'Ecarts semantiques exploitables',
       keywordStrategy: 'Strategie de recherche et de contenu',
       roadmap: 'Feuille de route historique restauree',
+      marketIntelStudies: 'Etudes marche, preuves et signaux terrain',
+      marketInsights: 'Lecture factuelle du marche',
+      marketDynamics: 'Dynamiques et tensions du marche',
+      winningMove: 'Mouvement strategique gagnant',
+      leaderMoat: 'Charte de puissance du leader',
+      knowledgeGraph: 'Graphe de connaissance du marche',
+      proofModel: 'Registre des preuves',
+      fieldSignals: 'Publicites, avis et signaux terrain',
+      googleSignals: 'Signaux Google et demande observee',
+      localConfirmed: 'Local confirme',
+      localProbable: 'Local probable',
+      foreignBenchmark: 'Benchmark etranger',
       excludedGeo: 'Sources etrangeres isolees',
       openSource: 'Consulter la source',
       observedEvidence: 'Preuve observee'
@@ -330,13 +342,25 @@
       grandSlam: 'Offer architecture',
       productAudit: 'Product or service audit',
       mastering: 'Acquisition and retention techniques',
-      duel: 'Strategic duel',
+      duel: 'Strategic duel, JTBD, Kano, and AARRR',
       swot: 'Offensive SWOT',
       blueOcean: 'Blue Ocean strategy and ERRC matrix',
       comparison: 'Competitive balance of power',
       semantic: 'Exploitable semantic gaps',
       keywordStrategy: 'Search and content strategy',
       roadmap: 'Restored historical roadmap',
+      marketIntelStudies: 'Market studies, proof, and field signals',
+      marketInsights: 'Evidence-based market reading',
+      marketDynamics: 'Market dynamics and tensions',
+      winningMove: 'Winning strategic move',
+      leaderMoat: 'Leader power charter',
+      knowledgeGraph: 'Market knowledge graph',
+      proofModel: 'Proof register',
+      fieldSignals: 'Ads, reviews, and field signals',
+      googleSignals: 'Google signals and observed demand',
+      localConfirmed: 'Confirmed local',
+      localProbable: 'Probable local',
+      foreignBenchmark: 'Foreign benchmark',
       excludedGeo: 'Foreign sources isolated',
       openSource: 'Open source',
       observedEvidence: 'Observed evidence'
@@ -355,13 +379,25 @@
       grandSlam: '\u0647\u0646\u062f\u0633\u0629 \u0627\u0644\u0639\u0631\u0636',
       productAudit: '\u062a\u062f\u0642\u064a\u0642 \u0627\u0644\u0645\u0646\u062a\u062c \u0623\u0648 \u0627\u0644\u062e\u062f\u0645\u0629',
       mastering: '\u062a\u0642\u0646\u064a\u0627\u062a \u0627\u0644\u0627\u0643\u062a\u0633\u0627\u0628 \u0648\u0627\u0644\u0627\u062d\u062a\u0641\u0627\u0638',
-      duel: '\u0627\u0644\u0645\u0648\u0627\u062c\u0647\u0629 \u0627\u0644\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629',
+      duel: '\u0627\u0644\u0645\u0648\u0627\u062c\u0647\u0629 \u0627\u0644\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0648 JTBD \u0648 Kano \u0648 AARRR',
       swot: '\u062a\u062d\u0644\u064a\u0644 SWOT \u0627\u0644\u0647\u062c\u0648\u0645\u064a',
       blueOcean: '\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0627\u0644\u0645\u062d\u064a\u0637 \u0627\u0644\u0623\u0632\u0631\u0642 \u0648\u0645\u0635\u0641\u0648\u0641\u0629 ERRC',
       comparison: '\u0645\u064a\u0632\u0627\u0646 \u0627\u0644\u0642\u0648\u0649 \u0627\u0644\u062a\u0646\u0627\u0641\u0633\u064a',
       semantic: '\u0627\u0644\u0641\u062c\u0648\u0627\u062a \u0627\u0644\u062f\u0644\u0627\u0644\u064a\u0629 \u0627\u0644\u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u0627\u0633\u062a\u063a\u0644\u0627\u0644',
       keywordStrategy: '\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0627\u0644\u0628\u062d\u062b \u0648\u0627\u0644\u0645\u062d\u062a\u0648\u0649',
       roadmap: '\u062e\u0627\u0631\u0637\u0629 \u0627\u0644\u0637\u0631\u064a\u0642 \u0627\u0644\u062a\u0627\u0631\u064a\u062e\u064a\u0629 \u0627\u0644\u0645\u0633\u062a\u0639\u0627\u062f\u0629',
+      marketIntelStudies: '\u062f\u0631\u0627\u0633\u0627\u062a \u0627\u0644\u0633\u0648\u0642 \u0648\u0627\u0644\u0623\u062f\u0644\u0629 \u0648\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062a \u0627\u0644\u0645\u064a\u062f\u0627\u0646\u064a\u0629',
+      marketInsights: '\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0645\u0628\u0646\u064a\u0629 \u0639\u0644\u0649 \u0627\u0644\u0623\u062f\u0644\u0629',
+      marketDynamics: '\u062f\u064a\u0646\u0627\u0645\u064a\u0643\u064a\u0627\u062a \u0627\u0644\u0633\u0648\u0642 \u0648\u062a\u0648\u062a\u0631\u0627\u062a\u0647',
+      winningMove: '\u0627\u0644\u062d\u0631\u0643\u0629 \u0627\u0644\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0627\u0644\u0631\u0627\u0628\u062d\u0629',
+      leaderMoat: '\u0645\u064a\u062b\u0627\u0642 \u0642\u0648\u0629 \u0627\u0644\u0645\u062a\u0635\u062f\u0631',
+      knowledgeGraph: '\u062e\u0631\u064a\u0637\u0629 \u0645\u0639\u0631\u0641\u0629 \u0627\u0644\u0633\u0648\u0642',
+      proofModel: '\u0633\u062c\u0644 \u0627\u0644\u0623\u062f\u0644\u0629',
+      fieldSignals: '\u0627\u0644\u0625\u0639\u0644\u0627\u0646\u0627\u062a \u0648\u0627\u0644\u0622\u0631\u0627\u0621 \u0648\u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062a \u0627\u0644\u0645\u064a\u062f\u0627\u0646\u064a\u0629',
+      googleSignals: '\u0625\u0634\u0627\u0631\u0627\u062a Google \u0648\u0627\u0644\u0637\u0644\u0628 \u0627\u0644\u0645\u0631\u0635\u0648\u062f',
+      localConfirmed: '\u0645\u062d\u0644\u064a \u0645\u0624\u0643\u062f',
+      localProbable: '\u0645\u062d\u0644\u064a \u0645\u0631\u062c\u062d',
+      foreignBenchmark: '\u0645\u0631\u062c\u0639 \u0623\u062c\u0646\u0628\u064a',
       excludedGeo: '\u0645\u0635\u0627\u062f\u0631 \u0623\u062c\u0646\u0628\u064a\u0629 \u062a\u0645 \u0639\u0632\u0644\u0647\u0627',
       openSource: '\u0641\u062a\u062d \u0627\u0644\u0645\u0635\u062f\u0631',
       observedEvidence: '\u0627\u0644\u062f\u0644\u064a\u0644 \u0627\u0644\u0645\u0631\u0635\u0648\u062f'
@@ -384,6 +420,7 @@
   }
 
   function looksBroken(value) {
+    if (/(?:\u00c3.|\u00c2.|\u00e2.|\u00f0.|\u00d8.|\u00d9.)/.test(String(value || ''))) return true;
     return /(?:Ã|Â|â|Ø|Ù|ð|Å“|Æ’|’|–|—|“|”|·)/.test(String(value || ''));
   }
 
@@ -395,12 +432,17 @@
       const repaired = window.repairMojibakeString(text);
       if (repaired) text = repaired;
     }
-    if (looksBroken(text) && typeof TextDecoder !== 'undefined') {
-      try {
-        const bytes = new Uint8Array(Array.from(text).map((char) => char.charCodeAt(0) & 255));
-        const decoded = new TextDecoder('utf-8').decode(bytes).replace(/\s+/g, ' ').trim();
-        if (decoded) text = decoded;
-      } catch (_) {}
+    if (typeof TextDecoder !== 'undefined') {
+      for (let pass = 0; pass < 3 && looksBroken(text); pass += 1) {
+        try {
+          const bytes = new Uint8Array(Array.from(text).map((char) => char.charCodeAt(0) & 255));
+          const decoded = new TextDecoder('utf-8').decode(bytes).replace(/\s+/g, ' ').trim();
+          if (!decoded || decoded === text) break;
+          text = decoded;
+        } catch (_) {
+          break;
+        }
+      }
     }
     return text.replace(/\uFFFD/g, '').trim();
   }
@@ -417,8 +459,11 @@
   function useful(value) {
     if (value === null || value === undefined) return false;
     if (Array.isArray(value)) return value.some(useful);
+    if (typeof value === 'number') return Number.isFinite(value) && value > 0;
+    if (typeof value === 'boolean') return value;
     const text = fixText(value).replace(/[.*_`#]/g, '').trim();
     if (!text) return false;
+    if (/^(?:non trouve|non detecte|indisponible|\u063a\u064a\u0631 \u0645\u062a\u0648\u0641\u0631|\u0644\u0627 \u064a\u0648\u062c\u062f|\u0644\u0645 \u064a\u062a\u0645 \u0627\u0644\u0639\u062b\u0648\u0631|false)$/i.test(text)) return false;
     return !/^(?:null|undefined|none|n\/a|no data|insufficient data|not detected|non detecte|aucun|aucune|donnees insuffisantes|—|-|--|0)$/.test(text.toLowerCase());
   }
 
@@ -453,9 +498,19 @@
     return /(guide concret|commentaires clients \(0\)|positionnementmedium|preuve(?:high|medium|low)|impact(?:high|medium|low)|plan de recherche|this week|next 30 days)/i.test(value);
   }
 
+  function matchesReportLanguage(text) {
+    const value = fixText(text);
+    if (!value || /^https?:\/\//i.test(value) || /^[\w.-]+\.[a-z]{2,}(?:\/|$)/i.test(value)) return true;
+    if (value.length < 28) return true;
+    const arabicLetters = (value.match(/[\u0600-\u06ff]/g) || []).length;
+    const latinLetters = (value.match(/[A-Za-z\u00c0-\u024f]/g) || []).length;
+    if (lang() === 'ar') return arabicLetters > 0 || latinLetters < 18;
+    return arabicLetters < Math.max(8, latinLetters * 0.35);
+  }
+
   function cleanInsight(value, fallback = '') {
     const text = fixText(value);
-    if (!useful(text) || mixedLanguageNoise(text) || genericCompetitorNoise(text)) return fixText(fallback);
+    if (!useful(text) || mixedLanguageNoise(text) || genericCompetitorNoise(text) || !matchesReportLanguage(text)) return fixText(fallback);
     return text;
   }
 
@@ -579,31 +634,12 @@
     };
   }
 
-  function fallbackDecision(intel, offerType) {
-    const subject = cleanInsight(intel?.productMarketStudy?.subject || document.getElementById('keyword')?.value || '');
-    const market = cleanInsight(intel?.geoInterpretation?.market || document.getElementById('country')?.value || '');
-    if (lang() === 'ar') {
-      const core = offerType === 'service' ? copy('serviceDecision') : copy('productDecision');
-      return `${core}${subject ? ` حول "${subject}"` : ''}${market ? ` في ${market}` : ''}.`;
-    }
-    if (lang() === 'en') {
-      const core = offerType === 'service' ? copy('serviceDecision') : copy('productDecision');
-      return `${core}${subject ? ` around "${subject}"` : ''}${market ? ` in ${market}` : ''}.`;
-    }
-    const core = offerType === 'service' ? copy('serviceDecision') : copy('productDecision');
-    return `${core}${subject ? ` autour de "${subject}"` : ''}${market ? ` en ${market}` : ''}.`;
-  }
-
-  function fallbackMove(offerType) {
-    return offerType === 'service' ? copy('serviceMove') : copy('productMove');
-  }
-
   function openingCards(intel, offerType) {
     const verdict = intel.marketVerdict || {};
     const attack = intel.recommendedAttackAngle || {};
     const answers = intel.finalAnswers || {};
     const actions = Array.isArray(intel.priorityActions) ? intel.priorityActions : [];
-    const firstAction = actions.find((item) => useful(item?.action || item)) || list(answers.thisWeek, 1)[0] || list(answers.next30Days, 1)[0] || fallbackMove(offerType);
+    const firstAction = actions.find((item) => useful(item?.action || item)) || list(answers.thisWeek, 1)[0] || list(answers.next30Days, 1)[0] || '';
     return [
       {
         title: copy('whoCaptures'),
@@ -623,7 +659,7 @@
       {
         title: copy('nextMove'),
         value: normalizeItem(firstAction?.action || firstAction),
-        note: cleanInsight(firstAction?.why || fallbackMove(offerType))
+        note: cleanInsight(firstAction?.why || '')
       }
     ].filter((item) => useful(item.value));
   }
@@ -635,10 +671,10 @@
     const actions = Array.isArray(intel.priorityActions) ? intel.priorityActions : [];
     const immediate = actions.filter((item) => !item.horizon || item.horizon === 'NOW').slice(0, 3);
     return {
-      decision: cleanInsight(attack.positioningStatement || answers.positionToTake, fallbackDecision(intel, offerType)),
+      decision: cleanInsight(attack.positioningStatement || answers.positionToTake),
       lever: list(verdict.whyTheyWin, 1)[0],
       risk: list(answers.missingProofs || attack.proofsToAdd || answers.weaknesses, 1)[0],
-      move: normalizeItem(immediate[0]?.action || immediate[0]) || fallbackMove(offerType),
+      move: normalizeItem(immediate[0]?.action || immediate[0]),
       opportunities: list(intel.productMarketStudy?.exploitableOpenings, 3),
       weaknesses: list(answers.weaknesses || attack.whatTheyDoNotProve, 3),
       actions: immediate.map((item) => normalizeItem(item.action || item)).filter(useful).slice(0, 3)
@@ -670,6 +706,25 @@
       </details>`;
   }
 
+  function openingHook(intel) {
+    const subject = cleanInsight(intel?.productMarketStudy?.subject || document.getElementById('keyword')?.value || '');
+    const market = cleanInsight(intel?.geoInterpretation?.market || document.getElementById('country')?.value || '');
+    const leader = cleanInsight(intel?.marketVerdict?.currentLeader);
+    if (lang() === 'ar') {
+      return subject && market
+        ? `قراءة مركزة لـ «${subject}» في ${market}: من يجذب الطلب، ما الذي يثبته، وما الفرصة القابلة للاختبار الآن${leader ? ` أمام ${leader}` : ''}.`
+        : 'قراءة مركزة لإشارات الطلب والعرض والأدلة التي يمكن تحويلها إلى قرار عملي.';
+    }
+    if (lang() === 'en') {
+      return subject && market
+        ? `A focused read of “${subject}” in ${market}: who captures demand, what is actually proven, and which opening can be tested now${leader ? ` against ${leader}` : ''}.`
+        : 'A focused read of demand, offer, and proof signals that can become a practical decision.';
+    }
+    return subject && market
+      ? `Lecture ciblée de « ${subject} » au ${market} : qui capte la demande, ce qui est réellement prouvé et l’ouverture à tester maintenant${leader ? ` face à ${leader}` : ''}.`
+      : 'Lecture ciblée des signaux de demande, d’offre et de preuve qui peuvent devenir une décision concrète.';
+  }
+
   function renderOpening(intel, offerType) {
     const cards = openingCards(intel, offerType);
     if (!cards.length) return '';
@@ -688,7 +743,7 @@
         <div class="daka-comp-opening-top">
           <span class="daka-comp-kicker">${esc(copy('opening'))}</span>
           <h2>${esc(title)}</h2>
-          <p>${esc(copy('openingHook'))}</p>
+           <p>${esc(openingHook(intel))}</p>
           ${geoNote ? `<div class="daka-comp-warning">${esc(geoNote)}</div>` : ''}
         </div>
         <div class="daka-comp-opening-grid">
@@ -762,8 +817,8 @@
       list(attack.whatCompetitorsSell).length ? `<article><h4>${esc(copy('whatMarketSells'))}</h4>${bullets(attack.whatCompetitorsSell, 'neutral')}</article>` : '',
       list(attack.whatTheyDoNotProve).length ? `<article><h4>${esc(copy('weakProof'))}</h4>${bullets(attack.whatTheyDoNotProve, 'alert')}</article>` : '',
       useful(attack.promiseToMake) ? `<article><h4>${esc(copy('promiseToTake'))}</h4>${paragraph(attack.promiseToMake, 'daka-comp-emphasis')}</article>` : '',
-      useful(attack.positioningStatement) || useful(fallbackDecision(intel, offerTypeFromInput(intel)))
-        ? `<article><h4>${esc(copy('positionToTake'))}</h4>${paragraph(cleanInsight(attack.positioningStatement, fallbackDecision(intel, offerTypeFromInput(intel))), 'daka-comp-emphasis')}</article>` : '',
+      useful(attack.positioningStatement)
+        ? `<article><h4>${esc(copy('positionToTake'))}</h4>${paragraph(cleanInsight(attack.positioningStatement), 'daka-comp-emphasis')}</article>` : '',
       list(attack.proofsToAdd).length ? `<article><h4>${esc(copy('proofsToAdd'))}</h4>${bullets(attack.proofsToAdd, 'neutral')}</article>` : ''
     ].filter(Boolean).join('');
     return detailsSection('comp-positioning', copy('positioning'), body, false);
@@ -793,9 +848,6 @@
       DAYS7: actions.filter((item) => item.horizon === '7_DAYS').slice(0, 3),
       DAYS30: actions.filter((item) => item.horizon === '30_DAYS').slice(0, 3)
     };
-    if (!groups.NOW.length && useful(fallbackMove(offerType))) {
-      groups.NOW = [{ action: fallbackMove(offerType) }];
-    }
     const body = [
       groups.NOW.length ? `<section><h4>${esc(copy('now'))}</h4><div class="daka-comp-card-grid">${groups.NOW.map(actionCard).join('')}</div></section>` : '',
       groups.DAYS7.length ? `<section><h4>${esc(copy('week'))}</h4><div class="daka-comp-card-grid">${groups.DAYS7.map(actionCard).join('')}</div></section>` : '',
@@ -804,10 +856,17 @@
     return detailsSection('comp-action-plan', copy('actionPlan'), body, false);
   }
 
+  function competitorGeoLabel(item) {
+    if (item?.geoTier === 'LOCAL_CONFIRMED' || item?.geoConfirmed === true) return extraCopy('localConfirmed');
+    if (item?.geoTier === 'LOCAL_PROBABLE' || item?.geoMatched === true) return extraCopy('localProbable');
+    if (item?.geoTier === 'FOREIGN_BENCHMARK') return extraCopy('foreignBenchmark');
+    return copy('benchmarkType');
+  }
+
   function renderCompetitors(intel) {
     const profiles = (Array.isArray(intel.competitorProfiles) ? intel.competitorProfiles : [])
       .filter((item) => useful(item?.domain || item?.title))
-      .slice(0, 5);
+      .slice(0, 10);
     if (!profiles.length) return '';
     const body = profiles.map((item, index) => {
       const evidence = linkItems(item.evidenceLinks);
@@ -826,7 +885,7 @@
               <span class="daka-comp-rank">${String(index + 1).padStart(2, '0')}</span>
               <div>
                 <h4>${esc(item.domain || item.title || '')}</h4>
-                <small>${esc(item.geoMatched ? copy('directType') : copy('benchmarkType'))}</small>
+                <small>${esc(competitorGeoLabel(item))}</small>
               </div>
             </div>
             ${useful(item.confidence) ? `<span class="daka-comp-badge">${esc(item.confidence)}</span>` : ''}
@@ -835,7 +894,7 @@
           ${evidence}
         </article>`;
     }).join('');
-    return detailsSection('comp-direct-competitors', copy('directCompetitors'), body, false);
+    return detailsSection('comp-direct-competitors', copy('directCompetitors'), `<div class="daka-comp-profile-grid">${body}</div>`, false);
   }
 
   function renderUserBenchmark(data, intel) {
@@ -912,6 +971,11 @@
       strengths: 'Forces', weaknesses: 'Faiblesses', opportunities: 'Opportunites', threats: 'Menaces',
       trafficSources: 'Sources de trafic', retentionLoop: 'Boucle de retention', monetizationHack: 'Monetisation',
       competitor: 'Concurrent', user: 'Votre position', killShot: 'Action decisive',
+      offerAndRisk: 'Offre, risque et garantie', jtbdPsychology: 'Psychologie client (JTBD)', kanoDelighter: 'Effet remarquable (Kano)', activationAARRR: 'Activation et friction (AARRR)',
+      flankingStrategy: 'Strategie de contournement', pricingBundling: 'Prix et bundles', valueLadder: 'Echelle de valeur', uxTeardown: 'Demontage UX',
+      dreamOutcome: 'Resultat recherche', perceivedLikelihood: 'Credibilite percue', timeDelay: 'Delai de resultat', effortAndSacrifice: 'Effort demande', theIrresistibleOffer: 'Offre finale',
+      coreOffering: 'Offre principale', pricingStrategy: 'Strategie de prix', uniqueValueProposition: 'Proposition de valeur', weakestProductFeature: 'Faiblesse observee', killShotFeature: 'Contre-proposition',
+      mainMoat: 'Avantage principal', summary: 'Synthese', contentStrategy: 'Strategie de contenu', technicalMoat: 'Avantage technique', brandAuthority: 'Autorite de marque',
       eliminate: 'Eliminer', reduce: 'Reduire', raise: 'Renforcer', create: 'Creer', currentRedOcean: 'Ocean rouge', blueOceanMoves: 'Mouvements Ocean bleu', positioningMap: 'Carte de positionnement'
     },
     en: {
@@ -919,6 +983,11 @@
       strengths: 'Strengths', weaknesses: 'Weaknesses', opportunities: 'Opportunities', threats: 'Threats',
       trafficSources: 'Traffic sources', retentionLoop: 'Retention loop', monetizationHack: 'Monetization',
       competitor: 'Competitor', user: 'Your position', killShot: 'Decisive move',
+      offerAndRisk: 'Offer, risk, and guarantee', jtbdPsychology: 'Customer psychology (JTBD)', kanoDelighter: 'Delighter effect (Kano)', activationAARRR: 'Activation and friction (AARRR)',
+      flankingStrategy: 'Flanking strategy', pricingBundling: 'Pricing and bundles', valueLadder: 'Value ladder', uxTeardown: 'UX teardown',
+      dreamOutcome: 'Desired outcome', perceivedLikelihood: 'Perceived credibility', timeDelay: 'Time to result', effortAndSacrifice: 'Required effort', theIrresistibleOffer: 'Final offer',
+      coreOffering: 'Core offer', pricingStrategy: 'Pricing strategy', uniqueValueProposition: 'Value proposition', weakestProductFeature: 'Observed weakness', killShotFeature: 'Counter-proposition',
+      mainMoat: 'Main advantage', summary: 'Summary', contentStrategy: 'Content strategy', technicalMoat: 'Technical advantage', brandAuthority: 'Brand authority',
       eliminate: 'Eliminate', reduce: 'Reduce', raise: 'Raise', create: 'Create', currentRedOcean: 'Red ocean', blueOceanMoves: 'Blue Ocean moves', positioningMap: 'Positioning map'
     },
     ar: {
@@ -926,6 +995,11 @@
       strengths: '\u0646\u0642\u0627\u0637 \u0627\u0644\u0642\u0648\u0629', weaknesses: '\u0646\u0642\u0627\u0637 \u0627\u0644\u0636\u0639\u0641', opportunities: '\u0627\u0644\u0641\u0631\u0635', threats: '\u0627\u0644\u062a\u0647\u062f\u064a\u062f\u0627\u062a',
       trafficSources: '\u0645\u0635\u0627\u062f\u0631 \u0627\u0644\u0632\u064a\u0627\u0631\u0627\u062a', retentionLoop: '\u062d\u0644\u0642\u0629 \u0627\u0644\u0627\u062d\u062a\u0641\u0627\u0638', monetizationHack: '\u062a\u062d\u0642\u064a\u0642 \u0627\u0644\u062f\u062e\u0644',
       competitor: '\u0627\u0644\u0645\u0646\u0627\u0641\u0633', user: '\u0645\u0648\u0642\u0639\u0643', killShot: '\u0627\u0644\u062d\u0631\u0643\u0629 \u0627\u0644\u062d\u0627\u0633\u0645\u0629',
+      offerAndRisk: '\u0627\u0644\u0639\u0631\u0636 \u0648\u0627\u0644\u0645\u062e\u0627\u0637\u0631 \u0648\u0627\u0644\u0636\u0645\u0627\u0646', jtbdPsychology: '\u0633\u064a\u0643\u0648\u0644\u0648\u062c\u064a\u0629 \u0627\u0644\u0639\u0645\u064a\u0644 (JTBD)', kanoDelighter: '\u0639\u0627\u0645\u0644 \u0627\u0644\u0625\u0628\u0647\u0627\u0631 (Kano)', activationAARRR: '\u0627\u0644\u062a\u0641\u0639\u064a\u0644 \u0648\u0627\u0644\u0627\u062d\u062a\u0643\u0627\u0643 (AARRR)',
+      flankingStrategy: '\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0627\u0644\u0627\u0644\u062a\u0641\u0627\u0641', pricingBundling: '\u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u062d\u0632\u0645', valueLadder: '\u0633\u0644\u0645 \u0627\u0644\u0642\u064a\u0645\u0629', uxTeardown: '\u062a\u0641\u0643\u064a\u0643 \u062a\u062c\u0631\u0628\u0629 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645',
+      dreamOutcome: '\u0627\u0644\u0646\u062a\u064a\u062c\u0629 \u0627\u0644\u0645\u0631\u063a\u0648\u0628\u0629', perceivedLikelihood: '\u0627\u0644\u0645\u0635\u062f\u0627\u0642\u064a\u0629 \u0627\u0644\u0645\u062f\u0631\u0643\u0629', timeDelay: '\u0645\u062f\u0629 \u062a\u062d\u0642\u064a\u0642 \u0627\u0644\u0646\u062a\u064a\u062c\u0629', effortAndSacrifice: '\u0627\u0644\u062c\u0647\u062f \u0627\u0644\u0645\u0637\u0644\u0648\u0628', theIrresistibleOffer: '\u0627\u0644\u0639\u0631\u0636 \u0627\u0644\u0646\u0647\u0627\u0626\u064a',
+      coreOffering: '\u0627\u0644\u0639\u0631\u0636 \u0627\u0644\u0623\u0633\u0627\u0633\u064a', pricingStrategy: '\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0627\u0644\u0633\u0639\u0631', uniqueValueProposition: '\u0642\u064a\u0645\u0629 \u0627\u0644\u0639\u0631\u0636', weakestProductFeature: '\u0627\u0644\u0636\u0639\u0641 \u0627\u0644\u0645\u0631\u0635\u0648\u062f', killShotFeature: '\u0627\u0644\u0639\u0631\u0636 \u0627\u0644\u0645\u0636\u0627\u062f',
+      mainMoat: '\u0627\u0644\u0623\u0641\u0636\u0644\u064a\u0629 \u0627\u0644\u0631\u0626\u064a\u0633\u064a\u0629', summary: '\u0627\u0644\u062e\u0644\u0627\u0635\u0629', contentStrategy: '\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0627\u0644\u0645\u062d\u062a\u0648\u0649', technicalMoat: '\u0627\u0644\u0623\u0641\u0636\u0644\u064a\u0629 \u0627\u0644\u062a\u0642\u0646\u064a\u0629', brandAuthority: '\u0633\u0644\u0637\u0629 \u0627\u0644\u0639\u0644\u0627\u0645\u0629',
       eliminate: '\u062d\u0630\u0641', reduce: '\u062a\u0642\u0644\u064a\u0635', raise: '\u0631\u0641\u0639', create: '\u0627\u0628\u062a\u0643\u0627\u0631', currentRedOcean: '\u0627\u0644\u0645\u062d\u064a\u0637 \u0627\u0644\u0623\u062d\u0645\u0631', blueOceanMoves: '\u062d\u0631\u0643\u0627\u062a \u0627\u0644\u0645\u062d\u064a\u0637 \u0627\u0644\u0623\u0632\u0631\u0642', positioningMap: '\u062e\u0631\u064a\u0637\u0629 \u0627\u0644\u062a\u0645\u0648\u0636\u0639'
     }
   };
@@ -934,9 +1008,16 @@
     return fixText(STUDY_FIELD_LABELS[lang()]?.[key] || '');
   }
 
+  const STUDY_META_KEYS = new Set(['status', 'type', 'confidence', 'confidenceExplanation', 'evidenceLinks']);
+
   function studyHasValue(value) {
     if (Array.isArray(value)) return value.some(studyHasValue);
-    if (value && typeof value === 'object') return Object.values(value).some(studyHasValue);
+    if (value && typeof value === 'object') {
+      return Object.entries(value)
+        .filter(([key]) => !STUDY_META_KEYS.has(key))
+        .some(([, item]) => studyHasValue(item));
+    }
+    if (typeof value === 'boolean') return false;
     return useful(value);
   }
 
@@ -948,18 +1029,24 @@
       return [primitives.length ? bullets(primitives.slice(0, 8), 'neutral') : '', objects.map((item) => `<div class="daka-comp-study-subcard">${renderStudyValue(item, depth + 1)}</div>`).join('')].join('');
     }
     if (value && typeof value === 'object') {
-      return Object.entries(value).filter(([, item]) => studyHasValue(item)).slice(0, 12).map(([key, item]) => {
+      return Object.entries(value)
+        .filter(([key, item]) => !STUDY_META_KEYS.has(key) && studyHasValue(item))
+        .slice(0, 12).map(([key, item]) => {
         const label = studyFieldLabel(key);
         const content = renderStudyValue(item, depth + 1);
         if (!content) return '';
         return `<div class="daka-comp-study-field">${label ? `<strong>${esc(label)}</strong>` : ''}${content}</div>`;
       }).join('');
     }
-    return paragraph(value);
+    const text = cleanInsight(value);
+    if (!text) return '';
+    if (/^https?:\/\//i.test(text)) {
+      return `<a href="${esc(text)}" target="_blank" rel="noopener" data-no-collapse="true">${esc(extraCopy('openSource'))}</a>`;
+    }
+    return paragraph(text);
   }
 
   function renderStrategicStudies(data) {
-    if (data?.strategicStudiesAvailability?.available === false) return '';
     const studies = [
       ['top3ReverseEngineering', extraCopy('reverseEngineering')],
       ['grandSlamOfferBlueprint', extraCopy('grandSlam')],
@@ -980,6 +1067,34 @@
         ${renderStudyValue(data[key])}
       </article>`).join('')}</div>`;
     return detailsSection('comp-strategic-studies', extraCopy('strategicStudies'), body, false);
+  }
+
+  function renderMarketIntelligenceStudies(data) {
+    const apifyIntel = data?.apify?.apifyIntel || {};
+    const fieldSignals = {
+      ads: Array.isArray(apifyIntel.ads) ? apifyIntel.ads.slice(0, 6) : [],
+      posts: Array.isArray(apifyIntel.posts) ? apifyIntel.posts.slice(0, 6) : [],
+      comments: Array.isArray(apifyIntel.comments) ? apifyIntel.comments.slice(0, 6) : [],
+      reviews: Array.isArray(apifyIntel.reviews) ? apifyIntel.reviews.slice(0, 6) : [],
+      links: Array.isArray(data?.apify?.links?.all) ? data.apify.links.all.slice(0, 10) : []
+    };
+    const studies = [
+      [data?.marketInsights, extraCopy('marketInsights')],
+      [data?.marketDynamics, extraCopy('marketDynamics')],
+      [data?.winningMove, extraCopy('winningMove')],
+      [data?.leaderMoat, extraCopy('leaderMoat')],
+      [data?.knowledgeGraph, extraCopy('knowledgeGraph')],
+      [data?.proofModel, extraCopy('proofModel')],
+      [data?.googleRealData, extraCopy('googleSignals')],
+      [fieldSignals, extraCopy('fieldSignals')]
+    ].filter(([value]) => studyHasValue(value));
+    if (!studies.length) return '';
+    const body = `<div class="daka-comp-study-grid">${studies.map(([value, title]) => `
+      <article class="daka-comp-study-card">
+        <h4>${esc(title)}</h4>
+        ${renderStudyValue(value)}
+      </article>`).join('')}</div>`;
+    return detailsSection('comp-market-intelligence-studies', extraCopy('marketIntelStudies'), body, false);
   }
 
   function renderProductStudy(intel) {
@@ -1336,6 +1451,11 @@
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 16px;
       }
+      #resultsCompetitors .daka-comp-profile-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
       #resultsCompetitors .daka-comp-study-card {
         min-width: 0;
       }
@@ -1377,6 +1497,9 @@
         #resultsCompetitors .daka-comp-study-grid {
           grid-template-columns: 1fr;
         }
+        #resultsCompetitors .daka-comp-profile-grid {
+          grid-template-columns: 1fr;
+        }
         #resultsCompetitors .daka-comp-benchmark-card {
           align-items: stretch;
           flex-direction: column;
@@ -1407,6 +1530,7 @@
       renderUserBenchmark(repaired, intel),
       renderCompetitors(intel),
       renderSources(intel, repaired),
+      renderMarketIntelligenceStudies(repaired),
       renderProductStudy(intel),
       renderStrategicStudies(repaired),
       renderMissingProofs(intel),
@@ -1417,6 +1541,13 @@
     container.style.display = 'block';
     container.dir = lang() === 'ar' ? 'rtl' : 'ltr';
     container.setAttribute('lang', lang());
+    if (container.dataset.interactionGuard !== 'true') {
+      container.dataset.interactionGuard = 'true';
+      container.addEventListener('click', (event) => {
+        const interactive = event.target.closest('a, button, input, select, textarea, [data-no-collapse]');
+        if (interactive && !interactive.closest('summary')) event.stopPropagation();
+      });
+    }
     container.querySelectorAll('[data-close-parent]').forEach((button) => {
       button.addEventListener('click', (event) => {
         event.preventDefault();

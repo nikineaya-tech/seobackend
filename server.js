@@ -7529,6 +7529,129 @@ function geoMatchDetailsStrictV3(rawUrl = '', geoData = {}, title = '', snippet 
     };
 }
 
+function classifyCompetitorGeoTier(rawUrl = '', geoData = {}, title = '', snippet = '', options = {}) {
+    const match = geoMatchDetailsStrictV3(rawUrl, geoData, title, snippet);
+    const targetGl = String(geoData?.gl || '').toLowerCase();
+    const targetLocation = String(geoData?.location || '').toLowerCase();
+    const isGlobal = targetLocation === 'global english';
+    if (isGlobal || match.strictMatched) {
+        return { ...match, tier: 'LOCAL_CONFIRMED', local: true, foreignConflict: null };
+    }
+
+    const host = safeHostname(rawUrl);
+    const blob = `${host} ${title || ''} ${snippet || ''}`;
+    let foreignConflict = null;
+    for (const [gl, rule] of Object.entries(COMPETITOR_STRICT_GEO_RULES)) {
+        if (gl === targetGl) continue;
+        const tldMatch = (rule.tlds || []).find(tld => host.endsWith(tld));
+        const aliasMatch = (rule.aliases || []).find(alias => competitorGeoPhraseMatch(blob, alias));
+        if (tldMatch || aliasMatch) {
+            foreignConflict = {
+                gl,
+                country: rule.country,
+                signal: tldMatch ? `tld:${tldMatch}` : aliasMatch
+            };
+            break;
+        }
+    }
+
+    if (foreignConflict) {
+        return { ...match, tier: 'FOREIGN_BENCHMARK', local: false, foreignConflict };
+    }
+    if (options.fromTargetedSerp !== false && isPublicHttpUrl(rawUrl)) {
+        return {
+            ...match,
+            tier: 'LOCAL_PROBABLE',
+            local: true,
+            foreignConflict: null,
+            matchedTerms: [...new Set([...(match.matchedTerms || []), `serp:${targetGl || 'target'}`])]
+        };
+    }
+    return { ...match, tier: 'UNCONFIRMED', local: false, foreignConflict: null };
+}
+
+const COMPETITOR_QUERY_LOCALIZATION_CACHE = new Map();
+
+function detectCompetitorQueryLanguage(value = '') {
+    const text = String(value || '').trim().toLowerCase();
+    if (!text) return null;
+    if (/[\u0600-\u06ff]/.test(text)) return 'ar';
+    if (/[àâçéèêëîïôùûüÿœ]/i.test(text) || /\b(?:agence|logiciel|maroc|libye|tunisie|alg[eé]rie|prix|acheter|concurrent|march[eé]|service|formation)\b/i.test(text)) return 'fr';
+    if (/\b(?:agency|software|market|competitor|pricing|buy|service|training|united states|saudi arabia)\b/i.test(text)) return 'en';
+    return null;
+}
+
+function fallbackCompetitorQueryTranslation(value = '', targetLang = 'fr') {
+    const source = String(value || '').trim();
+    const normalized = source.toLowerCase();
+    const exact = {
+        ar: {
+            'agence marketing ia': '\u0648\u0643\u0627\u0644\u0629 \u062a\u0633\u0648\u064a\u0642 \u0628\u0627\u0644\u0630\u0643\u0627\u0621 \u0627\u0644\u0627\u0635\u0637\u0646\u0627\u0639\u064a',
+            'saas marketing maroc': '\u0628\u0631\u0645\u062c\u064a\u0627\u062a \u0627\u0644\u062a\u0633\u0648\u064a\u0642 \u0643\u062e\u062f\u0645\u0629 \u0641\u064a \u0627\u0644\u0645\u063a\u0631\u0628',
+            'logiciel de gestion et spy des concurrents': '\u0628\u0631\u0646\u0627\u0645\u062c \u0644\u0625\u062f\u0627\u0631\u0629 \u0648\u0645\u0631\u0627\u0642\u0628\u0629 \u0627\u0644\u0645\u0646\u0627\u0641\u0633\u064a\u0646'
+        },
+        fr: {
+            'ai marketing agency': 'agence marketing IA',
+            'competitor intelligence software': 'logiciel de veille concurrentielle'
+        },
+        en: {
+            'agence marketing ia': 'AI marketing agency',
+            'logiciel de veille concurrentielle': 'competitor intelligence software'
+        }
+    };
+    if (exact[targetLang]?.[normalized]) return exact[targetLang][normalized];
+    return source;
+}
+
+async function localizeCompetitorQueryForAnalysis(value = '', targetLang = 'fr') {
+    const originalQuery = String(value || '').replace(/\s+/g, ' ').trim();
+    const safeTarget = ['fr', 'en', 'ar'].includes(targetLang) ? targetLang : 'fr';
+    const cacheKey = `${safeTarget}:${originalQuery.toLowerCase()}`;
+    const cached = COMPETITOR_QUERY_LOCALIZATION_CACHE.get(cacheKey);
+    if (cached) return cached;
+    const detectedLang = detectCompetitorQueryLanguage(originalQuery);
+    const isUrl = /^https?:\/\//i.test(originalQuery);
+    let localizedQuery = originalQuery;
+    let source = 'original';
+
+    if (!isUrl && originalQuery && detectedLang !== safeTarget) {
+        try {
+            const response = await axios.get('https://translate.googleapis.com/translate_a/single', {
+                params: { client: 'gtx', sl: 'auto', tl: safeTarget, dt: 't', q: originalQuery },
+                timeout: 3500,
+                maxContentLength: 120000
+            });
+            const translated = Array.isArray(response.data?.[0])
+                ? response.data[0].map(part => Array.isArray(part) ? part[0] : '').filter(Boolean).join('')
+                : '';
+            if (translated && translated.trim().length >= 2) {
+                localizedQuery = translated.replace(/\s+/g, ' ').trim();
+                source = 'translation';
+            }
+        } catch (error) {
+            console.warn(`[WarRoom-V10.0] Query translation fallback: ${error.message}`);
+        }
+        if (localizedQuery === originalQuery) {
+            localizedQuery = fallbackCompetitorQueryTranslation(originalQuery, safeTarget);
+            source = localizedQuery === originalQuery ? 'original-fallback' : 'glossary-fallback';
+        }
+    }
+
+    const result = {
+        originalQuery,
+        localizedQuery,
+        detectedLang,
+        targetLang: safeTarget,
+        source,
+        searchVariants: [...new Set([originalQuery, localizedQuery].filter(Boolean))]
+    };
+    COMPETITOR_QUERY_LOCALIZATION_CACHE.set(cacheKey, result);
+    if (COMPETITOR_QUERY_LOCALIZATION_CACHE.size > 250) {
+        COMPETITOR_QUERY_LOCALIZATION_CACHE.delete(COMPETITOR_QUERY_LOCALIZATION_CACHE.keys().next().value);
+    }
+    return result;
+}
+
 const COMPETITOR_BUSINESS_CACHE = new Map();
 const COMPETITOR_BUSINESS_CACHE_TTL = 12 * 60 * 60 * 1000;
 
@@ -7665,14 +7788,16 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
     if (cached && Date.now() - cached.savedAt < COMPETITOR_BUSINESS_CACHE_TTL) return cached.value;
 
     const fallback = {
-        whatTheySell: compactBusinessText(competitor.snippet, 180) || labels.fallbackSell,
-        primaryPromise: compactBusinessText(competitor.title, 160) || competitor.domain || labels.fallbackSell,
+        // A SERP title/snippet is evidence about the page, not a promise we can
+        // safely attribute to the business. Keep the fallback factual and sparse.
+        whatTheySell: compactBusinessText(competitor.snippet, 180),
+        primaryPromise: '',
         observedStrengths: [],
         structuralStrengths: [],
         productSignals: compactBusinessText(competitor.snippet, 180) ? [compactBusinessText(competitor.snippet, 180)] : [],
         deducedWeaknesses: [],
         missingProofs: [],
-        attackAngle: labels.attack,
+        attackAngle: '',
         evidenceLinks: [competitor.url].filter(Boolean),
         confidence: 'LOW',
         observed: false,
@@ -7779,8 +7904,8 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
         );
 
         const value = {
-            whatTheySell: headings[0] || compactBusinessText(competitor.snippet, 180) || labels.fallbackSell,
-            primaryPromise: headings[1] || headings[0] || compactBusinessText(competitor.title, 160),
+            whatTheySell: headings[0] || compactBusinessText(competitor.snippet, 180),
+            primaryPromise: headings[1] || '',
             observedStrengths: structuralStrengths.slice(0, 6),
             structuralStrengths: structuralStrengths.slice(0, 6),
             productSignals: productSignals.slice(0, 5),
@@ -7805,7 +7930,7 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
             },
             deducedWeaknesses,
             missingProofs: missingProofs.slice(0, 4),
-            attackAngle: missingProofs[0] || labels.attack,
+            attackAngle: missingProofs[0] || '',
             evidenceLinks,
             confidence: structuralStrengths.length >= 3 ? 'HIGH' : structuralStrengths.length ? 'MEDIUM' : 'LOW',
             observed: true,
@@ -7824,7 +7949,7 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
 }
 
 async function enrichTopCompetitorsBusiness(competitors = [], lang = 'fr') {
-    const targets = competitors.slice(0, 5);
+    const targets = competitors.slice(0, 10);
     const results = new Array(targets.length);
     let cursor = 0;
     const worker = async () => {
@@ -7849,6 +7974,21 @@ function dedupeBusinessActions(actions = []) {
         seen.push(normalized);
         return true;
     }).slice(0, 10);
+}
+
+function hasMeaningfulCompetitorStudyData(value, depth = 0) {
+    if (depth > 6 || value === null || value === undefined) return false;
+    if (Array.isArray(value)) return value.some(item => hasMeaningfulCompetitorStudyData(item, depth + 1));
+    if (typeof value === 'object') {
+        const metaKeys = new Set(['status', 'type', 'confidence', 'confidenceExplanation', 'evidenceLinks']);
+        return Object.entries(value)
+            .filter(([key]) => !metaKeys.has(key))
+            .some(([, item]) => hasMeaningfulCompetitorStudyData(item, depth + 1));
+    }
+    if (typeof value === 'number') return Number.isFinite(value) && value !== 0;
+    const text = String(value || '').replace(/\s+/g, ' ').trim();
+    if (!text) return false;
+    return !/^(?:null|undefined|none|n\/?a|not available|not found|non trouve|non detecte|aucun|aucune|indisponible|error|not_called|غير متوفر|لا يوجد|لا توجد|غير متاح|[-—]+|0)$/i.test(text);
 }
 
 // Keep business classification deterministic and local to the competitor pipeline.
@@ -7984,9 +8124,9 @@ function buildCompetitorMarketProductSources({
         const title = marketProductSourceTitle(raw) || safeHostname(url) || url;
         const snippet = cleanCompetitorBusinessText(raw.snippet || raw.description || raw.text || extra.evidence, 220);
         const geoMatch = type === 'userBenchmark'
-            ? { strictMatched: true, score: 100, matchedTerms: ['user-provided'], geoTarget: geoData?.location || null }
-            : geoMatchDetailsStrictV3(url, geoData, title, snippet);
-        if (!geoMatch.strictMatched) {
+            ? { strictMatched: true, score: 100, matchedTerms: ['user-provided'], geoTarget: geoData?.location || null, tier: 'USER_BENCHMARK', local: true }
+            : classifyCompetitorGeoTier(url, geoData, title, snippet, { fromTargetedSerp: true });
+        if (!geoMatch.local) {
             excludedByGeo.push({
                 title,
                 url,
@@ -8010,6 +8150,8 @@ function buildCompetitorMarketProductSources({
             source: extra.source || raw.source || 'serp',
             category: raw.category || extra.category || type,
             geoMatched: true,
+            geoConfirmed: geoMatch.tier === 'LOCAL_CONFIRMED',
+            geoTier: geoMatch.tier,
             geoTarget: geoData?.location || null,
             geoSignals: geoMatch.matchedTerms || [],
             userProvided: type === 'userBenchmark'
@@ -8046,7 +8188,7 @@ function buildCompetitorMarketProductSources({
             : [])
     ], item => marketProductSourceUrl(item));
 
-    for (const competitor of safeArray(enrichedCompetitors).slice(0, 6)) {
+    for (const competitor of safeArray(enrichedCompetitors).slice(0, 10)) {
         push('directCompetitor', competitor, {
             confidence: competitor.businessProfile?.confidence || 'MEDIUM',
             observedEvidence: competitor.snippet || copy.serp,
@@ -8096,7 +8238,7 @@ function buildCompetitorMarketProductSources({
     }
 
     for (const key of Object.keys(groups)) {
-        groups[key] = uniqueByKey(groups[key], item => item.url).slice(0, key === 'directCompetitor' ? 6 : 8);
+        groups[key] = uniqueByKey(groups[key], item => item.url).slice(0, key === 'directCompetitor' ? 10 : 8);
     }
     const localComparableSiteCount = [
         groups.directCompetitor,
@@ -8284,7 +8426,6 @@ function buildContextualBusinessPosition({ archetype = 'generic', query = '', ge
 async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', query = '', geo = '', userContext = {} } = {}) {
     const archetypeContext = [query, userContext?.offer, userContext?.audience].filter(Boolean).join(' ');
     const archetype = detectCompetitorBusinessArchetype(archetypeContext, competitors);
-    const generic = archetypeBusinessCopy(archetype, query, geo, lang);
     const rawProfiles = await enrichTopCompetitorsBusiness(competitors, lang);
     return rawProfiles.map((raw, index) => {
         const competitor = competitors[index] || {};
@@ -8295,7 +8436,7 @@ async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', q
         ], 3);
         const observedText = cleanCompetitorBusinessText(raw?.whatTheySell, 220);
         const tooGeneric = !observedText || /offre commerciale|commercial offer|demande observ|market demand/i.test(observedText);
-        const proofGaps = [...generic.proof];
+        const proofGaps = [];
         const removeProofGap = pattern => {
             const proofIndex = proofGaps.findIndex(x => pattern.test(x));
             if (proofIndex >= 0) proofGaps.splice(proofIndex, 1);
@@ -8310,14 +8451,14 @@ async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', q
         const confidence = raw?.confidence || 'LOW';
         return {
             ...raw,
-            whatTheySell: tooGeneric ? generic.sell : observedText,
-            primaryPromise: cleanCompetitorBusinessText(raw?.primaryPromise || competitor.title, 200),
+            whatTheySell: tooGeneric ? '' : observedText,
+            primaryPromise: cleanCompetitorBusinessText(raw?.primaryPromise || '', 200),
             observedStrengths,
             structuralStrengths: observedStrengths,
             deducedWeaknesses: weaknesses,
             missingProofs,
-            attackAngle: cleanCompetitorBusinessText(weaknesses[0] || generic.position, 260),
-            concreteAction: cleanCompetitorBusinessText(generic.proof.join(' · '), 300),
+            attackAngle: cleanCompetitorBusinessText(weaknesses[0] || raw?.attackAngle || '', 260),
+            concreteAction: cleanCompetitorBusinessText(raw?.concreteAction || '', 300),
             confidence,
             confidenceExplanation: competitorConfidenceExplanation(confidence, lang),
             archetype,
@@ -8328,15 +8469,16 @@ async function enrichTopCompetitorsBusinessV2(competitors = [], { lang = 'fr', q
 }
 
 function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = '', lang = 'fr', archetype = 'generic', missingProofs = [] } = {}) {
-    const generic = archetypeBusinessCopy(archetype, query, geo, lang);
+    const evidenceGaps = dedupeBusinessInsights(missingProofs, 5);
+    if (!leader.domain || !evidenceGaps.length) return [];
     const leaderName = cleanCompetitorBusinessText(leader.domain || leader.title || '', 80) || (lang === 'ar' ? 'المرجع المرصود' : lang === 'en' ? 'the observed benchmark' : 'le benchmark observé');
     const actionsByType = {
         service: lang === 'ar' ? [
-            `???? ???? ?? ???? ???? ????? ??? ????? ????? ?? ${leaderName}: ??????? ????????? ??????? ?????? ?????.`,
-            '???? ???? ???? ?? ????? ????? ?????? ??? ???? ??????? ?? ?????.',
-            '???? ????????? ????? ???????? ?????? ????? ?????????? ?? ??? ?????.',
-            '??? ???? ?????? ????? ??????? ?? ???? ?????? ???? ?????.',
-            '???? ???? ??????? ???????? ?????? ?????? ??????? ??????? ?? ???? ????.'
+            `انشر مقارنة عملية مع ${leaderName} توضّح النطاق والمخرجات والآجال وطريقة العمل دون ادعاءات غير مثبتة.`,
+            'اعرض نتيجة عميل قابلة للتحقق قبل زر التواصل أو الحجز.',
+            'اجمع المخرجات وطريقة التسعير وشروط الدفع والمراجعات في قسم واحد.',
+            'أضف خطوة أولى منخفضة المخاطر أو ضمان مراجعة واضحا.',
+            'وحّد زر التواصل الرئيسي وواتساب والخطوة التالية في مسار واحد.'
         ] : lang === 'en' ? [
             `Publish a practical comparison page with ${leaderName}, covering scope, deliverables, timing, and your difference.`,
             'Show verifiable client outcomes before the contact CTA.',
@@ -8351,11 +8493,11 @@ function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = ''
             'Unifie le CTA principal, le CTA WhatsApp et la prochaine etape dans un seul parcours.'
         ],
         supplement: lang === 'ar' ? [
-            `???? ???? ???? ????? ????? ????? ?????? ????? ??? ${leaderName}: ????????? ?????????? ??????????? ??? ???? ???? ???????.`,
-            '???? ????????? ??????? ?????????? ??? ?? ???? ???? ??? ????? ?? ?????.',
-            '??? ???? ????? ?????? ?? ??? ??????? ?? ???? ????? ????.',
-            '???? ????? ?????? ??????? ??? ???? ?? ??? ????? ??? ????? ??? ?? ??? ???.',
-            '??? FAQ ????? ?? ???????? ?????????? ?????? ?????? ????????.'
+            `ابن عرضا يشرح لماذا يختار العميل منتجك بدل ${leaderName}: التركيبة والاستعمال والاحتياطات والدليل المتاح.`,
+            'اعرض التركيبة والجرعة والتحذيرات وما تم إثباته قبل السعر أو زر الطلب.',
+            'أضف آراء قابلة للتحقق أو صور استعمال أو دليلا مرئيا على النتيجة.',
+            'اعرض السعر المحلي والتوفر وما يحتاج إلى تأكيد قبل تقديم أي وعد قوي.',
+            'أضف أسئلة شائعة مختصرة حول السلامة والاستعمال والمدة والفئة المناسبة.'
         ] : lang === 'en' ? [
             `Build an offer block that explains why buyers should pick your product over ${leaderName}: composition, usage, precautions, and proof of outcome.`,
             'Show composition, dosage, warnings, and what is proven before price or CTA.',
@@ -8370,11 +8512,11 @@ function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = ''
             'Ajoute une FAQ courte sur la securite, l usage, la duree et le profil concerne.'
         ],
         physical_product: lang === 'ar' ? [
-            `???? ???? ???? ????? ????? ????? ?????? ???? ??? ${leaderName}: ?? ???? ???? ?? ?????? ?? ????? ??? ???? ???? ?????? ????.`,
-            '???? ????? ??????? ??????? ???????? ???????? ??????? ?? ???? ???? ?????.',
-            '??? ???? ?????? ?? ???? ?? ????? ???? ?? ???? ??? ???? ??????.',
-            '???? ?? ???? ???? ??????? ????? ???????? ??? ???? ???? ?? ?????.',
-            '??? FAQ ????? ?? ?????? ?????? ??????? ??? ??? ?????.'
+            `ابن شاشة قرار توضّح لماذا يختار المشتري عرضك بدل ${leaderName}: المحتوى والسعر والدليل الفعلي على الجودة.`,
+            'اجمع السعر المؤكد والتوفر والتوصيل والإرجاع والضمان في شاشة قرار واحدة.',
+            'أضف آراء حقيقية أو صورا أو عرضا يبين ما يتسلمه العميل فعلا.',
+            'وضّح المنتج والخيارات المتاحة وما يتضمنه السعر بالضبط.',
+            'أضف أسئلة شائعة مختصرة حول التوصيل والدفع والضمان وما بعد الشراء.'
         ] : lang === 'en' ? [
             `Build a decision screen that shows why buyers should choose your offer over ${leaderName}: what is included, what it costs, and what actually proves quality.`,
             'Group confirmed price, availability, delivery, returns, and guarantee on one decision screen.',
@@ -8389,11 +8531,11 @@ function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = ''
             'Ajoute une FAQ courte sur la livraison, le paiement, la garantie et l apres-achat.'
         ],
         generic: lang === 'ar' ? [
-            `???? ?????? ????? ????? ?? ${leaderName} ???? ?????? ?????? ??????? ??? ???? ??? ?????.`,
-            '???? ?? ???? ????? ???? ??? ???? ???? ????? ????.',
-            '???? ??? ????? ?? ?????? ?? ???????? ???? ?? ?????? ????.',
-            '???? ?????? ?????? ????? ????? ??????? ?? ??? ??????.',
-            '???? ?? ??? ?? ????? ???? ???? ?? ??????.'
+            `أنشئ مقارنة واضحة مع ${leaderName} بلغة بسيطة قابلة للتحقق.`,
+            'وضّح ما الذي يباع ولمن وما الدليل الفعلي على الاختلاف.',
+            'لا تعرض سعرا أو شرطا أو ضمانا إلا إذا تم تأكيده.',
+            'اجمع الدليل والطمأنة وزر الإجراء في مسار قصير واحد.',
+            'احذف كل وعد لا تدعمه إشارة ظاهرة في الصفحة.'
         ] : lang === 'en' ? [
             `Create a comparison section with ${leaderName} using simple, verifiable language.`,
             'State what is sold, for whom, and what actually proves the difference.',
@@ -8411,15 +8553,12 @@ function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = ''
     const picked = actionsByType[archetype] || actionsByType.generic;
     const whys = [
         buildContextualBusinessPosition({ archetype, query, geo, lang, leader, missingProofs }),
-        missingProofs[0] || generic.promise,
-        missingProofs[1] || generic.position,
-        missingProofs[2] || generic.promise,
-        generic.promise
+        ...evidenceGaps
     ];
-    const actions = picked.map((action, index) => ({
+    const actions = picked.slice(0, whys.length).map((action, index) => ({
         category: ['positionnement', 'preuve', 'offre', 'confiance', 'conversion'][index] || 'positionnement',
         action,
-        why: whys[index] || generic.promise,
+        why: whys[index],
         impact: 'HIGH',
         effort: index <= 1 ? 'LOW' : 'MEDIUM',
         horizon: index <= 2 ? '7_DAYS' : '30_DAYS'
@@ -8429,25 +8568,26 @@ function buildDeterministicBusinessActionsV2({ leader = {}, query = '', geo = ''
 function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources = [], mergedData = {}, lang = 'fr', query = '', geo = '', userContext = {} } = {}) {
     const archetypeContext = [query, userContext?.offer, userContext?.audience].filter(Boolean).join(' ');
     const archetype = detectCompetitorBusinessArchetype(archetypeContext, competitors);
-    const generic = archetypeBusinessCopy(archetype, query, geo, lang);
-    const profiles = competitors.slice(0, 5).map(c => {
+    const profiles = competitors.slice(0, 10).map(c => {
         const profile = c.businessProfile || {};
         return {
             domain: c.domain, title: c.title, url: c.url, position: c.position,
             competitorType: c.competitorType, category: c.category, typeLabel: c.typeLabel || c.type,
-            whatTheySell: cleanCompetitorBusinessText(profile.whatTheySell || c.snippet || generic.sell, 220),
-            primaryPromise: cleanCompetitorBusinessText(profile.primaryPromise || c.title, 200),
+            whatTheySell: cleanCompetitorBusinessText(profile.whatTheySell || c.snippet || '', 220),
+            primaryPromise: cleanCompetitorBusinessText(profile.primaryPromise || '', 200),
             observedStrengths: dedupeBusinessInsights(profile.observedStrengths || [], 3),
             deducedWeaknesses: dedupeBusinessInsights(profile.deducedWeaknesses || [], 3),
             missingProofs: dedupeBusinessInsights(profile.missingProofs || [], 3),
-            attackAngle: cleanCompetitorBusinessText(profile.attackAngle || generic.position, 250),
-            concreteAction: cleanCompetitorBusinessText(profile.concreteAction || generic.proof.join(' · '), 300),
+            attackAngle: cleanCompetitorBusinessText(profile.attackAngle || '', 250),
+            concreteAction: cleanCompetitorBusinessText(profile.concreteAction || '', 300),
             evidenceLinks: (profile.evidenceLinks || [c.url]).filter(Boolean).slice(0, 5),
             confidence: profile.confidence || 'LOW',
             confidenceExplanation: profile.confidenceExplanation || competitorConfidenceExplanation(profile.confidence || 'LOW', lang),
-            signals: profile.signals || {},
-            geoMatched: c.geoMatched,
-            commercialIntentScore: c.commercialIntentScore
+              signals: profile.signals || {},
+              geoMatched: c.geoMatched,
+              geoConfirmed: c.geoConfirmed === true,
+              geoTier: c.geoTier || (c.geoMatched ? 'LOCAL_PROBABLE' : 'UNCONFIRMED'),
+              commercialIntentScore: c.commercialIntentScore
         };
     });
     const leader = profiles[0] || {};
@@ -8455,6 +8595,13 @@ function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources
     const weaknesses = dedupeBusinessInsights(profiles.flatMap(x => x.deducedWeaknesses || []), 3);
     const missingProofs = dedupeBusinessInsights(profiles.flatMap(x => x.missingProofs || []), 3);
     const contextualPosition = buildContextualBusinessPosition({ archetype, query, geo, lang, leader, missingProofs });
+    const observedDecisionFactors = dedupeBusinessInsights([
+        profiles.some(item => item.signals?.hasPrice) ? (lang === 'ar' ? 'ظهور السعر أو شروط الدفع ضمن العروض المرصودة' : lang === 'en' ? 'Price or payment terms are visible in observed offers' : 'Prix ou conditions de paiement visibles dans les offres observées') : null,
+        profiles.some(item => item.signals?.hasReviews) ? (lang === 'ar' ? 'وجود آراء أو تقييمات عملاء ضمن العروض المرصودة' : lang === 'en' ? 'Customer reviews or ratings appear in observed offers' : 'Avis ou évaluations clients présents dans les offres observées') : null,
+        profiles.some(item => item.signals?.hasGuarantee) ? (lang === 'ar' ? 'وجود ضمان معلن ضمن بعض العروض المرصودة' : lang === 'en' ? 'A stated guarantee appears in some observed offers' : 'Garantie annoncée dans certaines offres observées') : null,
+        profiles.some(item => item.signals?.hasDelivery || item.signals?.hasReturns) ? (lang === 'ar' ? 'شروط التوصيل أو الإرجاع ظاهرة ضمن بعض العروض' : lang === 'en' ? 'Delivery or return terms appear in some offers' : 'Conditions de livraison ou de retour visibles dans certaines offres') : null,
+        profiles.some(item => item.signals?.hasContact) ? (lang === 'ar' ? 'مسار تواصل أو طلب ظاهر' : lang === 'en' ? 'A visible contact or order path' : 'Parcours de contact ou de commande visible') : null
+    ].filter(Boolean), 5);
     const reasons = dedupeBusinessInsights([
         ...(leader.observedStrengths || []),
         leader.geoMatched ? (lang === 'ar' ? '\u062D\u0636\u0648\u0631 \u0648\u0627\u0636\u062D \u0648\u0645\u0644\u0627\u0626\u0645 \u0644\u0644\u0633\u0648\u0642 \u0627\u0644\u0645\u0633\u062A\u0647\u062F\u0641.' : lang === 'en' ? 'Clear relevance and presence in the target market.' : 'Présence claire et pertinente sur le marché ciblé.') : null,
@@ -8471,15 +8618,18 @@ function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources
         reason, scope: 'brand_site', type: 'observed', confidence: leader.confidence || 'LOW',
         evidenceLinks: leader.evidenceLinks || []
     }));
-    const actions = buildDeterministicBusinessActionsV2({ leader, query, geo, lang, archetype, missingProofs }).map(x => ({
-        ...x, type: 'recommended', confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW', evidenceLinks: allEvidence.slice(0, 4)
-    }));
+    const hasCompetitiveEvidence = profiles.length > 0 || Boolean(userContext?.benchmark?.hasUrl);
+    const actions = hasCompetitiveEvidence
+        ? buildDeterministicBusinessActionsV2({ leader, query, geo, lang, archetype, missingProofs }).map(x => ({
+            ...x, type: 'recommended', confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW', evidenceLinks: allEvidence.slice(0, 4)
+        }))
+        : [];
     const grouped = { competitors: [], distributionChannels: [], socialSources: [], marketSources: [] };
     for (const source of marketSources) {
         const key = source.sourceGroup && grouped[source.sourceGroup] ? source.sourceGroup : 'marketSources';
         grouped[key].push(source);
     }
-    grouped.competitors = competitors.slice(5, 10).map(x => ({
+    grouped.competitors = competitors.slice(10, 15).map(x => ({
         ...x,
         role: marketResultLabelsV2('direct_competitor', lang).role,
         recommendedUse: marketResultLabelsV2('direct_competitor', lang).recommendedUse
@@ -8489,14 +8639,20 @@ function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources
         ...(mergedData.marketInsights?.relatedSearches || []).map(x => x?.query || x)
     ], 5);
     const mismatchNote = competitorGeoMismatchNote(query, geo, lang);
-    const noDirectCompetitor = lang === 'ar' ? 'لم يتم تأكيد منافس مباشر' : lang === 'en' ? 'No direct competitor confirmed' : 'Aucun concurrent direct confirmé';
-    const marketPattern = profiles.length >= 3
-        ? (lang === 'ar' ? 'السوق يضم عدة عروض قابلة للمقارنة؛ الفوز يحتاج إلى عرض أوضح وأدلة أقوى.'
-            : lang === 'en' ? 'The market contains several comparable offers; winning requires a clearer offer and stronger proof.'
-            : 'Le marché contient plusieurs offres comparables ; gagner exige une offre plus claire et des preuves plus fortes.')
-        : (lang === 'ar' ? 'عدد المنافسين المباشرين المؤكدين ما زال محدودا؛ يجب التحقق محليا قبل استثمار كبير.'
-            : lang === 'en' ? 'Few direct competitors are confirmed; validate the opportunity locally before major investment.'
-            : 'Peu de concurrents directs sont confirmés ; valide l’opportunité localement avant un investissement important.');
+    const leaderIsForeign = leader.geoTier === 'FOREIGN_BENCHMARK';
+    const marketPattern = !profiles.length
+        ? null
+        : leaderIsForeign
+            ? (lang === 'ar'
+                ? `لم يتم تأكيد منافس محلي مباشر في ${localizeCompetitorMarketName(geo, 'ar')}. تتم دراسة ${leader.domain} كمرجع أجنبي فقط، ولا يمثل السوق المستهدف.`
+                : lang === 'en'
+                    ? `No direct local competitor was confirmed in ${localizeCompetitorMarketName(geo, 'en')}. ${leader.domain} is analyzed only as a foreign benchmark and does not represent the target market.`
+                    : `Aucun concurrent local direct n'a été confirmé en ${localizeCompetitorMarketName(geo, 'fr')}. ${leader.domain} est étudié uniquement comme benchmark étranger et ne représente pas le marché cible.`)
+            : (lang === 'ar'
+                ? `تم رصد ${profiles.length} منافسين أو عروض قابلة للمقارنة في ${localizeCompetitorMarketName(geo, 'ar')}، ويظهر ${leader.domain} كأول مرجع تجاري يحتاج إلى تفكيك.`
+                : lang === 'en'
+                    ? `${profiles.length} comparable competitors or offers were observed in ${localizeCompetitorMarketName(geo, 'en')}; ${leader.domain} is the first commercial reference to reverse-engineer.`
+                    : `${profiles.length} concurrents ou offres comparables ont été observés en ${localizeCompetitorMarketName(geo, 'fr')} ; ${leader.domain} est le premier référent commercial à décoder.`);
     return {
         positioning: lang === 'ar'
             ? 'Daka Market Insight Intelligence — محرك لتحليل السوق والمنافسة والطلب والعرض والقرار التجاري.'
@@ -8508,32 +8664,36 @@ function buildCompetitorDecisionIntelligenceV2({ competitors = [], marketSources
             subject: query, geo: localizeCompetitorMarketName(geo, lang), archetype,
             observedDemandSignals: demandSignals,
             observedOfferPatterns: dedupeBusinessInsights(profiles.map(x => x.whatTheySell), 5),
-            buyerDecisionFactors: generic.proof,
+            buyerDecisionFactors: observedDecisionFactors,
             exploitableOpenings: weaknesses,
             type: 'deduced', confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW', evidenceLinks: allEvidence
         },
         marketVerdict: {
-            currentLeader: leader.domain || noDirectCompetitor, whoWins: leader.domain || noDirectCompetitor,
+            currentLeader: leader.domain || null, whoWins: leader.domain || null,
             whyTheyWin: reasons, whyTheyWinDetails: reasonDetails, marketPattern,
             type: 'deduced', confidence: leader.confidence || 'LOW',
             confidenceExplanation: leader.confidenceExplanation || competitorConfidenceExplanation(leader.confidence || 'LOW', lang),
             evidenceLinks: leader.evidenceLinks || []
         },
         competitorProfiles: profiles,
-        recommendedAttackAngle: {
+        recommendedAttackAngle: hasCompetitiveEvidence ? {
             whatCompetitorsSell: dedupeBusinessInsights(profiles.map(x => x.whatTheySell), 4),
-            whatTheyDoNotProve: missingProofs, promiseToMake: generic.promise,
-            positioningStatement: contextualPosition, proofsToAdd: missingProofs.length ? missingProofs : generic.proof,
+            whatTheyDoNotProve: missingProofs,
+            promiseToMake: missingProofs.length
+                ? cleanCompetitorBusinessText(mergedData.winningMove || contextualPosition, 320) || null
+                : null,
+            positioningStatement: contextualPosition,
+            proofsToAdd: missingProofs,
             type: 'recommended', confidence: profiles.length >= 3 ? 'MEDIUM' : 'LOW', evidenceLinks: allEvidence
-        },
+        } : {},
         priorityActions: actions,
         surveillance: grouped,
         finalAnswers: {
-            whoWins: leader.domain || noDirectCompetitor, whyTheyWin: reasons, weaknesses,
-            positionToTake: contextualPosition,
+            whoWins: leader.domain || null, whyTheyWin: reasons, weaknesses,
+            positionToTake: hasCompetitiveEvidence ? contextualPosition : null,
             thisWeek: actions.filter(x => x.horizon === '7_DAYS').slice(0, 3),
             next30Days: actions.filter(x => x.horizon === '30_DAYS').slice(0, 3),
-            missingProofs: missingProofs.length ? missingProofs : generic.proof.slice(0, 3)
+            missingProofs
         }
     };
 }
@@ -8573,12 +8733,19 @@ async function analyzeCompetitors(
         return { success: false, error: 'Query is required', externalBot: GPT_BOT };
     }
 
+    const queryLocalization = await localizeCompetitorQueryForAnalysis(cleanQuery, langObj.code);
+    const reportQuery = queryLocalization.localizedQuery || cleanQuery;
+    const queryCorpus = [...new Set([cleanQuery, reportQuery].filter(Boolean))].join(' | ');
+    console.log(
+        `[WarRoom-V10.0] Query locale source=${queryLocalization.source} | original="${cleanQuery}" | report="${reportQuery}"`
+    );
+
     const geoData    = resolveSerpGeo(geo);
     const googleLang = langObj.serpHl;
     const contextKey = cleanProofText(JSON.stringify(userIntentContext || {}), 220) || 'no-context';
 
     // ── 3. CACHE ──────────────────────────────────────────────
-    const cacheKey = `warroom-v10.3:${cleanQuery}:${geoData.gl}:${langObj.code}:${contextKey}`;
+    const cacheKey = `warroom-v10.4:${cleanQuery}:${reportQuery}:${geoData.gl}:${langObj.code}:${contextKey}`;
 
     if (forceRefresh) {
         cache.cache.delete(cacheKey);
@@ -8622,7 +8789,14 @@ async function analyzeCompetitors(
             console.log('[WarRoom-V10.0] SERP via SERPER (primaire)...');
             const res = await RetryManager.executeWithRetry(
                 () => axios.post('https://google.serper.dev/search',
-                    { q: cleanQuery, gl: geoData.gl, hl: googleLang, num: 10 },
+                    {
+                        q: queryLocalization.searchVariants.length > 1
+                            ? `(\"${cleanQuery}\") OR (\"${reportQuery}\")`
+                            : cleanQuery,
+                        gl: geoData.gl,
+                        hl: googleLang,
+                        num: 10
+                    },
                     {
                         headers: {
                             'X-API-KEY':    process.env.SERPER_API_KEY,
@@ -8661,7 +8835,7 @@ async function analyzeCompetitors(
             const res = await RetryManager.executeWithRetry(
                 () => axios.get('https://serpapi.com/search', {
                     params: {
-                        q:       cleanQuery,
+                        q:       reportQuery || cleanQuery,
                         gl:      geoData.gl,
                         hl:      googleLang,
                         num:     10,
@@ -8712,7 +8886,7 @@ let knowledgeGraph = serpExtrasStore.knowledgeGraph || null;
 // ── 4e — ACQUISITION PARALLÈLE SCRAPE.DO + GSC ───────────
 console.log(`[WarRoom-V10.0] Acquisition parallèle SCRAPE.DO INTEL + GSC + MAPS + TRENDS + SHOPPING...`);
 
-const isProductIntent = /(prix|tarif|acheter|achat|product|produit|shop|boutique|ecommerce|e-commerce|commande)/i.test(cleanQuery);
+const isProductIntent = /(prix|tarif|acheter|achat|product|produit|shop|boutique|ecommerce|e-commerce|commande|\u0633\u0639\u0631|\u0634\u0631\u0627\u0621|\u0645\u0646\u062a\u062c|\u0645\u062a\u062c\u0631)/i.test(queryCorpus);
 const isLocalIntent = /(maroc|morocco|casablanca|rabat|tanger|fes|marrakech|agadir|sale|meknes|near me|local|proche|pres de moi|près de moi)/i.test(cleanQuery);
 const shouldRunSearchEnrich = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_SEARCH_ENRICH;
 const shouldRunKeywords = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_KEYWORDS;
@@ -8961,9 +9135,11 @@ const gscData =
         const blocked = isBlockedCompetitorUrl(url, title, snippet);
         const officialLike = isOfficialLikeCompetitor(url, title, snippet);
         const commercialScore = commercialIntentScore(url, title, snippet);
-        const geoMatch = geoMatchDetailsStrictV3(url, geoData, title, snippet);
+        const geoMatch = classifyCompetitorGeoTier(url, geoData, title, snippet, {
+            fromTargetedSerp: r.source !== 'direct-url'
+        });
         const geoScore = geoMatch.score || 0;
-        const classification = classifyMarketResultV2({ url, title, snippet, query: cleanQuery, lang: langObj.code });
+        const classification = classifyMarketResultV2({ url, title, snippet, query: queryCorpus, lang: langObj.code });
 
         return {
             raw: r,
@@ -8990,7 +9166,7 @@ const gscData =
     });
 
     const foreignMarketSources = assessedCompetitors
-    .filter(x => !x.geoMatch?.strictMatched)
+    .filter(x => x.geoMatch?.tier === 'FOREIGN_BENCHMARK')
     .map(x => ({
         title: x.title,
         url: x.url,
@@ -9001,7 +9177,7 @@ const gscData =
     }));
 
     const marketSources = assessedCompetitors
-    .filter(x => !x.isRealCompetitor && x.geoMatch?.strictMatched)
+    .filter(x => !x.isRealCompetitor && ['LOCAL_CONFIRMED', 'LOCAL_PROBABLE'].includes(x.geoMatch?.tier))
     .map(x => ({
         title: x.title,
         url: x.url,
@@ -9017,14 +9193,21 @@ const gscData =
     }))
     .slice(0, 10);
 
-    const filteredCompetitors = assessedCompetitors
-    .filter(x => x.isRealCompetitor && x.geoMatch?.strictMatched)
+    const localCompetitors = assessedCompetitors
+    .filter(x => x.isRealCompetitor && ['LOCAL_CONFIRMED', 'LOCAL_PROBABLE'].includes(x.geoMatch?.tier))
     .sort((a, b) => {
         const scoreA = (100 - a.originalPosition * 5) + (a.geoScore * 1.35) + a.commercialScore;
         const scoreB = (100 - b.originalPosition * 5) + (b.geoScore * 1.35) + b.commercialScore;
         return scoreB - scoreA;
     })
     .slice(0, 10);
+    const foreignBenchmarkCompetitors = assessedCompetitors
+        .filter(x => x.isRealCompetitor && x.geoMatch?.tier === 'FOREIGN_BENCHMARK')
+        .sort((a, b) => (a.originalPosition || 99) - (b.originalPosition || 99))
+        .slice(0, 10);
+    const filteredCompetitors = localCompetitors.length
+        ? localCompetitors
+        : foreignBenchmarkCompetitors;
 
 const enrichedCompetitors = filteredCompetitors.map((x, i) => {
     const r = x.raw;
@@ -9057,7 +9240,9 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
         type,
         dominance: Math.min(posScore + richScore + Math.min(geoScore, 30), 100),
         geoMatchScore: geoScore,
-        geoMatched: geoScore > 0,
+        geoMatched: ['LOCAL_CONFIRMED', 'LOCAL_PROBABLE'].includes(x.geoMatch?.tier),
+        geoConfirmed: x.geoMatch?.tier === 'LOCAL_CONFIRMED',
+        geoTier: x.geoMatch?.tier || 'UNCONFIRMED',
         geoTarget: x.geoMatch?.geoTarget || geoData.location,
         geoSignals: x.geoMatch?.matchedTerms || [],
         estimatedAuthority:
@@ -9078,16 +9263,23 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
 });
 
     // ── 6. SCRAPING MOAT LEADER (SCRAPE.DO) ───────────────────
+const competitorGeoTierCounts = enrichedCompetitors.reduce((counts, item) => {
+    const tier = item.geoTier || 'UNCONFIRMED';
+    counts[tier] = (counts[tier] || 0) + 1;
+    return counts;
+}, {});
+console.log(`[WarRoom-V10.0] Geo tiers: confirmed=${competitorGeoTierCounts.LOCAL_CONFIRMED || 0} probable=${competitorGeoTierCounts.LOCAL_PROBABLE || 0} foreign=${foreignMarketSources.length} unconfirmed=${competitorGeoTierCounts.UNCONFIRMED || 0}`);
+
 const top5BusinessProfiles = await enrichTopCompetitorsBusinessV2(enrichedCompetitors, {
     lang: langObj.code,
-    query: cleanQuery,
+    query: queryCorpus,
     geo: geoData.location,
     userContext: userIntentContext
 });
 top5BusinessProfiles.forEach((profile, index) => {
     if (enrichedCompetitors[index]) enrichedCompetitors[index].businessProfile = profile;
 });
-console.log(`[WarRoom-V10.0] Business profiles explored: ${top5BusinessProfiles.filter(Boolean).length}/5`);
+console.log(`[WarRoom-V10.0] Business profiles explored: ${top5BusinessProfiles.filter(Boolean).length}/${Math.min(10, enrichedCompetitors.length)}`);
 
   let leaderMoat = { status: ND };
 
@@ -9240,65 +9432,6 @@ try {
     // ── 9. FALLBACKS ──────────────────────────────────────────
     const leaderDomain = enrichedCompetitors[0]?.domain || (isAr ? 'المنافس' : isEn ? 'competitor' : 'le leader');
 
-    const fallbackWinningMove = isAr
-        ? `تفوّق على ${leaderDomain} في الثقة والضمان`
-        : isEn ? `Beat ${leaderDomain} on trust and guarantee`
-               : `Battez ${leaderDomain} sur la confiance et la garantie`;
-
-    const fallbackRoadmap = isAr
-        ? ['أعِد كتابة H1 بأسلوب JTBD', 'أضف ضماناً قوياً في القسم الرئيسي', 'بسّط مسار الشراء إلى خطوتين']
-        : isEn
-        ? ['Rewrite H1 in JTBD mode', 'Add strong guarantee in hero section', 'Simplify checkout to 2 steps max']
-        : ['Réécrire le H1 en mode JTBD', 'Ajouter une garantie forte en hero section', "Simplifier le tunnel d'achat à 2 étapes max"];
-
-    const fallbackSwot = isAr ? {
-        strengths:     ['القِدَم والشهرة في السوق'],
-        weaknesses:    ['باردة ومعاملاتية بلا تخصيص'],
-        opportunities: ['إنشاء مجتمع متخصص حول المنتج'],
-        threats:       ['حرب أسعار وشيكة مع المنافسين']
-    } : isEn ? {
-        strengths:     ['Brand authority and market seniority'],
-        weaknesses:    ['Cold and transactional, no personalization'],
-        opportunities: ['Build a niche community around the product'],
-        threats:       ['Imminent price war with competitors']
-    } : {
-        strengths:     ['Ancienneté et notoriété sur le marché'],
-        weaknesses:    ['Froid et transactionnel, sans personnalisation'],
-        opportunities: ['Créer une communauté de niche autour du produit'],
-        threats:       ['Guerre des prix imminente avec les concurrents']
-    };
-
-    const fallbackDuel = isAr ? {
-        offerAndRisk:     { competitor: 'ضمان 30 يوم فقط',              user: ND, killShot: 'ضمان مدى الحياة + مكافأة عند عدم الرضا' },
-        jtbdPsychology:   { competitor: 'يبرز مزايا المنتج التقنية',    user: ND, killShot: 'H1 يركز على التحول العاطفي للعميل' },
-        kanoDelighter:    { competitor: 'يتنافس على السعر فقط',         user: ND, killShot: 'هدية مفاجئة مع كل طلب' },
-        activationAARRR:  { competitor: 'عملية شراء في 5+ خطوات',      user: ND, killShot: 'دفع بنقرة واحدة - Apple Pay / Google Pay' },
-        flankingStrategy: { competitor: 'يهيمن بالحجم والسعر المنخفض', user: ND, killShot: 'استهداف الشريحة الفاخرة التي يتجاهلها' },
-        pricingBundling:  { competitor: 'سعر فردي بدون حزم',           user: ND, killShot: 'حزمة حصرية تجعل مقارنة الأسعار مستحيلة' },
-        valueLadder:      { competitor: 'منتج واحد فقط',               user: ND, killShot: 'إضافة منتجات تكميلية (Upsell) بنقرة واحدة' },
-        uxTeardown:       { competitor: 'عملية دفع معقدة',             user: ND, killShot: 'دفع سريع بدون إدخال بيانات غير ضرورية' }
-    } : isEn ? {
-        offerAndRisk:     { competitor: 'Standard 30-day guarantee',         user: ND, killShot: 'Lifetime guarantee + bonus if unsatisfied' },
-        jtbdPsychology:   { competitor: 'Highlights technical features',     user: ND, killShot: 'H1 focused on emotional transformation' },
-        kanoDelighter:    { competitor: 'Competes on price only',            user: ND, killShot: 'Unexpected physical gift in every order' },
-        activationAARRR:  { competitor: '5+ step checkout process',          user: ND, killShot: '1-click checkout with Apple Pay / Google Pay' },
-        flankingStrategy: { competitor: 'Dominates on volume and low price', user: ND, killShot: 'Attack ultra-premium segment they ignore' },
-        pricingBundling:  { competitor: 'Unit price, no bundle offer',       user: ND, killShot: 'Exclusive bundle making price comparison impossible' },
-        valueLadder:      { competitor: 'Single product offer',              user: ND, killShot: '1-click upsells and cross-sells' },
-        uxTeardown:       { competitor: 'High friction checkout',            user: ND, killShot: 'Frictionless Apple/Google Pay checkout' }
-    } : {
-        offerAndRisk:     { competitor: 'Garantie standard 30 jours',          user: ND, killShot: 'Satisfait ou remboursé + 10€ offerts si insatisfait' },
-        jtbdPsychology:   { competitor: 'Met en avant les caractéristiques',   user: ND, killShot: 'H1 axé sur la transformation émotionnelle résolue' },
-        kanoDelighter:    { competitor: 'Se bat uniquement sur le prix',       user: ND, killShot: 'Bonus physique inattendu inclus dans chaque commande' },
-        activationAARRR:  { competitor: "Processus d'achat en 5+ étapes",     user: ND, killShot: 'Checkout 1 clic avec Apple Pay / Google Pay' },
-        flankingStrategy: { competitor: 'Domine sur le volume et le prix bas', user: ND, killShot: "Attaquer le segment ultra-premium qu'il ignore" },
-        pricingBundling:  { competitor: 'Prix unitaire sans offre groupée',    user: ND, killShot: 'Bundle exclusif qui rend la comparaison de prix impossible' },
-        valueLadder:      { competitor: 'Offre unique',                        user: ND, killShot: 'Upsell 1-click + offre complémentaire' },
-        uxTeardown:       { competitor: 'Friction au paiement',                user: ND, killShot: 'Checkout natif Apple/Google Pay sans champs inutiles' }
-    };
-
-   
-
 // ── 10. mergedData INITIAL ────────────────────────────────
 const normalizedKwKeys = Object.keys(kwData || {});
 const normalizedCleanQuery = String(cleanQuery || '').trim().toLowerCase();
@@ -9396,7 +9529,7 @@ const marketProductSources = buildCompetitorMarketProductSources({
     marketSources,
     shoppingProducts: localShoppingProducts,
     scrapeDoSerpData,
-    query: cleanQuery,
+    query: queryCorpus,
     lang: langObj.code,
     geoData,
     userSiteData
@@ -9417,13 +9550,9 @@ const trendsMomentum = trendsSeries.length
     : null;
 
 let mergedData = {
-    winningMove: fallbackWinningMove,
-    actionRoadmap: fallbackRoadmap,
-    marketDynamics: {
-        porterVerdict: isAr ? 'سوق تنافسي' : isEn ? 'Competitive market' : 'Marché concurrentiel',
-        threatLevel: 'Medium',
-        barrierToEntry: isAr ? 'سلطة النطاق والقِدَم' : isEn ? 'Domain authority and seniority' : 'Autorité de domaine et ancienneté'
-    },
+    winningMove: null,
+    actionRoadmap: [],
+    marketDynamics: {},
     marketInsights: {
         difficulty: typeof calculateDifficulty === 'function'
             ? calculateDifficulty(enrichedCompetitors)
@@ -9435,10 +9564,7 @@ let mergedData = {
 
         volume: realVolume,
         trend: realTrend,
-        vocabulary: [cleanQuery],
-        sophisticationLevel: '3',
-        awarenessLevel: 'Solution Aware',
-
+        vocabulary: [reportQuery],
         peopleAlsoAsk: peopleAlsoAsk.slice(0, 4),
         relatedSearches: relatedSearches.slice(0, 4),
 
@@ -9477,76 +9603,33 @@ let mergedData = {
     },
 
     keywordStrategy: {
-        primary: [cleanQuery],
+        primary: [reportQuery],
         longTail: kwData && longTailKeywords.length
             ? longTailKeywords
             : [
-                (isAr ? 'مراجعة ' : isEn ? 'Review ' : 'Avis ') + cleanQuery,
-                (isAr ? 'أفضل ' : isEn ? 'Best ' : 'Meilleur ') + cleanQuery + ' ' + geoData.location
+                (isAr ? 'مراجعة ' : isEn ? 'Review ' : 'Avis ') + reportQuery,
+                (isAr ? 'أفضل ' : isEn ? 'Best ' : 'Meilleur ') + reportQuery + ' ' + localizeCompetitorMarketName(geoData.location, langObj.code)
             ],
         missingGaps: [(isAr ? 'بديل ' : isEn ? 'Alternative to ' : 'Alternative ') + leaderDomain]
     },
 
-    swot: fallbackSwot,
-
-    blueOceanStrategy: {
-        eliminate: [isAr ? 'الرسوم الخفية والعمليات الغامضة' : isEn ? 'Hidden fees and opaque processes' : 'Frais cachés et processus opaques'],
-        reduce: [isAr ? 'النماذج الطويلة المعقدة' : isEn ? 'Long and complex forms' : 'Formulaires trop longs'],
-        raise: [isAr ? 'الطمأنينة والدليل الاجتماعي' : isEn ? 'Reassurance and social proof' : 'Réassurance et preuve sociale'],
-        create: [isAr ? 'مرافقة شخصية بعد الشراء' : isEn ? 'Personalized post-purchase support' : 'Accompagnement post-achat personnalisé'],
-        currentRedOcean: [isAr ? 'حرب الأسعار' : isEn ? 'Price war' : 'Prix bas, même promesse que tous'],
-        blueOceanMoves: [isAr ? 'ضمان استثنائي + حزمة حصرية' : isEn ? 'Extreme guarantee + exclusive bundle' : 'Garantie extrême + Bundle exclusif'],
-        positioningMap: [isAr ? 'فاخر وبأسعار معقولة' : isEn ? 'Premium accessible' : 'Premium accessible']
-    },
-
-    comparisonScores: {
-        user: hasUserSite ? [40, 50, 40, 30, 50, 20] : [50, 45, 55, 40, 60, 45],
-        competitor: [85, 90, 75, 80, 85, 90],
-        labels: isAr
-            ? ['السلطة', 'العرض/الخدمة', 'التقنية', 'التحويل', 'الكتابة', 'الثقة']
-            : isEn
-                ? ['Authority', 'Offer/Service', 'Technical', 'Conversion', 'Copywriting', 'Trust']
-                : ['Autorité', 'Offre/Service', 'Technique', 'Conversion', 'Copywriting', 'Confiance']
-    },
-
-    productServiceAudit: {
-        coreOffering: isAr ? 'عرض قياسي في السوق' : isEn ? 'Standard market offer' : 'Offre standard du marché',
-        pricingStrategy: shoppingPriceMin !== null && shoppingPriceMax !== null
-            ? (
-                isAr
-                    ? `نطاق سعري مرصود من ${shoppingPriceMin} إلى ${shoppingPriceMax}`
-                    : isEn
-                        ? `Observed price range from ${shoppingPriceMin} to ${shoppingPriceMax}`
-                        : `Fourchette de prix observée de ${shoppingPriceMin} à ${shoppingPriceMax}`
-            )
-            : (isAr ? 'سعر متوسط بدون تمييز' : isEn ? 'Median price, no differentiation' : 'Prix médian sans différenciation'),
-        uniqueValueProposition: ND,
-        weakestProductFeature: isAr ? 'غياب الشفافية في الضمان' : isEn ? 'Lack of guarantee transparency' : 'Manque de transparence sur la garantie',
-        killShotFeature: isAr ? 'جدول مقارنة عام مع ضمان مدى الحياة' : isEn ? 'Public comparison table with lifetime guarantee' : 'Tableau comparatif public avec garantie à vie'
-    },
-
-    top3ReverseEngineering: {
-        commonSuccessFactors: [ND],
-        glaringWeaknesses: [ND],
-        trafficStrategyGuess: ND
-    },
-
-    grandSlamOfferBlueprint: {
-        dreamOutcome: ND,
-        perceivedLikelihood: ND,
-        timeDelay: ND,
-        effortAndSacrifice: ND,
-        theIrresistibleOffer: ND
-    },
-
-    duelComparison: fallbackDuel,
+    swot: {},
+    blueOceanStrategy: {},
+    comparisonScores: {},
+    productServiceAudit: shoppingPriceMin !== null && shoppingPriceMax !== null
+        ? {
+            pricingStrategy: isAr
+                ? `نطاق سعري مرصود من ${shoppingPriceMin} إلى ${shoppingPriceMax}`
+                : isEn
+                    ? `Observed price range from ${shoppingPriceMin} to ${shoppingPriceMax}`
+                    : `Fourchette de prix observée de ${shoppingPriceMin} à ${shoppingPriceMax}`
+        }
+        : {},
+    top3ReverseEngineering: {},
+    grandSlamOfferBlueprint: {},
+    duelComparison: {},
     semanticDifferences: [],
-
-    masteringTechniques: {
-        trafficSources: ND,
-        retentionLoop: ND,
-        monetizationHack: ND
-    },
+    masteringTechniques: {},
 
     gscInsights: gscData
         ? {
@@ -9682,7 +9765,7 @@ let mergedData = {
 
     const agent1Prompt = `${langInstr}
 Lecture business de la demande et des forces du marche :
-- Niche : "${cleanQuery}" | Pays : ${geoData.location}
+- Niche localisee : "${reportQuery}" | Requete originale : "${cleanQuery}" | Pays : ${geoData.location}
 TOP 5 DES ACTEURS COMMERCIAUX OBSERVES :
 ${top5Str}
 PROFILS BUSINESS INSPECTES :
@@ -9730,7 +9813,7 @@ RÈGLES D'UTILISATION DU CONTEXTE :
 - N'invente pas les champs manquants.` : '';
 const agent2Prompt = `${langInstr}
 Plan offensif de visibilite marche et pages d'acquisition :
-- Niche : "${cleanQuery}" | Leader : ${enrichedCompetitors[0]?.domain || ND} | Pays : ${geoData.location}
+- Niche localisee : "${reportQuery}" | Requete originale : "${cleanQuery}" | Leader : ${enrichedCompetitors[0]?.domain || ND} | Pays : ${geoData.location}
 MOAT — Blog:${leaderMoat?.contentStrategy?.hasBlog ?? '?'} FAQ:${leaderMoat?.technicalMoat?.hasFaqSection ?? '?'} Schema:${leaderMoat?.technicalMoat?.schemaTagsCount ?? 0}
 PROFILS BUSINESS INSPECTES :
 ${competitorBusinessContext}
@@ -9758,7 +9841,7 @@ JSON uniquement :
 
     const agent3Prompt = `${langInstr}
 MASTERING & DUEL CMO (Reverse Engineering & Grand Slam Offer) :
-- Niche : "${cleanQuery}"
+- Niche localisee : "${reportQuery}" | Requete originale : "${cleanQuery}"
 - Top 3 Challengers : ${top3Context}
 - User Context : ${userContextStr}
 PROFILS BUSINESS INSPECTES :
@@ -9815,7 +9898,7 @@ JSON uniquement :
 
     const agent4Prompt = `${langInstr}
 SWOT Offensif + Blue Ocean + Scores :
-- Niche : "${cleanQuery}"
+- Niche localisee : "${reportQuery}" | Requete originale : "${cleanQuery}"
 - Leader : ${enrichedCompetitors[0]?.domain || ND} (${enrichedCompetitors[0]?.snippet?.substring(0, 60) || ''})
 - Top 3 : ${top3Str}
 - Profils business inspectes :
@@ -9887,7 +9970,7 @@ JSON uniquement :
         marketSources,
         mergedData,
         lang: langObj.code,
-        query: cleanQuery,
+        query: reportQuery,
         geo: geoData.location,
         userContext: {
             ...userIntentContext,
@@ -9896,17 +9979,29 @@ JSON uniquement :
     });
     competitorIntelligence.userBenchmark = marketProductSources.userBenchmark;
     competitorIntelligence.marketProductSources = marketProductSources;
+    const strategicStudyKeys = [
+        'marketInsights', 'marketDynamics', 'winningMove', 'top3ReverseEngineering',
+        'grandSlamOfferBlueprint', 'productServiceAudit', 'masteringTechniques',
+        'duelComparison', 'swot', 'blueOceanStrategy', 'comparisonScores',
+        'semanticDifferences', 'keywordStrategy', 'actionRoadmap'
+    ];
+    const availableStrategicStudies = strategicStudyKeys.filter(key => hasMeaningfulCompetitorStudyData(mergedData[key]));
     competitorIntelligence.strategicStudiesAvailability = {
-        available: enrichedCompetitors.length > 0,
-        localCompetitorsConfirmed: enrichedCompetitors.length,
+        available: availableStrategicStudies.length > 0,
+        studyCount: availableStrategicStudies.length,
+        availableStudies: availableStrategicStudies,
+        hiddenStudies: strategicStudyKeys.filter(key => !availableStrategicStudies.includes(key)),
+        localCompetitorsConfirmed: enrichedCompetitors.filter(item => item.geoTier === 'LOCAL_CONFIRMED').length,
+        localCompetitorsProbable: enrichedCompetitors.filter(item => item.geoTier === 'LOCAL_PROBABLE').length,
+        foreignBenchmarks: foreignMarketSources.length,
         target: geoData.location
     };
-    // Keep legacy report blocks aligned with the verified business decision layer.
-    mergedData.winningMove = competitorIntelligence.finalAnswers?.positionToTake || mergedData.winningMove;
-    mergedData.actionRoadmap = (competitorIntelligence.priorityActions || [])
-        .map(item => item.action)
-        .filter(Boolean)
-        .slice(0, 6);
+    // Preserve the historical studies as their own layer. The decision model is
+    // additive and must never overwrite the richer AI studies or their roadmap.
+    competitorIntelligence.legacyStudies = {
+        winningMove: mergedData.winningMove,
+        actionRoadmap: mergedData.actionRoadmap
+    };
 
     // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
   // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
@@ -9933,7 +10028,9 @@ let apifyData = {
 
 try {
     const apifyResearchContext = {
-        query: cleanQuery,
+        query: reportQuery,
+        originalQuery: cleanQuery,
+        searchVariants: queryLocalization.searchVariants,
         url: userSiteData?.url || '',
         keywordStrategy: mergedData.keywordStrategy,
         marketInsights: mergedData.marketInsights,
@@ -9950,9 +10047,9 @@ try {
             shopping: mergedData.marketInsights?.shoppingIntel || { products: localShoppingProducts },
             maps: mergedData.marketInsights?.mapsIntel || mapsData
         },
-        competitors: enrichedCompetitors.slice(0, 6),
+        competitors: enrichedCompetitors.slice(0, 10),
         urls: [
-            ...enrichedCompetitors.slice(0, 6).map(c => c.url).filter(Boolean),
+            ...enrichedCompetitors.slice(0, 10).map(c => c.url).filter(Boolean),
             ...(leaderMoat?.brandAuthority?.channelEvidence || []).map(x => x.url).filter(Boolean)
         ],
         keywords: [
@@ -9962,14 +10059,14 @@ try {
             mergedData.grandSlamOfferBlueprint?.theIrresistibleOffer
         ].filter(Boolean),
         funnel: {
-            productOrService: mergedData.productServiceAudit?.coreOffering || cleanQuery,
+            productOrService: mergedData.productServiceAudit?.coreOffering || reportQuery,
             offer: mergedData.grandSlamOfferBlueprint?.theIrresistibleOffer || mergedData.winningMove,
-            niche: cleanQuery
+            niche: reportQuery
         }
     };
 
     const apifyPromise = callApify({
-    query: cleanQuery,
+    query: reportQuery,
     url: userSiteData?.url || '',
     geo: geoData?.location || geo,
     lang: langObj?.code || 'fr',
@@ -10061,7 +10158,11 @@ const finalResult = {
     success: true,
     source,
     elapsed,
-    query: cleanQuery,
+    query: reportQuery,
+    originalQuery: cleanQuery,
+    localizedQuery: reportQuery,
+    queryLocalization,
+    searchVariants: queryLocalization.searchVariants,
     geo: geoData.location,
     serpGeo: {
         requested: geo,
@@ -10087,6 +10188,8 @@ const finalResult = {
         excludedForeignOrUnconfirmed: marketProductSources.excludedByGeoCount,
         strict: marketProductSources.strictGeo?.enabled !== false,
         foreignCandidatesObserved: foreignMarketSources.length,
+        localCompetitorsConfirmed: enrichedCompetitors.filter(item => item.geoTier === 'LOCAL_CONFIRMED').length,
+        localCompetitorsProbable: enrichedCompetitors.filter(item => item.geoTier === 'LOCAL_PROBABLE').length,
         shoppingOffersExcludedOutsideTarget: Math.max(0, shoppingProducts.length - localShoppingProducts.length)
     },
     strategicStudiesAvailability: competitorIntelligence.strategicStudiesAvailability,
