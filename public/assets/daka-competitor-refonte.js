@@ -290,6 +290,84 @@
     }
   };
 
+  const EXTRA_COPY = {
+    fr: {
+      userBenchmark: 'Votre site : benchmark direct',
+      userBenchmarkNote: 'Ce site a ete lu et integre a la comparaison sans etre classe comme concurrent.',
+      sameProducts: 'Pages du meme produit ou de la meme offre',
+      suppliers: 'Fournisseurs et distributeurs locaux',
+      marketplaces: 'Marketplaces et revendeurs locaux',
+      videos: 'Videos produit du marche cible',
+      fieldProof: 'Sources et preuves du marche cible',
+      foreignBenchmarks: 'Benchmarks etrangers (aucune source locale confirmee)',
+      strategicStudies: 'Etudes strategiques approfondies',
+      reverseEngineering: 'Reverse engineering du Top 3',
+      grandSlam: 'Architecture de l offre',
+      productAudit: 'Audit produit ou service',
+      mastering: 'Techniques d acquisition et de retention',
+      duel: 'Duel strategique',
+      swot: 'SWOT offensif',
+      blueOcean: 'Strategie Blue Ocean et matrice ERRC',
+      comparison: 'Rapport de forces',
+      semantic: 'Ecarts semantiques exploitables',
+      keywordStrategy: 'Strategie de recherche et de contenu',
+      roadmap: 'Feuille de route historique restauree',
+      excludedGeo: 'Sources etrangeres isolees',
+      openSource: 'Consulter la source',
+      observedEvidence: 'Preuve observee'
+    },
+    en: {
+      userBenchmark: 'Your website: direct benchmark',
+      userBenchmarkNote: 'This website was read and included in the comparison without being classified as a competitor.',
+      sameProducts: 'Same-product or same-offer pages',
+      suppliers: 'Local suppliers and distributors',
+      marketplaces: 'Local marketplaces and resellers',
+      videos: 'Product videos in the target market',
+      fieldProof: 'Target-market sources and proof',
+      foreignBenchmarks: 'Foreign benchmarks (no local source confirmed)',
+      strategicStudies: 'Deep strategic studies',
+      reverseEngineering: 'Top 3 reverse engineering',
+      grandSlam: 'Offer architecture',
+      productAudit: 'Product or service audit',
+      mastering: 'Acquisition and retention techniques',
+      duel: 'Strategic duel',
+      swot: 'Offensive SWOT',
+      blueOcean: 'Blue Ocean strategy and ERRC matrix',
+      comparison: 'Competitive balance of power',
+      semantic: 'Exploitable semantic gaps',
+      keywordStrategy: 'Search and content strategy',
+      roadmap: 'Restored historical roadmap',
+      excludedGeo: 'Foreign sources isolated',
+      openSource: 'Open source',
+      observedEvidence: 'Observed evidence'
+    },
+    ar: {
+      userBenchmark: '\u0645\u0648\u0642\u0639\u0643: \u0645\u0631\u062c\u0639 \u0644\u0644\u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u0645\u0628\u0627\u0634\u0631\u0629',
+      userBenchmarkNote: '\u062a\u0645\u062a \u0642\u0631\u0627\u0621\u0629 \u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0642\u0639 \u0648\u0625\u062f\u0645\u0627\u062c\u0647 \u0641\u064a \u0627\u0644\u0645\u0642\u0627\u0631\u0646\u0629 \u062f\u0648\u0646 \u062a\u0635\u0646\u064a\u0641\u0647 \u0643\u0645\u0646\u0627\u0641\u0633.',
+      sameProducts: '\u0635\u0641\u062d\u0627\u062a \u0627\u0644\u0645\u0646\u062a\u062c \u0623\u0648 \u0627\u0644\u0639\u0631\u0636 \u0646\u0641\u0633\u0647',
+      suppliers: '\u0627\u0644\u0645\u0648\u0631\u062f\u0648\u0646 \u0648\u0627\u0644\u0645\u0648\u0632\u0639\u0648\u0646 \u0627\u0644\u0645\u062d\u0644\u064a\u0648\u0646',
+      marketplaces: '\u0627\u0644\u0623\u0633\u0648\u0627\u0642 \u0627\u0644\u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a\u0629 \u0648\u0627\u0644\u0628\u0627\u0626\u0639\u0648\u0646 \u0627\u0644\u0645\u062d\u0644\u064a\u0648\u0646',
+      videos: '\u0641\u064a\u062f\u064a\u0648\u0647\u0627\u062a \u0627\u0644\u0645\u0646\u062a\u062c \u0641\u064a \u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0645\u0633\u062a\u0647\u062f\u0641',
+      fieldProof: '\u0645\u0635\u0627\u062f\u0631 \u0648\u0623\u062f\u0644\u0629 \u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0645\u0633\u062a\u0647\u062f\u0641',
+      foreignBenchmarks: '\u0645\u0631\u0627\u062c\u0639 \u0623\u062c\u0646\u0628\u064a\u0629 (\u0644\u0645 \u064a\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0645\u0635\u062f\u0631 \u0645\u062d\u0644\u064a)',
+      strategicStudies: '\u062f\u0631\u0627\u0633\u0627\u062a \u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0645\u0639\u0645\u0642\u0629',
+      reverseEngineering: '\u062a\u0641\u0643\u064a\u0643 \u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0623\u0642\u0648\u0649 3 \u0645\u0646\u0627\u0641\u0633\u064a\u0646',
+      grandSlam: '\u0647\u0646\u062f\u0633\u0629 \u0627\u0644\u0639\u0631\u0636',
+      productAudit: '\u062a\u062f\u0642\u064a\u0642 \u0627\u0644\u0645\u0646\u062a\u062c \u0623\u0648 \u0627\u0644\u062e\u062f\u0645\u0629',
+      mastering: '\u062a\u0642\u0646\u064a\u0627\u062a \u0627\u0644\u0627\u0643\u062a\u0633\u0627\u0628 \u0648\u0627\u0644\u0627\u062d\u062a\u0641\u0627\u0638',
+      duel: '\u0627\u0644\u0645\u0648\u0627\u062c\u0647\u0629 \u0627\u0644\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629',
+      swot: '\u062a\u062d\u0644\u064a\u0644 SWOT \u0627\u0644\u0647\u062c\u0648\u0645\u064a',
+      blueOcean: '\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0627\u0644\u0645\u062d\u064a\u0637 \u0627\u0644\u0623\u0632\u0631\u0642 \u0648\u0645\u0635\u0641\u0648\u0641\u0629 ERRC',
+      comparison: '\u0645\u064a\u0632\u0627\u0646 \u0627\u0644\u0642\u0648\u0649 \u0627\u0644\u062a\u0646\u0627\u0641\u0633\u064a',
+      semantic: '\u0627\u0644\u0641\u062c\u0648\u0627\u062a \u0627\u0644\u062f\u0644\u0627\u0644\u064a\u0629 \u0627\u0644\u0642\u0627\u0628\u0644\u0629 \u0644\u0644\u0627\u0633\u062a\u063a\u0644\u0627\u0644',
+      keywordStrategy: '\u0627\u0633\u062a\u0631\u0627\u062a\u064a\u062c\u064a\u0629 \u0627\u0644\u0628\u062d\u062b \u0648\u0627\u0644\u0645\u062d\u062a\u0648\u0649',
+      roadmap: '\u062e\u0627\u0631\u0637\u0629 \u0627\u0644\u0637\u0631\u064a\u0642 \u0627\u0644\u062a\u0627\u0631\u064a\u062e\u064a\u0629 \u0627\u0644\u0645\u0633\u062a\u0639\u0627\u062f\u0629',
+      excludedGeo: '\u0645\u0635\u0627\u062f\u0631 \u0623\u062c\u0646\u0628\u064a\u0629 \u062a\u0645 \u0639\u0632\u0644\u0647\u0627',
+      openSource: '\u0641\u062a\u062d \u0627\u0644\u0645\u0635\u062f\u0631',
+      observedEvidence: '\u0627\u0644\u062f\u0644\u064a\u0644 \u0627\u0644\u0645\u0631\u0635\u0648\u062f'
+    }
+  };
+
   const STATE = { inFlight: false, renderToken: null };
 
   function lang() {
@@ -299,6 +377,10 @@
 
   function copy(key) {
     return fixText(COPY[lang()]?.[key] || COPY.fr[key] || key);
+  }
+
+  function extraCopy(key) {
+    return fixText(EXTRA_COPY[lang()]?.[key] || EXTRA_COPY.fr[key] || key);
   }
 
   function looksBroken(value) {
@@ -756,9 +838,32 @@
     return detailsSection('comp-direct-competitors', copy('directCompetitors'), body, false);
   }
 
-  function sourceGroups(intel) {
+  function renderUserBenchmark(data, intel) {
+    const benchmark = data?.userBenchmark || data?.marketProductSources?.userBenchmark || intel?.userBenchmark;
+    if (!benchmark || !useful(benchmark.url)) return '';
+    const body = `
+      <article class="daka-comp-benchmark-card">
+        <div>
+          <span class="daka-comp-eyebrow">${esc(extraCopy('userBenchmark'))}</span>
+          <h4>${esc(benchmark.title || benchmark.domain || benchmark.url)}</h4>
+          <p>${esc(extraCopy('userBenchmarkNote'))}</p>
+          ${useful(benchmark.observedEvidence) ? `<p><strong>${esc(extraCopy('observedEvidence'))}:</strong> ${esc(benchmark.observedEvidence)}</p>` : ''}
+        </div>
+        <a href="${esc(benchmark.url)}" target="_blank" rel="noopener" data-no-collapse="true">${esc(extraCopy('openSource'))}</a>
+      </article>`;
+    return detailsSection('comp-user-benchmark', extraCopy('userBenchmark'), body, true);
+  }
+
+  function sourceGroups(intel, data) {
     const surveillance = intel.surveillance || {};
+    const marketGroups = data?.marketProductSources?.groups || intel?.marketProductSources?.groups || {};
     return [
+      { title: extraCopy('sameProducts'), items: marketGroups.sameProductPage || [] },
+      { title: extraCopy('suppliers'), items: marketGroups.supplierSource || [] },
+      { title: extraCopy('marketplaces'), items: marketGroups.marketplaceProduct || [] },
+      { title: extraCopy('videos'), items: marketGroups.youtubeVideo || [] },
+      { title: extraCopy('fieldProof'), items: marketGroups.contentProof || [] },
+      { title: extraCopy('foreignBenchmarks'), items: marketGroups.foreignBenchmark || [] },
       { title: copy('benchmarkType'), items: surveillance.competitors || [] },
       { title: copy('distributionType'), items: surveillance.distributionChannels || [] },
       { title: copy('socialType'), items: surveillance.socialSources || [] },
@@ -766,16 +871,23 @@
     ];
   }
 
-  function renderSources(intel) {
-    const blocks = sourceGroups(intel).map((group) => {
+  function renderSources(intel, data) {
+    const seen = new Set();
+    const blocks = sourceGroups(intel, data).map((group) => {
       const items = (Array.isArray(group.items) ? group.items : [])
         .map((item) => ({
           domain: cleanInsight(item.domain || item.title || item.url || ''),
           url: item.url,
           role: cleanInsight(item.role || item.typeLabel || ''),
-          use: cleanInsight(item.recommendedUse || item.rejectionReason || '')
+          use: cleanInsight(item.recommendedUse || item.whyRelevant || item.observedEvidence || item.rejectionReason || '')
         }))
-        .filter((item) => useful(item.domain));
+        .filter((item) => {
+          if (!useful(item.domain)) return false;
+          const key = item.url || item.domain;
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
       if (!items.length) return '';
       return `
         <section class="daka-comp-source-group">
@@ -792,6 +904,82 @@
         </section>`;
     }).filter(Boolean).join('');
     return detailsSection('comp-source-deck', copy('sourceDeck'), blocks, false);
+  }
+
+  const STUDY_FIELD_LABELS = {
+    fr: {
+      commonSuccessFactors: 'Facteurs de succes communs', glaringWeaknesses: 'Faiblesses visibles', trafficStrategyGuess: 'Acquisition probable',
+      strengths: 'Forces', weaknesses: 'Faiblesses', opportunities: 'Opportunites', threats: 'Menaces',
+      trafficSources: 'Sources de trafic', retentionLoop: 'Boucle de retention', monetizationHack: 'Monetisation',
+      competitor: 'Concurrent', user: 'Votre position', killShot: 'Action decisive',
+      eliminate: 'Eliminer', reduce: 'Reduire', raise: 'Renforcer', create: 'Creer', currentRedOcean: 'Ocean rouge', blueOceanMoves: 'Mouvements Ocean bleu', positioningMap: 'Carte de positionnement'
+    },
+    en: {
+      commonSuccessFactors: 'Shared success factors', glaringWeaknesses: 'Visible weaknesses', trafficStrategyGuess: 'Likely acquisition',
+      strengths: 'Strengths', weaknesses: 'Weaknesses', opportunities: 'Opportunities', threats: 'Threats',
+      trafficSources: 'Traffic sources', retentionLoop: 'Retention loop', monetizationHack: 'Monetization',
+      competitor: 'Competitor', user: 'Your position', killShot: 'Decisive move',
+      eliminate: 'Eliminate', reduce: 'Reduce', raise: 'Raise', create: 'Create', currentRedOcean: 'Red ocean', blueOceanMoves: 'Blue Ocean moves', positioningMap: 'Positioning map'
+    },
+    ar: {
+      commonSuccessFactors: '\u0639\u0648\u0627\u0645\u0644 \u0627\u0644\u0646\u062c\u0627\u062d \u0627\u0644\u0645\u0634\u062a\u0631\u0643\u0629', glaringWeaknesses: '\u0627\u0644\u062b\u063a\u0631\u0627\u062a \u0627\u0644\u0638\u0627\u0647\u0631\u0629', trafficStrategyGuess: '\u0627\u0644\u0627\u0643\u062a\u0633\u0627\u0628 \u0627\u0644\u0645\u0631\u062c\u062d',
+      strengths: '\u0646\u0642\u0627\u0637 \u0627\u0644\u0642\u0648\u0629', weaknesses: '\u0646\u0642\u0627\u0637 \u0627\u0644\u0636\u0639\u0641', opportunities: '\u0627\u0644\u0641\u0631\u0635', threats: '\u0627\u0644\u062a\u0647\u062f\u064a\u062f\u0627\u062a',
+      trafficSources: '\u0645\u0635\u0627\u062f\u0631 \u0627\u0644\u0632\u064a\u0627\u0631\u0627\u062a', retentionLoop: '\u062d\u0644\u0642\u0629 \u0627\u0644\u0627\u062d\u062a\u0641\u0627\u0638', monetizationHack: '\u062a\u062d\u0642\u064a\u0642 \u0627\u0644\u062f\u062e\u0644',
+      competitor: '\u0627\u0644\u0645\u0646\u0627\u0641\u0633', user: '\u0645\u0648\u0642\u0639\u0643', killShot: '\u0627\u0644\u062d\u0631\u0643\u0629 \u0627\u0644\u062d\u0627\u0633\u0645\u0629',
+      eliminate: '\u062d\u0630\u0641', reduce: '\u062a\u0642\u0644\u064a\u0635', raise: '\u0631\u0641\u0639', create: '\u0627\u0628\u062a\u0643\u0627\u0631', currentRedOcean: '\u0627\u0644\u0645\u062d\u064a\u0637 \u0627\u0644\u0623\u062d\u0645\u0631', blueOceanMoves: '\u062d\u0631\u0643\u0627\u062a \u0627\u0644\u0645\u062d\u064a\u0637 \u0627\u0644\u0623\u0632\u0631\u0642', positioningMap: '\u062e\u0631\u064a\u0637\u0629 \u0627\u0644\u062a\u0645\u0648\u0636\u0639'
+    }
+  };
+
+  function studyFieldLabel(key) {
+    return fixText(STUDY_FIELD_LABELS[lang()]?.[key] || '');
+  }
+
+  function studyHasValue(value) {
+    if (Array.isArray(value)) return value.some(studyHasValue);
+    if (value && typeof value === 'object') return Object.values(value).some(studyHasValue);
+    return useful(value);
+  }
+
+  function renderStudyValue(value, depth = 0) {
+    if (!studyHasValue(value) || depth > 4) return '';
+    if (Array.isArray(value)) {
+      const primitives = value.filter((item) => typeof item !== 'object' && useful(item));
+      const objects = value.filter((item) => item && typeof item === 'object' && studyHasValue(item));
+      return [primitives.length ? bullets(primitives.slice(0, 8), 'neutral') : '', objects.map((item) => `<div class="daka-comp-study-subcard">${renderStudyValue(item, depth + 1)}</div>`).join('')].join('');
+    }
+    if (value && typeof value === 'object') {
+      return Object.entries(value).filter(([, item]) => studyHasValue(item)).slice(0, 12).map(([key, item]) => {
+        const label = studyFieldLabel(key);
+        const content = renderStudyValue(item, depth + 1);
+        if (!content) return '';
+        return `<div class="daka-comp-study-field">${label ? `<strong>${esc(label)}</strong>` : ''}${content}</div>`;
+      }).join('');
+    }
+    return paragraph(value);
+  }
+
+  function renderStrategicStudies(data) {
+    if (data?.strategicStudiesAvailability?.available === false) return '';
+    const studies = [
+      ['top3ReverseEngineering', extraCopy('reverseEngineering')],
+      ['grandSlamOfferBlueprint', extraCopy('grandSlam')],
+      ['productServiceAudit', extraCopy('productAudit')],
+      ['masteringTechniques', extraCopy('mastering')],
+      ['duelComparison', extraCopy('duel')],
+      ['swot', extraCopy('swot')],
+      ['blueOceanStrategy', extraCopy('blueOcean')],
+      ['comparisonScores', extraCopy('comparison')],
+      ['semanticDifferences', extraCopy('semantic')],
+      ['keywordStrategy', extraCopy('keywordStrategy')],
+      ['actionRoadmap', extraCopy('roadmap')]
+    ].filter(([key]) => studyHasValue(data?.[key]));
+    if (!studies.length) return '';
+    const body = `<div class="daka-comp-study-grid">${studies.map(([key, title]) => `
+      <article class="daka-comp-study-card">
+        <h4>${esc(title)}</h4>
+        ${renderStudyValue(data[key])}
+      </article>`).join('')}</div>`;
+    return detailsSection('comp-strategic-studies', extraCopy('strategicStudies'), body, false);
   }
 
   function renderProductStudy(intel) {
@@ -918,7 +1106,9 @@
       #resultsCompetitors .daka-comp-profile,
       #resultsCompetitors .daka-comp-source-card,
       #resultsCompetitors .daka-comp-answer-card,
-      #resultsCompetitors .daka-comp-note-card {
+      #resultsCompetitors .daka-comp-note-card,
+      #resultsCompetitors .daka-comp-study-card,
+      #resultsCompetitors .daka-comp-benchmark-card {
         border: 1px solid rgba(148, 163, 184, 0.16);
         background: rgba(15, 23, 42, 0.7);
         border-radius: 20px;
@@ -1116,6 +1306,58 @@
         padding: 18px;
         color: #94a3b8;
       }
+      #resultsCompetitors .daka-comp-benchmark-card {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        border-color: rgba(34, 197, 94, 0.28);
+        background: linear-gradient(135deg, rgba(6, 78, 59, 0.22), rgba(15, 23, 42, 0.82));
+      }
+      #resultsCompetitors .daka-comp-benchmark-card h4,
+      #resultsCompetitors .daka-comp-study-card h4 {
+        margin: 0 0 10px;
+        color: #f8fafc;
+      }
+      #resultsCompetitors .daka-comp-benchmark-card a {
+        flex: 0 0 auto;
+        display: inline-flex;
+        align-items: center;
+        min-height: 42px;
+        padding: 0 16px;
+        border-radius: 12px;
+        color: #bbf7d0;
+        border: 1px solid rgba(34, 197, 94, 0.28);
+        text-decoration: none;
+        font-weight: 800;
+      }
+      #resultsCompetitors .daka-comp-study-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+      }
+      #resultsCompetitors .daka-comp-study-card {
+        min-width: 0;
+      }
+      #resultsCompetitors .daka-comp-study-field {
+        display: grid;
+        gap: 7px;
+        margin-top: 10px;
+        padding: 12px;
+        border-radius: 14px;
+        border: 1px solid rgba(148, 163, 184, 0.13);
+        background: rgba(2, 6, 23, 0.22);
+      }
+      #resultsCompetitors .daka-comp-study-field > strong {
+        color: #67e8f9;
+        font-size: 0.78rem;
+      }
+      #resultsCompetitors .daka-comp-study-subcard {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.55);
+      }
       @media (max-width: 720px) {
         #resultsCompetitors .daka-comp-opening,
         #resultsCompetitors .daka-comp-executive {
@@ -1131,6 +1373,13 @@
         #resultsCompetitors .daka-comp-card-grid,
         #resultsCompetitors .daka-comp-column-grid {
           grid-template-columns: 1fr;
+        }
+        #resultsCompetitors .daka-comp-study-grid {
+          grid-template-columns: 1fr;
+        }
+        #resultsCompetitors .daka-comp-benchmark-card {
+          align-items: stretch;
+          flex-direction: column;
         }
       }
       @media (prefers-reduced-motion: reduce) {
@@ -1155,9 +1404,11 @@
       renderVerdict(intel),
       renderPositioning(intel),
       renderActionPlan(intel, offerType),
+      renderUserBenchmark(repaired, intel),
       renderCompetitors(intel),
-      renderSources(intel),
+      renderSources(intel, repaired),
       renderProductStudy(intel),
+      renderStrategicStudies(repaired),
       renderMissingProofs(intel),
       renderFinalAnswers(intel)
     ].filter(Boolean).join('');

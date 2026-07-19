@@ -3204,6 +3204,17 @@ function resolveSerpGeo(input) {
         'bahrain': { loc: 'Bahrain', gl: 'bh', dom: 'google.com.bh' },
         'البحرين': { loc: 'Bahrain', gl: 'bh', dom: 'google.com.bh' },
         'manama': { loc: 'Manama, Bahrain', gl: 'bh', dom: 'google.com.bh' },
+
+        // JORDAN
+        'jordan': { loc: 'Jordan', gl: 'jo', dom: 'google.jo' },
+        'jordanie': { loc: 'Jordan', gl: 'jo', dom: 'google.jo' },
+        'amman': { loc: 'Amman, Jordan', gl: 'jo', dom: 'google.jo' },
+
+        // LEBANON
+        'lebanon': { loc: 'Lebanon', gl: 'lb', dom: 'google.com.lb' },
+        'liban': { loc: 'Lebanon', gl: 'lb', dom: 'google.com.lb' },
+        'beirut': { loc: 'Beirut, Lebanon', gl: 'lb', dom: 'google.com.lb' },
+        'beyrouth': { loc: 'Beirut, Lebanon', gl: 'lb', dom: 'google.com.lb' },
         'المنامة': { loc: 'Manama, Bahrain', gl: 'bh', dom: 'google.com.bh' },
         
         // 🇫🇷 FRANCE
@@ -7347,24 +7358,32 @@ function classifyMarketResultV2({ url = '', title = '', snippet = '', query = ''
     };
 }
 
+function competitorGeoPhraseMatch(text = '', phrase = '') {
+    const normalize = value => String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim();
+    const haystack = normalize(text);
+    const needle = normalize(phrase);
+    if (!haystack || !needle) return false;
+    const escaped = needle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}(?=$|[^\\p{L}\\p{N}])`, 'u').test(haystack);
+}
+
 function competitorGeoMismatchNote(query = '', geo = '', lang = 'fr') {
     const rawQuery = String(query || '').toLowerCase();
     const geoKey = String(geo || '').trim().toLowerCase();
     if (!rawQuery || !geoKey) return '';
 
-    const aliases = {
-        morocco: ['morocco', 'maroc', '\u0627\u0644\u0645\u063a\u0631\u0628'],
-        libya: ['libya', '\u0644\u064a\u0628\u064a\u0627'],
-        tunisia: ['tunisia', 'tunisie', '\u062a\u0648\u0646\u0633'],
-        algeria: ['algeria', 'alg\u00e9rie', 'algerie', '\u0627\u0644\u062c\u0632\u0627\u0626\u0631'],
-        egypt: ['egypt', '\u00e9gypte', 'egypte', '\u0645\u0635\u0631'],
-        'saudi arabia': ['saudi arabia', 'saudi', 'arabie saoudite', '\u0627\u0644\u0633\u0639\u0648\u062f\u064a\u0629'],
-        'united arab emirates': ['united arab emirates', 'uae', 'emirats arabes unis', '\u0627\u0644\u0625\u0645\u0627\u0631\u0627\u062a'],
-        france: ['france', '\u0641\u0631\u0646\u0633\u0627'],
-        'united states': ['united states', 'usa', 'us ', '\u0627\u0644\u0648\u0644\u0627\u064a\u0627\u062a \u0627\u0644\u0645\u062a\u062d\u062f\u0629']
-    };
+    const aliases = Object.fromEntries(
+        Object.values(COMPETITOR_STRICT_GEO_RULES).map(rule => [rule.country, rule.aliases])
+    );
+    const selectedGeo = resolveSerpGeo(geoKey);
+    const selectedCountry = COMPETITOR_STRICT_GEO_RULES[String(selectedGeo?.gl || '').toLowerCase()]?.country || geoKey;
 
-    const mentioned = Object.keys(aliases).find((country) => aliases[country].some((token) => rawQuery.includes(token)));
+    const mentioned = Object.keys(aliases).find((country) => aliases[country].some((token) => competitorGeoPhraseMatch(rawQuery, token)));
     if (!mentioned) return '';
 
     if (geoKey === 'global english') {
@@ -7375,7 +7394,7 @@ function competitorGeoMismatchNote(query = '', geo = '', lang = 'fr') {
                 : `La requête mentionne ${localizeCompetitorMarketName(mentioned, 'fr')}, mais le ciblage sélectionné est Global English. Interprétez les résultats comme des signaux globaux avec vérification locale nécessaire.`;
     }
 
-    if (mentioned === geoKey) return '';
+    if (mentioned === selectedCountry) return '';
 
     return lang === 'ar'
         ? `\u062a\u0630\u0643\u0631 \u0627\u0644\u0639\u0628\u0627\u0631\u0629 ${localizeCompetitorMarketName(mentioned, 'ar')}\u060c \u0628\u064a\u0646\u0645\u0627 \u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0645\u062d\u062f\u062f \u0647\u0648 ${localizeCompetitorMarketName(geo, 'ar')}. \u0627\u0644\u0646\u062a\u064a\u062c\u0629 \u062a\u062d\u062a\u0627\u062c \u0642\u0631\u0627\u0621\u0629 \u0645\u062d\u0644\u064a\u0629 \u0645\u0646\u0641\u0635\u0644\u0629.`
@@ -7452,6 +7471,61 @@ function geoMatchDetailsV2(rawUrl = '', geoData = {}, title = '', snippet = '') 
         matchedTerms: [...new Set(matchedTerms)].slice(0, 8),
         geoTarget: geoData?.location || null,
         gl
+    };
+}
+
+const COMPETITOR_STRICT_GEO_RULES = {
+    ma: { country: 'morocco', tlds: ['.ma'], aliases: ['morocco', 'maroc', 'casablanca', 'rabat', 'marrakech', 'tanger', 'agadir', '\u0627\u0644\u0645\u063a\u0631\u0628'] },
+    ly: { country: 'libya', tlds: ['.ly'], aliases: ['libya', 'libye', 'tripoli', 'benghazi', 'misrata', '\u0644\u064a\u0628\u064a\u0627', '\u0637\u0631\u0627\u0628\u0644\u0633', '\u0628\u0646\u063a\u0627\u0632\u064a'] },
+    tn: { country: 'tunisia', tlds: ['.tn'], aliases: ['tunisia', 'tunisie', 'tunis', 'sfax', '\u062a\u0648\u0646\u0633'] },
+    dz: { country: 'algeria', tlds: ['.dz'], aliases: ['algeria', 'algerie', 'alger', 'oran', 'constantine', '\u0627\u0644\u062c\u0632\u0627\u0626\u0631'] },
+    eg: { country: 'egypt', tlds: ['.eg'], aliases: ['egypt', 'egypte', 'cairo', 'alexandria', 'giza', '\u0645\u0635\u0631', '\u0627\u0644\u0642\u0627\u0647\u0631\u0629'] },
+    sa: { country: 'saudi arabia', tlds: ['.sa'], aliases: ['saudi arabia', 'saudi', 'arabie saoudite', 'riyadh', 'jeddah', 'dammam', '\u0627\u0644\u0633\u0639\u0648\u062f\u064a\u0629'] },
+    ae: { country: 'united arab emirates', tlds: ['.ae'], aliases: ['united arab emirates', 'uae', 'emirates', 'dubai', 'abu dhabi', 'sharjah', '\u0627\u0644\u0625\u0645\u0627\u0631\u0627\u062a'] },
+    qa: { country: 'qatar', tlds: ['.qa'], aliases: ['qatar', 'doha', '\u0642\u0637\u0631', '\u0627\u0644\u062f\u0648\u062d\u0629'] },
+    kw: { country: 'kuwait', tlds: ['.kw'], aliases: ['kuwait', 'koweit', '\u0627\u0644\u0643\u0648\u064a\u062a'] },
+    bh: { country: 'bahrain', tlds: ['.bh'], aliases: ['bahrain', 'bahrein', 'manama', '\u0627\u0644\u0628\u062d\u0631\u064a\u0646', '\u0627\u0644\u0645\u0646\u0627\u0645\u0629'] },
+    om: { country: 'oman', tlds: ['.om'], aliases: ['oman', 'muscat', 'mascate', '\u0639\u0645\u0627\u0646', '\u0645\u0633\u0642\u0637'] },
+    jo: { country: 'jordan', tlds: ['.jo'], aliases: ['jordan', 'jordanie', 'amman', '\u0627\u0644\u0623\u0631\u062f\u0646'] },
+    lb: { country: 'lebanon', tlds: ['.lb'], aliases: ['lebanon', 'liban', 'beirut', 'beyrouth', '\u0644\u0628\u0646\u0627\u0646', '\u0628\u064a\u0631\u0648\u062a'] },
+    fr: { country: 'france', tlds: ['.fr'], aliases: ['france', 'paris', 'lyon', 'marseille', 'toulouse', '\u0641\u0631\u0646\u0633\u0627'] },
+    us: { country: 'united states', tlds: ['.us'], aliases: ['united states', 'united states of america', 'usa', 'u.s.a', '\u0627\u0644\u0648\u0644\u0627\u064a\u0627\u062a \u0627\u0644\u0645\u062a\u062d\u062f\u0629'] }
+};
+
+function geoMatchDetailsStrictV3(rawUrl = '', geoData = {}, title = '', snippet = '') {
+    const host = safeHostname(rawUrl);
+    const blob = `${host} ${title || ''} ${snippet || ''}`;
+    const gl = String(geoData?.gl || '').toLowerCase();
+    const location = String(geoData?.location || '');
+    const isGlobal = location.toLowerCase() === 'global english';
+    const rule = COMPETITOR_STRICT_GEO_RULES[gl] || null;
+    const matchedTerms = [];
+    let score = 0;
+
+    for (const tld of rule?.tlds || []) {
+        if (host.endsWith(tld)) {
+            score += 45;
+            matchedTerms.push(`tld:${tld}`);
+        }
+    }
+    for (const alias of rule?.aliases || []) {
+        if (competitorGeoPhraseMatch(blob, alias)) {
+            score += 12;
+            matchedTerms.push(alias);
+        }
+    }
+    if (location && competitorGeoPhraseMatch(blob, location)) {
+        score += 20;
+        matchedTerms.push(`location:${location.toLowerCase()}`);
+    }
+
+    return {
+        score: Math.min(score, 80),
+        matchedTerms: [...new Set(matchedTerms)].slice(0, 8),
+        geoTarget: location || null,
+        gl,
+        country: rule?.country || (isGlobal ? 'global english' : null),
+        strictMatched: isGlobal || score >= 12
     };
 }
 
@@ -7822,6 +7896,9 @@ function marketProductSourceText(lang = 'fr') {
     const copy = {
         fr: {
             directCompetitor: 'Concurrent direct identifie dans les resultats accessibles.',
+            userBenchmark: 'Site fourni par l utilisateur et analyse comme benchmark direct, jamais comme concurrent.',
+            supplierSource: 'Fournisseur, fabricant ou distributeur local utile pour verifier le produit et la disponibilite.',
+            foreignBenchmark: 'Benchmark etranger affiche uniquement faute de source locale confirmee. Il ne represente pas le pays cible.',
             sameProductPage: 'Page qui semble vendre ou presenter le meme produit ou une offre tres proche.',
             marketplaceProduct: 'Marketplace ou canal de distribution utile pour comparer prix, disponibilite et presentation.',
             youtubeVideo: 'Video YouTube liee au produit ou a la demande detectee.',
@@ -7832,6 +7909,9 @@ function marketProductSourceText(lang = 'fr') {
         },
         en: {
             directCompetitor: 'Direct competitor identified in accessible results.',
+            userBenchmark: 'User-provided website analyzed as a direct benchmark, never as a competitor.',
+            supplierSource: 'Local supplier, manufacturer, or distributor useful for checking the product and availability.',
+            foreignBenchmark: 'Foreign benchmark shown only because no local source was confirmed. It does not represent the target country.',
             sameProductPage: 'Page that appears to sell or present the same product or a very close offer.',
             marketplaceProduct: 'Marketplace or distribution channel useful for comparing price, availability, and presentation.',
             youtubeVideo: 'YouTube video related to the product or detected demand.',
@@ -7842,6 +7922,9 @@ function marketProductSourceText(lang = 'fr') {
         },
         ar: {
             directCompetitor: '\u0645\u0646\u0627\u0641\u0633 \u0645\u0628\u0627\u0634\u0631 \u062a\u0645 \u0631\u0635\u062f\u0647 \u0641\u064a \u0627\u0644\u0646\u062a\u0627\u0626\u062c \u0627\u0644\u0645\u062a\u0627\u062d\u0629.',
+            userBenchmark: '\u0645\u0648\u0642\u0639 \u0642\u062f\u0645\u0647 \u0627\u0644\u0645\u0633\u062a\u062e\u062f\u0645 \u0648\u062a\u0645 \u062a\u062d\u0644\u064a\u0644\u0647 \u0643\u0645\u0631\u062c\u0639 \u0645\u0628\u0627\u0634\u0631\u060c \u0648\u0644\u064a\u0633 \u0643\u0645\u0646\u0627\u0641\u0633.',
+            supplierSource: '\u0645\u0648\u0631\u062f \u0623\u0648 \u0645\u0635\u0646\u0639 \u0623\u0648 \u0645\u0648\u0632\u0639 \u0645\u062d\u0644\u064a \u0645\u0641\u064a\u062f \u0644\u0644\u062a\u062d\u0642\u0642 \u0645\u0646 \u0627\u0644\u0645\u0646\u062a\u062c \u0648\u0627\u0644\u062a\u0648\u0641\u0631.',
+            foreignBenchmark: '\u0645\u0631\u062c\u0639 \u0623\u062c\u0646\u0628\u064a \u064a\u0638\u0647\u0631 \u0641\u0642\u0637 \u0644\u0639\u062f\u0645 \u062a\u0623\u0643\u064a\u062f \u0645\u0635\u062f\u0631 \u0645\u062d\u0644\u064a. \u0648\u0647\u0648 \u0644\u0627 \u064a\u0645\u062b\u0644 \u0627\u0644\u0628\u0644\u062f \u0627\u0644\u0645\u0633\u062a\u0647\u062f\u0641.',
             sameProductPage: '\u0635\u0641\u062d\u0629 \u062a\u0628\u062f\u0648 \u0643\u0623\u0646\u0647\u0627 \u062a\u0628\u064a\u0639 \u0646\u0641\u0633 \u0627\u0644\u0645\u0646\u062a\u062c \u0623\u0648 \u0639\u0631\u0636\u0627 \u0642\u0631\u064a\u0628\u0627 \u062c\u062f\u0627.',
             marketplaceProduct: '\u0633\u0648\u0642 \u0625\u0644\u0643\u062a\u0631\u0648\u0646\u064a \u0623\u0648 \u0642\u0646\u0627\u0629 \u062a\u0648\u0632\u064a\u0639 \u0645\u0641\u064a\u062f\u0629 \u0644\u0645\u0642\u0627\u0631\u0646\u0629 \u0627\u0644\u0633\u0639\u0631 \u0648\u0627\u0644\u062a\u0648\u0641\u0631 \u0648\u0637\u0631\u064a\u0642\u0629 \u0627\u0644\u0639\u0631\u0636.',
             youtubeVideo: '\u0641\u064a\u062f\u064a\u0648 YouTube \u0645\u0631\u062a\u0628\u0637 \u0628\u0627\u0644\u0645\u0646\u062a\u062c \u0623\u0648 \u0628\u0627\u0644\u0637\u0644\u0628 \u0627\u0644\u0645\u0631\u0635\u0648\u062f.',
@@ -7875,17 +7958,23 @@ function buildCompetitorMarketProductSources({
     shoppingProducts = [],
     scrapeDoSerpData = null,
     query = '',
-    lang = 'fr'
+    lang = 'fr',
+    geoData = {},
+    userSiteData = null
 } = {}) {
     const copy = marketProductSourceText(lang);
     const groups = {
+        userBenchmark: [],
+        foreignBenchmark: [],
         directCompetitor: [],
         sameProductPage: [],
+        supplierSource: [],
         marketplaceProduct: [],
         youtubeVideo: [],
         contentProof: [],
         weakOrUnconfirmed: []
     };
+    const excludedByGeo = [];
     const marketplaceHosts = ['amazon.', 'jumia.', 'aliexpress.', 'ebay.', 'etsy.', 'walmart.', 'noon.', 'fnac.', 'cdiscount.'];
     const safeArray = value => Array.isArray(value) ? value : [];
 
@@ -7894,6 +7983,20 @@ function buildCompetitorMarketProductSources({
         if (!isPublicHttpUrl(url)) return;
         const title = marketProductSourceTitle(raw) || safeHostname(url) || url;
         const snippet = cleanCompetitorBusinessText(raw.snippet || raw.description || raw.text || extra.evidence, 220);
+        const geoMatch = type === 'userBenchmark'
+            ? { strictMatched: true, score: 100, matchedTerms: ['user-provided'], geoTarget: geoData?.location || null }
+            : geoMatchDetailsStrictV3(url, geoData, title, snippet);
+        if (!geoMatch.strictMatched) {
+            excludedByGeo.push({
+                title,
+                url,
+                domain: safeHostname(url),
+                sourceType: type,
+                reason: 'country_mismatch_or_unconfirmed',
+                geoTarget: geoData?.location || null
+            });
+            return;
+        }
         const bucket = groups[type] ? type : 'weakOrUnconfirmed';
         groups[bucket].push({
             title,
@@ -7905,9 +8008,28 @@ function buildCompetitorMarketProductSources({
             observedEvidence: extra.observedEvidence || snippet || copy.serp,
             confidence: extra.confidence || 'MEDIUM',
             source: extra.source || raw.source || 'serp',
-            category: raw.category || extra.category || type
+            category: raw.category || extra.category || type,
+            geoMatched: true,
+            geoTarget: geoData?.location || null,
+            geoSignals: geoMatch.matchedTerms || [],
+            userProvided: type === 'userBenchmark'
         });
     };
+
+    if (userSiteData?.url) {
+        push('userBenchmark', {
+            url: userSiteData.url,
+            title: userSiteData.title || userSiteData.content?.title || userSiteData.seo?.title || safeHostname(userSiteData.url),
+            snippet: userSiteData.description || userSiteData.content?.description || userSiteData.content?.h1 || userSiteData.h1 || ''
+        }, {
+            confidence: 'HIGH',
+            source: 'user-input',
+            observedEvidence: [
+                userSiteData.content?.h1 || userSiteData.h1,
+                Number(userSiteData.content?.wordCount || 0) > 0 ? `${userSiteData.content.wordCount} words observed` : null
+            ].filter(Boolean).join(' | ')
+        });
+    }
 
     const allSearchSources = uniqueByKey([
         ...safeArray(assessedCompetitors).map(item => ({
@@ -7937,11 +8059,16 @@ function buildCompetitorMarketProductSources({
         const host = safeHostname(url);
         const blob = `${host} ${safePath(url)} ${source.title || ''} ${source.snippet || ''} ${query}`.toLowerCase();
         const isYoutube = /youtube\.com|youtu\.be/.test(host);
+        const isSupplier = /supplier|wholesale|wholesaler|manufacturer|factory|distributor|fournisseur|grossiste|fabricant|distributeur|alibaba\.|1688\./.test(blob);
         const isMarketplace = marketplaceHosts.some(pattern => host.includes(pattern)) ||
             source.category === 'marketplace' || source.category === 'reseller' ||
             /marketplace|shopping|shop|store|boutique|acheter|buy|product|produit|prix|price/.test(blob);
         const isProductPage = /\/(p|product|produit|shop|store|boutique|item|dp|gp\/product)\b|acheter|buy|prix|price|livraison|delivery/.test(blob) ||
             Number(source.commercialIntentScore || source.commercialScore || 0) >= 25;
+
+        if (isSupplier) {
+            push('supplierSource', source, { confidence: 'MEDIUM', observedEvidence: source.snippet || copy.serp, source: source.source || 'serp' });
+        }
 
         if (isYoutube) {
             push('youtubeVideo', source, { confidence: 'MEDIUM', observedEvidence: source.snippet || copy.serp, source: source.source || 'serp' });
@@ -7971,18 +8098,56 @@ function buildCompetitorMarketProductSources({
     for (const key of Object.keys(groups)) {
         groups[key] = uniqueByKey(groups[key], item => item.url).slice(0, key === 'directCompetitor' ? 6 : 8);
     }
+    const localComparableSiteCount = [
+        groups.directCompetitor,
+        groups.sameProductPage,
+        groups.supplierSource,
+        groups.marketplaceProduct
+    ].reduce((total, items) => total + items.length, 0);
+    if (localComparableSiteCount === 0) {
+        const targetMarket = localizeCompetitorMarketName(geoData?.location || '', lang);
+        const foreignNotice = lang === 'ar'
+            ? `\u0644\u0645 \u064a\u062a\u0645 \u062a\u0623\u0643\u064a\u062f \u0645\u0648\u0642\u0639 \u062a\u062c\u0627\u0631\u064a \u0645\u062d\u0644\u064a \u0641\u064a ${targetMarket}. \u064a\u0639\u0631\u0636 \u0647\u0630\u0627 \u0627\u0644\u0645\u0648\u0642\u0639 \u0627\u0644\u0623\u062c\u0646\u0628\u064a \u0643\u0645\u0631\u062c\u0639 \u0641\u0642\u0637 \u0648\u0644\u0627 \u064a\u0645\u062b\u0644 \u0627\u0644\u0633\u0648\u0642 \u0627\u0644\u0645\u0633\u062a\u0647\u062f\u0641.`
+            : lang === 'en'
+                ? `No local commercial website was confirmed in ${targetMarket}. This foreign website is shown only as a benchmark and does not represent the target market.`
+                : `Aucun site commercial local n'a ete confirme en ${targetMarket}. Ce site etranger est affiche uniquement comme benchmark et ne represente pas le marche cible.`;
+        groups.foreignBenchmark = uniqueByKey(excludedByGeo, item => item.url).slice(0, 5).map(item => ({
+            ...item,
+            sourceType: 'foreignBenchmark',
+            type: 'foreignBenchmark',
+            whyRelevant: foreignNotice,
+            observedEvidence: foreignNotice,
+            confidence: 'LOW',
+            source: 'foreign-fallback',
+            category: 'foreign_benchmark',
+            geoMatched: false,
+            userProvided: false
+        }));
+    }
     const items = uniqueByKey(Object.values(groups).flat(), item => item.url);
+    const localItems = items.filter(item => item.sourceType !== 'foreignBenchmark');
+    const foreignBenchmarkLinks = groups.foreignBenchmark.map(item => item.url);
     return {
-        version: 'market-product-sources-v1',
+        version: 'market-product-sources-v2',
         groups,
         items,
+        userBenchmark: groups.userBenchmark[0] || null,
         competitorLinks: groups.directCompetitor.map(item => item.url),
         productLinks: uniqueByKey([...groups.sameProductPage, ...groups.marketplaceProduct], item => item.url).map(item => item.url),
-        proofLinks: items.map(item => item.url),
+        supplierLinks: groups.supplierSource.map(item => item.url),
+        foreignBenchmarkLinks,
+        proofLinks: localItems.map(item => item.url),
         youtubeLinks: groups.youtubeVideo.map(item => item.url),
-        observedUrls: items.map(item => item.url),
-        pagesExplored: items.map(item => item.url),
-        counts: Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, value.length]))
+        observedUrls: localItems.map(item => item.url),
+        pagesExplored: localItems.map(item => item.url),
+        counts: Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, value.length])),
+        excludedByGeoCount: uniqueByKey(excludedByGeo, item => item.url).length,
+        strictGeo: {
+            enabled: String(geoData?.location || '').toLowerCase() !== 'global english',
+            target: geoData?.location || null,
+            gl: geoData?.gl || null,
+            localComparableSiteCount
+        }
     };
 }
 
@@ -8796,8 +8961,8 @@ const gscData =
         const blocked = isBlockedCompetitorUrl(url, title, snippet);
         const officialLike = isOfficialLikeCompetitor(url, title, snippet);
         const commercialScore = commercialIntentScore(url, title, snippet);
-        const geoMatch = geoMatchDetailsV2(url, geoData, title, snippet);
-        const geoScore = Math.max(geoBoostScore(url, geoData, title, snippet), geoMatch.score || 0);
+        const geoMatch = geoMatchDetailsStrictV3(url, geoData, title, snippet);
+        const geoScore = geoMatch.score || 0;
         const classification = classifyMarketResultV2({ url, title, snippet, query: cleanQuery, lang: langObj.code });
 
         return {
@@ -8824,8 +8989,19 @@ const gscData =
         };
     });
 
+    const foreignMarketSources = assessedCompetitors
+    .filter(x => !x.geoMatch?.strictMatched)
+    .map(x => ({
+        title: x.title,
+        url: x.url,
+        domain: x.domain,
+        reason: 'country_mismatch_or_unconfirmed',
+        geoTarget: geoData.location,
+        geoSignals: x.geoMatch?.matchedTerms || []
+    }));
+
     const marketSources = assessedCompetitors
-    .filter(x => !x.isRealCompetitor)
+    .filter(x => !x.isRealCompetitor && x.geoMatch?.strictMatched)
     .map(x => ({
         title: x.title,
         url: x.url,
@@ -8842,7 +9018,7 @@ const gscData =
     .slice(0, 10);
 
     const filteredCompetitors = assessedCompetitors
-    .filter(x => x.isRealCompetitor)
+    .filter(x => x.isRealCompetitor && x.geoMatch?.strictMatched)
     .sort((a, b) => {
         const scoreA = (100 - a.originalPosition * 5) + (a.geoScore * 1.35) + a.commercialScore;
         const scoreB = (100 - b.originalPosition * 5) + (b.geoScore * 1.35) + b.commercialScore;
@@ -9042,10 +9218,11 @@ try {
 
     const userIntelCtx = userSiteData ? {
         hasUrl:    !!userSiteData.url,
-        title:     userSiteData.meta?.title        || null,
-        wordCount: userSiteData.content?.wordCount || 0,
-        h1:        userSiteData.structure?.h1?.text || null,
-        schema:    userSiteData.schema?.exists      || false,
+        title:     userSiteData.meta?.title || userSiteData.title || userSiteData.content?.title || null,
+        description: userSiteData.meta?.description || userSiteData.description || userSiteData.content?.description || null,
+        wordCount: userSiteData.content?.wordCount || userSiteData.wordCount || userSiteData.brand?.wordCount || 0,
+        h1:        userSiteData.structure?.h1?.text || userSiteData.content?.h1 || userSiteData.h1 || null,
+        schema:    userSiteData.schema?.exists || userSiteData.seo?.schema?.exists || false,
     } : null;
 
     const gscContext = gscData?.length
@@ -9130,9 +9307,11 @@ const longTailKeywords = normalizedKwKeys.filter(
     k => String(k).trim().toLowerCase() !== normalizedCleanQuery
 ).slice(0, 4);
 
-const topObservedDomains = Array.isArray(scrapeDoSerpData?.domains)
-    ? scrapeDoSerpData.domains.slice(0, 6)
-    : [];
+const topObservedDomains = (Array.isArray(scrapeDoSerpData?.domains)
+    ? scrapeDoSerpData.domains
+    : [])
+    .filter(domain => geoMatchDetailsStrictV3(`https://${String(domain || '').replace(/^https?:\/\//, '')}`, geoData, '', '').strictMatched)
+    .slice(0, 6);
 
 const trendsSeries = Array.isArray(trendsData?.interestOverTime)
     ? trendsData.interestOverTime
@@ -9173,6 +9352,17 @@ const shoppingProducts = Array.isArray(shoppingData?.products)
         ? shoppingData.shopping_results
         : [];
 
+const localShoppingProducts = shoppingProducts.filter(product => {
+    const url = marketProductSourceUrl(product);
+    if (!url) return false;
+    return geoMatchDetailsStrictV3(
+        url,
+        geoData,
+        marketProductSourceTitle(product),
+        product.snippet || product.description || product.merchant || ''
+    ).strictMatched;
+});
+
 const avgMapRating = mapsPlaces.length
     ? Number(
         (
@@ -9187,7 +9377,7 @@ const totalMapReviews = mapsPlaces.reduce(
     0
 );
 
-const shoppingPrices = shoppingProducts
+const shoppingPrices = localShoppingProducts
     .map(p =>
         Number(
             p.price ??
@@ -9204,11 +9394,19 @@ const marketProductSources = buildCompetitorMarketProductSources({
     assessedCompetitors,
     enrichedCompetitors,
     marketSources,
-    shoppingProducts,
+    shoppingProducts: localShoppingProducts,
     scrapeDoSerpData,
     query: cleanQuery,
-    lang: langObj.code
+    lang: langObj.code,
+    geoData,
+    userSiteData
 });
+console.log(
+    `[WarRoom-V10.0] GEO SOURCES target=${geoData.location} ` +
+    `local=${marketProductSources.proofLinks.length} ` +
+    `foreignFallback=${marketProductSources.foreignBenchmarkLinks.length} ` +
+    `userBenchmark=${marketProductSources.userBenchmark ? 'yes' : 'no'}`
+);
 
 const trendsMomentum = trendsSeries.length
     ? Number(
@@ -9268,10 +9466,11 @@ let mergedData = {
 
         shoppingIntel: {
             active: !!shoppingData,
-            productsCount: shoppingProducts.length,
+            productsCount: localShoppingProducts.length,
             minPrice: shoppingPriceMin,
             maxPrice: shoppingPriceMax,
-            topProducts: shoppingProducts.slice(0, 8)
+            topProducts: localShoppingProducts.slice(0, 8),
+            excludedOutsideTargetMarket: Math.max(0, shoppingProducts.length - localShoppingProducts.length)
         },
 
         topDomainsObserved: topObservedDomains
@@ -9690,8 +9889,18 @@ JSON uniquement :
         lang: langObj.code,
         query: cleanQuery,
         geo: geoData.location,
-        userContext: userIntentContext
+        userContext: {
+            ...userIntentContext,
+            benchmark: userIntelCtx
+        }
     });
+    competitorIntelligence.userBenchmark = marketProductSources.userBenchmark;
+    competitorIntelligence.marketProductSources = marketProductSources;
+    competitorIntelligence.strategicStudiesAvailability = {
+        available: enrichedCompetitors.length > 0,
+        localCompetitorsConfirmed: enrichedCompetitors.length,
+        target: geoData.location
+    };
     // Keep legacy report blocks aligned with the verified business decision layer.
     mergedData.winningMove = competitorIntelligence.finalAnswers?.positionToTake || mergedData.winningMove;
     mergedData.actionRoadmap = (competitorIntelligence.priorityActions || [])
@@ -9733,12 +9942,12 @@ try {
         kwData,
         trendsQueries,
         trendsRegions,
-        shoppingProducts,
+        shoppingProducts: localShoppingProducts,
         mapsPlaces,
         topDomainsObserved: topObservedDomains,
         googleRealData: {
             trends: mergedData.marketInsights?.trendsIntel || trendsData,
-            shopping: mergedData.marketInsights?.shoppingIntel || shoppingData,
+            shopping: mergedData.marketInsights?.shoppingIntel || { products: localShoppingProducts },
             maps: mergedData.marketInsights?.mapsIntel || mapsData
         },
         competitors: enrichedCompetitors.slice(0, 6),
@@ -9864,18 +10073,34 @@ const finalResult = {
     competitors: enrichedCompetitors,
     marketSources,
     marketProductSources,
+    userBenchmark: marketProductSources.userBenchmark,
     competitorLinks: marketProductSources.competitorLinks,
     productLinks: marketProductSources.productLinks,
+    supplierLinks: marketProductSources.supplierLinks,
+    foreignBenchmarkLinks: marketProductSources.foreignBenchmarkLinks,
     proofLinks: marketProductSources.proofLinks,
     pagesExplored: marketProductSources.pagesExplored,
     observedUrls: marketProductSources.observedUrls,
+    geoSourceAudit: {
+        target: geoData.location,
+        gl: geoData.gl,
+        excludedForeignOrUnconfirmed: marketProductSources.excludedByGeoCount,
+        strict: marketProductSources.strictGeo?.enabled !== false,
+        foreignCandidatesObserved: foreignMarketSources.length,
+        shoppingOffersExcludedOutsideTarget: Math.max(0, shoppingProducts.length - localShoppingProducts.length)
+    },
+    strategicStudiesAvailability: competitorIntelligence.strategicStudiesAvailability,
     leaderMoat,
     knowledgeGraph,
     googleRealData: {
         serp: scrapeDoSerpData,
         maps: mapsData,
         trends: trendsData,
-        shopping: shoppingData
+        shopping: {
+            products: localShoppingProducts,
+            strictGeoFiltered: true,
+            excludedOutsideTargetMarket: Math.max(0, shoppingProducts.length - localShoppingProducts.length)
+        }
     },
     ...mergedData,
     competitorIntelligence,
