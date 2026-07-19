@@ -1668,7 +1668,8 @@
     rewriteChrome();
 
     const form = document.getElementById('competitorsForm');
-    if (form) {
+    if (form && form.dataset.dakaCompetitorRefonteBound !== 'true') {
+      form.dataset.dakaCompetitorRefonteBound = 'true';
       form.onsubmit = null;
       form.addEventListener('submit', handleSubmit, true);
     }

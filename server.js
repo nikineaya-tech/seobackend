@@ -11256,15 +11256,50 @@ const warRoomLimiter = rateLimit({
 // ⚔️ ROUTE : COMPETITORS ENDPOINT (WAR ROOM V11)
 // ════════════════════════════════════════════════════════════════════
 const competitorsInFlight = new Map();
-function buildCompetitorsRequestKey({ query = '', geo = '', lang = 'fr', url = '', forceRefresh = false }) {
-    return [
-        String(query).trim().toLowerCase(),
-        String(geo).trim().toLowerCase(),
-        String(lang).trim().toLowerCase(),
-        String(url).trim().toLowerCase(),
-        forceRefresh ? 'force' : 'normal'
-    ].join('|');
+const competitorBenchmarkInFlight = new Map();
+
+function getCompetitorBenchmark(url, lang = 'fr') {
+    const key = `${String(url || '').trim().toLowerCase()}|${String(lang || 'fr').toLowerCase()}`;
+    const existing = competitorBenchmarkInFlight.get(key);
+    if (existing) return Promise.race([
+        existing,
+        new Promise(resolve => setTimeout(() => resolve(null), 15000))
+    ]);
+
+    const scrapePromise = Promise.resolve()
+        .then(() => scrapeSiteData(url, lang))
+        .catch(error => {
+            console.warn('[/api/competitors] Benchmark scrape failed:', error.message);
+            return null;
+        });
+    competitorBenchmarkInFlight.set(key, scrapePromise);
+    scrapePromise.finally(() => {
+        if (competitorBenchmarkInFlight.get(key) === scrapePromise) {
+            competitorBenchmarkInFlight.delete(key);
+        }
+    });
+    return Promise.race([
+        scrapePromise,
+        new Promise(resolve => setTimeout(() => resolve(null), 15000))
+    ]);
 }
+
+function buildCompetitorsRequestKey({ query = '', geo = '', lang = 'fr', url = '', forceRefresh = false, context = {} }) {
+     let contextKey = '';
+     try {
+         contextKey = JSON.stringify(context || {}).slice(0, 2000);
+     } catch (_) {
+         contextKey = '';
+     }
+     return [
+         String(query).trim().toLowerCase(),
+         String(geo).trim().toLowerCase(),
+         String(lang).trim().toLowerCase(),
+         String(url).trim().toLowerCase(),
+         forceRefresh ? 'force' : 'normal',
+         contextKey
+     ].join('|');
+ }
 
 app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedReport('competitors'), warRoomLimiter, async (req, res) => {
     const startTime = Date.now();
@@ -11334,7 +11369,7 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
         if (url && isValidUrl(url.trim())) {
             console.log(`[/api/competitors] Benchmark utilisateur lancé pour : ${url}`);
             try {
-                const siteScrape = await scrapeSiteData(url.trim(), lang);
+                const siteScrape = await getCompetitorBenchmark(url.trim(), lang);
                 if (siteScrape?.success) {
                     userSiteData = siteScrape;
                     console.log(
@@ -11406,9 +11441,8 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
         // ── PATCH 6 : Timeout → 504 propre ───────────────────
         if (error.message === 'ROUTE_TIMEOUT') {
             console.warn(`⏱️ [/api/competitors] TIMEOUT après ${elapsed}ms`);
-            if (typeof inFlightKey === 'string') {
-                competitorsInFlight.delete(inFlightKey);
-            }
+            // Keep the active promise registered until it settles. Removing
+            // it here would let the next click launch a duplicate analysis.
             if (typeof updateMetrics === 'function') {
                 updateMetrics(req.method, req.path, 504, elapsed);
             }
