@@ -7320,7 +7320,7 @@ function classifyMarketResultV2({ url = '', title = '', snippet = '', query = ''
         };
     }
 
-    if (commercialScore >= 45 && officialLike) {
+    if (commercialScore >= 25 && officialLike) {
         const labels = labelsFor('direct_competitor');
         return {
             isRealCompetitor: true,
@@ -7333,7 +7333,7 @@ function classifyMarketResultV2({ url = '', title = '', snippet = '', query = ''
         };
     }
 
-    if (commercialScore >= 25 && officialLike) {
+    if (commercialScore >= 15 && officialLike) {
         const labels = labelsFor('benchmark_regional');
         return {
             isRealCompetitor: false,
@@ -8094,6 +8094,7 @@ function marketProductSourceTitle(item = {}) {
 function buildCompetitorMarketProductSources({
     assessedCompetitors = [],
     enrichedCompetitors = [],
+    foreignBenchmarkSources = [],
     marketSources = [],
     shoppingProducts = [],
     scrapeDoSerpData = null,
@@ -8126,7 +8127,9 @@ function buildCompetitorMarketProductSources({
         const geoMatch = type === 'userBenchmark'
             ? { strictMatched: true, score: 100, matchedTerms: ['user-provided'], geoTarget: geoData?.location || null, tier: 'USER_BENCHMARK', local: true }
             : classifyCompetitorGeoTier(url, geoData, title, snippet, { fromTargetedSerp: true });
-        if (!geoMatch.local) {
+        // Foreign references stay available as benchmarks. They never enter
+        // the local competitor ranking but remain useful for market research.
+        if (type !== 'foreignBenchmark' && !geoMatch.local) {
             excludedByGeo.push({
                 title,
                 url,
@@ -8196,6 +8199,15 @@ function buildCompetitorMarketProductSources({
         });
     }
 
+    for (const source of safeArray(foreignBenchmarkSources).slice(0, 10)) {
+        push('foreignBenchmark', source, {
+            confidence: 'LOW',
+            observedEvidence: source.snippet || copy.foreignBenchmark,
+            source: source.source || 'foreign-fallback',
+            whyRelevant: copy.foreignBenchmark
+        });
+    }
+
     for (const source of allSearchSources) {
         const url = marketProductSourceUrl(source);
         const host = safeHostname(url);
@@ -8253,7 +8265,7 @@ function buildCompetitorMarketProductSources({
             : lang === 'en'
                 ? `No local commercial website was confirmed in ${targetMarket}. This foreign website is shown only as a benchmark and does not represent the target market.`
                 : `Aucun site commercial local n'a ete confirme en ${targetMarket}. Ce site etranger est affiche uniquement comme benchmark et ne represente pas le marche cible.`;
-        groups.foreignBenchmark = uniqueByKey(excludedByGeo, item => item.url).slice(0, 5).map(item => ({
+        const fallbackForeign = uniqueByKey(excludedByGeo, item => item.url).slice(0, 5).map(item => ({
             ...item,
             sourceType: 'foreignBenchmark',
             type: 'foreignBenchmark',
@@ -8265,6 +8277,7 @@ function buildCompetitorMarketProductSources({
             geoMatched: false,
             userProvided: false
         }));
+        groups.foreignBenchmark = uniqueByKey([...groups.foreignBenchmark, ...fallbackForeign], item => item.url).slice(0, 10);
     }
     const items = uniqueByKey(Object.values(groups).flat(), item => item.url);
     const localItems = items.filter(item => item.sourceType !== 'foreignBenchmark');
@@ -9526,6 +9539,7 @@ const shoppingPriceMax = shoppingPrices.length ? Math.max(...shoppingPrices) : n
 const marketProductSources = buildCompetitorMarketProductSources({
     assessedCompetitors,
     enrichedCompetitors,
+    foreignBenchmarkSources: foreignMarketSources,
     marketSources,
     shoppingProducts: localShoppingProducts,
     scrapeDoSerpData,
@@ -9979,6 +9993,9 @@ JSON uniquement :
     });
     competitorIntelligence.userBenchmark = marketProductSources.userBenchmark;
     competitorIntelligence.marketProductSources = marketProductSources;
+    // Stable public contract for the restored competitor dossier.
+    competitorIntelligence.top10Competitors = (competitorIntelligence.competitorProfiles || []).slice(0, 10);
+    competitorIntelligence.competitorCount = competitorIntelligence.top10Competitors.length;
     const strategicStudyKeys = [
         'marketInsights', 'marketDynamics', 'winningMove', 'top3ReverseEngineering',
         'grandSlamOfferBlueprint', 'productServiceAudit', 'masteringTechniques',
@@ -10172,6 +10189,7 @@ const finalResult = {
     },
     lang: langObj.code,
     competitors: enrichedCompetitors,
+    top10Competitors: enrichedCompetitors.slice(0, 10),
     marketSources,
     marketProductSources,
     userBenchmark: marketProductSources.userBenchmark,
@@ -11258,6 +11276,43 @@ const warRoomLimiter = rateLimit({
 const competitorsInFlight = new Map();
 const competitorBenchmarkInFlight = new Map();
 
+function normalizeCompetitorBenchmarkResult(result, url) {
+    const meta = result?.meta || {};
+    const bodyText = String(result?.bodyText || result?.content?.text || '').slice(0, 12000);
+    const h1 = result?.h1 || result?.copyIntel?.headlines?.h1?.[0] || result?.mainPage?.h1 || '';
+    const title = result?.title || meta.title || result?.mainPage?.title || '';
+    const description = result?.description || meta.description || result?.metaDescription || '';
+    const wordCount = Number(result?.wordCount || result?.brand?.wordCount || bodyText.split(/\s+/).filter(Boolean).length);
+    const schemaExists = Boolean(
+        result?.schema?.exists ||
+        result?.trustSignals?.hasSchema ||
+        result?.schemaData?.count ||
+        (Array.isArray(result?.jsonLd) && result.jsonLd.length)
+    );
+
+    return {
+        success: result?.success !== false && Boolean(url),
+        url,
+        title,
+        description,
+        h1,
+        wordCount,
+        bodyText,
+        meta: { title, description },
+        content: { title, description, h1, wordCount, text: bodyText },
+        structure: { h1: { text: h1 } },
+        schema: { exists: schemaExists },
+        seo: { schema: { exists: schemaExists } },
+        sections: Array.isArray(result?.sectionRawBlocks)
+            ? result.sectionRawBlocks.slice(0, 35)
+            : Array.isArray(result?.sectionsDetailed)
+                ? result.sectionsDetailed.slice(0, 35)
+                : [],
+        sourceJobId: result?.sourceJobId || null,
+        executionLayer: result?.executionLayer || null
+    };
+}
+
 function getCompetitorBenchmark(url, lang = 'fr') {
     const key = `${String(url || '').trim().toLowerCase()}|${String(lang || 'fr').toLowerCase()}`;
     const existing = competitorBenchmarkInFlight.get(key);
@@ -11267,7 +11322,24 @@ function getCompetitorBenchmark(url, lang = 'fr') {
     ]);
 
     const scrapePromise = Promise.resolve()
-        .then(() => scrapeSiteData(url, lang))
+        .then(async () => {
+            if (shouldUseRailwayScraping()) {
+                console.log(`[/api/competitors] Benchmark routed to Railway: ${url}`);
+                const railwayResult = await scrapeUrlViaRailway(url, {
+                    purpose: 'competitor-benchmark',
+                    explore: true,
+                    maxPages: 4,
+                    maxExtraPages: 3,
+                    maxDepth: 1,
+                    maxClicks: 6,
+                    maxButtonsPerPage: 4,
+                    crawlBudgetMs: 45000,
+                    timeout: 120000
+                });
+                return normalizeCompetitorBenchmarkResult(railwayResult, url);
+            }
+            return normalizeCompetitorBenchmarkResult(await scrapeSiteData(url, lang), url);
+        })
         .catch(error => {
             console.warn('[/api/competitors] Benchmark scrape failed:', error.message);
             return null;

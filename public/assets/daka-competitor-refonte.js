@@ -796,7 +796,10 @@
 
   function renderVerdict(intel) {
     const verdict = intel.marketVerdict || {};
-    const leaderProfile = (intel.competitorProfiles || []).find((item) => useful(item?.domain)) || {};
+    const leaderProfiles = Array.isArray(intel.competitorProfiles) && intel.competitorProfiles.length
+      ? intel.competitorProfiles
+      : (Array.isArray(intel.top10Competitors) ? intel.top10Competitors : []);
+    const leaderProfile = leaderProfiles.find((item) => useful(item?.domain)) || {};
     const header = [
       splitStat(copy('leader'), verdict.currentLeader),
       splitStat(copy('leaderStatus'), leaderProfile.geoMatched ? copy('localLeader') : copy('regionalBenchmark')),
@@ -864,7 +867,9 @@
   }
 
   function renderCompetitors(intel) {
-    const profiles = (Array.isArray(intel.competitorProfiles) ? intel.competitorProfiles : [])
+    const profiles = (Array.isArray(intel.competitorProfiles) && intel.competitorProfiles.length
+      ? intel.competitorProfiles
+      : (Array.isArray(intel.top10Competitors) ? intel.top10Competitors : []))
       .filter((item) => useful(item?.domain || item?.title))
       .slice(0, 10);
     if (!profiles.length) return '';
