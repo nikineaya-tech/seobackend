@@ -46,6 +46,9 @@
       positioning: 'Position stratégique recommandée',
       actionPlan: 'Plan d’attaque prioritaire',
       directCompetitors: 'Concurrents directs',
+      analyzeAction: 'Analyser',
+      auditAction: 'Audit technique',
+      keywordsAction: 'G\u00e9n\u00e9rer des mots-cl\u00e9s',
       sourceDeck: 'Benchmarks, canaux et sources',
       productStudy: 'Étude produit / catégorie',
       missingProofs: 'Preuves manquantes',
@@ -134,6 +137,9 @@
       positioning: 'Recommended strategic position',
       actionPlan: 'Priority attack plan',
       directCompetitors: 'Direct competitors',
+      analyzeAction: 'Analyze',
+      auditAction: 'Technical audit',
+      keywordsAction: 'Generate keywords',
       sourceDeck: 'Benchmarks, channels, and sources',
       productStudy: 'Product / category study',
       missingProofs: 'Missing proof',
@@ -222,6 +228,9 @@
       positioning: 'التموضع الاستراتيجي الموصى به',
       actionPlan: 'خطة الهجوم ذات الأولوية',
       directCompetitors: 'المنافسون المباشرون',
+      analyzeAction: '\u062a\u062d\u0644\u064a\u0644',
+      auditAction: '\u062a\u062f\u0642\u064a\u0642 \u062a\u0642\u0646\u064a',
+      keywordsAction: '\u062a\u0648\u0644\u064a\u062f \u0627\u0644\u0643\u0644\u0645\u0627\u062a \u0627\u0644\u0645\u0641\u062a\u0627\u062d\u064a\u0629',
       sourceDeck: 'المراجع والقنوات والمصادر',
       productStudy: 'دراسة المنتج / الفئة',
       missingProofs: 'الأدلة الناقصة',
@@ -875,7 +884,20 @@
     if (!profiles.length) return '';
     const body = profiles.map((item, index) => {
       const evidence = linkItems(item.evidenceLinks);
+      const competitorUrl = fixText(item.url || item.pageUrl || item.link || (item.domain ? 'https://' + item.domain : ''));
+      const competitorSeed = fixText(item.domain || item.title || item.primaryPromise || '');
+      const actions = competitorUrl ? [
+        '<div class="daka-comp-profile-actions" data-no-collapse="true">',
+        '<button type="button" class="daka-comp-action-btn daka-comp-action-primary" data-no-collapse="true" data-competitor-action="analyze" data-competitor-url="' + esc(competitorUrl) + '" data-competitor-seed="' + esc(competitorSeed) + '" aria-label="' + esc(copy('analyzeAction')) + '">',
+        '<i class="fas fa-chart-line" aria-hidden="true"></i><span>' + esc(copy('analyzeAction')) + '</span></button>',
+        '<button type="button" class="daka-comp-action-btn" data-no-collapse="true" data-competitor-action="audit" data-competitor-url="' + esc(competitorUrl) + '" aria-label="' + esc(copy('auditAction')) + '">',
+        '<i class="fas fa-microscope" aria-hidden="true"></i><span>' + esc(copy('auditAction')) + '</span></button>',
+        '<button type="button" class="daka-comp-action-btn" data-no-collapse="true" data-competitor-action="keywords" data-competitor-url="' + esc(competitorUrl) + '" data-competitor-seed="' + esc(competitorSeed) + '" aria-label="' + esc(copy('keywordsAction')) + '">',
+        '<i class="fas fa-key" aria-hidden="true"></i><span>' + esc(copy('keywordsAction')) + '</span></button>',
+        '</div>'
+      ].join('') : '';
       const grid = [
+        actions,
         splitStat(copy('whatSell'), item.whatTheySell),
         splitStat(copy('promise'), item.primaryPromise),
         splitStat(copy('strength'), list(item.observedStrengths, 1)[0]),
@@ -1388,6 +1410,52 @@
         display: flex;
         align-items: center;
         gap: 12px;
+        min-width: 0;
+      }
+      #resultsCompetitors .daka-comp-profile-actions {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 7px;
+        flex-wrap: wrap;
+        margin-bottom: 2px;
+      }
+      #resultsCompetitors .daka-comp-action-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        min-height: 36px;
+        padding: 0 10px;
+        border: 1px solid rgba(148, 163, 184, 0.22);
+        border-radius: 10px;
+        background: rgba(15, 23, 42, 0.82);
+        color: #cbd5e1;
+        font: inherit;
+        font-size: 0.68rem;
+        font-weight: 850;
+        line-height: 1;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: transform 160ms ease, border-color 160ms ease, color 160ms ease, background 160ms ease;
+      }
+      #resultsCompetitors .daka-comp-action-btn:hover,
+      #resultsCompetitors .daka-comp-action-btn:focus-visible {
+        transform: translateY(-1px);
+        border-color: rgba(103, 232, 249, 0.58);
+        color: #f8fafc;
+        background: rgba(14, 116, 144, 0.26);
+        outline: none;
+      }
+      #resultsCompetitors .daka-comp-action-btn i {
+        color: #67e8f9;
+        font-size: 0.78rem;
+      }
+      #resultsCompetitors .daka-comp-action-primary {
+        border-color: rgba(139, 92, 246, 0.42);
+        color: #ddd6fe;
+        background: rgba(91, 33, 182, 0.2);
       }
       #resultsCompetitors .daka-comp-rank,
       #resultsCompetitors .daka-comp-badge {
@@ -1510,6 +1578,20 @@
           flex-direction: column;
         }
       }
+      @media (max-width: 760px) {
+        #resultsCompetitors .daka-comp-profile header {
+          align-items: flex-start;
+          flex-direction: column;
+        }
+        #resultsCompetitors .daka-comp-profile-actions {
+          width: 100%;
+          justify-content: flex-start;
+        }
+        #resultsCompetitors .daka-comp-action-btn {
+          flex: 1 1 auto;
+          min-width: 0;
+        }
+      }
       @media (prefers-reduced-motion: reduce) {
         #resultsCompetitors * {
           transition: none !important;
@@ -1517,6 +1599,61 @@
       }
     `;
     document.head.appendChild(style);
+  }
+
+  function switchCompetitorWorkspace(tabName) {
+    if (window.tabManager && typeof window.tabManager.switchTab === 'function') {
+      window.tabManager.switchTab(tabName, { scroll: true });
+      return;
+    }
+    document.querySelector('.nav-btn[data-tab="' + tabName + '"]')?.click();
+  }
+
+  function bindCompetitorActionControls(container) {
+    if (!container || container.dataset.competitorActionsBound === 'true') return;
+    container.dataset.competitorActionsBound = 'true';
+    container.addEventListener('click', (event) => {
+      const button = event.target.closest('[data-competitor-action]');
+      if (!button || !container.contains(button)) return;
+      event.preventDefault();
+      event.stopPropagation();
+
+      const action = button.getAttribute('data-competitor-action');
+      const url = fixText(button.getAttribute('data-competitor-url'));
+      const seed = fixText(button.getAttribute('data-competitor-seed')) || url;
+      if (!url) return;
+
+      if (action === 'analyze') {
+        const opened = window.open(url, '_blank', 'noopener,noreferrer');
+        if (!opened) {
+          window.toast?.warning(lang() === 'ar' ? '\u0627\u0633\u0645\u062d \u0628\u0641\u062a\u062d \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0645\u0635\u062f\u0631.' : lang() === 'en' ? 'Allow the source page to open in a new tab.' : 'Autorisez l’ouverture de la page source dans un nouvel onglet.');
+        }
+        return;
+      }
+
+      if (action === 'audit') {
+        const input = document.getElementById('techUrl');
+        if (input) input.value = url;
+        const selectedLang = lang();
+        document.querySelector('input[name="techLang"][value="' + selectedLang + '"]')?.click();
+        switchCompetitorWorkspace('technical');
+        input?.focus();
+        window.toast?.success(copy('auditAction'));
+        return;
+      }
+
+      if (action === 'keywords') {
+        const input = document.getElementById('seedKeyword');
+        if (input) input.value = seed;
+        ['fr', 'ar', 'en'].forEach((code) => {
+          const checkbox = document.getElementById('lang' + code.toUpperCase());
+          if (checkbox) checkbox.checked = code === lang();
+        });
+        switchCompetitorWorkspace('keywords');
+        input?.focus();
+        window.toast?.success(copy('keywordsAction'));
+      }
+    });
   }
 
   function renderCompetitorReport(data) {
@@ -1546,6 +1683,7 @@
     container.style.display = 'block';
     container.dir = lang() === 'ar' ? 'rtl' : 'ltr';
     container.setAttribute('lang', lang());
+    bindCompetitorActionControls(container);
     if (container.dataset.interactionGuard !== 'true') {
       container.dataset.interactionGuard = 'true';
       container.addEventListener('click', (event) => {
