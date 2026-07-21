@@ -888,11 +888,11 @@
       const competitorSeed = fixText(item.domain || item.title || item.primaryPromise || '');
       const actions = competitorUrl ? [
         '<div class="daka-comp-profile-actions" data-no-collapse="true">',
-        '<button type="button" class="daka-comp-action-btn daka-comp-action-primary" data-no-collapse="true" data-competitor-action="analyze" data-competitor-url="' + esc(competitorUrl) + '" data-competitor-seed="' + esc(competitorSeed) + '" aria-label="' + esc(copy('analyzeAction')) + '">',
+        '<button type="button" class="daka-comp-action-btn daka-comp-action-primary" data-no-collapse="true" data-competitor-action="funnel" data-url="' + esc(competitorUrl) + '" data-competitor-seed="' + esc(competitorSeed) + '" aria-label="' + esc(copy('analyzeAction')) + '">',
         '<i class="fas fa-chart-line" aria-hidden="true"></i><span>' + esc(copy('analyzeAction')) + '</span></button>',
-        '<button type="button" class="daka-comp-action-btn" data-no-collapse="true" data-competitor-action="audit" data-competitor-url="' + esc(competitorUrl) + '" aria-label="' + esc(copy('auditAction')) + '">',
+        '<button type="button" class="daka-comp-action-btn" data-no-collapse="true" data-competitor-action="tech" data-url="' + esc(competitorUrl) + '" aria-label="' + esc(copy('auditAction')) + '">',
         '<i class="fas fa-microscope" aria-hidden="true"></i><span>' + esc(copy('auditAction')) + '</span></button>',
-        '<button type="button" class="daka-comp-action-btn" data-no-collapse="true" data-competitor-action="keywords" data-competitor-url="' + esc(competitorUrl) + '" data-competitor-seed="' + esc(competitorSeed) + '" aria-label="' + esc(copy('keywordsAction')) + '">',
+        '<button type="button" class="daka-comp-action-btn" data-no-collapse="true" data-competitor-action="keywords" data-url="' + esc(competitorUrl) + '" data-competitor-seed="' + esc(competitorSeed) + '" aria-label="' + esc(copy('keywordsAction')) + '">',
         '<i class="fas fa-key" aria-hidden="true"></i><span>' + esc(copy('keywordsAction')) + '</span></button>',
         '</div>'
       ].join('') : '';
@@ -1601,61 +1601,6 @@
     document.head.appendChild(style);
   }
 
-  function switchCompetitorWorkspace(tabName) {
-    if (window.tabManager && typeof window.tabManager.switchTab === 'function') {
-      window.tabManager.switchTab(tabName, { scroll: true });
-      return;
-    }
-    document.querySelector('.nav-btn[data-tab="' + tabName + '"]')?.click();
-  }
-
-  function bindCompetitorActionControls(container) {
-    if (!container || container.dataset.competitorActionsBound === 'true') return;
-    container.dataset.competitorActionsBound = 'true';
-    container.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-competitor-action]');
-      if (!button || !container.contains(button)) return;
-      event.preventDefault();
-      event.stopPropagation();
-
-      const action = button.getAttribute('data-competitor-action');
-      const url = fixText(button.getAttribute('data-competitor-url'));
-      const seed = fixText(button.getAttribute('data-competitor-seed')) || url;
-      if (!url) return;
-
-      if (action === 'analyze') {
-        const opened = window.open(url, '_blank', 'noopener,noreferrer');
-        if (!opened) {
-          window.toast?.warning(lang() === 'ar' ? '\u0627\u0633\u0645\u062d \u0628\u0641\u062a\u062d \u0646\u0627\u0641\u0630\u0629 \u0627\u0644\u0645\u0635\u062f\u0631.' : lang() === 'en' ? 'Allow the source page to open in a new tab.' : 'Autorisez l’ouverture de la page source dans un nouvel onglet.');
-        }
-        return;
-      }
-
-      if (action === 'audit') {
-        const input = document.getElementById('techUrl');
-        if (input) input.value = url;
-        const selectedLang = lang();
-        document.querySelector('input[name="techLang"][value="' + selectedLang + '"]')?.click();
-        switchCompetitorWorkspace('technical');
-        input?.focus();
-        window.toast?.success(copy('auditAction'));
-        return;
-      }
-
-      if (action === 'keywords') {
-        const input = document.getElementById('seedKeyword');
-        if (input) input.value = seed;
-        ['fr', 'ar', 'en'].forEach((code) => {
-          const checkbox = document.getElementById('lang' + code.toUpperCase());
-          if (checkbox) checkbox.checked = code === lang();
-        });
-        switchCompetitorWorkspace('keywords');
-        input?.focus();
-        window.toast?.success(copy('keywordsAction'));
-      }
-    });
-  }
-
   function renderCompetitorReport(data) {
     const container = document.getElementById('resultsCompetitors');
     if (!container) return;
@@ -1683,7 +1628,7 @@
     container.style.display = 'block';
     container.dir = lang() === 'ar' ? 'rtl' : 'ltr';
     container.setAttribute('lang', lang());
-    bindCompetitorActionControls(container);
+
     if (container.dataset.interactionGuard !== 'true') {
       container.dataset.interactionGuard = 'true';
       container.addEventListener('click', (event) => {
