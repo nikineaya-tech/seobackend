@@ -15587,8 +15587,9 @@ document.addEventListener('click', (event) => {
     event.preventDefault();
     event.stopPropagation();
 
-    const action = btn.dataset.competitorAction;
-    const url = btn.dataset.url || '';
+    const rawAction = btn.dataset.competitorAction;
+    const action = rawAction === 'analyze' ? 'funnel' : rawAction === 'audit' ? 'tech' : rawAction;
+    const url = btn.dataset.url || btn.dataset.competitorUrl || '';
 
     if (action === 'funnel') {
         window.spyOnCompetitorFunnel(url);
