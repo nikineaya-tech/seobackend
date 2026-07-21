@@ -15494,10 +15494,23 @@ function afterTabVisible(tabKey, callback) {
     requestAnimationFrame(run);
 }
 
-function openCompetitorAudit(tabKey, inputId, rawUrl) {
-    const targetUrl = String(rawUrl || '').trim();
+function normalizeCompetitorTargetUrl(rawUrl) {
+    const value = String(rawUrl || '').trim();
+    if (!value) return '';
+    const candidate = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+    try {
+        const parsed = new URL(candidate);
+        if (!/^https?:$/.test(parsed.protocol) || !parsed.hostname) return '';
+        return parsed.toString();
+    } catch (_) {
+        return '';
+    }
+}
+
+function openCompetitorAudit(tabKey, inputId, rawUrl, options = {}) {
+    const targetUrl = normalizeCompetitorTargetUrl(rawUrl);
     if (!targetUrl) {
-        if (typeof toast !== 'undefined') toast.warning(STATE.currentLang === 'ar' ? 'رابط المنافس غير موجود.' : 'URL concurrent manquante.');
+        if (typeof toast !== 'undefined') toast.warning(STATE.currentLang === 'ar' ? 'URL du concurrent manquante.' : 'URL concurrent manquante.');
         return;
     }
 
@@ -15510,19 +15523,29 @@ function openCompetitorAudit(tabKey, inputId, rawUrl) {
             urlInput.dispatchEvent(new Event('change', { bubbles: true }));
             urlInput.focus();
             urlInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+            if (options.submit) {
+                const formId = tabKey === 'funnel' ? 'funnelForm' : tabKey === 'technical' ? 'technicalForm' : '';
+                const form = formId ? document.getElementById(formId) : null;
+                if (form) {
+                    setTimeout(() => {
+                        if (typeof form.requestSubmit === 'function') form.requestSubmit();
+                        else form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+                    }, 80);
+                }
+            }
         } else {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     });
 }
-
 window.spyOnCompetitorFunnel = function(url) {
-    openCompetitorAudit('funnel', 'funnelUrl', url);
+    openCompetitorAudit('funnel', 'funnelUrl', url, { submit: true });
     if (typeof toast !== 'undefined') toast.info(STATE.currentLang === 'ar' ? 'جاهز لتحليل القمع الخاص بهم!' : 'Prêt à analyser leur Funnel ! Cliquez sur Lancer.');
 };
 
 window.spyOnCompetitorTech = function(url) {
-    openCompetitorAudit('technical', 'techUrl', url);
+    openCompetitorAudit('technical', 'techUrl', url, { submit: true });
     if (typeof toast !== 'undefined') toast.info(STATE.currentLang === 'ar' ? 'جاهز للتدقيق التقني!' : 'Prêt pour l\'audit technique ! Cliquez sur Lancer.');
 };
 
