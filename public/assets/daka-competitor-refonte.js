@@ -572,6 +572,60 @@
     if (!values.length) return '';
     return `<div class="daka-comp-links">${values.map((item) => `<a href="${esc(item.url)}" target="_blank" rel="noopener" data-no-collapse="true">${esc(item.label || copy('open'))}</a>`).join('')}</div>`;
   }
+  function urlDomain(url) {
+    const raw = fixText(url);
+    if (!raw) return '';
+    try {
+      return new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`).hostname.replace(/^www\./i, '');
+    } catch (_) {
+      return raw.replace(/^https?:\/\//i, '').split('/')[0].replace(/^www\./i, '');
+    }
+  }
+
+  function normalizeSourceItem(item, roleFallback) {
+    if (!item) return null;
+    if (typeof item === 'string') {
+      const url = fixText(item);
+      if (!useful(url)) return null;
+      return { url, domain: urlDomain(url), role: roleFallback || '', use: '' };
+    }
+    const url = fixText(item.url || item.link || item.pageUrl || '');
+    const domain = cleanInsight(item.domain || item.title || item.name || urlDomain(url) || item.url || '');
+    if (!useful(domain) && !useful(url)) return null;
+    return {
+      url,
+      domain: domain || urlDomain(url),
+      role: cleanInsight(item.role || item.typeLabel || item.source || roleFallback || ''),
+      use: cleanInsight(item.recommendedUse || item.whyRelevant || item.observedEvidence || item.snippet || item.rejectionReason || '')
+    };
+  }
+
+  function mergeSourceItems() {
+    return Array.from(arguments)
+      .flatMap((items) => Array.isArray(items) ? items : [])
+      .filter(Boolean);
+  }
+
+  function competitorProfiles(data, intel) {
+    const pools = [
+      intel?.competitorProfiles,
+      intel?.top10Competitors,
+      data?.top10Competitors,
+      data?.competitors,
+      data?.marketSources
+    ];
+    const seen = new Set();
+    return pools
+      .flatMap((items) => Array.isArray(items) ? items : [])
+      .filter((item) => useful(item?.domain || item?.title || item?.url || item?.link))
+      .filter((item) => {
+        const key = fixText(item.domain || item.url || item.link || item.title).toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .slice(0, 10);
+  }
 
   function countryLabel(item, currentLang) {
     return `${item.code} ${item.labels[currentLang] || item.labels.fr}`;
@@ -875,12 +929,8 @@
     return copy('benchmarkType');
   }
 
-  function renderCompetitors(intel) {
-    const profiles = (Array.isArray(intel.competitorProfiles) && intel.competitorProfiles.length
-      ? intel.competitorProfiles
-      : (Array.isArray(intel.top10Competitors) ? intel.top10Competitors : []))
-      .filter((item) => useful(item?.domain || item?.title))
-      .slice(0, 10);
+  function renderCompetitors(intel, data) {
+    const profiles = competitorProfiles(data, intel);
     if (!profiles.length) return '';
     const body = profiles.map((item, index) => {
       const evidence = linkItems(item.evidenceLinks);
@@ -892,7 +942,7 @@
         '<i class="fas fa-chart-line" aria-hidden="true"></i><span>' + esc(copy('analyzeAction')) + '</span></button>',
         '<button type="button" class="daka-comp-action-btn" data-no-collapse="true" data-competitor-action="tech" data-url="' + esc(competitorUrl) + '" aria-label="' + esc(copy('auditAction')) + '">',
         '<i class="fas fa-microscope" aria-hidden="true"></i><span>' + esc(copy('auditAction')) + '</span></button>',
-        '<button type="button" class="daka-comp-action-btn" data-no-collapse="true" data-competitor-action="keywords" data-url="' + esc(competitorUrl) + '" data-competitor-seed="' + esc(competitorSeed) + '" aria-label="' + esc(copy('keywordsAction')) + '">',
+        '<button type="button" class="daka-comp-action-btn" data-no-collapse="true" data-competitor-action="keywords" data-url="' + esc(competitorUrl) + '" data-domain="' + esc(competitorSeed) + '" data-title="' + esc(item.title || item.primaryPromise || competitorSeed) + '" data-competitor-seed="' + esc(competitorSeed) + '" aria-label="' + esc(copy('keywordsAction')) + '">',
         '<i class="fas fa-key" aria-hidden="true"></i><span>' + esc(copy('keywordsAction')) + '</span></button>',
         '</div>'
       ].join('') : '';
@@ -943,14 +993,19 @@
   function sourceGroups(intel, data) {
     const surveillance = intel.surveillance || {};
     const marketGroups = data?.marketProductSources?.groups || intel?.marketProductSources?.groups || {};
+    const rootProductLinks = mergeSourceItems(data?.productLinks, intel?.productLinks);
+    const rootSupplierLinks = mergeSourceItems(data?.supplierLinks, intel?.supplierLinks);
+    const rootProofLinks = mergeSourceItems(data?.proofLinks, data?.observedUrls, data?.pagesExplored, intel?.proofLinks);
+    const rootForeignLinks = mergeSourceItems(data?.foreignBenchmarkLinks, intel?.foreignBenchmarkLinks);
+    const rootCompetitorLinks = mergeSourceItems(data?.competitorLinks, intel?.competitorLinks);
     return [
-      { title: extraCopy('sameProducts'), items: marketGroups.sameProductPage || [] },
-      { title: extraCopy('suppliers'), items: marketGroups.supplierSource || [] },
+      { title: extraCopy('sameProducts'), items: mergeSourceItems(marketGroups.sameProductPage, rootProductLinks) },
+      { title: extraCopy('suppliers'), items: mergeSourceItems(marketGroups.supplierSource, rootSupplierLinks) },
       { title: extraCopy('marketplaces'), items: marketGroups.marketplaceProduct || [] },
       { title: extraCopy('videos'), items: marketGroups.youtubeVideo || [] },
-      { title: extraCopy('fieldProof'), items: marketGroups.contentProof || [] },
-      { title: extraCopy('foreignBenchmarks'), items: marketGroups.foreignBenchmark || [] },
-      { title: copy('benchmarkType'), items: surveillance.competitors || [] },
+      { title: extraCopy('fieldProof'), items: mergeSourceItems(marketGroups.contentProof, rootProofLinks) },
+      { title: extraCopy('foreignBenchmarks'), items: mergeSourceItems(marketGroups.foreignBenchmark, rootForeignLinks) },
+      { title: copy('benchmarkType'), items: mergeSourceItems(surveillance.competitors, rootCompetitorLinks) },
       { title: copy('distributionType'), items: surveillance.distributionChannels || [] },
       { title: copy('socialType'), items: surveillance.socialSources || [] },
       { title: copy('marketType'), items: surveillance.marketSources || [] }
@@ -961,14 +1016,9 @@
     const seen = new Set();
     const blocks = sourceGroups(intel, data).map((group) => {
       const items = (Array.isArray(group.items) ? group.items : [])
-        .map((item) => ({
-          domain: cleanInsight(item.domain || item.title || item.url || ''),
-          url: item.url,
-          role: cleanInsight(item.role || item.typeLabel || ''),
-          use: cleanInsight(item.recommendedUse || item.whyRelevant || item.observedEvidence || item.rejectionReason || '')
-        }))
+        .map((item) => normalizeSourceItem(item, group.title))
         .filter((item) => {
-          if (!useful(item.domain)) return false;
+          if (!item || !useful(item.domain || item.url)) return false;
           const key = item.url || item.domain;
           if (seen.has(key)) return false;
           seen.add(key);
@@ -1074,6 +1124,7 @@
   }
 
   function renderStrategicStudies(data) {
+    const legacy = data?.competitorIntelligence?.legacyStudies || data?.legacyStudies || {};
     const studies = [
       ['top3ReverseEngineering', extraCopy('reverseEngineering')],
       ['grandSlamOfferBlueprint', extraCopy('grandSlam')],
@@ -1086,12 +1137,12 @@
       ['semanticDifferences', extraCopy('semantic')],
       ['keywordStrategy', extraCopy('keywordStrategy')],
       ['actionRoadmap', extraCopy('roadmap')]
-    ].filter(([key]) => studyHasValue(data?.[key]));
+    ].filter(([key]) => studyHasValue(data?.[key]) || studyHasValue(legacy?.[key]));
     if (!studies.length) return '';
     const body = `<div class="daka-comp-study-grid">${studies.map(([key, title]) => `
       <article class="daka-comp-study-card">
         <h4>${esc(title)}</h4>
-        ${renderStudyValue(data[key])}
+        ${renderStudyValue(data[key] || legacy[key])}
       </article>`).join('')}</div>`;
     return detailsSection('comp-strategic-studies', extraCopy('strategicStudies'), body, false);
   }
@@ -1615,7 +1666,7 @@
       renderPositioning(intel),
       renderActionPlan(intel, offerType),
       renderUserBenchmark(repaired, intel),
-      renderCompetitors(intel),
+      renderCompetitors(intel, repaired),
       renderSources(intel, repaired),
       renderMarketIntelligenceStudies(repaired),
       renderProductStudy(intel),
