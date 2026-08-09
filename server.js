@@ -10015,10 +10015,11 @@ JSON uniquement :
     };
     // Preserve the historical studies as their own layer. The decision model is
     // additive and must never overwrite the richer AI studies or their roadmap.
-    competitorIntelligence.legacyStudies = {
-        winningMove: mergedData.winningMove,
-        actionRoadmap: mergedData.actionRoadmap
-    };
+    competitorIntelligence.legacyStudies = Object.fromEntries(
+        strategicStudyKeys
+            .filter(key => hasMeaningfulCompetitorStudyData(mergedData[key]))
+            .map(key => [key, mergedData[key]])
+    );
 
     // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────
   // ── 16. CONSTRUCTION RÉSULTAT FINAL ──────────────────────

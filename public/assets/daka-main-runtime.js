@@ -2847,10 +2847,9 @@ function renderCompetitorDecisionLayerV2(data, { isAr = false, isEn = false } = 
 
 async function displayCompetitorsResults(data) {
 
-    // Competitor Refonte is the single source of truth for this report DOM.
-    // Keep the legacy function callable for compatibility, but never let it
-    // append the old layout after the refonte has loaded.
-    if (window.__dakaCompetitorRefonteLoaded && typeof window.__dakaCompetitorRefonteRender === 'function') {
+    // Legacy rich Competitor Research is the primary renderer.
+    // The experimental refonte can only run when explicitly enabled.
+    if (window.DAKA_USE_COMPETITOR_REFONTE === true && window.__dakaCompetitorRefonteLoaded && typeof window.__dakaCompetitorRefonteRender === 'function') {
         return window.__dakaCompetitorRefonteRender(data);
     }
 
