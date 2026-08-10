@@ -415,10 +415,8 @@ function dedupeFunnelAnalysis(req, res, next) {
     }
 
     let resolveAnalysis;
-    let rejectAnalysis;
-    const promise = new Promise((resolve, reject) => {
+    const promise = new Promise((resolve) => {
         resolveAnalysis = resolve;
-        rejectAnalysis = reject;
     });
     const shortKey = crypto.createHash('sha1').update(key).digest('hex').slice(0, 10);
     funnelAnalysisInFlight.set(key, { promise, shortKey, startedAt: Date.now() });
@@ -426,6 +424,9 @@ function dedupeFunnelAnalysis(req, res, next) {
     const originalJson = res.json.bind(res);
     let settled = false;
     res.json = function resolveFunnelAnalysis(payload) {
+        if (res.writableEnded || res.destroyed) {
+            return res;
+        }
         if (!settled) {
             settled = true;
             funnelAnalysisInFlight.delete(key);
@@ -438,7 +439,14 @@ function dedupeFunnelAnalysis(req, res, next) {
         if (settled) return;
         settled = true;
         funnelAnalysisInFlight.delete(key);
-        rejectAnalysis(new Error('FUNNEL_CLIENT_CONNECTION_CLOSED'));
+        resolveAnalysis({
+            statusCode: 499,
+            payload: {
+                success: false,
+                clientClosed: true,
+                error: 'FUNNEL_CLIENT_CONNECTION_CLOSED'
+            }
+        });
     });
 
     console.log(`[FUNNEL-DEDUPE] Started analysis key=${shortKey}`);
@@ -4963,9 +4971,9 @@ async function exploreFunnelCommerce(url, options = {}) {
   const baseCtaCount = Array.isArray(baseScrape?.copyIntel?.realCTAs)
     ? baseScrape.copyIntel.realCTAs.length
     : (Array.isArray(baseScrape?.ctas) ? baseScrape.ctas.length : 0);
-  if (baseScrape && (baseSectionCount > 0 || baseBodyLength > 200 || baseCtaCount > 0 || baseScrape?.priceIntel?.detected)) {
+  if (baseScrape) {
     console.log(
-      `[FUNNEL-DEDUPE] Commerce reuses deep scrape sections=${baseSectionCount} ` +
+      `[FUNNEL-DEDUPE] Commerce reuses existing deep scrape sections=${baseSectionCount} ` +
       `body=${baseBodyLength} ctas=${baseCtaCount}; no second Railway job`
     );
     return buildCommerceFromRailwayResult(baseScrape);
@@ -10498,26 +10506,16 @@ async function callOpenRouterAPI(prompt, options = {}) {
  // ── MODELS QUEUE — Payants d'abord, :free en fallback
     // maxContext : Le nombre maximum de tokens (Prompt + Réponse) que le modèle peut gérer.
     const allModels = [
-        // 🚀 TIER 1 : PAYANTS — Ultra-Rapides (Fail-Fast: 8s - 10s)
-        // Correction des IDs suite aux erreurs "is not a valid model ID"
-        { id: 'google/gemini-2.5-flash-lite-preview-09-2025', free: false, timeout: 8000,  maxContext: 1050000 }, // 1.05M tokens ! Idéal pour analyser des sites entiers
-        { id: 'bytedance-seed/seed-2.0-mini',                      free: false, timeout: 8000,  maxContext: 262000 },
-        { id: 'qwen/qwen3.5-flash-02-23',                          free: false, timeout: 9000,  maxContext: 1000000 }, // 1M tokens
-        { id: 'stepfun/step-3.5-flash',                       free: false, timeout: 9000,  maxContext: 262000 },
-        { id: 'z-ai/glm-4.7-flash',                           free: false, timeout: 10000, maxContext: 203000 },
-        { id: 'xiaomi/mimo-v2-flash',                         free: false, timeout: 10000, maxContext: 262000 },
-
-        // 🧠 TIER 2 : PAYANTS — Modèles de Raisonnement (12s - 15s)
-        { id: 'qwen/qwen-3.5-9b-instruct',                    free: false, timeout: 12000, maxContext: 262000 },
-        { id: 'google/gemma-4-26b-a4b-it',                    free: false, timeout: 15000, maxContext: 262000 },
-
-        // 🆓 TIER 3 : GRATUITS — Le Fallback de Sécurité (12s - 20s)
-        // ATTENTION : Les modèles gratuits ont souvent un "Rate Limit" très strict (ex: 8 requêtes/minute)
+        { id: 'google/gemini-2.5-flash-lite',                 free: false, timeout: 9000,  maxContext: 1000000 },
+        { id: 'google/gemini-2.0-flash-001',                  free: false, timeout: 9000,  maxContext: 1000000 },
+        { id: 'google/gemini-2.0-flash-lite-001',             free: false, timeout: 8000,  maxContext: 1000000 },
+        { id: 'xiaomi/mimo-v2.5',                             free: false, timeout: 10000, maxContext: 262000 },
+        { id: 'google/gemma-4-26b-a4b-it',                    free: false, timeout: 12000, maxContext: 262000 },
+        { id: 'mistralai/mistral-small-24b-instruct-2501:free', free: true, timeout: 12000, maxContext: 128000 },
+        { id: 'meta-llama/llama-3.3-70b-instruct:free',       free: true,  timeout: 12000, maxContext: 128000 },
+        { id: 'deepseek/deepseek-chat-v3-0324:free',          free: true,  timeout: 12000, maxContext: 128000 },
         { id: 'nvidia/nemotron-nano-12b-2-vl:free',           free: true,  timeout: 12000, maxContext: 128000 },
-        { id: 'arcee-ai/trinity-large-preview:free',          free: true,  timeout: 15000, maxContext: 131000 }, // ⚠️ Attention, modèle voué à disparaître fin avril
-        { id: 'meta-llama/llama-3.3-70b-instruct:free',       free: true,  timeout: 15000, maxContext: 128000 }, // Modèle très lourd et qualitatif
-        { id: 'openai/gpt-4o-mini:free',                      free: true,  timeout: 15000, maxContext: 128000 }, // Valeur refuge (quand les endpoints sont dispos)
-        { id: 'openrouter/free',                              free: true,  timeout: 20000, maxContext: 100000 }  // Routage automatique (le contexte varie selon le modèle choisi en interne)
+        { id: 'openrouter/auto',                              free: false, timeout: 15000, maxContext: 100000 }
     ];
 
     console.log(`🤖 AI Models queue: ${allModels.length} models ready`);

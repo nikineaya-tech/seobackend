@@ -23,7 +23,7 @@ const SCRAPE_DO_TOKEN =
   '';
 
 const ENABLE_BROWSERLESS = ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPER_ENABLE_BROWSERLESS || 'false').toLowerCase());
-const ENABLE_SCRAPEDO = String(process.env.SCRAPER_ENABLE_SCRAPEDO || 'true') !== 'false';
+const ENABLE_SCRAPEDO = ['1', 'true', 'yes', 'on'].includes(String(process.env.SCRAPER_ENABLE_SCRAPEDO || 'false').toLowerCase());
 const SCRAPEDO_TIMEOUT_MS = Math.max(10000, Number(process.env.SCRAPEDO_TIMEOUT_MS || 45000));
 const DEFAULT_CRAWL_OPTIONS = {
   maxPages: Math.max(1, Number(process.env.SCRAPER_MAX_PAGES || 4)),
@@ -2300,7 +2300,7 @@ async function scrapeUrl(rawUrl, options = {}) {
       };
     }
 
-    console.warn('[RailwayScraper] Local scrape weak. Trying Browserless...');
+    console.warn(ENABLE_BROWSERLESS && BROWSERLESS_API_TOKEN ? '[RailwayScraper] Local scrape weak. Trying Browserless...' : '[RailwayScraper] Local scrape weak. Browserless disabled; considering enabled fallbacks...');
   } catch (error) {
     attempts.push({
       provider: 'local',

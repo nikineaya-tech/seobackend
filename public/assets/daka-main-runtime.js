@@ -9,7 +9,7 @@
         : 'https://seobackend-f81n.onrender.com',  // 🔥 NOUVELLE URL
     TIMEOUT_SHORT: 15000,
     TIMEOUT_MEDIUM: 45000, // Passe à 45 secondes pour les analyses simples
-    TIMEOUT_LONG: 90000,
+    TIMEOUT_LONG: 180000,
     MAX_RETRIES: 3,
     RETRY_DELAY: 2000,
     TOAST_DURATION: 5000,
