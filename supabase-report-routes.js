@@ -3,7 +3,7 @@
 const crypto = require('crypto');
 
 const REPORT_TYPES = new Set(['competitors', 'funnel', 'technical', 'keywords']);
-const PUBLIC_REPORT_FRONTEND_URL = 'https://seo.mktnstrategix.com';
+const PUBLIC_REPORT_FRONTEND_URL = process.env.PUBLIC_REPORT_FRONTEND_URL || 'https://marketinsight.mktnstrategix.com';
 
 function safeText(value, max = 240) {
     return String(value || '').trim().slice(0, max);

@@ -6,8 +6,8 @@
 SUPABASE_URL         = https://etjwmqnbfsevlwaeixwb.supabase.co
 SUPABASE_ANON_KEY    = [ton anon key — Supabase → Settings → API → anon public]
 SUPABASE_SERVICE_KEY = [ton service_role key — Supabase → Settings → API → service_role]
-FRONTEND_URL         = https://app.da-ka.live
-AUTH_REDIRECT_URL    = https://seo.mktnstrategix.com/seodaka4444
+FRONTEND_URL         = https://marketinsight.mktnstrategix.com/app
+AUTH_REDIRECT_URL    = https://marketinsight.mktnstrategix.com/app
 # Après activation du domaine personnalisé Supabase :
 SUPABASE_PUBLIC_URL  = https://auth.da-ka.live
 ```
@@ -18,11 +18,13 @@ Dans Supabase Dashboard > Authentication > URL Configuration :
 
 ```text
 Site URL:
-https://seo.mktnstrategix.com/seodaka4444
+https://marketinsight.mktnstrategix.com
 
 Redirect URLs:
-https://seo.mktnstrategix.com/seodaka4444
-https://seo.mktnstrategix.com/seodaka4444/**
+https://marketinsight.mktnstrategix.com
+https://marketinsight.mktnstrategix.com/**
+https://marketinsight.mktnstrategix.com/app
+https://marketinsight.mktnstrategix.com/app/**
 ```
 
 Supprimer `http://localhost:3000` des URLs de production. Sinon Supabase peut y
