@@ -24,7 +24,7 @@
       <div>
         <span class="badge">Daka Admin Room</span>
         <h1>Leads, logins et activite client.</h1>
-        <p>Tableau de supervision first-party pour suivre les utilisateurs connectes, les vues, les clics, les sorties et les signaux d'engagement sur Daka Market Insight.</p>
+        <p>Tableau de supervision first-party pour suivre les utilisateurs Supabase Auth, les vues, clics, sorties et signaux d'engagement.</p>
       </div>
       <button type="button" onclick="loadActivity()">Rafraichir</button>
     </section>
@@ -46,15 +46,13 @@
       <button class="danger" type="button" onclick="logoutAdmin()">Deconnecter</button>
     </section>
 
-    <section class="card">
-      <div id="metrics" class="grid"></div>
-    </section>
+    <section class="card"><div id="metrics" class="grid"></div></section>
 
     <section class="card">
       <div class="toolbar">
         <div>
           <h2>Personnes authentifiees</h2>
-          <p class="muted small" style="margin:4px 0 0">Regroupement par Gmail detecte dans les evenements de connexion et d'usage.</p>
+          <p class="muted small" style="margin:4px 0 0">Source principale: Supabase Auth. Les actions viennent du tracking si la table existe.</p>
         </div>
         <button class="secondary" type="button" onclick="renderPeople()">Recalculer</button>
       </div>
@@ -66,11 +64,7 @@
         <h2>Derniers evenements</h2>
         <div class="filters">
           <select id="typeFilter" onchange="renderEvents()">
-            <option value="">Tous</option>
-            <option value="page_view">Vues</option>
-            <option value="click">Clics</option>
-            <option value="page_exit">Sorties</option>
-            <option value="auth_login">Logins</option>
+            <option value="">Tous</option><option value="page_view">Vues</option><option value="click">Clics</option><option value="page_exit">Sorties</option><option value="auth_login">Logins</option>
           </select>
           <input id="searchFilter" oninput="renderEvents()" placeholder="Filtrer email, page, label, domaine">
         </div>
@@ -86,193 +80,65 @@ let LAST_EVENTS = [];
 let LAST_USERS = [];
 let ADMIN_SESSION = readSession();
 
-function esc(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (s) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
-}
+function esc(value){return String(value ?? '').replace(/[&<>"']/g,(s)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
+function readSession(){try{return JSON.parse(sessionStorage.getItem('dakaAdminSession') || 'null') || null;}catch(_){return null;}}
+function saveSession(session){ADMIN_SESSION=session;sessionStorage.setItem('dakaAdminSession',JSON.stringify(session));updateSessionUi();}
+function clearSession(){ADMIN_SESSION=null;sessionStorage.removeItem('dakaAdminSession');updateSessionUi();}
+function adminHeaders(){return ADMIN_SESSION?.sessionToken ? {Authorization:'Bearer '+ADMIN_SESSION.sessionToken} : {};}
+function metric(label,value){return '<div class="metric"><strong>'+esc(value || 0)+'</strong><span>'+esc(label)+'</span></div>';}
+function emailOf(item){const direct=item?.email||item?.user_email||item?.userEmail||item?.gmail||item?.data?.email||item?.data?.user_email||item?.data?.userEmail;const email=String(direct||'').trim().toLowerCase();return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)?email:'';}
+function userIdOf(item){return String(item?.id||item?.user_id||item?.userId||item?.data?.user_id||item?.data?.userId||'').trim();}
+function eventTime(event){return new Date(event.ts||event.lastSignInAt||event.createdAt||event.created_at||Date.now()).getTime()||Date.now();}
+function normalizeType(type){const t=String(type||'').toLowerCase();if(['signed_in','sign_in','login','login_success','auth_login','user_login'].includes(t))return 'auth_login';return t||'event';}
+function updateSessionUi(){const active=Boolean(ADMIN_SESSION?.sessionToken&&(!ADMIN_SESSION.expiresAt||new Date(ADMIN_SESSION.expiresAt).getTime()>Date.now()));$('loginCard').style.display=active?'none':'grid';$('sessionCard').style.display=active?'grid':'none';if(active){$('sessionEmail').textContent=ADMIN_SESSION?.admin?.email||'Admin connecte';$('sessionExpiry').textContent=ADMIN_SESSION.expiresAt?'Session active jusqu au '+new Date(ADMIN_SESSION.expiresAt).toLocaleString():'Session active';}}
 
-function readSession() {
-  try { return JSON.parse(sessionStorage.getItem('dakaAdminSession') || 'null') || null; } catch (_) { return null; }
-}
-
-function saveSession(session) {
-  ADMIN_SESSION = session;
-  sessionStorage.setItem('dakaAdminSession', JSON.stringify(session));
-  updateSessionUi();
-}
-
-function clearSession() {
-  ADMIN_SESSION = null;
-  sessionStorage.removeItem('dakaAdminSession');
-  updateSessionUi();
-}
-
-function adminHeaders() {
-  return ADMIN_SESSION?.sessionToken ? { Authorization: 'Bearer ' + ADMIN_SESSION.sessionToken } : {};
-}
-
-function updateSessionUi() {
-  const active = Boolean(ADMIN_SESSION?.sessionToken && (!ADMIN_SESSION.expiresAt || new Date(ADMIN_SESSION.expiresAt).getTime() > Date.now()));
-  $('loginCard').style.display = active ? 'none' : 'grid';
-  $('sessionCard').style.display = active ? 'grid' : 'none';
-  if (active) {
-    $('sessionEmail').textContent = ADMIN_SESSION?.admin?.email || 'Admin connecte';
-    $('sessionExpiry').textContent = ADMIN_SESSION.expiresAt ? 'Session active jusqu au ' + new Date(ADMIN_SESSION.expiresAt).toLocaleString() : 'Session active';
-  }
-}
-
-function metric(label, value) {
-  return '<div class="metric"><strong>' + esc(value || 0) + '</strong><span>' + esc(label) + '</span></div>';
-}
-
-function emailOf(item) {
-  const direct = item?.email || item?.user_email || item?.userEmail || item?.gmail || item?.data?.email || item?.data?.user_email || item?.data?.userEmail;
-  const email = String(direct || '').trim().toLowerCase();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
-}
-
-function userIdOf(item) {
-  return String(item?.user_id || item?.userId || item?.data?.user_id || item?.data?.userId || '').trim();
-}
-
-function eventTime(event) {
-  return new Date(event.ts || event.created_at || event.createdAt || Date.now()).getTime() || Date.now();
-}
-
-function normalizeType(type) {
-  const t = String(type || '').toLowerCase();
-  if (['signed_in','sign_in','login','login_success','auth_login','user_login'].includes(t)) return 'auth_login';
-  return t || 'event';
-}
-
-function buildPeople() {
-  const map = new Map();
-  [...LAST_USERS, ...LAST_EVENTS].forEach((item) => {
-    const email = emailOf(item);
-    if (!email) return;
-    const key = email;
-    const type = normalizeType(item.type || item.event_type || item.event || (item.lastSeen ? 'profile' : 'event'));
-    const current = map.get(key) || { email, userId: userIdOf(item), firstSeen: eventTime(item), lastSeen: eventTime(item), total: 0, pageViews: 0, clicks: 0, exits: 0, logins: 0, paths: new Set(), lastLabel: '' };
-    const at = eventTime(item);
-    current.firstSeen = Math.min(current.firstSeen, at);
-    current.lastSeen = Math.max(current.lastSeen, at);
-    current.userId = current.userId || userIdOf(item);
-    current.total += item.lastSeen ? Number(item.total || 0) : 1;
-    if (type === 'page_view') current.pageViews += 1;
-    if (type === 'click') current.clicks += 1;
-    if (type === 'page_exit') current.exits += 1;
-    if (type === 'auth_login') current.logins += 1;
-    if (item.path) current.paths.add(item.path);
-    current.lastLabel = item.label || item.title || item.path || current.lastLabel;
-    map.set(key, current);
+function buildPeople(){
+  const map=new Map();
+  [...LAST_USERS,...LAST_EVENTS].forEach((item)=>{
+    const email=emailOf(item); if(!email) return;
+    const type=normalizeType(item.type||item.event_type||item.event||(item.source==='supabase-auth'?'auth_login':'event'));
+    const current=map.get(email)||{email,userId:userIdOf(item),firstSeen:eventTime(item),lastSeen:eventTime(item),total:0,pageViews:0,clicks:0,exits:0,logins:0,paths:new Set(),lastLabel:''};
+    const at=eventTime(item); current.firstSeen=Math.min(current.firstSeen,at); current.lastSeen=Math.max(current.lastSeen,at); current.userId=current.userId||userIdOf(item); current.total+=1;
+    if(type==='page_view')current.pageViews+=1; if(type==='click')current.clicks+=1; if(type==='page_exit')current.exits+=1; if(type==='auth_login')current.logins+=1;
+    if(item.path)current.paths.add(item.path); current.lastLabel=item.label||item.name||item.title||item.path||current.lastLabel; map.set(email,current);
   });
-  return Array.from(map.values()).sort((a, b) => b.lastSeen - a.lastSeen);
+  return Array.from(map.values()).sort((a,b)=>b.lastSeen-a.lastSeen);
 }
 
-async function loginAdmin() {
-  const email = $('adminEmail').value.trim();
-  const password = $('adminPassword').value;
-  $('events').innerHTML = '<div class="empty">Verification admin...</div>';
-  try {
-    const response = await fetch(API_BASE_URL + '/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      mode: 'cors',
-      credentials: 'omit',
-      body: JSON.stringify({ email, password })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.sessionToken) throw new Error(data.error || 'ADMIN_LOGIN_FAILED');
-    $('adminPassword').value = '';
-    saveSession(data);
-    await loadActivity();
-  } catch (error) {
-    clearSession();
-    $('people').innerHTML = '';
-    $('events').innerHTML = '<p class="danger-text">Connexion admin refusee.</p><p class="muted small">' + esc(error.message) + '</p>';
-  }
+async function loginAdmin(){
+  const email=$('adminEmail').value.trim(); const password=$('adminPassword').value; $('events').innerHTML='<div class="empty">Verification admin...</div>';
+  try{const response=await fetch(API_BASE_URL+'/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},mode:'cors',credentials:'omit',body:JSON.stringify({email,password})});const data=await response.json().catch(()=>({}));if(!response.ok||!data.sessionToken)throw new Error(data.error||'ADMIN_LOGIN_FAILED');$('adminPassword').value='';saveSession(data);await loadActivity();}
+  catch(error){clearSession();$('people').innerHTML='';$('events').innerHTML='<p class="danger-text">Connexion admin refusee.</p><p class="muted small">'+esc(error.message)+'</p>';}
 }
 
-async function logoutAdmin() {
-  try {
-    if (ADMIN_SESSION?.sessionToken) {
-      await fetch(API_BASE_URL + '/api/admin/logout', { method: 'POST', headers: adminHeaders(), mode: 'cors', credentials: 'omit' });
-    }
-  } catch (_) {}
-  clearSession();
-  LAST_EVENTS = [];
-  LAST_USERS = [];
-  $('metrics').innerHTML = '';
-  $('people').innerHTML = '';
-  $('events').innerHTML = '<div class="empty">Session admin fermee.</div>';
+async function logoutAdmin(){try{if(ADMIN_SESSION?.sessionToken){await fetch(API_BASE_URL+'/api/admin/logout',{method:'POST',headers:adminHeaders(),mode:'cors',credentials:'omit'});}}catch(_){} clearSession();LAST_EVENTS=[];LAST_USERS=[];$('metrics').innerHTML='';$('people').innerHTML='';$('events').innerHTML='<div class="empty">Session admin fermee.</div>';}
+
+async function loadAuthUsers(){
+  try{const response=await fetch(API_BASE_URL+'/auth/admin/users',{headers:adminHeaders(),mode:'cors',credentials:'omit'});if(response.status===401)throw new Error('ADMIN_AUTH_REQUIRED');if(!response.ok)return [];const data=await response.json();return (Array.isArray(data.users)?data.users:[]).map((user)=>({...user,source:'supabase-auth',type:'auth_login',ts:user.lastSignInAt||user.createdAt,label:user.name||user.provider||'Supabase Auth'}));}
+  catch(error){if(error.message==='ADMIN_AUTH_REQUIRED')throw error;console.warn('[Admin] Supabase auth users unavailable:',error);return [];}
 }
 
-async function loadActivity() {
+async function loadActivity(){
   updateSessionUi();
-  if (!ADMIN_SESSION?.sessionToken) {
-    $('metrics').innerHTML = '';
-    $('people').innerHTML = '';
-    $('events').innerHTML = '<div class="empty">Connecte-toi pour lire les signaux.</div>';
-    return;
-  }
-  $('events').innerHTML = '<div class="empty">Chargement des signaux...</div>';
-  try {
-    const response = await fetch(API_BASE_URL + '/api/admin/activity', {
-      headers: adminHeaders(),
-      mode: 'cors',
-      credentials: 'omit'
-    });
-    if (!response.ok) throw new Error(response.status === 401 ? 'ADMIN_AUTH_REQUIRED' : 'ADMIN_ACTIVITY_UNAVAILABLE');
-    const data = await response.json();
-    const summary = data.summary || {};
-    LAST_EVENTS = Array.isArray(data.events) ? data.events : [];
-    LAST_USERS = Array.isArray(data.users) ? data.users : [];
-    const authenticatedCount = buildPeople().length || summary.authenticatedUsers || summary.users || 0;
-    $('metrics').innerHTML =
-      metric('Gmails', authenticatedCount) +
-      metric('Events', summary.totalEvents) +
-      metric('Vues', summary.pageViews) +
-      metric('Clics', summary.clicks) +
-      metric('Sorties', summary.exits);
-    renderPeople();
-    renderEvents();
-  } catch (error) {
-    clearSession();
-    $('metrics').innerHTML = '';
-    $('people').innerHTML = '';
-    $('events').innerHTML = '<p class="danger-text">Acces refuse ou session expiree.</p><p class="muted small">' + esc(error.message) + '</p>';
-  }
+  if(!ADMIN_SESSION?.sessionToken){$('metrics').innerHTML='';$('people').innerHTML='';$('events').innerHTML='<div class="empty">Connecte-toi pour lire les signaux.</div>';return;}
+  $('people').innerHTML='<div class="empty">Chargement des utilisateurs Supabase...</div>'; $('events').innerHTML='<div class="empty">Chargement des signaux...</div>';
+  try{
+    const authUsers=await loadAuthUsers();
+    let summary={}; let events=[]; let activityUsers=[]; let warning='';
+    try{const response=await fetch(API_BASE_URL+'/api/admin/activity',{headers:adminHeaders(),mode:'cors',credentials:'omit'});if(response.status===401)throw new Error('ADMIN_AUTH_REQUIRED');if(response.ok){const data=await response.json();summary=data.summary||{};events=Array.isArray(data.events)?data.events:[];activityUsers=Array.isArray(data.users)?data.users:[];}else{warning='Historique actions indisponible: cree la table site_activity_events.';}}
+    catch(error){if(error.message==='ADMIN_AUTH_REQUIRED')throw error;warning='Historique actions indisponible: cree la table site_activity_events.';}
+    LAST_EVENTS=events; LAST_USERS=[...authUsers,...activityUsers];
+    const people=buildPeople();
+    $('metrics').innerHTML=metric('Gmails',people.length)+metric('Events',summary.totalEvents||events.length)+metric('Vues',summary.pageViews)+metric('Clics',summary.clicks)+metric('Sorties',summary.exits);
+    renderPeople(); renderEvents();
+    if(warning&&!events.length){$('events').innerHTML='<div class="empty">'+esc(warning)+'<br>Les utilisateurs Supabase Auth restent visibles ci-dessus.</div>';}
+  }catch(error){clearSession();$('metrics').innerHTML='';$('people').innerHTML='';$('events').innerHTML='<p class="danger-text">Acces refuse ou session expiree.</p><p class="muted small">'+esc(error.message)+'</p>';}
 }
 
-function renderPeople() {
-  const people = buildPeople();
-  $('people').innerHTML = people.map((person) => {
-    const initial = person.email.slice(0, 1).toUpperCase();
-    const lastSeen = new Date(person.lastSeen).toLocaleString();
-    const pathCount = person.paths.size;
-    return '<div class="person"><div class="identity"><span class="avatar">' + esc(initial) + '</span><div><b>' + esc(person.email) + '</b><br><span class="muted small">Derniere action: ' + esc(person.lastLabel || 'activite detectee') + '</span></div></div><div class="stat"><strong>' + esc(person.logins) + '</strong><span>logins</span></div><div class="stat"><strong>' + esc(person.pageViews) + '</strong><span>vues</span></div><div class="stat"><strong>' + esc(person.clicks) + '</strong><span>clics</span></div><div class="stat"><strong>' + esc(pathCount) + '</strong><span>pages</span></div><span class="muted small">' + esc(lastSeen) + '</span></div>';
-  }).join('') || '<div class="empty">Aucun Gmail utilisateur n est encore associe aux evenements. Il faut que le frontend envoie email/user_id au tracking apres authentification.</div>';
-}
+function renderPeople(){const people=buildPeople();$('people').innerHTML=people.map((person)=>{const initial=person.email.slice(0,1).toUpperCase();const lastSeen=new Date(person.lastSeen).toLocaleString();const pathCount=person.paths.size;return '<div class="person"><div class="identity"><span class="avatar">'+esc(initial)+'</span><div><b>'+esc(person.email)+'</b><br><span class="muted small">Derniere action: '+esc(person.lastLabel||'connexion detectee')+'</span></div></div><div class="stat"><strong>'+esc(person.logins)+'</strong><span>logins</span></div><div class="stat"><strong>'+esc(person.pageViews)+'</strong><span>vues</span></div><div class="stat"><strong>'+esc(person.clicks)+'</strong><span>clics</span></div><div class="stat"><strong>'+esc(pathCount)+'</strong><span>pages</span></div><span class="muted small">'+esc(lastSeen)+'</span></div>';}).join('')||'<div class="empty">Aucun utilisateur Supabase Auth lisible. Verifie SUPABASE_SERVICE_KEY sur Render.</div>';}
+function renderEvents(){const type=$('typeFilter').value;const query=$('searchFilter').value.trim().toLowerCase();const events=LAST_EVENTS.filter((event)=>{const eventType=normalizeType(event.type);if(type&&eventType!==type)return false;if(!query)return true;return [event.path,event.domain,event.title,event.label,event.email,event.user_email,event.userEmail,event.data?.email].some((value)=>String(value||'').toLowerCase().includes(query));});$('events').innerHTML=events.map((event)=>{const eventType=normalizeType(event.type);const date=new Date(event.ts||event.created_at||Date.now()).toLocaleString();const label=event.label||event.title||'';const email=emailOf(event)||'visiteur anonyme';return '<div class="event"><span class="pill">'+esc(eventType)+'</span><div><b>'+esc(event.path||'/')+'</b><br><span class="muted small">'+esc(label)+'</span></div><span class="pill email-pill">'+esc(email)+'</span><span class="muted small">'+esc(date)+'</span></div>';}).join('')||'<div class="empty">Aucun signal ne correspond au filtre.</div>';}
 
-function renderEvents() {
-  const type = $('typeFilter').value;
-  const query = $('searchFilter').value.trim().toLowerCase();
-  const events = LAST_EVENTS.filter((event) => {
-    const eventType = normalizeType(event.type);
-    if (type && eventType !== type) return false;
-    if (!query) return true;
-    return [event.path, event.domain, event.title, event.label, event.email, event.user_email, event.userEmail, event.data?.email].some((value) => String(value || '').toLowerCase().includes(query));
-  });
-  $('events').innerHTML = events.map((event) => {
-    const eventType = normalizeType(event.type);
-    const date = new Date(event.ts || event.created_at || Date.now()).toLocaleString();
-    const label = event.label || event.title || '';
-    const email = emailOf(event) || 'visiteur anonyme';
-    return '<div class="event"><span class="pill">' + esc(eventType) + '</span><div><b>' + esc(event.path || '/') + '</b><br><span class="muted small">' + esc(label) + '</span></div><span class="pill email-pill">' + esc(email) + '</span><span class="muted small">' + esc(date) + '</span></div>';
-  }).join('') || '<div class="empty">Aucun signal ne correspond au filtre.</div>';
-}
-
-updateSessionUi();
-loadActivity();
+updateSessionUi();loadActivity();
 </script>
 </body>
 </html>
