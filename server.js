@@ -17387,15 +17387,192 @@ const DAKA_LANDING_HTML = path.join(DAKA_PUBLIC_DIR, 'landing.html');
 const DAKA_ADMIN_HTML = path.join(DAKA_PUBLIC_DIR, 'admin.html');
 const DAKA_ACTIVITY_EVENTS = [];
 
-function requireAdminAccess(req, res, next) {
-    const expected = process.env.ADMIN_TOKEN || process.env.DAKA_ADMIN_TOKEN || '';
-    const provided = req.get('x-admin-token') || req.query.token || '';
-    if (!expected || provided !== expected) {
-        return res.status(401).json({ success: false, error: 'ADMIN_AUTH_REQUIRED' });
-    }
-    return next();
+const ADMIN_SESSION_TTL_MS = Number(process.env.DAKA_ADMIN_SESSION_TTL_MS || 1000 * 60 * 60 * 8);
+const ADMIN_PASSWORD_SCRYPT = Object.freeze({ N: 16384, r: 8, p: 1, keylen: 64 });
+let adminBootstrapPromise = null;
+
+function normalizeAdminEmail(value) {
+    return String(value || '').trim().toLowerCase().slice(0, 180);
 }
 
+function base64Url(buffer) {
+    return Buffer.from(buffer).toString('base64url');
+}
+
+function hashAdminToken(token) {
+    return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+}
+
+async function hashAdminPassword(password) {
+    const salt = crypto.randomBytes(24);
+    const derived = await new Promise((resolve, reject) => {
+        crypto.scrypt(String(password || ''), salt, ADMIN_PASSWORD_SCRYPT.keylen, {
+            N: ADMIN_PASSWORD_SCRYPT.N,
+            r: ADMIN_PASSWORD_SCRYPT.r,
+            p: ADMIN_PASSWORD_SCRYPT.p
+        }, (error, key) => error ? reject(error) : resolve(key));
+    });
+    return [
+        'scrypt',
+        ADMIN_PASSWORD_SCRYPT.N,
+        ADMIN_PASSWORD_SCRYPT.r,
+        ADMIN_PASSWORD_SCRYPT.p,
+        salt.toString('base64'),
+        Buffer.from(derived).toString('base64')
+    ].join('$');
+}
+
+async function verifyAdminPassword(password, storedHash) {
+    const parts = String(storedHash || '').split('$');
+    if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
+    const [, rawN, rawR, rawP, rawSalt, rawHash] = parts;
+    const expected = Buffer.from(rawHash, 'base64');
+    if (!expected.length) return false;
+    const derived = await new Promise((resolve, reject) => {
+        crypto.scrypt(String(password || ''), Buffer.from(rawSalt, 'base64'), expected.length, {
+            N: Number(rawN) || ADMIN_PASSWORD_SCRYPT.N,
+            r: Number(rawR) || ADMIN_PASSWORD_SCRYPT.r,
+            p: Number(rawP) || ADMIN_PASSWORD_SCRYPT.p
+        }, (error, key) => error ? reject(error) : resolve(key));
+    });
+    return expected.length === derived.length && crypto.timingSafeEqual(expected, derived);
+}
+
+function getAdminBearerToken(req) {
+    const auth = String(req.get('authorization') || '');
+    if (/^Bearer\s+/i.test(auth)) return auth.replace(/^Bearer\s+/i, '').trim();
+    return String(req.get('x-admin-session') || req.query.adminSession || '').trim();
+}
+
+async function ensureConfiguredAdminUser() {
+    if (!supabase) return;
+    if (adminBootstrapPromise) return adminBootstrapPromise;
+    adminBootstrapPromise = (async () => {
+        const email = normalizeAdminEmail(process.env.DAKA_ADMIN_EMAIL || process.env.ADMIN_EMAIL || '');
+        const password = String(process.env.DAKA_ADMIN_PASSWORD || process.env.ADMIN_PASSWORD || '');
+        if (!email || !password) return;
+        const { data: existing } = await supabase
+            .from('daka_admin_users')
+            .select('email')
+            .eq('email', email)
+            .maybeSingle();
+        if (existing?.email) return;
+        const passwordHash = await hashAdminPassword(password);
+        const { error } = await supabase.from('daka_admin_users').upsert({
+            email,
+            password_hash: passwordHash,
+            is_active: true,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'email' });
+        if (error) console.warn('[AdminAuth] bootstrap failed:', error.message);
+        else console.log('[AdminAuth] admin user bootstrapped from Render env');
+    })().catch(error => console.warn('[AdminAuth] bootstrap unavailable:', error.message));
+    return adminBootstrapPromise;
+}
+
+async function verifyAdminSession(req) {
+    const expected = process.env.ADMIN_TOKEN || process.env.DAKA_ADMIN_TOKEN || '';
+    const provided = req.get('x-admin-token') || req.query.token || '';
+    if (expected && provided && provided === expected) {
+        return { mode: 'legacy-token', email: 'legacy-admin' };
+    }
+    if (!supabase) return null;
+    const token = getAdminBearerToken(req);
+    if (!token) return null;
+    const tokenHash = hashAdminToken(token);
+    const { data, error } = await supabase
+        .from('daka_admin_sessions')
+        .select('token_hash,email,expires_at,revoked_at')
+        .eq('token_hash', tokenHash)
+        .maybeSingle();
+    if (error || !data || data.revoked_at || new Date(data.expires_at).getTime() <= Date.now()) return null;
+    return { mode: 'session', email: data.email, tokenHash };
+}
+
+async function requireAdminAccess(req, res, next) {
+    try {
+        const session = await verifyAdminSession(req);
+        if (!session) {
+            return res.status(401).json({ success: false, error: 'ADMIN_AUTH_REQUIRED' });
+        }
+        req.admin = session;
+        return next();
+    } catch (error) {
+        console.warn('[AdminAuth] session check failed:', error.message);
+        return res.status(401).json({ success: false, error: 'ADMIN_AUTH_REQUIRED' });
+    }
+}
+
+app.post('/api/admin/login', async (req, res) => {
+    try {
+        await ensureConfiguredAdminUser();
+        if (!supabase) {
+            return res.status(503).json({ success: false, error: 'ADMIN_DB_UNAVAILABLE' });
+        }
+        const email = normalizeAdminEmail(req.body?.email);
+        const password = String(req.body?.password || '');
+        if (!email || password.length < 8) {
+            return res.status(400).json({ success: false, error: 'ADMIN_CREDENTIALS_REQUIRED' });
+        }
+        const { data: admin, error } = await supabase
+            .from('daka_admin_users')
+            .select('email,password_hash,is_active,failed_login_count,locked_until')
+            .eq('email', email)
+            .maybeSingle();
+        const lockedUntil = admin?.locked_until ? new Date(admin.locked_until).getTime() : 0;
+        if (error || !admin || !admin.is_active || lockedUntil > Date.now()) {
+            return res.status(401).json({ success: false, error: 'ADMIN_LOGIN_FAILED' });
+        }
+        const ok = await verifyAdminPassword(password, admin.password_hash);
+        if (!ok) {
+            const failed = Number(admin.failed_login_count || 0) + 1;
+            await supabase.from('daka_admin_users').update({
+                failed_login_count: failed,
+                locked_until: failed >= 6 ? new Date(Date.now() + 15 * 60 * 1000).toISOString() : null,
+                updated_at: new Date().toISOString()
+            }).eq('email', email);
+            return res.status(401).json({ success: false, error: 'ADMIN_LOGIN_FAILED' });
+        }
+        const token = base64Url(crypto.randomBytes(32));
+        const expiresAt = new Date(Date.now() + ADMIN_SESSION_TTL_MS).toISOString();
+        await supabase.from('daka_admin_users').update({
+            failed_login_count: 0,
+            locked_until: null,
+            last_login_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }).eq('email', email);
+        const { error: sessionError } = await supabase.from('daka_admin_sessions').insert({
+            token_hash: hashAdminToken(token),
+            email,
+            expires_at: expiresAt,
+            ip_hash: crypto.createHash('sha256').update(String(req.ip || '') + String(process.env.TRACKING_SALT || 'daka')).digest('hex').slice(0, 32),
+            user_agent: String(req.get('user-agent') || '').slice(0, 220)
+        });
+        if (sessionError) throw sessionError;
+        return res.json({ success: true, sessionToken: token, expiresAt, admin: { email } });
+    } catch (error) {
+        console.warn('[AdminAuth] login failed:', error.message);
+        return res.status(500).json({ success: false, error: 'ADMIN_LOGIN_UNAVAILABLE' });
+    }
+});
+
+app.post('/api/admin/logout', async (req, res) => {
+    try {
+        const session = await verifyAdminSession(req);
+        if (session?.tokenHash && supabase) {
+            await supabase.from('daka_admin_sessions').update({
+                revoked_at: new Date().toISOString()
+            }).eq('token_hash', session.tokenHash);
+        }
+        return res.json({ success: true });
+    } catch {
+        return res.json({ success: true });
+    }
+});
+
+app.get('/api/admin/session', requireAdminAccess, async (req, res) => {
+    return res.json({ success: true, admin: { email: req.admin?.email || 'admin' } });
+});
 function normalizeTrackingEvent(req) {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const data = body.data && typeof body.data === 'object' ? body.data : {};
