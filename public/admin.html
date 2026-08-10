@@ -7,272 +7,47 @@
   <meta name="robots" content="noindex,nofollow">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    :root{--bg:#020617;--panel:#08111f;--panel2:#0b1527;--line:rgba(148,163,184,.18);--text:#e5f3ff;--muted:#8ea4bf;--cyan:#22d3ee;--green:#22c55e;--violet:#8b5cf6;--red:#fb7185;--amber:#f59e0b}
+    :root{--bg:#020617;--line:rgba(148,163,184,.18);--text:#e5f3ff;--muted:#8ea4bf;--cyan:#22d3ee;--green:#22c55e;--violet:#8b5cf6;--red:#fb7185}
     *{box-sizing:border-box}body{margin:0;font-family:Inter,system-ui,sans-serif;background:radial-gradient(circle at 15% -5%,rgba(34,211,238,.16),transparent 30%),radial-gradient(circle at 80% 0,rgba(139,92,246,.14),transparent 28%),var(--bg);color:var(--text)}
-    .wrap{width:min(1180px,calc(100% - 28px));margin:28px auto 48px}.top{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:22px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(145deg,rgba(8,17,31,.96),rgba(2,6,23,.88));box-shadow:0 24px 70px rgba(0,0,0,.28)}
-    h1{margin:0;font-size:clamp(1.8rem,4vw,3.4rem);letter-spacing:-.04em}.top p,.muted{color:var(--muted)}.top p{margin:8px 0 0;line-height:1.55}.badge{display:inline-flex;align-items:center;gap:8px;width:max-content;margin-bottom:12px;padding:8px 12px;border-radius:999px;background:rgba(34,197,94,.11);color:#86efac;border:1px solid rgba(34,197,94,.24);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
-    .card{margin-top:18px;padding:18px;border:1px solid var(--line);border-radius:22px;background:rgba(8,17,31,.78);box-shadow:0 18px 50px rgba(0,0,0,.18)}.login{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end}.sessionbar{display:none;grid-template-columns:1fr auto auto;gap:10px;align-items:center}
-    label{display:grid;gap:7px;color:#cbd5e1;font-size:.78rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em}input,select,button{min-height:44px;border-radius:13px;border:1px solid rgba(148,163,184,.24);background:#020817;color:var(--text);padding:10px 12px;font:inherit}button{cursor:pointer;background:linear-gradient(135deg,var(--green),var(--cyan));color:#02111d;font-weight:900;border:0;box-shadow:0 14px 34px rgba(34,211,238,.18)}button.secondary{background:rgba(139,92,246,.16);color:#ddd6fe;border:1px solid rgba(139,92,246,.32);box-shadow:none}button.danger{background:rgba(251,113,133,.12);color:#fecdd3;border:1px solid rgba(251,113,133,.32);box-shadow:none}
-    .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.metric{padding:17px;border-radius:18px;background:linear-gradient(145deg,#020817,#071225);border:1px solid rgba(34,211,238,.14)}.metric strong{display:block;font-size:2rem;letter-spacing:-.04em}.metric span{display:block;color:var(--muted);font-size:.72rem;font-weight:900;text-transform:uppercase}
-    .toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.toolbar h2{margin:0;font-size:1.05rem}.filters{display:flex;gap:8px;flex-wrap:wrap}.events,.people{display:grid;gap:9px}.event{display:grid;grid-template-columns:130px minmax(0,1fr) 220px 180px;gap:12px;align-items:center;padding:12px;border:1px solid rgba(148,163,184,.12);border-radius:15px;background:#030b18}.person{display:grid;grid-template-columns:minmax(0,1.2fr) repeat(4,92px) 170px;gap:12px;align-items:center;padding:14px;border:1px solid rgba(34,211,238,.16);border-radius:18px;background:linear-gradient(145deg,rgba(3,11,24,.98),rgba(8,17,31,.88))}.person b,.event b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.person .avatar{width:38px;height:38px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--violet),var(--cyan));color:white;font-weight:900}.identity{display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px;align-items:center}.stat{padding:8px;border-radius:12px;background:rgba(2,8,23,.78);border:1px solid rgba(148,163,184,.12);text-align:center}.stat strong{display:block}.stat span{font-size:.67rem;color:var(--muted);text-transform:uppercase;font-weight:900}.pill{display:inline-flex;width:max-content;border-radius:999px;padding:6px 9px;background:rgba(34,211,238,.12);color:#67e8f9;font-size:.72rem;font-weight:900}.email-pill{justify-self:start;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;background:rgba(139,92,246,.13);color:#ddd6fe}.danger-text{color:#fca5a5}.ok{color:#86efac}.small{font-size:.78rem;line-height:1.45}.empty{padding:24px;text-align:center;border:1px dashed rgba(148,163,184,.22);border-radius:18px;color:var(--muted)}.secure{border-color:rgba(34,197,94,.22);background:rgba(34,197,94,.06)}
-    @media(max-width:960px){.person,.event{grid-template-columns:1fr 1fr}.identity,.event>div{grid-column:1/-1}.grid{grid-template-columns:1fr 1fr 1fr}}@media(max-width:820px){.top,.login,.sessionbar{grid-template-columns:1fr}.top button{width:100%}}@media(max-width:520px){.grid,.person,.event{grid-template-columns:1fr}.wrap{width:min(100% - 18px,1180px);margin-top:14px}.card,.top{border-radius:18px}}
+    .wrap{width:min(1180px,calc(100% - 28px));margin:28px auto 48px}.top,.card{border:1px solid var(--line);background:linear-gradient(145deg,rgba(8,17,31,.96),rgba(2,6,23,.88));box-shadow:0 24px 70px rgba(0,0,0,.24)}.top{display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center;padding:22px;border-radius:26px}.card{margin-top:18px;padding:18px;border-radius:22px}
+    h1{margin:0;font-size:clamp(1.8rem,4vw,3.3rem);letter-spacing:-.04em}.muted,.top p{color:var(--muted)}.top p{margin:8px 0 0;line-height:1.55}.badge{display:inline-flex;width:max-content;margin-bottom:12px;padding:8px 12px;border-radius:999px;background:rgba(34,197,94,.11);color:#86efac;border:1px solid rgba(34,197,94,.24);font-size:.72rem;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+    .login{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:10px;align-items:end}.sessionbar{display:none;grid-template-columns:1fr auto auto;gap:10px;align-items:center}.grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.metric{padding:17px;border-radius:18px;background:#030b18;border:1px solid rgba(34,211,238,.14)}.metric strong{display:block;font-size:2rem}.metric span{display:block;color:var(--muted);font-size:.72rem;font-weight:900;text-transform:uppercase}
+    label{display:grid;gap:7px;color:#cbd5e1;font-size:.78rem;font-weight:900;text-transform:uppercase}input,select,button{min-height:44px;border-radius:13px;border:1px solid rgba(148,163,184,.24);background:#020817;color:var(--text);padding:10px 12px;font:inherit}button{cursor:pointer;background:linear-gradient(135deg,var(--green),var(--cyan));color:#02111d;font-weight:900;border:0}button.secondary{background:rgba(139,92,246,.16);color:#ddd6fe;border:1px solid rgba(139,92,246,.32)}button.danger{background:rgba(251,113,133,.12);color:#fecdd3;border:1px solid rgba(251,113,133,.32)}
+    .toolbar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.toolbar h2{margin:0;font-size:1.05rem}.filters{display:flex;gap:8px;flex-wrap:wrap}.events,.people{display:grid;gap:9px}.event{display:grid;grid-template-columns:130px minmax(0,1fr) 220px 180px;gap:12px;align-items:center;padding:12px;border:1px solid rgba(148,163,184,.12);border-radius:15px;background:#030b18}.person{display:grid;grid-template-columns:minmax(0,1.2fr) repeat(4,92px) 170px;gap:12px;align-items:center;padding:14px;border:1px solid rgba(34,211,238,.16);border-radius:18px;background:#030b18}.person b,.event b{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.avatar{width:38px;height:38px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,var(--violet),var(--cyan));font-weight:900}.identity{display:grid;grid-template-columns:38px minmax(0,1fr);gap:10px;align-items:center}.stat{padding:8px;border-radius:12px;background:#020817;border:1px solid rgba(148,163,184,.12);text-align:center}.stat span{font-size:.67rem;color:var(--muted);text-transform:uppercase;font-weight:900}.pill{display:inline-flex;width:max-content;border-radius:999px;padding:6px 9px;background:rgba(34,211,238,.12);color:#67e8f9;font-size:.72rem;font-weight:900}.email-pill{background:rgba(139,92,246,.13);color:#ddd6fe;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.danger-text{color:#fca5a5}.small{font-size:.78rem;line-height:1.45}.empty{padding:24px;text-align:center;border:1px dashed rgba(148,163,184,.22);border-radius:18px;color:var(--muted)}.secure{border-color:rgba(34,197,94,.22)}
+    @media(max-width:960px){.person,.event{grid-template-columns:1fr 1fr}.identity,.event>div{grid-column:1/-1}.grid{grid-template-columns:1fr 1fr 1fr}}@media(max-width:820px){.top,.login,.sessionbar{grid-template-columns:1fr}}@media(max-width:520px){.grid,.person,.event{grid-template-columns:1fr}.wrap{width:min(100% - 18px,1180px)}}
   </style>
 </head>
 <body>
-  <main class="wrap">
-    <section class="top">
-      <div>
-        <span class="badge">Daka Admin Room</span>
-        <h1>Leads, logins et activite client.</h1>
-        <p>Tableau de supervision first-party pour suivre les utilisateurs connectes, les vues, les clics, les sorties et les signaux d'engagement sur Daka Market Insight.</p>
-      </div>
-      <button type="button" onclick="loadActivity()">Rafraichir</button>
-    </section>
-
-    <section id="loginCard" class="card login">
-      <label>Email admin
-        <input id="adminEmail" type="email" placeholder="email admin" autocomplete="username">
-      </label>
-      <label>Mot de passe
-        <input id="adminPassword" type="password" placeholder="mot de passe" autocomplete="current-password">
-      </label>
-      <button type="button" onclick="loginAdmin()">Connexion securisee</button>
-      <p class="muted small" style="grid-column:1/-1;margin:0">Le mot de passe est verifie par le backend. Supabase conserve uniquement un hash scrypt et les sessions sont stockees sous forme de hash.</p>
-    </section>
-
-    <section id="sessionCard" class="card sessionbar secure">
-      <div><strong id="sessionEmail">Admin connecte</strong><br><span id="sessionExpiry" class="muted small"></span></div>
-      <button type="button" onclick="loadActivity()">Actualiser les signaux</button>
-      <button class="danger" type="button" onclick="logoutAdmin()">Deconnecter</button>
-    </section>
-
-    <section class="card">
-      <div id="metrics" class="grid"></div>
-    </section>
-
-    <section class="card">
-      <div class="toolbar">
-        <div>
-          <h2>Personnes authentifiees</h2>
-          <p class="muted small" style="margin:4px 0 0">Regroupement par Gmail detecte dans les evenements de connexion et d'usage.</p>
-        </div>
-        <button class="secondary" type="button" onclick="renderPeople()">Recalculer</button>
-      </div>
-      <div id="people" class="people"></div>
-    </section>
-
-    <section class="card">
-      <div class="toolbar">
-        <h2>Derniers evenements</h2>
-        <div class="filters">
-          <select id="typeFilter" onchange="renderEvents()">
-            <option value="">Tous</option>
-            <option value="page_view">Vues</option>
-            <option value="click">Clics</option>
-            <option value="page_exit">Sorties</option>
-            <option value="auth_login">Logins</option>
-          </select>
-          <input id="searchFilter" oninput="renderEvents()" placeholder="Filtrer email, page, label, domaine">
-        </div>
-      </div>
-      <div id="events" class="events"></div>
-    </section>
-  </main>
-
+<main class="wrap">
+  <section class="top"><div><span class="badge">Daka Admin Room</span><h1>Leads, logins et activite client.</h1><p>Supervision des utilisateurs Supabase Auth, vues, clics, sorties et signaux d'engagement.</p></div><button onclick="loadActivity()">Rafraichir</button></section>
+  <section id="loginCard" class="card login"><label>Email admin<input id="adminEmail" type="email" autocomplete="username"></label><label>Mot de passe<input id="adminPassword" type="password" autocomplete="current-password"></label><button onclick="loginAdmin()">Connexion securisee</button><p class="muted small" style="grid-column:1/-1;margin:0">Mot de passe verifie par backend; sessions stockees en hash.</p></section>
+  <section id="sessionCard" class="card sessionbar secure"><div><strong id="sessionEmail">Admin connecte</strong><br><span id="sessionExpiry" class="muted small"></span></div><button onclick="loadActivity()">Actualiser</button><button class="danger" onclick="logoutAdmin()">Deconnecter</button></section>
+  <section class="card"><div id="metrics" class="grid"></div></section>
+  <section class="card"><div class="toolbar"><div><h2>Personnes authentifiees</h2><p class="muted small" style="margin:4px 0 0">Source principale: Supabase Auth. Les actions viennent du tracking si la table existe.</p></div><button class="secondary" onclick="renderPeople()">Recalculer</button></div><div id="people" class="people"></div></section>
+  <section class="card"><div class="toolbar"><h2>Derniers evenements</h2><div class="filters"><select id="typeFilter" onchange="renderEvents()"><option value="">Tous</option><option value="page_view">Vues</option><option value="click">Clics</option><option value="page_exit">Sorties</option><option value="auth_login">Logins</option></select><input id="searchFilter" oninput="renderEvents()" placeholder="Filtrer email, page, label, domaine"></div></div><div id="events" class="events"></div></section>
+</main>
 <script>
-const API_BASE_URL = window.DAKA_API_BASE_URL || (location.hostname.includes('localhost') ? 'http://localhost:10000' : 'https://seobackend-f81n.onrender.com');
-const $ = (id) => document.getElementById(id);
-let LAST_EVENTS = [];
-let LAST_USERS = [];
-let ADMIN_SESSION = readSession();
-
-function esc(value) {
-  return String(value ?? '').replace(/[&<>"']/g, (s) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
-}
-
-function readSession() {
-  try { return JSON.parse(sessionStorage.getItem('dakaAdminSession') || 'null') || null; } catch (_) { return null; }
-}
-
-function saveSession(session) {
-  ADMIN_SESSION = session;
-  sessionStorage.setItem('dakaAdminSession', JSON.stringify(session));
-  updateSessionUi();
-}
-
-function clearSession() {
-  ADMIN_SESSION = null;
-  sessionStorage.removeItem('dakaAdminSession');
-  updateSessionUi();
-}
-
-function adminHeaders() {
-  return ADMIN_SESSION?.sessionToken ? { Authorization: 'Bearer ' + ADMIN_SESSION.sessionToken } : {};
-}
-
-function updateSessionUi() {
-  const active = Boolean(ADMIN_SESSION?.sessionToken && (!ADMIN_SESSION.expiresAt || new Date(ADMIN_SESSION.expiresAt).getTime() > Date.now()));
-  $('loginCard').style.display = active ? 'none' : 'grid';
-  $('sessionCard').style.display = active ? 'grid' : 'none';
-  if (active) {
-    $('sessionEmail').textContent = ADMIN_SESSION?.admin?.email || 'Admin connecte';
-    $('sessionExpiry').textContent = ADMIN_SESSION.expiresAt ? 'Session active jusqu au ' + new Date(ADMIN_SESSION.expiresAt).toLocaleString() : 'Session active';
-  }
-}
-
-function metric(label, value) {
-  return '<div class="metric"><strong>' + esc(value || 0) + '</strong><span>' + esc(label) + '</span></div>';
-}
-
-function emailOf(item) {
-  const direct = item?.email || item?.user_email || item?.userEmail || item?.gmail || item?.data?.email || item?.data?.user_email || item?.data?.userEmail;
-  const email = String(direct || '').trim().toLowerCase();
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : '';
-}
-
-function userIdOf(item) {
-  return String(item?.user_id || item?.userId || item?.data?.user_id || item?.data?.userId || '').trim();
-}
-
-function eventTime(event) {
-  return new Date(event.ts || event.created_at || event.createdAt || Date.now()).getTime() || Date.now();
-}
-
-function normalizeType(type) {
-  const t = String(type || '').toLowerCase();
-  if (['signed_in','sign_in','login','login_success','auth_login','user_login'].includes(t)) return 'auth_login';
-  return t || 'event';
-}
-
-function buildPeople() {
-  const map = new Map();
-  [...LAST_USERS, ...LAST_EVENTS].forEach((item) => {
-    const email = emailOf(item);
-    if (!email) return;
-    const key = email;
-    const type = normalizeType(item.type || item.event_type || item.event || (item.lastSeen ? 'profile' : 'event'));
-    const current = map.get(key) || { email, userId: userIdOf(item), firstSeen: eventTime(item), lastSeen: eventTime(item), total: 0, pageViews: 0, clicks: 0, exits: 0, logins: 0, paths: new Set(), lastLabel: '' };
-    const at = eventTime(item);
-    current.firstSeen = Math.min(current.firstSeen, at);
-    current.lastSeen = Math.max(current.lastSeen, at);
-    current.userId = current.userId || userIdOf(item);
-    current.total += item.lastSeen ? Number(item.total || 0) : 1;
-    if (type === 'page_view') current.pageViews += 1;
-    if (type === 'click') current.clicks += 1;
-    if (type === 'page_exit') current.exits += 1;
-    if (type === 'auth_login') current.logins += 1;
-    if (item.path) current.paths.add(item.path);
-    current.lastLabel = item.label || item.title || item.path || current.lastLabel;
-    map.set(key, current);
-  });
-  return Array.from(map.values()).sort((a, b) => b.lastSeen - a.lastSeen);
-}
-
-async function loginAdmin() {
-  const email = $('adminEmail').value.trim();
-  const password = $('adminPassword').value;
-  $('events').innerHTML = '<div class="empty">Verification admin...</div>';
-  try {
-    const response = await fetch(API_BASE_URL + '/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      mode: 'cors',
-      credentials: 'omit',
-      body: JSON.stringify({ email, password })
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.sessionToken) throw new Error(data.error || 'ADMIN_LOGIN_FAILED');
-    $('adminPassword').value = '';
-    saveSession(data);
-    await loadActivity();
-  } catch (error) {
-    clearSession();
-    $('people').innerHTML = '';
-    $('events').innerHTML = '<p class="danger-text">Connexion admin refusee.</p><p class="muted small">' + esc(error.message) + '</p>';
-  }
-}
-
-async function logoutAdmin() {
-  try {
-    if (ADMIN_SESSION?.sessionToken) {
-      await fetch(API_BASE_URL + '/api/admin/logout', { method: 'POST', headers: adminHeaders(), mode: 'cors', credentials: 'omit' });
-    }
-  } catch (_) {}
-  clearSession();
-  LAST_EVENTS = [];
-  LAST_USERS = [];
-  $('metrics').innerHTML = '';
-  $('people').innerHTML = '';
-  $('events').innerHTML = '<div class="empty">Session admin fermee.</div>';
-}
-
-async function loadActivity() {
-  updateSessionUi();
-  if (!ADMIN_SESSION?.sessionToken) {
-    $('metrics').innerHTML = '';
-    $('people').innerHTML = '';
-    $('events').innerHTML = '<div class="empty">Connecte-toi pour lire les signaux.</div>';
-    return;
-  }
-  $('events').innerHTML = '<div class="empty">Chargement des signaux...</div>';
-  try {
-    const response = await fetch(API_BASE_URL + '/api/admin/activity', {
-      headers: adminHeaders(),
-      mode: 'cors',
-      credentials: 'omit'
-    });
-    if (!response.ok) throw new Error(response.status === 401 ? 'ADMIN_AUTH_REQUIRED' : 'ADMIN_ACTIVITY_UNAVAILABLE');
-    const data = await response.json();
-    const summary = data.summary || {};
-    LAST_EVENTS = Array.isArray(data.events) ? data.events : [];
-    LAST_USERS = Array.isArray(data.users) ? data.users : [];
-    const authenticatedCount = buildPeople().length || summary.authenticatedUsers || summary.users || 0;
-    $('metrics').innerHTML =
-      metric('Gmails', authenticatedCount) +
-      metric('Events', summary.totalEvents) +
-      metric('Vues', summary.pageViews) +
-      metric('Clics', summary.clicks) +
-      metric('Sorties', summary.exits);
-    renderPeople();
-    renderEvents();
-  } catch (error) {
-    clearSession();
-    $('metrics').innerHTML = '';
-    $('people').innerHTML = '';
-    $('events').innerHTML = '<p class="danger-text">Acces refuse ou session expiree.</p><p class="muted small">' + esc(error.message) + '</p>';
-  }
-}
-
-function renderPeople() {
-  const people = buildPeople();
-  $('people').innerHTML = people.map((person) => {
-    const initial = person.email.slice(0, 1).toUpperCase();
-    const lastSeen = new Date(person.lastSeen).toLocaleString();
-    const pathCount = person.paths.size;
-    return '<div class="person"><div class="identity"><span class="avatar">' + esc(initial) + '</span><div><b>' + esc(person.email) + '</b><br><span class="muted small">Derniere action: ' + esc(person.lastLabel || 'activite detectee') + '</span></div></div><div class="stat"><strong>' + esc(person.logins) + '</strong><span>logins</span></div><div class="stat"><strong>' + esc(person.pageViews) + '</strong><span>vues</span></div><div class="stat"><strong>' + esc(person.clicks) + '</strong><span>clics</span></div><div class="stat"><strong>' + esc(pathCount) + '</strong><span>pages</span></div><span class="muted small">' + esc(lastSeen) + '</span></div>';
-  }).join('') || '<div class="empty">Aucun Gmail utilisateur n est encore associe aux evenements. Il faut que le frontend envoie email/user_id au tracking apres authentification.</div>';
-}
-
-function renderEvents() {
-  const type = $('typeFilter').value;
-  const query = $('searchFilter').value.trim().toLowerCase();
-  const events = LAST_EVENTS.filter((event) => {
-    const eventType = normalizeType(event.type);
-    if (type && eventType !== type) return false;
-    if (!query) return true;
-    return [event.path, event.domain, event.title, event.label, event.email, event.user_email, event.userEmail, event.data?.email].some((value) => String(value || '').toLowerCase().includes(query));
-  });
-  $('events').innerHTML = events.map((event) => {
-    const eventType = normalizeType(event.type);
-    const date = new Date(event.ts || event.created_at || Date.now()).toLocaleString();
-    const label = event.label || event.title || '';
-    const email = emailOf(event) || 'visiteur anonyme';
-    return '<div class="event"><span class="pill">' + esc(eventType) + '</span><div><b>' + esc(event.path || '/') + '</b><br><span class="muted small">' + esc(label) + '</span></div><span class="pill email-pill">' + esc(email) + '</span><span class="muted small">' + esc(date) + '</span></div>';
-  }).join('') || '<div class="empty">Aucun signal ne correspond au filtre.</div>';
-}
-
-updateSessionUi();
-loadActivity();
+const API_BASE_URL=window.DAKA_API_BASE_URL||(location.hostname.includes('localhost')?'http://localhost:10000':'https://seobackend-f81n.onrender.com');
+const $=(id)=>document.getElementById(id);let LAST_EVENTS=[],LAST_USERS=[],ADMIN_SESSION=readSession();
+function esc(v){return String(v??'').replace(/[&<>"']/g,s=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));}
+function readSession(){try{return JSON.parse(sessionStorage.getItem('dakaAdminSession')||'null')||null}catch(_){return null}}
+function saveSession(s){ADMIN_SESSION=s;sessionStorage.setItem('dakaAdminSession',JSON.stringify(s));updateSessionUi()}
+function clearSession(){ADMIN_SESSION=null;sessionStorage.removeItem('dakaAdminSession');updateSessionUi()}
+function adminHeaders(){return ADMIN_SESSION?.sessionToken?{Authorization:'Bearer '+ADMIN_SESSION.sessionToken}:{}}
+function metric(l,v){return '<div class="metric"><strong>'+esc(v||0)+'</strong><span>'+esc(l)+'</span></div>'}
+function emailOf(i){const d=i?.email||i?.user_email||i?.userEmail||i?.gmail||i?.data?.email||i?.data?.user_email||i?.data?.userEmail;const e=String(d||'').trim().toLowerCase();return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)?e:''}
+function userIdOf(i){return String(i?.id||i?.user_id||i?.userId||i?.data?.user_id||i?.data?.userId||'').trim()}
+function eventTime(e){return new Date(e.ts||e.lastSignInAt||e.createdAt||e.created_at||Date.now()).getTime()||Date.now()}
+function normalizeType(t){t=String(t||'').toLowerCase();return ['signed_in','sign_in','login','login_success','auth_login','user_login'].includes(t)?'auth_login':(t||'event')}
+function updateSessionUi(){const a=!!(ADMIN_SESSION?.sessionToken&&(!ADMIN_SESSION.expiresAt||new Date(ADMIN_SESSION.expiresAt).getTime()>Date.now()));$('loginCard').style.display=a?'none':'grid';$('sessionCard').style.display=a?'grid':'none';if(a){$('sessionEmail').textContent=ADMIN_SESSION?.admin?.email||'Admin connecte';$('sessionExpiry').textContent=ADMIN_SESSION.expiresAt?'Session active jusqu au '+new Date(ADMIN_SESSION.expiresAt).toLocaleString():'Session active'}}
+function buildPeople(){const m=new Map();[...LAST_USERS,...LAST_EVENTS].forEach(i=>{const email=emailOf(i);if(!email)return;const type=normalizeType(i.type||i.event_type||i.event||(i.source==='supabase-auth'?'auth_login':'event'));const cur=m.get(email)||{email,userId:userIdOf(i),firstSeen:eventTime(i),lastSeen:eventTime(i),total:0,pageViews:0,clicks:0,exits:0,logins:0,paths:new Set(),lastLabel:''};const at=eventTime(i);cur.firstSeen=Math.min(cur.firstSeen,at);cur.lastSeen=Math.max(cur.lastSeen,at);cur.userId=cur.userId||userIdOf(i);cur.total+=1;if(type==='page_view')cur.pageViews++;if(type==='click')cur.clicks++;if(type==='page_exit')cur.exits++;if(type==='auth_login')cur.logins++;if(i.path)cur.paths.add(i.path);cur.lastLabel=i.label||i.name||i.title||i.path||cur.lastLabel;m.set(email,cur)});return [...m.values()].sort((a,b)=>b.lastSeen-a.lastSeen)}
+async function loginAdmin(){const email=$('adminEmail').value.trim(),password=$('adminPassword').value;$('events').innerHTML='<div class="empty">Verification admin...</div>';try{const r=await fetch(API_BASE_URL+'/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},mode:'cors',credentials:'omit',body:JSON.stringify({email,password})});const d=await r.json().catch(()=>({}));if(!r.ok||!d.sessionToken)throw new Error(d.error||'ADMIN_LOGIN_FAILED');$('adminPassword').value='';saveSession(d);await loadActivity()}catch(e){clearSession();$('people').innerHTML='';$('events').innerHTML='<p class="danger-text">Connexion admin refusee.</p><p class="muted small">'+esc(e.message)+'</p>'}}
+async function logoutAdmin(){try{if(ADMIN_SESSION?.sessionToken)await fetch(API_BASE_URL+'/api/admin/logout',{method:'POST',headers:adminHeaders(),mode:'cors',credentials:'omit'})}catch(_){}clearSession();LAST_EVENTS=[];LAST_USERS=[];$('metrics').innerHTML='';$('people').innerHTML='';$('events').innerHTML='<div class="empty">Session admin fermee.</div>'}
+async function loadAuthUsers(){try{const r=await fetch(API_BASE_URL+'/auth/admin/users',{headers:adminHeaders(),mode:'cors',credentials:'omit'});if(r.status===401)throw new Error('ADMIN_AUTH_REQUIRED');if(!r.ok)return [];const d=await r.json();return (Array.isArray(d.users)?d.users:[]).map(u=>({...u,source:'supabase-auth',type:'auth_login',ts:u.lastSignInAt||u.createdAt,label:u.name||u.provider||'Supabase Auth'}))}catch(e){if(e.message==='ADMIN_AUTH_REQUIRED')throw e;console.warn('[Admin] Supabase auth users unavailable:',e);return []}}
+async function loadActivity(){updateSessionUi();if(!ADMIN_SESSION?.sessionToken){$('metrics').innerHTML='';$('people').innerHTML='';$('events').innerHTML='<div class="empty">Connecte-toi pour lire les signaux.</div>';return}$('people').innerHTML='<div class="empty">Chargement des utilisateurs Supabase...</div>';$('events').innerHTML='<div class="empty">Chargement des signaux...</div>';try{const authUsers=await loadAuthUsers();let summary={},events=[],activityUsers=[],warning='';try{const r=await fetch(API_BASE_URL+'/api/admin/activity',{headers:adminHeaders(),mode:'cors',credentials:'omit'});if(r.status===401)throw new Error('ADMIN_AUTH_REQUIRED');if(r.ok){const d=await r.json();summary=d.summary||{};events=Array.isArray(d.events)?d.events:[];activityUsers=Array.isArray(d.users)?d.users:[]}else warning='Historique actions indisponible: cree la table site_activity_events.'}catch(e){if(e.message==='ADMIN_AUTH_REQUIRED')throw e;warning='Historique actions indisponible: cree la table site_activity_events.'}LAST_EVENTS=events;LAST_USERS=[...authUsers,...activityUsers];const people=buildPeople();$('metrics').innerHTML=metric('Gmails',people.length)+metric('Events',summary.totalEvents||events.length)+metric('Vues',summary.pageViews)+metric('Clics',summary.clicks)+metric('Sorties',summary.exits);renderPeople();renderEvents();if(warning&&!events.length)$('events').innerHTML='<div class="empty">'+esc(warning)+'<br>Les utilisateurs Supabase Auth restent visibles ci-dessus.</div>'}catch(e){clearSession();$('metrics').innerHTML='';$('people').innerHTML='';$('events').innerHTML='<p class="danger-text">Acces refuse ou session expiree.</p><p class="muted small">'+esc(e.message)+'</p>'}}
+function renderPeople(){const p=buildPeople();$('people').innerHTML=p.map(x=>'<div class="person"><div class="identity"><span class="avatar">'+esc(x.email.slice(0,1).toUpperCase())+'</span><div><b>'+esc(x.email)+'</b><br><span class="muted small">Derniere action: '+esc(x.lastLabel||'connexion detectee')+'</span></div></div><div class="stat"><strong>'+esc(x.logins)+'</strong><span>logins</span></div><div class="stat"><strong>'+esc(x.pageViews)+'</strong><span>vues</span></div><div class="stat"><strong>'+esc(x.clicks)+'</strong><span>clics</span></div><div class="stat"><strong>'+esc(x.paths.size)+'</strong><span>pages</span></div><span class="muted small">'+esc(new Date(x.lastSeen).toLocaleString())+'</span></div>').join('')||'<div class="empty">Aucun utilisateur Supabase Auth lisible. Verifie SUPABASE_SERVICE_KEY sur Render.</div>'}
+function renderEvents(){const type=$('typeFilter').value,q=$('searchFilter').value.trim().toLowerCase();const ev=LAST_EVENTS.filter(e=>{const t=normalizeType(e.type);if(type&&t!==type)return false;if(!q)return true;return [e.path,e.domain,e.title,e.label,e.email,e.user_email,e.userEmail,e.data?.email].some(v=>String(v||'').toLowerCase().includes(q))});$('events').innerHTML=ev.map(e=>'<div class="event"><span class="pill">'+esc(normalizeType(e.type))+'</span><div><b>'+esc(e.path||'/')+'</b><br><span class="muted small">'+esc(e.label||e.title||'')+'</span></div><span class="pill email-pill">'+esc(emailOf(e)||'visiteur anonyme')+'</span><span class="muted small">'+esc(new Date(e.ts||e.created_at||Date.now()).toLocaleString())+'</span></div>').join('')||'<div class="empty">Aucun signal ne correspond au filtre.</div>'}
+updateSessionUi();loadActivity();
 </script>
 </body>
 </html>
