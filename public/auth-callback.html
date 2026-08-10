@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Daka - Connexion</title>
+  <style>
+    :root{color-scheme:dark;--bg:#020617;--cyan:#22d3ee;--violet:#8b5cf6;--text:#e5f3ff;--muted:#93a8c3}
+    *{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:radial-gradient(circle at 20% 10%,rgba(34,211,238,.18),transparent 28%),radial-gradient(circle at 80% 20%,rgba(139,92,246,.18),transparent 30%),var(--bg);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif;color:var(--text)}
+    .card{width:min(520px,calc(100% - 32px));padding:28px;border:1px solid rgba(125,211,252,.2);border-radius:24px;background:rgba(8,17,31,.82);box-shadow:0 24px 80px rgba(0,0,0,.38);text-align:center}
+    .orb{width:68px;height:68px;margin:0 auto 18px;border-radius:22px;background:linear-gradient(135deg,var(--cyan),var(--violet));box-shadow:0 0 44px rgba(34,211,238,.35)}
+    h1{margin:0 0 10px;font-size:1.35rem}p{margin:0;color:var(--muted);line-height:1.55}.link{display:inline-flex;margin-top:18px;color:#67e8f9;text-decoration:none;font-weight:800}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="orb" aria-hidden="true"></div>
+    <h1>Connexion Daka en cours...</h1>
+    <p>Redirection vers la nouvelle adresse Market Insight.</p>
+    <a class="link" id="fallback" href="https://marketinsight.mktnstrategix.com/">Continuer</a>
+  </main>
+  <script>
+    (function(){
+      var target = 'https://marketinsight.mktnstrategix.com/';
+      var query = window.location.search || '';
+      var hash = window.location.hash || '';
+      var next = target + query + hash;
+      document.getElementById('fallback').href = next;
+      window.location.replace(next);
+    })();
+  </script>
+</body>
+</html>
