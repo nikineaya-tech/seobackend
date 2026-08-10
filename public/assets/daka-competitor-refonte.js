@@ -456,6 +456,28 @@
     return text.replace(/\uFFFD/g, '').trim();
   }
 
+  function normalizeStaticCopy(node, seen = new WeakSet()) {
+    if (!node || typeof node !== 'object') return node;
+    if (seen.has(node)) return node;
+    seen.add(node);
+    if (Array.isArray(node)) {
+      node.forEach((item, index) => {
+        if (typeof item === 'string') node[index] = fixText(item);
+        else if (item && typeof item === 'object') normalizeStaticCopy(item, seen);
+      });
+      return node;
+    }
+    Object.keys(node).forEach((key) => {
+      const item = node[key];
+      if (typeof item === 'string') node[key] = fixText(item);
+      else if (item && typeof item === 'object') normalizeStaticCopy(item, seen);
+    });
+    return node;
+  }
+
+  normalizeStaticCopy(COUNTRIES);
+  normalizeStaticCopy(COPY);
+  normalizeStaticCopy(EXTRA_COPY);
   function esc(value) {
     return fixText(value)
       .replace(/&/g, '&amp;')
