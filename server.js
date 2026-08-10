@@ -1887,7 +1887,7 @@ APIFY_TRUSTPILOT_REVIEWS_ACTOR: process.env.APIFY_TRUSTPILOT_REVIEWS_ACTOR || ''
     
     // Security
     CORS_ORIGINS: [
-        'https://seo.mktnstrategix.com',
+        'https://marketinsight.mktnstrategix.com',
         'https://app.da-ka.live',
         'http://localhost:3000',
         'http://localhost:5500',
@@ -1942,7 +1942,7 @@ app.use(helmet({
 app.use((req, res, next) => {
     res.setHeader(
         "Content-Security-Policy", 
-        "frame-ancestors 'self' https://seo.mktnstrategix.com https://app.da-ka.live"
+        "frame-ancestors 'self' https://marketinsight.mktnstrategix.com https://seo.mktnstrategix.com https://app.da-ka.live"
     );
     next();
 });
@@ -10582,7 +10582,7 @@ async function callOpenRouterAPI(prompt, options = {}) {
                     headers: {
                         'Authorization': `Bearer ${apiKey}`,
                         'Content-Type':  'application/json',
-                        'HTTP-Referer':  process.env.APP_URL || 'https://seo.mktnstrategix.com',
+                        'HTTP-Referer':  process.env.APP_URL || 'https://marketinsight.mktnstrategix.com',
                         'X-Title':       'SEO Gen Pro'
                     },
                     timeout: modelTimeout // ⚡ C'EST ICI LA MAGIE DE LA VITESSE
@@ -17380,31 +17380,103 @@ app.get('/api/job/:id', requireAuth, async (req, res) => {
 });
 
 
-// ========== ROOT ENDPOINT ==========
-app.get('/', (req, res) => {
-    res.json({
-        success: true,
-        name: 'SEO Gen Pro API',
-        version: '3.0.0',
-        status: 'online',
-        uptime: formatDuration(Date.now() - METRICS.startTime),
-        endpoints: {
-            health: 'GET /health',
-            metrics: 'GET /metrics',
-            scrape: 'POST /api/scrape',
-            competitors: 'POST /api/competitors',
-            generate: 'POST /api/generate',
-            funnel: 'POST /api/funnel',
-            cache: {
-                stats: 'GET /cache/stats',
-                clear: 'POST /cache/clear',
-                cleanup: 'POST /cache/cleanup'
-            }
-        },
-        documentation: 'https://seo.mktnstrategix.com/docs',
-        support: 'contact@mktnstrategix.com'
-    });
+// ========== PUBLIC FRONTEND ROUTES ==========
+const DAKA_PUBLIC_DIR = path.join(__dirname, 'public');
+const DAKA_APP_HTML = path.join(__dirname, 'index.html');
+const DAKA_LANDING_HTML = path.join(DAKA_PUBLIC_DIR, 'landing.html');
+const DAKA_ADMIN_HTML = path.join(DAKA_PUBLIC_DIR, 'admin.html');
+const DAKA_ACTIVITY_EVENTS = [];
+
+function requireAdminAccess(req, res, next) {
+    const expected = process.env.ADMIN_TOKEN || process.env.DAKA_ADMIN_TOKEN || '';
+    const provided = req.get('x-admin-token') || req.query.token || '';
+    if (!expected || provided !== expected) {
+        return res.status(401).json({ success: false, error: 'ADMIN_AUTH_REQUIRED' });
+    }
+    return next();
+}
+
+function normalizeTrackingEvent(req) {
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const data = body.data && typeof body.data === 'object' ? body.data : {};
+    return {
+        id: crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(12).toString('hex'),
+        ts: Number(body.ts) || Date.now(),
+        type: String(body.type || 'event').slice(0, 48),
+        path: String(body.path || req.get('referer') || '/').slice(0, 260),
+        domain: String(body.domain || req.hostname || '').slice(0, 120),
+        title: String(body.title || '').slice(0, 180),
+        label: String(data.text || data.track || data.id || '').slice(0, 160),
+        userId: body.userId ? String(body.userId).slice(0, 80) : null,
+        email: body.email ? String(body.email).slice(0, 160) : null,
+        ipHash: crypto.createHash('sha256').update(String(req.ip || '') + String(process.env.TRACKING_SALT || 'daka')).digest('hex').slice(0, 16),
+        userAgent: String(req.get('user-agent') || '').slice(0, 220),
+        data: JSON.parse(JSON.stringify(data)).constructor === Object ? data : {}
+    };
+}
+
+app.post('/api/track', express.json({ limit: '64kb' }), async (req, res) => {
+    try {
+        const event = normalizeTrackingEvent(req);
+        DAKA_ACTIVITY_EVENTS.unshift(event);
+        if (DAKA_ACTIVITY_EVENTS.length > 500) DAKA_ACTIVITY_EVENTS.length = 500;
+        if (supabase) {
+            supabase.from('site_activity_events').insert({
+                event_type: event.type,
+                page_path: event.path,
+                domain: event.domain,
+                title: event.title,
+                label: event.label,
+                user_id: event.userId,
+                email: event.email,
+                ip_hash: event.ipHash,
+                user_agent: event.userAgent,
+                payload: event.data
+            }).then(() => null).catch(() => null);
+        }
+        return res.status(204).end();
+    } catch {
+        return res.status(204).end();
+    }
 });
+
+app.get('/api/admin/activity', requireAdminAccess, async (req, res) => {
+    let events = DAKA_ACTIVITY_EVENTS.slice(0, 120);
+    if (supabase) {
+        try {
+            const { data } = await supabase
+                .from('site_activity_events')
+                .select('event_type,page_path,domain,title,label,user_id,email,created_at,payload')
+                .order('created_at', { ascending: false })
+                .limit(120);
+            if (Array.isArray(data) && data.length) {
+                events = data.map(row => ({
+                    type: row.event_type,
+                    path: row.page_path,
+                    domain: row.domain,
+                    title: row.title,
+                    label: row.label,
+                    userId: row.user_id,
+                    email: row.email,
+                    ts: row.created_at ? new Date(row.created_at).getTime() : Date.now(),
+                    data: row.payload || {}
+                }));
+            }
+        } catch (_) {}
+    }
+    const summary = {
+        totalEvents: events.length,
+        pageViews: events.filter(e => e.type === 'page_view').length,
+        clicks: events.filter(e => e.type === 'click').length,
+        exits: events.filter(e => e.type === 'page_exit').length
+    };
+    return res.json({ success: true, summary, events });
+});
+
+app.get('/', (req, res) => res.sendFile(DAKA_LANDING_HTML));
+app.get('/app', (req, res) => res.sendFile(DAKA_APP_HTML));
+app.get('/admin', (req, res) => res.sendFile(DAKA_ADMIN_HTML));
+app.get('/seodaka4444', (req, res) => res.redirect(301, '/app'));
 
 // ========== HEALTH CHECK ==========
 app.get('/health', (req, res) => {
@@ -22377,7 +22449,7 @@ function buildPDFFromReport(R) {
 }
 
 const ALLOWED_ORIGINS = [
-  'https://seo.mktnstrategix.com',
+  'https://marketinsight.mktnstrategix.com',
   'https://seobackend-f81n.onrender.com',
   'http://localhost:10000'
 ];

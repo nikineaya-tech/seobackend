@@ -19,7 +19,7 @@ function registerAuthRoutes(app) {
     const publicAuthRedirectUrl = String(
         process.env.AUTH_REDIRECT_URL ||
         process.env.FRONTEND_URL ||
-        'https://seo.mktnstrategix.com/seodaka4444'
+        'https://marketinsight.mktnstrategix.com/app'
     ).trim();
     const authClient = publicSupabaseUrl && anonKey
         ? createClient(publicSupabaseUrl, anonKey, {
@@ -32,7 +32,7 @@ function registerAuthRoutes(app) {
         })
         : null;
     const allowedOrigins = new Set([
-        'https://seo.mktnstrategix.com',
+        'https://marketinsight.mktnstrategix.com',
         'https://app.da-ka.live',
         'http://localhost:10000',
         'http://localhost:3000',

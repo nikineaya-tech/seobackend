@@ -6751,7 +6751,7 @@ async function confirmDakaExportStudio(format = 'word') {
 }
 
 var dakaPdfLogoDataUrlCache = '';
-const DAKA_PUBLIC_APP_URL = 'https://seo.mktnstrategix.com/seodaka4444';
+const DAKA_PUBLIC_APP_URL = 'https://marketinsight.mktnstrategix.com/app';
 const DAKA_PUBLIC_LOGO_URL = 'https://seobackend-f81n.onrender.com/assets/daka-report-logo.png';
 
 function inferDakaReportOfferType() {
