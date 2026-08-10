@@ -17571,6 +17571,46 @@ app.post('/api/admin/logout', async (req, res) => {
 app.get('/api/admin/session', requireAdminAccess, async (req, res) => {
     return res.json({ success: true, admin: { email: req.admin?.email || 'admin' } });
 });
+function normalizeAdminDashboardAuthUser(user) {
+    const metadata = user?.user_metadata || {};
+    const appMetadata = user?.app_metadata || {};
+    return {
+        id: user?.id || null,
+        userId: user?.id || null,
+        email: user?.email || null,
+        name: metadata.full_name || metadata.name || metadata.display_name || user?.email || null,
+        avatarUrl: metadata.avatar_url || metadata.picture || null,
+        provider: appMetadata.provider || (Array.isArray(user?.identities) && user.identities[0]?.provider) || null,
+        providers: Array.isArray(user?.identities) ? user.identities.map(identity => identity.provider).filter(Boolean) : [],
+        createdAt: user?.created_at || null,
+        lastSignInAt: user?.last_sign_in_at || null,
+        type: 'auth_login',
+        source: 'supabase-auth',
+        label: 'Supabase Auth',
+        ts: user?.last_sign_in_at || user?.created_at || null
+    };
+}
+
+async function listAdminDashboardAuthUsers() {
+    if (!supabase?.auth?.admin?.listUsers) return [];
+    try {
+        const users = [];
+        let page = 1;
+        const perPage = 100;
+        while (page <= 10) {
+            const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
+            if (error) throw error;
+            const batch = Array.isArray(data?.users) ? data.users : [];
+            users.push(...batch.map(normalizeAdminDashboardAuthUser));
+            if (batch.length < perPage) break;
+            page += 1;
+        }
+        return users.filter(user => user.email);
+    } catch (error) {
+        console.warn('[AdminActivity] Supabase Auth users unavailable:', error.message);
+        return [];
+    }
+}
 function normalizeTrackingEvent(req) {
     const body = req.body && typeof req.body === 'object' ? req.body : {};
     const data = body.data && typeof body.data === 'object' ? body.data : {};
@@ -17617,7 +17657,9 @@ app.post('/api/track', express.json({ limit: '64kb' }), async (req, res) => {
 
 app.get('/api/admin/activity', requireAdminAccess, async (req, res) => {
     let events = DAKA_ACTIVITY_EVENTS.slice(0, 120);
+    let authUsers = [];
     if (supabase) {
+        authUsers = await listAdminDashboardAuthUsers();
         try {
             const { data } = await supabase
                 .from('site_activity_events')
@@ -17641,11 +17683,12 @@ app.get('/api/admin/activity', requireAdminAccess, async (req, res) => {
     }
     const summary = {
         totalEvents: events.length,
+        authUsers: authUsers.length,
         pageViews: events.filter(e => e.type === 'page_view').length,
         clicks: events.filter(e => e.type === 'click').length,
         exits: events.filter(e => e.type === 'page_exit').length
     };
-    return res.json({ success: true, summary, events });
+    return res.json({ success: true, summary, events, users: authUsers, authUsers });
 });
 
 app.get('/', (req, res) => res.sendFile(DAKA_LANDING_HTML));

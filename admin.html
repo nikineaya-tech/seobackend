@@ -125,11 +125,11 @@ async function loadActivity(){
   try{
     const authUsers=await loadAuthUsers();
     let summary={}; let events=[]; let activityUsers=[]; let warning='';
-    try{const response=await fetch(API_BASE_URL+'/api/admin/activity',{headers:adminHeaders(),mode:'cors',credentials:'omit'});if(response.status===401)throw new Error('ADMIN_AUTH_REQUIRED');if(response.ok){const data=await response.json();summary=data.summary||{};events=Array.isArray(data.events)?data.events:[];activityUsers=Array.isArray(data.users)?data.users:[];}else{warning='Historique actions indisponible: cree la table site_activity_events.';}}
+    try{const response=await fetch(API_BASE_URL+'/api/admin/activity',{headers:adminHeaders(),mode:'cors',credentials:'omit'});if(response.status===401)throw new Error('ADMIN_AUTH_REQUIRED');if(response.ok){const data=await response.json();summary=data.summary||{};events=Array.isArray(data.events)?data.events:[];activityUsers=Array.isArray(data.users)?data.users:(Array.isArray(data.authUsers)?data.authUsers:[]);}else{warning='Historique actions indisponible: cree la table site_activity_events.';}}
     catch(error){if(error.message==='ADMIN_AUTH_REQUIRED')throw error;warning='Historique actions indisponible: cree la table site_activity_events.';}
     LAST_EVENTS=events; LAST_USERS=[...authUsers,...activityUsers];
     const people=buildPeople();
-    $('metrics').innerHTML=metric('Gmails',people.length)+metric('Events',summary.totalEvents||events.length)+metric('Vues',summary.pageViews)+metric('Clics',summary.clicks)+metric('Sorties',summary.exits);
+    $('metrics').innerHTML=metric('Gmails',people.length||summary.authUsers||0)+metric('Events',summary.totalEvents||events.length)+metric('Vues',summary.pageViews)+metric('Clics',summary.clicks)+metric('Sorties',summary.exits);
     renderPeople(); renderEvents();
     if(warning&&!events.length){$('events').innerHTML='<div class="empty">'+esc(warning)+'<br>Les utilisateurs Supabase Auth restent visibles ci-dessus.</div>';}
   }catch(error){clearSession();$('metrics').innerHTML='';$('people').innerHTML='';$('events').innerHTML='<p class="danger-text">Acces refuse ou session expiree.</p><p class="muted small">'+esc(error.message)+'</p>';}
