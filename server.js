@@ -17476,7 +17476,6 @@ app.get('/api/admin/activity', requireAdminAccess, async (req, res) => {
 app.get('/', (req, res) => res.sendFile(DAKA_LANDING_HTML));
 app.get('/app', (req, res) => res.sendFile(DAKA_APP_HTML));
 app.get('/admin', (req, res) => res.sendFile(DAKA_ADMIN_HTML));
-app.get('/seodaka4444', (req, res) => res.redirect(301, '/app'));
 
 // ========== HEALTH CHECK ==========
 app.get('/health', (req, res) => {
