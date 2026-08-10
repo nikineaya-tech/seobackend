@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 
 function normalizeRedirect(rawUrl, allowedOrigins) {
@@ -9,6 +10,34 @@ function normalizeRedirect(rawUrl, allowedOrigins) {
     } catch {
         return null;
     }
+}
+
+function getBearerToken(req) {
+    const authorization = req.get('authorization') || '';
+    return authorization.startsWith('Bearer ')
+        ? authorization.slice(7).trim()
+        : '';
+}
+
+function hashAdminToken(token) {
+    return crypto.createHash('sha256').update(String(token || '')).digest('hex');
+}
+
+function normalizeAuthUser(user) {
+    const metadata = user.user_metadata || {};
+    const appMetadata = user.app_metadata || {};
+    return {
+        id: user.id,
+        email: user.email || null,
+        name: metadata.full_name || metadata.name || metadata.display_name || user.email || null,
+        avatarUrl: metadata.avatar_url || metadata.picture || null,
+        provider: appMetadata.provider || (Array.isArray(user.identities) && user.identities[0]?.provider) || null,
+        providers: Array.isArray(user.identities) ? user.identities.map(identity => identity.provider).filter(Boolean) : [],
+        createdAt: user.created_at || null,
+        confirmedAt: user.confirmed_at || user.email_confirmed_at || null,
+        lastSignInAt: user.last_sign_in_at || null,
+        phone: user.phone || null
+    };
 }
 
 function registerAuthRoutes(app) {
@@ -31,6 +60,11 @@ function registerAuthRoutes(app) {
             auth: { persistSession: false, autoRefreshToken: false }
         })
         : null;
+    const adminClient = supabaseUrl && serviceKey
+        ? createClient(supabaseUrl, serviceKey, {
+            auth: { persistSession: false, autoRefreshToken: false }
+        })
+        : null;
     const allowedOrigins = new Set([
         'https://marketinsight.mktnstrategix.com',
         'https://app.da-ka.live',
@@ -47,10 +81,7 @@ function registerAuthRoutes(app) {
     async function getUserFromRequest(req) {
         if (!verifierClient) return { user: null, error: 'AUTH_NOT_CONFIGURED' };
 
-        const authorization = req.get('authorization') || '';
-        const token = authorization.startsWith('Bearer ')
-            ? authorization.slice(7).trim()
-            : '';
+        const token = getBearerToken(req);
         if (!token) return { user: null, error: 'AUTH_REQUIRED' };
 
         const { data, error } = await verifierClient.auth.getUser(token);
@@ -58,6 +89,39 @@ function registerAuthRoutes(app) {
             user: data?.user || null,
             error: error?.message || (!data?.user ? 'INVALID_SESSION' : null)
         };
+    }
+
+    async function getAdminFromRequest(req) {
+        if (!adminClient) return { admin: null, error: 'ADMIN_AUTH_NOT_CONFIGURED' };
+
+        const token = getBearerToken(req);
+        if (!token) return { admin: null, error: 'ADMIN_AUTH_REQUIRED' };
+
+        const tokenHash = hashAdminToken(token);
+        const columnsToTry = ['token_hash', 'session_hash', 'session_token_hash'];
+        let lastError = null;
+
+        for (const column of columnsToTry) {
+            const { data, error } = await adminClient
+                .from('daka_admin_sessions')
+                .select('*')
+                .eq(column, tokenHash)
+                .maybeSingle();
+
+            if (error) {
+                lastError = error;
+                continue;
+            }
+
+            if (!data) continue;
+            if (data.revoked_at) return { admin: null, error: 'ADMIN_SESSION_REVOKED' };
+            if (data.expires_at && new Date(data.expires_at).getTime() <= Date.now()) {
+                return { admin: null, error: 'ADMIN_SESSION_EXPIRED' };
+            }
+            return { admin: data, error: null };
+        }
+
+        return { admin: null, error: lastError?.message || 'ADMIN_SESSION_NOT_FOUND' };
     }
 
     async function requireAuth(req, res, next) {
@@ -172,6 +236,44 @@ function registerAuthRoutes(app) {
                 avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture || null
             }
         });
+    });
+
+    app.get('/auth/admin/users', async (req, res) => {
+        res.setHeader('Cache-Control', 'no-store');
+        const { admin, error: adminError } = await getAdminFromRequest(req);
+        if (!admin) {
+            return res.status(401).json({
+                success: false,
+                error: adminError || 'ADMIN_AUTH_REQUIRED'
+            });
+        }
+
+        try {
+            const users = [];
+            let page = 1;
+            const perPage = 100;
+            while (page <= 10) {
+                const { data, error } = await adminClient.auth.admin.listUsers({ page, perPage });
+                if (error) throw error;
+                const batch = Array.isArray(data?.users) ? data.users : [];
+                users.push(...batch.map(normalizeAuthUser));
+                if (batch.length < perPage) break;
+                page += 1;
+            }
+
+            return res.json({
+                success: true,
+                source: 'supabase-auth',
+                total: users.length,
+                users
+            });
+        } catch (error) {
+            console.error('[AuthAdmin] list users failed:', error);
+            return res.status(500).json({
+                success: false,
+                error: 'SUPABASE_AUTH_USERS_UNAVAILABLE'
+            });
+        }
     });
 
     console.log(authClient
