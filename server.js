@@ -42,10 +42,12 @@ const {
   Packer,
   PageNumber,
   Paragraph,
+  ShadingType,
   Table,
   TableCell,
   TableRow,
   TextRun,
+  UnderlineType,
   WidthType,
 } = require('docx');
 const { createClient } = require('@supabase/supabase-js');
@@ -23094,8 +23096,22 @@ function createDocxTextRun(text, lang, options = {}) {
         bold: !!options.bold,
         italics: !!options.italics,
         color: options.color || '111827',
+        underline: options.underline ? { type: UnderlineType.SINGLE } : undefined,
         rightToLeft: lang === 'ar',
         break: options.break || 0,
+    });
+}
+
+function createDocxHyperlink(href, lang) {
+    const safeHref = String(href || '').trim();
+    if (!/^https?:\/\//i.test(safeHref)) return null;
+    return new ExternalHyperlink({
+        link: safeHref,
+        children: [createDocxTextRun(safeHref.slice(0, 160), lang, {
+            size: 19,
+            color: '0369A1',
+            underline: true,
+        })],
     });
 }
 
@@ -23150,18 +23166,31 @@ function createDocxVisualAssetSection(visualAssets = [], lang = 'fr', offerType 
 function createDocxParagraph(text, lang, options = {}) {
     const cleaned = cleanDocxText(text, lang, options.offerType || 'product');
     if (!cleaned && !options.allowEmpty) return null;
+    const children = [createDocxTextRun(cleaned, lang, {
+        bold: options.bold,
+        italics: options.italics,
+        size: options.size || (options.heading ? 28 : 23),
+        color: options.color,
+        underline: options.underline,
+    })];
+    const links = Array.isArray(options.links) ? options.links.filter(Boolean).slice(0, 6) : [];
+    if (links.length) {
+        children.push(createDocxTextRun(' ', lang, { size: options.size || 21, color: options.color || '111827' }));
+        links.forEach((href, index) => {
+            const link = createDocxHyperlink(href, lang);
+            if (!link) return;
+            if (index > 0) children.push(createDocxTextRun(' | ', lang, { size: 18, color: '64748B' }));
+            children.push(link);
+        });
+    }
     return new Paragraph({
         heading: options.heading,
         bidirectional: lang === 'ar',
         alignment: options.alignment || (lang === 'ar' ? AlignmentType.RIGHT : (options.center ? AlignmentType.CENTER : AlignmentType.JUSTIFIED)),
         spacing: { before: options.before || 0, after: options.after ?? 120, line: options.line || 276 },
         bullet: options.bullet ? { level: 0 } : undefined,
-        children: [createDocxTextRun(cleaned, lang, {
-            bold: options.bold,
-            italics: options.italics,
-            size: options.size || (options.heading ? 28 : 23),
-            color: options.color,
-        })],
+        shading: options.fill ? { type: ShadingType.CLEAR, color: 'auto', fill: options.fill } : undefined,
+        children,
     });
 }
 
@@ -23268,6 +23297,81 @@ function createDocxCardCell(title, value, lang, offerType, fill, accent = '0369A
             right: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
         },
         children: paragraphs.length ? paragraphs : [new Paragraph('')],
+    });
+}
+
+function inferDocxVisualProfile($, el) {
+    const className = String($(el).attr('class') || '').toLowerCase();
+    const style = String($(el).attr('style') || '').toLowerCase();
+    const text = String($(el).text() || '').toLowerCase().slice(0, 1800);
+    const corpus = `${className} ${style} ${text}`;
+    if (/(risk|danger|threat|warning|weak|friction|urgent|error|blocker|menace|risque|faiblesse|alerte|خطر|تهديد|ضعف|تحذير)/i.test(corpus)) {
+        return { fill: 'FFF7ED', accent: 'C2410C', label: 'Risk' };
+    }
+    if (/(opportun|success|win|growth|positive|green|gain|force|avantage|فرصة|نجاح|نمو|قوة)/i.test(corpus)) {
+        return { fill: 'F0FDF4', accent: '16A34A', label: 'Opportunity' };
+    }
+    if (/(action|plan|priority|cta|next|execute|attaque|priorit|recommand|نفذ|إجراء|خطة|أولوية)/i.test(corpus)) {
+        return { fill: 'EFF6FF', accent: '2563EB', label: 'Action' };
+    }
+    if (/(ai|ia|prompt|agent|model|intelligence|analysis|analyse|insight|ذكاء|تحليل|رؤية)/i.test(corpus)) {
+        return { fill: 'F5F3FF', accent: '7C3AED', label: 'Insight' };
+    }
+    if (/(competitor|market|pricing|score|benchmark|concurrent|march|prix|منافس|سوق|سعر)/i.test(corpus)) {
+        return { fill: 'ECFEFF', accent: '0891B2', label: 'Market' };
+    }
+    return { fill: 'F8FAFC', accent: '0369A1', label: 'Evidence' };
+}
+
+function createDocxInsightBox(title, text, links, profile, lang, offerType) {
+    const cleanTitle = cleanDocxText(title || profile?.label || '', lang, offerType).slice(0, 140);
+    const cleanBody = cleanDocxText(text || '', lang, offerType).slice(0, 2600);
+    if (!cleanTitle && !cleanBody && !(links || []).length) return null;
+    const isAr = lang === 'ar';
+    const paragraphs = [];
+    if (cleanTitle) {
+        paragraphs.push(createDocxParagraph(cleanTitle, lang, {
+            bold: true,
+            size: 20,
+            color: profile?.accent || '0369A1',
+            alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
+            after: 55,
+            offerType,
+        }));
+    }
+    if (cleanBody && cleanBody.toLowerCase() !== cleanTitle.toLowerCase()) {
+        paragraphs.push(createDocxParagraph(cleanBody, lang, {
+            size: 20,
+            color: '0F172A',
+            alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
+            after: 60,
+            links,
+            offerType,
+        }));
+    } else if ((links || []).length) {
+        paragraphs.push(createDocxParagraph(lang === 'ar' ? 'الروابط' : lang === 'en' ? 'Links' : 'Liens', lang, {
+            size: 19,
+            color: '0F172A',
+            alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
+            links,
+            offerType,
+        }));
+    }
+    return new Table({
+        width: { size: 100, type: WidthType.PERCENTAGE },
+        rows: [new TableRow({
+            children: [new TableCell({
+                shading: { fill: profile?.fill || 'F8FAFC' },
+                margins: { top: 150, bottom: 140, left: 170, right: 170 },
+                borders: {
+                    top: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                    bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                    left: { style: BorderStyle.SINGLE, size: 8, color: profile?.accent || '0369A1' },
+                    right: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                },
+                children: paragraphs.filter(Boolean),
+            })],
+        })],
     });
 }
 
@@ -23420,6 +23524,15 @@ function convertReportHtmlToDocxBlocks(sectionHtml, lang, offerType = 'product')
     $('[aria-hidden="true"]').remove();
     const blocks = [];
     const pushedText = new Set();
+    const cardSelector = '.report-section-card,.funnel-section-card,.action-card,.executive-card,.exportable-card,.result-card,.competitor-card,.decision-proof-panel,.executive-block,.executive-action';
+    const collectLinks = el => {
+        const links = [];
+        $(el).find('a[href]').each((__, link) => {
+            const href = String($(link).attr('href') || '').trim();
+            if (/^https?:\/\//i.test(href) && !links.includes(href)) links.push(href);
+        });
+        return links;
+    };
     const pushParagraph = (text, options = {}) => {
         const cleaned = cleanDocxText(text, lang, offerType);
         if (!cleaned || cleaned.length < 2) return;
@@ -23431,7 +23544,7 @@ function convertReportHtmlToDocxBlocks(sectionHtml, lang, offerType = 'product')
             : createDocxParagraph(cleaned.slice(0, options.max || 1400), lang, { ...options, offerType });
         if (paragraph) blocks.push(paragraph);
     };
-    $('main').find('h1,h2,h3,h4,p,li,blockquote,pre,table,.report-section-card,.funnel-section-card,.action-card,.executive-card,.exportable-card').each((_, el) => {
+    $('main').find(`h1,h2,h3,h4,p,li,blockquote,pre,table,${cardSelector}`).each((_, el) => {
         if (blocks.length >= 720) return false;
         const tag = (el.tagName || '').toLowerCase();
         if (tag === 'table') {
@@ -23439,28 +23552,32 @@ function convertReportHtmlToDocxBlocks(sectionHtml, lang, offerType = 'product')
             if (table) blocks.push(table);
             return;
         }
+        const isStyledCard = $(el).is(cardSelector);
+        if (!isStyledCard && $(el).parents(cardSelector).length) return;
         let text = $(el).text().replace(/\s+/g, ' ').trim();
-        const links = [];
-        $(el).find('a[href]').each((__, link) => {
-            const href = String($(link).attr('href') || '').trim();
-            if (/^https?:\/\//i.test(href) && !links.includes(href)) links.push(href);
-        });
-        if (links.length) {
-            const label = lang === 'ar' ? '\u0627\u0644\u0631\u0648\u0627\u0628\u0637' : lang === 'en' ? 'Links' : 'Liens';
-            text = `${text} ${label}: ${links.slice(0, 6).join(' | ')}`;
-        }
+        const links = collectLinks(el);
         if (!text) return;
         if (/^(voir les details|voir détails|fermer|copier|ouvrir|exporter|share|download)$/i.test(text)) return;
-        if (/^h[1-6]$/.test(tag)) {
+        if (isStyledCard) {
+            const headingNode = $(el).find('h1,h2,h3,h4,.report-section-title,.section-title,.card-title,.executive-title,strong').first();
+            const title = headingNode.length ? headingNode.text().replace(/\s+/g, ' ').trim() : '';
+            const body = title ? text.replace(title, '').replace(/\s+/g, ' ').trim() : text;
+            const key = cleanDocxText(`${title} ${body}`, lang, offerType).toLowerCase().slice(0, 220);
+            if (key && pushedText.has(key)) return;
+            if (key) pushedText.add(key);
+            const profile = inferDocxVisualProfile($, el);
+            const box = createDocxInsightBox(title || profile.label, body || text, links, profile, lang, offerType);
+            if (box) blocks.push(box);
+        } else if (/^h[1-6]$/.test(tag)) {
             pushParagraph(text, { heading: true, level: Number(tag[1]) <= 2 ? 2 : 3 });
         } else if (tag === 'li') {
-            pushParagraph(text, { bullet: true, max: 1100, size: 22 });
+            pushParagraph(text, { bullet: true, max: 1100, size: 22, links });
         } else if (tag === 'blockquote') {
-            pushParagraph(text, { italics: true, max: 1400, size: 22, color: '334155' });
+            pushParagraph(text, { italics: true, max: 1400, size: 22, color: '334155', links });
         } else if (tag === 'pre') {
             pushParagraph(text, { max: 2600, size: 19, color: '0F172A' });
         } else if ($(el).find('p,li,h1,h2,h3,h4,table').length === 0 || tag === 'p') {
-            pushParagraph(text, { max: 2200, size: 22 });
+            pushParagraph(text, { max: 2200, size: 22, links });
         }
     });
     if (!blocks.length) {
