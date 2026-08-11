@@ -2980,22 +2980,33 @@ function renderCompetitorDecisionLayerV2(data, { isAr = false, isEn = false } = 
     const orbitItems = pulseCards.slice(0, 4);
     const metricTotal = metricCards.reduce((sum, item) => sum + Number(item.value || 0), 0);
     const chartScore = Math.max(18, Math.min(96, Math.round((directProfiles.length * 12) + (sourceGroups.length * 8) + Math.min(metricTotal, 28) * 2)));
-    const chartHtml = orbitItems.length ? `
-        <aside class="business-orbit-chart" style="--business-orbit-deg:${Math.round(chartScore * 3.6)}deg;">
+    const ringPalette = ['#22d3ee', '#22c55e', '#a78bfa', '#f59e0b'];
+    let ringCursor = 0;
+    const ringStops = metricCards.slice(0, 4).map((item, index) => {
+        const share = metricTotal ? (Number(item.value || 0) / metricTotal) * 100 : 25;
+        const start = ringCursor;
+        const end = index === metricCards.slice(0, 4).length - 1 ? 100 : ringCursor + share;
+        ringCursor = end;
+        return `${ringPalette[index]} ${start.toFixed(2)}% ${end.toFixed(2)}%`;
+    }).join(', ');
+    const chartHtml = (metricCards.length || orbitItems.length) ? `
+        <aside class="business-orbit-chart business-circular-charter" style="--business-ring: conic-gradient(${ringStops || '#22d3ee 0% 100%'}); --business-orbit-deg:${Math.round(chartScore * 3.6)}deg;">
             <div class="business-orbit-core">
                 <span>${esc(briefLabels.chart)}</span>
                 <strong>${esc(String(chartScore))}</strong>
                 <small>${esc(briefLabels.chartSub)}</small>
             </div>
-            <div class="business-orbit-stats" aria-label="${esc(briefLabels.stats)}">
-                ${metricCards.slice(0, 4).map((item) => `<span><b>${esc(String(item.value))}</b>${esc(item.label)}</span>`).join('')}
-            </div>
-            ${orbitItems.map((item, index) => `
-                <article class="business-orbit-node business-orbit-node-${index}">
-                    <span>${esc(item.title)}</span>
-                    <strong>${esc(normalizeText(item.value))}</strong>
-                    ${item.note ? `<p>${esc(normalizeText(item.note))}</p>` : ''}
-                </article>`).join('')}
+            ${metricCards.length ? `<div class="business-orbit-stats" aria-label="${esc(briefLabels.stats)}">
+                ${metricCards.slice(0, 4).map((item, index) => `<span style="--metric-color:${ringPalette[index]}"><b>${esc(String(item.value))}</b>${esc(item.label)}</span>`).join('')}
+            </div>` : ''}
+            ${orbitItems.length ? `<div class="business-orbit-nodes">
+                ${orbitItems.map((item, index) => `
+                    <article class="business-orbit-node business-orbit-node-${index}" style="--metric-color:${ringPalette[index]}">
+                        <span>${esc(item.title)}</span>
+                        <strong>${esc(normalizeText(item.value))}</strong>
+                        ${item.note ? `<p>${esc(normalizeText(item.note))}</p>` : ''}
+                    </article>`).join('')}
+            </div>` : ''}
         </aside>` : '';
 
     const actionCard = (item) => {

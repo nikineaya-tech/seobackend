@@ -5279,7 +5279,7 @@ navkeywords: 'Market demand',
 
     <script src="https://seobackend-f81n.onrender.com/assets/daka-analytics.js?v=20260810-marketinsight1"></script>
     <script>window.DAKA_USE_COMPETITOR_REFONTE = false;</script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260811-executive-report-ux2"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260811-circular-chart-perf1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">
@@ -9444,9 +9444,9 @@ body {
 
 #dakaAppMatrixCanvas {
     z-index: 0 !important;
-    opacity: .52 !important;
+    opacity: .38 !important;
     mix-blend-mode: screen;
-    filter: drop-shadow(0 0 14px rgba(34, 211, 238, .34));
+    filter: drop-shadow(0 0 10px rgba(34, 211, 238, .24));
 }
 
 .daka-app-matrix-glow {
@@ -9464,9 +9464,9 @@ body {
     inset: 0;
     pointer-events: none;
     background:
-        linear-gradient(rgba(34, 211, 238, .045) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(34, 211, 238, .038) 1px, transparent 1px);
-    background-size: 42px 42px;
+        linear-gradient(rgba(34, 211, 238, .032) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 211, 238, .028) 1px, transparent 1px);
+    background-size: 56px 56px;
     mask-image: linear-gradient(to bottom, rgba(0,0,0,.98), transparent 90%);
 }
 
@@ -9541,9 +9541,9 @@ main > .container > .results-container,
     width: 100%;
     height: 100%;
     pointer-events: none;
-    opacity: .48;
+    opacity: .30;
     mix-blend-mode: screen;
-    filter: drop-shadow(0 0 10px rgba(34, 211, 238, .26));
+    filter: drop-shadow(0 0 8px rgba(34, 211, 238, .18));
 }
 
 .tab-content > .card::after,
@@ -9653,12 +9653,12 @@ body > div:has(#btn-export-global),
 }
 
 .business-intel-hero-circular {
-    grid-template-columns: minmax(0, .88fr) minmax(430px, 1.12fr) !important;
+    grid-template-columns: minmax(0, .95fr) minmax(340px, 1.05fr) !important;
     align-items: center !important;
 }
 
 .business-intel-hero-circular .business-intel-hero-copy {
-    min-height: 330px;
+    min-height: 0;
     justify-content: center;
 }
 
@@ -9670,12 +9670,12 @@ body > div:has(#btn-export-global),
 
 .business-orbit-chart {
     position: relative;
-    min-height: 520px;
+    min-height: 0;
     border: 1px solid rgba(148, 163, 184, .13);
     border-radius: 28px;
     background:
-        radial-gradient(circle at 50% 46%, rgba(34, 211, 238, .13), transparent 30%),
-        radial-gradient(circle at 50% 46%, rgba(139, 92, 246, .10), transparent 48%),
+        radial-gradient(circle at 18% 28%, rgba(34, 211, 238, .13), transparent 32%),
+        radial-gradient(circle at 84% 20%, rgba(139, 92, 246, .10), transparent 42%),
         linear-gradient(145deg, rgba(3, 10, 23, .86), rgba(9, 20, 38, .62));
     overflow: hidden;
 }
@@ -9805,6 +9805,88 @@ body > div:has(#btn-export-global),
 .business-orbit-node-2 { bottom: 72px; left: 50%; transform: translateX(-50%); }
 .business-orbit-node-3 { top: 50%; left: 18px; transform: translateY(-50%); }
 
+.business-circular-charter {
+    display: grid;
+    grid-template-columns: minmax(190px, 240px) minmax(0, 1fr);
+    gap: 18px;
+    align-items: center;
+    padding: clamp(16px, 2vw, 24px);
+}
+
+.business-circular-charter::before,
+.business-circular-charter::after {
+    display: none;
+}
+
+.business-circular-charter .business-orbit-core {
+    position: relative;
+    inset: auto;
+    grid-row: 1 / span 2;
+    width: min(240px, 100%);
+    transform: none;
+    margin: 0 auto;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(2, 8, 19, .98) 0 58%, transparent 59%),
+        var(--business-ring, conic-gradient(#22d3ee 0% 100%));
+}
+
+.business-circular-charter .business-orbit-core::before {
+    content: "";
+    position: absolute;
+    inset: 12px;
+    border-radius: inherit;
+    border: 1px solid rgba(255, 255, 255, .08);
+    pointer-events: none;
+}
+
+.business-circular-charter .business-orbit-core strong {
+    font-size: clamp(2.7rem, 4.2vw, 4rem);
+}
+
+.business-circular-charter .business-orbit-stats {
+    position: relative;
+    left: auto;
+    bottom: auto;
+    transform: none;
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.business-circular-charter .business-orbit-stats span {
+    justify-content: flex-start;
+    border-radius: 14px;
+    padding: 10px 12px;
+    border-color: rgba(148, 163, 184, .11);
+    border-inline-start: 3px solid var(--metric-color, #22d3ee);
+}
+
+.business-circular-charter .business-orbit-stats b {
+    font-size: 1.05rem;
+}
+
+.business-orbit-nodes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.business-circular-charter .business-orbit-node {
+    position: relative;
+    inset: auto;
+    left: auto;
+    right: auto;
+    top: auto;
+    bottom: auto;
+    width: auto;
+    min-width: 0;
+    padding: 11px 12px;
+    transform: none;
+    border-color: rgba(148, 163, 184, .10);
+    border-inline-start: 3px solid var(--metric-color, #22d3ee);
+}
+
 @media (min-width: 1440px) {
     :root { --daka-command-max: 1640px; }
     .nav-tabs { max-width: 980px !important; }
@@ -9819,12 +9901,17 @@ body > div:has(#btn-export-global),
 }
 
 @media (max-width: 900px) {
-    #dakaAppMatrixCanvas { opacity: .34 !important; }
-    .daka-form-matrix-canvas { opacity: .34; }
+    #dakaAppMatrixCanvas { opacity: .26 !important; }
+    .daka-form-matrix-canvas { opacity: .22; }
     main > .container { width: calc(100% - 18px) !important; }
     .business-intel-hero-circular,
     .business-intel-brief-grid {
         grid-template-columns: 1fr !important;
+    }
+    .business-circular-charter,
+    .business-orbit-nodes,
+    .business-circular-charter .business-orbit-stats {
+        grid-template-columns: 1fr;
     }
     .business-orbit-chart {
         min-height: auto;
@@ -9889,7 +9976,7 @@ body > div:has(#btn-export-global),
         const canvas = document.createElement('canvas');
         canvas.className = 'daka-form-matrix-canvas';
         canvas.setAttribute('aria-hidden', 'true');
-        canvas.dataset.fontSize = '13';
+        canvas.dataset.fontSize = '18';
         canvas._drops = [];
         panel.prepend(canvas);
         formCanvases.add(canvas);
@@ -9905,7 +9992,7 @@ body > div:has(#btn-export-global),
         if (!panel) return;
         const rect = panel.getBoundingClientRect();
         if (!rect.width || !rect.height) return;
-        const ratio = Math.min(window.devicePixelRatio || 1, 1.75);
+        const ratio = Math.min(window.devicePixelRatio || 1, 1.2);
         const width = Math.max(1, Math.floor(rect.width));
         const height = Math.max(1, Math.floor(rect.height));
         if (canvas._w === width && canvas._h === height) return;
@@ -9918,7 +10005,7 @@ body > div:has(#btn-export-global),
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-        const fontSize = Number(canvas.dataset.fontSize || 13);
+        const fontSize = Number(canvas.dataset.fontSize || 18);
         const cols = Math.max(1, Math.ceil(width / fontSize));
         canvas._drops = Array.from({ length: cols }, () => Math.floor(Math.random() * (height / fontSize)));
     }
@@ -9931,15 +10018,15 @@ body > div:has(#btn-export-global),
         if (!ctx) return;
         const width = canvas._w || panel.clientWidth || 1;
         const height = canvas._h || panel.clientHeight || 1;
-        const fontSize = Number(canvas.dataset.fontSize || 13);
-        ctx.fillStyle = 'rgba(2, 6, 23, 0.11)';
+        const fontSize = Number(canvas.dataset.fontSize || 18);
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.16)';
         ctx.fillRect(0, 0, width, height);
         ctx.font = fontSize + 'px Consolas, Monaco, monospace';
         for (let i = 0; i < canvas._drops.length; i += 1) {
             const x = i * fontSize;
             const y = canvas._drops[i] * fontSize;
-            const hot = Math.random() > 0.965;
-            ctx.fillStyle = hot ? 'rgba(248, 250, 252, .62)' : (Math.random() > 0.74 ? 'rgba(34, 197, 94, .42)' : 'rgba(34, 211, 238, .52)');
+            const hot = Math.random() > 0.972;
+            ctx.fillStyle = hot ? 'rgba(248, 250, 252, .48)' : (Math.random() > 0.78 ? 'rgba(34, 197, 94, .30)' : 'rgba(34, 211, 238, .38)');
             ctx.fillText(matrixChars[Math.floor(Math.random() * matrixChars.length)] || '0', x, y);
             if (y > height + 60 && Math.random() > 0.968) canvas._drops[i] = 0;
             canvas._drops[i] += 1;
@@ -9947,7 +10034,7 @@ body > div:has(#btn-export-global),
     }
 
     function tickFormMatrix(now) {
-        if (!document.hidden && (!formLastFrame || now - formLastFrame > 42)) {
+        if (!document.hidden && (!formLastFrame || now - formLastFrame > 90)) {
             formLastFrame = now;
             formCanvases.forEach(drawFormCanvas);
         }
@@ -10098,11 +10185,11 @@ body > div:has(#btn-export-global),
     let columns = 0;
     let drops = [];
     let lastFrame = 0;
-    const fontSize = 14;
+    const fontSize = 20;
     const chars = Array.from('Daka Market Insight 010101 CRO UX AIDA SEO DATA TRUST FUNNEL \u0633\u0648\u0642 \u0645\u0646\u0627\u0641\u0633\u0648\u0646 \u062a\u062d\u0644\u064a\u0644 \u062b\u0642\u0629 \u0646\u0645\u0648 \u0642\u0631\u0627\u0631');
 
     function resizeMatrix() {
-        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const ratio = Math.min(window.devicePixelRatio || 1, 1.25);
         width = window.innerWidth || document.documentElement.clientWidth || 1280;
         height = window.innerHeight || document.documentElement.clientHeight || 720;
         canvas.width = Math.floor(width * ratio);
@@ -10117,7 +10204,7 @@ body > div:has(#btn-export-global),
     }
 
     function drawMatrix() {
-        ctx.fillStyle = 'rgba(2, 6, 23, 0.075)';
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.13)';
         ctx.fillRect(0, 0, width, height);
         ctx.font = fontSize + 'px Consolas, Monaco, monospace';
 
@@ -10125,8 +10212,8 @@ body > div:has(#btn-export-global),
             const text = chars[Math.floor(Math.random() * chars.length)] || '0';
             const x = i * fontSize;
             const y = drops[i] * fontSize;
-            const hot = Math.random() > 0.95;
-            ctx.fillStyle = hot ? 'rgba(248, 250, 252, 0.84)' : (Math.random() > 0.68 ? 'rgba(34, 197, 94, 0.5)' : 'rgba(34, 211, 238, 0.68)');
+            const hot = Math.random() > 0.965;
+            ctx.fillStyle = hot ? 'rgba(248, 250, 252, 0.62)' : (Math.random() > 0.74 ? 'rgba(34, 197, 94, 0.36)' : 'rgba(34, 211, 238, 0.48)');
             ctx.fillText(text, x, y);
             if (y > height + 90 && Math.random() > 0.965) drops[i] = 0;
             drops[i] += 1;
@@ -10134,7 +10221,7 @@ body > div:has(#btn-export-global),
     }
 
     function tickMatrix(now) {
-        if (!document.hidden && (!lastFrame || now - lastFrame > 30)) {
+        if (!document.hidden && (!lastFrame || now - lastFrame > 76)) {
             lastFrame = now;
             drawMatrix();
         }
