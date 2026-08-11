@@ -9421,6 +9421,126 @@ body.modal-open {
 })();
 </script>
 
+<style id="daka-index-command-center-matrix">
+/* Command-center expansion + Matrix atmosphere for index.html */
+:root {
+    --daka-command-max: 1560px;
+    --daka-command-pad: clamp(14px, 2.3vw, 34px);
+}
+
+html {
+    background:
+        radial-gradient(circle at 18% 4%, rgba(34, 211, 238, .16), transparent 30%),
+        radial-gradient(circle at 82% 0%, rgba(139, 92, 246, .15), transparent 28%),
+        #020617 !important;
+}
+
+body {
+    background:
+        radial-gradient(circle at 11% 14%, rgba(14, 165, 233, .18), transparent 26%),
+        radial-gradient(circle at 91% 10%, rgba(168, 85, 247, .14), transparent 28%),
+        linear-gradient(135deg, rgba(2, 6, 23, .98), rgba(3, 9, 22, .96) 46%, rgba(2, 6, 23, .98)) !important;
+}
+
+#dakaAppMatrixCanvas {
+    z-index: 0 !important;
+    opacity: .38 !important;
+    mix-blend-mode: screen;
+    filter: drop-shadow(0 0 10px rgba(34, 211, 238, .25));
+}
+
+.daka-app-matrix-glow {
+    z-index: 0 !important;
+    opacity: 1 !important;
+    background:
+        radial-gradient(circle at 17% 12%, rgba(34, 211, 238, .18), transparent 30%),
+        radial-gradient(circle at 82% 16%, rgba(139, 92, 246, .18), transparent 28%),
+        linear-gradient(180deg, rgba(2, 6, 23, .08), rgba(2, 6, 23, .68) 72%, rgba(2, 6, 23, .92)) !important;
+}
+
+.daka-app-matrix-glow::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(rgba(34, 211, 238, .026) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 211, 238, .022) 1px, transparent 1px);
+    background-size: 54px 54px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.92), transparent 84%);
+}
+
+.daka-app-matrix-glow::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(2, 6, 23, .9), transparent 13%, transparent 87%, rgba(2, 6, 23, .9)),
+        linear-gradient(180deg, rgba(2, 6, 23, .38), transparent 24%, transparent 72%, rgba(2, 6, 23, .92));
+}
+
+.main-wrapper {
+    position: relative;
+    z-index: 1;
+}
+
+main {
+    padding-block: clamp(24px, 2.8vw, 46px) 72px !important;
+}
+
+main > .container {
+    width: min(var(--daka-command-max), calc(100% - var(--daka-command-pad))) !important;
+    max-width: var(--daka-command-max) !important;
+}
+
+main > .container > .tab-content,
+main > .container > .results-container,
+.results-container,
+.form-section,
+.business-intel-shell,
+.daka-report-executive-mode,
+.funnel-v2-report,
+.funnel-surgery-shell {
+    max-width: 100% !important;
+}
+
+.form-section,
+.business-intel-shell,
+.daka-report-executive-mode,
+.funnel-v2-report,
+.funnel-surgery-shell,
+.result-card,
+.executive-summary {
+    box-shadow:
+        0 24px 80px rgba(0, 0, 0, .30),
+        inset 0 1px 0 rgba(255, 255, 255, .045) !important;
+}
+
+@media (min-width: 1440px) {
+    :root { --daka-command-max: 1640px; }
+    .nav-tabs { max-width: 980px !important; }
+    .header[data-nav-density="compact"] .container { max-width: 1840px !important; }
+    .header[data-nav-density="compact"] .header-content {
+        grid-template-columns: minmax(190px, .78fr) minmax(520px, 1.8fr) 72px minmax(24px, .32fr) minmax(124px, auto) minmax(52px, auto) minmax(52px, auto) !important;
+    }
+}
+
+@media (min-width: 1800px) {
+    :root { --daka-command-max: 1760px; }
+}
+
+@media (max-width: 900px) {
+    #dakaAppMatrixCanvas { opacity: .22 !important; }
+    main > .container { width: calc(100% - 18px) !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #dakaAppMatrixCanvas { opacity: 0 !important; }
+    .daka-app-matrix-glow::before { display: none; }
+}
+</style>
+
 <script>
 (function initDakaAppMatrix() {
     const canvas = document.getElementById('dakaAppMatrixCanvas');
@@ -9435,8 +9555,9 @@ body.modal-open {
     let height = 0;
     let columns = 0;
     let drops = [];
-    const fontSize = 15;
-    const chars = 'DAKA MARKET INTEL SPY CRO FUNNEL AIDA TRUST CTA PRICE UX DATA 010101';
+    let lastFrame = 0;
+    const fontSize = 17;
+    const chars = Array.from('Daka Market Insight 010101 CRO UX AIDA SEO DATA TRUST FUNNEL سوق منافسون تحليل ثقة نمو قرار');
 
     function resizeMatrix() {
         const ratio = Math.min(window.devicePixelRatio || 1, 2);
@@ -9449,28 +9570,32 @@ body.modal-open {
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
         columns = Math.max(1, Math.ceil(width / fontSize));
         drops = Array.from({ length: columns }, function () {
-            return Math.floor(Math.random() * (height / fontSize));
+            return Math.floor(Math.random() * (height / fontSize) * 1.35);
         });
     }
 
     function drawMatrix() {
-        ctx.fillStyle = 'rgba(2, 6, 23, 0.08)';
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.095)';
         ctx.fillRect(0, 0, width, height);
         ctx.font = fontSize + 'px Consolas, Monaco, monospace';
-        ctx.fillStyle = 'rgba(34, 211, 238, 0.52)';
 
         for (let i = 0; i < drops.length; i += 1) {
-            const text = chars.charAt(Math.floor(Math.random() * chars.length));
+            const text = chars[Math.floor(Math.random() * chars.length)] || '0';
             const x = i * fontSize;
             const y = drops[i] * fontSize;
+            const hot = Math.random() > 0.955;
+            ctx.fillStyle = hot ? 'rgba(248, 250, 252, 0.78)' : (Math.random() > 0.72 ? 'rgba(34, 197, 94, 0.42)' : 'rgba(34, 211, 238, 0.58)');
             ctx.fillText(text, x, y);
-            if (y > height + 80 && Math.random() > 0.985) drops[i] = 0;
+            if (y > height + 90 && Math.random() > 0.972) drops[i] = 0;
             drops[i] += 1;
         }
     }
 
-    function tickMatrix() {
-        if (!document.hidden) drawMatrix();
+    function tickMatrix(now) {
+        if (!document.hidden && (!lastFrame || now - lastFrame > 38)) {
+            lastFrame = now;
+            drawMatrix();
+        }
         window.requestAnimationFrame(tickMatrix);
     }
 
