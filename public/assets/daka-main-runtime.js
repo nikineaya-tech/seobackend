@@ -6093,6 +6093,126 @@ function cloneReportHtmlForExport(el, exportOptions = {}) {
     return clone.innerHTML;
 }
 
+function getDakaDocxVisualLabel(node, moduleTitle, index) {
+    const host = node.closest('.report-section, .executive-panel, .result-card, .card, article, section') || node.parentElement;
+    const heading = host?.querySelector('h1,h2,h3,h4,.report-section-title,.section-title,.card-title,.executive-title');
+    const label = getExportableReportText(heading).slice(0, 90) || moduleTitle || 'Daka chart';
+    return `${label}${index > 0 ? ' #' + (index + 1) : ''}`;
+}
+
+function isDakaDocxVisualUsable(node) {
+    if (!node || node.closest('[hidden], .hidden, .no-print, .loading-state, .auth-modal')) return false;
+    const rect = node.getBoundingClientRect ? node.getBoundingClientRect() : { width: 0, height: 0 };
+    const width = Number(node.width || rect.width || 0);
+    const height = Number(node.height || rect.height || 0);
+    if (width < 120 || height < 80) return false;
+    const style = window.getComputedStyle ? window.getComputedStyle(node) : null;
+    if (style && (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0)) return false;
+    return true;
+}
+
+function dakaCanvasToDocxAsset(canvas, moduleTitle, moduleKey, index) {
+    if (!isDakaDocxVisualUsable(canvas)) return null;
+    try {
+        const dataUrl = canvas.toDataURL('image/png');
+        if (!/^data:image\/png;base64,/i.test(dataUrl) || dataUrl.length < 900 || dataUrl.length > 2_400_000) return null;
+        return {
+            type: 'png',
+            moduleKey,
+            moduleTitle,
+            label: getDakaDocxVisualLabel(canvas, moduleTitle, index),
+            width: Number(canvas.width || 900),
+            height: Number(canvas.height || 520),
+            dataUrl
+        };
+    } catch (_) {
+        return null;
+    }
+}
+
+async function dakaSvgToDocxAsset(svg, moduleTitle, moduleKey, index) {
+    if (!isDakaDocxVisualUsable(svg)) return null;
+    try {
+        const rect = svg.getBoundingClientRect();
+        const width = Math.max(240, Math.round(rect.width || Number(svg.getAttribute('width')) || 900));
+        const height = Math.max(160, Math.round(rect.height || Number(svg.getAttribute('height')) || 520));
+        const clone = svg.cloneNode(true);
+        clone.setAttribute('xmlns', clone.getAttribute('xmlns') || 'http://www.w3.org/2000/svg');
+        clone.setAttribute('width', String(width));
+        clone.setAttribute('height', String(height));
+        const serialized = new XMLSerializer().serializeToString(clone);
+        const blob = new Blob([serialized], { type: 'image/svg+xml;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const dataUrl = await new Promise(function (resolve) {
+            const img = new Image();
+            img.onload = function () {
+                try {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(0, 0, width, height);
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL('image/png'));
+                } catch (_) {
+                    resolve('');
+                } finally {
+                    URL.revokeObjectURL(url);
+                }
+            };
+            img.onerror = function () {
+                URL.revokeObjectURL(url);
+                resolve('');
+            };
+            img.src = url;
+        });
+        if (!/^data:image\/png;base64,/i.test(dataUrl) || dataUrl.length < 900 || dataUrl.length > 2_400_000) return null;
+        return {
+            type: 'png',
+            moduleKey,
+            moduleTitle,
+            label: getDakaDocxVisualLabel(svg, moduleTitle, index),
+            width,
+            height,
+            dataUrl
+        };
+    } catch (_) {
+        return null;
+    }
+}
+
+async function collectDakaDocxVisualAssets(selectedModules) {
+    const assets = [];
+    const seen = new Set();
+    const maxAssets = 10;
+    for (const module of selectedModules || []) {
+        const root = document.getElementById(module.id);
+        if (!root) continue;
+        const canvases = Array.from(root.querySelectorAll('canvas'));
+        for (let index = 0; index < canvases.length && assets.length < maxAssets; index++) {
+            const asset = dakaCanvasToDocxAsset(canvases[index], module.title, module.key, index);
+            if (!asset) continue;
+            const fingerprint = asset.dataUrl.slice(0, 420);
+            if (seen.has(fingerprint)) continue;
+            seen.add(fingerprint);
+            assets.push(asset);
+        }
+        const svgs = Array.from(root.querySelectorAll('svg')).filter(function (svg) {
+            return !svg.closest('button,.btn-gen,.report-feature-nav,.export-bubble-wrapper') && isDakaDocxVisualUsable(svg);
+        });
+        for (let index = 0; index < svgs.length && assets.length < maxAssets; index++) {
+            const asset = await dakaSvgToDocxAsset(svgs[index], module.title, module.key, index);
+            if (!asset) continue;
+            const fingerprint = asset.dataUrl.slice(0, 420);
+            if (seen.has(fingerprint)) continue;
+            seen.add(fingerprint);
+            assets.push(asset);
+        }
+    }
+    return assets;
+}
+
 function createFixedPdfClone(el, exportOptions = {}) {
     const shell = document.createElement('section');
     shell.className = 'daka-pdf-fixed-clone';
@@ -6622,6 +6742,7 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
         return toast.warning(isAr ? 'المحتوى غير جاهز للتصدير.' : isEn ? 'Content is not ready to export.' : 'Le contenu n’est pas prêt pour l’export.');
     }
     const title = isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport exécutif Daka';
+    const visualAssets = await collectDakaDocxVisualAssets(selectedModules);
     const slug = (model.domain || 'report').replace(/[^a-zA-Z0-9]/g, '-').substring(0, 34);
     const filename = 'Daka-Editable-Report-' + slug + '-' + Date.now() + '.docx';
     const response = await fetch(`${CONFIG.API_BASE_URL}/api/export/word`, {
@@ -6651,7 +6772,8 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
                 geo: model.geo || '',
                 objective: model.objective || ''
             },
-            sectionHtml
+            sectionHtml,
+            visualAssets
         })
     });
     if (!response.ok) throw new Error(isAr ? 'تعذر إنشاء ملف DOCX.' : isEn ? 'DOCX export failed.' : 'Export DOCX impossible.');

@@ -22970,6 +22970,10 @@ function normalizeWordExportList(values, limit = 4) {
     return list.slice(0, limit);
 }
 
+function wordExportEmptyLabel(lang = 'fr') {
+    return lang === 'ar' ? '\u063a\u064a\u0631 \u0645\u0624\u0643\u062f \u0628\u0639\u062f' : lang === 'en' ? 'Not confirmed yet' : 'Non confirme';
+}
+
 function inferWordExportBusinessContext(model = {}, sectionHtml = '') {
     const corpus = [
         model.domain,
@@ -23062,11 +23066,24 @@ function loadDakaDocxLogoBuffer(uploadedLogoDataUrl = '') {
     const match = dataUrl.match(/^data:image\/(png|jpe?g);base64,([a-z0-9+/=\s]+)$/i);
     if (match) {
         const buffer = Buffer.from(match[2].replace(/\s+/g, ''), 'base64');
-        if (buffer.length > 0 && buffer.length <= 2_000_000) return buffer;
+        if (buffer.length > 0 && buffer.length <= 2_000_000) {
+            return { buffer, extension: /^jpe?g$/i.test(match[1]) ? 'jpg' : 'png' };
+        }
     }
     const logoPath = path.join(__dirname, 'assets', 'daka-report-logo.png');
-    if (fs.existsSync(logoPath)) return fs.readFileSync(logoPath);
+    if (fs.existsSync(logoPath)) return { buffer: fs.readFileSync(logoPath), extension: 'png' };
     return null;
+}
+
+function loadDocxImageFromDataUrl(dataUrl = '', maxBytes = 2_500_000) {
+    const match = String(dataUrl || '').match(/^data:image\/(png|jpe?g);base64,([a-z0-9+/=\s]+)$/i);
+    if (!match) return null;
+    const buffer = Buffer.from(match[2].replace(/\s+/g, ''), 'base64');
+    if (!buffer.length || buffer.length > maxBytes) return null;
+    return {
+        buffer,
+        extension: /^jpe?g$/i.test(match[1]) ? 'jpg' : 'png',
+    };
 }
 
 function createDocxTextRun(text, lang, options = {}) {
@@ -23080,6 +23097,54 @@ function createDocxTextRun(text, lang, options = {}) {
         rightToLeft: lang === 'ar',
         break: options.break || 0,
     });
+}
+
+function createDocxVisualAssetSection(visualAssets = [], lang = 'fr', offerType = 'product') {
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const children = [];
+    const usable = [];
+    (Array.isArray(visualAssets) ? visualAssets : []).slice(0, 10).forEach((asset, index) => {
+        const image = loadDocxImageFromDataUrl(asset?.dataUrl);
+        if (!image) return;
+        const width = Math.max(180, Number(asset.width || 900));
+        const height = Math.max(120, Number(asset.height || 520));
+        const targetWidth = Math.min(560, Math.round(width));
+        const targetHeight = Math.min(340, Math.max(120, Math.round(height * (targetWidth / width))));
+        usable.push({
+            image,
+            width: targetWidth,
+            height: targetHeight,
+            label: cleanDocxText(asset.label || asset.moduleTitle || `Chart ${index + 1}`, lang, offerType),
+            moduleTitle: cleanDocxText(asset.moduleTitle || '', lang, offerType),
+        });
+    });
+    if (!usable.length) return children;
+    children.push(createDocxHeading(isAr ? '\u0627\u0644\u0631\u0633\u0648\u0645 \u0648\u0627\u0644\u0645\u0624\u0634\u0631\u0627\u062a \u0627\u0644\u0628\u0635\u0631\u064a\u0629' : isEn ? 'Charts and visual evidence' : 'Graphiques et preuves visuelles', lang, 1, offerType));
+    children.push(createDocxParagraph(
+        isAr ? '\u0647\u0630\u0647 \u0627\u0644\u0644\u0642\u0637\u0627\u062a \u062a\u062d\u0641\u0638 \u0627\u0644\u0631\u0633\u0648\u0645 \u0627\u0644\u0645\u0647\u0645\u0629 \u0627\u0644\u062a\u064a \u062a\u0638\u0647\u0631 \u0641\u064a \u0648\u0627\u062c\u0647\u0629 Daka \u0644\u062a\u0633\u0647\u064a\u0644 \u0627\u0644\u0645\u0631\u0627\u062c\u0639\u0629 \u0641\u064a Word.' :
+            isEn ? 'These captures preserve the important charts shown in the Daka interface so the Word file remains decision-ready.' :
+                'Ces captures conservent les graphiques importants affiches dans l\'interface Daka pour garder un fichier Word exploitable.',
+        lang,
+        { size: 21, color: '475569', after: 180, offerType }
+    ));
+    usable.forEach((asset, index) => {
+        children.push(createDocxParagraph(
+            `${index + 1}. ${asset.label}${asset.moduleTitle && asset.moduleTitle !== asset.label ? ' - ' + asset.moduleTitle : ''}`,
+            lang,
+            { bold: true, size: 21, color: '075985', alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT, after: 70, offerType }
+        ));
+        children.push(new Paragraph({
+            alignment: AlignmentType.CENTER,
+            spacing: { before: 40, after: 220 },
+            children: [new ImageRun({
+                data: asset.image.buffer,
+                type: asset.image.extension,
+                transformation: { width: asset.width, height: asset.height },
+            })],
+        }));
+    });
+    return children.filter(Boolean);
 }
 
 function createDocxParagraph(text, lang, options = {}) {
@@ -23183,7 +23248,7 @@ function createDocxCardCell(title, value, lang, offerType, fill, accent = '0369A
             after: 45,
             offerType,
         }),
-        createDocxParagraph(value || '—', lang, {
+        createDocxParagraph(value || wordExportEmptyLabel(lang), lang, {
             bold: true,
             size: 22,
             color: '0F172A',
@@ -23314,11 +23379,11 @@ function createDocxActionMatrix(model, lang, offerType) {
 
 function parseHtmlTableToDocx($, table, lang, offerType) {
     const rows = [];
-    $(table).find('tr').slice(0, 18).each((_, tr) => {
+    $(table).find('tr').slice(0, 60).each((_, tr) => {
         const cellCount = Math.max(1, $(tr).children('th,td').length);
         const cells = [];
-        $(tr).children('th,td').slice(0, 6).each((__, cell) => {
-            const text = cleanDocxText($(cell).text(), lang, offerType).slice(0, 650);
+        $(tr).children('th,td').slice(0, 8).each((__, cell) => {
+            const text = cleanDocxText($(cell).text(), lang, offerType).slice(0, 1200);
             cells.push(new TableCell({
                 width: { size: Math.floor(100 / cellCount), type: WidthType.PERCENTAGE },
                 shading: $(cell).is('th') ? { fill: 'E0F2FE' } : undefined,
@@ -23367,30 +23432,39 @@ function convertReportHtmlToDocxBlocks(sectionHtml, lang, offerType = 'product')
         if (paragraph) blocks.push(paragraph);
     };
     $('main').find('h1,h2,h3,h4,p,li,blockquote,pre,table,.report-section-card,.funnel-section-card,.action-card,.executive-card,.exportable-card').each((_, el) => {
-        if (blocks.length >= 260) return false;
+        if (blocks.length >= 720) return false;
         const tag = (el.tagName || '').toLowerCase();
         if (tag === 'table') {
             const table = parseHtmlTableToDocx($, el, lang, offerType);
             if (table) blocks.push(table);
             return;
         }
-        const text = $(el).text().replace(/\s+/g, ' ').trim();
+        let text = $(el).text().replace(/\s+/g, ' ').trim();
+        const links = [];
+        $(el).find('a[href]').each((__, link) => {
+            const href = String($(link).attr('href') || '').trim();
+            if (/^https?:\/\//i.test(href) && !links.includes(href)) links.push(href);
+        });
+        if (links.length) {
+            const label = lang === 'ar' ? '\u0627\u0644\u0631\u0648\u0627\u0628\u0637' : lang === 'en' ? 'Links' : 'Liens';
+            text = `${text} ${label}: ${links.slice(0, 6).join(' | ')}`;
+        }
         if (!text) return;
         if (/^(voir les details|voir détails|fermer|copier|ouvrir|exporter|share|download)$/i.test(text)) return;
         if (/^h[1-6]$/.test(tag)) {
             pushParagraph(text, { heading: true, level: Number(tag[1]) <= 2 ? 2 : 3 });
         } else if (tag === 'li') {
-            pushParagraph(text, { bullet: true, max: 700, size: 22 });
+            pushParagraph(text, { bullet: true, max: 1100, size: 22 });
         } else if (tag === 'blockquote') {
-            pushParagraph(text, { italics: true, max: 900, size: 22, color: '334155' });
+            pushParagraph(text, { italics: true, max: 1400, size: 22, color: '334155' });
         } else if (tag === 'pre') {
-            pushParagraph(text, { max: 1600, size: 19, color: '0F172A' });
+            pushParagraph(text, { max: 2600, size: 19, color: '0F172A' });
         } else if ($(el).find('p,li,h1,h2,h3,h4,table').length === 0 || tag === 'p') {
-            pushParagraph(text, { max: 1200, size: 22 });
+            pushParagraph(text, { max: 2200, size: 22 });
         }
     });
     if (!blocks.length) {
-        const fallback = cleanDocxText($('main').text(), lang, offerType).slice(0, 2200);
+        const fallback = cleanDocxText($('main').text(), lang, offerType).slice(0, 6000);
         if (fallback) blocks.push(createDocxParagraph(fallback, lang, { offerType }));
     }
     return blocks.filter(Boolean);
@@ -23404,13 +23478,13 @@ async function buildDakaDocxDocument(payload = {}) {
     const sectionHtml = sanitizeWordExportFragment(payload.sectionHtml);
     const offerType = inferWordExportBusinessContext(model, sectionHtml);
     const title = cleanDocxText(payload.title || (isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport executif Daka'), lang, offerType).slice(0, 140);
-    const logoBuffer = loadDakaDocxLogoBuffer(payload.logoDataUrl);
+    const logoAsset = loadDakaDocxLogoBuffer(payload.logoDataUrl);
     const children = [];
-    if (logoBuffer) {
+    if (logoAsset) {
         children.push(new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { after: 180 },
-            children: [new ImageRun({ data: logoBuffer, transformation: { width: 104, height: 104 } })],
+            children: [new ImageRun({ data: logoAsset.buffer, type: logoAsset.extension, transformation: { width: 104, height: 104 } })],
         }));
     }
     children.push(createDocxParagraph('Daka Market Intelligence Spyer', lang, { center: true, bold: true, size: 23, color: '0369A1', after: 70, offerType }));
@@ -23437,6 +23511,7 @@ async function buildDakaDocxDocument(payload = {}) {
     children.push(...createDocxListBlock(isAr ? 'أهم المخاطر' : isEn ? 'Top risks' : 'Principaux risques', model.weaknesses, lang, offerType));
     children.push(...createDocxBranchSchema(model, lang, offerType));
     children.push(...createDocxActionMatrix(model, lang, offerType));
+    children.push(...createDocxVisualAssetSection(payload.visualAssets, lang, offerType));
     children.push(createDocxParagraph(
         isAr ? 'هذا الملف قابل للتعديل في Word. راجع الأرقام والوعود التجارية قبل إرساله للعميل النهائي.' :
             isEn ? 'This file is editable in Word. Review figures and commercial claims before sending it to the final client.' :
@@ -23464,7 +23539,7 @@ async function buildDakaDocxDocument(payload = {}) {
             },
         },
         sections: [{
-            properties: { page: { margin: { top: 1134, right: 1417, bottom: 1134, left: 1417 } } },
+            properties: { page: { size: { width: 11906, height: 16838 }, margin: { top: 1134, right: 1417, bottom: 1134, left: 1417 } } },
             headers: {
                 default: new Header({
                     children: [createDocxParagraph(headerText, lang, { size: 18, color: '64748B', alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT, offerType })].filter(Boolean),
