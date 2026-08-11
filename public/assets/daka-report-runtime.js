@@ -57,9 +57,9 @@ function getReportFeatureCopy(lang = STATE.currentLang || 'fr') {
     const fr = {
         summary: ['Résumé', 'Comprendre le verdict en 3 minutes', 'fa-gauge-high'],
         actions: ['Actions prioritaires', 'Les priorités à exécuter maintenant', 'fa-list-check'],
-        competitors: ['Concurrents', 'Qui attaque votre marché et comment répondre', 'fa-crosshairs'],
+        competitors: ['Concurrents', 'Qui attaque votre marché et comment répondre', 'fa-chart-line'],
         funnel: ['Funnel', 'Où votre page perd des clients', 'fa-route'],
-        seo: ['SEO', 'Les freins techniques et sémantiques', 'fa-magnifying-glass-chart'],
+        seo: ['SEO', 'Les freins techniques et sémantiques', 'fa-magnifying-glass'],
         keywords: ['Keywords', 'Les demandes utiles à cibler', 'fa-key'],
         pricing: ['Pricing', 'Prix, perception et marge', 'fa-tags'],
         trust: ['Trust', 'Preuves, garanties et objections', 'fa-shield-halved'],
@@ -69,9 +69,9 @@ function getReportFeatureCopy(lang = STATE.currentLang || 'fr') {
     if (isAr) return {
         summary: ['الملخص', 'افهم الخلاصة في 3 دقائق', 'fa-gauge-high'],
         actions: ['الإجراءات', 'الأولويات التي يجب تنفيذها الآن', 'fa-list-check'],
-        competitors: ['المنافسون', 'من يهاجم سوقك وكيف ترد', 'fa-crosshairs'],
+        competitors: ['المنافسون', 'من يهاجم سوقك وكيف ترد', 'fa-chart-line'],
         funnel: ['مسار التحويل', 'أين تفقد صفحتك العملاء', 'fa-route'],
-        seo: ['أساس الموقع', 'العوائق التقنية والدلالية', 'fa-magnifying-glass-chart'],
+        seo: ['أساس الموقع', 'العوائق التقنية والدلالية', 'fa-magnifying-glass'],
         keywords: ['الكلمات', 'الطلبات المفيدة للاستهداف', 'fa-key'],
         pricing: ['السعر', 'السعر والإدراك والهامش', 'fa-tags'],
         trust: ['الثقة', 'الأدلة والضمانات والاعتراضات', 'fa-shield-halved'],
@@ -81,9 +81,9 @@ function getReportFeatureCopy(lang = STATE.currentLang || 'fr') {
     if (isEn) return {
         summary: ['Summary', 'Understand the verdict in 3 minutes', 'fa-gauge-high'],
         actions: ['Priority actions', 'What to execute now', 'fa-list-check'],
-        competitors: ['Competitors', 'Who attacks your market and how to respond', 'fa-crosshairs'],
+        competitors: ['Competitors', 'Who attacks your market and how to respond', 'fa-chart-line'],
         funnel: ['Funnel', 'Where your page loses customers', 'fa-route'],
-        seo: ['SEO', 'Technical and semantic blockers', 'fa-magnifying-glass-chart'],
+        seo: ['SEO', 'Technical and semantic blockers', 'fa-magnifying-glass'],
         keywords: ['Keywords', 'Useful demand to target', 'fa-key'],
         pricing: ['Pricing', 'Price, perception, and margin', 'fa-tags'],
         trust: ['Trust', 'Proof, guarantees, and objections', 'fa-shield-halved'],
@@ -102,6 +102,22 @@ function enhanceReportNavigation(container) {
 
     const reportLang = (container.querySelector(':scope > #funnelReport') || container).getAttribute('lang') || container.getAttribute('lang') || STATE.currentLang || 'fr';
     const copy = getReportFeatureCopy(reportLang);
+    const host = container.querySelector(':scope > #funnelReport') || container;
+    host.classList.add('daka-report-executive-mode');
+    if (summary) {
+        summary.dataset.reportIndex = '00';
+        summary.dataset.reportKind = 'summary';
+    }
+    sections.forEach((section, index) => {
+        section.dataset.reportIndex = String(index + 1).padStart(2, '0');
+    });
+    if (!host.dataset.executiveModeInitialized) {
+        if (summary) summary.classList.remove('executive-expanded', 'executive-full');
+        sections.forEach(section => {
+            if (!section.classList.contains('report-section-direct')) setReportSectionOpen(section, false);
+        });
+        host.dataset.executiveModeInitialized = '1';
+    }
     const items = [];
     if (summary) items.push({ key: 'summary', target: summary });
     sections.forEach(section => {
@@ -123,27 +139,53 @@ function enhanceReportNavigation(container) {
     const nav = document.createElement('nav');
     nav.className = 'report-feature-nav no-print';
     nav.setAttribute('aria-label', reportLang === 'ar' ? 'التنقل في التقرير' : reportLang === 'en' ? 'Report navigation' : 'Navigation du rapport');
+    const navMeta = reportLang === 'ar'
+        ? { title: 'خريطة التقرير', sub: 'القرار أولا، التفاصيل عند الحاجة' }
+        : reportLang === 'en'
+            ? { title: 'Report map', sub: 'Decision first, details when needed' }
+            : { title: 'Carte du rapport', sub: 'Décision d’abord, détails ensuite' };
     nav.innerHTML = items.map((item, index) => {
         const [title, description, icon] = copy[item.key] || copy.details;
         return `<button type="button" class="report-feature-tab${index === 0 ? ' active' : ''}" data-no-collapse="true" data-feature-index="${index}">
             <i class="fas ${icon}"></i><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(description)}</small></span>
         </button>`;
     }).join('');
+    nav.insertAdjacentHTML('afterbegin', `<div class="report-feature-nav-meta"><strong>${escapeHtml(navMeta.title)}</strong><small>${escapeHtml(navMeta.sub)}</small></div>`);
+    const navTabs = [...nav.querySelectorAll('.report-feature-tab')];
+    const navMetaSmall = nav.querySelector('.report-feature-nav-meta small');
+    const setActiveNavItem = (index) => {
+        navTabs.forEach((tab, tabIndex) => tab.classList.toggle('active', tabIndex === index));
+        if (navMetaSmall) navMetaSmall.textContent = `${index + 1}/${items.length} · ${navMeta.sub}`;
+    };
     nav.addEventListener('click', event => {
         const button = event.target.closest('.report-feature-tab');
         if (!button) return;
         event.preventDefault();
         event.stopPropagation();
-        nav.querySelectorAll('.report-feature-tab').forEach(tab => tab.classList.toggle('active', tab === button));
         const item = items[Number(button.dataset.featureIndex)];
         if (!item?.target) return;
+        setActiveNavItem(Number(button.dataset.featureIndex));
         if (item.target.classList.contains('report-section')) setReportSectionOpen(item.target, true);
         item.target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
 
-    const host = container.querySelector(':scope > #funnelReport') || container;
     host.querySelectorAll(':scope > .report-feature-nav').forEach(oldNav => oldNav.remove());
     host.insertBefore(nav, host.firstChild);
+    setActiveNavItem(0);
+
+    if (host.__dakaReportNavObserver?.disconnect) host.__dakaReportNavObserver.disconnect();
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver(entries => {
+            const visible = entries
+                .filter(entry => entry.isIntersecting)
+                .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+            if (!visible?.target) return;
+            const index = items.findIndex(item => item.target === visible.target);
+            if (index >= 0) setActiveNavItem(index);
+        }, { rootMargin: '-24% 0px -62% 0px', threshold: [0.04, 0.12, 0.22, 0.36] });
+        items.forEach(item => item.target && observer.observe(item.target));
+        host.__dakaReportNavObserver = observer;
+    }
 }
 
 function setReportSectionOpen(section, open) {

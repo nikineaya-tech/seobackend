@@ -1479,7 +1479,7 @@ document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.addEventListener('DOMContentLoaded', initSharedReportRoute);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-06-21-evidence-loaders';
+window.DAKA_FRONTEND_BUILD = '2026-08-11-executive-report-ux2';
 
 function loaderTypeFromEndpoint(endpoint = '') {
     const value = String(endpoint || '').toLowerCase();
@@ -1494,12 +1494,8 @@ function ensureAnalysisLoader(endpoint) {
     const type = loaderTypeFromEndpoint(endpoint);
     if (!loader?.classList.contains('active')) return showDakaLoader(type);
 
-    const copy = DAKA_LOADER_COPY[type] || DAKA_LOADER_COPY.competitors;
-    document.getElementById('daka-loader-kicker').textContent = copy.kicker;
-    document.getElementById('daka-loader-title').textContent = copy.title;
-    document.getElementById('daka-loader-subtitle').textContent = copy.subtitle;
-    document.getElementById('daka-loader-hooks').innerHTML = copy.hooks
-        .map(hook => `<span>${escapeHtml(hook)}</span>`).join('');
+    renderDakaLoaderState(type, { reset: window.dakaLoaderState?.type !== type });
+    dakaStartLoaderRotation(type);
     enforceMutedLoaderVideos();
     document.getElementById('daka-global-loader-video')?.play().catch(() => {});
     return window.dakaActiveAnalysisId;
@@ -1913,31 +1909,197 @@ window.dakaAnalysisInFlight = new Map();
 
 const DAKA_LOADER_COPY = {
   competitors: {
-    kicker: 'Analyse concurrentielle',
-    title: 'Daka cartographie vos vrais adversaires',
-    subtitle: 'Nous repérons les concurrents utiles, leurs angles faibles et les opportunités à exploiter.',
-    hooks: ['Concurrents réels', 'Angles d’attaque', 'Plan de conquête']
+    icon: 'fa-chart-line',
+    accent: '#22d3ee',
+    kicker: { fr: 'Analyse concurrentielle', en: 'Competitor intelligence', ar: 'تحليل المنافسين' },
+    variants: {
+      fr: [
+        { title: 'Daka ouvre la carte du marché', subtitle: 'On compare les vrais acteurs, pas les rumeurs. Les rivaux utiles remontent en premier.', hooks: ['Top concurrents', 'Angles faibles', 'Move prioritaire'], icons: ['fa-chart-line', 'fa-bullseye', 'fa-route'] },
+        { title: 'La demande laisse des traces', subtitle: 'Quand un concurrent gagne, le marché parle. Daka trie les signaux qui comptent.', hooks: ['SERP', 'Benchmarks', 'Opportunités'], icons: ['fa-magnifying-glass', 'fa-scale-balanced', 'fa-lightbulb'] },
+        { title: 'Le radar isole les vrais rivaux', subtitle: 'Les concurrents directs entrent dans l’analyse, les figurants restent dehors.', hooks: ['Directs', 'Indirects', 'À attaquer'], icons: ['fa-signal', 'fa-filter', 'fa-bolt'] },
+        { title: 'Daka cherche la faille commerciale', subtitle: 'Le meilleur angle se cache souvent dans une promesse mal prouvée.', hooks: ['Promesse', 'Preuves', 'Faille'], icons: ['fa-bullhorn', 'fa-link', 'fa-triangle-exclamation'] },
+        { title: 'Votre plan d’attaque prend forme', subtitle: 'Pas de brouillard: seulement les leviers capables de bouger le marché.', hooks: ['Menaces', 'Quick wins', 'Sources'], icons: ['fa-shield-halved', 'fa-wand-magic-sparkles', 'fa-database'] }
+      ],
+      en: [
+        { title: 'Daka is mapping the market', subtitle: 'We compare real players, not noise. Useful rivals come first.', hooks: ['Top rivals', 'Weak angles', 'Priority move'], icons: ['fa-chart-line', 'fa-bullseye', 'fa-route'] },
+        { title: 'Demand leaves a trail', subtitle: 'When a competitor wins, the market talks. Daka sorts the signals that matter.', hooks: ['SERP', 'Benchmarks', 'Opportunities'], icons: ['fa-magnifying-glass', 'fa-scale-balanced', 'fa-lightbulb'] },
+        { title: 'The radar isolates true rivals', subtitle: 'Direct competitors enter the analysis, weak lookalikes stay outside.', hooks: ['Direct', 'Indirect', 'Attackable'], icons: ['fa-signal', 'fa-filter', 'fa-bolt'] },
+        { title: 'Daka is finding the commercial gap', subtitle: 'The best opening often hides inside an under-proven promise.', hooks: ['Promise', 'Proof', 'Gap'], icons: ['fa-bullhorn', 'fa-link', 'fa-triangle-exclamation'] },
+        { title: 'Your attack plan is forming', subtitle: 'No fog: only levers that can move the market.', hooks: ['Threats', 'Quick wins', 'Sources'], icons: ['fa-shield-halved', 'fa-wand-magic-sparkles', 'fa-database'] }
+      ],
+      ar: [
+        { title: 'Daka ترسم خريطة السوق', subtitle: 'نقارن اللاعبين الحقيقيين، لا الضجيج. المنافسون المهمون يظهرون أولا.', hooks: ['أهم المنافسين', 'زوايا الضعف', 'الخطوة الأولى'], icons: ['fa-chart-line', 'fa-bullseye', 'fa-route'] },
+        { title: 'الطلب يترك إشارات', subtitle: 'عندما يربح منافس، يترك السوق دلائل واضحة. Daka ترتبها لك.', hooks: ['نتائج البحث', 'نماذج مقارنة', 'فرص'], icons: ['fa-magnifying-glass', 'fa-scale-balanced', 'fa-lightbulb'] },
+        { title: 'الرادار يعزل المنافسين الحقيقيين', subtitle: 'ندخل المنافسين المباشرين في التحليل ونستبعد التشابهات الضعيفة.', hooks: ['مباشرون', 'غير مباشرون', 'قابلون للهجوم'], icons: ['fa-signal', 'fa-filter', 'fa-bolt'] },
+        { title: 'نبحث عن الثغرة التجارية', subtitle: 'أقوى زاوية غالبا تختبئ داخل وعد غير مثبت بما يكفي.', hooks: ['الوعد', 'الدليل', 'الثغرة'], icons: ['fa-bullhorn', 'fa-link', 'fa-triangle-exclamation'] },
+        { title: 'خطة الهجوم تتشكل', subtitle: 'لا ضباب: فقط روافع قادرة على تحريك السوق.', hooks: ['تهديدات', 'مكاسب سريعة', 'مصادر'], icons: ['fa-shield-halved', 'fa-wand-magic-sparkles', 'fa-database'] }
+      ]
+    }
   },
   funnel: {
-    kicker: 'Analyse funnel',
-    title: 'Daka révèle les pertes invisibles',
-    subtitle: 'Nous suivons le parcours, les frictions et les signaux qui bloquent la conversion.',
-    hooks: ['Parcours client', 'Friction', 'Conversion']
+    icon: 'fa-filter',
+    accent: '#8b5cf6',
+    kicker: { fr: 'Analyse funnel', en: 'Funnel surgery', ar: 'تحليل مسار البيع' },
+    variants: {
+      fr: [
+        { title: 'Daka lit la page comme un acheteur pressé', subtitle: 'Chaque titre, CTA et preuve passe le test: est-ce que ça facilite l’action?', hooks: ['Hero', 'CTA', 'Preuves'], icons: ['fa-heading', 'fa-hand-pointer', 'fa-shield-halved'] },
+        { title: 'Le parcours passe au scanner', subtitle: 'On suit les sections dans l’ordre exact pour trouver où l’attention fuit.', hooks: ['Parcours', 'Friction', 'Priorités'], icons: ['fa-route', 'fa-triangle-exclamation', 'fa-list-check'] },
+        { title: 'Daka sépare le désir du bruit', subtitle: 'Les phrases qui vendent restent, les blocs qui fatiguent descendent.', hooks: ['Désir', 'Clarté', 'Action'], icons: ['fa-heart-pulse', 'fa-eye', 'fa-bolt'] },
+        { title: 'Les CTA passent au banc d’essai', subtitle: 'Un bouton peut exister et rester mou. Daka vérifie s’il pousse vraiment au clic.', hooks: ['Boutons', 'Microcopy', 'Décision'], icons: ['fa-computer-mouse', 'fa-quote-right', 'fa-circle-check'] },
+        { title: 'La chirurgie du funnel se prépare', subtitle: 'Garder, modifier, ajouter ou retirer: la sortie arrive en version exploitable.', hooks: ['Garder', 'Améliorer', 'Ajouter'], icons: ['fa-lock', 'fa-wrench', 'fa-plus'] }
+      ],
+      en: [
+        { title: 'Daka reads the page like a rushed buyer', subtitle: 'Every headline, CTA and proof point is tested: does it make action easier?', hooks: ['Hero', 'CTA', 'Proof'], icons: ['fa-heading', 'fa-hand-pointer', 'fa-shield-halved'] },
+        { title: 'The path goes through the scanner', subtitle: 'We follow sections in order to find where attention starts leaking.', hooks: ['Journey', 'Friction', 'Priorities'], icons: ['fa-route', 'fa-triangle-exclamation', 'fa-list-check'] },
+        { title: 'Separating desire from noise', subtitle: 'Copy that sells stays visible. Tiring blocks move down the list.', hooks: ['Desire', 'Clarity', 'Action'], icons: ['fa-heart-pulse', 'fa-eye', 'fa-bolt'] },
+        { title: 'CTAs are on the test bench', subtitle: 'A button can exist and still feel weak. Daka checks if it really drives clicks.', hooks: ['Buttons', 'Microcopy', 'Decision'], icons: ['fa-computer-mouse', 'fa-quote-right', 'fa-circle-check'] },
+        { title: 'Funnel surgery is getting ready', subtitle: 'What to keep, improve, add or remove is being shaped into usable actions.', hooks: ['Keep', 'Improve', 'Add'], icons: ['fa-lock', 'fa-wrench', 'fa-plus'] }
+      ],
+      ar: [
+        { title: 'Daka تقرأ الصفحة كزائر مستعجل', subtitle: 'كل عنوان وزر ودليل يمر بسؤال واحد: هل يسهل قرار الشراء؟', hooks: ['البداية', 'زر القرار', 'الإثبات'], icons: ['fa-heading', 'fa-hand-pointer', 'fa-shield-halved'] },
+        { title: 'مسار الصفحة تحت الفحص', subtitle: 'نتتبع ترتيب الأقسام لاكتشاف أين يضيع الانتباه.', hooks: ['المسار', 'العوائق', 'الأولويات'], icons: ['fa-route', 'fa-triangle-exclamation', 'fa-list-check'] },
+        { title: 'نفصل الرغبة عن الضجيج', subtitle: 'الكلام الذي يبيع يبقى، والبلوكات المتعبة تنزل في الأولوية.', hooks: ['الرغبة', 'الوضوح', 'الفعل'], icons: ['fa-heart-pulse', 'fa-eye', 'fa-bolt'] },
+        { title: 'أزرار القرار تحت الاختبار', subtitle: 'قد يوجد زر لكنه لا يدفع للنقر. Daka تتحقق من قوته الفعلية.', hooks: ['الأزرار', 'النص القصير', 'القرار'], icons: ['fa-computer-mouse', 'fa-quote-right', 'fa-circle-check'] },
+        { title: 'جراحة الفانل تتجهز', subtitle: 'ما يجب الحفاظ عليه أو تحسينه أو إضافته أو حذفه يتحول إلى خطة عملية.', hooks: ['حافظ', 'حسن', 'أضف'], icons: ['fa-lock', 'fa-wrench', 'fa-plus'] }
+      ]
+    }
   },
   technical: {
-    kicker: 'Audit de présence digitale',
-    title: 'Daka inspecte les fondations de votre marché',
-    subtitle: 'Structure, performance et signaux de confiance sont classés selon leur impact business.',
-    hooks: ['Fondations', 'Confiance', 'Priorités business']
+    icon: 'fa-microchip',
+    accent: '#06b6d4',
+    kicker: { fr: 'Audit technique', en: 'Technical audit', ar: 'تدقيق تقني' },
+    variants: {
+      fr: [
+        { title: 'Daka ausculte les fondations', subtitle: 'Vitesse, structure et confiance passent avant les grands discours.', hooks: ['Performance', 'Structure', 'Trust'], icons: ['fa-gauge-high', 'fa-sitemap', 'fa-shield-halved'] },
+        { title: 'Les signaux invisibles passent au néon', subtitle: 'Ce que le visiteur ne voit pas peut quand même casser la confiance.', hooks: ['Meta', 'Schema', 'Indexation'], icons: ['fa-tags', 'fa-code', 'fa-magnifying-glass'] },
+        { title: 'Le site passe le contrôle qualité', subtitle: 'Daka cherche les blocages qui coûtent cher et se corrigent vite.', hooks: ['Erreurs', 'Priorité', 'Impact'], icons: ['fa-bug', 'fa-arrow-down-wide-short', 'fa-chart-line'] },
+        { title: 'On trie les faux travaux', subtitle: 'Tout ne mérite pas votre budget. Les corrections utiles montent en haut.', hooks: ['Filtre', 'Business', 'Confiance'], icons: ['fa-filter', 'fa-briefcase', 'fa-lock'] },
+        { title: 'Votre plan technique devient lisible', subtitle: 'Pas une liste interminable: les actions qui changent vraiment la perception.', hooks: ['Clarté', 'UX', 'Exécution'], icons: ['fa-eye', 'fa-mobile-screen', 'fa-list-check'] }
+      ],
+      en: [
+        { title: 'Daka is checking the foundations', subtitle: 'Speed, structure and trust come before big claims.', hooks: ['Performance', 'Structure', 'Trust'], icons: ['fa-gauge-high', 'fa-sitemap', 'fa-shield-halved'] },
+        { title: 'Invisible signals under neon light', subtitle: 'What visitors do not see can still damage trust.', hooks: ['Meta', 'Schema', 'Indexing'], icons: ['fa-tags', 'fa-code', 'fa-magnifying-glass'] },
+        { title: 'The site enters quality control', subtitle: 'Daka looks for blockers that are expensive to ignore and quick to fix.', hooks: ['Errors', 'Priority', 'Impact'], icons: ['fa-bug', 'fa-arrow-down-wide-short', 'fa-chart-line'] },
+        { title: 'Filtering fake technical work', subtitle: 'Not every fix deserves budget. Useful corrections rise first.', hooks: ['Filter', 'Business', 'Trust'], icons: ['fa-filter', 'fa-briefcase', 'fa-lock'] },
+        { title: 'Your technical plan becomes readable', subtitle: 'Not an endless list: actions that actually improve perception.', hooks: ['Clarity', 'UX', 'Execution'], icons: ['fa-eye', 'fa-mobile-screen', 'fa-list-check'] }
+      ],
+      ar: [
+        { title: 'Daka تفحص الأساسات', subtitle: 'السرعة والبنية والثقة تسبق أي كلام تسويقي كبير.', hooks: ['الأداء', 'البنية', 'الثقة'], icons: ['fa-gauge-high', 'fa-sitemap', 'fa-shield-halved'] },
+        { title: 'الإشارات الخفية تحت الضوء', subtitle: 'ما لا يراه الزائر قد يضعف الثقة رغم ذلك.', hooks: ['الميتا', 'السكيما', 'الفهرسة'], icons: ['fa-tags', 'fa-code', 'fa-magnifying-glass'] },
+        { title: 'الموقع يدخل فحص الجودة', subtitle: 'نبحث عن عوائق مكلفة إذا أهملت وسهلة إذا رتبت.', hooks: ['أخطاء', 'أولوية', 'أثر'], icons: ['fa-bug', 'fa-arrow-down-wide-short', 'fa-chart-line'] },
+        { title: 'نفرز الأعمال التقنية الزائفة', subtitle: 'ليس كل إصلاح يستحق الميزانية. الأهم يصعد أولا.', hooks: ['تصفية', 'أعمال', 'ثقة'], icons: ['fa-filter', 'fa-briefcase', 'fa-lock'] },
+        { title: 'الخطة التقنية تصبح واضحة', subtitle: 'ليست قائمة طويلة، بل إجراءات تغير إدراك الزائر فعلا.', hooks: ['وضوح', 'تجربة', 'تنفيذ'], icons: ['fa-eye', 'fa-mobile-screen', 'fa-list-check'] }
+      ]
+    }
   },
   keywords: {
-    kicker: 'Lecture de la demande marché',
-    title: 'Daka fait remonter les demandes rentables',
-    subtitle: 'Nous filtrons les intentions utiles pour révéler les sujets qui peuvent attirer une audience qualifiée.',
-    hooks: ['Intentions', 'Demande utile', 'Opportunités']
+    icon: 'fa-key',
+    accent: '#22c55e',
+    kicker: { fr: 'Lecture de la demande', en: 'Demand intelligence', ar: 'قراءة الطلب' },
+    variants: {
+      fr: [
+        { title: 'Daka écoute ce que le marché demande', subtitle: 'Les mots utiles montent, le bruit reste en bas.', hooks: ['Intentions', 'Questions', 'Sujets'], icons: ['fa-comments', 'fa-circle-question', 'fa-layer-group'] },
+        { title: 'On sépare les mots qui vendent du décor', subtitle: 'Un bon mot-clé porte une intention, pas seulement du volume.', hooks: ['Volume', 'Intent', 'Priorité'], icons: ['fa-chart-column', 'fa-bullseye', 'fa-arrow-down-wide-short'] },
+        { title: 'Les questions clients remontent', subtitle: 'Daka transforme les recherches en hooks, titres et idées de contenu.', hooks: ['Hooks', 'H1', 'Articles'], icons: ['fa-wand-magic-sparkles', 'fa-heading', 'fa-newspaper'] },
+        { title: 'Le plan de contenu prend forme', subtitle: 'On range les opportunités par impact, facilité et pertinence business.', hooks: ['Clusters', 'Business', 'Action'], icons: ['fa-diagram-project', 'fa-briefcase', 'fa-bolt'] },
+        { title: 'Votre audience parle déjà', subtitle: 'Daka traduit ses recherches en angles que vous pouvez publier.', hooks: ['Audience', 'Angles', 'Exécution'], icons: ['fa-users', 'fa-compass', 'fa-list-check'] }
+      ],
+      en: [
+        { title: 'Daka listens to real demand', subtitle: 'Useful keywords rise, noise stays down.', hooks: ['Intentions', 'Questions', 'Topics'], icons: ['fa-comments', 'fa-circle-question', 'fa-layer-group'] },
+        { title: 'Separating buying words from decoration', subtitle: 'A strong keyword carries intent, not only volume.', hooks: ['Volume', 'Intent', 'Priority'], icons: ['fa-chart-column', 'fa-bullseye', 'fa-arrow-down-wide-short'] },
+        { title: 'Customer questions are surfacing', subtitle: 'Daka turns searches into hooks, headlines and content ideas.', hooks: ['Hooks', 'H1', 'Articles'], icons: ['fa-wand-magic-sparkles', 'fa-heading', 'fa-newspaper'] },
+        { title: 'The content plan is taking shape', subtitle: 'Opportunities are sorted by impact, ease and business relevance.', hooks: ['Clusters', 'Business', 'Action'], icons: ['fa-diagram-project', 'fa-briefcase', 'fa-bolt'] },
+        { title: 'Your audience is already talking', subtitle: 'Daka translates searches into angles you can publish.', hooks: ['Audience', 'Angles', 'Execution'], icons: ['fa-users', 'fa-compass', 'fa-list-check'] }
+      ],
+      ar: [
+        { title: 'Daka تستمع للطلب الحقيقي', subtitle: 'الكلمات المفيدة تصعد، والضجيج يبقى في الأسفل.', hooks: ['النوايا', 'الأسئلة', 'المواضيع'], icons: ['fa-comments', 'fa-circle-question', 'fa-layer-group'] },
+        { title: 'نفرق بين كلمات الشراء والزينة', subtitle: 'الكلمة القوية تحمل نية واضحة، لا حجما فقط.', hooks: ['الحجم', 'النية', 'الأولوية'], icons: ['fa-chart-column', 'fa-bullseye', 'fa-arrow-down-wide-short'] },
+        { title: 'أسئلة العملاء تظهر', subtitle: 'Daka تحول البحث إلى عناوين وخطافات وأفكار محتوى.', hooks: ['خطافات', 'عنوان', 'مقالات'], icons: ['fa-wand-magic-sparkles', 'fa-heading', 'fa-newspaper'] },
+        { title: 'خطة المحتوى تتشكل', subtitle: 'نرتب الفرص حسب الأثر والسهولة والقيمة التجارية.', hooks: ['مجموعات', 'أعمال', 'فعل'], icons: ['fa-diagram-project', 'fa-briefcase', 'fa-bolt'] },
+        { title: 'جمهورك يتكلم بالفعل', subtitle: 'Daka تترجم بحثه إلى زوايا يمكن نشرها.', hooks: ['الجمهور', 'الزوايا', 'التنفيذ'], icons: ['fa-users', 'fa-compass', 'fa-list-check'] }
+      ]
+    }
   }
 };
+window.dakaLoaderState = { type: null, index: 0, timer: null };
 
+function getDakaLoaderLang() {
+  const state = (typeof STATE !== 'undefined' && STATE) ? STATE : (window.STATE || {});
+  const raw = String(state.currentLang || document.documentElement.lang || 'fr').toLowerCase();
+  if (raw.startsWith('ar')) return 'ar';
+  if (raw.startsWith('en')) return 'en';
+  return 'fr';
+}
+
+function getDakaLoaderPack(type = 'competitors') {
+  const pack = DAKA_LOADER_COPY[type] || DAKA_LOADER_COPY.competitors;
+  const lang = getDakaLoaderLang();
+  const variants = pack.variants?.[lang] || pack.variants?.fr || [];
+  return {
+    type,
+    lang,
+    icon: pack.icon || 'fa-sparkles',
+    accent: pack.accent || '#22d3ee',
+    kicker: pack.kicker?.[lang] || pack.kicker?.fr || 'Analyse Daka',
+    variants: variants.length ? variants : [{ title: 'Daka prepare votre rapport', subtitle: 'Les signaux utiles sont organises pour vous aider a decider.', hooks: ['Analyse', 'Tri', 'Decision'], icons: ['fa-magnifying-glass', 'fa-filter', 'fa-circle-check'] }]
+  };
+}
+
+function setTextContentSafe(id, value) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = value || '';
+}
+
+function renderDakaLoaderState(type = 'competitors', opts = {}) {
+  const pack = getDakaLoaderPack(type);
+  const state = window.dakaLoaderState || (window.dakaLoaderState = { type: null, index: 0, timer: null });
+  if (opts.reset || state.type !== type) state.index = 0;
+  state.type = type;
+  state.index = Math.max(0, state.index || 0) % pack.variants.length;
+  const item = pack.variants[state.index] || pack.variants[0];
+  const safe = typeof escapeHtml === 'function' ? escapeHtml : value => String(value || '');
+
+  const loader = document.getElementById('daka-global-loader');
+  if (loader) {
+    loader.dataset.loaderType = type;
+    loader.style.setProperty('--loader-accent', pack.accent);
+  }
+  setTextContentSafe('daka-loader-kicker', pack.kicker);
+  setTextContentSafe('daka-loader-title', item.title);
+  setTextContentSafe('daka-loader-subtitle', item.subtitle);
+
+  const icons = [pack.icon].concat((item.icons || []).slice(0, 3));
+  const iconStack = document.getElementById('daka-loader-icon-stack');
+  if (iconStack) {
+    iconStack.innerHTML = icons.map((icon, index) => `<span class="daka-loader-icon ${index === 0 ? 'is-main' : ''}"><i class="fas ${safe(icon)}"></i></span>`).join('');
+  }
+
+  const hooks = Array.isArray(item.hooks) ? item.hooks : [];
+  const hookIcons = Array.isArray(item.icons) ? item.icons : [];
+  const hooksEl = document.getElementById('daka-loader-hooks');
+  if (hooksEl) {
+    hooksEl.innerHTML = hooks.map((hook, index) => {
+      const icon = hookIcons[index] || 'fa-circle-dot';
+      return `<span><i class="fas ${safe(icon)}"></i>${safe(hook)}</span>`;
+    }).join('');
+  }
+}
+
+function dakaStartLoaderRotation(type = 'competitors') {
+  const state = window.dakaLoaderState || (window.dakaLoaderState = { type: null, index: 0, timer: null });
+  window.clearInterval(state.timer);
+  state.type = type;
+  state.timer = window.setInterval(() => {
+    const pack = getDakaLoaderPack(state.type || type);
+    state.index = ((state.index || 0) + 1) % pack.variants.length;
+    renderDakaLoaderState(state.type || type);
+  }, 3400);
+}
+
+function dakaStopLoaderRotation() {
+  if (window.dakaLoaderState?.timer) window.clearInterval(window.dakaLoaderState.timer);
+  if (window.dakaLoaderState) window.dakaLoaderState.timer = null;
+}
 function enforceMutedLoaderVideos() {
   document.querySelectorAll('.daka-global-loader video, .daka-fullscreen-loader video, .daka-loader-video, .daka-header-logo-video').forEach(video => {
     video.muted = true;
@@ -1951,7 +2113,6 @@ function enforceMutedLoaderVideos() {
 
 function showDakaLoader(type = 'competitors') {
   const loader = document.getElementById('daka-global-loader');
-  const copy = DAKA_LOADER_COPY[type] || DAKA_LOADER_COPY.competitors;
   if (!loader) return 0;
 
   window.dakaCurrentAbortController?.abort();
@@ -1959,10 +2120,8 @@ function showDakaLoader(type = 'competitors') {
   window.dakaAnalysisCancelled = false;
   window.dakaActiveAnalysisId += 1;
 
-  document.getElementById('daka-loader-kicker').textContent = copy.kicker;
-  document.getElementById('daka-loader-title').textContent = copy.title;
-  document.getElementById('daka-loader-subtitle').textContent = copy.subtitle;
-  document.getElementById('daka-loader-hooks').innerHTML = copy.hooks.map(hook => `<span>${escapeHtml(hook)}</span>`).join('');
+  renderDakaLoaderState(type, { reset: true });
+  dakaStartLoaderRotation(type);
   enforceMutedLoaderVideos();
   loader.hidden = false;
   loader.style.display = 'grid';
@@ -1988,6 +2147,7 @@ function hideDakaLoader() {
     loader.hidden = true;
   }
   document.body.classList.remove('loading-active');
+  dakaStopLoaderRotation();
   enforceMutedLoaderVideos();
   DakaSound.loaderStop();
 }
@@ -2110,11 +2270,8 @@ function showLoading(elementId) {
   const endpointType = loaderTypeFromId(elementId);
   const loader = document.getElementById('daka-global-loader');
   if (loader?.classList.contains('active')) {
-    const copy = DAKA_LOADER_COPY[endpointType] || DAKA_LOADER_COPY.competitors;
-    document.getElementById('daka-loader-kicker').textContent = copy.kicker;
-    document.getElementById('daka-loader-title').textContent = copy.title;
-    document.getElementById('daka-loader-subtitle').textContent = copy.subtitle;
-    document.getElementById('daka-loader-hooks').innerHTML = copy.hooks.map(hook => `<span>${escapeHtml(hook)}</span>`).join('');
+    renderDakaLoaderState(endpointType, { reset: window.dakaLoaderState?.type !== endpointType });
+    dakaStartLoaderRotation(endpointType);
     return window.dakaActiveAnalysisId;
   }
   return showDakaLoader(endpointType);
@@ -2394,7 +2551,7 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
     ];
     return `
     <section class="business-intel-shell" data-export-feature="summary" dir="${dir}">
-        <div class="business-intel-kicker"><i class="fas fa-chess-queen"></i>${esc(labels.kicker)}</div>
+        <div class="business-intel-kicker"><i class="fas fa-chart-line"></i>${esc(labels.kicker)}</div>
         ${(hasVerdictCard || hasAttackCard) ? `<div class="business-verdict-grid">` : ''}
             ${hasVerdictCard ? `<article class="business-verdict-card">` : ''}
                 <span class="business-type business-type-deduced">${esc(labels.deduced)}</span>
@@ -2820,7 +2977,7 @@ function renderCompetitorDecisionLayerV2(data, { isAr = false, isEn = false } = 
     return `
     <section class="business-intel-shell" data-export-feature="summary" dir="${dir}">
         <div class="business-intel-cinematic">
-            <div class="business-intel-kicker"><i class="fas fa-chess-queen"></i>${esc(labels.kicker)}</div>
+            <div class="business-intel-kicker"><i class="fas fa-chart-line"></i>${esc(labels.kicker)}</div>
             <div class="business-intel-hero">
                 <article class="business-intel-hero-copy">
                     <span class="business-type business-type-deduced">${esc(labels.opening)}</span>
@@ -3113,7 +3270,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         const lvlColor = { Low: '#10b981', Medium: '#f59e0b', High: '#ef4444', Critical: '#dc2626' };
         const tColor   = lvlColor[md.threatLevel] || '#94a3b8';
         marketDynHtml = card(`
-            ${sectionTitle('fa-chess-king', t.marketDyn, '#f59e0b')}
+            ${sectionTitle('fa-chart-line', t.marketDyn, '#f59e0b')}
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px;">
                 ${md.porterVerdict ? `
                 <div style="padding:14px;background:rgba(245,158,11,0.05);border-radius:10px;border:1px solid rgba(245,158,11,0.12);">
@@ -3208,7 +3365,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             margin-bottom:22px;padding:22px;border-radius:16px;">
             <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
                 <div style="background:var(--accent-secondary);width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                    <i class="fas fa-chess-knight" style="color:white;font-size:1.1rem;"></i>
+                    <i class="fas fa-bullseye" style="color:white;font-size:1.1rem;"></i>
                 </div>
                 <h3 style="margin:0;font-family:'Cairo';color:white;font-size:1.2rem;">${t.battlePlan}</h3>
             </div>
@@ -3299,7 +3456,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         ].filter(row => row[1] && row[1] !== '—');
 
         productAuditHtml = card(`
-            ${sectionTitle('fa-crosshairs', productOpportunityTitle, 'var(--accent-success)')}
+            ${sectionTitle('fa-bullseye', productOpportunityTitle, 'var(--accent-success)')}
             <p style="margin:0 0 14px;color:#bbf7d0;font-size:0.95rem;line-height:1.7;font-weight:700;" dir="auto">
                 ${safe(productOpportunityLead)}
             </p>
@@ -3349,7 +3506,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                     ${Array.isArray(rev.glaringWeaknesses) && rev.glaringWeaknesses.length ? `
                     <div style="padding:14px;border-radius:12px;background:rgba(239,68,68,0.05);border:1px solid rgba(239,68,68,0.12);">
                         <strong style="color:#ef4444;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:10px;">
-                            <i class="fas fa-crosshairs"></i> ${t.weaknesses}
+                            <i class="fas fa-bullseye"></i> ${t.weaknesses}
                         </strong>
                         <ul style="margin:0;padding:0;">${renderList(rev.glaringWeaknesses, '#ef4444')}</ul>
                     </div>` : ''}
@@ -3419,9 +3576,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             const duelConfig = {
                 offerAndRisk:     { title: isAr ? 'العرض والمخاطرة'         : (isEn ? 'Offer & Risk (Allan Dib)'   : 'Offre & Risque (Allan Dib)'),   icon: 'fa-shield-alt',    color: '#f59e0b' },
                 jtbdPsychology:   { title: isAr ? 'علم النفس (JTBD)'        : (isEn ? 'Psychology (JTBD)'          : 'Psychologie (JTBD)'),            icon: 'fa-brain',         color: '#8b5cf6' },
-                kanoDelighter:    { title: isAr ? 'ميزة الإبهار (Kano)'     : (isEn ? 'Delighter (Kano)'           : 'Effet Wahou (Kano)'),            icon: 'fa-magic',         color: '#ec4899' },
+                kanoDelighter:    { title: isAr ? 'ميزة الإبهار (Kano)'     : (isEn ? 'Delighter (Kano)'           : 'Effet Wahou (Kano)'),            icon: 'fa-wand-magic-sparkles', color: '#ec4899' },
                 activationAARRR:  { title: isAr ? 'الاحتكاك (AARRR)'        : (isEn ? 'UX Friction (AARRR)'        : 'Friction UX (AARRR)'),           icon: 'fa-bolt',          color: '#06b6d4' },
-                flankingStrategy: { title: isAr ? 'استراتيجية التطويق'      : (isEn ? 'Flanking Strategy'          : 'Attaque de Flanc'),              icon: 'fa-chess-knight',  color: '#10b981' },
+                flankingStrategy: { title: isAr ? 'استراتيجية التطويق'      : (isEn ? 'Flanking Strategy'          : 'Attaque de Flanc'),              icon: 'fa-bullseye',  color: '#10b981' },
                 pricingBundling:  { title: isAr ? 'هندسة الأسعار'           : (isEn ? 'Pricing Architecture'       : 'Architecture Prix (Leurre)'),    icon: 'fa-tags',          color: '#3b82f6' },
                 valueLadder:      { title: isAr ? 'سلم القيمة'              : (isEn ? 'Value Ladder (Upsell)'      : 'Value Ladder (Upsell)'),         icon: 'fa-layer-group',   color: '#a78bfa' },
                 uxTeardown:       { title: isAr ? 'تفكيك تجربة المستخدم'   : (isEn ? 'UX Teardown'                : 'UX Teardown (Friction)'),        icon: 'fa-mobile-alt',    color: '#f472b6' },
@@ -3429,7 +3586,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
 
             const renderDuelCard = (key, dataObj) => {
                 if (!dataObj || !dataObj.competitor) return '';
-                const conf = duelConfig[key] || { title: key, icon: 'fa-crosshairs', color: '#a78bfa' };
+                const conf = duelConfig[key] || { title: key, icon: 'fa-bullseye', color: '#a78bfa' };
                 return `
                 <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.05);
                             border-radius:14px;padding:18px;transition:all 0.3s ease;"
@@ -3454,7 +3611,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                     ${dataObj.killShot ? `
                     <div style="background:linear-gradient(90deg,rgba(16,185,129,0.12),rgba(16,185,129,0.03));border:1px solid rgba(16,185,129,0.25);padding:10px;border-radius:9px;text-align:${tAlign};">
                         <strong style="color:#34d399;font-size:0.68rem;text-transform:uppercase;display:flex;align-items:center;gap:6px;margin-bottom:5px;">
-                            <i class="fas fa-crosshairs"></i> ${t.kill}
+                            <i class="fas fa-bullseye"></i> ${t.kill}
                         </strong>
                         <div style="font-size:0.88rem;font-weight:800;color:white;line-height:1.5;font-family:'Almarai',sans-serif;" dir="auto">
                             "<bdi>${safe(dataObj.killShot)}</bdi>"
@@ -3464,7 +3621,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             };
 
             duelHtml = card(`
-                ${sectionTitle('fa-chess-board', t.duelTitle, 'var(--accent-secondary)')}
+                ${sectionTitle('fa-chart-column', t.duelTitle, 'var(--accent-secondary)')}
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;">
                     ${validDuelKeys.map(key => renderDuelCard(key, duel[key])).join('')}
                 </div>
@@ -3729,7 +3886,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         const domColor = dom > 70 ? '#ef4444' : (dom > 40 ? '#f59e0b' : '#10b981');
         const safeUrl  = escapeHtml(comp.url || '');
         return `
-        <div class="result-card fade-in-up" style="border-${bSide}:5px solid ${domColor};margin-bottom:16px;animation-delay:${idx * 0.07}s;">
+        <article class="competitor-object-card result-card fade-in-up" data-competitor-rank="${idx + 1}" data-competitor-score="${dom}" style="border-${bSide}:5px solid ${domColor};margin-bottom:16px;animation-delay:${idx * 0.07}s;">
             <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:14px;">
                 <div style="flex:1;min-width:200px;">
                     <div style="display:flex;align-items:center;gap:10px;margin-bottom:7px;">
@@ -3791,7 +3948,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                     </button>
                 </div>
             </div>
-        </div>`;
+        </article>`;
     }).join('');
 
     // ══════════════════════════════════════════════════════════════
@@ -3976,7 +4133,7 @@ if (elite) {
         })}
 
         ${eliteCard({
-          icon: 'fa-crown',
+          icon: 'fa-chart-line',
           label: elite.leaderLabel,
           main: safe(elite.leaderMain, ''),
           extra: proofHtml,
@@ -3985,7 +4142,7 @@ if (elite) {
         })}
 
         ${eliteCard({
-          icon: 'fa-crosshairs',
+          icon: 'fa-bullseye',
           label: elite.gapLabel,
           main: safe(elite.gapMain, ''),
           sub: safe(elite.gapSub, ''),
@@ -4063,7 +4220,7 @@ const reportLabels = getReportLabels({ isAr, isEn });
             ${keywordsHtml}
         `, { isAr, isEn })}
 
-        ${renderReportSection('competitors', reportLabels.competitors, `${competitors.length} ${t.targets} - ${reportLabels.competitorsSub}`, 'fa-crosshairs', `
+        ${renderReportSection('competitors', reportLabels.competitors, `${competitors.length} ${t.targets} - ${reportLabels.competitorsSub}`, 'fa-bullseye', `
             ${competitors.length ? competitorsList : `
     <div class="result-card fade-in-up" style="text-align:center;padding:26px;">
         <div style="font-size:0.95rem;color:#94a3b8;">${t.noComp}</div>
@@ -4679,7 +4836,7 @@ function renderRealResultsEngine(ctx = {}, opts = {}) {
     const cards = [
         {
             type: 'markdown',
-            icon: 'fa-magnifying-glass-chart',
+            icon: 'fa-magnifying-glass',
             title: isAr ? 'إشارة الظهور والهوية' : isEn ? 'Search Snippet & Brand Signal' : 'Search Snippet & Brand Signal',
             desc: isAr ? 'عنوان ووصف وروابط اجتماعية تجعل الصفحة مفهومة قبل الزيارة.' : isEn ? 'Title, meta and social previews that make the offer clear before the click.' : 'Title, meta et aperçus sociaux pour rendre l’offre claire avant le clic.',
             target: '<head>',
@@ -5400,7 +5557,7 @@ function displayTechnicalResults(data) {
                 </div>
                 <div style="font-weight:700; color:#e2e8f0; font-size:0.95rem;" dir="auto">${extract.title || '---'}</div>
                 ${assets.optimizedTitle ? `<div style="margin-top:8px; font-size:0.8rem; color:#10b981;" dir="auto">
-                    <i class="fas fa-magic" style="margin-${isAr?'left':'right'}:5px;"></i>
+                    <i class="fas fa-wand-magic-sparkles" style="margin-${isAr?'left':'right'}:5px;"></i>
                     ${isAr?'مقترح':'Suggestion'}: ${assets.optimizedTitle}</div>` : ''}
             </div>
 
@@ -5411,7 +5568,7 @@ function displayTechnicalResults(data) {
                 </div>
                 <div style="font-size:0.88rem; line-height:1.5; color:#cbd5e1;" dir="auto">${extract.description || '---'}</div>
                 ${assets.optimizedDescription ? `<div style="margin-top:8px; font-size:0.8rem; color:#10b981;" dir="auto">
-                    <i class="fas fa-magic" style="margin-${isAr?'left':'right'}:5px;"></i>
+                    <i class="fas fa-wand-magic-sparkles" style="margin-${isAr?'left':'right'}:5px;"></i>
                     ${isAr?'مقترح':'Suggestion'}: ${assets.optimizedDescription}</div>` : ''}
             </div>
 
@@ -6527,7 +6684,7 @@ function getDakaExportModules() {
     const feature = (key, icon, fr, en, ar) => ({ key, icon, title: isAr ? ar : isEn ? en : fr });
     return [
         {
-            key: 'competitors', id: 'resultsCompetitors', icon: 'fa-chess-queen',
+            key: 'competitors', id: 'resultsCompetitors', icon: 'fa-chart-line',
             available: !!STATE.lastAnalysisResults,
             title: isAr ? 'المنافسون والسوق' : isEn ? 'Competitors & Market' : 'Concurrents & marché',
             subtitle: isAr ? 'الفرص والتهديدات وخطة التقدم' : isEn ? 'Opportunities, threats and attack plan' : 'Opportunités, menaces et plan d’attaque',
@@ -6536,12 +6693,12 @@ function getDakaExportModules() {
                 feature('summary', 'fa-gauge-high', 'Résumé exécutif · lecture 3 minutes', 'Executive summary · 3-minute read', 'الملخص التنفيذي · قراءة 3 دقائق'),
                 feature('market', 'fa-compass', 'Lecture du marché et preuves', 'Market reading and evidence', 'قراءة السوق والأدلة'),
                 feature('plan', 'fa-list-check', 'Plan d’attaque prioritaire', 'Priority attack plan', 'خطة الهجوم ذات الأولوية'),
-                feature('competitors', 'fa-crosshairs', 'Fiches des concurrents', 'Competitor profiles', 'ملفات المنافسين'),
+                feature('competitors', 'fa-bullseye', 'Fiches des concurrents', 'Competitor profiles', 'ملفات المنافسين'),
                 feature('proof', 'fa-link', 'Sources et liens à consulter', 'Sources and links to review', 'المصادر والروابط للفحص')
             ]
         },
         {
-            key: 'funnel', id: 'resultsFunnel', icon: 'fa-filter-circle-dollar',
+            key: 'funnel', id: 'resultsFunnel', icon: 'fa-filter',
             available: !!STATE.lastFunnelResults,
             title: isAr ? 'العرض ومسار التحويل' : isEn ? 'Offer & Conversion Path' : 'Offre & parcours de conversion',
             subtitle: isAr ? 'الثقة والسعر ونقاط فقدان العملاء' : isEn ? 'Trust, pricing and conversion leaks' : 'Confiance, prix et pertes de conversion',
@@ -6564,9 +6721,9 @@ function getDakaExportModules() {
                 feature('technical-signals', 'fa-microchip', 'Signaux techniques', 'Technical signals', 'الإشارات التقنية'),
                 feature('copy-signals', 'fa-quote-left', 'Signaux copywriting', 'Copywriting signals', 'إشارات النص'),
                 feature('page-metrics', 'fa-chart-column', 'Métriques de page', 'Page metrics', 'مقاييس الصفحة'),
-                feature('attack-opportunities', 'fa-crosshairs', 'Angles d’attaque', 'Attack angles', 'زوايا الهجوم'),
-                feature('ready-copy', 'fa-pen-ruler', 'Textes prêts à utiliser', 'Ready-to-use copy', 'نصوص جاهزة'),
-                feature('trust-mobile', 'fa-shield-heart', 'Confiance et mobile', 'Trust and mobile', 'الثقة والهاتف'),
+                feature('attack-opportunities', 'fa-bullseye', 'Angles d’attaque', 'Attack angles', 'زوايا الهجوم'),
+                feature('ready-copy', 'fa-pen-nib', 'Textes prêts à utiliser', 'Ready-to-use copy', 'نصوص جاهزة'),
+                feature('trust-mobile', 'fa-shield-halved', 'Confiance et mobile', 'Trust and mobile', 'الثقة والهاتف'),
                 feature('prioritized-actions', 'fa-list-check', 'Plan d’action priorisé', 'Prioritized action plan', 'خطة العمل'),
                 feature('mega-redesign', 'fa-wand-magic-sparkles', 'Mega AI Redesign Prompt', 'Mega AI Redesign Prompt', 'أمر إعادة التصميم')
             ]
@@ -9712,13 +9869,24 @@ function buildExecutiveSummaryModel(data, type, lang = STATE.currentLang || 'fr'
 }
 
 function navigateReportView(button, mode) {
-    const root = button?.closest('.executive-summary')?.parentElement || document;
+    const summary = button?.closest('.executive-summary');
+    const root = summary?.parentElement || document;
     const sections = [...root.querySelectorAll('.report-section')];
+    if (summary) {
+        summary.classList.toggle('executive-expanded', mode !== 'summary');
+        summary.classList.toggle('executive-full', mode === 'full');
+        summary.querySelectorAll('.executive-nav button').forEach(navButton => {
+            navButton.classList.toggle('active', navButton === button);
+        });
+    }
     if (mode === 'summary') {
-        button.closest('.executive-summary')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        sections.forEach(section => setReportSectionOpen(section, false));
+        summary?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         return;
     }
-    if (mode === 'analysis') sections.slice(0, 2).forEach(section => setReportSectionOpen(section, true));
+    if (mode === 'analysis') {
+        sections.forEach((section, index) => setReportSectionOpen(section, index < 2));
+    }
     if (mode === 'full') sections.forEach(section => setReportSectionOpen(section, true));
     sections[0]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
@@ -9749,16 +9917,20 @@ function renderExecutiveSummary(data, type, opts = {}) {
         summary: 'Résumé 3 min', analysis: 'Analyse 30 min', full: 'Voir le dossier complet',
         impact: 'Impact', effort: 'Effort', priority: 'Priorité', keywords: 'Mots réels du site'
     };
-    const list = (items) => `<ul>${(items.length ? items : [fallback]).map(item => `<li>${safe(executiveText(item))}</li>`).join('')}</ul>`;
+    const list = (items) => `<ul>${items.map(item => `<li>${safe(executiveText(item))}</li>`).join('')}</ul>`;
     const defaultImpact = isAr ? 'متوسط' : isEn ? 'Medium' : 'Moyen';
     const defaultEffort = isAr ? 'منخفض' : isEn ? 'Low' : 'Faible';
-    const actions = (model.actions.length ? model.actions : [{ title: fallback, impact: defaultImpact, effort: defaultEffort, priority: '1' }])
-        .map((action, index) => ({
-            ...action,
-            impact: executiveIsUsefulText(action.impact) ? action.impact : defaultImpact,
-            effort: executiveIsUsefulText(action.effort) ? action.effort : defaultEffort,
-            priority: executiveIsUsefulText(action.priority) ? action.priority : String(index + 1)
-        }));
+    const actions = (Array.isArray(model.actions) ? model.actions : [])
+        .map((action, index) => {
+            const normalizedAction = typeof action === 'string' ? { title: action } : { ...(action || {}) };
+            return {
+            ...normalizedAction,
+            impact: executiveIsUsefulText(normalizedAction.impact) ? normalizedAction.impact : defaultImpact,
+            effort: executiveIsUsefulText(normalizedAction.effort) ? normalizedAction.effort : defaultEffort,
+            priority: executiveIsUsefulText(normalizedAction.priority) ? normalizedAction.priority : String(index + 1)
+            };
+        })
+        .filter(action => executiveIsUsefulText(action.title));
     const pulse = isAr ? {
         verdict: 'القرار', leverage: 'الرافعة الأقوى', risk: 'الخطر الفوري', move: 'الخطوة التالية',
         proof: 'خلاصة مبنية على الأدلة المرصودة في الصفحة',
@@ -9774,10 +9946,10 @@ function renderExecutiveSummary(data, type, opts = {}) {
     };
     const pulseData = model.pulse || {};
     const pulseItems = [
-        ['fa-compass', pulse.verdict, pulseData.decision || model.verdict || fallback, '#22d3ee'],
-        ['fa-arrow-trend-up', pulse.leverage, pulseData.leverage || model.opportunities[0] || fallback, '#22c55e'],
-        ['fa-triangle-exclamation', pulse.risk, pulseData.risk || model.weaknesses[0] || fallback, '#fb7185'],
-        ['fa-bolt', pulse.move, pulseData.move || actions[0]?.title || fallback, '#a78bfa']
+        ['decision', 'fa-compass', pulse.verdict, pulseData.decision || model.verdict || fallback, '#22d3ee'],
+        ['insight', 'fa-arrow-trend-up', pulse.leverage, pulseData.leverage || model.opportunities[0] || fallback, '#22c55e'],
+        ['risk', 'fa-triangle-exclamation', pulse.risk, pulseData.risk || model.weaknesses[0] || fallback, '#fb7185'],
+        ['action', 'fa-bolt', pulse.move, pulseData.move || actions[0]?.title || fallback, '#a78bfa']
     ];
     const dashboard = model.dashboard || {};
     const dashboardItems = [
@@ -9793,6 +9965,25 @@ function renderExecutiveSummary(data, type, opts = {}) {
         [pulse.risk, pulseData.risk || model.weaknesses[0]],
         [pulse.move, pulseData.move || actions[0]?.title]
     ].filter(([, value]) => executiveIsUsefulText(value));
+    const executiveBlocks = [
+        model.opportunities?.length ? `<div class="executive-block" style="--executive-color:#10b981"><h3>${safe(t.opportunities)}</h3>${list(model.opportunities)}</div>` : '',
+        model.weaknesses?.length ? `<div class="executive-block" style="--executive-color:#ef4444"><h3>${safe(t.weaknesses)}</h3>${list(model.weaknesses)}</div>` : '',
+        actions.length ? `<div class="executive-block executive-block-wide" style="--executive-color:#8b5cf6">
+                <h3>${safe(t.actions)}</h3>
+                <div class="executive-actions">${actions.map(action => `
+                    <div class="executive-action">
+                        <strong>${safe(action.title)}</strong>
+                        <div class="executive-action-meta">
+                            <span>${safe(t.impact)}: ${safe(action.impact)}</span>
+                            <span>${safe(t.effort)}: ${safe(action.effort)}</span>
+                            <span>${safe(t.priority)}: ${safe(action.priority)}</span>
+                        </div>
+                    </div>`).join('')}
+                </div>
+            </div>` : '',
+        model.quickWins?.length ? `<div class="executive-block" style="--executive-color:#22d3ee"><h3>${safe(t.quick)}</h3>${list(model.quickWins)}</div>` : '',
+        model.plan30?.length ? `<div class="executive-block" style="--executive-color:#f59e0b"><h3>${safe(t.plan)}</h3>${list(model.plan30)}</div>` : ''
+    ].filter(Boolean).join('');
 
     return `
     <section class="executive-summary fade-in-up" data-export-feature="summary" dir="${isAr ? 'rtl' : 'ltr'}">
@@ -9806,8 +9997,8 @@ function renderExecutiveSummary(data, type, opts = {}) {
         </div>
         <div class="executive-decision-pulse">
             <p class="executive-proof-line"><i class="fas fa-circle-check"></i>${safe(pulse.proof)}</p>
-            <div class="executive-pulse-grid">${pulseItems.map(([icon, label, value, accent]) => `
-                <article style="--pulse-accent:${accent}">
+            <div class="executive-pulse-grid">${pulseItems.map(([lane, icon, label, value, accent]) => `
+                <article data-lane="${lane}" style="--pulse-accent:${accent}">
                     <span><i class="fas ${icon}"></i></span>
                     <div><small>${safe(label)}</small><strong dir="auto">${safe(executiveText(value))}</strong></div>
                 </article>`).join('')}</div>
@@ -9822,29 +10013,11 @@ function renderExecutiveSummary(data, type, opts = {}) {
         </div>` : ''}
         ${model.keywords?.length ? `<div class="executive-keyword-ribbon"><strong>${safe(t.keywords)}</strong><div>${model.keywords.map(word => `<span dir="auto">${safe(word)}</span>`).join('')}</div></div>` : ''}
         <nav class="executive-nav no-print" aria-label="${safe(t.kicker)}">
-            <button type="button" onclick="navigateReportView(this,'summary')">${safe(t.summary)}</button>
+            <button type="button" class="active" onclick="navigateReportView(this,'summary')">${safe(t.summary)}</button>
             <button type="button" onclick="navigateReportView(this,'analysis')">${safe(t.analysis)}</button>
             <button type="button" onclick="navigateReportView(this,'full')">${safe(t.full)}</button>
         </nav>
-        <div class="executive-grid">
-            <div class="executive-block" style="--executive-color:#10b981"><h3>${safe(t.opportunities)}</h3>${list(model.opportunities)}</div>
-            <div class="executive-block" style="--executive-color:#ef4444"><h3>${safe(t.weaknesses)}</h3>${list(model.weaknesses)}</div>
-            <div class="executive-block executive-block-wide" style="--executive-color:#8b5cf6">
-                <h3>${safe(t.actions)}</h3>
-                <div class="executive-actions">${actions.map(action => `
-                    <div class="executive-action">
-                        <strong>${safe(action.title)}</strong>
-                        <div class="executive-action-meta">
-                            <span>${safe(t.impact)}: ${safe(action.impact)}</span>
-                            <span>${safe(t.effort)}: ${safe(action.effort)}</span>
-                            <span>${safe(t.priority)}: ${safe(action.priority)}</span>
-                        </div>
-                    </div>`).join('')}
-                </div>
-            </div>
-            <div class="executive-block" style="--executive-color:#22d3ee"><h3>${safe(t.quick)}</h3>${list(model.quickWins)}</div>
-            <div class="executive-block" style="--executive-color:#f59e0b"><h3>${safe(t.plan)}</h3>${list(model.plan30)}</div>
-        </div>
+        ${executiveBlocks ? `<div class="executive-grid">${executiveBlocks}</div>` : ''}
     </section>`;
 }
 
@@ -10452,7 +10625,7 @@ function renderDecisionProofPanel(data = {}, opts = {}) {
         </div>
         <div style="padding:20px;display:grid;gap:18px;">
             <h3 style="margin:0;color:#fff;font-size:1rem;display:flex;align-items:center;gap:9px;">
-                <i class="fas fa-shield-check" style="color:#60a5fa"></i>${esc(proofTitle)}
+                <i class="fas fa-shield-halved" style="color:#60a5fa"></i>${esc(proofTitle)}
             </h3>
             ${renderFactGroup(observedLabel, proof.observed, '#60a5fa', 'fa-eye')}
             ${renderFactGroup(deducedLabel, proof.deduced, '#f59e0b', 'fa-calculator')}
@@ -10525,7 +10698,7 @@ function renderFunnelSectionSurgery(data, opts = {}) {
         return fallback;
     };
     const definitions = [
-        ['improve', copy.improve, 'fa-pen-ruler', '#f59e0b'], ['add', copy.add, 'fa-circle-plus', '#a78bfa'],
+        ['improve', copy.improve, 'fa-pen-nib', '#f59e0b'], ['add', copy.add, 'fa-circle-plus', '#a78bfa'],
         ['move', copy.move, 'fa-arrows-up-down-left-right', '#38bdf8'], ['remove', copy.remove, 'fa-code-merge', '#fb7185'],
         ['keep', copy.keep, 'fa-circle-check', '#22c55e'], ['unconfirmed', isAr ? 'عناصر غير مؤكدة' : isEn ? 'Unconfirmed items' : 'Éléments non confirmés', 'fa-circle-question', '#60a5fa']
     ];
@@ -11386,7 +11559,7 @@ const visualHierarchyHtml =
             ${[
                 { label: i18n.agent1Label, cot: cot.agent1, color: '#3b82f6', icon: 'fa-user-tie'     },
                 { label: i18n.agent2Label, cot: cot.agent2, color: '#10b981', icon: 'fa-funnel-dollar' },
-                { label: i18n.agent3Label, cot: cot.agent3, color: '#f59e0b', icon: 'fa-chess-knight'  },
+                { label: i18n.agent3Label, cot: cot.agent3, color: '#f59e0b', icon: 'fa-bullseye'  },
                 { label: i18n.agent4Label, cot: cot.agent4, color: '#a855f7', icon: 'fa-brain'         },
             ].filter(a => a.cot && Object.keys(a.cot).length > 0).map(a => {
                 const txt = a.cot.reasoning || a.cot.funnelReasoning || a.cot.neuroReasoning
@@ -11548,7 +11721,7 @@ const visualHierarchyHtml =
         { label: i18n.marginLabel,  val: fin.margin   ? fin.margin                                         : null, c: '#10b981', icon: 'fa-chart-line'    },
         { label: 'CPA',             val: fin.cpa      ? `${fin.cpa} ${fin.currency}`                       : null, c: '#ef4444', icon: 'fa-bullseye'      },
         { label: i18n.mrrLabel,     val: fin.mrr      ? `${fin.mrr.toLocaleString()} ${fin.currency}`      : null, c: '#8b5cf6', icon: 'fa-coins'         },
-        { label: i18n.stealLabel,   val: fin.netProfit? `${fin.netProfit.toLocaleString()} ${fin.currency}`: null, c: '#ec4899', icon: 'fa-crosshairs'    },
+        { label: i18n.stealLabel,   val: fin.netProfit? `${fin.netProfit.toLocaleString()} ${fin.currency}`: null, c: '#ec4899', icon: 'fa-bullseye'    },
         { label: i18n.crLabel,      val: fin.cr       ? `${fin.cr}%`                                       : null, c: '#06b6d4', icon: 'fa-percent'       },
     ].filter(k => k.val);
 
@@ -11872,7 +12045,7 @@ const pricingHtml = hasCommerceMoney ? `
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
             <div style="background:var(--accent-secondary);width:40px;height:40px;border-radius:11px;
                  display:flex;align-items:center;justify-content:center;flex-shrink:0;">
-                <i class="fas fa-chess-knight" style="color:white;font-size:1.1rem;"></i>
+                <i class="fas fa-bullseye" style="color:white;font-size:1.1rem;"></i>
             </div>
             <div>
                 <h3 style="margin:0;font-family:Cairo;color:white;font-size:1.05rem;">
@@ -11969,7 +12142,7 @@ const pricingHtml = hasCommerceMoney ? `
              border:1px solid rgba(239,68,68,0.12);border-radius:10px;padding:12px;">
             <small style="color:#ef4444;font-weight:800;font-size:0.6rem;text-transform:uppercase;
                    letter-spacing:1px;display:block;margin-bottom:8px;">
-                <i class="fas fa-chess"></i> ${i18n.counterStratLabel}
+                <i class="fas fa-diagram-project"></i> ${i18n.counterStratLabel}
             </small>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;">
                 ${counterStrat.howToBeatThem ? `
@@ -13029,7 +13202,7 @@ const designHtml = design.primary || design.fontMain || design.style ? `
     <div class="result-card fade-in-up" style="margin-bottom:22px;border-left:4px solid #ef4444;" dir="${dir}">
         <h3 style="margin-bottom:14px;font-family:Cairo;display:flex;align-items:center;
              gap:10px;color:white;font-size:1rem;">
-            <i class="fas fa-crosshairs" style="color:#ef4444"></i>
+            <i class="fas fa-bullseye" style="color:#ef4444"></i>
             ${i18n.counterTitle}
         </h3>
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;">
@@ -13229,7 +13402,7 @@ const funnelReportLabels = getReportLabels({ isAr, isEn });
             <div class="result-card fade-in-up" style="margin-bottom:22px;border-left:4px solid #a855f7;" dir="${dir}">
                 <h3 style="margin-bottom:10px;font-family:Cairo;display:flex;align-items:center;
                      gap:10px;color:white;font-size:1rem;">
-                    <i class="fas fa-magic" style="color:#a855f7"></i>
+                    <i class="fas fa-wand-magic-sparkles" style="color:#a855f7"></i>
                     ${i18n.magicTitle}
                 </h3>
                 <p style="font-size:0.75rem;color:#64748b;margin-bottom:10px;">${i18n.magicSub}</p>
@@ -14225,19 +14398,19 @@ function renderFunnelLegacyModules(data = {}, opts = {}) {
             value: select(data.pageMetrics, legacy.pageMetrics, expert.pageMetrics, data.aarrMetrics, legacy.aarrMetrics)
         },
         {
-            key: 'attack-opportunities', icon: 'fa-crosshairs',
+            key: 'attack-opportunities', icon: 'fa-bullseye',
             title: text('Angles d’attaque et opportunités', 'Attack angles and opportunities', 'زوايا الهجوم والفرص'),
             subtitle: text('Les leviers différenciants à tester sans présenter une hypothèse comme un fait.', 'Differentiation levers to test without presenting hypotheses as facts.', 'رافعات التميز التي يجب اختبارها دون تقديم الفرضيات كحقائق.'),
             value: select(data.attackAngles, legacy.attackAngles, expert.attackAngles, data.quickWins, legacy.quickWins)
         },
         {
-            key: 'ready-copy', icon: 'fa-pen-ruler',
+            key: 'ready-copy', icon: 'fa-pen-nib',
             title: text('Copywriting prêt à utiliser', 'Ready-to-use copywriting', 'نصوص جاهزة للاستخدام'),
             subtitle: text('Titres, CTA, microcopy et blocs de réassurance directement exploitables.', 'Headlines, CTAs, microcopy, and reassurance blocks ready to use.', 'عناوين وCTA ونصوص طمأنة جاهزة للاستخدام.'),
             value: copyIntel.readyToUseCopy
         },
         {
-            key: 'trust-mobile', icon: 'fa-shield-heart',
+            key: 'trust-mobile', icon: 'fa-shield-halved',
             title: text('Confiance, mobile et risques de décision', 'Trust, mobile, and decision risks', 'الثقة وتجربة الهاتف ومخاطر القرار'),
             subtitle: text('Preuves, objections, expérience mobile et fiabilité des conclusions.', 'Proof, objections, mobile experience, and conclusion reliability.', 'الأدلة والاعتراضات وتجربة الهاتف وموثوقية الاستنتاجات.'),
             value: trustMobile
@@ -14585,7 +14758,7 @@ function displayFunnelResults(data = {}) {
             ${renderReportSection('money', copy.offer, copy.offerSub, 'fa-tags', offerHtml, { isAr, isEn })}
             ${renderReportSection('frictions', copy.frictions, copy.frictionsSub, 'fa-triangle-exclamation', renderFunnelV2Cards(frictions, { accent: '#fb7185', limit: 5, observationLabel: copy.observed, actionLabel: copy.action, confidenceLabel: copy.confidence }) || `<p class="funnel-v2-empty">${safe(copy.partial)}</p>`, { isAr, isEn })}
             ${renderReportSection('plan', copy.plan, copy.planSub, 'fa-list-check', planHtml, { isAr, isEn })}
-            ${primaryEvidenceHtml ? renderReportSection('funnel-primary-evidence', isAr ? 'التحليل القائم على الأدلة' : isEn ? 'Evidence-first analysis' : 'Analyse fondée sur les preuves', isAr ? 'ما تم رصده فعليا قبل أي توصية.' : isEn ? 'What was actually observed before any recommendation.' : 'Ce qui a réellement été observé avant toute recommandation.', 'fa-magnifying-glass-chart', primaryEvidenceHtml, { isAr, isEn }) : ''}
+            ${primaryEvidenceHtml ? renderReportSection('funnel-primary-evidence', isAr ? 'التحليل القائم على الأدلة' : isEn ? 'Evidence-first analysis' : 'Analyse fondée sur les preuves', isAr ? 'ما تم رصده فعليا قبل أي توصية.' : isEn ? 'What was actually observed before any recommendation.' : 'Ce qui a réellement été observé avant toute recommandation.', 'fa-magnifying-glass', primaryEvidenceHtml, { isAr, isEn }) : ''}
             ${renderReportSection('details', copy.details, copy.detailsSub, 'fa-database', detailsHtml, { isAr, isEn })}
             ${legacyModulesHtml}
             ${renderExpertDock('funnel', { isAr, isEn })}
