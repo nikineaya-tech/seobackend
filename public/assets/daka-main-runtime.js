@@ -930,7 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
 let dakaAuthClient = null;
 let currentAuthUser = null;
 let authConfigured = false;
-let authRedirectUrl = `${window.location.origin}${window.location.pathname}`;
+let authRedirectUrl = `${window.location.origin}${window.location.pathname}${window.location.search || ''}`;
 const authReady = new Promise(resolve => { resolveAuthReady = resolve; });
 
 function authCopy() {
@@ -1143,9 +1143,19 @@ function closeAuthModal() {
     document.body.classList.remove('modal-open');
 }
 
+function getAuthRedirectUrl() {
+    const sharedToken = typeof getSharedReportTokenFromLocation === 'function'
+        ? getSharedReportTokenFromLocation()
+        : '';
+    if (sharedToken) {
+        return `${window.location.origin}/app?sharedReport=${encodeURIComponent(sharedToken)}`;
+    }
+    return authRedirectUrl || `${window.location.origin}${window.location.pathname}${window.location.search || ''}`;
+}
+
 async function loginWithGoogle() {
     if (!dakaAuthClient) return openAuthModal();
-   const redirectTo = authRedirectUrl || `${window.location.origin}${window.location.pathname}`;
+   const redirectTo = getAuthRedirectUrl();
     const { error } = await dakaAuthClient.auth.signInWithOAuth({
         provider: 'google',
         options: { redirectTo }
@@ -1156,7 +1166,7 @@ async function loginWithGoogle() {
 async function loginWithEmail() {
     const email = document.getElementById('auth-email')?.value?.trim();
     if (!email || !dakaAuthClient) return toast.warning('Email requis.');
-    const redirectTo = authRedirectUrl || `${window.location.origin}${window.location.pathname}`;
+    const redirectTo = getAuthRedirectUrl();
     const { error } = await dakaAuthClient.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: redirectTo }
@@ -1400,11 +1410,25 @@ async function shareSavedReport(id) {
             body: JSON.stringify({ isPublic: true }),
             timeout: 20000
         });
-        const sharePath = response?.sharePath || response?.shareUrl;
-        if (!sharePath) throw new Error(copy.shareUnavailable);
-        const shareUrl = /^https?:\/\//i.test(String(sharePath))
-            ? String(sharePath)
-            : new URL(sharePath, window.location.origin).href;
+        const rawShare = response?.shareUrl || response?.sharePath || response?.legacyShareUrl || response?.legacySharePath || '';
+        const sharedToken = response?.shareToken ||
+            response?.share_token ||
+            String(rawShare).match(/\/shared-report\/([^/?#]+)/i)?.[1] ||
+            String(rawShare).match(/[?&](?:sharedReport|reportToken)=([^&#]+)/i)?.[1] ||
+            '';
+        let shareUrl = '';
+        if (sharedToken) {
+            let shareBase = window.location.origin;
+            try {
+                if (/^https?:\/\//i.test(String(rawShare))) shareBase = new URL(String(rawShare)).origin;
+            } catch (_) {}
+            shareUrl = new URL(`/app?sharedReport=${encodeURIComponent(decodeURIComponent(String(sharedToken)))}`, shareBase).href;
+        } else if (rawShare) {
+            shareUrl = /^https?:\/\//i.test(String(rawShare))
+                ? String(rawShare).replace(/\/shared-report\/([^/?#]+)/i, (_all, token) => `/app?sharedReport=${encodeURIComponent(decodeURIComponent(token))}`)
+                : new URL(rawShare, window.location.origin).href;
+        }
+        if (!shareUrl) throw new Error(copy.shareUnavailable);
         if (shareWindow && !shareWindow.closed) {
             shareWindow.location.href = shareUrl;
         }
@@ -1453,6 +1477,11 @@ async function initSharedReportRoute() {
     await Promise.race([authReady, new Promise(resolve => setTimeout(resolve, 3500))]);
     const accessToken = await getAuthAccessToken();
     if (!accessToken) {
+        if (authConfigured && typeof openAuthModal === 'function') {
+            toast.info('Connecte-toi pour ouvrir ce rapport partage.');
+            openAuthModal();
+            return;
+        }
         renderSharedReportGate('Connectez-vous avec un compte abonné pour ouvrir ce rapport partagé.', 'login');
         return;
     }

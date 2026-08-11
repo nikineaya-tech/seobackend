@@ -9444,9 +9444,9 @@ body {
 
 #dakaAppMatrixCanvas {
     z-index: 0 !important;
-    opacity: .38 !important;
+    opacity: .52 !important;
     mix-blend-mode: screen;
-    filter: drop-shadow(0 0 10px rgba(34, 211, 238, .25));
+    filter: drop-shadow(0 0 14px rgba(34, 211, 238, .34));
 }
 
 .daka-app-matrix-glow {
@@ -9464,10 +9464,10 @@ body {
     inset: 0;
     pointer-events: none;
     background:
-        linear-gradient(rgba(34, 211, 238, .026) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(34, 211, 238, .022) 1px, transparent 1px);
-    background-size: 54px 54px;
-    mask-image: linear-gradient(to bottom, rgba(0,0,0,.92), transparent 84%);
+        linear-gradient(rgba(34, 211, 238, .045) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(34, 211, 238, .038) 1px, transparent 1px);
+    background-size: 42px 42px;
+    mask-image: linear-gradient(to bottom, rgba(0,0,0,.98), transparent 90%);
 }
 
 .daka-app-matrix-glow::after {
@@ -9541,9 +9541,9 @@ main > .container > .results-container,
     width: 100%;
     height: 100%;
     pointer-events: none;
-    opacity: .34;
+    opacity: .48;
     mix-blend-mode: screen;
-    filter: drop-shadow(0 0 8px rgba(34, 211, 238, .18));
+    filter: drop-shadow(0 0 10px rgba(34, 211, 238, .26));
 }
 
 .tab-content > .card::after,
@@ -9819,8 +9819,8 @@ body > div:has(#btn-export-global),
 }
 
 @media (max-width: 900px) {
-    #dakaAppMatrixCanvas { opacity: .22 !important; }
-    .daka-form-matrix-canvas { opacity: .22; }
+    #dakaAppMatrixCanvas { opacity: .34 !important; }
+    .daka-form-matrix-canvas { opacity: .34; }
     main > .container { width: calc(100% - 18px) !important; }
     .business-intel-hero-circular,
     .business-intel-brief-grid {
@@ -9889,7 +9889,7 @@ body > div:has(#btn-export-global),
         const canvas = document.createElement('canvas');
         canvas.className = 'daka-form-matrix-canvas';
         canvas.setAttribute('aria-hidden', 'true');
-        canvas.dataset.fontSize = '15';
+        canvas.dataset.fontSize = '13';
         canvas._drops = [];
         panel.prepend(canvas);
         formCanvases.add(canvas);
@@ -9918,7 +9918,7 @@ body > div:has(#btn-export-global),
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
         ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-        const fontSize = Number(canvas.dataset.fontSize || 15);
+        const fontSize = Number(canvas.dataset.fontSize || 13);
         const cols = Math.max(1, Math.ceil(width / fontSize));
         canvas._drops = Array.from({ length: cols }, () => Math.floor(Math.random() * (height / fontSize)));
     }
@@ -9931,23 +9931,23 @@ body > div:has(#btn-export-global),
         if (!ctx) return;
         const width = canvas._w || panel.clientWidth || 1;
         const height = canvas._h || panel.clientHeight || 1;
-        const fontSize = Number(canvas.dataset.fontSize || 15);
-        ctx.fillStyle = 'rgba(2, 6, 23, 0.14)';
+        const fontSize = Number(canvas.dataset.fontSize || 13);
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.11)';
         ctx.fillRect(0, 0, width, height);
         ctx.font = fontSize + 'px Consolas, Monaco, monospace';
         for (let i = 0; i < canvas._drops.length; i += 1) {
             const x = i * fontSize;
             const y = canvas._drops[i] * fontSize;
-            const hot = Math.random() > 0.97;
-            ctx.fillStyle = hot ? 'rgba(248, 250, 252, .52)' : (Math.random() > 0.78 ? 'rgba(34, 197, 94, .34)' : 'rgba(34, 211, 238, .42)');
+            const hot = Math.random() > 0.965;
+            ctx.fillStyle = hot ? 'rgba(248, 250, 252, .62)' : (Math.random() > 0.74 ? 'rgba(34, 197, 94, .42)' : 'rgba(34, 211, 238, .52)');
             ctx.fillText(matrixChars[Math.floor(Math.random() * matrixChars.length)] || '0', x, y);
-            if (y > height + 60 && Math.random() > 0.976) canvas._drops[i] = 0;
+            if (y > height + 60 && Math.random() > 0.968) canvas._drops[i] = 0;
             canvas._drops[i] += 1;
         }
     }
 
     function tickFormMatrix(now) {
-        if (!document.hidden && (!formLastFrame || now - formLastFrame > 54)) {
+        if (!document.hidden && (!formLastFrame || now - formLastFrame > 42)) {
             formLastFrame = now;
             formCanvases.forEach(drawFormCanvas);
         }
@@ -10001,13 +10001,13 @@ body > div:has(#btn-export-global),
         filter.type = 'lowpass';
         filter.frequency.setValueAtTime(1600, now);
         gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.exponentialRampToValueAtTime(0.006, now + 0.035);
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+        gain.gain.exponentialRampToValueAtTime(0.0038, now + 0.04);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.46);
         osc.connect(filter);
         filter.connect(gain);
         gain.connect(audioMaster);
         osc.start(now);
-        osc.stop(now + 0.48);
+        osc.stop(now + 0.5);
     }
 
     function startMatrixSound() {
@@ -10019,9 +10019,9 @@ body > div:has(#btn-export-global),
         const now = ctx.currentTime;
         audioMaster.gain.cancelScheduledValues(now);
         audioMaster.gain.setValueAtTime(Math.max(audioMaster.gain.value, 0.0001), now);
-        audioMaster.gain.linearRampToValueAtTime(0.018, now + 0.45);
+        audioMaster.gain.linearRampToValueAtTime(0.011, now + 0.45);
         playSoftPulse();
-        audioPulseTimer = window.setInterval(playSoftPulse, 1500 + Math.floor(Math.random() * 700));
+        audioPulseTimer = window.setInterval(playSoftPulse, 1850 + Math.floor(Math.random() * 850));
     }
 
     function stopMatrixSound() {
@@ -10098,7 +10098,7 @@ body > div:has(#btn-export-global),
     let columns = 0;
     let drops = [];
     let lastFrame = 0;
-    const fontSize = 17;
+    const fontSize = 14;
     const chars = Array.from('Daka Market Insight 010101 CRO UX AIDA SEO DATA TRUST FUNNEL \u0633\u0648\u0642 \u0645\u0646\u0627\u0641\u0633\u0648\u0646 \u062a\u062d\u0644\u064a\u0644 \u062b\u0642\u0629 \u0646\u0645\u0648 \u0642\u0631\u0627\u0631');
 
     function resizeMatrix() {
@@ -10117,7 +10117,7 @@ body > div:has(#btn-export-global),
     }
 
     function drawMatrix() {
-        ctx.fillStyle = 'rgba(2, 6, 23, 0.095)';
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.075)';
         ctx.fillRect(0, 0, width, height);
         ctx.font = fontSize + 'px Consolas, Monaco, monospace';
 
@@ -10125,16 +10125,16 @@ body > div:has(#btn-export-global),
             const text = chars[Math.floor(Math.random() * chars.length)] || '0';
             const x = i * fontSize;
             const y = drops[i] * fontSize;
-            const hot = Math.random() > 0.955;
-            ctx.fillStyle = hot ? 'rgba(248, 250, 252, 0.78)' : (Math.random() > 0.72 ? 'rgba(34, 197, 94, 0.42)' : 'rgba(34, 211, 238, 0.58)');
+            const hot = Math.random() > 0.95;
+            ctx.fillStyle = hot ? 'rgba(248, 250, 252, 0.84)' : (Math.random() > 0.68 ? 'rgba(34, 197, 94, 0.5)' : 'rgba(34, 211, 238, 0.68)');
             ctx.fillText(text, x, y);
-            if (y > height + 90 && Math.random() > 0.972) drops[i] = 0;
+            if (y > height + 90 && Math.random() > 0.965) drops[i] = 0;
             drops[i] += 1;
         }
     }
 
     function tickMatrix(now) {
-        if (!document.hidden && (!lastFrame || now - lastFrame > 38)) {
+        if (!document.hidden && (!lastFrame || now - lastFrame > 30)) {
             lastFrame = now;
             drawMatrix();
         }

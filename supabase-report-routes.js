@@ -64,7 +64,7 @@ function buildReadableSharedReportHtml(data = {}) {
     const dir = isAr ? 'rtl' : 'ltr';
     const labels = isAr ? {
         prepared: '\u062a\u0642\u0631\u064a\u0631 Daka \u0642\u0627\u0628\u0644 \u0644\u0644\u0645\u0634\u0627\u0631\u0643\u0629',
-        open: '\u0647\u0630\u0627 \u0627\u0644\u062a\u0642\u0631\u064a\u0631 \u0645\u062a\u0627\u062d \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0628\u062f\u0648\u0646 \u062d\u0633\u0627\u0628.',
+        open: '\u0647\u0630\u0627 \u0627\u0644\u062a\u0642\u0631\u064a\u0631 \u0645\u062a\u0627\u062d \u0644\u0644\u0642\u0631\u0627\u0621\u0629 \u0628\u0639\u062f \u062a\u0633\u062c\u064a\u0644 \u0627\u0644\u062f\u062e\u0648\u0644.',
         score: '\u0627\u0644\u0646\u062a\u064a\u062c\u0629',
         verdict: '\u0627\u0644\u062e\u0644\u0627\u0635\u0629',
         opportunities: '\u0623\u0641\u0636\u0644 \u0627\u0644\u0641\u0631\u0635',
@@ -74,7 +74,7 @@ function buildReadableSharedReportHtml(data = {}) {
         empty: '\u063a\u064a\u0631 \u0645\u062a\u0627\u062d \u0641\u064a \u0647\u0630\u0627 \u0627\u0644\u062a\u0642\u0631\u064a\u0631.'
     } : isEn ? {
         prepared: 'Shareable Daka report',
-        open: 'This report is readable without an account.',
+        open: 'This report is readable after sign-in.',
         score: 'Score',
         verdict: 'Verdict',
         opportunities: 'Top opportunities',
@@ -84,7 +84,7 @@ function buildReadableSharedReportHtml(data = {}) {
         empty: 'Not available in this report.'
     } : {
         prepared: 'Rapport Daka partageable',
-        open: 'Ce rapport est consultable sans compte.',
+        open: 'Ce rapport est consultable apr\u00e8s connexion.',
         score: 'Score',
         verdict: 'Verdict',
         opportunities: 'Top opportunit\u00e9s',
@@ -565,12 +565,17 @@ return {
             .single();
 
         if (error || !data) return res.status(404).json({ success: false, error: 'REPORT_NOT_FOUND' });
-        const sharePath = data.is_public ? `/shared-report/${data.share_token}` : null;
+        const encodedToken = data.is_public ? encodeURIComponent(data.share_token) : null;
+        const sharePath = encodedToken ? `/app?sharedReport=${encodedToken}` : null;
+        const legacySharePath = encodedToken ? `/shared-report/${encodedToken}` : null;
         return res.json({
             success: true,
             isPublic: data.is_public,
+            shareToken: data.share_token,
             sharePath,
-            shareUrl: sharePath ? `${PUBLIC_REPORT_FRONTEND_URL}${sharePath}` : null
+            shareUrl: sharePath ? `${PUBLIC_REPORT_FRONTEND_URL}${sharePath}` : null,
+            legacySharePath,
+            legacyShareUrl: legacySharePath ? `${PUBLIC_REPORT_FRONTEND_URL}${legacySharePath}` : null
         });
     });
 
@@ -603,16 +608,9 @@ return {
     });
 
     app.get('/shared-report/:token', async (req, res) => {
-        if (!ensureReportsConfigured(res)) return;
-        const { data, error } = await supabase
-            .from('user_reports')
-            .select('type,title,target_url,query,result,created_at')
-            .eq('share_token', req.params.token)
-            .eq('is_public', true)
-            .single();
-
-        if (error || !data) return res.status(404).send('Rapport introuvable ou non partage.');
-        return res.type('html').send(buildSharedReportGateHtml({ token: req.params.token, title: data.title }));
+        const token = String(req.params.token || '').trim();
+        const redirectUrl = `${PUBLIC_REPORT_FRONTEND_URL}/app?sharedReport=${encodeURIComponent(token)}`;
+        return res.redirect(302, redirectUrl);
     });
 
     return { requireReportQuota, persistGeneratedReport, getQuota };
