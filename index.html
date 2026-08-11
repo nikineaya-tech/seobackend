@@ -9517,6 +9517,66 @@ main > .container > .results-container,
         inset 0 1px 0 rgba(255, 255, 255, .045) !important;
 }
 
+.tab-content > .card,
+.form-section {
+    position: relative !important;
+    isolation: isolate;
+    overflow: hidden !important;
+    background:
+        radial-gradient(circle at 12% 4%, rgba(34, 211, 238, .11), transparent 28%),
+        radial-gradient(circle at 88% 12%, rgba(139, 92, 246, .11), transparent 30%),
+        linear-gradient(145deg, rgba(8, 17, 31, .86), rgba(2, 6, 23, .88) 68%, rgba(7, 12, 24, .9)) !important;
+}
+
+.tab-content > .card > :not(.daka-form-matrix-canvas),
+.form-section > :not(.daka-form-matrix-canvas) {
+    position: relative;
+    z-index: 1;
+}
+
+.daka-form-matrix-canvas {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    opacity: .34;
+    mix-blend-mode: screen;
+    filter: drop-shadow(0 0 8px rgba(34, 211, 238, .18));
+}
+
+.tab-content > .card::after,
+.form-section::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(90deg, rgba(2, 6, 23, .72), transparent 16%, transparent 84%, rgba(2, 6, 23, .72)),
+        linear-gradient(180deg, rgba(2, 6, 23, .26), transparent 28%, rgba(2, 6, 23, .42));
+}
+
+.tab-content > .card .input-field,
+.tab-content > .card .select-field,
+.tab-content > .card .textarea-field,
+.form-section .input-field,
+.form-section .select-field,
+.form-section .textarea-field {
+    background: rgba(2, 8, 19, .76) !important;
+    backdrop-filter: blur(8px);
+}
+
+.tab-content > .card .input-field:focus,
+.tab-content > .card .select-field:focus,
+.tab-content > .card .textarea-field:focus,
+.form-section .input-field:focus,
+.form-section .select-field:focus,
+.form-section .textarea-field:focus {
+    background: rgba(5, 15, 31, .88) !important;
+}
+
 @media (min-width: 1440px) {
     :root { --daka-command-max: 1640px; }
     .nav-tabs { max-width: 980px !important; }
@@ -9532,16 +9592,228 @@ main > .container > .results-container,
 
 @media (max-width: 900px) {
     #dakaAppMatrixCanvas { opacity: .22 !important; }
+    .daka-form-matrix-canvas { opacity: .22; }
     main > .container { width: calc(100% - 18px) !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {
     #dakaAppMatrixCanvas { opacity: 0 !important; }
+    .daka-form-matrix-canvas { display: none; }
     .daka-app-matrix-glow::before { display: none; }
 }
 </style>
 
 <script>
+(function initDakaFormMatrixAndSound() {
+    const formSelector = '.tab-content > .card, .form-section';
+    const loaderSelector = '#daka-global-loader, .loading-state';
+    const matrixChars = Array.from('Daka Market Insight 010101 CRO UX AIDA SEO DATA TRUST FUNNEL \u0633\u0648\u0642 \u0645\u0646\u0627\u0641\u0633\u0648\u0646 \u062a\u062d\u0644\u064a\u0644 \u062b\u0642\u0629 \u0646\u0645\u0648 \u0642\u0631\u0627\u0631');
+    const formCanvases = new Set();
+    let formLastFrame = 0;
+    let audioCtx = null;
+    let audioMaster = null;
+    let audioPulseTimer = null;
+    let audioRunning = false;
+    let userInteracted = false;
+    let soundMuted = localStorage.getItem('dakaMatrixSoundMuted') === '1';
+
+    function ensureFormCanvas(panel) {
+        if (!panel || panel.querySelector(':scope > .daka-form-matrix-canvas')) return;
+        const canvas = document.createElement('canvas');
+        canvas.className = 'daka-form-matrix-canvas';
+        canvas.setAttribute('aria-hidden', 'true');
+        canvas.dataset.fontSize = '15';
+        canvas._drops = [];
+        panel.prepend(canvas);
+        formCanvases.add(canvas);
+        resizeFormCanvas(canvas);
+    }
+
+    function mountFormMatrices() {
+        document.querySelectorAll(formSelector).forEach(ensureFormCanvas);
+    }
+
+    function resizeFormCanvas(canvas) {
+        const panel = canvas.parentElement;
+        if (!panel) return;
+        const rect = panel.getBoundingClientRect();
+        if (!rect.width || !rect.height) return;
+        const ratio = Math.min(window.devicePixelRatio || 1, 1.75);
+        const width = Math.max(1, Math.floor(rect.width));
+        const height = Math.max(1, Math.floor(rect.height));
+        if (canvas._w === width && canvas._h === height) return;
+        canvas._w = width;
+        canvas._h = height;
+        canvas.width = Math.floor(width * ratio);
+        canvas.height = Math.floor(height * ratio);
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+        const fontSize = Number(canvas.dataset.fontSize || 15);
+        const cols = Math.max(1, Math.ceil(width / fontSize));
+        canvas._drops = Array.from({ length: cols }, () => Math.floor(Math.random() * (height / fontSize)));
+    }
+
+    function drawFormCanvas(canvas) {
+        const panel = canvas.parentElement;
+        if (!panel || panel.offsetParent === null) return;
+        resizeFormCanvas(canvas);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        const width = canvas._w || panel.clientWidth || 1;
+        const height = canvas._h || panel.clientHeight || 1;
+        const fontSize = Number(canvas.dataset.fontSize || 15);
+        ctx.fillStyle = 'rgba(2, 6, 23, 0.14)';
+        ctx.fillRect(0, 0, width, height);
+        ctx.font = fontSize + 'px Consolas, Monaco, monospace';
+        for (let i = 0; i < canvas._drops.length; i += 1) {
+            const x = i * fontSize;
+            const y = canvas._drops[i] * fontSize;
+            const hot = Math.random() > 0.97;
+            ctx.fillStyle = hot ? 'rgba(248, 250, 252, .52)' : (Math.random() > 0.78 ? 'rgba(34, 197, 94, .34)' : 'rgba(34, 211, 238, .42)');
+            ctx.fillText(matrixChars[Math.floor(Math.random() * matrixChars.length)] || '0', x, y);
+            if (y > height + 60 && Math.random() > 0.976) canvas._drops[i] = 0;
+            canvas._drops[i] += 1;
+        }
+    }
+
+    function tickFormMatrix(now) {
+        if (!document.hidden && (!formLastFrame || now - formLastFrame > 54)) {
+            formLastFrame = now;
+            formCanvases.forEach(drawFormCanvas);
+        }
+        window.requestAnimationFrame(tickFormMatrix);
+    }
+
+    function updateSoundButton() {
+        const btn = document.getElementById('soundToggle');
+        if (!btn) return;
+        btn.classList.toggle('muted', soundMuted);
+        btn.setAttribute('aria-pressed', String(!soundMuted));
+        btn.setAttribute('title', soundMuted ? 'Activer le son Matrix doux' : 'Couper le son Matrix doux');
+        const icon = btn.querySelector('i');
+        if (icon) icon.className = soundMuted ? 'fas fa-volume-xmark' : 'fas fa-volume-low';
+    }
+
+    function isLoaderVisible() {
+        return Array.from(document.querySelectorAll(loaderSelector)).some(loader => {
+            if (!loader) return false;
+            try {
+                if (loader.id === 'daka-global-loader' && loader.matches?.(':popover-open')) return true;
+            } catch (_) {}
+            const style = window.getComputedStyle(loader);
+            return loader.classList.contains('active') ||
+                loader.classList.contains('show') ||
+                loader.classList.contains('is-active') ||
+                (style.display !== 'none' && style.visibility !== 'hidden' && Number(style.opacity || 1) > 0.2 && loader.offsetParent !== null);
+        });
+    }
+
+    function ensureAudio() {
+        if (audioCtx) return audioCtx;
+        const AudioCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtor) return null;
+        audioCtx = new AudioCtor();
+        audioMaster = audioCtx.createGain();
+        audioMaster.gain.value = 0.0001;
+        audioMaster.connect(audioCtx.destination);
+        return audioCtx;
+    }
+
+    function playSoftPulse() {
+        if (!audioCtx || !audioMaster || soundMuted || !audioRunning) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        const filter = audioCtx.createBiquadFilter();
+        const notes = [392, 523.25, 659.25, 783.99, 1046.5];
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(notes[Math.floor(Math.random() * notes.length)], now);
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1600, now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.exponentialRampToValueAtTime(0.006, now + 0.035);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.42);
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioMaster);
+        osc.start(now);
+        osc.stop(now + 0.48);
+    }
+
+    function startMatrixSound() {
+        if (soundMuted || audioRunning || !userInteracted || document.hidden) return;
+        const ctx = ensureAudio();
+        if (!ctx || !audioMaster) return;
+        ctx.resume?.();
+        audioRunning = true;
+        const now = ctx.currentTime;
+        audioMaster.gain.cancelScheduledValues(now);
+        audioMaster.gain.setValueAtTime(Math.max(audioMaster.gain.value, 0.0001), now);
+        audioMaster.gain.linearRampToValueAtTime(0.018, now + 0.45);
+        playSoftPulse();
+        audioPulseTimer = window.setInterval(playSoftPulse, 1500 + Math.floor(Math.random() * 700));
+    }
+
+    function stopMatrixSound() {
+        if (!audioRunning || !audioCtx || !audioMaster) return;
+        audioRunning = false;
+        window.clearInterval(audioPulseTimer);
+        audioPulseTimer = null;
+        const now = audioCtx.currentTime;
+        audioMaster.gain.cancelScheduledValues(now);
+        audioMaster.gain.setValueAtTime(Math.max(audioMaster.gain.value, 0.0001), now);
+        audioMaster.gain.linearRampToValueAtTime(0.0001, now + 0.35);
+    }
+
+    function syncLoaderSound() {
+        if (soundMuted || !isLoaderVisible()) stopMatrixSound();
+        else startMatrixSound();
+    }
+
+    document.addEventListener('pointerdown', () => {
+        userInteracted = true;
+        ensureAudio();
+        window.setTimeout(syncLoaderSound, 140);
+    }, { passive: true });
+
+    document.addEventListener('click', event => {
+        const btn = event.target.closest?.('#soundToggle');
+        if (!btn) {
+            window.setTimeout(syncLoaderSound, 180);
+            return;
+        }
+        soundMuted = !soundMuted;
+        localStorage.setItem('dakaMatrixSoundMuted', soundMuted ? '1' : '0');
+        updateSoundButton();
+        syncLoaderSound();
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) stopMatrixSound();
+        else syncLoaderSound();
+    });
+
+    try {
+        new MutationObserver(() => {
+            mountFormMatrices();
+            syncLoaderSound();
+        }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'popover'] });
+    } catch (_) {}
+
+    window.addEventListener('resize', () => formCanvases.forEach(resizeFormCanvas), { passive: true });
+    document.addEventListener('DOMContentLoaded', () => {
+        mountFormMatrices();
+        updateSoundButton();
+        syncLoaderSound();
+    });
+    mountFormMatrices();
+    updateSoundButton();
+    tickFormMatrix();
+})();
+
 (function initDakaAppMatrix() {
     const canvas = document.getElementById('dakaAppMatrixCanvas');
     if (!canvas || canvas.dataset.ready === '1') return;
@@ -9557,7 +9829,7 @@ main > .container > .results-container,
     let drops = [];
     let lastFrame = 0;
     const fontSize = 17;
-    const chars = Array.from('Daka Market Insight 010101 CRO UX AIDA SEO DATA TRUST FUNNEL سوق منافسون تحليل ثقة نمو قرار');
+    const chars = Array.from('Daka Market Insight 010101 CRO UX AIDA SEO DATA TRUST FUNNEL \u0633\u0648\u0642 \u0645\u0646\u0627\u0641\u0633\u0648\u0646 \u062a\u062d\u0644\u064a\u0644 \u062b\u0642\u0629 \u0646\u0645\u0648 \u0642\u0631\u0627\u0631');
 
     function resizeMatrix() {
         const ratio = Math.min(window.devicePixelRatio || 1, 2);
