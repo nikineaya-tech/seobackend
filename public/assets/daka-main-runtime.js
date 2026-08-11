@@ -2896,6 +2896,78 @@ function renderCompetitorDecisionLayerV2(data, { isAr = false, isEn = false } = 
     const positioningText = normalizeText(intel.positioning || attack.positioningStatement || finalAnswers.positionToTake || '');
     const editorialTitle = normalizeText(intel.editorialTitle || verdict.currentLeader || finalAnswers.whoWins || [data.keyword, intel.geoInterpretation?.market].filter(Boolean).join(' ? ') || labels.verdict);
     const editorialSubtitle = normalizeText(intel.editorialSubtitle || verdict.marketPattern || cleanItems(study.observedDemandSignals, 1)[0] || cleanItems(study.buyerDecisionFactors, 1)[0] || attack.promiseToMake || study.subject || labels.openingSub);
+    const briefLabels = isAr ? {
+        title: '\u0645\u0644\u062e\u0635 Daka \u0627\u0644\u0645\u0636\u063a\u0648\u0637',
+        signal: '\u0642\u0631\u0627\u0621\u0629 \u0633\u0631\u064a\u0639\u0629',
+        proof: '\u0623\u062f\u0644\u0629 \u062a\u0633\u062a\u062d\u0642 \u0627\u0644\u0641\u062d\u0635',
+        action: '\u0627\u0644\u062d\u0631\u0643\u0629 \u0627\u0644\u0623\u0648\u0644\u0649',
+        chart: '\u0628\u0648\u0635\u0644\u0629 \u0627\u0644\u0633\u0648\u0642',
+        chartSub: '\u062f\u0631\u062c\u0629 \u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u0625\u0634\u0627\u0631\u0627\u062a',
+        stats: '\u0625\u0634\u0627\u0631\u0627\u062a \u0645\u0631\u0635\u0648\u062f\u0629'
+    } : isEn ? {
+        title: 'Compact Daka intelligence',
+        signal: 'Fast read',
+        proof: 'Proof to inspect',
+        action: 'First move',
+        chart: 'Market compass',
+        chartSub: 'Signal-read score',
+        stats: 'Observed signals'
+    } : {
+        title: 'Intelligence Daka compacte',
+        signal: 'Lecture rapide',
+        proof: 'Preuves a inspecter',
+        action: 'Premier move',
+        chart: 'Boussole marche',
+        chartSub: 'Score de lecture des signaux',
+        stats: 'Signaux observes'
+    };
+    const proofPreview = cleanItems([
+        ...(Array.isArray(verdict.whyTheyWin) ? verdict.whyTheyWin : []),
+        ...(Array.isArray(study.observedDemandSignals) ? study.observedDemandSignals : []),
+        ...(Array.isArray(study.buyerDecisionFactors) ? study.buyerDecisionFactors : [])
+    ], 2).join(' | ');
+    const firstMove = positioningText || cleanItems([
+        nowActions[0]?.action,
+        weekActions[0]?.action,
+        attack.positioningStatement,
+        finalAnswers.positionToTake
+    ], 1)[0];
+    const briefItems = [
+        { title: briefLabels.signal, value: editorialSubtitle },
+        { title: briefLabels.proof, value: proofPreview },
+        { title: briefLabels.action, value: firstMove }
+    ].filter((item) => isUseful(item.value));
+    const briefHtml = briefItems.length ? `
+        <details class="business-intel-brief" open>
+            <summary><span><i class="fas fa-chart-line"></i>${esc(labels.kicker || briefLabels.title)}</span><i class="fas fa-chevron-down"></i></summary>
+            <div class="business-intel-brief-grid">
+                ${briefItems.map((item, index) => `
+                    <details class="business-intel-brief-item" ${index === 0 ? 'open' : ''}>
+                        <summary>${esc(item.title)}</summary>
+                        <p>${esc(normalizeText(item.value))}</p>
+                    </details>`).join('')}
+            </div>
+        </details>` : '';
+    const orbitItems = pulseCards.slice(0, 4);
+    const metricTotal = metricCards.reduce((sum, item) => sum + Number(item.value || 0), 0);
+    const chartScore = Math.max(18, Math.min(96, Math.round((directProfiles.length * 12) + (sourceGroups.length * 8) + Math.min(metricTotal, 28) * 2)));
+    const chartHtml = orbitItems.length ? `
+        <aside class="business-orbit-chart" style="--business-orbit-deg:${Math.round(chartScore * 3.6)}deg;">
+            <div class="business-orbit-core">
+                <span>${esc(briefLabels.chart)}</span>
+                <strong>${esc(String(chartScore))}</strong>
+                <small>${esc(briefLabels.chartSub)}</small>
+            </div>
+            <div class="business-orbit-stats" aria-label="${esc(briefLabels.stats)}">
+                ${metricCards.slice(0, 4).map((item) => `<span><b>${esc(String(item.value))}</b>${esc(item.label)}</span>`).join('')}
+            </div>
+            ${orbitItems.map((item, index) => `
+                <article class="business-orbit-node business-orbit-node-${index}">
+                    <span>${esc(item.title)}</span>
+                    <strong>${esc(normalizeText(item.value))}</strong>
+                    ${item.note ? `<p>${esc(normalizeText(item.note))}</p>` : ''}
+                </article>`).join('')}
+        </aside>` : '';
 
     const actionCard = (item) => {
         if (!item || !isUseful(item.action)) return '';
@@ -2977,16 +3049,14 @@ function renderCompetitorDecisionLayerV2(data, { isAr = false, isEn = false } = 
     return `
     <section class="business-intel-shell" data-export-feature="summary" dir="${dir}">
         <div class="business-intel-cinematic">
-            <div class="business-intel-kicker"><i class="fas fa-chart-line"></i>${esc(labels.kicker)}</div>
-            <div class="business-intel-hero">
+            ${briefHtml}
+            <div class="business-intel-hero business-intel-hero-circular">
                 <article class="business-intel-hero-copy">
-                    <span class="business-type business-type-deduced">${esc(labels.opening)}</span>
                     <h2 class="business-intel-headline">${esc(editorialTitle)}</h2>
                     <p class="business-intel-subtitle">${esc(editorialSubtitle)}</p>
                     ${geoNote ? `<p class="business-intel-geo-note">${esc(geoNote)}</p>` : ''}
-                    ${metricCards.length ? `<div class="business-intel-metrics">${metricCards.map((item) => `<article><strong>${esc(String(item.value))}</strong><span>${esc(item.label)}</span></article>`).join('')}</div>` : ''}
                 </article>
-                ${pulseCards.length ? `<aside class="business-intel-pulse-grid">${pulseCards.map((item, index) => `<article class="business-pulse-card" style="--pulse-rgb:${['34,211,238','59,130,246','168,85,247','34,197,94'][index % 4]};"><span>${esc(item.title)}</span><strong>${esc(normalizeText(item.value))}</strong>${item.note ? `<p>${esc(normalizeText(item.note))}</p>` : ''}</article>`).join('')}</aside>` : ''}
+                ${chartHtml}
             </div>
             ${positioningText ? `<article class="business-intel-positioning-card"><strong>${esc(labels.positioning)}</strong><p>${esc(positioningText)}</p></article>` : ''}
         </div>

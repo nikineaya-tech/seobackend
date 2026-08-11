@@ -9577,6 +9577,234 @@ main > .container > .results-container,
     background: rgba(5, 15, 31, .88) !important;
 }
 
+body > div:has(#btn-export-global),
+#btn-export-global {
+    display: none !important;
+}
+
+.business-intel-brief {
+    position: relative;
+    z-index: 2;
+    border: 1px solid rgba(125, 211, 252, .16);
+    border-radius: 16px;
+    background: rgba(2, 8, 19, .48);
+    overflow: hidden;
+}
+
+.business-intel-brief > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 46px;
+    padding: 10px 14px;
+    color: #7dd3fc;
+    cursor: pointer;
+    list-style: none;
+}
+
+.business-intel-brief > summary span {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: .72rem;
+    font-weight: 950;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+}
+
+.business-intel-brief > summary i:last-child {
+    color: #94a3b8;
+    transition: transform .2s ease;
+}
+
+.business-intel-brief[open] > summary i:last-child {
+    transform: rotate(180deg);
+}
+
+.business-intel-brief-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 0 12px 12px;
+}
+
+.business-intel-brief-item {
+    border-radius: 12px;
+    background: rgba(15, 23, 42, .48);
+    border: 1px solid rgba(148, 163, 184, .10);
+}
+
+.business-intel-brief-item > summary {
+    padding: 10px 11px;
+    color: #dbeafe;
+    cursor: pointer;
+    font-size: .72rem;
+    font-weight: 900;
+    list-style: none;
+}
+
+.business-intel-brief-item p {
+    margin: 0;
+    padding: 0 11px 11px;
+    color: #9fb3cc;
+    font-size: .76rem;
+    line-height: 1.55;
+}
+
+.business-intel-hero-circular {
+    grid-template-columns: minmax(0, .88fr) minmax(430px, 1.12fr) !important;
+    align-items: center !important;
+}
+
+.business-intel-hero-circular .business-intel-hero-copy {
+    min-height: 330px;
+    justify-content: center;
+}
+
+.business-intel-hero-circular .business-intel-headline {
+    max-width: 23ch;
+    font-size: clamp(1.85rem, 3.2vw, 3.75rem);
+    line-height: 1.02;
+}
+
+.business-orbit-chart {
+    position: relative;
+    min-height: 520px;
+    border: 1px solid rgba(148, 163, 184, .13);
+    border-radius: 28px;
+    background:
+        radial-gradient(circle at 50% 46%, rgba(34, 211, 238, .13), transparent 30%),
+        radial-gradient(circle at 50% 46%, rgba(139, 92, 246, .10), transparent 48%),
+        linear-gradient(145deg, rgba(3, 10, 23, .86), rgba(9, 20, 38, .62));
+    overflow: hidden;
+}
+
+.business-orbit-chart::before {
+    content: "";
+    position: absolute;
+    inset: 46px;
+    border-radius: 50%;
+    border: 1px dashed rgba(125, 211, 252, .18);
+}
+
+.business-orbit-chart::after {
+    content: "";
+    position: absolute;
+    inset: 96px;
+    border-radius: 50%;
+    border: 1px solid rgba(139, 92, 246, .18);
+}
+
+.business-orbit-core {
+    position: absolute;
+    inset: 50%;
+    width: 190px;
+    aspect-ratio: 1;
+    transform: translate(-50%, -50%);
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 4px;
+    text-align: center;
+    border-radius: 999px;
+    background:
+        radial-gradient(circle at 50% 50%, rgba(2, 8, 19, .96) 0 58%, transparent 59%),
+        conic-gradient(from -90deg, #22d3ee 0 var(--business-orbit-deg), rgba(148, 163, 184, .12) var(--business-orbit-deg) 360deg);
+    box-shadow: 0 0 44px rgba(34, 211, 238, .16), inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+.business-orbit-core span,
+.business-orbit-core small {
+    color: #94a3b8;
+    font-size: .62rem;
+    font-weight: 900;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+}
+
+.business-orbit-core strong {
+    color: #f8fafc;
+    font-size: 3.15rem;
+    line-height: .9;
+}
+
+.business-orbit-stats {
+    position: absolute;
+    left: 50%;
+    bottom: 18px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 7px;
+    width: min(90%, 460px);
+}
+
+.business-orbit-stats span {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, .76);
+    border: 1px solid rgba(148, 163, 184, .12);
+    color: #9fb3cc;
+    font-size: .62rem;
+    font-weight: 850;
+}
+
+.business-orbit-stats b {
+    color: #f8fafc;
+    font-size: .82rem;
+}
+
+.business-orbit-node {
+    position: absolute;
+    width: min(230px, 42%);
+    padding: 12px 13px;
+    border-radius: 16px;
+    background: rgba(2, 8, 19, .82);
+    border: 1px solid rgba(125, 211, 252, .14);
+    backdrop-filter: blur(14px);
+}
+
+.business-orbit-node span {
+    display: block;
+    color: #67e8f9;
+    font-size: .62rem;
+    font-weight: 950;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+}
+
+.business-orbit-node strong {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    color: #f8fafc;
+    font-size: .84rem;
+    line-height: 1.35;
+}
+
+.business-orbit-node p {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    margin: 6px 0 0;
+    color: #9fb3cc;
+    font-size: .7rem;
+    line-height: 1.45;
+}
+
+.business-orbit-node-0 { top: 18px; left: 50%; transform: translateX(-50%); }
+.business-orbit-node-1 { top: 50%; right: 18px; transform: translateY(-50%); }
+.business-orbit-node-2 { bottom: 72px; left: 50%; transform: translateX(-50%); }
+.business-orbit-node-3 { top: 50%; left: 18px; transform: translateY(-50%); }
+
 @media (min-width: 1440px) {
     :root { --daka-command-max: 1640px; }
     .nav-tabs { max-width: 980px !important; }
@@ -9594,6 +9822,40 @@ main > .container > .results-container,
     #dakaAppMatrixCanvas { opacity: .22 !important; }
     .daka-form-matrix-canvas { opacity: .22; }
     main > .container { width: calc(100% - 18px) !important; }
+    .business-intel-hero-circular,
+    .business-intel-brief-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .business-orbit-chart {
+        min-height: auto;
+        display: grid;
+        gap: 10px;
+        padding: 16px;
+    }
+    .business-orbit-chart::before,
+    .business-orbit-chart::after {
+        display: none;
+    }
+    .business-orbit-core,
+    .business-orbit-stats,
+    .business-orbit-node {
+        position: relative;
+        inset: auto;
+        left: auto;
+        right: auto;
+        top: auto;
+        bottom: auto;
+        width: 100%;
+        transform: none;
+    }
+    .business-orbit-core {
+        width: min(220px, 78vw);
+        margin: 0 auto 8px;
+    }
+    .business-orbit-stats {
+        order: 2;
+        width: 100%;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -9616,6 +9878,11 @@ main > .container > .results-container,
     let audioRunning = false;
     let userInteracted = false;
     let soundMuted = localStorage.getItem('dakaMatrixSoundMuted') === '1';
+
+    function removeLegacyFloatingExport() {
+        const oldExport = document.getElementById('btn-export-global');
+        if (oldExport && oldExport.parentElement) oldExport.parentElement.remove();
+    }
 
     function ensureFormCanvas(panel) {
         if (!panel || panel.querySelector(':scope > .daka-form-matrix-canvas')) return;
@@ -9798,6 +10065,7 @@ main > .container > .results-container,
 
     try {
         new MutationObserver(() => {
+            removeLegacyFloatingExport();
             mountFormMatrices();
             syncLoaderSound();
         }).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style', 'popover'] });
@@ -9805,10 +10073,12 @@ main > .container > .results-container,
 
     window.addEventListener('resize', () => formCanvases.forEach(resizeFormCanvas), { passive: true });
     document.addEventListener('DOMContentLoaded', () => {
+        removeLegacyFloatingExport();
         mountFormMatrices();
         updateSoundButton();
         syncLoaderSound();
     });
+    removeLegacyFloatingExport();
     mountFormMatrices();
     updateSoundButton();
     tickFormMatrix();

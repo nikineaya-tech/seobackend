@@ -823,21 +823,36 @@
           : `Qui domine "${subject}" en ${market} ?`)
       : copy('moduleTitle');
     const geoNote = cleanInsight(intel?.geoInterpretation?.mismatchNote);
+    const chartScore = Math.max(18, Math.min(96, Math.round((cards.length * 18) + (competitorProfiles({ competitorIntelligence: intel }, intel).length * 6))));
+    const mini = cards.slice(0, 3);
     return `
-      <section class="daka-comp-opening" dir="${lang() === 'ar' ? 'rtl' : 'ltr'}">
-        <div class="daka-comp-opening-top">
-          <span class="daka-comp-kicker">${esc(copy('opening'))}</span>
-          <h2>${esc(title)}</h2>
-           <p>${esc(openingHook(intel))}</p>
-          ${geoNote ? `<div class="daka-comp-warning">${esc(geoNote)}</div>` : ''}
-        </div>
-        <div class="daka-comp-opening-grid">
-          ${cards.map((card) => `
-            <article class="daka-comp-pulse-card">
-              <span>${esc(card.title)}</span>
-              <strong>${esc(card.value)}</strong>
-              ${card.note ? `<p>${esc(card.note)}</p>` : ''}
-            </article>`).join('')}
+      <section class="daka-comp-opening daka-comp-opening-circular" dir="${lang() === 'ar' ? 'rtl' : 'ltr'}">
+        <details class="daka-comp-intel-brief" open>
+          <summary><span>${esc(copy('moduleTitle'))}</span><i class="fas fa-chevron-down"></i></summary>
+          <div>
+            ${mini.map((card, index) => `
+              <details ${index === 0 ? 'open' : ''}>
+                <summary>${esc(card.title)}</summary>
+                <p>${esc(card.value)}</p>
+                ${card.note ? `<small>${esc(card.note)}</small>` : ''}
+              </details>`).join('')}
+          </div>
+        </details>
+        <div class="daka-comp-opening-layout">
+          <div class="daka-comp-opening-top">
+            <h2>${esc(title)}</h2>
+            <p>${esc(openingHook(intel))}</p>
+            ${geoNote ? `<div class="daka-comp-warning">${esc(geoNote)}</div>` : ''}
+          </div>
+          <aside class="daka-comp-orbit-chart" style="--daka-comp-orbit:${Math.round(chartScore * 3.6)}deg;">
+            <div class="daka-comp-orbit-core"><span>${esc(copy('opening'))}</span><strong>${esc(String(chartScore))}</strong><small>${esc(copy('confidence'))}</small></div>
+            ${cards.slice(0, 4).map((card, index) => `
+              <article class="daka-comp-orbit-node daka-comp-orbit-node-${index}">
+                <span>${esc(card.title)}</span>
+                <strong>${esc(card.value)}</strong>
+                ${card.note ? `<p>${esc(card.note)}</p>` : ''}
+              </article>`).join('')}
+          </aside>
         </div>
       </section>`;
   }
@@ -1299,6 +1314,168 @@
         line-height: 1.78;
         font-size: 0.97rem;
       }
+      #resultsCompetitors .daka-comp-intel-brief {
+        margin-bottom: 16px;
+        border: 1px solid rgba(125, 211, 252, 0.16);
+        border-radius: 16px;
+        background: rgba(2, 8, 19, 0.46);
+        overflow: hidden;
+      }
+      #resultsCompetitors .daka-comp-intel-brief > summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        min-height: 46px;
+        padding: 10px 14px;
+        color: #7dd3fc;
+        cursor: pointer;
+        list-style: none;
+      }
+      #resultsCompetitors .daka-comp-intel-brief > summary span {
+        font-size: 0.72rem;
+        font-weight: 950;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+      #resultsCompetitors .daka-comp-intel-brief > summary i {
+        color: #94a3b8;
+        transition: transform 180ms ease;
+      }
+      #resultsCompetitors .daka-comp-intel-brief[open] > summary i {
+        transform: rotate(180deg);
+      }
+      #resultsCompetitors .daka-comp-intel-brief > div {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px;
+        padding: 0 12px 12px;
+      }
+      #resultsCompetitors .daka-comp-intel-brief details {
+        border: 1px solid rgba(148, 163, 184, 0.10);
+        border-radius: 12px;
+        background: rgba(15, 23, 42, 0.48);
+      }
+      #resultsCompetitors .daka-comp-intel-brief details > summary {
+        padding: 10px 11px;
+        color: #dbeafe;
+        cursor: pointer;
+        font-size: 0.72rem;
+        font-weight: 900;
+        list-style: none;
+      }
+      #resultsCompetitors .daka-comp-intel-brief details p,
+      #resultsCompetitors .daka-comp-intel-brief details small {
+        display: block;
+        margin: 0;
+        padding: 0 11px 11px;
+        color: #9fb3cc;
+        font-size: 0.76rem;
+        line-height: 1.55;
+      }
+      #resultsCompetitors .daka-comp-opening-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 0.9fr) minmax(420px, 1.1fr);
+        gap: 18px;
+        align-items: center;
+      }
+      #resultsCompetitors .daka-comp-orbit-chart {
+        position: relative;
+        min-height: 500px;
+        border: 1px solid rgba(148, 163, 184, 0.13);
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 50% 46%, rgba(34, 211, 238, 0.13), transparent 30%),
+          radial-gradient(circle at 50% 46%, rgba(139, 92, 246, 0.10), transparent 48%),
+          linear-gradient(145deg, rgba(3, 10, 23, 0.86), rgba(9, 20, 38, 0.62));
+        overflow: hidden;
+      }
+      #resultsCompetitors .daka-comp-orbit-chart::before,
+      #resultsCompetitors .daka-comp-orbit-chart::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+      }
+      #resultsCompetitors .daka-comp-orbit-chart::before {
+        inset: 44px;
+        border: 1px dashed rgba(125, 211, 252, 0.18);
+      }
+      #resultsCompetitors .daka-comp-orbit-chart::after {
+        inset: 96px;
+        border: 1px solid rgba(139, 92, 246, 0.18);
+      }
+      #resultsCompetitors .daka-comp-orbit-core {
+        position: absolute;
+        inset: 50%;
+        width: 190px;
+        aspect-ratio: 1;
+        transform: translate(-50%, -50%);
+        display: grid;
+        place-items: center;
+        align-content: center;
+        gap: 4px;
+        text-align: center;
+        border-radius: 999px;
+        background:
+          radial-gradient(circle at 50% 50%, rgba(2, 8, 19, 0.96) 0 58%, transparent 59%),
+          conic-gradient(from -90deg, #22d3ee 0 var(--daka-comp-orbit), rgba(148, 163, 184, 0.12) var(--daka-comp-orbit) 360deg);
+        box-shadow: 0 0 44px rgba(34, 211, 238, 0.16), inset 0 1px 0 rgba(255,255,255,0.08);
+      }
+      #resultsCompetitors .daka-comp-orbit-core span,
+      #resultsCompetitors .daka-comp-orbit-core small {
+        color: #94a3b8;
+        font-size: 0.62rem;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      #resultsCompetitors .daka-comp-orbit-core strong {
+        color: #f8fafc;
+        font-size: 3.15rem;
+        line-height: 0.9;
+      }
+      #resultsCompetitors .daka-comp-orbit-node {
+        position: absolute;
+        width: min(230px, 42%);
+        padding: 12px 13px;
+        border-radius: 16px;
+        background: rgba(2, 8, 19, 0.82);
+        border: 1px solid rgba(125, 211, 252, 0.14);
+        backdrop-filter: blur(14px);
+      }
+      #resultsCompetitors .daka-comp-orbit-node span {
+        display: block;
+        color: #67e8f9;
+        font-size: 0.62rem;
+        font-weight: 950;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        margin-bottom: 5px;
+      }
+      #resultsCompetitors .daka-comp-orbit-node strong {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        color: #f8fafc;
+        font-size: 0.84rem;
+        line-height: 1.35;
+      }
+      #resultsCompetitors .daka-comp-orbit-node p {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin: 6px 0 0;
+        color: #9fb3cc;
+        font-size: 0.7rem;
+        line-height: 1.45;
+      }
+      #resultsCompetitors .daka-comp-orbit-node-0 { top: 18px; left: 50%; transform: translateX(-50%); }
+      #resultsCompetitors .daka-comp-orbit-node-1 { top: 50%; right: 18px; transform: translateY(-50%); }
+      #resultsCompetitors .daka-comp-orbit-node-2 { bottom: 18px; left: 50%; transform: translateX(-50%); }
+      #resultsCompetitors .daka-comp-orbit-node-3 { top: 50%; left: 18px; transform: translateY(-50%); }
       #resultsCompetitors .daka-comp-opening-grid,
       #resultsCompetitors .daka-comp-stat-grid,
       #resultsCompetitors .daka-comp-column-grid,
