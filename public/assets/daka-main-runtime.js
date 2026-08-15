@@ -15198,13 +15198,17 @@ function appendOpenRouterChatMessage(chatId, role, text) {
 
 function extractHtmlForPreview(text) {
     const raw = String(text || '').trim();
-    const fenced = raw.match(/```html\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/);
-    const candidate = (fenced?.[1] || raw).trim();
     const lt = String.fromCharCode(60);
     const gt = String.fromCharCode(62);
+    const fenced = raw.match(/```html\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/);
+    let candidate = (fenced?.[1] || raw).trim();
+    const docStart = candidate.search(new RegExp(lt + '!doctype\\s+html|' + lt + 'html[\\s' + gt + ']', 'i'));
+    if (docStart > 0) candidate = candidate.slice(docStart).trim();
+    const tailFence = candidate.indexOf('```');
+    if (tailFence > 0) candidate = candidate.slice(0, tailFence).trim();
     const fullDocPattern = new RegExp(lt + '!doctype\\s+html|' + lt + 'html[\\s' + gt + ']', 'i');
     const partialHtmlPattern = new RegExp(lt + '(section|main|header|div|style|script|body)[\\s' + gt + ']', 'i');
-    if (fullDocPattern.test(candidate)) return candidate;
+    if (fullDocPattern.test(candidate)) return healPreviewHtmlDocument(candidate);
     if (partialHtmlPattern.test(candidate)) {
         const open = name => lt + name + gt;
         const close = name => lt + '/' + name + gt;
@@ -15214,6 +15218,26 @@ function extractHtmlForPreview(text) {
         return lt + '!doctype html' + gt + open('html') + open('head') + metaCharset + metaViewport + style + close('head') + open('body') + candidate + close('body') + close('html');
     }
     return '';
+}
+
+function closeTag(name) {
+    return String.fromCharCode(60) + '/' + name + String.fromCharCode(62);
+}
+
+function healPreviewHtmlDocument(html) {
+    const lt = String.fromCharCode(60);
+    const gt = String.fromCharCode(62);
+    let doc = String(html || '').trim();
+    const endHtml = doc.search(new RegExp(lt + '/html' + gt, 'i'));
+    if (endHtml > 0) doc = doc.slice(0, endHtml + 7);
+    const openCount = name => (doc.match(new RegExp(lt + name + '\\b', 'gi')) || []).length;
+    const closeCount = name => (doc.match(new RegExp(lt + '/' + name + gt, 'gi')) || []).length;
+    ['style', 'script'].forEach(name => {
+        if (openCount(name) > closeCount(name)) doc += closeTag(name);
+    });
+    if (!new RegExp(lt + '/body' + gt, 'i').test(doc)) doc += closeTag('body');
+    if (!new RegExp(lt + '/html' + gt, 'i').test(doc)) doc += closeTag('html');
+    return doc;
 }
 
 function renderOpenRouterCodePreview(outputId, previewId, emptyId) {
@@ -15337,7 +15361,7 @@ async function runOpenRouterCodeBuilder(kind, promptId, outputId, customId, quot
     }
     if (basePrompt.length < 80) return toast.warning(labels.empty);
     const taskLine = {
-        full: 'Genere une premiere version exploitable en un seul fichier HTML avec CSS et JS integres. Reponds en Markdown avec un seul bloc Markdown html complet. Si c?est trop long, donne Partie 1 et termine par GO.',
+        full: 'MODE LOVABLE EXECUTION. Genere sans questions une page complete en un seul fichier HTML avec CSS et JS integres. Reponds uniquement avec un seul bloc Markdown ```html contenant <!DOCTYPE html> jusqu a </html>. Aucun diagnostic, aucun plan, aucune explication avant le code. Si le budget est limite, fais une version compacte mais complete et previewable.',
         html: 'Genere uniquement le HTML semantique dans un bloc Markdown html. Ne donne pas le CSS ni le JS.',
         css: 'Genere uniquement le CSS premium mobile-first dans un bloc Markdown css. Ne donne pas le HTML complet ni le JS.',
         js: 'Genere uniquement le JavaScript utile dans un bloc Markdown javascript. Ne donne pas le HTML complet ni le CSS.'
@@ -15359,7 +15383,7 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
             method: 'POST',
             body: JSON.stringify({
                 prompt,
-                maxTokens: kind === 'full' ? 4096 : 3000,
+                maxTokens: kind === 'full' ? 14000 : 5000,
                 temperature: 0.22,
                 model: document.getElementById(modelId)?.value || undefined
             }),
