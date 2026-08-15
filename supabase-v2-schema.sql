@@ -57,7 +57,7 @@ create extension if not exists pgcrypto;
 create table if not exists public.user_api_keys (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  provider text not null check (provider in ('openrouter', 'groq')),
+  provider text not null check (provider in ('gemini', 'openrouter', 'groq')),
   encrypted_key text not null,
   key_iv text not null,
   key_tag text not null,

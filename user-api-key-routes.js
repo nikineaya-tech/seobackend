@@ -2,7 +2,19 @@
 
 const crypto = require('crypto');
 
+const PROVIDER_GEMINI = 'gemini';
 const PROVIDER_OPENROUTER = 'openrouter';
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_PROMPT_TO_CODE_MODEL || process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const GEMINI_CODE_MODELS = new Set([
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-pro'
+]);
+const GEMINI_FALLBACK_MODELS = [
+  DEFAULT_GEMINI_MODEL,
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite'
+];
 const DEFAULT_OPENROUTER_MODEL = process.env.OPENROUTER_PROMPT_TO_CODE_MODEL || process.env.OPENROUTER_MODEL || 'cohere/north-mini-code';
 const OPENROUTER_CODE_MODELS = new Set([
   'cohere/north-mini-code',
@@ -232,6 +244,10 @@ function maskOpenRouterKey(last4) {
   return last4 ? `sk-or-v1-****${last4}` : null;
 }
 
+function maskGeminiKey(last4) {
+  return last4 ? `AIza****${last4}` : null;
+}
+
 function validateOpenRouterKey(apiKey) {
   const value = String(apiKey || '').trim();
   if (!/^(sk-or-v1-|sk-)[A-Za-z0-9_-]{20,}$/.test(value)) {
@@ -242,6 +258,26 @@ function validateOpenRouterKey(apiKey) {
   return value;
 }
 
+function validateGeminiKey(apiKey) {
+  const value = String(apiKey || '').trim();
+  if (!/^AIza[A-Za-z0-9_-]{20,}$/.test(value) && value.length < 30) {
+    const error = new Error('INVALID_GEMINI_API_KEY');
+    error.status = 400;
+    throw error;
+  }
+  return value;
+}
+
+function resolveGeminiModel(input) {
+  const requested = String(input || '').trim();
+  if (!requested) return DEFAULT_GEMINI_MODEL;
+  return GEMINI_CODE_MODELS.has(requested) ? requested : DEFAULT_GEMINI_MODEL;
+}
+
+function buildGeminiModelChain(primary) {
+  return [...new Set([resolveGeminiModel(primary), ...GEMINI_FALLBACK_MODELS].filter(Boolean))];
+}
+
 function resolveOpenRouterModel(input) {
   const requested = String(input || '').trim();
   if (!requested) return DEFAULT_OPENROUTER_MODEL;
@@ -250,6 +286,52 @@ function resolveOpenRouterModel(input) {
 
 function buildOpenRouterModelChain(primary) {
   return [...new Set([resolveOpenRouterModel(primary), ...OPENROUTER_FALLBACK_MODELS].filter(Boolean))];
+}
+
+async function callGeminiWithFallback({ apiKey, models, systemPrompt, prompt, maxTokens, temperature }) {
+  const failures = [];
+  for (const model of models) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), Number(process.env.GEMINI_MODEL_TIMEOUT_MS || 60000));
+    try {
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        signal: controller.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ role: 'user', parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature,
+            maxOutputTokens: maxTokens
+          }
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        failures.push({ model, error: payload?.error?.message || `HTTP_${response.status}` });
+        continue;
+      }
+      const content = (payload?.candidates?.[0]?.content?.parts || [])
+        .map(part => part?.text || '')
+        .join('')
+        .trim();
+      if (!content) {
+        failures.push({ model, error: payload?.promptFeedback?.blockReason || 'EMPTY_MODEL_RESPONSE' });
+        continue;
+      }
+      return { payload, model, content, fallbacksTried: failures };
+    } catch (error) {
+      failures.push({ model, error: error?.name === 'AbortError' ? 'MODEL_TIMEOUT_ABORTED' : (error?.message || 'MODEL_REQUEST_FAILED') });
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+  const error = new Error('GEMINI_ALL_MODELS_FAILED');
+  error.status = 502;
+  error.failures = failures;
+  throw error;
 }
 
 async function callOpenRouterWithFallback({ apiKey, models, messages, maxTokens, temperature }) {
@@ -342,6 +424,142 @@ function registerUserApiKeyRoutes(app, { supabase, requireAuth }) {
     }
     return true;
   };
+
+  app.get('/api/user-api-keys/gemini/status', requireAuth, async (req, res) => {
+    if (!ensureStore(res)) return;
+    try {
+      const row = await getUserProviderKey(supabase, req.user.id, PROVIDER_GEMINI);
+      res.json({
+        success: true,
+        connected: Boolean(row && row.status === 'active'),
+        provider: PROVIDER_GEMINI,
+        maskedKey: row ? maskGeminiKey(row.key_last4) : null,
+        updatedAt: row?.updated_at || null,
+        model: DEFAULT_GEMINI_MODEL,
+        models: [...GEMINI_CODE_MODELS]
+      });
+    } catch (error) {
+      console.error('[GeminiKeys] status failed:', error.message);
+      const setup = userKeySetupError(error, 'USER_KEY_STATUS_FAILED');
+      if (setup.error === 'USER_API_KEYS_TABLE_MISSING') {
+        return res.json({
+          success: true,
+          connected: false,
+          provider: PROVIDER_GEMINI,
+          setupRequired: true,
+          error: setup.error,
+          message: setup.message,
+          model: DEFAULT_GEMINI_MODEL,
+          models: [...GEMINI_CODE_MODELS]
+        });
+      }
+      res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
+    }
+  });
+
+  app.post('/api/user-api-keys/gemini', requireAuth, async (req, res) => {
+    if (!ensureStore(res)) return;
+    try {
+      const apiKey = validateGeminiKey(req.body?.apiKey);
+      const encrypted = encryptSecret(apiKey);
+      const record = {
+        user_id: req.user.id,
+        provider: PROVIDER_GEMINI,
+        ...encrypted,
+        key_last4: apiKey.slice(-4),
+        status: 'active',
+        updated_at: new Date().toISOString()
+      };
+      const { data, error } = await supabase
+        .from('user_api_keys')
+        .upsert(record, { onConflict: 'user_id,provider' })
+        .select('key_last4,updated_at,status')
+        .single();
+      if (error) throw error;
+      res.json({
+        success: true,
+        connected: true,
+        provider: PROVIDER_GEMINI,
+        maskedKey: maskGeminiKey(data.key_last4),
+        updatedAt: data.updated_at,
+        model: DEFAULT_GEMINI_MODEL,
+        models: [...GEMINI_CODE_MODELS]
+      });
+    } catch (error) {
+      console.error('[GeminiKeys] save failed:', error.message);
+      const setup = userKeySetupError(error, 'USER_KEY_SAVE_FAILED');
+      res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
+    }
+  });
+
+  app.delete('/api/user-api-keys/gemini', requireAuth, async (req, res) => {
+    if (!ensureStore(res)) return;
+    try {
+      const { error } = await supabase
+        .from('user_api_keys')
+        .delete()
+        .eq('user_id', req.user.id)
+        .eq('provider', PROVIDER_GEMINI);
+      if (error) throw error;
+      res.json({ success: true, connected: false, provider: PROVIDER_GEMINI });
+    } catch (error) {
+      console.error('[GeminiKeys] delete failed:', error.message);
+      const setup = userKeySetupError(error, 'USER_KEY_DELETE_FAILED');
+      res.status(setup.status).json({ success: false, error: setup.error, message: setup.message });
+    }
+  });
+
+  app.post('/api/prompt-to-code/gemini', requireAuth, async (req, res) => {
+    if (!ensureStore(res)) return;
+    try {
+      const prompt = purifyCodeUserInput(req.body?.prompt || '');
+      if (prompt.length < 80) return res.status(400).json({ success: false, error: 'PROMPT_TOO_SHORT' });
+      const promptSignals = parseCodeUserSignals(prompt);
+      const systemPrompt = buildOpenRouterSystemPrompt(promptSignals);
+      const personalizedPrompt = buildOpenRouterPersonalizedPrompt(prompt, promptSignals);
+      const row = await getUserProviderKey(supabase, req.user.id, PROVIDER_GEMINI);
+      if (!row || row.status !== 'active') return res.status(400).json({ success: false, error: 'GEMINI_KEY_NOT_CONNECTED' });
+      const apiKey = decryptSecret(row);
+      const models = buildGeminiModelChain(req.body?.model);
+      const maxTokens = Math.min(65536, Math.max(512, Number(req.body?.maxTokens || 8192)));
+      const temperature = Number.isFinite(Number(req.body?.temperature)) ? Number(req.body.temperature) : 0.22;
+      const result = await callGeminiWithFallback({
+        apiKey,
+        models,
+        maxTokens,
+        temperature,
+        systemPrompt,
+        prompt: personalizedPrompt
+      });
+      res.json({
+        success: true,
+        provider: PROVIDER_GEMINI,
+        model: result.model,
+        attemptedModels: models,
+        fallbacksTried: result.fallbacksTried,
+        content: result.content,
+        promptMeta: {
+          task: promptSignals.task,
+          language: promptSignals.language,
+          constraints: promptSignals.constraints,
+          codeTargets: promptSignals.codeTargets,
+          isAnswerToPreviousQuestions: promptSignals.isAnswerToPreviousQuestions
+        },
+        usage: result.payload?.usageMetadata || null,
+        rateLimit: null
+      });
+    } catch (error) {
+      console.error('[Gemini] prompt-to-code failed:', error.message);
+      const setup = userKeySetupError(error, 'GEMINI_PROMPT_FAILED');
+      res.status(setup.status).json({
+        success: false,
+        error: setup.error,
+        message: setup.message,
+        failures: error.failures || null,
+        rateLimit: null
+      });
+    }
+  });
 
   app.get('/api/user-api-keys/openrouter/status', requireAuth, async (req, res) => {
     if (!ensureStore(res)) return;

@@ -4107,7 +4107,7 @@ table tbody td {
                             <small id="auth-quota" class="auth-quota">0/5</small>
                             <strong id="user-name"></strong>
                         </span>
-                        <button id="btn-groq-key" class="auth-logout-btn" type="button" onclick="openOpenRouterKeyModal()" title="Clé OpenRouter">
+                        <button id="btn-groq-key" class="auth-logout-btn" type="button" onclick="openOpenRouterKeyModal()" title="Clé Gemini API">
                             <i class="fas fa-key"></i>
                         </button>
                         <button id="btn-logout" class="auth-logout-btn" type="button" onclick="logout()" title="Déconnexion">
@@ -4160,8 +4160,8 @@ table tbody td {
         <div class="auth-modal-panel">
             <div class="auth-modal-head">
                 <div>
-                    <h3 id="groq-key-title">Connecter OpenRouter</h3>
-                    <p id="groq-key-subtitle">Ajoutez votre clé OpenRouter pour utiliser le générateur prompt-to-code avec votre propre quota.</p>
+                    <h3 id="groq-key-title">Connecter Gemini API</h3>
+                    <p id="groq-key-subtitle">Ajoutez votre clé Gemini API pour utiliser Daka AI Code Machine avec votre quota Google.</p>
                 </div>
                 <button class="auth-close-btn" type="button" onclick="closeOpenRouterKeyModal()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
             </div>
@@ -4175,14 +4175,14 @@ table tbody td {
                 </div>
                 <div class="groq-key-form">
                     <label>
-                        <span id="groq-key-label">Clé API OpenRouter</span>
-                        <input id="groq-api-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="sk-or-v1-...">
+                        <span id="groq-key-label">Clé API Gemini</span>
+                        <input id="groq-api-key-input" type="password" autocomplete="off" spellcheck="false" placeholder="AIza...">
                     </label>
                     <div class="groq-actions">
                         <button type="button" onclick="saveOpenRouterKey()"><i class="fas fa-lock"></i> <span id="groq-save-label">Enregistrer chiffré</span></button>
                         <button type="button" onclick="deleteOpenRouterKey()"><i class="fas fa-trash"></i> <span id="groq-delete-label">Supprimer</span></button>
                     </div>
-                    <p id="groq-key-note" class="groq-note">Daka n’affiche jamais votre clé. Elle sert uniquement aux appels OpenRouter que vous déclenchez.</p>
+                    <p id="groq-key-note" class="groq-note">Daka n’affiche jamais votre clé. Elle sert uniquement aux appels Gemini que vous déclenchez.</p>
                 </div>
             </div>
         </div>

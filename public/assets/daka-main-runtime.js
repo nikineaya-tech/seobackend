@@ -954,18 +954,18 @@ function authCopy() {
         shareCopied: 'تم نسخ رابط المشاركة.',
         shareUnavailable: 'تعذر إنشاء رابط المشاركة.',
         loadingReport: 'جارٍ فتح التقرير...',
-        groqTitle: 'ربط OpenRouter',
-        groqSubtitle: 'أضف مفتاح OpenRouter لاستخدام مولد code prompt عبر حصتك الخاصة.',
-        groqConnected: 'OpenRouter متصل',
-        groqDisconnected: 'OpenRouter غير متصل',
+        groqTitle: 'ربط Gemini API',
+        groqSubtitle: 'أضف مفتاح Gemini API لاستخدام Daka AI Code Machine عبر حصتك في Google.',
+        groqConnected: 'Gemini API متصل',
+        groqDisconnected: 'Gemini API غير متصل',
         groqMask: 'يبقى المفتاح مشفرا على الخادم.',
-        groqLabel: 'مفتاح OpenRouter API',
+        groqLabel: 'مفتاح Gemini API',
         groqSave: 'حفظ مشفر',
         groqDelete: 'حذف',
-        groqNote: 'لا يعرض Daka مفتاحك أبدا. يستخدم فقط في طلبات OpenRouter التي تطلقها.',
-        groqSaved: 'تم حفظ مفتاح OpenRouter بشكل مشفر.',
-        groqDeleted: 'تم حذف مفتاح OpenRouter.',
-        groqInvalid: 'مفتاح OpenRouter غير صالح.'
+        groqNote: 'لا يعرض Daka مفتاحك أبدا. يستخدم فقط في طلبات Gemini التي تطلقها.',
+        groqSaved: 'تم حفظ مفتاح Gemini API بشكل مشفر.',
+        groqDeleted: 'تم حذف مفتاح Gemini API.',
+        groqInvalid: 'مفتاح Gemini API غير صالح.'
     };
     if (lang === 'en') return {
         login: 'Sign in',
@@ -986,18 +986,18 @@ function authCopy() {
         shareCopied: 'Share link copied.',
         shareUnavailable: 'Unable to create the share link.',
         loadingReport: 'Opening report...',
-        groqTitle: 'Connect OpenRouter',
-        groqSubtitle: 'Add your OpenRouter key to use the Daka prompt-to-code machine with your own quota.',
-        groqConnected: 'OpenRouter connected',
-        groqDisconnected: 'OpenRouter not connected',
+        groqTitle: 'Connect Gemini API',
+        groqSubtitle: 'Add your Gemini API key to use Daka AI Code Machine with your Google quota.',
+        groqConnected: 'Gemini API connected',
+        groqDisconnected: 'Gemini API not connected',
         groqMask: 'Your key stays encrypted on the server.',
-        groqLabel: 'OpenRouter API key',
+        groqLabel: 'Gemini API key',
         groqSave: 'Save encrypted',
         groqDelete: 'Delete',
-        groqNote: 'Daka never displays your key. It is only used for OpenRouter calls you trigger.',
-        groqSaved: 'OpenRouter key saved encrypted.',
-        groqDeleted: 'OpenRouter key deleted.',
-        groqInvalid: 'Invalid OpenRouter key.'
+        groqNote: 'Daka never displays your key. It is only used for Gemini calls you trigger.',
+        groqSaved: 'Gemini API key saved encrypted.',
+        groqDeleted: 'Gemini API key deleted.',
+        groqInvalid: 'Invalid Gemini API key.'
     };
     return {
         login: 'Connexion',
@@ -1018,18 +1018,18 @@ function authCopy() {
         shareCopied: 'Lien de partage copié.',
         shareUnavailable: 'Impossible de créer le lien de partage.',
         loadingReport: 'Ouverture du rapport...',
-        groqTitle: 'Connecter OpenRouter',
-        groqSubtitle: 'Ajoutez votre clé OpenRouter pour utiliser le prompt-to-code avec votre propre quota.',
-        groqConnected: 'OpenRouter connecté',
-        groqDisconnected: 'OpenRouter non connecté',
+        groqTitle: 'Connecter Gemini API',
+        groqSubtitle: 'Ajoutez votre clé Gemini API pour utiliser Daka AI Code Machine avec votre quota Google.',
+        groqConnected: 'Gemini API connecté',
+        groqDisconnected: 'Gemini API non connecté',
         groqMask: 'Votre clé reste chiffrée côté serveur.',
-        groqLabel: 'Clé API OpenRouter',
+        groqLabel: 'Clé API Gemini',
         groqSave: 'Enregistrer chiffré',
         groqDelete: 'Supprimer',
-        groqNote: 'Daka n’affiche jamais votre clé. Elle sert uniquement aux appels OpenRouter que vous déclenchez.',
-        groqSaved: 'Clé OpenRouter enregistrée et chiffrée.',
-        groqDeleted: 'Clé OpenRouter supprimée.',
-        groqInvalid: 'Clé OpenRouter invalide.'
+        groqNote: 'Daka n’affiche jamais votre clé. Elle sert uniquement aux appels Gemini que vous déclenchez.',
+        groqSaved: 'Clé Gemini API enregistrée et chiffrée.',
+        groqDeleted: 'Clé Gemini API supprimée.',
+        groqInvalid: 'Clé Gemini API invalide.'
     };
 }
 
@@ -1203,11 +1203,11 @@ function updateOpenRouterKeyUI(status = {}) {
 async function refreshOpenRouterKeyStatus() {
     if (!currentAuthUser) return updateOpenRouterKeyUI({ connected: false });
     try {
-        const status = await api.get('/api/user-api-keys/openrouter/status', 15000);
+        const status = await api.get('/api/user-api-keys/gemini/status', 15000);
         updateOpenRouterKeyUI(status);
         return status;
     } catch (error) {
-        console.warn('[OpenRouter] status unavailable:', error.message);
+        console.warn('[Gemini] status unavailable:', error.message);
         updateOpenRouterKeyUI({ connected: false });
         return null;
     }
@@ -1233,9 +1233,9 @@ async function saveOpenRouterKey() {
     const copy = authCopy();
     const input = document.getElementById('groq-api-key-input');
     const apiKey = String(input?.value || '').trim();
-    if (!/^(sk-or-v1-|sk-)[A-Za-z0-9_-]{20,}$/.test(apiKey)) return toast.warning(copy.groqInvalid);
+    if (!(/^AIza[A-Za-z0-9_-]{20,}$/.test(apiKey) || apiKey.length >= 30)) return toast.warning(copy.groqInvalid);
     try {
-        const status = await api.request('/api/user-api-keys/openrouter', {
+        const status = await api.request('/api/user-api-keys/gemini', {
             method: 'POST',
             body: JSON.stringify({ apiKey }),
             timeout: 20000
@@ -1252,7 +1252,7 @@ async function saveOpenRouterKey() {
 async function deleteOpenRouterKey() {
     const copy = authCopy();
     try {
-        const status = await api.request('/api/user-api-keys/openrouter', {
+        const status = await api.request('/api/user-api-keys/gemini', {
             method: 'DELETE',
             timeout: 20000
         });
@@ -14514,7 +14514,7 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
     ).join('');
     const builderLabels = {
         title: isAr ? 'Daka AI Code Machine' : isEn ? 'Daka AI Code Machine' : 'Daka AI Code Machine',
-        sub: isAr ? 'استخدم مفتاح OpenRouter المتصل لتوليد كود داخل Daka.' : isEn ? 'Use your connected OpenRouter key to generate code inside Daka.' : 'Utilise ta clé OpenRouter connectée pour générer du code directement dans Daka.',
+        sub: isAr ? 'استخدم مفتاح Gemini API المتصل لتوليد كود داخل Daka.' : isEn ? 'Use your connected Gemini API key to generate code inside Daka.' : 'Utilise ta clé Gemini API connectée pour générer du code directement dans Daka.',
         note: isAr ? 'Describe the app, market, offer, CTA, trust, colors...' : isEn ? 'Describe what to build: market, offer, CTA, trust, colors, constraints...' : 'D?cris ce que tu veux construire : march?, offre, CTA, confiance, couleurs, contraintes...',
         full: isAr ? 'توليد صفحة كاملة' : isEn ? 'Generate full page' : 'Générer page HTML complète',
         html: isAr ? 'توليد HTML' : isEn ? 'Generate HTML' : 'Générer HTML seul',
@@ -14564,7 +14564,7 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
             <header>
                 <div><small>${safe(builderLabels.generator)}</small><strong>${safe(builderLabels.sub)}</strong></div>
                 <button type="button" data-no-collapse="true" onclick="event.stopPropagation();openOpenRouterKeyModal()">
-                    <i class="fas fa-key"></i><span>OpenRouter</span>
+                    <i class="fas fa-key"></i><span>Gemini API</span>
                 </button>
             </header>
             <div id="${builderIds.quota}" class="groq-quota-strip" data-no-collapse="true">
@@ -14580,13 +14580,11 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
             </div>
 
             <label class="groq-model-row" data-no-collapse="true" onclick="event.stopPropagation()">
-                <span>${safe(isAr ? 'OpenRouter model' : isEn ? 'OpenRouter model' : 'Modele OpenRouter')}</span>
+                <span>${safe(isAr ? 'Gemini model' : isEn ? 'Gemini model' : 'Modèle Gemini')}</span>
                 <select id="${builderIds.model}" data-no-collapse="true">
-                    <option value="cohere/north-mini-code">Cohere North Mini Code (free)</option>
-                    <option value="z-ai/glm-5.2">Z.ai GLM 5.2 (free)</option>
-                    <option value="nvidia/nemotron-3-ultra:free">NVIDIA Nemotron 3 Ultra (free)</option>
-                    <option value="moonshotai/kimi-k2.7-code">Kimi K2.7 Code</option>
-                    <option value="qwen/qwen3.7-plus">Qwen3.7 Plus</option>
+                    <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                    <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+                    <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
                 </select>
             </label>
             <textarea id="${builderIds.custom}" class="groq-builder-note" data-no-collapse="true" placeholder="${safe(builderLabels.note)}"></textarea>
@@ -15335,24 +15333,24 @@ async function runOpenRouterCodeBuilder(kind, promptId, outputId, customId, quot
     const labels = lang === 'ar'
         ? {
             login: 'سجل الدخول أولا.',
-            running: 'OpenRouter يكتب الكود...',
+            running: 'Gemini يكتب الكود...',
             ready: 'تم توليد الكود.',
-            connect: 'اربط مفتاح OpenRouter أولا.',
+            connect: 'اربط مفتاح Gemini API أولا.',
             empty: 'لا يوجد prompt كاف للتوليد.'
         }
         : lang === 'en'
             ? {
                 login: 'Sign in first.',
-                running: 'OpenRouter is writing the code...',
+                running: 'Gemini is writing the code...',
                 ready: 'Code generated.',
-                connect: 'Connect your OpenRouter key first.',
+                connect: 'Connect your Gemini API key first.',
                 empty: 'No prompt available for generation.'
             }
             : {
                 login: 'Connecte-toi d’abord.',
-                running: 'OpenRouter écrit le code...',
+                running: 'Gemini écrit le code...',
                 ready: 'Code généré.',
-                connect: 'Connecte ta clé OpenRouter d’abord.',
+                connect: 'Connecte ta clé Gemini API d’abord.',
                 empty: 'Aucun prompt suffisant pour générer.'
             };
     if (!currentAuthUser) {
@@ -15379,7 +15377,7 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> IA...';
         }
         if (output) output.textContent = labels.running;
-        const response = await api.request('/api/prompt-to-code/openrouter', {
+        const response = await api.request('/api/prompt-to-code/gemini', {
             method: 'POST',
             body: JSON.stringify({
                 prompt,
@@ -15401,13 +15399,13 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
         toast.success(labels.ready);
     } catch (error) {
         updateOpenRouterQuotaUI(quotaId, error?.data || {});
-        if (/OPENROUTER_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
+        if (/GEMINI_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
             toast.warning(error.data?.message || labels.connect);
             openOpenRouterKeyModal();
         } else {
-            toast.error(error.message || 'OpenRouter error');
+            toast.error(error.message || 'Gemini error');
         }
-        if (output) output.textContent = error.data?.message || error.message || 'OpenRouter error';
+        if (output) output.textContent = error.data?.message || error.message || 'Gemini error';
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -15432,10 +15430,10 @@ async function sendOpenRouterCodeBuilderMessage(promptId, outputId, chatId, inpu
         .join('\n\n');
     const lang = STATE.currentLang || 'fr';
     const labels = lang === 'ar'
-        ? { login: 'سجل الدخول أولا.', empty: 'اكتب رسالتك أولا.', running: 'OpenRouter يفكر...', connect: 'اربط مفتاح OpenRouter أولا.' }
+        ? { login: 'سجل الدخول أولا.', empty: 'اكتب رسالتك أولا.', running: 'Gemini يفكر...', connect: 'اربط مفتاح Gemini API أولا.' }
         : lang === 'en'
-            ? { login: 'Sign in first.', empty: 'Write your message first.', running: 'OpenRouter is thinking...', connect: 'Connect your OpenRouter key first.' }
-            : { login: 'Connecte-toi d’abord.', empty: 'Écris ton message d’abord.', running: 'OpenRouter réfléchit...', connect: 'Connecte ta clé OpenRouter d’abord.' };
+            ? { login: 'Sign in first.', empty: 'Write your message first.', running: 'Gemini is thinking...', connect: 'Connect your Gemini API key first.' }
+            : { login: 'Connecte-toi d’abord.', empty: 'Écris ton message d’abord.', running: 'Gemini réfléchit...', connect: 'Connecte ta clé Gemini API d’abord.' };
     if (!currentAuthUser) {
         toast.warning(labels.login);
         return openAuthModal();
@@ -15473,7 +15471,7 @@ Si une information manque, pose les questions nécessaires avant d'inventer.`;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
         }
         appendOpenRouterChatMessage(chatId, 'assistant', labels.running);
-        const response = await api.request('/api/prompt-to-code/openrouter', {
+        const response = await api.request('/api/prompt-to-code/gemini', {
             method: 'POST',
             body: JSON.stringify({
                 prompt,
@@ -15494,13 +15492,13 @@ Si une information manque, pose les questions nécessaires avant d'inventer.`;
         updateOpenRouterQuotaUI(quotaId, response);
     } catch (error) {
         updateOpenRouterQuotaUI(quotaId, error?.data || {});
-        if (/OPENROUTER_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
+        if (/GEMINI_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
             toast.warning(error.data?.message || labels.connect);
             openOpenRouterKeyModal();
         } else {
-            toast.error(error.message || 'OpenRouter error');
+            toast.error(error.message || 'Gemini error');
         }
-        appendOpenRouterChatMessage(chatId, 'assistant', error.data?.message || error.message || 'OpenRouter error');
+        appendOpenRouterChatMessage(chatId, 'assistant', error.data?.message || error.message || 'Gemini error');
     } finally {
         if (btn) {
             btn.disabled = false;
