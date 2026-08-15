@@ -14045,13 +14045,43 @@ function buildDakaMegaPromptPackage(rawPrompt, opts = {}) {
         .replace(/\bSEO\b/g, 'visibilité marché')
         .replace(/articles?\s+SEO/ig, 'pages d’acquisition')
         .replace(/mots-cl[eé]s/ig, 'signaux de demande');
+    const looksLikeNoise = value => {
+        const s = clean(value);
+        if (!s || s.length < 2) return true;
+        if (/^(?:word\s*){4,}$/i.test(s)) return true;
+        if (/(?:mmMwWLliI0fiflO&1|undefined|null|\$\{|function\s+\w+|const\s+\w+\s*=|<\/?(?:div|script|style|html|body)\b)/i.test(s)) return true;
+        if ((s.match(/\?/g) || []).length > 12 && !/[a-zA-Z\u0600-\u06FF]{12,}/.test(s)) return true;
+        return false;
+    };
+    const uniqueCleanList = list => {
+        const seen = new Set();
+        return list.map(item => clean(item)).filter(item => item && !looksLikeNoise(item)).filter(item => {
+            const key = item.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim().slice(0, 130);
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    };
+    const purifyReportNotes = value => {
+        let out = stripConflictingRoles(value)
+            .replace(/```[\s\S]*?```/g, ' ')
+            .replace(/<script[\s\S]*?<\/script>/ig, ' ')
+            .replace(/<style[\s\S]*?<\/style>/ig, ' ')
+            .replace(/<[^>]{20,}>/g, ' ')
+            .replace(/(?:\bword\b[\s|,.;:-]*){4,}/ig, ' ')
+            .replace(/(?:mmMwWLliI0fiflO&1\s*)+/ig, ' ')
+            .replace(/\[(?:ADMIN|PHONE|EMAIL|WHATSAPP)[^\]]*\]/ig, 'A confirmer')
+            .replace(/https?:\/\.\.\./g, 'A confirmer');
+        out = clean(out);
+        return looksLikeNoise(out) ? '' : out;
+    };
     const clip = (value, max = 900) => {
         const out = clean(value);
         return out.length > max ? `${out.slice(0, max).trim()}...` : out;
     };
-    const arr = (...values) => values.flatMap(value => Array.isArray(value) ? value : (value ? [value] : []))
+    const arr = (...values) => uniqueCleanList(values.flatMap(value => Array.isArray(value) ? value : (value ? [value] : []))
         .map(item => clean(toText(item?.title || item?.action || item?.sectionType || item?.section || item?.text || item)))
-        .filter(Boolean);
+        .filter(Boolean));
     const url = data.url || data.targetUrl || data.analyzedUrl || STATE.lastInputs?.funnelUrl || 'URL A COLLER';
     const surgery = data.funnelSectionSurgery || data.sectionSurgery || {};
     const primary = data.funnelPrimaryAnalysis || data.funnelEvidenceSynthesis || {};
@@ -14067,11 +14097,15 @@ function buildDakaMegaPromptPackage(rawPrompt, opts = {}) {
     const missing = arr(primary.missing, surgery.add, surgery.missingSections).slice(0, 10);
     const actions = arr(data.concreteActionPlan, data.prioritizedActionPlan, legacy.concreteActionPlan, legacy.quickWins).slice(0, 10);
     const proof = arr(primary.proofUsed, data.proofModel?.observed, data.funnelEvidenceSynthesis?.proofUsed).slice(0, 8);
+    const benefits = arr(data.copySignals?.benefits, data.benefits, data.valueProposition, legacy.benefits).slice(0, 8);
+    const objections = arr(data.objectionMap, data.objections, data.copySignals?.objections, legacy.objections).slice(0, 8);
+    const trustSignals = arr(data.trustSignals, data.trustModel?.signals, data.proofModel?.missing, legacy.trustSignals).slice(0, 8);
+    const pageProblems = arr(data.uxFriction, data.frictionPoints, data.designFindings, data.aidaAnalysis?.fatalFlaws, legacy.uxFriction).slice(0, 8);
     const offerType = clean(offer.offerType || data.offerType || data.projectIdentity?.offerType || data.projectIdentity?.businessModel || legacy.offerType || '');
     const offerContextText = `${offerType} ${url} ${h1} ${present.join(' ')} ${ctas.join(' ')}`.toLowerCase();
     const isPhysicalProduct = /e-?commerce|shop|boutique|produit|product|panier|cart|checkout|livraison|stock|retour|serum|s[ée]rum|lotion|huile|parapharmacie|cosm[eé]tique/.test(offerContextText);
     const isServiceOffer = !isPhysicalProduct && /service|agence|consulting|formation|saas|software|logiciel|audit|devis|rdv|appointment|livrable|accompagnement/.test(offerContextText);
-    const originalPrompt = clip(stripConflictingRoles(rawPrompt), 1800);
+    const originalPrompt = clip(purifyReportNotes(rawPrompt), 1200);
     const vocabularyRules = isPhysicalProduct
         ? text(
             '- Vocabulaire adapté : produit, bénéfices, ingrédients/composition, usage, prix, stock, livraison, retour, garantie, avis, preuve produit, sécurité paiement.\n- Interdit ici sauf preuve : livrables, révisions, accompagnement, diagnostic, prestation.',
@@ -14094,9 +14128,10 @@ function buildDakaMegaPromptPackage(rawPrompt, opts = {}) {
 URL / PAGE :
 - ${url}
 
-CONTEXTE DISPONIBLE :
-- Objectif : ameliorer ou reconstruire une page HTML/CSS/JS orientee conversion.
+CONTEXTE DAKA PURIFIE :
+- Objectif : reconstruire une page de vente elite, claire, mobile-first et orientee conversion.
 - Type d'offre detecte : ${clean(offer.offerType || legacy.auditSummary?.title || 'A confirmer')}
+- Modele marche deduit : ${isPhysicalProduct ? 'Produit physique / ecommerce' : isServiceOffer ? 'Service / SaaS / prestation' : 'A confirmer'}
 - H1 actuel : ${clean(h1)}
 - Prix detecte : ${clean(price)}
 - CTA detectes :
@@ -14107,16 +14142,65 @@ ${bullet(present)}
 ${bullet(weak)}
 - Sections manquantes a ajouter :
 ${bullet(missing)}
+- Benefices ou promesses detectes :
+${bullet(benefits)}
+- Objections ou frictions a traiter :
+${bullet(objections)}
+- Signaux de confiance / preuves / garanties :
+${bullet(trustSignals)}
+- Problemes UX/CRO observes :
+${bullet(pageProblems)}
 - Actions prioritaires Daka :
 ${bullet(actions)}
 - Preuves textuelles disponibles :
 ${bullet(proof)}
-- Notes du rapport Daka :
+- Notes Daka purifiees :
 ${originalPrompt || '- A confirmer'}
 
 REGLES DE VOCABULAIRE MARCHE :
 ${vocabularyRules}
+
+REGLES DE PURIFICATION :
+- Ignore les fragments techniques, placeholders, bouts de code, doublons CTA, repetitions et textes parasites.
+- Ne transforme jamais une recommandation en preuve.
+- Si une information est utile mais non verifiee, affiche-la comme zone a confirmer, pas comme fait.
+- La page finale doit sembler pensee par un vrai marketer senior, pas par un generateur generique.
 `.trim();
+    const eliteRules = text(
+`CHARTE DE GENERATION ELITE DAKA
+1. Commence par une lecture strategique courte : ce que la page vend, a qui, pourquoi l'utilisateur hesite, quelle promesse doit dominer.
+2. Transforme les details du rapport en structure commerciale, pas en texte brut.
+3. La premiere vue doit clarifier : resultat promis, produit/service, preuve visible, CTA principal et reduction du risque.
+4. Chaque section doit avoir un role : comprendre, desirer, croire, comparer, decider, agir.
+5. Ne montre pas les donnees faibles comme des faits. Convertis-les en blocs "A confirmer" ou en recommandations.
+6. Si avis, garantie, livraison, stock, prix ou resultats ne sont pas prouves, cree un emplacement propre et marque "A confirmer".
+7. Purifie les CTA dupliques et garde une action principale coherente.
+8. Produit une page premium, lisible, mobile-first, avec vrai rythme editorial et hierarchie visuelle.
+9. Evite les longs paragraphes : utilise hero, preuves rapides, cartes benefices, etapes, comparaison, FAQ et CTA final.
+10. Le code final doit etre directement collable et ne doit contenir aucun placeholder technique non explique.`,
+`DAKA ELITE GENERATION CHARTER
+1. Start with a short strategic read: what the page sells, to whom, why users hesitate, and which promise should dominate.
+2. Turn report details into a commercial structure, not raw text.
+3. The first viewport must clarify: promised result, product/service, visible proof, main CTA, and risk reduction.
+4. Every section must have a role: understand, desire, trust, compare, decide, act.
+5. Do not present weak data as facts. Convert it into "To confirm" blocks or recommendations.
+6. If reviews, guarantee, delivery, stock, price, or results are not proven, create a clean placeholder marked "To confirm".
+7. Purify duplicate CTAs and keep one coherent main action.
+8. Produce a premium, readable, mobile-first page with strong editorial rhythm and visual hierarchy.
+9. Avoid long paragraphs: use hero, quick proof, benefit cards, steps, comparison, FAQ, and final CTA.
+10. Final code must be paste-ready and contain no unexplained technical placeholder.`,
+`ميثاق Daka لتوليد صفحة Elite
+1. ابدأ بقراءة استراتيجية قصيرة: ماذا تبيع الصفحة، لمن، لماذا يتردد المستخدم، وما الوعد الذي يجب أن يهيمن.
+2. حوّل تفاصيل التقرير إلى بنية تجارية، لا إلى نص خام.
+3. أول شاشة يجب أن توضح: النتيجة الموعودة، المنتج أو الخدمة، دليل سريع، CTA رئيسي وتقليل المخاطرة.
+4. لكل قسم دور واضح: الفهم، الرغبة، الثقة، المقارنة، القرار، التنفيذ.
+5. لا تعرض البيانات الضعيفة كحقائق. حولها إلى "يجب التأكيد" أو توصيات.
+6. إذا لم تثبت الآراء أو الضمان أو التوصيل أو المخزون أو السعر أو النتائج، ضع مكانا نظيفا مكتوبا عليه "يجب التأكيد".
+7. نظف أزرار CTA المكررة واترك إجراء رئيسيا واحدا واضحا.
+8. أنشئ صفحة premium، مقروءة، mobile-first، بإيقاع كتابي وتسلسل بصري قوي.
+9. تجنب الفقرات الطويلة: استعمل hero، أدلة سريعة، بطاقات فوائد، خطوات، مقارنة، FAQ وCTA نهائي.
+10. الكود النهائي يجب أن يكون قابلا للنسخ مباشرة ودون placeholders تقنية غير مفسرة.`
+    );
 
     const full = `${text(
 `Tu es un expert X10 en UI/UX, CRO, copywriting et frontend HTML/CSS/JS. Ta mission est de m'aider a ameliorer ou reconstruire ma page a partir des preuves Funnel fournies.
@@ -14126,6 +14210,8 @@ Je veux une page claire, responsive, credible et orientee conversion. L'utilisat
 
 DONNEES DISPONIBLES
 ${commonData}
+
+${eliteRules}
 
 QUESTIONS DE CLARIFICATION
 Avant de coder, analyse les donnees. Si une information manque ou semble contradictoire, pose 3 a 7 questions maximum. Si tout est suffisant, dis "Les donnees sont suffisantes" et passe au plan.
@@ -14160,7 +14246,7 @@ REGLES DE CODE
 - Commente les sections importantes.
 
 SECTIONS A GENERER
-Hero clair, benefices, preuve sociale, offre/prix, garanties, FAQ, comparaison si utile, urgence/scarcity seulement si prouvee, CTA final, sticky CTA mobile si utile.
+Hero clair, preuve rapide, benefices, demonstration visuelle, offre/prix, garanties, FAQ, comparaison si utile, urgence/scarcity seulement si prouvee, CTA final, sticky CTA mobile si utile.
 
 METHODE DE LIVRAISON
 Reponds en etapes :
@@ -14181,6 +14267,8 @@ I need a clear, responsive, credible conversion page. The end user is non-techni
 
 AVAILABLE DATA
 ${commonData}
+
+${eliteRules}
 
 CLARIFICATION QUESTIONS
 First analyze the data. If anything is missing or contradictory, ask 3 to 7 questions maximum. If enough data is available, say "The data is sufficient" and move to the plan.
@@ -14215,7 +14303,7 @@ CODE RULES
 - Comment important sections.
 
 SECTIONS TO GENERATE
-Clear hero, benefits, social proof, offer/price, guarantees, FAQ, comparison if useful, urgency/scarcity only if proven, final CTA, mobile sticky CTA if useful.
+Clear hero, quick proof, benefits, visual demonstration, offer/price, guarantees, FAQ, comparison if useful, urgency/scarcity only if proven, final CTA, mobile sticky CTA if useful.
 
 DELIVERY METHOD
 Answer in steps:
@@ -14236,6 +14324,8 @@ Give clean usable code. If the answer is too long, split into parts and wait for
 
 البيانات المتاحة
 ${commonData}
+
+${eliteRules}
 
 أسئلة التوضيح
 حلل البيانات أولا. إذا كانت معلومة ناقصة أو متناقضة، اطرح من 3 إلى 7 أسئلة فقط. إذا كانت البيانات كافية، قل "البيانات كافية" ثم انتقل إلى الخطة.
@@ -14291,6 +14381,8 @@ Hero واضح، فوائد، دليل اجتماعي، عرض/سعر، ضمان�
 DONNEES
 ${commonData}
 
+${eliteRules}
+
 REGLES
 - Ne pas inventer avis, prix, garanties, livraison, resultats, logos ou certifications.
 - Marquer "A confirmer" si une preuve manque.
@@ -14311,6 +14403,8 @@ SORTIE
 
 DATA
 ${commonData}
+
+${eliteRules}
 
 RULES
 - Do not invent reviews, prices, guarantees, delivery, results, logos, or certifications.
@@ -14333,6 +14427,8 @@ OUTPUT
 البيانات
 ${commonData}
 
+${eliteRules}
+
 القواعد
 - لا تخترع آراء أو أسعارا أو ضمانات أو توصيلا أو نتائج أو شعارات أو شهادات.
 - اكتب "يجب التأكيد" عند نقص الدليل.
@@ -14351,9 +14447,9 @@ ${commonData}
 7. اختبار الهاتف.`
 )}`.trim();
 
-    const htmlOnly = `${text('Genere uniquement le HTML semantique mobile-first pour cette page. Ne donne pas le CSS ni le JS maintenant. Utilise les preuves suivantes et marque les donnees manquantes "A confirmer".', 'Generate only the mobile-first semantic HTML for this page. Do not output CSS or JS yet. Use the following evidence and mark missing data as "To confirm".', 'أنشئ HTML فقط للصفحة بشكل semantic وmobile-first. لا تكتب CSS أو JS الآن. استخدم الأدلة التالية واكتب "يجب التأكيد" عند نقص البيانات.')}\n\n${commonData}`;
-    const cssOnly = `${text('Genere uniquement le CSS premium mobile-first pour le HTML de cette page. Aucun framework, aucune dependance lourde, aucun scroll horizontal. Structure les styles par section.', 'Generate only premium mobile-first CSS for this page HTML. No framework, no heavy dependency, no horizontal scroll. Organize styles by section.', 'أنشئ CSS فقط بتصميم premium وmobile-first. دون إطار عمل أو تبعيات ثقيلة أو تمرير أفقي. نظم الأنماط حسب الأقسام.')}\n\n${commonData}`;
-    const jsOnly = `${text('Genere uniquement le JavaScript utile pour cette page : menu mobile, FAQ accordéon, sticky CTA mobile si pertinent, micro-interactions. Pas de tracking agressif, aucune erreur console.', 'Generate only useful JavaScript: mobile menu, FAQ accordion, mobile sticky CTA if relevant, micro-interactions. No aggressive tracking, no console errors.', 'أنشئ JavaScript المفيد فقط: قائمة الهاتف، FAQ، CTA ثابت للهاتف عند الحاجة، وتفاعلات خفيفة. دون تتبع مزعج ودون أخطاء console.')}\n\n${commonData}`;
+    const htmlOnly = `${text('Genere uniquement le HTML semantique mobile-first pour cette page. Ne donne pas le CSS ni le JS maintenant. Utilise les preuves suivantes et marque les donnees manquantes "A confirmer".', 'Generate only the mobile-first semantic HTML for this page. Do not output CSS or JS yet. Use the following evidence and mark missing data as "To confirm".', 'أنشئ HTML فقط للصفحة بشكل semantic وmobile-first. لا تكتب CSS أو JS الآن. استخدم الأدلة التالية واكتب "يجب التأكيد" عند نقص البيانات.')}\n\n${commonData}\n\n${eliteRules}`;
+    const cssOnly = `${text('Genere uniquement le CSS premium mobile-first pour le HTML de cette page. Aucun framework, aucune dependance lourde, aucun scroll horizontal. Structure les styles par section.', 'Generate only premium mobile-first CSS for this page HTML. No framework, no heavy dependency, no horizontal scroll. Organize styles by section.', 'أنشئ CSS فقط بتصميم premium وmobile-first. دون إطار عمل أو تبعيات ثقيلة أو تمرير أفقي. نظم الأنماط حسب الأقسام.')}\n\n${commonData}\n\n${eliteRules}`;
+    const jsOnly = `${text('Genere uniquement le JavaScript utile pour cette page : menu mobile, FAQ accordéon, sticky CTA mobile si pertinent, micro-interactions. Pas de tracking agressif, aucune erreur console.', 'Generate only useful JavaScript: mobile menu, FAQ accordion, mobile sticky CTA if relevant, micro-interactions. No aggressive tracking, no console errors.', 'أنشئ JavaScript المفيد فقط: قائمة الهاتف، FAQ، CTA ثابت للهاتف عند الحاجة، وتفاعلات خفيفة. دون تتبع مزعج ودون أخطاء console.')}\n\n${commonData}\n\n${eliteRules}`;
     const questions = `${text('Avant de coder, pose ces questions si les reponses ne sont pas dans les donnees :', 'Before coding, ask these questions if answers are not in the data:', 'قبل كتابة الكود، اطرح هذه الأسئلة إذا لم تكن الإجابات موجودة في البيانات:')}
 1. ${text('Quel est l’objectif principal : achat, lead, appel, WhatsApp, demo ?', 'What is the main goal: purchase, lead, call, WhatsApp, demo?', 'ما الهدف الرئيسي: شراء، عميل محتمل، مكالمة، واتساب، تجربة؟')}
 2. ${text('Quelle langue exacte doit utiliser la page ?', 'What exact language should the page use?', 'ما اللغة الدقيقة للصفحة؟')}
