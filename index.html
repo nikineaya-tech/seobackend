@@ -4166,6 +4166,15 @@ table tbody td {
                 <button class="auth-close-btn" type="button" onclick="closeOpenRouterKeyModal()" aria-label="Fermer"><i class="fas fa-xmark"></i></button>
             </div>
             <div class="groq-key-panel">
+                <div class="groq-key-form">
+                    <label>
+                        <span>Provider IA</span>
+                        <select id="daka-code-provider-modal" class="input-field" onchange="setDakaCodeProvider(this.value)">
+                            <option value="gemini">Gemini API</option>
+                            <option value="openrouter">OpenRouter</option>
+                        </select>
+                    </label>
+                </div>
                 <div class="groq-status-card">
                     <div>
                         <strong id="groq-key-status">Non connecté</strong>

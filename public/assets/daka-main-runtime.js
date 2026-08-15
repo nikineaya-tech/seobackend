@@ -1056,6 +1056,7 @@ function refreshAuthCopy() {
     document.getElementById('groq-save-label') && (document.getElementById('groq-save-label').textContent = copy.groqSave);
     document.getElementById('groq-delete-label') && (document.getElementById('groq-delete-label').textContent = copy.groqDelete);
     document.getElementById('groq-key-note') && (document.getElementById('groq-key-note').textContent = copy.groqNote);
+    if (typeof refreshProviderModalCopy === 'function') refreshProviderModalCopy();
 }
 
 async function updateAuthUI(user, disabled = false) {
@@ -1192,23 +1193,78 @@ async function refreshQuotaBadge(quotaOverride = null) {
     }
 }
 
-function updateOpenRouterKeyUI(status = {}) {
+function getDakaCodeProvider() {
+    return localStorage.getItem('dakaCodeProvider') === 'openrouter' ? 'openrouter' : 'gemini';
+}
+
+function setDakaCodeProvider(provider) {
+    const clean = provider === 'openrouter' ? 'openrouter' : 'gemini';
+    localStorage.setItem('dakaCodeProvider', clean);
+    refreshAuthCopy();
+    refreshOpenRouterKeyStatus().catch(() => {});
+}
+
+function providerCopy(provider = getDakaCodeProvider()) {
     const copy = authCopy();
+    if (provider === 'openrouter') return {
+        title: 'Connecter OpenRouter',
+        subtitle: 'Ajoutez votre clé OpenRouter pour utiliser Daka AI Code Machine via OpenRouter.',
+        connected: 'OpenRouter connecté',
+        disconnected: 'OpenRouter non connecté',
+        mask: 'Votre clé OpenRouter reste chiffrée côté serveur.',
+        label: 'Clé API OpenRouter',
+        note: 'Daka n’affiche jamais votre clé. Elle sert uniquement aux appels OpenRouter que vous déclenchez.',
+        saved: 'Clé OpenRouter enregistrée et chiffrée.',
+        deleted: 'Clé OpenRouter supprimée.',
+        invalid: 'Clé OpenRouter invalide.',
+        placeholder: 'sk-or-v1-...'
+    };
+    return {
+        title: copy.groqTitle,
+        subtitle: copy.groqSubtitle,
+        connected: copy.groqConnected,
+        disconnected: copy.groqDisconnected,
+        mask: copy.groqMask,
+        label: copy.groqLabel,
+        note: copy.groqNote,
+        saved: copy.groqSaved,
+        deleted: copy.groqDeleted,
+        invalid: copy.groqInvalid,
+        placeholder: 'AIza...'
+    };
+}
+
+function refreshProviderModalCopy(provider = getDakaCodeProvider()) {
+    const copy = providerCopy(provider);
+    document.getElementById('groq-key-title') && (document.getElementById('groq-key-title').textContent = copy.title);
+    document.getElementById('groq-key-subtitle') && (document.getElementById('groq-key-subtitle').textContent = copy.subtitle);
+    document.getElementById('groq-key-label') && (document.getElementById('groq-key-label').textContent = copy.label);
+    document.getElementById('groq-key-note') && (document.getElementById('groq-key-note').textContent = copy.note);
+    const input = document.getElementById('groq-api-key-input');
+    if (input) input.placeholder = copy.placeholder;
+    const select = document.getElementById('daka-code-provider-modal');
+    if (select) select.value = provider;
+}
+
+function updateOpenRouterKeyUI(status = {}) {
     const statusNode = document.getElementById('groq-key-status');
     const maskNode = document.getElementById('groq-key-mask');
-    if (statusNode) statusNode.textContent = status.connected ? copy.groqConnected : status.setupRequired ? 'Configuration requise' : copy.groqDisconnected;
-    if (maskNode) maskNode.textContent = status.message || status.maskedKey || copy.groqMask;
+    const copy = providerCopy(status.provider || getDakaCodeProvider());
+    if (statusNode) statusNode.textContent = status.connected ? copy.connected : status.setupRequired ? 'Configuration requise' : copy.disconnected;
+    if (maskNode) maskNode.textContent = status.message || status.maskedKey || copy.mask;
 }
 
 async function refreshOpenRouterKeyStatus() {
     if (!currentAuthUser) return updateOpenRouterKeyUI({ connected: false });
+    const provider = getDakaCodeProvider();
+    refreshProviderModalCopy(provider);
     try {
-        const status = await api.get('/api/user-api-keys/gemini/status', 15000);
+        const status = await api.get(`/api/user-api-keys/${provider}/status`, 15000);
         updateOpenRouterKeyUI(status);
         return status;
     } catch (error) {
-        console.warn('[Gemini] status unavailable:', error.message);
-        updateOpenRouterKeyUI({ connected: false });
+        console.warn(`[${provider}] status unavailable:`, error.message);
+        updateOpenRouterKeyUI({ connected: false, provider });
         return null;
     }
 }
@@ -1216,6 +1272,7 @@ async function refreshOpenRouterKeyStatus() {
 function openOpenRouterKeyModal() {
     if (!currentAuthUser) return openAuthModal();
     refreshAuthCopy();
+    refreshProviderModalCopy();
     document.getElementById('groq-key-modal')?.classList.add('active');
     document.body.classList.add('modal-open');
     refreshOpenRouterKeyStatus();
@@ -1230,34 +1287,39 @@ function closeOpenRouterKeyModal() {
 }
 
 async function saveOpenRouterKey() {
-    const copy = authCopy();
+    const provider = getDakaCodeProvider();
+    const copy = providerCopy(provider);
     const input = document.getElementById('groq-api-key-input');
     const apiKey = String(input?.value || '').trim();
-    if (!(/^AIza[A-Za-z0-9_-]{20,}$/.test(apiKey) || apiKey.length >= 30)) return toast.warning(copy.groqInvalid);
+    const isValid = provider === 'openrouter'
+        ? /^(sk-or-v1-|sk-)[A-Za-z0-9_-]{20,}$/.test(apiKey)
+        : (/^AIza[A-Za-z0-9_-]{20,}$/.test(apiKey) || apiKey.length >= 30);
+    if (!isValid) return toast.warning(copy.invalid);
     try {
-        const status = await api.request('/api/user-api-keys/gemini', {
+        const status = await api.request(`/api/user-api-keys/${provider}`, {
             method: 'POST',
             body: JSON.stringify({ apiKey }),
             timeout: 20000
         });
         if (input) input.value = '';
         updateOpenRouterKeyUI(status);
-        toast.success(copy.groqSaved);
+        toast.success(copy.saved);
     } catch (error) {
-        toast.error(error.message || copy.groqInvalid);
+        toast.error(error.message || copy.invalid);
         updateOpenRouterKeyUI(error.data || { connected: false, message: error.message });
     }
 }
 
 async function deleteOpenRouterKey() {
-    const copy = authCopy();
+    const provider = getDakaCodeProvider();
+    const copy = providerCopy(provider);
     try {
-        const status = await api.request('/api/user-api-keys/gemini', {
+        const status = await api.request(`/api/user-api-keys/${provider}`, {
             method: 'DELETE',
             timeout: 20000
         });
         updateOpenRouterKeyUI(status);
-        toast.success(copy.groqDeleted);
+        toast.success(copy.deleted);
     } catch (error) {
         toast.error(error.message || copy.shareUnavailable);
     }
@@ -14497,10 +14559,12 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         quota: `groqCodeBuilderQuota_${suffix}`,
         chat: `groqCodeBuilderChat_${suffix}`,
         chatInput: `groqCodeBuilderChatInput_${suffix}`,
+        provider: `dakaCodeProvider_${suffix}`,
         model: `openRouterModel_${suffix}`,
         codeTab: `groqCodeBuilderCodeTab_${suffix}`,
         previewTab: `groqCodeBuilderPreviewTab_${suffix}`
     };
+    const selectedProvider = typeof getDakaCodeProvider === 'function' ? getDakaCodeProvider() : 'gemini';
     const promptByKey = {
         full: pack.full,
         short: pack.short,
@@ -14534,6 +14598,7 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         chatIntro: isAr ? 'اسأل عن تعديل، قسم أقوى، أو تبسيط الكود الناتج.' : isEn ? 'Ask for a change, a stronger section, or simpler generated code.' : 'Pose une question, demande une variante ou fais modifier le code généré.',
         chatPlaceholder: isAr ? 'مثال: اجعل الهيرو أقوى وأعطني HTML/CSS فقط...' : isEn ? 'Example: make the hero stronger and return only HTML/CSS...' : 'Exemple : rends le hero plus premium et donne seulement HTML/CSS...',
         send: isAr ? 'إرسال' : isEn ? 'Send' : 'Envoyer',
+        provider: isAr ? 'مزود الذكاء' : isEn ? 'AI provider' : 'Provider IA',
         promptBrief: isAr ? 'Prompt / Brief' : isEn ? 'Prompt / Brief' : 'Prompt / Brief',
         generator: isAr ? 'مولد الكود' : isEn ? 'Code generator' : 'Générateur de code',
         showPreview: isAr ? 'معاينة مباشرة' : isEn ? 'Live preview' : 'Aperçu live',
@@ -14580,11 +14645,27 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
             </div>
 
             <label class="groq-model-row" data-no-collapse="true" onclick="event.stopPropagation()">
-                <span>${safe(isAr ? 'Gemini model' : isEn ? 'Gemini model' : 'Modèle Gemini')}</span>
+                <span>${safe(builderLabels.provider)}</span>
+                <select id="${builderIds.provider}" data-no-collapse="true" onchange="setDakaCodeProvider(this.value)">
+                    <option value="gemini"${selectedProvider === 'gemini' ? ' selected' : ''}>Gemini API</option>
+                    <option value="openrouter"${selectedProvider === 'openrouter' ? ' selected' : ''}>OpenRouter</option>
+                </select>
+            </label>
+            <label class="groq-model-row" data-no-collapse="true" onclick="event.stopPropagation()">
+                <span>${safe(isAr ? 'Model' : isEn ? 'Model' : 'Modèle')}</span>
                 <select id="${builderIds.model}" data-no-collapse="true">
+                    <optgroup label="Gemini">
                     <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
                     <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
                     <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                    </optgroup>
+                    <optgroup label="OpenRouter">
+                    <option value="cohere/north-mini-code">Cohere North Mini Code</option>
+                    <option value="z-ai/glm-5.2">Z.ai GLM 5.2</option>
+                    <option value="nvidia/nemotron-3-ultra:free">NVIDIA Nemotron 3 Ultra Free</option>
+                    <option value="moonshotai/kimi-k2.7-code">Kimi K2.7 Code</option>
+                    <option value="qwen/qwen3.7-plus">Qwen3.7 Plus</option>
+                    </optgroup>
                 </select>
             </label>
             <textarea id="${builderIds.custom}" class="groq-builder-note" data-no-collapse="true" placeholder="${safe(builderLabels.note)}"></textarea>
@@ -15175,7 +15256,8 @@ function updateOpenRouterQuotaUI(quotaId, payload = {}) {
             : { req: 'Requêtes restantes', tokens: 'Tokens restants', reset: 'Reset', unknown: 'Non exposé', used: 'utilisés' };
     const clean = value => (value !== null && value !== undefined && String(value).trim() !== '') ? String(value).trim() : '—';
     const requestValue = clean(rate.remainingRequests || rate.requestsRemaining);
-    const tokenValue = clean(rate.remainingTokens || rate.tokensRemaining || (usage.total_tokens ? `${usage.total_tokens} ${labels.used}` : null));
+    const usedTokens = usage.total_tokens || usage.totalTokenCount || usage.candidatesTokenCount || usage.promptTokenCount;
+    const tokenValue = clean(rate.remainingTokens || rate.tokensRemaining || (usedTokens ? `${usedTokens} ${labels.used}` : null));
     const resetValue = clean(rate.resetRequests || rate.resetTokens || rate.retryAfter || labels.unknown);
     node.innerHTML = `
         <div><small>${escapeHtml(labels.req)}</small><strong>${escapeHtml(requestValue)}</strong></div>
@@ -15330,27 +15412,29 @@ async function runOpenRouterCodeBuilder(kind, promptId, outputId, customId, quot
     const basePrompt = String(promptNode?.value || promptNode?.textContent || '').trim();
     const extra = String(custom?.value || '').trim();
     const lang = STATE.currentLang || 'fr';
+    const provider = getDakaCodeProvider();
+    const providerName = provider === 'openrouter' ? 'OpenRouter' : 'Gemini';
     const labels = lang === 'ar'
         ? {
             login: 'سجل الدخول أولا.',
-            running: 'Gemini يكتب الكود...',
+            running: `${providerName} يكتب الكود...`,
             ready: 'تم توليد الكود.',
-            connect: 'اربط مفتاح Gemini API أولا.',
+            connect: provider === 'openrouter' ? 'اربط مفتاح OpenRouter أولا.' : 'اربط مفتاح Gemini API أولا.',
             empty: 'لا يوجد prompt كاف للتوليد.'
         }
         : lang === 'en'
             ? {
                 login: 'Sign in first.',
-                running: 'Gemini is writing the code...',
+                running: `${providerName} is writing the code...`,
                 ready: 'Code generated.',
-                connect: 'Connect your Gemini API key first.',
+                connect: provider === 'openrouter' ? 'Connect your OpenRouter key first.' : 'Connect your Gemini API key first.',
                 empty: 'No prompt available for generation.'
             }
             : {
                 login: 'Connecte-toi d’abord.',
-                running: 'Gemini écrit le code...',
+                running: `${providerName} écrit le code...`,
                 ready: 'Code généré.',
-                connect: 'Connecte ta clé Gemini API d’abord.',
+                connect: provider === 'openrouter' ? 'Connecte ta clé OpenRouter d’abord.' : 'Connecte ta clé Gemini API d’abord.',
                 empty: 'Aucun prompt suffisant pour générer.'
             };
     if (!currentAuthUser) {
@@ -15377,7 +15461,7 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> IA...';
         }
         if (output) output.textContent = labels.running;
-        const response = await api.request('/api/prompt-to-code/gemini', {
+        const response = await api.request(`/api/prompt-to-code/${provider}`, {
             method: 'POST',
             body: JSON.stringify({
                 prompt,
@@ -15399,13 +15483,13 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
         toast.success(labels.ready);
     } catch (error) {
         updateOpenRouterQuotaUI(quotaId, error?.data || {});
-        if (/GEMINI_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
+        if (/(GEMINI|OPENROUTER)_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
             toast.warning(error.data?.message || labels.connect);
             openOpenRouterKeyModal();
         } else {
-            toast.error(error.message || 'Gemini error');
+            toast.error(error.message || `${providerName} error`);
         }
-        if (output) output.textContent = error.data?.message || error.message || 'Gemini error';
+        if (output) output.textContent = error.data?.message || error.message || `${providerName} error`;
     } finally {
         if (btn) {
             btn.disabled = false;
@@ -15429,11 +15513,13 @@ async function sendOpenRouterCodeBuilderMessage(promptId, outputId, chatId, inpu
         .filter(Boolean)
         .join('\n\n');
     const lang = STATE.currentLang || 'fr';
+    const provider = getDakaCodeProvider();
+    const providerName = provider === 'openrouter' ? 'OpenRouter' : 'Gemini';
     const labels = lang === 'ar'
-        ? { login: 'سجل الدخول أولا.', empty: 'اكتب رسالتك أولا.', running: 'Gemini يفكر...', connect: 'اربط مفتاح Gemini API أولا.' }
+        ? { login: 'سجل الدخول أولا.', empty: 'اكتب رسالتك أولا.', running: `${providerName} يفكر...`, connect: provider === 'openrouter' ? 'اربط مفتاح OpenRouter أولا.' : 'اربط مفتاح Gemini API أولا.' }
         : lang === 'en'
-            ? { login: 'Sign in first.', empty: 'Write your message first.', running: 'Gemini is thinking...', connect: 'Connect your Gemini API key first.' }
-            : { login: 'Connecte-toi d’abord.', empty: 'Écris ton message d’abord.', running: 'Gemini réfléchit...', connect: 'Connecte ta clé Gemini API d’abord.' };
+            ? { login: 'Sign in first.', empty: 'Write your message first.', running: `${providerName} is thinking...`, connect: provider === 'openrouter' ? 'Connect your OpenRouter key first.' : 'Connect your Gemini API key first.' }
+            : { login: 'Connecte-toi d’abord.', empty: 'Écris ton message d’abord.', running: `${providerName} réfléchit...`, connect: provider === 'openrouter' ? 'Connecte ta clé OpenRouter d’abord.' : 'Connecte ta clé Gemini API d’abord.' };
     if (!currentAuthUser) {
         toast.warning(labels.login);
         return openAuthModal();
@@ -15471,7 +15557,7 @@ Si une information manque, pose les questions nécessaires avant d'inventer.`;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
         }
         appendOpenRouterChatMessage(chatId, 'assistant', labels.running);
-        const response = await api.request('/api/prompt-to-code/gemini', {
+        const response = await api.request(`/api/prompt-to-code/${provider}`, {
             method: 'POST',
             body: JSON.stringify({
                 prompt,
@@ -15492,13 +15578,13 @@ Si une information manque, pose les questions nécessaires avant d'inventer.`;
         updateOpenRouterQuotaUI(quotaId, response);
     } catch (error) {
         updateOpenRouterQuotaUI(quotaId, error?.data || {});
-        if (/GEMINI_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
+        if (/(GEMINI|OPENROUTER)_KEY_NOT_CONNECTED|USER_SECRET_ENCRYPTION_KEY|USER_API_KEYS_TABLE/i.test(error.message || error.data?.error || '')) {
             toast.warning(error.data?.message || labels.connect);
             openOpenRouterKeyModal();
         } else {
-            toast.error(error.message || 'Gemini error');
+            toast.error(error.message || `${providerName} error`);
         }
-        appendOpenRouterChatMessage(chatId, 'assistant', error.data?.message || error.message || 'Gemini error');
+        appendOpenRouterChatMessage(chatId, 'assistant', error.data?.message || error.message || `${providerName} error`);
     } finally {
         if (btn) {
             btn.disabled = false;
