@@ -5,6 +5,22 @@
     <meta charset="UTF-8">
     <!-- GitHub sync marker: 2026-06-28 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script id="daka-deal-editor-guard">
+    (function () {
+        try {
+            var params = new URLSearchParams(window.location.search || '');
+            var isDealEditor =
+                /(^|\.)deal\.ai$/i.test(window.location.hostname || '') &&
+                (/\/simple-websites\/edit\//i.test(window.location.pathname || '') ||
+                 params.has('preview_mode') ||
+                 params.has('funnel') ||
+                 params.has('pagePath'));
+            if (!isDealEditor) return;
+            window.DAKA_DEAL_EDITOR_SAFE = true;
+            document.documentElement.classList.add('daka-deal-editor');
+        } catch (_) {}
+    })();
+    </script>
 
    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; media-src 'self' https://etjwmqnbfsevlwaeixwb.supabase.co blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://seobackend-f81n.onrender.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com; font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://seobackend-f81n.onrender.com http://localhost:10000;">
 
@@ -9955,10 +9971,52 @@ body > div:has(#btn-export-global),
     .daka-form-matrix-canvas { display: none; }
     .daka-app-matrix-glow::before { display: none; }
 }
+
+html.daka-deal-editor,
+html.daka-deal-editor body {
+    min-height: 100vh !important;
+    overflow-x: hidden !important;
+    background:
+        radial-gradient(circle at 16% 8%, rgba(34, 211, 238, .10), transparent 28%),
+        radial-gradient(circle at 86% 10%, rgba(139, 92, 246, .10), transparent 28%),
+        #020617 !important;
+}
+
+html.daka-deal-editor body::before,
+html.daka-deal-editor #dakaAppMatrixCanvas,
+html.daka-deal-editor .daka-app-matrix-glow,
+html.daka-deal-editor .daka-app-matrix-glow::before,
+html.daka-deal-editor .daka-app-matrix-glow::after,
+html.daka-deal-editor .daka-form-matrix-canvas {
+    display: none !important;
+    content: none !important;
+}
+
+html.daka-deal-editor .main-wrapper,
+html.daka-deal-editor main,
+html.daka-deal-editor main > .container,
+html.daka-deal-editor .tab-content,
+html.daka-deal-editor .form-section {
+    position: relative !important;
+    z-index: auto !important;
+    isolation: auto !important;
+}
+
+html.daka-deal-editor .tab-content > .card::after,
+html.daka-deal-editor .form-section::after {
+    display: none !important;
+    content: none !important;
+}
+
+html.daka-deal-editor .header {
+    position: relative !important;
+    top: auto !important;
+}
 </style>
 
 <script>
 (function initDakaFormMatrixAndSound() {
+    if (window.DAKA_DEAL_EDITOR_SAFE || document.documentElement.classList.contains('daka-deal-editor')) return;
     const formSelector = '.tab-content > .card, .form-section';
     const loaderSelector = '#daka-global-loader, .loading-state';
     const matrixChars = Array.from('Daka Market Insight 010101 CRO UX AIDA SEO DATA TRUST FUNNEL \u0633\u0648\u0642 \u0645\u0646\u0627\u0641\u0633\u0648\u0646 \u062a\u062d\u0644\u064a\u0644 \u062b\u0642\u0629 \u0646\u0645\u0648 \u0642\u0631\u0627\u0631');
@@ -10177,6 +10235,7 @@ body > div:has(#btn-export-global),
 })();
 
 (function initDakaAppMatrix() {
+    if (window.DAKA_DEAL_EDITOR_SAFE || document.documentElement.classList.contains('daka-deal-editor')) return;
     const canvas = document.getElementById('dakaAppMatrixCanvas');
     if (!canvas || canvas.dataset.ready === '1') return;
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
