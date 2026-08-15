@@ -476,9 +476,14 @@ html, body {
 .groq-machine-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .groq-machine-steps span{display:flex;align-items:center;gap:7px;min-width:0;padding:9px 10px;border:1px solid rgba(34,211,238,.14);border-radius:13px;background:rgba(2,6,23,.34);color:#cbd5e1;font-size:.68rem;font-weight:900}
 .groq-machine-steps span:before{content:"";width:7px;height:7px;flex:0 0 auto;border-radius:999px;background:#22d3ee;box-shadow:0 0 13px rgba(34,211,238,.7)}
-.groq-builder-quick{display:flex;flex-wrap:wrap;gap:8px}
-.groq-builder-quick button{min-height:34px;padding:7px 10px;border:1px solid rgba(34,211,238,.18);border-radius:999px;background:rgba(15,23,42,.72);color:#bae6fd;font-size:.69rem;font-weight:900;cursor:pointer}
-.groq-builder-quick button:hover{border-color:rgba(34,197,94,.45);color:#dcfce7;background:rgba(34,197,94,.1)}
+.daka-prompt-brief-panel{border-color:rgba(34,211,238,.22);background:linear-gradient(145deg,rgba(8,17,31,.92),rgba(2,6,23,.82))}
+.daka-code-mode-tabs{display:flex;flex-wrap:wrap;gap:8px;padding:8px;border:1px solid rgba(34,211,238,.14);border-radius:18px;background:rgba(2,6,23,.46)}
+.daka-code-mode-tabs button{min-height:38px;padding:8px 12px;border:1px solid rgba(148,163,184,.14);border-radius:999px;background:rgba(15,23,42,.76);color:#cbd5e1;font-size:.72rem;font-weight:950;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px;transition:.2s ease}
+.daka-code-mode-tabs button:hover{border-color:rgba(34,211,238,.42);color:#f8fafc;background:rgba(34,211,238,.09)}
+.daka-code-mode-tabs button.active{border-color:rgba(34,211,238,.55);color:#03111c;background:linear-gradient(135deg,#67e8f9,#a78bfa);box-shadow:0 12px 34px rgba(34,211,238,.18)}
+.daka-code-mode-tabs button:last-child{margin-inline-start:auto;border-color:rgba(34,197,94,.28);color:#dcfce7;background:rgba(34,197,94,.1)}
+.daka-code-mode-tabs button:last-child:hover{background:rgba(34,197,94,.18);border-color:rgba(34,197,94,.5)}
+.daka-code-pane,.daka-preview-pane{min-height:280px}
 .groq-workbench-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,.95fr);gap:12px;align-items:stretch}
 .groq-preview-frame{width:100%;height:520px;border:0;background:#fff;border-radius:0}
 .groq-preview-empty{display:grid;place-items:center;min-height:240px;padding:22px;color:#94a3b8;text-align:center;font-size:.8rem;line-height:1.6}

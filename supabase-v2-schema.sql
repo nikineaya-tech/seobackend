@@ -52,10 +52,12 @@ create policy "users_delete_own_reports"
   on public.user_reports for delete
   using (auth.uid() = user_id);
 
+create extension if not exists pgcrypto;
+
 create table if not exists public.user_api_keys (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  provider text not null check (provider in ('groq')),
+  provider text not null check (provider in ('openrouter', 'groq')),
   encrypted_key text not null,
   key_iv text not null,
   key_tag text not null,
@@ -70,6 +72,8 @@ create index if not exists user_api_keys_user_provider_idx
   on public.user_api_keys(user_id, provider);
 
 alter table public.user_api_keys enable row level security;
+
+grant select, insert, update, delete on public.user_api_keys to authenticated;
 
 drop policy if exists "users_read_own_api_keys" on public.user_api_keys;
 create policy "users_read_own_api_keys"

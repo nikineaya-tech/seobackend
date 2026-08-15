@@ -14490,12 +14490,16 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
     const builderIds = {
         custom: `groqCodeBuilderCustom_${suffix}`,
         output: `groqCodeBuilderOutput_${suffix}`,
+        outputWrap: `groqCodeBuilderOutputWrap_${suffix}`,
         preview: `groqCodeBuilderPreview_${suffix}`,
+        previewWrap: `groqCodeBuilderPreviewWrap_${suffix}`,
         previewEmpty: `groqCodeBuilderPreviewEmpty_${suffix}`,
         quota: `groqCodeBuilderQuota_${suffix}`,
         chat: `groqCodeBuilderChat_${suffix}`,
         chatInput: `groqCodeBuilderChatInput_${suffix}`,
-        model: `openRouterModel_${suffix}`
+        model: `openRouterModel_${suffix}`,
+        codeTab: `groqCodeBuilderCodeTab_${suffix}`,
+        previewTab: `groqCodeBuilderPreviewTab_${suffix}`
     };
     const promptByKey = {
         full: pack.full,
@@ -14530,14 +14534,15 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
         chatIntro: isAr ? 'اسأل عن تعديل، قسم أقوى، أو تبسيط الكود الناتج.' : isEn ? 'Ask for a change, a stronger section, or simpler generated code.' : 'Pose une question, demande une variante ou fais modifier le code généré.',
         chatPlaceholder: isAr ? 'مثال: اجعل الهيرو أقوى وأعطني HTML/CSS فقط...' : isEn ? 'Example: make the hero stronger and return only HTML/CSS...' : 'Exemple : rends le hero plus premium et donne seulement HTML/CSS...',
         send: isAr ? 'إرسال' : isEn ? 'Send' : 'Envoyer',
+        promptBrief: isAr ? 'Prompt / Brief' : isEn ? 'Prompt / Brief' : 'Prompt / Brief',
+        generator: isAr ? 'مولد الكود' : isEn ? 'Code generator' : 'Générateur de code',
+        showPreview: isAr ? 'معاينة مباشرة' : isEn ? 'Live preview' : 'Aperçu live',
+        showCode: isAr ? 'Code' : isEn ? 'Code' : 'Code',
+        download: isAr ? 'تحميل الكود' : isEn ? 'Download code' : 'Télécharger le code',
         step1: isAr ? '1. Prompt' : isEn ? '1. Prompt' : '1. Prompt',
         step2: isAr ? '2. Build' : isEn ? '2. Build' : '2. Build',
         step3: isAr ? '3. Preview' : isEn ? '3. Preview' : '3. Aperçu',
-        step4: isAr ? '4. Iterate' : isEn ? '4. Iterate' : '4. Itérer',
-        quickHero: isAr ? 'Hero أقوى' : isEn ? 'Stronger hero' : 'Hero plus fort',
-        quickMobile: isAr ? 'Mobile premium' : isEn ? 'Premium mobile' : 'Mobile premium',
-        quickTrust: isAr ? 'إضافة الثقة' : isEn ? 'Add trust' : 'Ajouter confiance',
-        quickShort: isAr ? 'اختصر الكود' : isEn ? 'Shorten code' : 'Raccourcir le code'
+        step4: isAr ? '4. Iterate' : isEn ? '4. Iterate' : '4. Itérer'
     };
     return `<div class="funnel-mega-redesign">
         <header>
@@ -14551,9 +14556,13 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
             <span><i class="fas fa-code"></i>${safe(isAr ? 'جاهز للكود HTML/CSS/JS' : isEn ? 'Ready for HTML/CSS/JS code' : 'Prêt pour coder HTML/CSS/JS')}</span>
             <span><i class="fas fa-eye"></i>${safe(isAr ? 'يعتمد فقط على الأدلة' : isEn ? 'Evidence-based only' : 'Basé uniquement sur les preuves')}</span>
         </div>
+        <details class="mega-prompt-shell daka-prompt-brief-panel" open data-no-collapse="true">
+            <summary data-no-collapse="true" onclick="event.stopPropagation()"><span>${safe(builderLabels.promptBrief)}</span><i class="fas fa-chevron-down"></i></summary>
+            <pre class="funnel-mega-prompt" dir="auto">${safe(pack.full.slice(0, 26000))}</pre>
+        </details>
         <section class="groq-code-builder" data-no-collapse="true" onclick="event.stopPropagation()">
             <header>
-                <div><small>${safe(builderLabels.title)}</small><strong>${safe(builderLabels.sub)}</strong></div>
+                <div><small>${safe(builderLabels.generator)}</small><strong>${safe(builderLabels.sub)}</strong></div>
                 <button type="button" data-no-collapse="true" onclick="event.stopPropagation();openOpenRouterKeyModal()">
                     <i class="fas fa-key"></i><span>OpenRouter</span>
                 </button>
@@ -14580,12 +14589,6 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                     <option value="qwen/qwen3.7-plus">Qwen3.7 Plus</option>
                 </select>
             </label>
-            <div class="groq-builder-quick" data-no-collapse="true">
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setOpenRouterBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickHero)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setOpenRouterBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickMobile)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setOpenRouterBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickTrust)}</button>
-                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();setOpenRouterBuilderInstruction('${builderIds.custom}', this.textContent)">${safe(builderLabels.quickShort)}</button>
-            </div>
             <textarea id="${builderIds.custom}" class="groq-builder-note" data-no-collapse="true" placeholder="${safe(builderLabels.note)}"></textarea>
             <div class="groq-builder-actions">
                 <button type="button" class="primary" data-no-collapse="true" onclick="event.stopPropagation();runOpenRouterCodeBuilder('full','${ids.full}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this,'${builderIds.model}')"><i class="fas fa-wand-magic-sparkles"></i>${safe(builderLabels.full)}</button>
@@ -14593,15 +14596,20 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                 <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runOpenRouterCodeBuilder('css','${ids.css}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this,'${builderIds.model}')"><i class="fab fa-css3-alt"></i>${safe(builderLabels.css)}</button>
                 <button type="button" data-no-collapse="true" onclick="event.stopPropagation();runOpenRouterCodeBuilder('js','${ids.js}','${builderIds.output}','${builderIds.custom}','${builderIds.quota}','${builderIds.preview}','${builderIds.previewEmpty}',this,'${builderIds.model}')"><i class="fab fa-js"></i>${safe(builderLabels.js)}</button>
             </div>
+            <div class="daka-code-mode-tabs" data-no-collapse="true">
+                <button id="${builderIds.previewTab}" type="button" class="active" data-no-collapse="true" onclick="event.stopPropagation();setDakaCodeBuilderMode('preview','${builderIds.outputWrap}','${builderIds.previewWrap}','${builderIds.codeTab}','${builderIds.previewTab}')"><i class="fas fa-eye"></i>${safe(builderLabels.showPreview)}</button>
+                <button id="${builderIds.codeTab}" type="button" data-no-collapse="true" onclick="event.stopPropagation();setDakaCodeBuilderMode('code','${builderIds.outputWrap}','${builderIds.previewWrap}','${builderIds.codeTab}','${builderIds.previewTab}')"><i class="fas fa-code"></i>${safe(builderLabels.showCode)}</button>
+                <button type="button" data-no-collapse="true" onclick="event.stopPropagation();downloadDakaGeneratedCode('${builderIds.output}')"><i class="fas fa-download"></i>${safe(builderLabels.download)}</button>
+            </div>
             <div class="groq-workbench-grid">
-                <div class="groq-builder-output-wrap">
+                <div id="${builderIds.outputWrap}" class="groq-builder-output-wrap daka-code-pane" style="display:none">
                     <div class="groq-builder-output-head">
                         <span>${safe(builderLabels.result)}</span>
                         <button type="button" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${builderIds.output}', this)"><i class="fas fa-copy"></i>${safe(builderLabels.copy)}</button>
                     </div>
                     <pre id="${builderIds.output}" class="groq-builder-output" dir="ltr">${safe(builderLabels.waiting)}</pre>
                 </div>
-                <div class="groq-builder-output-wrap">
+                <div id="${builderIds.previewWrap}" class="groq-builder-output-wrap daka-preview-pane">
                     <div class="groq-builder-output-head">
                         <span>${safe(builderLabels.preview)}</span>
                         <button type="button" data-no-collapse="true" onclick="event.stopPropagation();renderOpenRouterCodePreview('${builderIds.output}','${builderIds.preview}','${builderIds.previewEmpty}')"><i class="fas fa-eye"></i>${safe(builderLabels.refreshPreview)}</button>
@@ -14623,10 +14631,6 @@ function renderMegaRedesignPromptBlock(value, opts = {}) {
                 </div>
             </div>
         </section>
-        <details class="mega-prompt-shell" open data-no-collapse="true">
-            <summary data-no-collapse="true" onclick="event.stopPropagation()"><span>${safe(labels.toggle)}</span><i class="fas fa-chevron-down"></i></summary>
-            <pre class="funnel-mega-prompt" dir="auto">${safe(pack.full.slice(0, 26000))}</pre>
-        </details>
         ${hiddenSources}
     </div>`;
 }
@@ -15192,36 +15196,6 @@ function appendOpenRouterChatMessage(chatId, role, text) {
     node.scrollTop = node.scrollHeight;
 }
 
-function setOpenRouterBuilderInstruction(customId, text) {
-    const node = document.getElementById(customId);
-    if (!node) return;
-    const lang = STATE.currentLang || 'fr';
-    const instruction = String(text || '').trim();
-    const map = {
-        fr: {
-            'Hero plus fort': 'Rends le hero plus premium, plus clair et plus orienté conversion. Ne repose pas de questions si les données sont suffisantes.',
-            'Mobile premium': 'Optimise la version mobile : sections courtes, CTA visible, textes lisibles, aucune largeur qui déborde.',
-            'Ajouter confiance': 'Ajoute une couche confiance : preuves visibles, garantie si elle est fournie, FAQ objections, sans inventer d’avis.',
-            'Raccourcir le code': 'Rends le code plus court, propre, commenté par sections, sans framework lourd.'
-        },
-        en: {
-            'Stronger hero': 'Make the hero more premium, clearer, and more conversion-focused. Do not ask more questions if the data is sufficient.',
-            'Premium mobile': 'Optimize mobile: short sections, visible CTA, readable text, no horizontal overflow.',
-            'Add trust': 'Add a trust layer: visible proof, guarantee only if provided, objection FAQ, without inventing reviews.',
-            'Shorten code': 'Make the code shorter, clean, section-commented, without heavy frameworks.'
-        },
-        ar: {
-            'Hero أقوى': 'اجعل قسم Hero أقوى وأكثر وضوحا وموجها للتحويل. لا تعيد طرح الأسئلة إذا كانت البيانات كافية.',
-            'Mobile premium': 'حسن تجربة الهاتف: أقسام قصيرة، CTA واضح، نصوص مقروءة، بدون تجاوز عرض الشاشة.',
-            'إضافة الثقة': 'أضف طبقة ثقة: أدلة واضحة، ضمان فقط إذا كان مذكورا، FAQ للاعتراضات، بدون اختراع تقييمات.',
-            'اختصر الكود': 'اختصر الكود واجعله نظيفا ومقسما بتعليقات، بدون frameworks ثقيلة.'
-        }
-    };
-    const resolved = map[lang]?.[instruction] || instruction;
-    node.value = node.value ? `${node.value}\n${resolved}` : resolved;
-    node.focus();
-}
-
 function extractHtmlForPreview(text) {
     const raw = String(text || '').trim();
     const fenced = raw.match(/```html\s*([\s\S]*?)```/i) || raw.match(/```\s*([\s\S]*?)```/);
@@ -15263,6 +15237,67 @@ function renderOpenRouterCodePreview(outputId, previewId, emptyId) {
     iframe.srcdoc = html;
     iframe.style.display = 'block';
     if (empty) empty.style.display = 'none';
+}
+
+function rememberDakaGeneratedCode(outputId, content) {
+    window.DAKA_CODE_MACHINE_MEMORY = window.DAKA_CODE_MACHINE_MEMORY || {};
+    const value = String(content || '').trim();
+    if (!value) return;
+    window.DAKA_CODE_MACHINE_MEMORY[outputId] = {
+        code: value,
+        updatedAt: Date.now()
+    };
+}
+
+function getDakaGeneratedCode(outputId) {
+    const remembered = window.DAKA_CODE_MACHINE_MEMORY?.[outputId]?.code;
+    const output = document.getElementById(outputId);
+    return String(remembered || output?.textContent || '').trim();
+}
+
+function setDakaCodeBuilderMode(mode, outputWrapId, previewWrapId, codeTabId, previewTabId) {
+    const showCode = mode === 'code';
+    const outputWrap = document.getElementById(outputWrapId);
+    const previewWrap = document.getElementById(previewWrapId);
+    const codeTab = document.getElementById(codeTabId);
+    const previewTab = document.getElementById(previewTabId);
+    if (outputWrap) outputWrap.style.display = showCode ? 'block' : 'none';
+    if (previewWrap) previewWrap.style.display = showCode ? 'none' : 'block';
+    if (codeTab) codeTab.classList.toggle('active', showCode);
+    if (previewTab) previewTab.classList.toggle('active', !showCode);
+}
+
+function setDakaCodeBuilderModeFromOutput(outputId, mode) {
+    const output = document.getElementById(outputId);
+    const builder = output?.closest('.groq-code-builder');
+    if (!builder) return;
+    const outputWrap = builder.querySelector('.daka-code-pane');
+    const previewWrap = builder.querySelector('.daka-preview-pane');
+    const tabs = builder.querySelectorAll('.daka-code-mode-tabs button');
+    const previewTab = tabs[0];
+    const codeTab = tabs[1];
+    setDakaCodeBuilderMode(mode, outputWrap?.id, previewWrap?.id, codeTab?.id, previewTab?.id);
+}
+
+function downloadDakaGeneratedCode(outputId) {
+    const raw = getDakaGeneratedCode(outputId);
+    const html = extractHtmlForPreview(raw);
+    const content = html || raw;
+    const lang = STATE.currentLang || 'fr';
+    if (!content || /choisis un type|choose a code type|اختر نوع/i.test(content)) {
+        toast.warning(lang === 'ar' ? 'لا يوجد كود للتحميل بعد.' : lang === 'en' ? 'No generated code to download yet.' : 'Aucun code généré à télécharger.');
+        return;
+    }
+    const ext = html ? 'html' : 'txt';
+    const blob = new Blob([content], { type: html ? 'text/html;charset=utf-8' : 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `daka-generated-page-${Date.now()}.${ext}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 async function runOpenRouterCodeBuilder(kind, promptId, outputId, customId, quotaId, previewId, emptyId, btn, modelId) {
@@ -15331,8 +15366,14 @@ Réponds directement avec le livrable demandé, sans blabla inutile.`;
             timeout: 90000
         });
         if (output) output.textContent = response?.content || '';
+        rememberDakaGeneratedCode(outputId, response?.content || '');
         updateOpenRouterQuotaUI(quotaId, response);
-        if (kind === 'full') renderOpenRouterCodePreview(outputId, previewId, emptyId);
+        if (kind === 'full') {
+            renderOpenRouterCodePreview(outputId, previewId, emptyId);
+            setDakaCodeBuilderModeFromOutput(outputId, 'preview');
+        } else {
+            setDakaCodeBuilderModeFromOutput(outputId, 'code');
+        }
         toast.success(labels.ready);
     } catch (error) {
         updateOpenRouterQuotaUI(quotaId, error?.data || {});
@@ -15358,7 +15399,7 @@ async function sendOpenRouterCodeBuilderMessage(promptId, outputId, chatId, inpu
     const promptNode = document.getElementById(promptId);
     const basePrompt = String(promptNode?.value || promptNode?.textContent || '').trim();
     const message = String(input?.value || '').trim();
-    const currentCode = String(output?.textContent || '').trim();
+    const currentCode = getDakaGeneratedCode(outputId);
     const chatNode = document.getElementById(chatId);
     const chatHistory = [...(chatNode?.querySelectorAll('.groq-chat-message') || [])]
         .slice(-10)
@@ -15423,7 +15464,9 @@ Si une information manque, pose les questions nécessaires avant d'inventer.`;
         if (last && last.textContent === labels.running) last.textContent = response?.content || '';
         else appendOpenRouterChatMessage(chatId, 'assistant', response?.content || '');
         if (output && response?.content) output.textContent = response.content;
+        rememberDakaGeneratedCode(outputId, response?.content || '');
         renderOpenRouterCodePreview(outputId, previewId, emptyId);
+        setDakaCodeBuilderModeFromOutput(outputId, extractHtmlForPreview(response?.content || '') ? 'preview' : 'code');
         updateOpenRouterQuotaUI(quotaId, response);
     } catch (error) {
         updateOpenRouterQuotaUI(quotaId, error?.data || {});
