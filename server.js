@@ -54,6 +54,9 @@ const { createClient } = require('@supabase/supabase-js');
 const { registerAuthRoutes } = require('./supabase-auth-routes');
 const { registerReportRoutes } = require('./supabase-report-routes');
 const { registerUserApiKeyRoutes } = require('./user-api-key-routes');
+const {
+  buildAngleDrivenStpModel,
+} = require('./lib/stp-angle-engine');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -11264,6 +11267,10 @@ function mergeStpPersonaAiOverlay(baseCards = [], aiCards = []) {
             ...card,
             title: card.displayName || card.title,
             displayName: card.displayName || card.title,
+            primaryAngle: card.primaryAngle,
+            secondaryAngles: card.secondaryAngles,
+            angleMappings: card.angleMappings,
+            angleType: card.angleType,
             occupation: stpText(overlay.occupation || mergedDetails.occupation, 80) || card.occupation,
             ageRange: stpText(overlay.ageRange, 40) || card.ageRange,
             summary: stpText(overlay.summary || overlay.jobToBeDone, 360) || card.summary,
@@ -11272,6 +11279,12 @@ function mergeStpPersonaAiOverlay(baseCards = [], aiCards = []) {
             details: {
                 ...mergedDetails,
                 need: stpText(mergedDetails.need, 260) || card.details?.need,
+                primaryMarketingAngle: stpText(mergedDetails.primaryMarketingAngle, 160) || card.details?.primaryMarketingAngle,
+                primaryJobToBeDone: stpText(mergedDetails.primaryJobToBeDone, 260) || card.details?.primaryJobToBeDone,
+                informationBehavior: stpText(mergedDetails.informationBehavior, 260) || card.details?.informationBehavior,
+                buyingBehavior: stpText(mergedDetails.buyingBehavior, 260) || card.details?.buyingBehavior,
+                searchBehavior: stpText(mergedDetails.searchBehavior, 260) || card.details?.searchBehavior,
+                discoveryBehavior: stpText(mergedDetails.discoveryBehavior, 260) || card.details?.discoveryBehavior,
                 occupation: stpText(mergedDetails.occupation || overlay.occupation, 80) || card.details?.occupation,
                 segmentName: stpText(mergedDetails.segmentName || card.segmentName, 180) || card.details?.segmentName,
                 ageRange: stpText(mergedDetails.ageRange || overlay.ageRange, 40) || card.details?.ageRange,
@@ -11286,6 +11299,7 @@ function mergeStpPersonaAiOverlay(baseCards = [], aiCards = []) {
                     }).filter(item => item.name || item.type)
                     : card.details?.attackChannels,
                 buyingTriggers: stpArray(mergedDetails.buyingTriggers || mergedDetails.triggers || card.details?.buyingTriggers, 6),
+                trustSources: stpArray(mergedDetails.trustSources || card.details?.trustSources, 6),
                 pains: stpArray(mergedDetails.pains || card.details?.pains, 5),
                 objections: stpArray(mergedDetails.objections || card.details?.objections, 5),
                 proofNeeded: stpArray(mergedDetails.proofNeeded || card.details?.proofNeeded, 5),
@@ -11306,7 +11320,9 @@ async function maybeRefineStpPersonasWithAi({ personaCards = [], inputs = {}, co
                 'Keep the same number of personas and same ids.',
                 'Do not invent observed facts.',
                 'Age is allowed only as an inferred demographic hypothesis, never as observed data.',
-                'Each persona must include attackAngle and beachhead/budget order.',
+                'Each persona must keep its primary marketing angle logic, attackAngle and beachhead/budget order.',
+                'Do not collapse personas that have different jobs-to-be-done, triggers, buying behavior or marketing angles.',
+                'Channels must come from behavior and observed/inferred market access, not from generic lists.',
                 'If proof is weak, say what must be verified.'
             ],
             inputs,
@@ -11343,6 +11359,13 @@ Return strict JSON only:
       "confidence": "HIGH|MEDIUM|LOW",
       "details": {
         "need": "...",
+        "primaryMarketingAngle": "same or sharper angle name",
+        "primaryJobToBeDone": "behavioral JTBD behind this persona",
+        "informationBehavior": "how this persona learns before buying",
+        "buyingBehavior": "what makes this persona act",
+        "searchBehavior": "what this persona searches",
+        "discoveryBehavior": "how this persona discovers offers",
+        "trustSources": ["proof source or proof need"],
         "channels": ["..."],
         "attackChannels": [{"name":"...", "type":"Inbound|Outbound|Paid|Owned|Social|Local|Partnership|Experiment", "role":"why this channel matters", "timing":"now|after-proof|scale|test"}],
         "buyingTriggers": ["..."],
@@ -11528,6 +11551,19 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     if (personaAiOverlay?.personas?.length) {
         personaCards = mergeStpPersonaAiOverlay(personaCards, personaAiOverlay.personas);
     }
+    const stpAngleModel = buildAngleDrivenStpModel({
+        query,
+        geo: safeGeo,
+        lang: langPack.code,
+        segments: scoredSegments,
+        personaCards,
+        competitorData,
+        beachheadMarket,
+        budget: effectiveBudget
+    });
+    if (stpAngleModel?.personaCards?.length) {
+        personaCards = stpAngleModel.personaCards;
+    }
 
     const evidenceLedger = [
         stpEvidence('observed', `${competitorData?.top10Competitors?.length || competitorData?.competitors?.length || 0} competitors observed`, 'Competitor SERP layer', 'HIGH', (competitorData?.top10Competitors || []).slice(0, 5).map(c => c.url || c.link)),
@@ -11566,7 +11602,8 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
                 'Segmentation layer: market pockets and behavioral/persona candidates',
                 'Targeting layer: profitability, accessibility, proof strength and scalability scoring',
                 'Beachhead layer: first persona/segment to attack and next market by budget path',
-                'Persona prompt layer: avatar, age hypothesis, pains, triggers and attack angle',
+                'Angle layer: problems, JTBD, proof needs and marketing angles are deduplicated before persona generation',
+                'Persona prompt layer: avatar, age hypothesis, pains, triggers, behavior and attack angle',
                 'Positioning layer: promise, alternative, differentiator and proof guard',
                 'Cards renderer: persona cards first, STP details below'
             ],
@@ -11602,6 +11639,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
             userBenchmark: Boolean(competitorData.userBenchmark),
             proofModel: Boolean(competitorData.proofModel),
             contextInference: inferredContext.mode,
+            marketingAngleEngine: Boolean(stpAngleModel?.marketingAngles?.length),
             personaPromptLayer: Boolean(personaAiOverlay?.personas?.length),
             beachhead: true,
             aiRefinement: false
@@ -11620,6 +11658,11 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         beachheadMarket,
         persona,
         personaCards,
+        marketingAngles: stpAngleModel?.marketingAngles || [],
+        personaAngleMappings: stpAngleModel?.personaAngleMappings || [],
+        angleDeduplication: stpAngleModel?.angleDeduplication || [],
+        personaDeduplication: stpAngleModel?.personaDeduplication || [],
+        stpObservability: stpAngleModel?.observability || [],
         positioning,
         actionPlan,
         decisionCards: buildStpDecisionCards({
@@ -19301,7 +19344,7 @@ app.get('/api/library/:id/pdf', requireAuth, (req, res) => {
 app.get('/health', (req, res) => {
     const memUsage = process.memoryUsage();
     const uptime = Date.now() - METRICS.startTime;
-    const deployMarker = '2026-08-20-library-tab-runtime-fix3';
+    const deployMarker = '2026-08-20-stp-angle-persona-md1';
     
     res.json({
         success: true,

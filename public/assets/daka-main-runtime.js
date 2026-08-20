@@ -1622,7 +1622,7 @@ async function displaySavedReport(id, options = {}) {
             STATE.lastFunnelResults = null;
             STATE.lastTechnicalResults = null;
             STATE.lastKeywords = null;
-            ['resultsCompetitors', 'resultsFunnel', 'resultsTechnical', 'resultsKeywords'].forEach(resultId => {
+            ['resultsCompetitors', 'resultsFunnel', 'resultsTechnical', 'resultsKeywords', 'resultsStpDecision'].forEach(resultId => {
                 const resultNode = document.getElementById(resultId);
                 if (resultNode) resultNode.innerHTML = '';
             });
@@ -1643,11 +1643,18 @@ async function displaySavedReport(id, options = {}) {
             displayTechnicalResults(data);
         } else if (type === 'keywords') {
             displayKeywordsResults(data);
+        } else if (type === 'stp') {
+            STATE.lastStpResults = data;
+            renderStpDecision(data);
         } else {
             throw new Error('REPORT_TYPE_UNSUPPORTED');
         }
 
-        const target = document.getElementById(`results${type === 'competitors' ? 'Competitors' : type === 'funnel' ? 'Funnel' : type === 'technical' ? 'Technical' : 'Keywords'}`);
+        const target = document.getElementById(
+            type === 'stp'
+                ? 'resultsStpDecision'
+                : `results${type === 'competitors' ? 'Competitors' : type === 'funnel' ? 'Funnel' : type === 'technical' ? 'Technical' : 'Keywords'}`
+        );
         requestAnimationFrame(() => target?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
 
         if (options.exportDoc || options.exportPdf) {
@@ -1797,7 +1804,7 @@ document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.addEventListener('DOMContentLoaded', initSharedReportRoute);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-08-20-library-clean-persona-stp1';
+window.DAKA_FRONTEND_BUILD = '2026-08-20-stp-angle-persona-md1';
 
 function loaderTypeFromEndpoint(endpoint = '') {
     const value = String(endpoint || '').toLowerCase();
@@ -2417,6 +2424,14 @@ function ensureDakaLibraryStyles() {
             -webkit-user-select: none;
             user-select: none;
         }
+        .daka-library-shell.is-reading > .card-header,
+        .daka-library-shell.is-reading .daka-library-intro,
+        .daka-library-shell.is-reading .daka-library-shelf {
+            display: none !important;
+        }
+        .daka-library-shell.is-reading .daka-library-viewer {
+            margin-top: 0;
+        }
         .daka-library-toolbar {
             position: sticky;
             top: 86px;
@@ -2458,7 +2473,19 @@ function ensureDakaLibraryStyles() {
                 radial-gradient(circle at 50% 0%, rgba(34,211,238,.08), transparent 34%),
                 rgba(0,0,0,.16);
         }
-            #dakaLibraryCanvas {
+        .daka-library-viewer.is-fullscreen {
+            position: fixed;
+            inset: 10px;
+            z-index: 9999;
+            overflow: auto;
+            border-radius: 22px;
+            background: radial-gradient(circle at 0 0, rgba(34,211,238,.14), transparent 28%), #020617;
+            box-shadow: 0 30px 100px rgba(0,0,0,.65);
+        }
+        .daka-library-viewer.is-fullscreen .daka-library-canvas-wrap {
+            max-height: calc(100vh - 210px);
+        }
+        #dakaLibraryCanvas {
             max-width: 100%;
             border-radius: 10px;
             background: #fff;
@@ -2605,6 +2632,7 @@ async function openDakaLibraryPdf(itemId = 'marketing-frameworks-explained') {
     const viewer = document.getElementById('dakaLibraryViewer');
     if (!viewer) return;
     viewer.hidden = false;
+    viewer.closest('.daka-library-shell')?.classList.add('is-reading');
     viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
     setDakaLibraryStatus(dakaLibraryT('library_loading'));
     try {
@@ -2664,7 +2692,17 @@ function initDakaLibraryViewer() {
     });
     document.getElementById('dakaLibraryClose')?.addEventListener('click', () => {
         const viewer = document.getElementById('dakaLibraryViewer');
-        if (viewer) viewer.hidden = true;
+        if (viewer) {
+            viewer.hidden = true;
+            viewer.classList.remove('is-fullscreen');
+            viewer.closest('.daka-library-shell')?.classList.remove('is-reading');
+        }
+    });
+    document.getElementById('dakaLibraryFullscreen')?.addEventListener('click', () => {
+        const viewer = document.getElementById('dakaLibraryViewer');
+        if (!viewer) return;
+        viewer.classList.toggle('is-fullscreen');
+        setTimeout(() => renderDakaLibraryPage(), 160);
     });
     document.addEventListener('contextmenu', (event) => {
         if (event.target.closest('#dakaLibraryViewer')) event.preventDefault();
@@ -5490,6 +5528,15 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         cards: 'بطاقات القرار',
         personas: 'Personas السوق',
         personasSub: 'Daka يستخرج شخصيات قابلة للاستهداف من SERP والمنافسين والسياق.',
+        marketingAngles: 'زوايا الهجوم',
+        primaryAngle: 'الزاوية الرئيسية',
+        secondaryAngles: 'زوايا مساعدة',
+        jtbd: 'المهمة المطلوب إنجازها',
+        informationBehavior: 'سلوك البحث عن المعلومات',
+        buyingBehavior: 'سلوك الشراء',
+        searchBehavior: 'سلوك البحث',
+        discoveryBehavior: 'الاكتشاف',
+        trustSources: 'مصادر الثقة',
         competitorsObserved: 'منافسين مرصودين',
         name: 'الاسم',
         occupation: 'الدور',
@@ -5538,6 +5585,15 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         cards: 'Decision cards',
         personas: 'Market personas',
         personasSub: 'Daka extracts targetable personas from SERP, competitors and market context.',
+        marketingAngles: 'Attack angles',
+        primaryAngle: 'Primary angle',
+        secondaryAngles: 'Support angles',
+        jtbd: 'Job to be done',
+        informationBehavior: 'Information behavior',
+        buyingBehavior: 'Buying behavior',
+        searchBehavior: 'Search behavior',
+        discoveryBehavior: 'Discovery',
+        trustSources: 'Trust sources',
         competitorsObserved: 'competitors observed',
         name: 'Name',
         occupation: 'Role',
@@ -5586,6 +5642,15 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         cards: 'Cartes décision',
         personas: 'Personas marché',
         personasSub: 'Daka extrait des personas ciblables depuis la SERP, les concurrents et le contexte marché.',
+        marketingAngles: 'Angles d’attaque',
+        primaryAngle: 'Angle principal',
+        secondaryAngles: 'Angles supports',
+        jtbd: 'Job to be done',
+        informationBehavior: 'Comportement information',
+        buyingBehavior: 'Comportement achat',
+        searchBehavior: 'Comportement recherche',
+        discoveryBehavior: 'Découverte',
+        trustSources: 'Sources de confiance',
         competitorsObserved: 'concurrents observés',
         name: 'Nom',
         occupation: 'Rôle',
@@ -5707,6 +5772,11 @@ function ensureStpDecisionStyles() {
       .daka-stp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.daka-stp-card{min-width:0;border:1px solid rgba(148,163,184,.13);border-radius:18px;background:rgba(2,6,23,.46);padding:14px}.daka-stp-card p{margin:8px 0 0;color:#cbd5e1;line-height:1.58;font-size:.83rem}
       .daka-stp-card small,.daka-stp-chip{color:#8aa0ba;font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.daka-stp-chip{display:inline-flex;padding:5px 8px;border-radius:999px;background:rgba(34,211,238,.1);color:#7dd3fc;margin:4px 6px 0 0}
       .daka-stp-decision-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+      .daka-stp-angle-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:0 0 16px}
+      .daka-stp-angle-card{border:1px solid rgba(var(--angle-rgb,34,211,238),.22);border-radius:18px;background:linear-gradient(145deg,rgba(var(--angle-rgb,34,211,238),.13),rgba(2,6,23,.5));padding:12px;min-width:0}
+      .daka-stp-angle-card strong{display:flex;align-items:center;gap:8px;color:#fff;font-size:.82rem;line-height:1.3}
+      .daka-stp-angle-card p{margin:7px 0 0;color:#a8bad1;font-size:.74rem;line-height:1.45}
+      .daka-stp-angle-score{margin-top:8px;color:rgb(var(--angle-rgb,34,211,238));font-size:.7rem;font-weight:950}
       .daka-stp-persona-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:18px 0 12px}
       .daka-stp-persona-head p{margin:6px 0 0;color:#9fb2cb;line-height:1.55;font-size:.82rem}
       .daka-stp-personas{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px}
@@ -5720,6 +5790,9 @@ function ensureStpDecisionStyles() {
       .daka-stp-avatar i{color:rgb(var(--persona-rgb,34,211,238));font-size:1.35rem}
       .daka-stp-persona h3{font-size:.98rem;line-height:1.3;margin:0;color:#fff}
       .daka-stp-persona p{margin:0;color:#cbd5e1;line-height:1.55;font-size:.8rem}
+      .daka-stp-copy-md{border:1px solid rgba(var(--persona-rgb,34,211,238),.22);background:rgba(var(--persona-rgb,34,211,238),.1);color:#eaf6ff;border-radius:12px;padding:8px 10px;font-size:.72rem;font-weight:950;cursor:pointer;display:inline-flex;align-items:center;gap:7px;justify-content:center}
+      .daka-stp-copy-md:hover{background:rgba(var(--persona-rgb,34,211,238),.18)}
+      .daka-stp-md-source{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;white-space:pre-wrap}
       .daka-stp-mini-grid{display:grid;grid-template-columns:1fr;gap:8px}
       .daka-stp-mini{border:1px solid rgba(148,163,184,.09);border-radius:14px;background:rgba(2,6,23,.35);padding:9px}
       .daka-stp-mini strong{display:block;color:#eaf6ff;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
@@ -5815,10 +5888,76 @@ function renderStpSocialPlan(details = {}, copy = {}) {
     return `<div class="daka-stp-mini"><strong>${stpUiEsc(copy.socialPlan || copy.channels || 'Social')}</strong>${lines || ''}</div>${channelHtml}`;
 }
 
+function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
+    const details = card.details || {};
+    const primaryAngle = card.primaryAngle || {};
+    const secondaryAngles = Array.isArray(card.secondaryAngles) ? card.secondaryAngles : [];
+    const priority = card.beachheadPriority || {};
+    const lines = [
+        `# Persona ${index + 1}: ${stpUiText(card.displayName || card.name || card.title, `Persona ${index + 1}`)}`,
+        '',
+        `- ${copy.age || 'Age'}: ${stpUiText(card.ageRange || details.ageRange, copy.noData || 'N/A')}`,
+        `- ${copy.occupation || 'Role'}: ${stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName, copy.noData || 'N/A')}`,
+        `- ${copy.priority || 'Priority'}: ${stpUiText(card.priorityScore, '0')}/100`,
+        `- ${copy.primaryAngle || 'Primary angle'}: ${stpUiText(primaryAngle.name || details.primaryMarketingAngle || card.attackAngle, copy.noData || 'N/A')}`,
+        secondaryAngles.length ? `- ${copy.secondaryAngles || 'Support angles'}: ${secondaryAngles.map(a => stpUiText(a.name || a.label || a.type)).filter(Boolean).join(', ')}` : '',
+        `- ${copy.attackAngle || 'Attack angle'}: ${stpUiText(card.attackAngle || details.attackAngle, copy.noData || 'N/A')}`,
+        `- ${copy.jtbd || 'JTBD'}: ${stpUiText(details.primaryJobToBeDone || card.summary || details.need, copy.noData || 'N/A')}`,
+        `- ${copy.budgetPath || 'Budget path'}: ${stpUiText(priority.budgetPath || details.budgetPath, copy.noData || 'N/A')}`,
+        '',
+        `## ${copy.socialPlan || copy.channels || 'Channels'}`,
+        ...stpUiArray(details.channels, 8).map(item => `- ${item}`),
+        '',
+        `## ${copy.triggers || 'Triggers'}`,
+        ...stpUiArray(details.buyingTriggers, 8).map(item => `- ${item}`),
+        '',
+        `## ${copy.pains || 'Pains'}`,
+        ...stpUiArray(details.pains, 8).map(item => `- ${item}`),
+        '',
+        `## ${copy.objections || 'Objections'}`,
+        ...stpUiArray(details.objections, 8).map(item => `- ${item}`),
+        '',
+        `## ${copy.proofNeeded || 'Proofs to show'}`,
+        ...stpUiArray(details.proofNeeded || details.trustSources, 8).map(item => `- ${item}`),
+        '',
+        `## ${copy.informationBehavior || 'Information behavior'}`,
+        stpUiText(details.informationBehavior, copy.noData || 'N/A'),
+        '',
+        `## ${copy.buyingBehavior || 'Buying behavior'}`,
+        stpUiText(details.buyingBehavior, copy.noData || 'N/A'),
+        '',
+        `## ${copy.searchBehavior || 'Search behavior'}`,
+        stpUiText(details.searchBehavior, copy.noData || 'N/A'),
+        '',
+        `## ${copy.discoveryBehavior || 'Discovery'}`,
+        stpUiText(details.discoveryBehavior, copy.noData || 'N/A')
+    ].filter(line => line !== '');
+    return lines.join('\n');
+}
+
+function renderStpAngleOverview(angles = [], copy = {}) {
+    const cards = Array.isArray(angles) ? angles.filter(Boolean).slice(0, 7) : [];
+    if (!cards.length) return '';
+    return `<div class="daka-stp-angle-strip" aria-label="${stpUiEsc(copy.marketingAngles || 'Attack angles')}">
+      ${cards.map((angle, index) => {
+        const tone = stpUiText(angle.tone, index === 0 ? '34,197,94' : '34,211,238');
+        const name = stpUiText(angle.name || angle.label || angle.type, `Angle ${index + 1}`);
+        const promise = stpUiText(angle.promise || angle.problem || angle.jobToBeDone, '');
+        const score = stpUiText(angle.score, '');
+        return `<article class="daka-stp-angle-card" style="--angle-rgb:${stpUiEsc(tone)}">
+          <strong><i class="fas ${stpUiEsc(angle.icon || 'fa-bullseye')}"></i>${stpUiEsc(name)}</strong>
+          ${promise ? `<p>${stpUiEsc(promise)}</p>` : ''}
+          ${score ? `<div class="daka-stp-angle-score">${stpUiEsc(copy.priority || 'Priority')}: ${stpUiEsc(score)}/100</div>` : ''}
+        </article>`;
+      }).join('')}
+    </div>`;
+}
+
 function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
     const cards = Array.isArray(personaCards) ? personaCards.filter(Boolean) : [];
     if (!cards.length) return '';
     const competitorCount = Number(meta.competitorCount || 0);
+    const anglesHtml = renderStpAngleOverview(meta.marketingAngles, copy);
     return `<div class="daka-stp-persona-head">
       <div>
         <span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas || 'Personas')}</span>
@@ -5829,6 +5968,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
         ${competitorCount ? `<span class="daka-stp-chip"><i class="fas fa-ranking-star"></i> ${competitorCount} ${stpUiEsc(copy.competitorsObserved || copy.competitors || 'competitors observed')}</span>` : ''}
       </div>
     </div>
+    ${anglesHtml}
     <div class="daka-stp-personas">
       ${cards.map((card, index) => {
         const details = card.details || {};
@@ -5837,6 +5977,10 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
         const score = stpUiText(card.priorityScore, '');
         const personaName = stpUiText(card.displayName || card.name || card.title, `Persona ${index + 1}`);
         const personaRole = stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName || '');
+        const primaryAngle = card.primaryAngle || {};
+        const secondaryAngles = Array.isArray(card.secondaryAngles) ? card.secondaryAngles : [];
+        const mdId = `stpPersonaMarkdown_${index}_${String(card.id || index).replace(/[^a-z0-9_-]/gi, '_')}`;
+        const markdown = buildStpPersonaMarkdown(card, index, copy);
         return `<article class="daka-stp-persona" style="--persona-rgb:${stpUiEsc(tone)}">
           <div class="daka-stp-persona-top">
             <div class="daka-stp-avatar"><i class="fas ${stpUiEsc(card.icon || 'fa-user')}"></i></div>
@@ -5851,6 +5995,9 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
             ${card.ageRange || details.ageRange ? `<span class="daka-stp-chip">${stpUiEsc(copy.age || 'Age')}: ${stpUiEsc(stpUiText(card.ageRange || details.ageRange))}</span>` : ''}
             ${card.confidence ? `<span class="daka-stp-chip">${stpUiEsc(card.confidence)}</span>` : ''}
           </div>
+          ${primaryAngle.name ? `<div class="daka-stp-pill-row"><span class="daka-stp-chip"><i class="fas ${stpUiEsc(primaryAngle.icon || 'fa-bullseye')}"></i> ${stpUiEsc(copy.primaryAngle || 'Primary angle')}: ${stpUiEsc(primaryAngle.name)}</span>${secondaryAngles.slice(0, 2).map(angle => `<span class="daka-stp-chip">${stpUiEsc(angle.name || angle.label || angle.type)}</span>`).join('')}</div>` : ''}
+          <button type="button" class="daka-stp-copy-md" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${stpUiEsc(mdId)}', this)"><i class="fas fa-copy"></i> Markdown</button>
+          <pre id="${stpUiEsc(mdId)}" class="daka-stp-md-source">${stpUiEsc(markdown)}</pre>
           ${card.summary ? `<p>${stpUiEsc(card.summary)}</p>` : ''}
           <div class="daka-stp-persona-stp">
             ${renderStpMini(copy.stpSegmentation || 'Segmentation', details.stp?.segmentation || card.market || card.title)}
@@ -5860,11 +6007,17 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
           <div class="daka-stp-mini-grid">
             ${renderStpSocialPlan(details, copy)}
             ${renderStpMini(copy.attackAngle || 'Attack angle', card.attackAngle || details.attackAngle)}
+            ${renderStpMini(copy.jtbd || 'JTBD', details.primaryJobToBeDone)}
+            ${renderStpMini(copy.informationBehavior || 'Information behavior', details.informationBehavior)}
+            ${renderStpMini(copy.buyingBehavior || 'Buying behavior', details.buyingBehavior)}
+            ${renderStpMini(copy.searchBehavior || 'Search behavior', details.searchBehavior)}
+            ${renderStpMini(copy.discoveryBehavior || 'Discovery', details.discoveryBehavior)}
             ${renderStpMini(copy.budgetPath || 'Budget path', priority.budgetPath || details.budgetPath)}
             ${renderStpMini(copy.triggers || 'Triggers', details.buyingTriggers)}
             ${renderStpMini(copy.objections || 'Objections', details.objections)}
             ${renderStpMini(copy.pains || 'Pains', details.pains)}
             ${renderStpMini(copy.proofNeeded || 'Proofs to show', details.proofNeeded)}
+            ${renderStpMini(copy.trustSources || 'Trust sources', details.trustSources)}
             ${renderStpMini(copy.competitors || 'Competitors', details.competitors)}
             ${renderStpMini(copy.constraints || 'Constraints', details.constraints)}
           </div>
@@ -5919,7 +6072,10 @@ function renderStpDecision(data) {
         data?.targeting?.marketSignals?.competitorCount ||
         0
     );
-    const personaCardsHtml = renderStpPersonaCards(data?.personaCards?.length ? data.personaCards : fallbackPersona, copy, { competitorCount });
+    const personaCardsHtml = renderStpPersonaCards(data?.personaCards?.length ? data.personaCards : fallbackPersona, copy, {
+        competitorCount,
+        marketingAngles: data?.marketingAngles || []
+    });
 
     container.innerHTML = `<section class="daka-stp-report daka-stp-persona-only" dir="${dir}">
       ${personaCardsHtml || `<div class="daka-stp-persona-head"><div><span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas)}</span><p>${stpUiEsc(stpUiText(chosen.need, copy.subtitle))}</p></div></div>`}
