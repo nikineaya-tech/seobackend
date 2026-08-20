@@ -4488,7 +4488,7 @@ table tbody td {
                                 <span class="highlight" data-i18n="tab_stp_highlight">Positioning</span>
                             </h1>
                             <p class="card-subtitle" data-i18n="tab_stp_subtitle">
-                                Choisissez le segment, le persona, le positionnement et le beachhead market à partir des couches marché, concurrents, budget, preuves et accessibilité.
+                                Générez des personas d’attaque avec leurs angles, canaux sociaux, priorités budget et positionnement.
                             </p>
                         </div>
                         <div class="server-status online no-print" style="background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.36);">
@@ -4581,45 +4581,93 @@ table tbody td {
                                 <span class="highlight" data-i18n="library_highlight">Daka</span>
                             </h1>
                             <p class="card-subtitle" data-i18n="library_subtitle">
-                                Lisez les frameworks marketing de référence directement dans Daka, sans lien public ni bouton de téléchargement.
+                                Une salle de lecture pour les frameworks, playbooks et méthodes que Daka transforme ensuite en décisions marketing.
                             </p>
                         </div>
                         <div class="server-status online no-print" style="background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.34);">
-                            <i class="fas fa-shield-halved"></i>
-                            <span style="font-size:.75rem;font-weight:800;" data-i18n="library_badge">LECTURE SEULE</span>
+                            <i class="fas fa-book-open-reader"></i>
+                            <span style="font-size:.75rem;font-weight:800;" data-i18n="library_badge">SALLE DE LECTURE</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="daka-library-grid">
-                    <article class="daka-library-book">
-                        <div class="daka-library-cover" aria-hidden="true">
-                            <i class="fas fa-book-open"></i>
-                            <span>PDF</span>
-                        </div>
-                        <div>
-                            <span class="daka-library-pill" data-i18n="library_pdf_pill">Frameworks marketing</span>
-                            <h2 data-i18n="library_pdf_title">Marketing Frameworks Explained</h2>
-                            <p data-i18n="library_pdf_desc">Base de lecture pour STP, personas, positionnement, SWOT, funnel et décisions marketing.</p>
-                            <div class="daka-library-actions">
-                                <button id="openDakaLibraryPdf" class="btn btn-cosmic" type="button" data-library-id="marketing-frameworks-explained">
-                                    <i class="fas fa-eye"></i>
-                                    <span data-i18n="library_open">Lire dans Daka</span>
-                                </button>
-                            </div>
-                        </div>
-                    </article>
-
+                <div class="daka-library-intro">
+                    <div>
+                        <span class="daka-library-pill" data-i18n="library_collection_pill">Daka Reading Room</span>
+                        <h2 data-i18n="library_collection_title">Livres recommandés pour penser comme un strategist.</h2>
+                        <p data-i18n="library_collection_desc">Commencez par les frameworks fondamentaux, puis reliez la lecture aux modules STP, Competitor, Funnel et Audit.</p>
+                    </div>
                     <aside class="daka-library-guard">
-                        <i class="fas fa-lock"></i>
+                        <i class="fas fa-book-bookmark"></i>
                         <div>
-                            <h3 data-i18n="library_guard_title">Protection lecture seule</h3>
-                            <p data-i18n="library_guard_text">Le PDF reste hors dossier public. Il est servi via API authentifiée, rendu en canvas, sans toolbar native ni bouton download.</p>
+                            <h3 data-i18n="library_guard_title">Lecture encadrée</h3>
+                            <p data-i18n="library_guard_text">Les livres s’ouvrent dans Daka après connexion, dans un lecteur propre pensé pour lire, comprendre et appliquer.</p>
                         </div>
                     </aside>
                 </div>
 
+                <div class="daka-library-shelf" aria-label="Daka books">
+                    <article class="daka-library-book-card is-available" data-library-open data-library-id="marketing-frameworks-explained" tabindex="0" role="button">
+                        <div class="daka-library-cover" aria-hidden="true">
+                            <i class="fas fa-chess-board"></i>
+                            <span data-i18n="library_book1_tag">Frameworks</span>
+                        </div>
+                        <div class="daka-library-book-copy">
+                            <span class="daka-library-status-pill" data-i18n="library_available">Disponible</span>
+                            <h3 data-i18n="library_book1_title">Marketing Frameworks Explained</h3>
+                            <p data-i18n="library_book1_desc">Le socle pour structurer STP, persona, positionnement, SWOT, funnel et analyse concurrentielle.</p>
+                            <button class="daka-library-card-action" type="button" data-library-open data-library-id="marketing-frameworks-explained">
+                                <i class="fas fa-eye"></i>
+                                <span data-i18n="library_open">Lire dans Daka</span>
+                            </button>
+                        </div>
+                    </article>
+
+                    <article class="daka-library-book-card is-soon">
+                        <div class="daka-library-cover" aria-hidden="true">
+                            <i class="fas fa-users-viewfinder"></i>
+                            <span data-i18n="library_book2_tag">Personas</span>
+                        </div>
+                        <div class="daka-library-book-copy">
+                            <span class="daka-library-status-pill muted" data-i18n="library_soon">Bientôt</span>
+                            <h3 data-i18n="library_book2_title">STP Persona Attack Playbook</h3>
+                            <p data-i18n="library_book2_desc">Méthode terrain pour classer les segments, choisir le premier persona et construire l’angle d’attaque.</p>
+                        </div>
+                    </article>
+
+                    <article class="daka-library-book-card is-soon">
+                        <div class="daka-library-cover" aria-hidden="true">
+                            <i class="fas fa-binoculars"></i>
+                            <span data-i18n="library_book3_tag">Spy</span>
+                        </div>
+                        <div class="daka-library-book-copy">
+                            <span class="daka-library-status-pill muted" data-i18n="library_soon">Bientôt</span>
+                            <h3 data-i18n="library_book3_title">Competitive Intelligence Fieldbook</h3>
+                            <p data-i18n="library_book3_desc">Lecture des concurrents, offres, prix, objections et angles faibles à exploiter.</p>
+                        </div>
+                    </article>
+
+                    <article class="daka-library-book-card is-soon">
+                        <div class="daka-library-cover" aria-hidden="true">
+                            <i class="fas fa-route"></i>
+                            <span data-i18n="library_book4_tag">CRO</span>
+                        </div>
+                        <div class="daka-library-book-copy">
+                            <span class="daka-library-status-pill muted" data-i18n="library_soon">Bientôt</span>
+                            <h3 data-i18n="library_book4_title">Funnel & CRO Surgery Notes</h3>
+                            <p data-i18n="library_book4_desc">Checklists pour transformer une page confuse en parcours clair: confiance, friction, CTA, objections.</p>
+                        </div>
+                    </article>
+                </div>
+
                 <div id="dakaLibraryViewer" class="daka-library-viewer" hidden>
+                    <div class="daka-library-reader-head">
+                        <div>
+                            <span class="daka-library-pill" data-i18n="library_reader_pill">Reader Daka</span>
+                            <h2 id="dakaLibraryReaderTitle" data-i18n="library_pdf_title">Marketing Frameworks Explained</h2>
+                            <p id="dakaLibraryReaderDesc" data-i18n="library_pdf_desc">Base de lecture pour STP, personas, positionnement, SWOT, funnel et décisions marketing.</p>
+                        </div>
+                    </div>
                     <div class="daka-library-toolbar no-print">
                         <button id="dakaLibraryPrev" class="btn btn-secondary" type="button">
                             <i class="fas fa-chevron-left"></i>
@@ -5175,7 +5223,7 @@ navkeywords: 'Demande marché',
         // --- Tab STP ---
         tab_stp_title: 'Segmentation Targeting',
         tab_stp_highlight: 'Positioning',
-        tab_stp_subtitle: 'Choisissez le segment, le persona, le positionnement et le beachhead market à partir des couches marché, concurrents, budget, preuves et accessibilité.',
+        tab_stp_subtitle: 'Générez des personas d’attaque avec leurs angles, canaux sociaux, priorités budget et positionnement.',
         stp_layer_badge: 'STP BACKEND LAYER',
         stp_label_keyword: 'Marché, niche ou offre à positionner',
         stp_placeholder_keyword: 'Ex: agence marketing IA Maroc',
@@ -5207,14 +5255,32 @@ navkeywords: 'Demande marché',
         // --- Daka Library ---
         library_title: 'Bibliothèque',
         library_highlight: 'Daka',
-        library_subtitle: 'Lisez les frameworks marketing de référence directement dans Daka, sans lien public ni bouton de téléchargement.',
-        library_badge: 'LECTURE SEULE',
+        library_subtitle: 'Une salle de lecture pour les frameworks, playbooks et méthodes que Daka transforme ensuite en décisions marketing.',
+        library_badge: 'SALLE DE LECTURE',
         library_pdf_pill: 'Frameworks marketing',
         library_pdf_title: 'Marketing Frameworks Explained',
         library_pdf_desc: 'Base de lecture pour STP, personas, positionnement, SWOT, funnel et décisions marketing.',
         library_open: 'Lire dans Daka',
-        library_guard_title: 'Protection lecture seule',
-        library_guard_text: 'Le PDF reste hors dossier public. Il est servi via API authentifiée, rendu en canvas, sans toolbar native ni bouton download.',
+        library_collection_pill: 'Daka Reading Room',
+        library_collection_title: 'Livres recommandés pour penser comme un strategist.',
+        library_collection_desc: 'Commencez par les frameworks fondamentaux, puis reliez la lecture aux modules STP, Competitor, Funnel et Audit.',
+        library_guard_title: 'Mode lecture',
+        library_guard_text: 'Les livres s’ouvrent dans Daka après connexion, dans un lecteur propre pensé pour lire, comprendre et appliquer.',
+        library_available: 'Disponible',
+        library_soon: 'Bientôt',
+        library_reader_pill: 'Reader Daka',
+        library_book1_tag: 'Frameworks',
+        library_book1_title: 'Marketing Frameworks Explained',
+        library_book1_desc: 'Le socle pour structurer STP, persona, positionnement, SWOT, funnel et analyse concurrentielle.',
+        library_book2_tag: 'Personas',
+        library_book2_title: 'STP Persona Attack Playbook',
+        library_book2_desc: 'Méthode terrain pour classer les segments, choisir le premier persona et construire l’angle d’attaque.',
+        library_book3_tag: 'Spy',
+        library_book3_title: 'Competitive Intelligence Fieldbook',
+        library_book3_desc: 'Lecture des concurrents, offres, prix, objections et angles faibles à exploiter.',
+        library_book4_tag: 'CRO',
+        library_book4_title: 'Funnel & CRO Surgery Notes',
+        library_book4_desc: 'Checklists pour transformer une page confuse en parcours clair: confiance, friction, CTA, objections.',
         library_prev: 'Page précédente',
         library_next: 'Page suivante',
         library_close: 'Fermer',
@@ -5340,7 +5406,7 @@ navkeywords: 'طلب السوق',
         // --- Tab STP ---
         tab_stp_title: 'التقسيم والاستهداف',
         tab_stp_highlight: 'والتموضع',
-        tab_stp_subtitle: 'اختر الشريحة، الشخصية، التموضع وسوق الانطلاق اعتمادا على طبقات السوق والمنافسين والميزانية والأدلة وسهولة الوصول.',
+        tab_stp_subtitle: 'أنشئ شخصيات هجومية مع الزوايا والقنوات الاجتماعية وأولويات الميزانية والتموضع.',
         stp_layer_badge: 'طبقة STP في الخلفية',
         stp_label_keyword: 'السوق أو النيتش أو العرض المراد تموضعه',
         stp_placeholder_keyword: 'مثال: وكالة تسويق بالذكاء الاصطناعي المغرب',
@@ -5372,18 +5438,36 @@ navkeywords: 'طلب السوق',
         // --- Daka Library ---
         library_title: 'مكتبة',
         library_highlight: 'Daka',
-        library_subtitle: 'اقرأ أطر التسويق المرجعية داخل Daka مباشرة، بدون رابط عام أو زر تحميل.',
-        library_badge: 'قراءة فقط',
+        library_subtitle: 'غرفة قراءة للأطر والكتب العملية التي تحولها Daka لاحقا إلى قرارات تسويقية.',
+        library_badge: 'غرفة قراءة',
         library_pdf_pill: 'أطر التسويق',
         library_pdf_title: 'Marketing Frameworks Explained',
         library_pdf_desc: 'مرجع قراءة لـ STP والشخصيات والتموضع وSWOT والفانل والقرارات التسويقية.',
         library_open: 'اقرأ داخل Daka',
-        library_guard_title: 'حماية القراءة فقط',
-        library_guard_text: 'يبقى PDF خارج المجلد العام. يتم عرضه عبر API محمية، ويرسم داخل canvas بدون شريط PDF الأصلي أو زر تحميل.',
+        library_collection_pill: 'غرفة قراءة Daka',
+        library_collection_title: 'كتب مقترحة للتفكير مثل استراتيجي تسويق.',
+        library_collection_desc: 'ابدأ بالأطر الأساسية، ثم اربط القراءة بوحدات STP والمنافسين والفانل والتدقيق.',
+        library_guard_title: 'وضع القراءة',
+        library_guard_text: 'تفتح الكتب داخل Daka بعد تسجيل الدخول، في قارئ نظيف مصمم للقراءة والفهم والتطبيق.',
+        library_available: 'متاح',
+        library_soon: 'قريبا',
+        library_reader_pill: 'قارئ Daka',
+        library_book1_tag: 'Frameworks',
+        library_book1_title: 'Marketing Frameworks Explained',
+        library_book1_desc: 'الأساس لتنظيم STP والشخصيات والتموضع وSWOT والفانل وتحليل المنافسين.',
+        library_book2_tag: 'Personas',
+        library_book2_title: 'STP Persona Attack Playbook',
+        library_book2_desc: 'منهجية ميدانية لترتيب الشرائح واختيار أول شخصية وبناء زاوية الهجوم.',
+        library_book3_tag: 'Spy',
+        library_book3_title: 'Competitive Intelligence Fieldbook',
+        library_book3_desc: 'قراءة المنافسين والعروض والأسعار والاعتراضات والزوايا الضعيفة.',
+        library_book4_tag: 'CRO',
+        library_book4_title: 'Funnel & CRO Surgery Notes',
+        library_book4_desc: 'قوائم فحص لتحويل صفحة مشوشة إلى مسار واضح: ثقة، احتكاك، CTA، اعتراضات.',
         library_prev: 'الصفحة السابقة',
         library_next: 'الصفحة التالية',
         library_close: 'إغلاق',
-        library_loading: 'جاري تحميل المكتبة...',
+        library_loading: 'جاري فتح المكتبة...',
         library_page: 'صفحة',
 
         // --- Loading States Tab 1 (Competitors) ---
@@ -5505,7 +5589,7 @@ navkeywords: 'Market demand',
         // --- Tab STP ---
         tab_stp_title: 'Segmentation Targeting',
         tab_stp_highlight: 'Positioning',
-        tab_stp_subtitle: 'Choose the segment, persona, positioning and beachhead market from market, competitor, budget, proof and accessibility layers.',
+        tab_stp_subtitle: 'Generate attack personas with angles, social channels, budget priorities and positioning.',
         stp_layer_badge: 'STP BACKEND LAYER',
         stp_label_keyword: 'Market, niche or offer to position',
         stp_placeholder_keyword: 'Ex: AI marketing agency Morocco',
@@ -5531,20 +5615,38 @@ navkeywords: 'Market demand',
         stp_placeholder_constraints: 'Small budget, no sales team, slow delivery, weak proof...',
         stp_label_channels: 'Accessible channels',
         stp_placeholder_channels: 'SEO, TikTok, Meta Ads, WhatsApp, Google Maps, LinkedIn...',
-        stp_auto_deduce_note: 'Daka automatically infers the offer, audience, business model, beachhead region, competitors, constraints and channels through SERP, competitor and market layers.',
+        stp_auto_deduce_note: 'Daka automatically infers the offer, audience, business model, attack region, competitors, constraints and channels through SERP, competitor and market layers.',
         stp_btn: 'GENERATE STP DECISION',
 
         // --- Daka Library ---
         library_title: 'Daka',
         library_highlight: 'Library',
-        library_subtitle: 'Read reference marketing frameworks inside Daka, with no public link and no download button.',
-        library_badge: 'READ ONLY',
+        library_subtitle: 'A reading room for frameworks, playbooks and methods that Daka turns into marketing decisions.',
+        library_badge: 'READING ROOM',
         library_pdf_pill: 'Marketing frameworks',
         library_pdf_title: 'Marketing Frameworks Explained',
         library_pdf_desc: 'Reading base for STP, personas, positioning, SWOT, funnels and marketing decisions.',
         library_open: 'Read in Daka',
-        library_guard_title: 'Read-only protection',
-        library_guard_text: 'The PDF stays outside the public folder. It is served through an authenticated API and rendered in canvas without native PDF toolbar or download button.',
+        library_collection_pill: 'Daka Reading Room',
+        library_collection_title: 'Recommended books for thinking like a strategist.',
+        library_collection_desc: 'Start with foundational frameworks, then connect the reading to STP, Competitor, Funnel and Audit modules.',
+        library_guard_title: 'Reading mode',
+        library_guard_text: 'Books open inside Daka after sign-in, in a clean reader designed for reading, understanding and applying.',
+        library_available: 'Available',
+        library_soon: 'Soon',
+        library_reader_pill: 'Daka Reader',
+        library_book1_tag: 'Frameworks',
+        library_book1_title: 'Marketing Frameworks Explained',
+        library_book1_desc: 'The foundation for structuring STP, personas, positioning, SWOT, funnels and competitor analysis.',
+        library_book2_tag: 'Personas',
+        library_book2_title: 'STP Persona Attack Playbook',
+        library_book2_desc: 'A field method to rank segments, choose the first persona and build the attack angle.',
+        library_book3_tag: 'Spy',
+        library_book3_title: 'Competitive Intelligence Fieldbook',
+        library_book3_desc: 'How to read competitors, offers, prices, objections and weak angles to exploit.',
+        library_book4_tag: 'CRO',
+        library_book4_title: 'Funnel & CRO Surgery Notes',
+        library_book4_desc: 'Checklists to turn a confusing page into a clear path: trust, friction, CTA, objections.',
         library_prev: 'Previous page',
         library_next: 'Next page',
         library_close: 'Close',
@@ -5639,7 +5741,7 @@ navkeywords: 'Market demand',
 
     <script src="https://seobackend-f81n.onrender.com/assets/daka-analytics.js?v=20260810-marketinsight1"></script>
     <script>window.DAKA_USE_COMPETITOR_REFONTE = false;</script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-stp-library1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-library-clean-persona-stp1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">

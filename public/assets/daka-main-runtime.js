@@ -528,19 +528,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     navlibrary: 'Bibliothèque',
                     library_title: 'Bibliothèque',
                     library_highlight: 'Daka',
-                    library_subtitle: 'Lisez les frameworks marketing de référence directement dans Daka, sans lien public ni bouton de téléchargement.',
-                    library_badge: 'LECTURE SEULE',
+                    library_subtitle: 'Une salle de lecture pour les frameworks, playbooks et méthodes que Daka transforme ensuite en décisions marketing.',
+                    library_badge: 'SALLE DE LECTURE',
+                    library_collection_pill: 'Daka Reading Room',
+                    library_collection_title: 'Choisissez un livre, lisez dans Daka, appliquez dans vos décisions.',
+                    library_collection_desc: 'Les ouvrages sont présentés comme une bibliothèque stratégique: nom clair, utilité, contexte, puis lecture intégrée.',
                     library_pdf_pill: 'Frameworks marketing',
                     library_pdf_title: 'Marketing Frameworks Explained',
                     library_pdf_desc: 'Base de lecture pour STP, personas, positionnement, SWOT, funnel et décisions marketing.',
                     library_open: 'Lire dans Daka',
-                    library_guard_title: 'Protection lecture seule',
-                    library_guard_text: 'Le PDF reste hors dossier public. Il est servi via API authentifiée, rendu en canvas, sans toolbar native ni bouton download.',
+                    library_available: 'Disponible',
+                    library_soon: 'Bientôt',
+                    library_reader_pill: 'Reader Daka',
+                    library_guard_title: 'Mode lecture',
+                    library_guard_text: 'Les livres s’ouvrent dans Daka après connexion, dans un lecteur propre pensé pour lire, comprendre et appliquer.',
+                    library_book1_tag: 'Frameworks',
+                    library_book1_title: 'Marketing Frameworks Explained',
+                    library_book1_desc: 'Guide de lecture pour STP, personas, positionnement, SWOT, funnel et matrices de décision.',
+                    library_book2_tag: 'STP',
+                    library_book2_title: 'STP Persona Attack Playbook',
+                    library_book2_desc: 'Méthode Daka pour convertir les signaux marché en personas, angles et priorités d’attaque.',
+                    library_book3_tag: 'Competitor',
+                    library_book3_title: 'Competitive Intelligence Fieldbook',
+                    library_book3_desc: 'Lecture des concurrents, offres, prix, objections et angles faibles à exploiter.',
+                    library_book4_tag: 'Funnel',
+                    library_book4_title: 'Funnel & CRO Surgery Notes',
+                    library_book4_desc: 'Notes pratiques pour transformer une analyse funnel en sections, preuves client, CTA et ordre de page.',
                     library_prev: 'Page précédente',
                     library_next: 'Page suivante',
                     library_close: 'Fermer',
                     library_loading: 'Chargement de la bibliothèque...',
-                    library_loaded: 'Document prêt en lecture seule.',
+                    library_loaded: 'Livre prêt dans le reader Daka.',
                     library_error: 'Impossible d’ouvrir le document. Connectez-vous puis réessayez.',
                     library_page: 'Page',
                     label_seed: 'Mot-clé de départ',
@@ -614,19 +632,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     navlibrary: 'Library',
                     library_title: 'Daka',
                     library_highlight: 'Library',
-                    library_subtitle: 'Read reference marketing frameworks inside Daka, with no public link and no download button.',
-                    library_badge: 'READ ONLY',
+                    library_subtitle: 'A reading room for frameworks, playbooks and methods that Daka turns into marketing decisions.',
+                    library_badge: 'READING ROOM',
+                    library_collection_pill: 'Daka Reading Room',
+                    library_collection_title: 'Pick a book, read inside Daka, apply it to your decisions.',
+                    library_collection_desc: 'Books are presented as a strategic shelf: clear title, purpose, context, then an integrated reader.',
                     library_pdf_pill: 'Marketing frameworks',
                     library_pdf_title: 'Marketing Frameworks Explained',
                     library_pdf_desc: 'Reading base for STP, personas, positioning, SWOT, funnels and marketing decisions.',
                     library_open: 'Read in Daka',
-                    library_guard_title: 'Read-only protection',
-                    library_guard_text: 'The PDF stays outside the public folder. It is served through an authenticated API and rendered in canvas without native PDF toolbar or download button.',
+                    library_available: 'Available',
+                    library_soon: 'Soon',
+                    library_reader_pill: 'Daka Reader',
+                    library_guard_title: 'Reading mode',
+                    library_guard_text: 'Books open inside Daka after sign-in, in a clean reader designed for reading, understanding and applying.',
+                    library_book1_tag: 'Frameworks',
+                    library_book1_title: 'Marketing Frameworks Explained',
+                    library_book1_desc: 'Reading guide for STP, personas, positioning, SWOT, funnel and decision matrices.',
+                    library_book2_tag: 'STP',
+                    library_book2_title: 'STP Persona Attack Playbook',
+                    library_book2_desc: 'Daka method to turn market signals into personas, angles and attack priorities.',
+                    library_book3_tag: 'Competitor',
+                    library_book3_title: 'Competitive Intelligence Fieldbook',
+                    library_book3_desc: 'Competitor reading for offers, prices, objections and weak angles to exploit.',
+                    library_book4_tag: 'Funnel',
+                    library_book4_title: 'Funnel & CRO Surgery Notes',
+                    library_book4_desc: 'Practical notes to turn funnel analysis into sections, customer proof, CTAs and page order.',
                     library_prev: 'Previous page',
                     library_next: 'Next page',
                     library_close: 'Close',
                     library_loading: 'Loading library...',
-                    library_loaded: 'Document ready in read-only mode.',
+                    library_loaded: 'Book ready in the Daka reader.',
                     library_error: 'Unable to open the document. Sign in and try again.',
                     library_page: 'Page',
                     label_seed: 'Seed keyword',
@@ -659,19 +695,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     navlibrary: 'المكتبة',
                     library_title: 'مكتبة',
                     library_highlight: 'Daka',
-                    library_subtitle: 'اقرأ أطر التسويق المرجعية داخل Daka مباشرة، بدون رابط عام أو زر تحميل.',
-                    library_badge: 'قراءة فقط',
+                    library_subtitle: 'غرفة قراءة للأطر والكتب العملية التي تحولها Daka لاحقا إلى قرارات تسويقية.',
+                    library_badge: 'غرفة قراءة',
+                    library_collection_pill: 'غرفة قراءة Daka',
+                    library_collection_title: 'اختر كتابا، اقرأ داخل Daka، ثم طبقه في القرار.',
+                    library_collection_desc: 'تظهر الكتب كرف استراتيجي: اسم واضح، فائدة، سياق، ثم قارئ مدمج.',
                     library_pdf_pill: 'أطر التسويق',
                     library_pdf_title: 'Marketing Frameworks Explained',
                     library_pdf_desc: 'مرجع قراءة لـ STP والشخصيات والتموضع وSWOT والفانل والقرارات التسويقية.',
                     library_open: 'اقرأ داخل Daka',
-                    library_guard_title: 'حماية القراءة فقط',
-                    library_guard_text: 'يبقى PDF خارج المجلد العام. يتم عرضه عبر API محمية، ويرسم داخل canvas بدون شريط PDF الأصلي أو زر تحميل.',
+                    library_available: 'متاح',
+                    library_soon: 'قريبا',
+                    library_reader_pill: 'قارئ Daka',
+                    library_guard_title: 'وضع القراءة',
+                    library_guard_text: 'تفتح الكتب داخل Daka بعد تسجيل الدخول، في قارئ نظيف مصمم للقراءة والفهم والتطبيق.',
+                    library_book1_tag: 'Frameworks',
+                    library_book1_title: 'Marketing Frameworks Explained',
+                    library_book1_desc: 'دليل قراءة لـ STP والشخصيات والتموضع وSWOT والفانل ومصفوفات القرار.',
+                    library_book2_tag: 'STP',
+                    library_book2_title: 'STP Persona Attack Playbook',
+                    library_book2_desc: 'منهجية Daka لتحويل إشارات السوق إلى شخصيات وزوايا وأولويات هجوم.',
+                    library_book3_tag: 'Competitor',
+                    library_book3_title: 'Competitive Intelligence Fieldbook',
+                    library_book3_desc: 'قراءة المنافسين والعروض والأسعار والاعتراضات والزوايا الضعيفة للاستغلال.',
+                    library_book4_tag: 'Funnel',
+                    library_book4_title: 'Funnel & CRO Surgery Notes',
+                    library_book4_desc: 'ملاحظات عملية لتحويل تحليل الفانل إلى أقسام وأدلة عملاء وCTA وترتيب الصفحة.',
                     library_prev: 'الصفحة السابقة',
                     library_next: 'الصفحة التالية',
                     library_close: 'إغلاق',
-                    library_loading: 'جاري تحميل المكتبة...',
-                    library_loaded: 'الوثيقة جاهزة في وضع القراءة فقط.',
+                    library_loading: 'جاري فتح المكتبة...',
+                    library_loaded: 'الكتاب جاهز داخل قارئ Daka.',
                     library_error: 'تعذر فتح الوثيقة. سجل الدخول ثم حاول مرة أخرى.',
                     library_page: 'صفحة',
                     loading_comp_title: 'داكا يجهز ميزتك القادمة...',
@@ -729,19 +783,37 @@ document.addEventListener('DOMContentLoaded', () => {
             navtechnical: 'Audit site',
             library_title: 'Bibliothèque',
             library_highlight: 'Daka',
-            library_subtitle: 'Lisez les frameworks marketing de référence directement dans Daka, sans lien public ni bouton de téléchargement.',
-            library_badge: 'LECTURE SEULE',
+            library_subtitle: 'Une salle de lecture pour les frameworks, playbooks et méthodes que Daka transforme ensuite en décisions marketing.',
+            library_badge: 'SALLE DE LECTURE',
+            library_collection_pill: 'Daka Reading Room',
+            library_collection_title: 'Choisissez un livre, lisez dans Daka, appliquez dans vos décisions.',
+            library_collection_desc: 'Les ouvrages sont présentés comme une bibliothèque stratégique: nom clair, utilité, contexte, puis lecture intégrée.',
             library_pdf_pill: 'Frameworks marketing',
             library_pdf_title: 'Marketing Frameworks Explained',
             library_pdf_desc: 'Base de lecture pour STP, personas, positionnement, SWOT, funnel et décisions marketing.',
             library_open: 'Lire dans Daka',
-            library_guard_title: 'Protection lecture seule',
-            library_guard_text: 'Le PDF reste hors dossier public. Il est servi via API authentifiée, rendu en canvas, sans toolbar native ni bouton download.',
+            library_available: 'Disponible',
+            library_soon: 'Bientôt',
+            library_reader_pill: 'Reader Daka',
+            library_guard_title: 'Mode lecture',
+            library_guard_text: 'Les livres s’ouvrent dans Daka après connexion, dans un lecteur propre pensé pour lire, comprendre et appliquer.',
+            library_book1_tag: 'Frameworks',
+            library_book1_title: 'Marketing Frameworks Explained',
+            library_book1_desc: 'Guide de lecture pour STP, personas, positionnement, SWOT, funnel et matrices de décision.',
+            library_book2_tag: 'STP',
+            library_book2_title: 'STP Persona Attack Playbook',
+            library_book2_desc: 'Méthode Daka pour convertir les signaux marché en personas, angles et priorités d’attaque.',
+            library_book3_tag: 'Competitor',
+            library_book3_title: 'Competitive Intelligence Fieldbook',
+            library_book3_desc: 'Lecture des concurrents, offres, prix, objections et angles faibles à exploiter.',
+            library_book4_tag: 'Funnel',
+            library_book4_title: 'Funnel & CRO Surgery Notes',
+            library_book4_desc: 'Notes pratiques pour transformer une analyse funnel en sections, preuves client, CTA et ordre de page.',
             library_prev: 'Page précédente',
             library_next: 'Page suivante',
             library_close: 'Fermer',
             library_loading: 'Chargement de la bibliothèque...',
-            library_loaded: 'Document prêt en lecture seule.',
+            library_loaded: 'Livre prêt dans le reader Daka.',
             library_error: 'Impossible d’ouvrir le document. Connectez-vous puis réessayez.',
             library_page: 'Page',
             tab1_title: 'Lecture du marché',
@@ -773,19 +845,37 @@ document.addEventListener('DOMContentLoaded', () => {
             navtechnical: 'Site audit',
             library_title: 'Daka',
             library_highlight: 'Library',
-            library_subtitle: 'Read reference marketing frameworks inside Daka, with no public link and no download button.',
-            library_badge: 'READ ONLY',
+            library_subtitle: 'A reading room for frameworks, playbooks and methods that Daka turns into marketing decisions.',
+            library_badge: 'READING ROOM',
+            library_collection_pill: 'Daka Reading Room',
+            library_collection_title: 'Pick a book, read inside Daka, apply it to your decisions.',
+            library_collection_desc: 'Books are presented as a strategic shelf: clear title, purpose, context, then an integrated reader.',
             library_pdf_pill: 'Marketing frameworks',
             library_pdf_title: 'Marketing Frameworks Explained',
             library_pdf_desc: 'Reading base for STP, personas, positioning, SWOT, funnels and marketing decisions.',
             library_open: 'Read in Daka',
-            library_guard_title: 'Read-only protection',
-            library_guard_text: 'The PDF stays outside the public folder. It is served through an authenticated API and rendered in canvas without native PDF toolbar or download button.',
+            library_available: 'Available',
+            library_soon: 'Soon',
+            library_reader_pill: 'Daka Reader',
+            library_guard_title: 'Reading mode',
+            library_guard_text: 'Books open inside Daka after sign-in, in a clean reader designed for reading, understanding and applying.',
+            library_book1_tag: 'Frameworks',
+            library_book1_title: 'Marketing Frameworks Explained',
+            library_book1_desc: 'Reading guide for STP, personas, positioning, SWOT, funnel and decision matrices.',
+            library_book2_tag: 'STP',
+            library_book2_title: 'STP Persona Attack Playbook',
+            library_book2_desc: 'Daka method to turn market signals into personas, angles and attack priorities.',
+            library_book3_tag: 'Competitor',
+            library_book3_title: 'Competitive Intelligence Fieldbook',
+            library_book3_desc: 'Competitor reading for offers, prices, objections and weak angles to exploit.',
+            library_book4_tag: 'Funnel',
+            library_book4_title: 'Funnel & CRO Surgery Notes',
+            library_book4_desc: 'Practical notes to turn funnel analysis into sections, customer proof, CTAs and page order.',
             library_prev: 'Previous page',
             library_next: 'Next page',
             library_close: 'Close',
             library_loading: 'Loading library...',
-            library_loaded: 'Document ready in read-only mode.',
+            library_loaded: 'Book ready in the Daka reader.',
             library_error: 'Unable to open the document. Sign in and try again.',
             library_page: 'Page',
             tab1_title: 'Market Intelligence',
@@ -817,19 +907,37 @@ document.addEventListener('DOMContentLoaded', () => {
             navtechnical: 'فحص الموقع',
             library_title: 'مكتبة',
             library_highlight: 'Daka',
-            library_subtitle: 'اقرأ أطر التسويق المرجعية داخل Daka مباشرة، بدون رابط عام أو زر تحميل.',
-            library_badge: 'قراءة فقط',
+            library_subtitle: 'غرفة قراءة للأطر والكتب العملية التي تحولها Daka لاحقا إلى قرارات تسويقية.',
+            library_badge: 'غرفة قراءة',
+            library_collection_pill: 'غرفة قراءة Daka',
+            library_collection_title: 'اختر كتابا، اقرأ داخل Daka، ثم طبقه في القرار.',
+            library_collection_desc: 'تظهر الكتب كرف استراتيجي: اسم واضح، فائدة، سياق، ثم قارئ مدمج.',
             library_pdf_pill: 'أطر التسويق',
             library_pdf_title: 'Marketing Frameworks Explained',
             library_pdf_desc: 'مرجع قراءة لـ STP والشخصيات والتموضع وSWOT والفانل والقرارات التسويقية.',
             library_open: 'اقرأ داخل Daka',
-            library_guard_title: 'حماية القراءة فقط',
-            library_guard_text: 'يبقى PDF خارج المجلد العام. يتم عرضه عبر API محمية، ويرسم داخل canvas بدون شريط PDF الأصلي أو زر تحميل.',
+            library_available: 'متاح',
+            library_soon: 'قريبا',
+            library_reader_pill: 'قارئ Daka',
+            library_guard_title: 'وضع القراءة',
+            library_guard_text: 'تفتح الكتب داخل Daka بعد تسجيل الدخول، في قارئ نظيف مصمم للقراءة والفهم والتطبيق.',
+            library_book1_tag: 'Frameworks',
+            library_book1_title: 'Marketing Frameworks Explained',
+            library_book1_desc: 'دليل قراءة لـ STP والشخصيات والتموضع وSWOT والفانل ومصفوفات القرار.',
+            library_book2_tag: 'STP',
+            library_book2_title: 'STP Persona Attack Playbook',
+            library_book2_desc: 'منهجية Daka لتحويل إشارات السوق إلى شخصيات وزوايا وأولويات هجوم.',
+            library_book3_tag: 'Competitor',
+            library_book3_title: 'Competitive Intelligence Fieldbook',
+            library_book3_desc: 'قراءة المنافسين والعروض والأسعار والاعتراضات والزوايا الضعيفة للاستغلال.',
+            library_book4_tag: 'Funnel',
+            library_book4_title: 'Funnel & CRO Surgery Notes',
+            library_book4_desc: 'ملاحظات عملية لتحويل تحليل الفانل إلى أقسام وأدلة عملاء وCTA وترتيب الصفحة.',
             library_prev: 'الصفحة السابقة',
             library_next: 'الصفحة التالية',
             library_close: 'إغلاق',
-            library_loading: 'جاري تحميل المكتبة...',
-            library_loaded: 'الوثيقة جاهزة في وضع القراءة فقط.',
+            library_loading: 'جاري فتح المكتبة...',
+            library_loaded: 'الكتاب جاهز داخل قارئ Daka.',
             library_error: 'تعذر فتح الوثيقة. سجل الدخول ثم حاول مرة أخرى.',
             library_page: 'صفحة',
             tab1_title: 'ذكاء السوق',
@@ -1687,7 +1795,7 @@ document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.addEventListener('DOMContentLoaded', initSharedReportRoute);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-08-20-stp-menu-beachhead1';
+window.DAKA_FRONTEND_BUILD = '2026-08-20-library-clean-persona-stp1';
 
 function loaderTypeFromEndpoint(endpoint = '') {
     const value = String(endpoint || '').toLowerCase();
@@ -2112,29 +2220,72 @@ function ensureDakaLibraryStyles() {
             pointer-events: none;
             filter: blur(4px);
         }
-        .daka-library-grid {
+        .daka-library-intro {
             position: relative;
             display: grid;
-            grid-template-columns: minmax(0, 1.45fr) minmax(260px, .8fr);
-            gap: 18px;
+            grid-template-columns: minmax(0, 1.15fr) minmax(260px, .85fr);
+            gap: 16px;
             align-items: stretch;
+            margin-bottom: 18px;
         }
-        .daka-library-book,
+        .daka-library-intro > div,
         .daka-library-guard {
             border: 1px solid rgba(148,163,184,.15);
             border-radius: 24px;
             background: linear-gradient(145deg, rgba(15,23,42,.84), rgba(2,6,23,.74));
             box-shadow: 0 24px 70px rgba(0,0,0,.22);
-        }
-        .daka-library-book {
-            display: grid;
-            grid-template-columns: 132px minmax(0,1fr);
-            gap: 20px;
             padding: 22px;
         }
+        .daka-library-intro h2 {
+            margin: 0 0 10px;
+            color: #fff;
+            font-size: clamp(1.35rem, 2.4vw, 2.3rem);
+            letter-spacing: -.03em;
+        }
+        .daka-library-intro p,
+        .daka-library-book-copy p,
+        .daka-library-guard p {
+            margin: 0;
+            color: #afc0d4;
+            line-height: 1.7;
+        }
+        .daka-library-shelf {
+            position: relative;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(235px, 1fr));
+            gap: 14px;
+            align-items: stretch;
+        }
+        .daka-library-book-card {
+            position: relative;
+            min-width: 0;
+            overflow: hidden;
+            display: grid;
+            grid-template-rows: 150px 1fr;
+            border: 1px solid rgba(148,163,184,.14);
+            border-radius: 24px;
+            background: linear-gradient(145deg, rgba(8,17,31,.92), rgba(2,6,23,.74));
+            box-shadow: 0 22px 60px rgba(0,0,0,.2);
+            cursor: pointer;
+            transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+        }
+        .daka-library-book-card:hover,
+        .daka-library-book-card:focus-visible {
+            transform: translateY(-2px);
+            border-color: rgba(245,158,11,.46);
+            box-shadow: 0 28px 76px rgba(0,0,0,.28), 0 0 30px rgba(245,158,11,.08);
+            outline: none;
+        }
+        .daka-library-book-card.is-soon {
+            cursor: default;
+            opacity: .74;
+        }
+        .daka-library-book-card.is-soon:hover {
+            transform: none;
+            border-color: rgba(148,163,184,.14);
+        }
         .daka-library-cover {
-            min-height: 176px;
-            border-radius: 22px;
+            min-height: 150px;
             display: grid;
             place-items: center;
             align-content: center;
@@ -2143,10 +2294,10 @@ function ensureDakaLibraryStyles() {
             background:
                 radial-gradient(circle at 45% 22%, rgba(245,158,11,.28), transparent 34%),
                 linear-gradient(155deg, rgba(245,158,11,.14), rgba(139,92,246,.12) 48%, rgba(34,211,238,.08));
-            border: 1px solid rgba(245,158,11,.28);
+            border-bottom: 1px solid rgba(245,158,11,.22);
         }
         .daka-library-cover i {
-            font-size: 2.4rem;
+            font-size: 2rem;
             filter: drop-shadow(0 0 18px rgba(245,158,11,.36));
         }
         .daka-library-cover span,
@@ -2165,26 +2316,53 @@ function ensureDakaLibraryStyles() {
             border: 1px solid rgba(245,158,11,.28);
             background: rgba(245,158,11,.10);
         }
-        .daka-library-book h2 {
-            margin: 0 0 10px;
-            color: #fff;
-            font-size: clamp(1.35rem, 2.4vw, 2.3rem);
-            letter-spacing: -.03em;
-        }
-        .daka-library-book p,
-        .daka-library-guard p {
-            margin: 0;
-            color: #afc0d4;
-            line-height: 1.7;
-        }
-        .daka-library-actions {
-            display: flex;
-            flex-wrap: wrap;
+        .daka-library-book-copy {
+            display: grid;
             gap: 10px;
-            margin-top: 18px;
+            align-content: start;
+            padding: 18px;
+        }
+        .daka-library-book-copy h3 {
+            margin: 0;
+            color: #fff;
+            font-size: 1rem;
+            line-height: 1.28;
+            letter-spacing: -.01em;
+        }
+        .daka-library-status-pill {
+            justify-self: start;
+            display: inline-flex;
+            align-items: center;
+            min-height: 25px;
+            padding: 5px 9px;
+            border-radius: 999px;
+            color: #86efac;
+            background: rgba(34,197,94,.11);
+            border: 1px solid rgba(34,197,94,.22);
+            font-size: .64rem;
+            font-weight: 950;
+            letter-spacing: .06em;
+            text-transform: uppercase;
+        }
+        .daka-library-status-pill.muted {
+            color: #c4b5fd;
+            background: rgba(139,92,246,.12);
+            border-color: rgba(139,92,246,.22);
+        }
+        .daka-library-card-action {
+            justify-self: start;
+            margin-top: 2px;
+            min-height: 38px;
+            border: 0;
+            border-radius: 999px;
+            padding: 9px 13px;
+            color: #101827;
+            background: linear-gradient(135deg, #f59e0b, #22d3ee);
+            font-weight: 950;
+            cursor: pointer;
+            box-shadow: 0 16px 34px rgba(245,158,11,.16);
         }
         .daka-library-guard {
-            padding: 22px;
             display: grid;
             grid-template-columns: 48px minmax(0,1fr);
             gap: 14px;
@@ -2204,6 +2382,28 @@ function ensureDakaLibraryStyles() {
             margin: 0 0 8px;
             color: #fff;
             font-size: 1rem;
+        }
+        .daka-library-reader-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 20px 20px 2px;
+            border-bottom: 1px solid rgba(148,163,184,.1);
+            background:
+                radial-gradient(circle at 0 0, rgba(245,158,11,.12), transparent 32%),
+                rgba(2,6,23,.35);
+        }
+        .daka-library-reader-head h2 {
+            margin: 0 0 8px;
+            color: #fff;
+            font-size: clamp(1.18rem, 2vw, 1.72rem);
+            letter-spacing: -.02em;
+        }
+        .daka-library-reader-head p {
+            margin: 0 0 16px;
+            color: #aebdd3;
+            line-height: 1.62;
+            max-width: 72ch;
         }
         .daka-library-viewer {
             margin-top: 22px;
@@ -2255,7 +2455,7 @@ function ensureDakaLibraryStyles() {
                 radial-gradient(circle at 50% 0%, rgba(34,211,238,.08), transparent 34%),
                 rgba(0,0,0,.16);
         }
-        #dakaLibraryCanvas {
+            #dakaLibraryCanvas {
             max-width: 100%;
             border-radius: 10px;
             background: #fff;
@@ -2263,9 +2463,11 @@ function ensureDakaLibraryStyles() {
             pointer-events: none;
         }
         @media (max-width: 840px) {
-            .daka-library-grid,
-            .daka-library-book,
+            .daka-library-intro,
             .daka-library-guard {
+                grid-template-columns: 1fr;
+            }
+            .daka-library-shelf {
                 grid-template-columns: 1fr;
             }
             .daka-library-toolbar {
@@ -2307,6 +2509,16 @@ function refreshDakaLibraryCopy() {
     }
 }
 window.refreshDakaLibraryCopy = refreshDakaLibraryCopy;
+
+function setDakaLibraryReaderMeta(source) {
+    const card = source?.closest?.('.daka-library-book-card') || source;
+    const title = stpUiText(card?.querySelector?.('h3')?.textContent, dakaLibraryT('library_pdf_title'));
+    const desc = stpUiText(card?.querySelector?.('p')?.textContent, dakaLibraryT('library_pdf_desc'));
+    const titleEl = document.getElementById('dakaLibraryReaderTitle');
+    const descEl = document.getElementById('dakaLibraryReaderDesc');
+    if (titleEl) titleEl.textContent = title;
+    if (descEl) descEl.textContent = desc;
+}
 
 async function fetchDakaLibraryPdf(itemId) {
     const token = await getAuthAccessToken();
@@ -2414,10 +2626,25 @@ window.openDakaLibraryPdf = openDakaLibraryPdf;
 
 function initDakaLibraryViewer() {
     ensureDakaLibraryStyles();
-    document.getElementById('openDakaLibraryPdf')?.addEventListener('click', (event) => {
+    document.addEventListener('click', (event) => {
+        const trigger = event.target?.closest?.('[data-library-open]');
+        if (!trigger) return;
+        const card = trigger.closest('.daka-library-book-card');
+        if (card?.classList.contains('is-soon')) {
+            event.preventDefault();
+            if (typeof toast !== 'undefined') toast.info(dakaLibraryT('library_soon'));
+            return;
+        }
         event.preventDefault();
-        const itemId = event.currentTarget?.dataset?.libraryId || 'marketing-frameworks-explained';
+        const itemId = trigger.dataset.libraryId || card?.dataset?.libraryId || 'marketing-frameworks-explained';
+        setDakaLibraryReaderMeta(card || trigger);
         openDakaLibraryPdf(itemId);
+    });
+    document.addEventListener('keydown', (event) => {
+        const card = event.target?.closest?.('.daka-library-book-card[data-library-open]');
+        if (!card || !['Enter', ' '].includes(event.key)) return;
+        event.preventDefault();
+        card.click();
     });
     document.getElementById('dakaLibraryPrev')?.addEventListener('click', () => {
         if (!DAKA_LIBRARY_STATE.pdf || DAKA_LIBRARY_STATE.page <= 1) return;
@@ -5238,29 +5465,35 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         button: 'قرار STP احترافي',
         hint: 'اختر أفضل شريحة، شخصية العميل والتموضع اعتمادا على إشارات السوق الحقيقية.',
         title: 'قرار STP من Daka',
-        subtitle: 'Segmentation · Targeting · Positioning مبني على طبقات السوق والمنافسين والكلمات والأدلة.',
+        subtitle: 'Segmentation · Targeting · Positioning مبني على طبقات السوق والمنافسين والكلمات والقنوات.',
         run: 'توليد قرار STP',
         running: 'Daka يبني STP من إشارات السوق...',
         segment: 'الشريحة الفائزة',
         persona: 'الشخصية',
         positioning: 'التموضع',
         actions: 'الحركات الأولى',
-        evidence: 'دفتر الأدلة',
+        evidence: 'تفاصيل داخلية',
         competitors: 'منافسون وسياق السوق',
-        beachhead: 'سوق الانطلاق',
-        beachheadFit: 'ملاءمة الانطلاق',
+        beachhead: 'ترتيب الهجوم',
+        beachheadFit: 'أولوية الهجوم',
         nextMarket: 'السوق التالي',
         cards: 'بطاقات القرار',
         personas: 'Personas السوق',
-        personasSub: 'Daka يستخرج 5 شخصيات قابلة للاستهداف من SERP والمنافسين والسياق.',
+        personasSub: 'Daka يستخرج شخصيات قابلة للاستهداف من SERP والمنافسين والسياق.',
         priority: 'الأولوية',
         age: 'العمر',
         attackAngle: 'زاوية الهجوم',
         budgetPath: 'مسار الميزانية',
         channels: 'القنوات',
+        socialPlan: 'السوشيال والاستحواذ',
+        stpSegmentation: 'التقسيم',
+        stpTargeting: 'الاستهداف',
+        stpPositioning: 'التموضع',
         triggers: 'محفزات القرار',
         pains: 'المشاكل',
-        proofNeeded: 'الدليل المطلوب',
+        objections: 'الاعتراضات',
+        constraints: 'القيود',
+        proofNeeded: 'أدلة يجب عرضها',
         stpDetails: 'تفاصيل STP',
         inferredContext: 'السياق المستنتج',
         score: 'نقطة القرار',
@@ -5277,29 +5510,35 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         button: 'Pro STP Decision',
         hint: 'Choose the best segment, persona and positioning from real market signals.',
         title: 'Daka STP Decision',
-        subtitle: 'Segmentation · Targeting · Positioning built from market, competitor, keyword and proof layers.',
+        subtitle: 'Segmentation · Targeting · Positioning built from market, competitor, keyword and channel layers.',
         run: 'Generate STP decision',
         running: 'Daka is building STP from market signals...',
         segment: 'Winning segment',
         persona: 'Persona',
         positioning: 'Positioning',
         actions: 'First moves',
-        evidence: 'Evidence ledger',
+        evidence: 'Internal details',
         competitors: 'Competitors and market context',
-        beachhead: 'Beachhead market',
-        beachheadFit: 'Beachhead fit',
+        beachhead: 'Attack order',
+        beachheadFit: 'Attack priority',
         nextMarket: 'Next market',
         cards: 'Decision cards',
         personas: 'Market personas',
-        personasSub: 'Daka extracts 5 targetable personas from SERP, competitors and market context.',
+        personasSub: 'Daka extracts targetable personas from SERP, competitors and market context.',
         priority: 'Priority',
         age: 'Age',
         attackAngle: 'Attack angle',
         budgetPath: 'Budget path',
         channels: 'Channels',
+        socialPlan: 'Social and acquisition',
+        stpSegmentation: 'Segmentation',
+        stpTargeting: 'Targeting',
+        stpPositioning: 'Positioning',
         triggers: 'Decision triggers',
         pains: 'Pains',
-        proofNeeded: 'Proof needed',
+        objections: 'Objections',
+        constraints: 'Constraints',
+        proofNeeded: 'Proofs to show',
         stpDetails: 'STP details',
         inferredContext: 'Inferred context',
         score: 'Decision score',
@@ -5316,29 +5555,35 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         button: 'Décision STP Pro',
         hint: 'Choisir le meilleur segment, persona et positionnement à partir des signaux marché réels.',
         title: 'Décision STP Daka',
-        subtitle: 'Segmentation · Targeting · Positioning construit depuis les couches marché, concurrents, mots-clés et preuves.',
+        subtitle: 'Segmentation · Targeting · Positioning construit depuis les couches marché, concurrents, mots-clés et canaux.',
         run: 'Générer la décision STP',
         running: 'Daka construit le STP depuis les signaux marché...',
         segment: 'Segment gagnant',
         persona: 'Persona',
         positioning: 'Positionnement',
         actions: 'Premiers mouvements',
-        evidence: 'Registre des preuves',
+        evidence: 'Détails internes',
         competitors: 'Concurrents et contexte marché',
-        beachhead: 'Beachhead market',
-        beachheadFit: 'Fit beachhead',
+        beachhead: 'Ordre d’attaque',
+        beachheadFit: 'Priorité d’attaque',
         nextMarket: 'Marché suivant',
         cards: 'Cartes décision',
         personas: 'Personas marché',
-        personasSub: 'Daka extrait 5 personas ciblables depuis la SERP, les concurrents et le contexte marché.',
+        personasSub: 'Daka extrait des personas ciblables depuis la SERP, les concurrents et le contexte marché.',
         priority: 'Priorité',
         age: 'Âge',
         attackAngle: 'Angle d’attaque',
         budgetPath: 'Chemin budget',
         channels: 'Canaux',
+        socialPlan: 'Social et acquisition',
+        stpSegmentation: 'Segmentation',
+        stpTargeting: 'Targeting',
+        stpPositioning: 'Positioning',
         triggers: 'Déclencheurs',
         pains: 'Douleurs',
-        proofNeeded: 'Preuves à fournir',
+        objections: 'Objections',
+        constraints: 'Contraintes',
+        proofNeeded: 'Preuves à montrer',
         stpDetails: 'Détails STP',
         inferredContext: 'Contexte déduit',
         score: 'Score décision',
@@ -5446,6 +5691,9 @@ function ensureStpDecisionStyles() {
       .daka-stp-persona-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:18px 0 12px}
       .daka-stp-persona-head p{margin:6px 0 0;color:#9fb2cb;line-height:1.55;font-size:.82rem}
       .daka-stp-personas{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px}
+      .daka-stp-persona-only{padding-top:20px}
+      .daka-stp-persona-only .daka-stp-persona-head{margin-top:0}
+      .daka-stp-persona-only .daka-stp-personas{grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-bottom:0}
       .daka-stp-persona{position:relative;overflow:hidden;border:1px solid rgba(var(--persona-rgb,34,211,238),.24);border-radius:22px;background:radial-gradient(circle at 0 0,rgba(var(--persona-rgb,34,211,238),.18),transparent 34%),linear-gradient(145deg,rgba(8,17,31,.92),rgba(2,6,23,.72));padding:16px;min-height:310px;display:grid;gap:10px;align-content:start}
       .daka-stp-persona:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,rgba(var(--persona-rgb,34,211,238),1),transparent)}
       .daka-stp-persona-top{display:flex;align-items:center;gap:12px;min-width:0}
@@ -5457,18 +5705,18 @@ function ensureStpDecisionStyles() {
       .daka-stp-mini{border:1px solid rgba(148,163,184,.09);border-radius:14px;background:rgba(2,6,23,.35);padding:9px}
       .daka-stp-mini strong{display:block;color:#eaf6ff;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
       .daka-stp-mini span{display:block;color:#9fb2cb;font-size:.75rem;line-height:1.45}
+      .daka-stp-persona-stp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+      .daka-stp-persona-stp .daka-stp-mini{background:rgba(var(--persona-rgb,34,211,238),.08);border-color:rgba(var(--persona-rgb,34,211,238),.18)}
+      .daka-stp-social-line{display:block;margin-top:6px;padding-top:6px;border-top:1px solid rgba(148,163,184,.08)}
       .daka-stp-card[data-tone]{position:relative;overflow:hidden;border-color:rgba(var(--tone-rgb,34,211,238),.22);background:linear-gradient(145deg,rgba(var(--tone-rgb,34,211,238),.10),rgba(2,6,23,.54))}
       .daka-stp-card[data-tone]:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,rgba(var(--tone-rgb,34,211,238),1),transparent)}
       .daka-stp-card[data-tone] i{color:rgb(var(--tone-rgb,34,211,238));filter:drop-shadow(0 0 10px rgba(var(--tone-rgb,34,211,238),.35))}
       .daka-stp-card-head{display:flex;align-items:center;gap:9px;margin-bottom:9px}
       .daka-stp-card-head h3{font-size:.94rem;line-height:1.25}
-      .daka-stp-beachhead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;margin:14px 0;padding:16px;border:1px solid rgba(34,197,94,.2);border-radius:20px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(34,211,238,.06))}
-      .daka-stp-beachhead strong{display:block;color:#fff;font-size:1.05rem;line-height:1.35}.daka-stp-beachhead p{margin:7px 0 0;color:#cbd5e1;line-height:1.6;font-size:.84rem}
       .daka-stp-pill-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
       .daka-stp-list{display:grid;gap:8px;margin:10px 0 0;padding:0}.daka-stp-list li{list-style:none;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(148,163,184,.08);color:#dbeafe;font-size:.78rem;line-height:1.5}
-      .daka-stp-action{border-inline-start:3px solid #22c55e}.daka-stp-evidence[data-type="missing"]{border-inline-start:3px solid #f59e0b}.daka-stp-evidence[data-type="observed"]{border-inline-start:3px solid #22d3ee}.daka-stp-evidence[data-type="inferred"]{border-inline-start:3px solid #a78bfa}
-      .daka-stp-section{margin-top:12px}.daka-stp-section summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid rgba(148,163,184,.13);border-radius:16px;background:rgba(15,23,42,.62);color:#eaf6ff;font-weight:950}.daka-stp-section summary::-webkit-details-marker{display:none}.daka-stp-section-body{padding-top:12px}
-      @media(max-width:780px){.daka-stp-hero,.daka-stp-grid,.daka-stp-beachhead{grid-template-columns:1fr}.daka-stp-score{min-height:138px;max-width:180px;margin:auto}.daka-stp-persona-head{display:grid}.daka-stp-personas{grid-template-columns:1fr}}
+      .daka-stp-action{border-inline-start:3px solid #22c55e}
+      @media(max-width:780px){.daka-stp-hero,.daka-stp-grid,.daka-stp-persona-stp{grid-template-columns:1fr}.daka-stp-score{min-height:138px;max-width:180px;margin:auto}.daka-stp-persona-head{display:grid}.daka-stp-personas,.daka-stp-persona-only .daka-stp-personas{grid-template-columns:1fr}}
     `;
     document.head.appendChild(style);
 }
@@ -5533,6 +5781,21 @@ function renderStpAttackChannels(channels = [], copy = {}) {
     }).join('')}</div>`;
 }
 
+function renderStpSocialPlan(details = {}, copy = {}) {
+    const social = details.socialPlan && typeof details.socialPlan === 'object' ? details.socialPlan : {};
+    const channelHtml = renderStpAttackChannels(details.attackChannels, copy);
+    const platformText = stpUiArray(social.platforms || details.channels, 5).join(' · ');
+    const approach = stpUiText(social.approach);
+    const angles = stpUiArray(social.contentAngles, 5).join(' · ');
+    const lines = [
+        platformText ? `<span>${stpUiEsc(platformText)}</span>` : '',
+        approach ? `<span class="daka-stp-social-line">${stpUiEsc(approach)}</span>` : '',
+        angles ? `<span class="daka-stp-social-line">${stpUiEsc(angles)}</span>` : ''
+    ].filter(Boolean).join('');
+    if (!lines && !channelHtml) return '';
+    return `<div class="daka-stp-mini"><strong>${stpUiEsc(copy.socialPlan || copy.channels || 'Social')}</strong>${lines || ''}</div>${channelHtml}`;
+}
+
 function renderStpPersonaCards(personaCards = [], copy = {}) {
     const cards = Array.isArray(personaCards) ? personaCards.filter(Boolean) : [];
     if (!cards.length) return '';
@@ -5563,70 +5826,24 @@ function renderStpPersonaCards(personaCards = [], copy = {}) {
             ${card.confidence ? `<span class="daka-stp-chip">${stpUiEsc(card.confidence)}</span>` : ''}
           </div>
           ${card.summary ? `<p>${stpUiEsc(card.summary)}</p>` : ''}
+          <div class="daka-stp-persona-stp">
+            ${renderStpMini(copy.stpSegmentation || 'Segmentation', details.stp?.segmentation || card.market || card.title)}
+            ${renderStpMini(copy.stpTargeting || 'Targeting', details.stp?.targeting || card.role || card.summary)}
+            ${renderStpMini(copy.stpPositioning || 'Positioning', details.stp?.positioning || card.attackAngle || details.attackAngle)}
+          </div>
           <div class="daka-stp-mini-grid">
-            ${renderStpMini(copy.budgetPath || 'Budget path', priority.budgetPath || details.budgetPath)}
+            ${renderStpSocialPlan(details, copy)}
             ${renderStpMini(copy.attackAngle || 'Attack angle', card.attackAngle || details.attackAngle)}
-            ${renderStpAttackChannels(details.attackChannels, copy)}
+            ${renderStpMini(copy.budgetPath || 'Budget path', priority.budgetPath || details.budgetPath)}
             ${renderStpMini(copy.triggers || 'Triggers', details.buyingTriggers)}
+            ${renderStpMini(copy.objections || 'Objections', details.objections)}
             ${renderStpMini(copy.pains || 'Pains', details.pains)}
-            ${renderStpMini(copy.proofNeeded || 'Proof needed', details.proofNeeded)}
+            ${renderStpMini(copy.proofNeeded || 'Proofs to show', details.proofNeeded)}
+            ${renderStpMini(copy.constraints || 'Constraints', details.constraints)}
           </div>
         </article>`;
       }).join('')}
     </div>`;
-}
-
-function renderStpInferredContext(inferredContext = {}, copy = {}) {
-    const fields = inferredContext?.fields && typeof inferredContext.fields === 'object' ? inferredContext.fields : {};
-    const isAr = /السياق|المستنتج|Personas السوق/.test(`${copy.inferredContext || ''} ${copy.personas || ''}`);
-    const isEn = /Inferred|Market personas/.test(`${copy.inferredContext || ''} ${copy.personas || ''}`);
-    const labels = isAr ? {
-        offer: 'العرض',
-        audience: 'الجمهور',
-        objective: 'الهدف',
-        businessModel: 'نموذج العمل',
-        cityOrRegion: 'منطقة الانطلاق',
-        knownCompetitors: 'المنافسون',
-        constraints: 'القيود',
-        channels: 'القنوات'
-    } : isEn ? {
-        offer: 'Offer',
-        audience: 'Audience',
-        objective: 'Objective',
-        businessModel: 'Business model',
-        cityOrRegion: 'Beachhead region',
-        knownCompetitors: 'Competitors',
-        constraints: 'Constraints',
-        channels: 'Channels'
-    } : {
-        offer: 'Offre',
-        audience: 'Audience',
-        objective: 'Objectif',
-        businessModel: 'Modèle business',
-        cityOrRegion: 'Zone beachhead',
-        knownCompetitors: 'Concurrents',
-        constraints: 'Contraintes',
-        channels: 'Canaux'
-    };
-    const rows = Object.entries(fields)
-        .map(([key, field]) => {
-            const value = Array.isArray(field?.value) ? stpUiArray(field.value, 8).join(' · ') : stpUiText(field?.value);
-            if (!value) return '';
-            return `<article class="daka-stp-card">
-              <small>${stpUiEsc(labels[key] || key)}</small>
-              <h4 dir="auto">${stpUiEsc(value)}</h4>
-              <div class="daka-stp-pill-row">
-                <span class="daka-stp-chip">${stpUiEsc(field?.inferred ? (copy.inferred || 'Inferred') : 'User')}</span>
-                <span class="daka-stp-chip">${stpUiEsc(stpUiText(field?.confidence, 'MEDIUM'))}</span>
-              </div>
-            </article>`;
-        })
-        .filter(Boolean);
-    if (!rows.length) return '';
-    return `<details class="daka-stp-section">
-      <summary><span><i class="fas fa-brain"></i> ${stpUiEsc(copy.inferredContext || 'Inferred context')}</span><i class="fas fa-chevron-down"></i></summary>
-      <div class="daka-stp-section-body daka-stp-grid">${rows.join('')}</div>
-    </details>`;
 }
 
 function renderStpDecision(data) {
@@ -5636,120 +5853,41 @@ function renderStpDecision(data) {
     const copy = getStpCopy(lang);
     const dir = lang === 'ar' ? 'rtl' : 'ltr';
     const chosen = data?.targeting?.chosenSegment || {};
-    const persona = data?.persona || {};
-    const positioning = data?.positioning || {};
-    const score = Math.max(0, Math.min(100, Number(chosen?.scores?.total || 0)));
-    const actions = Array.isArray(data?.actionPlan) ? data.actionPlan : [];
-    const evidence = Array.isArray(data?.evidenceLedger) ? data.evidenceLedger : [];
-    const competitors = Array.isArray(data?.competitorSnapshot?.top10Competitors) ? data.competitorSnapshot.top10Competitors : [];
-    const personaCardsHtml = renderStpPersonaCards(data?.personaCards || [], copy);
-    const inferredContextHtml = renderStpInferredContext(data?.inferredContext || {}, copy);
-    const beachhead = data?.beachheadMarket || {};
-    const proofStatus = stpUiText(positioning.proofStatus, copy.noData);
-    const actionItems = actions
-        .slice(0, 6)
-        .map(item => stpUiText(item?.action || item))
-        .filter(Boolean);
-    const backendCards = Array.isArray(data?.decisionCards)
-        ? data.decisionCards.map(card => renderStpDecisionCard(normalizeBackendStpCard(card))).filter(Boolean)
-        : [];
-    const fallbackCards = [
-        renderStpDecisionCard({
-            tone: '34,211,238',
-            icon: 'fa-bullseye',
-            label: copy.segment,
-            headline: chosen.name,
-            body: chosen.need,
-            items: chosen.buyingTriggers || chosen.evidence,
-            chips: [chosen.confidence, data?.segmentation?.archetype]
-        }),
-        renderStpDecisionCard({
-            tone: '34,197,94',
-            icon: 'fa-flag-checkered',
-            label: copy.beachhead,
-            headline: beachhead.name || chosen.name,
-            body: beachhead.rationale || beachhead.focus,
-            items: [beachhead.budgetFit, beachhead.accessPath, beachhead.expansionPath, ...(beachhead.criteria || [])],
-            chips: [beachhead.confidence, beachhead.fitScore ? `${copy.beachheadFit}: ${beachhead.fitScore}/100` : '']
-        }),
-        renderStpDecisionCard({
-            tone: '139,92,246',
-            icon: 'fa-chess-knight',
-            label: copy.positioning,
-            headline: positioning.audience,
-            body: positioning.statement,
-            items: positioning.differentiatedBenefits,
-            chips: [proofStatus]
-        }),
-        renderStpDecisionCard({
-            tone: '245,158,11',
-            icon: 'fa-user-check',
-            label: copy.persona,
-            headline: persona.name,
-            body: persona.jobToBeDone,
-            items: [...(persona.pains || []), ...(persona.objections || [])],
-            chips: persona.alternatives
-        }),
-        renderStpDecisionCard({
-            tone: '236,72,153',
-            icon: 'fa-bolt',
-            label: copy.actions,
-            headline: data?.aiOverlay?.segmentRationale || copy.run,
-            items: actionItems,
-            chips: actions.slice(0, 3).flatMap(item => [item?.impact, item?.effort]).filter(Boolean)
-        })
-    ].filter(Boolean);
-    const decisionCards = (backendCards.length ? backendCards : fallbackCards).join('');
+    const fallbackPersona = data?.persona ? [{
+        id: 'persona-main',
+        icon: 'fa-user-check',
+        tone: '34,211,238',
+        title: data.persona.name || chosen.name || copy.persona,
+        role: 'Persona 1',
+        ageRange: data.persona.ageRange || '',
+        summary: data.persona.jobToBeDone || chosen.need || copy.subtitle,
+        priorityScore: Math.max(0, Math.min(100, Number(chosen?.scores?.total || 70))),
+        attackAngle: data?.positioning?.statement || chosen.need || '',
+        details: {
+            stp: {
+                segmentation: chosen.name || '',
+                targeting: data.persona.name || '',
+                positioning: data?.positioning?.statement || ''
+            },
+            socialPlan: {
+                approach: data?.positioning?.statement || '',
+                contentAngles: [
+                    ...(chosen.buyingTriggers || []),
+                    ...(data.persona.objections || [])
+                ]
+            },
+            attackChannels: [],
+            buyingTriggers: chosen.buyingTriggers || [],
+            pains: data.persona.pains || [],
+            objections: data.persona.objections || [],
+            proofNeeded: data.persona.proofNeeded || [],
+            constraints: []
+        }
+    }] : [];
+    const personaCardsHtml = renderStpPersonaCards(data?.personaCards?.length ? data.personaCards : fallbackPersona, copy);
 
-    container.innerHTML = `<section class="daka-stp-report" dir="${dir}">
-      <div class="daka-stp-hero">
-        <div>
-          <span class="daka-stp-kicker"><i class="fas fa-crosshairs"></i>${stpUiEsc(copy.title)}</span>
-          <h2 style="margin-top:10px">${stpUiEsc(stpUiText(chosen.name, copy.segment))}</h2>
-          <p>${stpUiEsc(stpUiText(data?.aiOverlay?.executiveDecision || chosen.need || copy.subtitle, copy.subtitle))}</p>
-          <div style="margin-top:10px">
-            <span class="daka-stp-chip">${stpUiEsc(stpUiText(data?.segmentation?.archetype, 'market'))}</span>
-            <span class="daka-stp-chip">${stpUiEsc(copy.proof)}: ${stpUiEsc(proofStatus)}</span>
-            <span class="daka-stp-chip">${stpUiEsc(stpUiText(chosen.confidence, 'MEDIUM'))}</span>
-          </div>
-        </div>
-        <div class="daka-stp-score" style="--stp-score:${score}%"><strong>${score}</strong><span>${stpUiEsc(copy.score)}</span></div>
-      </div>
-
-      ${personaCardsHtml}
-
-      ${beachhead.name || beachhead.rationale ? `<div class="daka-stp-beachhead">
-        <div>
-          <small class="daka-stp-kicker"><i class="fas fa-location-crosshairs"></i>${stpUiEsc(copy.beachhead)}</small>
-          <strong>${stpUiEsc(stpUiText(beachhead.name, chosen.name || copy.segment))}</strong>
-          <p>${stpUiEsc(stpUiText(beachhead.rationale || beachhead.focus, copy.subtitle))}</p>
-          <div class="daka-stp-pill-row">${stpUiArray([beachhead.budgetFit, beachhead.accessPath, beachhead.expansionPath], 3).map(chip => `<span class="daka-stp-chip">${stpUiEsc(chip)}</span>`).join('')}</div>
-        </div>
-        <div class="daka-stp-score" style="--stp-score:${Number(beachhead.fitScore || score)}%"><strong>${stpUiEsc(stpUiText(beachhead.fitScore, score))}</strong><span>${stpUiEsc(copy.beachheadFit)}</span></div>
-      </div>` : ''}
-
-      <details class="daka-stp-section" open>
-        <summary><span><i class="fas fa-diagram-project"></i> ${stpUiEsc(copy.stpDetails || copy.cards)}</span><i class="fas fa-chevron-down"></i></summary>
-        <div class="daka-stp-section-body">
-          <div class="daka-stp-decision-grid">${decisionCards}</div>
-        </div>
-      </details>
-
-      ${inferredContextHtml}
-
-      <details class="daka-stp-section">
-        <summary><span><i class="fas fa-shield-halved"></i> ${stpUiEsc(copy.evidence)}</span><i class="fas fa-chevron-down"></i></summary>
-        <div class="daka-stp-section-body">
-          <ul class="daka-stp-list">${evidence.map(item => `<li class="daka-stp-evidence" data-type="${stpUiEsc(item.type || 'inferred')}"><strong>${stpUiEsc(item.type === 'missing' ? copy.missing : item.type === 'observed' ? copy.observed : copy.inferred)}</strong> · ${stpUiEsc(stpUiText(item.value, copy.noData))}<br><small>${stpUiEsc(stpUiText(item.source, 'Daka'))} · ${stpUiEsc(stpUiText(item.confidence, 'MEDIUM'))}</small></li>`).join('')}</ul>
-        </div>
-      </details>
-
-      <details class="daka-stp-section">
-        <summary><span><i class="fas fa-ranking-star"></i> ${stpUiEsc(copy.competitors)}</span><i class="fas fa-chevron-down"></i></summary>
-        <div class="daka-stp-section-body daka-stp-grid">
-          ${competitors.slice(0, 10).map((item, index) => `<article class="daka-stp-card"><small>#${index + 1}</small><h4 dir="auto">${stpUiEsc(stpUiText(item.domain || item.title || item.url || item.link, copy.noData))}</h4><p dir="auto">${stpUiEsc(stpUiText(item.snippet || item.description || item.type, copy.noData))}</p>${item.url || item.link ? `<a class="daka-stp-chip" href="${stpUiEsc(item.url || item.link)}" target="_blank" rel="noopener">URL</a>` : ''}</article>`).join('')}
-        </div>
-      </details>
+    container.innerHTML = `<section class="daka-stp-report daka-stp-persona-only" dir="${dir}">
+      ${personaCardsHtml || `<div class="daka-stp-persona-head"><div><span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas)}</span><p>${stpUiEsc(stpUiText(chosen.need, copy.subtitle))}</p></div></div>`}
     </section>`;
     container.classList.add('active');
 }

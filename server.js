@@ -11000,7 +11000,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
     const labels = {
         highIntent: isAr ? 'صاحب نية شراء عالية' : isEn ? 'High-intent buyer' : 'Acheteur à forte intention',
         comparator: isAr ? 'المقارن قبل القرار' : isEn ? 'Comparison shopper' : 'Comparateur avant décision',
-        trust: isAr ? 'طالب الثقة والدليل' : isEn ? 'Trust and proof seeker' : 'Chercheur de preuve',
+        trust: isAr ? 'طالب الثقة' : isEn ? 'Trust seeker' : 'Chercheur de confiance',
         budget: isAr ? 'حساس للميزانية' : isEn ? 'Budget-sensitive buyer' : 'Sensible au budget',
         expert: isAr ? 'باحث عن الخبير' : isEn ? 'Expertise seeker' : 'Chercheur d’expertise',
         first: isAr ? 'هاجم أولا' : isEn ? 'Attack first' : 'Attaquer en premier',
@@ -11014,7 +11014,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             name: `${labels.highIntent} · ${market}`,
             need: isAr ? `يريد ${offer} بسرعة وبأقل مخاطرة` : isEn ? `Wants ${offer} quickly with less risk` : `Veut ${offer} vite avec moins de risque`,
             accessChannels: channels.length ? channels : ['SEO', 'landing page', 'WhatsApp'],
-            buyingTriggers: isAr ? ['سرعة القرار', 'وضوح العرض', 'دليل النتيجة'] : isEn ? ['speed to decision', 'clear offer', 'proof of outcome'] : ['rapidité de décision', 'offre claire', 'preuve du résultat'],
+            buyingTriggers: isAr ? ['سرعة القرار', 'وضوح العرض', 'نتيجة واضحة'] : isEn ? ['speed to decision', 'clear offer', 'visible outcome'] : ['rapidité de décision', 'offre claire', 'résultat visible'],
             confidence: 'MEDIUM'
         },
         {
@@ -11028,7 +11028,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         {
             id: 'persona-proof-seeker',
             name: `${labels.trust} · ${market}`,
-            need: isAr ? 'يريد إثباتا قبل ترك بياناته أو الشراء' : isEn ? 'Needs proof before submitting details or buying' : 'Veut une preuve avant de laisser ses infos ou acheter',
+            need: isAr ? 'يريد اطمئنانا قبل ترك بياناته أو الشراء' : isEn ? 'Needs reassurance before submitting details or buying' : 'Veut être rassuré avant de laisser ses infos ou acheter',
             accessChannels: channels.length ? channels : ['case studies', 'social proof', 'retargeting'],
             buyingTriggers: isAr ? ['آراء العملاء', 'الضمان', 'قبل/بعد'] : isEn ? ['reviews', 'guarantee', 'before/after'] : ['avis', 'garantie', 'avant/après'],
             confidence: 'MEDIUM'
@@ -11091,7 +11091,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         const text = `${segment?.id || ''} ${segment?.name || ''} ${segment?.need || ''}`.toLowerCase();
         if (index === 0) return beachheadMarket?.accessPath || (isAr ? 'ابدأ برسالة دقيقة وقناة وصول واحدة' : isEn ? 'Start with one sharp message and one access channel' : 'Commencer par un message précis et un canal d’accès');
         if (/compar|price|prix|سعر|budget/.test(text)) return isAr ? 'هاجمه بصفحة مقارنة وسعر وشروط واضحة' : isEn ? 'Attack with comparison, price clarity and terms' : 'Attaquer par comparaison, prix clair et conditions';
-        if (/proof|trust|avis|review|ثقة|دليل/.test(text)) return isAr ? 'هاجمه بالأدلة والضمان والاعتراضات' : isEn ? 'Attack with proof, guarantee and objections' : 'Attaquer par preuve, garantie et objections';
+        if (/proof|trust|avis|review|ثقة|دليل/.test(text)) return isAr ? 'هاجمه بالاطمئنان والضمان والاعتراضات' : isEn ? 'Attack with reassurance, guarantee and objections' : 'Attaquer par réassurance, garantie et objections';
         if (/agency|b2b|expert|service|وكالة|خبير/.test(text)) return isAr ? 'هاجمه بسلطة الخبرة وحالة استخدام واضحة' : isEn ? 'Attack with expertise authority and use case' : 'Attaquer par autorité experte et cas d’usage';
         return isAr ? 'هاجمه بوعد أكثر وضوحا ودليل أسرع' : isEn ? 'Attack with a clearer promise and faster proof' : 'Attaquer avec une promesse plus claire et une preuve plus rapide';
     };
@@ -11103,6 +11103,23 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         const attackChannels = segmentChannels.map(channel => classifyStpAttackChannel(channel, lang));
         const triggers = stpArray(segment.buyingTriggers || segment.evidence, 5);
         const pains = stpArray(persona.pains, 4);
+        const attackAngle = attackAngleFor(segment, index);
+        const socialChannels = attackChannels
+            .filter(channel => /social|paid|owned|inbound|outbound/i.test(`${channel?.type || ''} ${channel?.name || ''}`))
+            .slice(0, 4);
+        const socialPlan = {
+            platforms: stpArray(socialChannels.map(channel => channel.name), 4),
+            approach: index === 0
+                ? (isAr ? 'ابدأ بمحتوى توضيحي قصير ثم أعد استهداف من يتفاعل.' : isEn ? 'Start with short demonstration content, then retarget engaged visitors.' : 'Commencer par du contenu démonstration court, puis recibler les visiteurs engagés.')
+                : /compar|price|prix|سعر|budget/i.test(`${segment?.id || ''} ${segment?.name || ''}`)
+                    ? (isAr ? 'استعمل مقارنة وسعر وشروط واضحة كزاوية محتوى.' : isEn ? 'Use comparison, price and terms as the content angle.' : 'Utiliser comparaison, prix et conditions comme angle contenu.')
+                    : (isAr ? 'استعمل اعتراضاته كمواضيع محتوى ورسائل تواصل.' : isEn ? 'Turn objections into content themes and outreach messages.' : 'Transformer ses objections en contenus et messages de prospection.'),
+            contentAngles: stpArray([
+                attackAngle,
+                ...(triggers || []),
+                ...(pains || [])
+            ], 5)
+        };
         return {
             id: segment.id || `persona-${index + 1}`,
             number: index + 1,
@@ -11121,15 +11138,21 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 budgetPath: budgetLabel(index),
                 reason: index === 0 ? beachheadMarket?.rationale || segment.need : segment.need
             },
-            attackAngle: attackAngleFor(segment, index),
+            attackAngle,
             confidence: segment.confidence || persona.confidence || 'MEDIUM',
             details: {
                 need: segment.need || persona.jobToBeDone,
                 ageRange: ageRanges[archetype]?.[index] || ageRanges.general_market[index] || '25-50',
-                attackAngle: attackAngleFor(segment, index),
+                attackAngle,
                 budgetPath: budgetLabel(index),
                 channels: segmentChannels,
                 attackChannels,
+                socialPlan,
+                stp: {
+                    segmentation: segment.name || persona.name,
+                    targeting: persona.name || persona.jobToBeDone,
+                    positioning: attackAngle
+                },
                 buyingTriggers: triggers,
                 pains,
                 objections: stpArray(persona.objections, 4),
