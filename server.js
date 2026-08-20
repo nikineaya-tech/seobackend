@@ -19301,10 +19301,15 @@ app.get('/api/library/:id/pdf', requireAuth, (req, res) => {
 app.get('/health', (req, res) => {
     const memUsage = process.memoryUsage();
     const uptime = Date.now() - METRICS.startTime;
+    const deployMarker = '2026-08-20-stp-persona-library-fix2';
     
     res.json({
         success: true,
         status: 'healthy',
+        deploy: {
+            marker: deployMarker,
+            gitCommit: process.env.RENDER_GIT_COMMIT || process.env.COMMIT_SHA || null
+        },
         timestamp: new Date().toISOString(),
         uptime: {
             ms: uptime,
