@@ -11080,6 +11080,38 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         content_education: ['18-35', '22-44', '25-50', '16-30', '30-55', '20-40', '35-60'],
         general_market: ['24-45', '28-55', '22-40', '30-60', '18-34', '35-58', '25-50']
     };
+    const personaNames = {
+        ar: ['أمين صاحب القرار', 'ليلى الباحثة عن الدليل', 'يوسف المقارن', 'سارة محدودة الميزانية', 'هند الباحثة عن الخبير', 'مروان سريع القرار', 'نادية صاحبة التوسع'],
+        en: ['Amina the Decision Maker', 'Leila the Proof Seeker', 'Youssef the Comparator', 'Sara the Budget Guardian', 'Hind the Expertise Buyer', 'Marwan the Fast Mover', 'Nadia the Scale Buyer'],
+        fr: ['Amina la décideuse', 'Leila chercheuse de preuve', 'Youssef le comparateur', 'Sara budget prudent', 'Hind acheteuse d’expertise', 'Marwan décision rapide', 'Nadia croissance et scale']
+    };
+    const personaRoles = {
+        b2b_service: isAr
+            ? ['مدير مشروع', 'صاحبة شركة', 'مسؤول تسويق', 'مؤسس بميزانية محدودة', 'مديرة عمليات', 'Freelance B2B', 'مدير نمو']
+            : isEn
+                ? ['Project owner', 'Company founder', 'Marketing lead', 'Lean-budget founder', 'Operations manager', 'B2B freelancer', 'Growth lead']
+                : ['Dirigeant de projet', 'Fondatrice', 'Responsable marketing', 'Fondateur petit budget', 'Responsable opérations', 'Freelance B2B', 'Responsable croissance'],
+        ecommerce_product: isAr
+            ? ['مشتري جاهز', 'متسوّقة مقارنة', 'باحث عن الثقة', 'مشتري حساس للسعر', 'مستخدم يريد نتيجة', 'مشتري واتساب', 'عميل تكرار']
+            : isEn
+                ? ['Ready buyer', 'Comparison shopper', 'Trust seeker', 'Price-sensitive buyer', 'Outcome seeker', 'WhatsApp buyer', 'Repeat buyer']
+                : ['Acheteur prêt', 'Comparatrice', 'Chercheur de confiance', 'Acheteur sensible au prix', 'Chercheur de résultat', 'Acheteur WhatsApp', 'Client réachat'],
+        local_service: isAr
+            ? ['عميل محلي عاجل', 'باحث خرائط', 'مقارن أسعار', 'طالب ضمان', 'صاحب توصية', 'عميل قريب', 'مشتري خدمة متكررة']
+            : isEn
+                ? ['Urgent local buyer', 'Maps searcher', 'Price comparer', 'Guarantee seeker', 'Referral-led buyer', 'Nearby buyer', 'Repeat service buyer']
+                : ['Client local urgent', 'Chercheur Maps', 'Comparateur prix', 'Chercheur garantie', 'Client par recommandation', 'Client de proximité', 'Client récurrent'],
+        content_education: isAr
+            ? ['متعلم مبتدئ', 'مقارن الدورات', 'طالب شهادة', 'باحث عن تطبيق', 'صاحب تحول مهني', 'متابع محتوى', 'مشتري برنامج']
+            : isEn
+                ? ['Beginner learner', 'Course comparer', 'Certificate seeker', 'Practice seeker', 'Career switcher', 'Content follower', 'Program buyer']
+                : ['Apprenant débutant', 'Comparateur de formations', 'Chercheur certification', 'Chercheur pratique', 'Reconvertion professionnelle', 'Abonné contenu', 'Acheteur programme'],
+        general_market: isAr
+            ? ['عميل عالي النية', 'مقارن البدائل', 'طالب الثقة', 'حساس للميزانية', 'باحث عن الخبير', 'سريع القرار', 'مشتري توسع']
+            : isEn
+                ? ['High-intent buyer', 'Alternative comparer', 'Trust seeker', 'Budget-sensitive buyer', 'Expertise seeker', 'Fast decision maker', 'Scale buyer']
+                : ['Acheteur haute intention', 'Comparateur d’alternatives', 'Chercheur de confiance', 'Sensible au budget', 'Chercheur d’expertise', 'Décideur rapide', 'Acheteur scale']
+    };
     const budgetTier = inferStpBudgetTier(inputs.budget);
     const budgetLabel = (index) => {
         if (index === 0) return labels.first;
@@ -11104,6 +11136,11 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         const triggers = stpArray(segment.buyingTriggers || segment.evidence, 5);
         const pains = stpArray(persona.pains, 4);
         const attackAngle = attackAngleFor(segment, index);
+        const langKey = isAr ? 'ar' : isEn ? 'en' : 'fr';
+        const ageRange = ageRanges[archetype]?.[index] || ageRanges.general_market[index] || '25-50';
+        const displayName = personaNames[langKey]?.[index] || `${isAr ? 'Persona' : 'Persona'} ${index + 1}`;
+        const occupation = personaRoles[archetype]?.[index] || personaRoles.general_market[index] || '';
+        const segmentName = segment.name || persona.name || '';
         const socialChannels = attackChannels
             .filter(channel => /social|paid|owned|inbound|outbound/i.test(`${channel?.type || ''} ${channel?.name || ''}`))
             .slice(0, 4);
@@ -11126,9 +11163,12 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             avatar: `P${index + 1}`,
             icon: icons[index] || 'fa-user',
             tone: tones[index] || '34,211,238',
-            title: segment.name || persona.name,
+            title: displayName,
+            displayName,
+            occupation,
+            segmentName,
             role: isAr ? `Persona ${index + 1}` : isEn ? `Persona ${index + 1}` : `Persona ${index + 1}`,
-            ageRange: ageRanges[archetype]?.[index] || ageRanges.general_market[index] || '25-50',
+            ageRange,
             summary: persona.jobToBeDone,
             market,
             priorityScore: clamp(Math.round(score), 0, 100),
@@ -11142,14 +11182,16 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             confidence: segment.confidence || persona.confidence || 'MEDIUM',
             details: {
                 need: segment.need || persona.jobToBeDone,
-                ageRange: ageRanges[archetype]?.[index] || ageRanges.general_market[index] || '25-50',
+                ageRange,
+                occupation,
+                segmentName,
                 attackAngle,
                 budgetPath: budgetLabel(index),
                 channels: segmentChannels,
                 attackChannels,
                 socialPlan,
                 stp: {
-                    segmentation: segment.name || persona.name,
+                    segmentation: segmentName,
                     targeting: persona.name || persona.jobToBeDone,
                     positioning: attackAngle
                 },
@@ -11220,7 +11262,9 @@ function mergeStpPersonaAiOverlay(baseCards = [], aiCards = []) {
         };
         return {
             ...card,
-            title: stpText(overlay.title || overlay.name, 180) || card.title,
+            title: card.displayName || card.title,
+            displayName: card.displayName || card.title,
+            occupation: stpText(overlay.occupation || mergedDetails.occupation, 80) || card.occupation,
             ageRange: stpText(overlay.ageRange, 40) || card.ageRange,
             summary: stpText(overlay.summary || overlay.jobToBeDone, 360) || card.summary,
             attackAngle: stpText(overlay.attackAngle, 260) || card.attackAngle,
@@ -11228,6 +11272,8 @@ function mergeStpPersonaAiOverlay(baseCards = [], aiCards = []) {
             details: {
                 ...mergedDetails,
                 need: stpText(mergedDetails.need, 260) || card.details?.need,
+                occupation: stpText(mergedDetails.occupation || overlay.occupation, 80) || card.details?.occupation,
+                segmentName: stpText(mergedDetails.segmentName || card.segmentName, 180) || card.details?.segmentName,
                 ageRange: stpText(mergedDetails.ageRange || overlay.ageRange, 40) || card.details?.ageRange,
                 attackAngle: stpText(mergedDetails.attackAngle || overlay.attackAngle, 260) || card.details?.attackAngle,
                 channels: stpArray(mergedDetails.channels || card.details?.channels, 6),
@@ -11288,7 +11334,9 @@ Return strict JSON only:
   "personas": [
     {
       "id": "same id from input",
-      "title": "persona name",
+      "displayName": "human persona name",
+      "occupation": "role or buyer profile",
+      "title": "human persona name",
       "ageRange": "inferred age range",
       "summary": "JTBD/persona story",
       "attackAngle": "specific marketing attack angle",

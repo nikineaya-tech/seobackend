@@ -2626,6 +2626,8 @@ window.openDakaLibraryPdf = openDakaLibraryPdf;
 
 function initDakaLibraryViewer() {
     ensureDakaLibraryStyles();
+    if (window.__dakaLibraryViewerBound) return;
+    window.__dakaLibraryViewerBound = true;
     document.addEventListener('click', (event) => {
         const trigger = event.target?.closest?.('[data-library-open]');
         if (!trigger) return;
@@ -2675,7 +2677,11 @@ function initDakaLibraryViewer() {
     }, true);
 }
 
-document.addEventListener('DOMContentLoaded', initDakaLibraryViewer);
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initDakaLibraryViewer);
+} else {
+    initDakaLibraryViewer();
+}
 
         // ═══════════════════════════════════════════════════════════════════
         // 🔍 SERVER STATUS CHECKER
@@ -5480,6 +5486,9 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         cards: 'بطاقات القرار',
         personas: 'Personas السوق',
         personasSub: 'Daka يستخرج شخصيات قابلة للاستهداف من SERP والمنافسين والسياق.',
+        competitorsObserved: 'منافسين مرصودين',
+        name: 'الاسم',
+        occupation: 'الدور',
         priority: 'الأولوية',
         age: 'العمر',
         attackAngle: 'زاوية الهجوم',
@@ -5525,6 +5534,9 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         cards: 'Decision cards',
         personas: 'Market personas',
         personasSub: 'Daka extracts targetable personas from SERP, competitors and market context.',
+        competitorsObserved: 'competitors observed',
+        name: 'Name',
+        occupation: 'Role',
         priority: 'Priority',
         age: 'Age',
         attackAngle: 'Attack angle',
@@ -5570,6 +5582,9 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         cards: 'Cartes décision',
         personas: 'Personas marché',
         personasSub: 'Daka extrait des personas ciblables depuis la SERP, les concurrents et le contexte marché.',
+        competitorsObserved: 'concurrents observés',
+        name: 'Nom',
+        occupation: 'Rôle',
         priority: 'Priorité',
         age: 'Âge',
         attackAngle: 'Angle d’attaque',
@@ -5796,15 +5811,19 @@ function renderStpSocialPlan(details = {}, copy = {}) {
     return `<div class="daka-stp-mini"><strong>${stpUiEsc(copy.socialPlan || copy.channels || 'Social')}</strong>${lines || ''}</div>${channelHtml}`;
 }
 
-function renderStpPersonaCards(personaCards = [], copy = {}) {
+function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
     const cards = Array.isArray(personaCards) ? personaCards.filter(Boolean) : [];
     if (!cards.length) return '';
+    const competitorCount = Number(meta.competitorCount || 0);
     return `<div class="daka-stp-persona-head">
       <div>
         <span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas || 'Personas')}</span>
         <p>${stpUiEsc(copy.personasSub || '')}</p>
       </div>
-      <span class="daka-stp-chip">${cards.length} personas</span>
+      <div class="daka-stp-pill-row">
+        <span class="daka-stp-chip">${cards.length} personas</span>
+        ${competitorCount ? `<span class="daka-stp-chip"><i class="fas fa-ranking-star"></i> ${competitorCount} ${stpUiEsc(copy.competitorsObserved || copy.competitors || 'competitors observed')}</span>` : ''}
+      </div>
     </div>
     <div class="daka-stp-personas">
       ${cards.map((card, index) => {
@@ -5812,12 +5831,15 @@ function renderStpPersonaCards(personaCards = [], copy = {}) {
         const tone = stpUiText(card.tone, '34,211,238');
         const priority = card.beachheadPriority || {};
         const score = stpUiText(card.priorityScore, '');
+        const personaName = stpUiText(card.displayName || card.name || card.title, `Persona ${index + 1}`);
+        const personaRole = stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName || '');
         return `<article class="daka-stp-persona" style="--persona-rgb:${stpUiEsc(tone)}">
           <div class="daka-stp-persona-top">
             <div class="daka-stp-avatar"><i class="fas ${stpUiEsc(card.icon || 'fa-user')}"></i></div>
             <div style="min-width:0">
               <small class="daka-stp-chip">${stpUiEsc(card.role || `Persona ${index + 1}`)}</small>
-              <h3>${stpUiEsc(stpUiText(card.title, `Persona ${index + 1}`))}</h3>
+              <h3>${stpUiEsc(personaName)}</h3>
+              ${personaRole ? `<p style="margin-top:4px;color:#8fb4cf;font-weight:800">${stpUiEsc(personaRole)}</p>` : ''}
             </div>
           </div>
           <div class="daka-stp-pill-row">
@@ -5839,6 +5861,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}) {
             ${renderStpMini(copy.objections || 'Objections', details.objections)}
             ${renderStpMini(copy.pains || 'Pains', details.pains)}
             ${renderStpMini(copy.proofNeeded || 'Proofs to show', details.proofNeeded)}
+            ${renderStpMini(copy.competitors || 'Competitors', details.competitors)}
             ${renderStpMini(copy.constraints || 'Constraints', details.constraints)}
           </div>
         </article>`;
@@ -5857,7 +5880,9 @@ function renderStpDecision(data) {
         id: 'persona-main',
         icon: 'fa-user-check',
         tone: '34,211,238',
-        title: data.persona.name || chosen.name || copy.persona,
+        title: data.persona.displayName || data.persona.name || copy.persona,
+        displayName: data.persona.displayName || data.persona.name || copy.persona,
+        occupation: chosen.name || '',
         role: 'Persona 1',
         ageRange: data.persona.ageRange || '',
         summary: data.persona.jobToBeDone || chosen.need || copy.subtitle,
@@ -5884,7 +5909,13 @@ function renderStpDecision(data) {
             constraints: []
         }
     }] : [];
-    const personaCardsHtml = renderStpPersonaCards(data?.personaCards?.length ? data.personaCards : fallbackPersona, copy);
+    const competitorCount = Number(
+        data?.competitorSnapshot?.top10Competitors?.length ||
+        data?.competitorSnapshot?.competitors?.length ||
+        data?.targeting?.marketSignals?.competitorCount ||
+        0
+    );
+    const personaCardsHtml = renderStpPersonaCards(data?.personaCards?.length ? data.personaCards : fallbackPersona, copy, { competitorCount });
 
     container.innerHTML = `<section class="daka-stp-report daka-stp-persona-only" dir="${dir}">
       ${personaCardsHtml || `<div class="daka-stp-persona-head"><div><span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas)}</span><p>${stpUiEsc(stpUiText(chosen.need, copy.subtitle))}</p></div></div>`}
