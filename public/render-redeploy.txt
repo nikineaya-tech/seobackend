@@ -1,0 +1,2 @@
+Render redeploy marker.
+Last trigger: 2026-08-20 STP personas and library viewer fix.
