@@ -2,7 +2,7 @@
 
 const crypto = require('crypto');
 
-const REPORT_TYPES = new Set(['competitors', 'funnel', 'technical', 'keywords']);
+const REPORT_TYPES = new Set(['competitors', 'funnel', 'technical', 'keywords', 'stp']);
 const PUBLIC_REPORT_FRONTEND_URL = process.env.PUBLIC_REPORT_FRONTEND_URL || 'https://marketinsight.mktnstrategix.com';
 
 function safeText(value, max = 240) {
@@ -95,6 +95,7 @@ function buildReadableSharedReportHtml(data = {}) {
     };
     const title = safeText(data.title || result.title || result.query || result.url || `${data.type || 'Daka'} report`, 180);
     const score = [
+        result.targeting?.chosenSegment?.scores?.total,
         result.auditSummary?.overallScore,
         result.globalScoring?.overall,
         result.globalReport?.score,
@@ -102,6 +103,8 @@ function buildReadableSharedReportHtml(data = {}) {
         result.overallScore
     ].find(value => value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value)));
     const verdict = reportText(
+        result.positioning?.statement ||
+        result.aiOverlay?.executiveDecision ||
         result.funnelSurgery?.pageQuality?.message ||
         result.funnelSurgery?.verdict?.summary ||
         result.executiveBrief?.priority ||
@@ -110,12 +113,17 @@ function buildReadableSharedReportHtml(data = {}) {
         title
     );
     const opportunities = reportList([
+        result.segmentation?.candidates?.map(x => x.name || x.need),
+        result.positioning?.differentiatedBenefits,
         result.funnelPrimaryAnalysis?.present?.map(x => x.sectionType || x.section || x.name || x.title),
         result.auditSummary?.topStrengths,
         result.swot?.opportunities,
         result.quickWins
     ], 5);
     const weaknesses = reportList([
+        result.evidenceLedger?.filter(x => x.type === 'missing').map(x => x.value),
+        result.persona?.pains,
+        result.persona?.objections,
         result.funnelPrimaryAnalysis?.weak?.map(x => x.problem || x.sectionType || x.section || x.reason),
         result.auditSummary?.topWeaknesses,
         result.criticalIssues,
@@ -123,6 +131,8 @@ function buildReadableSharedReportHtml(data = {}) {
         result.swot?.weaknesses
     ], 5);
     const actions = reportList([
+        result.actionPlan?.map(x => x.action || x.recommendation),
+        result.aiOverlay?.firstMoves?.map(x => x.action || x.recommendation),
         result.funnelSurgery?.priorityPlan?.now,
         result.funnelSurgery?.priorityPlan?.sevenDays,
         result.concreteActionPlan?.map(x => x.changeNow || x.action),
@@ -130,6 +140,9 @@ function buildReadableSharedReportHtml(data = {}) {
         result.recommendations
     ], 7);
     const details = reportList([
+        result.targeting?.chosenSegment?.name,
+        result.persona?.jobToBeDone,
+        result.positioning?.proofStatus,
         result.funnelSurgery?.messagePromiseCta?.proposedH1,
         result.funnelSurgery?.messagePromiseCta?.proposedCta,
         result.funnelSurgery?.offerDetected?.offerType,

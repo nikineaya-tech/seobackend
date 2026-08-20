@@ -994,6 +994,7 @@ html, body {
         font-size: 1rem;
     }
     .nav-btn[data-tab="competitors"] > i { color: #67e8f9; }
+    .nav-btn[data-tab="stp"] > i { color: #22c55e; }
     .nav-btn[data-tab="funnel"] > i { color: #a78bfa; }
     .nav-btn[data-tab="technical"] > i { color: #22d3ee; }
     .nav-btn[data-tab="keywords"] > i { color: #86efac; }
@@ -4047,6 +4048,10 @@ table tbody td {
                         <i class="fas fa-chart-line"></i>
                         <span data-i18n="navcompetitors">Concurrents</span>
                     </button>
+                    <button class="nav-btn" data-tab="stp">
+                        <i class="fas fa-diagram-project"></i>
+                        <span data-i18n="navstp">STP</span>
+                    </button>
                     <button class="nav-btn" data-tab="funnel">
                         <i class="fas fa-filter"></i>
                         <span data-i18n="navfunnel">Funnel AIDA</span>
@@ -4465,6 +4470,143 @@ table tbody td {
 </button>
     </div>
 </div>
+
+
+        <div id="stpTab" class="tab-content">
+            <div class="card">
+                <div class="card-header" style="border-bottom:1px solid rgba(34,197,94,.18);padding-bottom:20px;margin-bottom:25px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:260px;">
+                            <h1 class="card-title">
+                                <i class="fas fa-diagram-project" style="color:#22c55e;text-shadow:0 0 15px rgba(34,197,94,.42);"></i>
+                                <span data-i18n="tab_stp_title">Segmentation Targeting</span>
+                                <span class="highlight" data-i18n="tab_stp_highlight">Positioning</span>
+                            </h1>
+                            <p class="card-subtitle" data-i18n="tab_stp_subtitle">
+                                Choisissez le segment, le persona, le positionnement et le beachhead market à partir des couches marché, concurrents, budget, preuves et accessibilité.
+                            </p>
+                        </div>
+                        <div class="server-status online no-print" style="background:rgba(34,197,94,.10);border:1px solid rgba(34,197,94,.36);">
+                            <i class="fas fa-layer-group"></i>
+                            <span style="font-size:.75rem;font-weight:800;" data-i18n="stp_layer_badge">STP BACKEND LAYER</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="stpForm">
+                    <div class="form-group">
+                        <label class="form-label" for="stpKeyword" data-i18n="stp_label_keyword">Marché, niche ou offre à positionner</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-crosshairs input-icon"></i>
+                            <input type="text" id="stpKeyword" class="input-field" data-i18n-placeholder="stp_placeholder_keyword" placeholder="Ex: agence marketing IA Maroc" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="stpUrl" data-i18n="stp_label_url">Votre site pour benchmark direct</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-link input-icon"></i>
+                            <input type="url" id="stpUrl" class="input-field" data-i18n-placeholder="stp_placeholder_url" placeholder="https://votre-site.com">
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;">
+                        <div class="form-group">
+                            <label class="form-label" for="stpCountry" data-i18n="stp_label_country">Pays et marché cible</label>
+                            <div class="input-wrapper competitor-country-shell">
+                                <i class="fas fa-globe input-icon"></i>
+                                <select id="stpCountry" class="select-field" data-country-catalog="stp"></select>
+                            </div>
+                            <small id="stpCountrySelectNote" class="country-select-note">Le libellé du pays suit la langue du rapport, sans modifier le marché ciblé.</small>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="stpLang" data-i18n="stp_label_lang">Langue de la décision</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-language input-icon"></i>
+                                <select id="stpLang" class="select-field">
+                                    <option value="fr">Français</option>
+                                    <option value="ar">العربية</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;">
+                        <div class="form-group">
+                            <label class="form-label" for="stpBudget" data-i18n="stp_label_budget">Budget / prix / ressources</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-wallet input-icon"></i>
+                                <input id="stpBudget" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_budget" placeholder="Ex: 200 DH/j ads, 499 DH/mois, petite équipe">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="stpObjective" data-i18n="stp_label_objective">Objectif prioritaire</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-flag-checkered input-icon"></i>
+                                <input id="stpObjective" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_objective" placeholder="Ex: leads qualifiés, ventes COD, rendez-vous, abonnement">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;">
+                        <div class="form-group">
+                            <label class="form-label" for="stpOffer" data-i18n="stp_label_offer">Offre exacte</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-box-open input-icon"></i>
+                                <input id="stpOffer" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_offer" placeholder="Ex: audit IA + plan marketing + exécution">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="stpAudience" data-i18n="stp_label_audience">Audience pressentie</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-users-line input-icon"></i>
+                                <input id="stpAudience" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_audience" placeholder="Ex: PME, agences, e-commerçants, freelances">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;">
+                        <div class="form-group">
+                            <label class="form-label" for="stpBusinessModel" data-i18n="stp_label_model">Modèle business</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-sitemap input-icon"></i>
+                                <input id="stpBusinessModel" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_model" placeholder="Ex: service B2B, e-commerce, SaaS, local service">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="stpCityRegion" data-i18n="stp_label_region">Zone à gagner</label>
+                            <div class="input-wrapper">
+                                <i class="fas fa-location-dot input-icon"></i>
+                                <input id="stpCityRegion" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_region" placeholder="Ex: Casablanca, Tripoli, Tunis, GCC">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:15px;">
+                        <div class="form-group">
+                            <label class="form-label" for="stpKnownCompetitors" data-i18n="stp_label_competitors">Concurrents connus</label>
+                            <textarea id="stpKnownCompetitors" class="textarea-field" rows="3" data-i18n-placeholder="stp_placeholder_competitors" placeholder="site1.com, marque2, page Instagram..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="stpConstraints" data-i18n="stp_label_constraints">Contraintes réelles</label>
+                            <textarea id="stpConstraints" class="textarea-field" rows="3" data-i18n-placeholder="stp_placeholder_constraints" placeholder="Petit budget, pas d’équipe sales, livraison lente, preuves faibles..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="stpChannels" data-i18n="stp_label_channels">Canaux accessibles</label>
+                            <textarea id="stpChannels" class="textarea-field" rows="3" data-i18n-placeholder="stp_placeholder_channels" placeholder="SEO, TikTok, Meta Ads, WhatsApp, Google Maps, LinkedIn..."></textarea>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-cosmic btn-lg" id="stpBtn" style="width:100%;margin-top:15px;height:60px;font-size:1.05rem;">
+                        <i class="fas fa-location-crosshairs"></i>
+                        <span data-stp-copy="run" data-i18n="stp_btn">GÉNÉRER LA DÉCISION STP</span>
+                    </button>
+                </form>
+
+                <div id="resultsStpDecision" class="results-container"></div>
+            </div>
+        </div>
 
 
         <div id="funnelTab" class="tab-content">
@@ -4969,6 +5111,7 @@ table tbody td {
 navkeywords: 'Demande marché',
         // --- Navigation ---
         navcompetitors: 'Concurrents',
+        navstp: 'STP',
         navfunnel: 'Funnel AIDA',
         navtechnical: 'Audit site',
         tab4_title: 'Opportunités de',
@@ -4992,6 +5135,37 @@ navkeywords: 'Demande marché',
         label_analysis_lang: '💬 Langue d\'analyse',
         label_options: '⚙️ Options d\'analyse',
         btn_analyze: 'LANCER L\'EXTRACTION STRATÉGIQUE',
+
+        // --- Tab STP ---
+        tab_stp_title: 'Segmentation Targeting',
+        tab_stp_highlight: 'Positioning',
+        tab_stp_subtitle: 'Choisissez le segment, le persona, le positionnement et le beachhead market à partir des couches marché, concurrents, budget, preuves et accessibilité.',
+        stp_layer_badge: 'STP BACKEND LAYER',
+        stp_label_keyword: 'Marché, niche ou offre à positionner',
+        stp_placeholder_keyword: 'Ex: agence marketing IA Maroc',
+        stp_label_url: 'Votre site pour benchmark direct',
+        stp_placeholder_url: 'https://votre-site.com',
+        stp_label_country: 'Pays et marché cible',
+        stp_label_lang: 'Langue de la décision',
+        stp_label_budget: 'Budget / prix / ressources',
+        stp_placeholder_budget: 'Ex: 200 DH/j ads, 499 DH/mois, petite équipe',
+        stp_label_objective: 'Objectif prioritaire',
+        stp_placeholder_objective: 'Ex: leads qualifiés, ventes COD, rendez-vous, abonnement',
+        stp_label_offer: 'Offre exacte',
+        stp_placeholder_offer: 'Ex: audit IA + plan marketing + exécution',
+        stp_label_audience: 'Audience pressentie',
+        stp_placeholder_audience: 'Ex: PME, agences, e-commerçants, freelances',
+        stp_label_model: 'Modèle business',
+        stp_placeholder_model: 'Ex: service B2B, e-commerce, SaaS, local service',
+        stp_label_region: 'Zone à gagner',
+        stp_placeholder_region: 'Ex: Casablanca, Tripoli, Tunis, GCC',
+        stp_label_competitors: 'Concurrents connus',
+        stp_placeholder_competitors: 'site1.com, marque2, page Instagram...',
+        stp_label_constraints: 'Contraintes réelles',
+        stp_placeholder_constraints: 'Petit budget, pas d’équipe sales, livraison lente, preuves faibles...',
+        stp_label_channels: 'Canaux accessibles',
+        stp_placeholder_channels: 'SEO, TikTok, Meta Ads, WhatsApp, Google Maps, LinkedIn...',
+        stp_btn: 'GÉNÉRER LA DÉCISION STP',
 
         // --- Loading States Tab 1 (Competitors) ---
         loading_comp_title: 'Daka prépare votre avantage...',
@@ -5083,6 +5257,7 @@ navkeywords: 'Demande marché',
 navkeywords: 'طلب السوق',
         // --- Navigation ---
         navcompetitors: 'المنافسون',
+        navstp: 'STP',
         navfunnel: 'مسار التحويل',
         navtechnical: 'فحص الموقع',
         tab4_title: 'مولد',
@@ -5106,6 +5281,37 @@ navkeywords: 'طلب السوق',
         label_analysis_lang: '💬 لغة التحليل',
         label_options: '⚙️ خيارات التحليل',
         btn_analyze: 'بدء الاستخراج الاستراتيجي',
+
+        // --- Tab STP ---
+        tab_stp_title: 'التقسيم والاستهداف',
+        tab_stp_highlight: 'والتموضع',
+        tab_stp_subtitle: 'اختر الشريحة، الشخصية، التموضع وسوق الانطلاق اعتمادا على طبقات السوق والمنافسين والميزانية والأدلة وسهولة الوصول.',
+        stp_layer_badge: 'طبقة STP في الخلفية',
+        stp_label_keyword: 'السوق أو النيتش أو العرض المراد تموضعه',
+        stp_placeholder_keyword: 'مثال: وكالة تسويق بالذكاء الاصطناعي المغرب',
+        stp_label_url: 'موقعك للقياس المباشر',
+        stp_placeholder_url: 'https://yoursite.com',
+        stp_label_country: 'البلد والسوق المستهدف',
+        stp_label_lang: 'لغة القرار',
+        stp_label_budget: 'الميزانية / السعر / الموارد',
+        stp_placeholder_budget: 'مثال: 200 درهم يوميا للإعلانات، فريق صغير',
+        stp_label_objective: 'الهدف الأول',
+        stp_placeholder_objective: 'مثال: عملاء محتملون، مبيعات COD، مواعيد، اشتراك',
+        stp_label_offer: 'العرض الدقيق',
+        stp_placeholder_offer: 'مثال: تدقيق IA + خطة تسويق + تنفيذ',
+        stp_label_audience: 'الجمهور المتوقع',
+        stp_placeholder_audience: 'مثال: PME، وكالات، تجار إلكترونيون، مستقلون',
+        stp_label_model: 'نموذج العمل',
+        stp_placeholder_model: 'مثال: خدمة B2B، تجارة إلكترونية، SaaS، خدمة محلية',
+        stp_label_region: 'المنطقة المراد كسبها',
+        stp_placeholder_region: 'مثال: الدار البيضاء، طرابلس، تونس، الخليج',
+        stp_label_competitors: 'منافسون معروفون',
+        stp_placeholder_competitors: 'site1.com، علامة2، صفحة Instagram...',
+        stp_label_constraints: 'القيود الواقعية',
+        stp_placeholder_constraints: 'ميزانية صغيرة، لا يوجد فريق مبيعات، توصيل بطيء، أدلة ضعيفة...',
+        stp_label_channels: 'القنوات المتاحة',
+        stp_placeholder_channels: 'SEO، TikTok، Meta Ads، WhatsApp، Google Maps، LinkedIn...',
+        stp_btn: 'توليد قرار STP',
 
         // --- Loading States Tab 1 (Competitors) ---
         loading_comp_title: 'داكا يجهز ميزتك القادمة...',
@@ -5197,6 +5403,7 @@ navkeywords: 'طلب السوق',
 navkeywords: 'Market demand',
         // --- Navigation ---
         navcompetitors: 'Competitors',
+        navstp: 'STP',
         navfunnel: 'AIDA Funnel',
         navtechnical: 'Site Audit',
         tab4_title: 'Keyword',
@@ -5220,6 +5427,37 @@ navkeywords: 'Market demand',
         label_analysis_lang: '💬 Analysis language',
         label_options: '⚙️ Analysis options',
         btn_analyze: 'LAUNCH STRATEGIC EXTRACTION',
+
+        // --- Tab STP ---
+        tab_stp_title: 'Segmentation Targeting',
+        tab_stp_highlight: 'Positioning',
+        tab_stp_subtitle: 'Choose the segment, persona, positioning and beachhead market from market, competitor, budget, proof and accessibility layers.',
+        stp_layer_badge: 'STP BACKEND LAYER',
+        stp_label_keyword: 'Market, niche or offer to position',
+        stp_placeholder_keyword: 'Ex: AI marketing agency Morocco',
+        stp_label_url: 'Your site for direct benchmark',
+        stp_placeholder_url: 'https://your-site.com',
+        stp_label_country: 'Target country and market',
+        stp_label_lang: 'Decision language',
+        stp_label_budget: 'Budget / price / resources',
+        stp_placeholder_budget: 'Ex: 200 MAD/day ads, 499 MAD/month, small team',
+        stp_label_objective: 'Priority objective',
+        stp_placeholder_objective: 'Ex: qualified leads, COD sales, appointments, subscription',
+        stp_label_offer: 'Exact offer',
+        stp_placeholder_offer: 'Ex: AI audit + marketing plan + execution',
+        stp_label_audience: 'Assumed audience',
+        stp_placeholder_audience: 'Ex: SMBs, agencies, e-commerce sellers, freelancers',
+        stp_label_model: 'Business model',
+        stp_placeholder_model: 'Ex: B2B service, e-commerce, SaaS, local service',
+        stp_label_region: 'Area to win',
+        stp_placeholder_region: 'Ex: Casablanca, Tripoli, Tunis, GCC',
+        stp_label_competitors: 'Known competitors',
+        stp_placeholder_competitors: 'site1.com, brand2, Instagram page...',
+        stp_label_constraints: 'Real constraints',
+        stp_placeholder_constraints: 'Small budget, no sales team, slow delivery, weak proof...',
+        stp_label_channels: 'Accessible channels',
+        stp_placeholder_channels: 'SEO, TikTok, Meta Ads, WhatsApp, Google Maps, LinkedIn...',
+        stp_btn: 'GENERATE STP DECISION',
 
         // --- Loading States Tab 1 (Competitors) ---
         loading_comp_title: 'Daka is shaping your advantage...',
@@ -5309,7 +5547,7 @@ navkeywords: 'Market demand',
 
     <script src="https://seobackend-f81n.onrender.com/assets/daka-analytics.js?v=20260810-marketinsight1"></script>
     <script>window.DAKA_USE_COMPETITOR_REFONTE = false;</script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260811-circular-chart-perf1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-stp-menu-beachhead1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">

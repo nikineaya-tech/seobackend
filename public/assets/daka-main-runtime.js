@@ -141,8 +141,8 @@ function repairVisibleMojibake(root = document.body) {
 }
 window.repairVisibleMojibake = repairVisibleMojibake;
 
-function hydrateCompetitorCountrySelect(preferredValue = null, lang = null) {
-    const select = document.getElementById('country');
+function hydrateDakaCountrySelectById(selectId, preferredValue = null, lang = null, noteId = null) {
+    const select = document.getElementById(selectId);
     if (!select) return;
     const locale = ['fr', 'en', 'ar'].includes(lang) ? lang : (STATE.currentLang || 'fr');
     const rawValue = preferredValue || select.value || STATE.lastInputs?.country || 'Morocco';
@@ -155,11 +155,16 @@ function hydrateCompetitorCountrySelect(preferredValue = null, lang = null) {
         select.value = currentValue;
     }
     select.dataset.locale = locale;
-    const note = document.getElementById('countrySelectNote');
+    const note = noteId ? document.getElementById(noteId) : null;
     if (note) {
         note.textContent = getDakaCountryHelperText(locale);
         note.dir = locale === 'ar' ? 'rtl' : 'ltr';
     }
+}
+
+function hydrateCompetitorCountrySelect(preferredValue = null, lang = null) {
+    hydrateDakaCountrySelectById('country', preferredValue, lang, 'countrySelectNote');
+    hydrateDakaCountrySelectById('stpCountry', preferredValue, lang, 'stpCountrySelectNote');
 }
 /* ══════════════════════════════════════════════════════════════
    PATCH — RESET COMPLET AVANT CHAQUE NOUVELLE ANALYSE
@@ -260,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
         STATE.currentLang = lang;
         localStorage.setItem('preferredLang', lang);
         localStorage.setItem('preferred_lang', lang);
-        document.querySelectorAll('#analysisLang, #funnelLang, #langSelector').forEach(el => {
+        document.querySelectorAll('#analysisLang, #stpLang, #funnelLang, #langSelector').forEach(el => {
             if (el && el.value !== lang) el.value = lang;
         });
         document.querySelectorAll('input[name="techLang"]').forEach(el => {
@@ -269,9 +274,10 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.i18n && typeof window.i18n.setLanguage === 'function' && window.i18n.currentLang !== lang) {
             window.i18n.setLanguage(lang);
         }
+        if (typeof refreshStpDecisionCopy === 'function') refreshStpDecisionCopy();
     };
 
-    document.querySelectorAll('#analysisLang, #funnelLang, #langSelector').forEach(el => {
+    document.querySelectorAll('#analysisLang, #stpLang, #funnelLang, #langSelector').forEach(el => {
         el.addEventListener('change', () => syncReportLanguage(el.value));
     });
 
@@ -351,6 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Update language selector
                 document.getElementById('langSelector') && (document.getElementById('langSelector').value = lang);
                 document.getElementById('analysisLang') && (document.getElementById('analysisLang').value = lang);
+                document.getElementById('stpLang') && (document.getElementById('stpLang').value = lang);
                 document.getElementById('funnelLang') && (document.getElementById('funnelLang').value = lang);
                 document.querySelectorAll('input[name="techLang"]').forEach(el => {
                     el.checked = el.value === lang;
@@ -358,6 +365,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 this.translateRuntimeChrome();
                 hydrateCompetitorCountrySelect(STATE.lastInputs?.country || null, lang);
+                if (typeof refreshStpDecisionCopy === 'function') refreshStpDecisionCopy();
 
                 if (CONFIG.DEBUG_MODE) console.log(`✅ Language changed to: ${lang}`);
             }
@@ -1570,7 +1578,7 @@ document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.addEventListener('DOMContentLoaded', initSharedReportRoute);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-08-11-executive-report-ux2';
+window.DAKA_FRONTEND_BUILD = '2026-08-20-stp-menu-beachhead1';
 
 function loaderTypeFromEndpoint(endpoint = '') {
     const value = String(endpoint || '').toLowerCase();
@@ -4740,6 +4748,425 @@ function collectBusinessContext(prefix = 'comp') {
         cityOrRegion: read('CityRegion')
     };
 }
+
+function getStpCopy(lang = STATE.currentLang || 'fr') {
+    if (lang === 'ar') return {
+        button: 'قرار STP احترافي',
+        hint: 'اختر أفضل شريحة، شخصية العميل والتموضع اعتمادا على إشارات السوق الحقيقية.',
+        title: 'قرار STP من Daka',
+        subtitle: 'Segmentation · Targeting · Positioning مبني على طبقات السوق والمنافسين والكلمات والأدلة.',
+        run: 'توليد قرار STP',
+        running: 'Daka يبني STP من إشارات السوق...',
+        segment: 'الشريحة الفائزة',
+        persona: 'الشخصية',
+        positioning: 'التموضع',
+        actions: 'الحركات الأولى',
+        evidence: 'دفتر الأدلة',
+        competitors: 'منافسون وسياق السوق',
+        beachhead: 'سوق الانطلاق',
+        beachheadFit: 'ملاءمة الانطلاق',
+        nextMarket: 'السوق التالي',
+        cards: 'بطاقات القرار',
+        score: 'نقطة القرار',
+        proof: 'حالة الدليل',
+        noData: 'غير متوفر',
+        missing: 'دليل ناقص',
+        observed: 'مرصود',
+        inferred: 'مستنتج',
+        success: 'تم بناء قرار STP.',
+        needInput: 'أدخل كلمة السوق أو رابطا أولا.',
+        error: 'تعذر بناء STP الآن.'
+    };
+    if (lang === 'en') return {
+        button: 'Pro STP Decision',
+        hint: 'Choose the best segment, persona and positioning from real market signals.',
+        title: 'Daka STP Decision',
+        subtitle: 'Segmentation · Targeting · Positioning built from market, competitor, keyword and proof layers.',
+        run: 'Generate STP decision',
+        running: 'Daka is building STP from market signals...',
+        segment: 'Winning segment',
+        persona: 'Persona',
+        positioning: 'Positioning',
+        actions: 'First moves',
+        evidence: 'Evidence ledger',
+        competitors: 'Competitors and market context',
+        beachhead: 'Beachhead market',
+        beachheadFit: 'Beachhead fit',
+        nextMarket: 'Next market',
+        cards: 'Decision cards',
+        score: 'Decision score',
+        proof: 'Proof status',
+        noData: 'Not available',
+        missing: 'Missing proof',
+        observed: 'Observed',
+        inferred: 'Inferred',
+        success: 'STP decision is ready.',
+        needInput: 'Enter a market keyword or URL first.',
+        error: 'Unable to build STP right now.'
+    };
+    return {
+        button: 'Décision STP Pro',
+        hint: 'Choisir le meilleur segment, persona et positionnement à partir des signaux marché réels.',
+        title: 'Décision STP Daka',
+        subtitle: 'Segmentation · Targeting · Positioning construit depuis les couches marché, concurrents, mots-clés et preuves.',
+        run: 'Générer la décision STP',
+        running: 'Daka construit le STP depuis les signaux marché...',
+        segment: 'Segment gagnant',
+        persona: 'Persona',
+        positioning: 'Positionnement',
+        actions: 'Premiers mouvements',
+        evidence: 'Registre des preuves',
+        competitors: 'Concurrents et contexte marché',
+        beachhead: 'Beachhead market',
+        beachheadFit: 'Fit beachhead',
+        nextMarket: 'Marché suivant',
+        cards: 'Cartes décision',
+        score: 'Score décision',
+        proof: 'Statut preuve',
+        noData: 'Non disponible',
+        missing: 'Preuve manquante',
+        observed: 'Observé',
+        inferred: 'Déduit',
+        success: 'Décision STP prête.',
+        needInput: 'Entrez un mot-clé marché ou une URL d’abord.',
+        error: 'Impossible de construire le STP maintenant.'
+    };
+}
+
+function stpUiEsc(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function stpUiText(value, fallback = '') {
+    if (value === null || value === undefined) return fallback;
+    if (Array.isArray(value)) return value.map(v => stpUiText(v)).filter(Boolean).join(', ') || fallback;
+    const text = String(value).trim();
+    return text && !/^(null|undefined|---|n\/a|non disponible|not available|غير متوفر)$/i.test(text) ? text : fallback;
+}
+
+function stpUiArray(value, max = 6) {
+    const input = Array.isArray(value) ? value : [value];
+    return [...new Set(input
+        .flatMap(item => Array.isArray(item) ? item : [item])
+        .map(item => stpUiText(item))
+        .filter(Boolean))]
+        .slice(0, max);
+}
+
+function collectStpPayload() {
+    const read = (id) => document.getElementById(id)?.value?.trim() || '';
+    const splitList = (value, max = 8) => String(value || '')
+        .split(/[\n,;]/)
+        .map(x => x.trim())
+        .filter(Boolean)
+        .slice(0, max);
+
+    const keyword = read('stpKeyword') || read('keyword');
+    const url = read('stpUrl') || read('url');
+    const country = document.getElementById('stpCountry')?.value || document.getElementById('country')?.value || 'Morocco';
+    const lang = document.getElementById('stpLang')?.value || document.getElementById('analysisLang')?.value || STATE.currentLang || 'fr';
+    const context = collectBusinessContext('comp');
+    const stpContext = {
+        offer: read('stpOffer') || context.offer,
+        audience: read('stpAudience') || context.audience,
+        objective: read('stpObjective') || context.objective,
+        budget: read('stpBudget') || context.priceRange,
+        businessModel: read('stpBusinessModel') || '',
+        knownCompetitors: splitList(read('stpKnownCompetitors')).length ? splitList(read('stpKnownCompetitors')) : context.knownCompetitors,
+        cityOrRegion: read('stpCityRegion') || context.cityOrRegion,
+        constraints: splitList(read('stpConstraints'), 6),
+        channels: splitList(read('stpChannels'), 6)
+    };
+    return {
+        query: keyword || url,
+        url: url || '',
+        geo: stpContext.cityOrRegion || country,
+        lang,
+        budget: stpContext.budget || '',
+        objective: stpContext.objective || '',
+        businessModel: stpContext.businessModel || stpContext.offer || '',
+        context: {
+            ...context,
+            ...stpContext,
+            selectedCountry: country,
+            userAudience: stpContext.audience || '',
+            knownCompetitors: stpContext.knownCompetitors || []
+        },
+        forceRefresh: true
+    };
+}
+
+function ensureStpDecisionStyles() {
+    if (document.getElementById('daka-stp-decision-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'daka-stp-decision-styles';
+    style.textContent = `
+      .daka-stp-tools{margin-top:14px;border:1px solid rgba(34,211,238,.18);border-radius:18px;background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(139,92,246,.06));padding:14px;display:grid;gap:12px}
+      .daka-stp-tools-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .daka-stp-tools-head strong{display:flex;align-items:center;gap:9px;color:#ecfeff;font-size:.95rem}
+      .daka-stp-tools-head p{margin:4px 0 0;color:#9fb2cb;font-size:.78rem;line-height:1.55}
+      .daka-stp-btn{min-height:44px;border:0;border-radius:14px;padding:10px 16px;background:linear-gradient(135deg,#22c55e,#22d3ee);color:#03111c;font-weight:950;cursor:pointer;display:inline-flex;align-items:center;gap:9px;box-shadow:0 14px 32px rgba(34,211,238,.2)}
+      .daka-stp-btn[disabled]{opacity:.62;cursor:wait}
+      .daka-stp-report{margin-top:18px;border:1px solid rgba(125,211,252,.18);border-radius:24px;background:radial-gradient(circle at 0 0,rgba(34,211,238,.13),transparent 28%),linear-gradient(145deg,rgba(7,17,32,.96),rgba(2,6,23,.86));padding:clamp(16px,2.4vw,24px);box-shadow:0 24px 70px rgba(0,0,0,.28)}
+      .daka-stp-report h2,.daka-stp-report h3,.daka-stp-report h4{margin:0;color:#fff}
+      .daka-stp-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(170px,.28fr);gap:16px;align-items:stretch;margin-bottom:16px}
+      .daka-stp-kicker{display:inline-flex;align-items:center;gap:8px;color:#67e8f9;font-size:.68rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
+      .daka-stp-hero p{margin:8px 0 0;color:#b7c7dd;line-height:1.65}
+      .daka-stp-score{display:grid;place-items:center;min-height:156px;border-radius:999px;border:1px solid rgba(34,211,238,.28);background:conic-gradient(from 180deg,#22c55e var(--stp-score,65%),rgba(15,23,42,.9) 0);position:relative;overflow:hidden}
+      .daka-stp-score:before{content:"";position:absolute;inset:12px;border-radius:inherit;background:#07111f;border:1px solid rgba(148,163,184,.12)}
+      .daka-stp-score strong,.daka-stp-score span{position:relative;z-index:1}.daka-stp-score strong{font-size:2.1rem}.daka-stp-score span{color:#9fb2cb;font-size:.7rem;font-weight:900;text-transform:uppercase}
+      .daka-stp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.daka-stp-card{min-width:0;border:1px solid rgba(148,163,184,.13);border-radius:18px;background:rgba(2,6,23,.46);padding:14px}.daka-stp-card p{margin:8px 0 0;color:#cbd5e1;line-height:1.58;font-size:.83rem}
+      .daka-stp-card small,.daka-stp-chip{color:#8aa0ba;font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.daka-stp-chip{display:inline-flex;padding:5px 8px;border-radius:999px;background:rgba(34,211,238,.1);color:#7dd3fc;margin:4px 6px 0 0}
+      .daka-stp-decision-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+      .daka-stp-card[data-tone]{position:relative;overflow:hidden;border-color:rgba(var(--tone-rgb,34,211,238),.22);background:linear-gradient(145deg,rgba(var(--tone-rgb,34,211,238),.10),rgba(2,6,23,.54))}
+      .daka-stp-card[data-tone]:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,rgba(var(--tone-rgb,34,211,238),1),transparent)}
+      .daka-stp-card[data-tone] i{color:rgb(var(--tone-rgb,34,211,238));filter:drop-shadow(0 0 10px rgba(var(--tone-rgb,34,211,238),.35))}
+      .daka-stp-card-head{display:flex;align-items:center;gap:9px;margin-bottom:9px}
+      .daka-stp-card-head h3{font-size:.94rem;line-height:1.25}
+      .daka-stp-beachhead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:center;margin:14px 0;padding:16px;border:1px solid rgba(34,197,94,.2);border-radius:20px;background:linear-gradient(135deg,rgba(34,197,94,.10),rgba(34,211,238,.06))}
+      .daka-stp-beachhead strong{display:block;color:#fff;font-size:1.05rem;line-height:1.35}.daka-stp-beachhead p{margin:7px 0 0;color:#cbd5e1;line-height:1.6;font-size:.84rem}
+      .daka-stp-pill-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+      .daka-stp-list{display:grid;gap:8px;margin:10px 0 0;padding:0}.daka-stp-list li{list-style:none;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(148,163,184,.08);color:#dbeafe;font-size:.78rem;line-height:1.5}
+      .daka-stp-action{border-inline-start:3px solid #22c55e}.daka-stp-evidence[data-type="missing"]{border-inline-start:3px solid #f59e0b}.daka-stp-evidence[data-type="observed"]{border-inline-start:3px solid #22d3ee}.daka-stp-evidence[data-type="inferred"]{border-inline-start:3px solid #a78bfa}
+      .daka-stp-section{margin-top:12px}.daka-stp-section summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid rgba(148,163,184,.13);border-radius:16px;background:rgba(15,23,42,.62);color:#eaf6ff;font-weight:950}.daka-stp-section summary::-webkit-details-marker{display:none}.daka-stp-section-body{padding-top:12px}
+      @media(max-width:780px){.daka-stp-hero,.daka-stp-grid,.daka-stp-beachhead{grid-template-columns:1fr}.daka-stp-score{min-height:138px;max-width:180px;margin:auto}}
+    `;
+    document.head.appendChild(style);
+}
+
+function renderStpList(items, className = '') {
+    const values = stpUiArray(items, 8);
+    if (!values.length) return '';
+    return `<ul class="daka-stp-list ${className}">${values.map(item => `<li>${stpUiEsc(item)}</li>`).join('')}</ul>`;
+}
+
+function renderStpDecisionCard({ tone = '34,211,238', icon = 'fa-circle-dot', label = '', headline = '', body = '', items = [], chips = [] } = {}) {
+    const cleanHeadline = stpUiText(headline);
+    const cleanBody = stpUiText(body);
+    const cleanItems = stpUiArray(items, 6);
+    const cleanChips = stpUiArray(chips, 5);
+    if (!cleanHeadline && !cleanBody && !cleanItems.length) return '';
+    return `<article class="daka-stp-card" data-tone="custom" style="--tone-rgb:${stpUiEsc(tone)}">
+      <div class="daka-stp-card-head">
+        <i class="fas ${stpUiEsc(icon)}"></i>
+        <small>${stpUiEsc(label)}</small>
+      </div>
+      ${cleanHeadline ? `<h3>${stpUiEsc(cleanHeadline)}</h3>` : ''}
+      ${cleanBody ? `<p>${stpUiEsc(cleanBody)}</p>` : ''}
+      ${cleanItems.length ? renderStpList(cleanItems) : ''}
+      ${cleanChips.length ? `<div class="daka-stp-pill-row">${cleanChips.map(chip => `<span class="daka-stp-chip">${stpUiEsc(chip)}</span>`).join('')}</div>` : ''}
+    </article>`;
+}
+
+function normalizeBackendStpCard(card = {}) {
+    return {
+        tone: card.tone || '34,211,238',
+        icon: card.icon || 'fa-circle-dot',
+        label: card.label || card.kind || '',
+        headline: card.headline || card.title || card.name || '',
+        body: card.body || card.description || card.rationale || '',
+        items: card.items || card.details || card.evidence || [],
+        chips: card.chips || card.badges || []
+    };
+}
+
+function renderStpDecision(data) {
+    const container = document.getElementById('resultsStpDecision');
+    if (!container) return;
+    const lang = data?.inputs?.lang || document.getElementById('stpLang')?.value || document.getElementById('analysisLang')?.value || STATE.currentLang || 'fr';
+    const copy = getStpCopy(lang);
+    const dir = lang === 'ar' ? 'rtl' : 'ltr';
+    const chosen = data?.targeting?.chosenSegment || {};
+    const persona = data?.persona || {};
+    const positioning = data?.positioning || {};
+    const score = Math.max(0, Math.min(100, Number(chosen?.scores?.total || 0)));
+    const actions = Array.isArray(data?.actionPlan) ? data.actionPlan : [];
+    const evidence = Array.isArray(data?.evidenceLedger) ? data.evidenceLedger : [];
+    const competitors = Array.isArray(data?.competitorSnapshot?.top10Competitors) ? data.competitorSnapshot.top10Competitors : [];
+    const beachhead = data?.beachheadMarket || {};
+    const proofStatus = stpUiText(positioning.proofStatus, copy.noData);
+    const actionItems = actions
+        .slice(0, 6)
+        .map(item => stpUiText(item?.action || item))
+        .filter(Boolean);
+    const backendCards = Array.isArray(data?.decisionCards)
+        ? data.decisionCards.map(card => renderStpDecisionCard(normalizeBackendStpCard(card))).filter(Boolean)
+        : [];
+    const fallbackCards = [
+        renderStpDecisionCard({
+            tone: '34,211,238',
+            icon: 'fa-bullseye',
+            label: copy.segment,
+            headline: chosen.name,
+            body: chosen.need,
+            items: chosen.buyingTriggers || chosen.evidence,
+            chips: [chosen.confidence, data?.segmentation?.archetype]
+        }),
+        renderStpDecisionCard({
+            tone: '34,197,94',
+            icon: 'fa-flag-checkered',
+            label: copy.beachhead,
+            headline: beachhead.name || chosen.name,
+            body: beachhead.rationale || beachhead.focus,
+            items: [beachhead.budgetFit, beachhead.accessPath, beachhead.expansionPath, ...(beachhead.criteria || [])],
+            chips: [beachhead.confidence, beachhead.fitScore ? `${copy.beachheadFit}: ${beachhead.fitScore}/100` : '']
+        }),
+        renderStpDecisionCard({
+            tone: '139,92,246',
+            icon: 'fa-chess-knight',
+            label: copy.positioning,
+            headline: positioning.audience,
+            body: positioning.statement,
+            items: positioning.differentiatedBenefits,
+            chips: [proofStatus]
+        }),
+        renderStpDecisionCard({
+            tone: '245,158,11',
+            icon: 'fa-user-check',
+            label: copy.persona,
+            headline: persona.name,
+            body: persona.jobToBeDone,
+            items: [...(persona.pains || []), ...(persona.objections || [])],
+            chips: persona.alternatives
+        }),
+        renderStpDecisionCard({
+            tone: '236,72,153',
+            icon: 'fa-bolt',
+            label: copy.actions,
+            headline: data?.aiOverlay?.segmentRationale || copy.run,
+            items: actionItems,
+            chips: actions.slice(0, 3).flatMap(item => [item?.impact, item?.effort]).filter(Boolean)
+        })
+    ].filter(Boolean);
+    const decisionCards = (backendCards.length ? backendCards : fallbackCards).join('');
+
+    container.innerHTML = `<section class="daka-stp-report" dir="${dir}">
+      <div class="daka-stp-hero">
+        <div>
+          <span class="daka-stp-kicker"><i class="fas fa-crosshairs"></i>${stpUiEsc(copy.title)}</span>
+          <h2 style="margin-top:10px">${stpUiEsc(stpUiText(chosen.name, copy.segment))}</h2>
+          <p>${stpUiEsc(stpUiText(data?.aiOverlay?.executiveDecision || chosen.need || copy.subtitle, copy.subtitle))}</p>
+          <div style="margin-top:10px">
+            <span class="daka-stp-chip">${stpUiEsc(stpUiText(data?.segmentation?.archetype, 'market'))}</span>
+            <span class="daka-stp-chip">${stpUiEsc(copy.proof)}: ${stpUiEsc(proofStatus)}</span>
+            <span class="daka-stp-chip">${stpUiEsc(stpUiText(chosen.confidence, 'MEDIUM'))}</span>
+          </div>
+        </div>
+        <div class="daka-stp-score" style="--stp-score:${score}%"><strong>${score}</strong><span>${stpUiEsc(copy.score)}</span></div>
+      </div>
+
+      ${beachhead.name || beachhead.rationale ? `<div class="daka-stp-beachhead">
+        <div>
+          <small class="daka-stp-kicker"><i class="fas fa-location-crosshairs"></i>${stpUiEsc(copy.beachhead)}</small>
+          <strong>${stpUiEsc(stpUiText(beachhead.name, chosen.name || copy.segment))}</strong>
+          <p>${stpUiEsc(stpUiText(beachhead.rationale || beachhead.focus, copy.subtitle))}</p>
+          <div class="daka-stp-pill-row">${stpUiArray([beachhead.budgetFit, beachhead.accessPath, beachhead.expansionPath], 3).map(chip => `<span class="daka-stp-chip">${stpUiEsc(chip)}</span>`).join('')}</div>
+        </div>
+        <div class="daka-stp-score" style="--stp-score:${Number(beachhead.fitScore || score)}%"><strong>${stpUiEsc(stpUiText(beachhead.fitScore, score))}</strong><span>${stpUiEsc(copy.beachheadFit)}</span></div>
+      </div>` : ''}
+
+      <div class="daka-stp-decision-grid">${decisionCards}</div>
+
+      <details class="daka-stp-section" open>
+        <summary><span><i class="fas fa-shield-halved"></i> ${stpUiEsc(copy.evidence)}</span><i class="fas fa-chevron-down"></i></summary>
+        <div class="daka-stp-section-body">
+          <ul class="daka-stp-list">${evidence.map(item => `<li class="daka-stp-evidence" data-type="${stpUiEsc(item.type || 'inferred')}"><strong>${stpUiEsc(item.type === 'missing' ? copy.missing : item.type === 'observed' ? copy.observed : copy.inferred)}</strong> · ${stpUiEsc(stpUiText(item.value, copy.noData))}<br><small>${stpUiEsc(stpUiText(item.source, 'Daka'))} · ${stpUiEsc(stpUiText(item.confidence, 'MEDIUM'))}</small></li>`).join('')}</ul>
+        </div>
+      </details>
+
+      <details class="daka-stp-section">
+        <summary><span><i class="fas fa-ranking-star"></i> ${stpUiEsc(copy.competitors)}</span><i class="fas fa-chevron-down"></i></summary>
+        <div class="daka-stp-section-body daka-stp-grid">
+          ${competitors.slice(0, 10).map((item, index) => `<article class="daka-stp-card"><small>#${index + 1}</small><h4 dir="auto">${stpUiEsc(stpUiText(item.domain || item.title || item.url || item.link, copy.noData))}</h4><p dir="auto">${stpUiEsc(stpUiText(item.snippet || item.description || item.type, copy.noData))}</p>${item.url || item.link ? `<a class="daka-stp-chip" href="${stpUiEsc(item.url || item.link)}" target="_blank" rel="noopener">URL</a>` : ''}</article>`).join('')}
+        </div>
+      </details>
+    </section>`;
+    container.classList.add('active');
+}
+
+async function requestStpDecision(e) {
+    if (e) e.preventDefault();
+    const payload = collectStpPayload();
+    const copy = getStpCopy(payload.lang);
+    if (!payload.query) return toast.warning(copy.needInput);
+
+    const btn = document.getElementById('stpBtn') || document.getElementById('stpDecisionBtn');
+    const original = btn?.innerHTML || '';
+    const resultBox = document.getElementById('resultsStpDecision');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i><span>${stpUiEsc(copy.running)}</span>`;
+    }
+    if (resultBox) {
+        resultBox.innerHTML = `<section class="daka-stp-report"><span class="daka-stp-kicker"><i class="fas fa-circle-notch fa-spin"></i>${stpUiEsc(copy.running)}</span></section>`;
+        resultBox.classList.add('active');
+    }
+
+    try {
+        const response = await analyzeWithPolling('/api/stp', payload);
+        if (!response?.success) throw new Error(response?.message || response?.error || copy.error);
+        window.DAKA_LAST_STP_DECISION = response;
+        renderStpDecision(response);
+        toast.success(copy.success);
+    } catch (error) {
+        if (error?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
+        console.error('[requestStpDecision]', error);
+        toast.error(error.message || copy.error);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+        hideLoading('loadingState');
+    }
+}
+
+function initStpDecisionTools() {
+    ensureStpDecisionStyles();
+    hydrateCompetitorCountrySelect(null, document.getElementById('stpLang')?.value || STATE.currentLang || 'fr');
+
+    const form = document.getElementById('stpForm');
+    if (form && !form.dataset.stpBound) {
+        form.addEventListener('submit', requestStpDecision);
+        form.dataset.stpBound = '1';
+    }
+
+    const btn = document.getElementById('stpBtn') || document.getElementById('stpDecisionBtn');
+    if (!form && btn && !btn.dataset.stpBound) {
+        btn.addEventListener('click', requestStpDecision);
+        btn.dataset.stpBound = '1';
+    }
+
+    ['stpLang', 'analysisLang'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.stpCopyBound) {
+            el.addEventListener('change', () => {
+                refreshStpDecisionCopy();
+                hydrateCompetitorCountrySelect(null, el.value || STATE.currentLang || 'fr');
+            });
+            el.dataset.stpCopyBound = '1';
+        }
+    });
+    refreshStpDecisionCopy();
+}
+
+function refreshStpDecisionCopy() {
+    const lang = document.getElementById('stpLang')?.value || document.getElementById('analysisLang')?.value || STATE.currentLang || 'fr';
+    const copy = getStpCopy(lang);
+    document.querySelectorAll('[data-stp-copy]').forEach(node => {
+        const key = node.getAttribute('data-stp-copy');
+        if (copy[key]) node.textContent = copy[key];
+    });
+}
+
+window.requestStpDecision = requestStpDecision;
+window.renderStpDecision = renderStpDecision;
+window.collectStpPayload = collectStpPayload;
 
 
 async function analyzeTechnical(e) {
@@ -10326,6 +10753,7 @@ function initEventListeners() {
         formCompetitors.removeEventListener('submit', analyzeCompetitors); // Nettoyage préventif
         formCompetitors.addEventListener('submit', analyzeCompetitors);
     }
+    initStpDecisionTools();
 
     // 2. Module Funnel AIDA
     const formFunnel = document.getElementById('funnelForm');
