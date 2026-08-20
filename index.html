@@ -995,6 +995,7 @@ html, body {
     }
     .nav-btn[data-tab="competitors"] > i { color: #67e8f9; }
     .nav-btn[data-tab="stp"] > i { color: #22c55e; }
+    .nav-btn[data-tab="library"] > i { color: #f59e0b; }
     .nav-btn[data-tab="funnel"] > i { color: #a78bfa; }
     .nav-btn[data-tab="technical"] > i { color: #22d3ee; }
     .nav-btn[data-tab="keywords"] > i { color: #86efac; }
@@ -4052,6 +4053,10 @@ table tbody td {
                         <i class="fas fa-diagram-project"></i>
                         <span data-i18n="navstp">STP</span>
                     </button>
+                    <button class="nav-btn" data-tab="library">
+                        <i class="fas fa-book-open-reader"></i>
+                        <span data-i18n="navlibrary">Bibliothèque</span>
+                    </button>
                     <button class="nav-btn" data-tab="funnel">
                         <i class="fas fa-filter"></i>
                         <span data-i18n="navfunnel">Funnel AIDA</span>
@@ -4565,6 +4570,80 @@ table tbody td {
         </div>
 
 
+        <div id="libraryTab" class="tab-content">
+            <div class="card daka-library-shell">
+                <div class="card-header" style="border-bottom:1px solid rgba(245,158,11,.20);padding-bottom:20px;margin-bottom:25px;">
+                    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+                        <div style="flex:1;min-width:260px;">
+                            <h1 class="card-title">
+                                <i class="fas fa-book-open-reader" style="color:#f59e0b;text-shadow:0 0 15px rgba(245,158,11,.36);"></i>
+                                <span data-i18n="library_title">Bibliothèque</span>
+                                <span class="highlight" data-i18n="library_highlight">Daka</span>
+                            </h1>
+                            <p class="card-subtitle" data-i18n="library_subtitle">
+                                Lisez les frameworks marketing de référence directement dans Daka, sans lien public ni bouton de téléchargement.
+                            </p>
+                        </div>
+                        <div class="server-status online no-print" style="background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.34);">
+                            <i class="fas fa-shield-halved"></i>
+                            <span style="font-size:.75rem;font-weight:800;" data-i18n="library_badge">LECTURE SEULE</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="daka-library-grid">
+                    <article class="daka-library-book">
+                        <div class="daka-library-cover" aria-hidden="true">
+                            <i class="fas fa-book-open"></i>
+                            <span>PDF</span>
+                        </div>
+                        <div>
+                            <span class="daka-library-pill" data-i18n="library_pdf_pill">Frameworks marketing</span>
+                            <h2 data-i18n="library_pdf_title">Marketing Frameworks Explained</h2>
+                            <p data-i18n="library_pdf_desc">Base de lecture pour STP, personas, positionnement, SWOT, funnel et décisions marketing.</p>
+                            <div class="daka-library-actions">
+                                <button id="openDakaLibraryPdf" class="btn btn-cosmic" type="button" data-library-id="marketing-frameworks-explained">
+                                    <i class="fas fa-eye"></i>
+                                    <span data-i18n="library_open">Lire dans Daka</span>
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+
+                    <aside class="daka-library-guard">
+                        <i class="fas fa-lock"></i>
+                        <div>
+                            <h3 data-i18n="library_guard_title">Protection lecture seule</h3>
+                            <p data-i18n="library_guard_text">Le PDF reste hors dossier public. Il est servi via API authentifiée, rendu en canvas, sans toolbar native ni bouton download.</p>
+                        </div>
+                    </aside>
+                </div>
+
+                <div id="dakaLibraryViewer" class="daka-library-viewer" hidden>
+                    <div class="daka-library-toolbar no-print">
+                        <button id="dakaLibraryPrev" class="btn btn-secondary" type="button">
+                            <i class="fas fa-chevron-left"></i>
+                            <span data-i18n="library_prev">Page précédente</span>
+                        </button>
+                        <strong id="dakaLibraryPageIndicator" data-i18n="library_page">Page</strong>
+                        <button id="dakaLibraryNext" class="btn btn-secondary" type="button">
+                            <span data-i18n="library_next">Page suivante</span>
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                        <button id="dakaLibraryClose" class="btn btn-secondary" type="button">
+                            <i class="fas fa-xmark"></i>
+                            <span data-i18n="library_close">Fermer</span>
+                        </button>
+                    </div>
+                    <div id="dakaLibraryStatus" class="daka-library-status" data-i18n="library_loading">Chargement de la bibliothèque...</div>
+                    <div class="daka-library-canvas-wrap">
+                        <canvas id="dakaLibraryCanvas"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
         <div id="funnelTab" class="tab-content">
             <div class="card">
                 <div class="card-header" style="border-bottom: 1px solid rgba(16, 185, 129, 0.2); padding-bottom: 20px; margin-bottom: 25px;">
@@ -5068,6 +5147,7 @@ navkeywords: 'Demande marché',
         // --- Navigation ---
         navcompetitors: 'Concurrents',
         navstp: 'STP',
+        navlibrary: 'Bibliothèque',
         navfunnel: 'Funnel AIDA',
         navtechnical: 'Audit site',
         tab4_title: 'Opportunités de',
@@ -5123,6 +5203,23 @@ navkeywords: 'Demande marché',
         stp_placeholder_channels: 'SEO, TikTok, Meta Ads, WhatsApp, Google Maps, LinkedIn...',
         stp_auto_deduce_note: 'Daka déduit automatiquement l’offre, l’audience, le modèle business, la zone à gagner, les concurrents, les contraintes et les canaux via SERP, concurrents et couches marché.',
         stp_btn: 'GÉNÉRER LA DÉCISION STP',
+
+        // --- Daka Library ---
+        library_title: 'Bibliothèque',
+        library_highlight: 'Daka',
+        library_subtitle: 'Lisez les frameworks marketing de référence directement dans Daka, sans lien public ni bouton de téléchargement.',
+        library_badge: 'LECTURE SEULE',
+        library_pdf_pill: 'Frameworks marketing',
+        library_pdf_title: 'Marketing Frameworks Explained',
+        library_pdf_desc: 'Base de lecture pour STP, personas, positionnement, SWOT, funnel et décisions marketing.',
+        library_open: 'Lire dans Daka',
+        library_guard_title: 'Protection lecture seule',
+        library_guard_text: 'Le PDF reste hors dossier public. Il est servi via API authentifiée, rendu en canvas, sans toolbar native ni bouton download.',
+        library_prev: 'Page précédente',
+        library_next: 'Page suivante',
+        library_close: 'Fermer',
+        library_loading: 'Chargement de la bibliothèque...',
+        library_page: 'Page',
 
         // --- Loading States Tab 1 (Competitors) ---
         loading_comp_title: 'Daka prépare votre avantage...',
@@ -5215,6 +5312,7 @@ navkeywords: 'طلب السوق',
         // --- Navigation ---
         navcompetitors: 'المنافسون',
         navstp: 'STP',
+        navlibrary: 'المكتبة',
         navfunnel: 'مسار التحويل',
         navtechnical: 'فحص الموقع',
         tab4_title: 'مولد',
@@ -5270,6 +5368,23 @@ navkeywords: 'طلب السوق',
         stp_placeholder_channels: 'SEO، TikTok، Meta Ads، WhatsApp، Google Maps، LinkedIn...',
         stp_auto_deduce_note: 'تستنتج Daka تلقائيا العرض والجمهور ونموذج العمل والمنطقة المراد كسبها والمنافسين والقيود والقنوات عبر SERP والمنافسين وطبقات السوق.',
         stp_btn: 'توليد قرار STP',
+
+        // --- Daka Library ---
+        library_title: 'مكتبة',
+        library_highlight: 'Daka',
+        library_subtitle: 'اقرأ أطر التسويق المرجعية داخل Daka مباشرة، بدون رابط عام أو زر تحميل.',
+        library_badge: 'قراءة فقط',
+        library_pdf_pill: 'أطر التسويق',
+        library_pdf_title: 'Marketing Frameworks Explained',
+        library_pdf_desc: 'مرجع قراءة لـ STP والشخصيات والتموضع وSWOT والفانل والقرارات التسويقية.',
+        library_open: 'اقرأ داخل Daka',
+        library_guard_title: 'حماية القراءة فقط',
+        library_guard_text: 'يبقى PDF خارج المجلد العام. يتم عرضه عبر API محمية، ويرسم داخل canvas بدون شريط PDF الأصلي أو زر تحميل.',
+        library_prev: 'الصفحة السابقة',
+        library_next: 'الصفحة التالية',
+        library_close: 'إغلاق',
+        library_loading: 'جاري تحميل المكتبة...',
+        library_page: 'صفحة',
 
         // --- Loading States Tab 1 (Competitors) ---
         loading_comp_title: 'داكا يجهز ميزتك القادمة...',
@@ -5362,6 +5477,7 @@ navkeywords: 'Market demand',
         // --- Navigation ---
         navcompetitors: 'Competitors',
         navstp: 'STP',
+        navlibrary: 'Library',
         navfunnel: 'AIDA Funnel',
         navtechnical: 'Site Audit',
         tab4_title: 'Keyword',
@@ -5417,6 +5533,23 @@ navkeywords: 'Market demand',
         stp_placeholder_channels: 'SEO, TikTok, Meta Ads, WhatsApp, Google Maps, LinkedIn...',
         stp_auto_deduce_note: 'Daka automatically infers the offer, audience, business model, beachhead region, competitors, constraints and channels through SERP, competitor and market layers.',
         stp_btn: 'GENERATE STP DECISION',
+
+        // --- Daka Library ---
+        library_title: 'Daka',
+        library_highlight: 'Library',
+        library_subtitle: 'Read reference marketing frameworks inside Daka, with no public link and no download button.',
+        library_badge: 'READ ONLY',
+        library_pdf_pill: 'Marketing frameworks',
+        library_pdf_title: 'Marketing Frameworks Explained',
+        library_pdf_desc: 'Reading base for STP, personas, positioning, SWOT, funnels and marketing decisions.',
+        library_open: 'Read in Daka',
+        library_guard_title: 'Read-only protection',
+        library_guard_text: 'The PDF stays outside the public folder. It is served through an authenticated API and rendered in canvas without native PDF toolbar or download button.',
+        library_prev: 'Previous page',
+        library_next: 'Next page',
+        library_close: 'Close',
+        library_loading: 'Loading library...',
+        library_page: 'Page',
 
         // --- Loading States Tab 1 (Competitors) ---
         loading_comp_title: 'Daka is shaping your advantage...',
@@ -5506,7 +5639,7 @@ navkeywords: 'Market demand',
 
     <script src="https://seobackend-f81n.onrender.com/assets/daka-analytics.js?v=20260810-marketinsight1"></script>
     <script>window.DAKA_USE_COMPETITOR_REFONTE = false;</script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-stp-personas1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-stp-library1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">

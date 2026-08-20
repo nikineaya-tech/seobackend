@@ -366,6 +366,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.translateRuntimeChrome();
                 hydrateCompetitorCountrySelect(STATE.lastInputs?.country || null, lang);
                 if (typeof refreshStpDecisionCopy === 'function') refreshStpDecisionCopy();
+                if (typeof refreshDakaLibraryCopy === 'function') refreshDakaLibraryCopy();
 
                 if (CONFIG.DEBUG_MODE) console.log(`✅ Language changed to: ${lang}`);
             }
@@ -524,6 +525,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     tab4_title: 'Idées de recherche',
                     tab4_highlight: 'rentables',
                     tab4_subtitle: 'Trouvez les demandes qui mélangent intention, rentabilité et facilité d’exécution.',
+                    navlibrary: 'Bibliothèque',
+                    library_title: 'Bibliothèque',
+                    library_highlight: 'Daka',
+                    library_subtitle: 'Lisez les frameworks marketing de référence directement dans Daka, sans lien public ni bouton de téléchargement.',
+                    library_badge: 'LECTURE SEULE',
+                    library_pdf_pill: 'Frameworks marketing',
+                    library_pdf_title: 'Marketing Frameworks Explained',
+                    library_pdf_desc: 'Base de lecture pour STP, personas, positionnement, SWOT, funnel et décisions marketing.',
+                    library_open: 'Lire dans Daka',
+                    library_guard_title: 'Protection lecture seule',
+                    library_guard_text: 'Le PDF reste hors dossier public. Il est servi via API authentifiée, rendu en canvas, sans toolbar native ni bouton download.',
+                    library_prev: 'Page précédente',
+                    library_next: 'Page suivante',
+                    library_close: 'Fermer',
+                    library_loading: 'Chargement de la bibliothèque...',
+                    library_loaded: 'Document prêt en lecture seule.',
+                    library_error: 'Impossible d’ouvrir le document. Connectez-vous puis réessayez.',
+                    library_page: 'Page',
                     label_seed: 'Mot-clé de départ',
                     placeholder_seed: 'Ex: formation marketing SaaS',
                     btn_keywords: 'TROUVER LES MOTS-CLÉS GAGNANTS'
@@ -592,6 +611,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     tab4_title: 'Keyword Opportunity',
                     tab4_highlight: 'Engine',
                     tab4_subtitle: 'Find queries that combine intent, profitability, and execution ease.',
+                    navlibrary: 'Library',
+                    library_title: 'Daka',
+                    library_highlight: 'Library',
+                    library_subtitle: 'Read reference marketing frameworks inside Daka, with no public link and no download button.',
+                    library_badge: 'READ ONLY',
+                    library_pdf_pill: 'Marketing frameworks',
+                    library_pdf_title: 'Marketing Frameworks Explained',
+                    library_pdf_desc: 'Reading base for STP, personas, positioning, SWOT, funnels and marketing decisions.',
+                    library_open: 'Read in Daka',
+                    library_guard_title: 'Read-only protection',
+                    library_guard_text: 'The PDF stays outside the public folder. It is served through an authenticated API and rendered in canvas without native PDF toolbar or download button.',
+                    library_prev: 'Previous page',
+                    library_next: 'Next page',
+                    library_close: 'Close',
+                    library_loading: 'Loading library...',
+                    library_loaded: 'Document ready in read-only mode.',
+                    library_error: 'Unable to open the document. Sign in and try again.',
+                    library_page: 'Page',
                     label_seed: 'Seed keyword',
                     placeholder_seed: 'Ex: SaaS marketing training',
                     btn_keywords: 'FIND WINNING KEYWORDS'
@@ -619,6 +656,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     tab4_title: 'فرص البحث',
                     tab4_highlight: 'الرابحة',
                     tab4_subtitle: 'اكتشف الكلمات التي تجمع بين النية، الربحية، وسهولة التنفيذ.',
+                    navlibrary: 'المكتبة',
+                    library_title: 'مكتبة',
+                    library_highlight: 'Daka',
+                    library_subtitle: 'اقرأ أطر التسويق المرجعية داخل Daka مباشرة، بدون رابط عام أو زر تحميل.',
+                    library_badge: 'قراءة فقط',
+                    library_pdf_pill: 'أطر التسويق',
+                    library_pdf_title: 'Marketing Frameworks Explained',
+                    library_pdf_desc: 'مرجع قراءة لـ STP والشخصيات والتموضع وSWOT والفانل والقرارات التسويقية.',
+                    library_open: 'اقرأ داخل Daka',
+                    library_guard_title: 'حماية القراءة فقط',
+                    library_guard_text: 'يبقى PDF خارج المجلد العام. يتم عرضه عبر API محمية، ويرسم داخل canvas بدون شريط PDF الأصلي أو زر تحميل.',
+                    library_prev: 'الصفحة السابقة',
+                    library_next: 'الصفحة التالية',
+                    library_close: 'إغلاق',
+                    library_loading: 'جاري تحميل المكتبة...',
+                    library_loaded: 'الوثيقة جاهزة في وضع القراءة فقط.',
+                    library_error: 'تعذر فتح الوثيقة. سجل الدخول ثم حاول مرة أخرى.',
+                    library_page: 'صفحة',
                     loading_comp_title: 'داكا يجهز ميزتك القادمة...',
                     loading_comp_sub: 'بينما تستمتع بقهوتك، تتحول إشارات السوق إلى قرارات واضحة.',
                     loading_funnel_title: 'داكا يكشف نقاط الاحتكاك...',
@@ -669,8 +724,26 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.assign(TRANSLATIONS.fr, {
             appname: 'Daka Market Intelligence Spyer',
             appbadge: 'MARKET INTEL',
+            navlibrary: 'Bibliothèque',
             navkeywords: 'Demande marché',
             navtechnical: 'Audit site',
+            library_title: 'Bibliothèque',
+            library_highlight: 'Daka',
+            library_subtitle: 'Lisez les frameworks marketing de référence directement dans Daka, sans lien public ni bouton de téléchargement.',
+            library_badge: 'LECTURE SEULE',
+            library_pdf_pill: 'Frameworks marketing',
+            library_pdf_title: 'Marketing Frameworks Explained',
+            library_pdf_desc: 'Base de lecture pour STP, personas, positionnement, SWOT, funnel et décisions marketing.',
+            library_open: 'Lire dans Daka',
+            library_guard_title: 'Protection lecture seule',
+            library_guard_text: 'Le PDF reste hors dossier public. Il est servi via API authentifiée, rendu en canvas, sans toolbar native ni bouton download.',
+            library_prev: 'Page précédente',
+            library_next: 'Page suivante',
+            library_close: 'Fermer',
+            library_loading: 'Chargement de la bibliothèque...',
+            library_loaded: 'Document prêt en lecture seule.',
+            library_error: 'Impossible d’ouvrir le document. Connectez-vous puis réessayez.',
+            library_page: 'Page',
             tab1_title: 'Lecture du marché',
             tab1_title_highlight: 'Concurrents',
             tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrète peut vous faire prendre sa place.',
@@ -695,8 +768,26 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.assign(TRANSLATIONS.en, {
             appname: 'Daka Market Intelligence Spyer',
             appbadge: 'MARKET INTEL',
+            navlibrary: 'Library',
             navkeywords: 'Market demand',
             navtechnical: 'Site audit',
+            library_title: 'Daka',
+            library_highlight: 'Library',
+            library_subtitle: 'Read reference marketing frameworks inside Daka, with no public link and no download button.',
+            library_badge: 'READ ONLY',
+            library_pdf_pill: 'Marketing frameworks',
+            library_pdf_title: 'Marketing Frameworks Explained',
+            library_pdf_desc: 'Reading base for STP, personas, positioning, SWOT, funnels and marketing decisions.',
+            library_open: 'Read in Daka',
+            library_guard_title: 'Read-only protection',
+            library_guard_text: 'The PDF stays outside the public folder. It is served through an authenticated API and rendered in canvas without native PDF toolbar or download button.',
+            library_prev: 'Previous page',
+            library_next: 'Next page',
+            library_close: 'Close',
+            library_loading: 'Loading library...',
+            library_loaded: 'Document ready in read-only mode.',
+            library_error: 'Unable to open the document. Sign in and try again.',
+            library_page: 'Page',
             tab1_title: 'Market Intelligence',
             tab1_title_highlight: 'Competitors',
             tab1_subtitle: 'See who wins, why they win, and the exact move that can help you take the market.',
@@ -721,8 +812,26 @@ document.addEventListener('DOMContentLoaded', () => {
         Object.assign(TRANSLATIONS.ar, {
             appname: 'داكا لاستخبارات السوق',
             appbadge: 'ذكاء السوق',
+            navlibrary: 'المكتبة',
             navkeywords: 'طلب السوق',
             navtechnical: 'فحص الموقع',
+            library_title: 'مكتبة',
+            library_highlight: 'Daka',
+            library_subtitle: 'اقرأ أطر التسويق المرجعية داخل Daka مباشرة، بدون رابط عام أو زر تحميل.',
+            library_badge: 'قراءة فقط',
+            library_pdf_pill: 'أطر التسويق',
+            library_pdf_title: 'Marketing Frameworks Explained',
+            library_pdf_desc: 'مرجع قراءة لـ STP والشخصيات والتموضع وSWOT والفانل والقرارات التسويقية.',
+            library_open: 'اقرأ داخل Daka',
+            library_guard_title: 'حماية القراءة فقط',
+            library_guard_text: 'يبقى PDF خارج المجلد العام. يتم عرضه عبر API محمية، ويرسم داخل canvas بدون شريط PDF الأصلي أو زر تحميل.',
+            library_prev: 'الصفحة السابقة',
+            library_next: 'الصفحة التالية',
+            library_close: 'إغلاق',
+            library_loading: 'جاري تحميل المكتبة...',
+            library_loaded: 'الوثيقة جاهزة في وضع القراءة فقط.',
+            library_error: 'تعذر فتح الوثيقة. سجل الدخول ثم حاول مرة أخرى.',
+            library_page: 'صفحة',
             tab1_title: 'ذكاء السوق',
             tab1_title_highlight: 'المنافسون',
             tab1_subtitle: 'افهم من يربح، لماذا يربح، وما الحركة العملية التي تقربك من السوق.',
@@ -1965,6 +2074,381 @@ class TabManager {
 }
 const tabManager = new TabManager();
 window.tabManager = tabManager;
+
+// ═══════════════════════════════════════════════════════════════════
+// 📚 DAKA LIBRARY - AUTHENTICATED READ-ONLY PDF VIEWER
+// ═══════════════════════════════════════════════════════════════════
+const DAKA_LIBRARY_STATE = {
+    pdf: null,
+    itemId: '',
+    page: 1,
+    pageCount: 0,
+    isRendering: false
+};
+
+function dakaLibraryT(key) {
+    if (window.i18n && typeof window.i18n.t === 'function') return window.i18n.t(key);
+    const lang = STATE.currentLang || 'fr';
+    return TRANSLATIONS?.[lang]?.[key] || TRANSLATIONS?.fr?.[key] || key;
+}
+
+function ensureDakaLibraryStyles() {
+    if (document.getElementById('daka-library-style')) return;
+    const style = document.createElement('style');
+    style.id = 'daka-library-style';
+    style.textContent = `
+        .daka-library-shell {
+            position: relative;
+            overflow: hidden;
+        }
+        .daka-library-shell::before {
+            content: "";
+            position: absolute;
+            inset: -28% auto auto -12%;
+            width: 420px;
+            aspect-ratio: 1;
+            border-radius: 999px;
+            background: radial-gradient(circle, rgba(245,158,11,.18), transparent 66%);
+            pointer-events: none;
+            filter: blur(4px);
+        }
+        .daka-library-grid {
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 1.45fr) minmax(260px, .8fr);
+            gap: 18px;
+            align-items: stretch;
+        }
+        .daka-library-book,
+        .daka-library-guard {
+            border: 1px solid rgba(148,163,184,.15);
+            border-radius: 24px;
+            background: linear-gradient(145deg, rgba(15,23,42,.84), rgba(2,6,23,.74));
+            box-shadow: 0 24px 70px rgba(0,0,0,.22);
+        }
+        .daka-library-book {
+            display: grid;
+            grid-template-columns: 132px minmax(0,1fr);
+            gap: 20px;
+            padding: 22px;
+        }
+        .daka-library-cover {
+            min-height: 176px;
+            border-radius: 22px;
+            display: grid;
+            place-items: center;
+            align-content: center;
+            gap: 10px;
+            color: #fef3c7;
+            background:
+                radial-gradient(circle at 45% 22%, rgba(245,158,11,.28), transparent 34%),
+                linear-gradient(155deg, rgba(245,158,11,.14), rgba(139,92,246,.12) 48%, rgba(34,211,238,.08));
+            border: 1px solid rgba(245,158,11,.28);
+        }
+        .daka-library-cover i {
+            font-size: 2.4rem;
+            filter: drop-shadow(0 0 18px rgba(245,158,11,.36));
+        }
+        .daka-library-cover span,
+        .daka-library-pill {
+            font-size: .72rem;
+            font-weight: 900;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+        }
+        .daka-library-pill {
+            display: inline-flex;
+            margin-bottom: 12px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            color: #fcd34d;
+            border: 1px solid rgba(245,158,11,.28);
+            background: rgba(245,158,11,.10);
+        }
+        .daka-library-book h2 {
+            margin: 0 0 10px;
+            color: #fff;
+            font-size: clamp(1.35rem, 2.4vw, 2.3rem);
+            letter-spacing: -.03em;
+        }
+        .daka-library-book p,
+        .daka-library-guard p {
+            margin: 0;
+            color: #afc0d4;
+            line-height: 1.7;
+        }
+        .daka-library-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 18px;
+        }
+        .daka-library-guard {
+            padding: 22px;
+            display: grid;
+            grid-template-columns: 48px minmax(0,1fr);
+            gap: 14px;
+            align-content: start;
+        }
+        .daka-library-guard > i {
+            width: 48px;
+            height: 48px;
+            border-radius: 16px;
+            display: grid;
+            place-items: center;
+            color: #86efac;
+            background: rgba(34,197,94,.12);
+            border: 1px solid rgba(34,197,94,.22);
+        }
+        .daka-library-guard h3 {
+            margin: 0 0 8px;
+            color: #fff;
+            font-size: 1rem;
+        }
+        .daka-library-viewer {
+            margin-top: 22px;
+            border: 1px solid rgba(148,163,184,.14);
+            border-radius: 28px;
+            background: linear-gradient(180deg, rgba(2,6,23,.92), rgba(8,17,31,.78));
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .daka-library-toolbar {
+            position: sticky;
+            top: 86px;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 12px;
+            border-bottom: 1px solid rgba(148,163,184,.12);
+            background: rgba(2,6,23,.9);
+            backdrop-filter: blur(14px);
+        }
+        .daka-library-toolbar .btn {
+            min-height: 40px;
+            border-radius: 13px;
+        }
+        #dakaLibraryPageIndicator {
+            min-width: 132px;
+            text-align: center;
+            color: #eaf6ff;
+            font-size: .9rem;
+        }
+        .daka-library-status {
+            min-height: 42px;
+            padding: 14px 18px 0;
+            color: #fcd34d;
+            font-weight: 800;
+            text-align: center;
+        }
+        .daka-library-status[hidden] { display: none; }
+        .daka-library-canvas-wrap {
+            padding: 18px;
+            display: grid;
+            place-items: start center;
+            overflow: auto;
+            max-height: min(78vh, 980px);
+            background:
+                radial-gradient(circle at 50% 0%, rgba(34,211,238,.08), transparent 34%),
+                rgba(0,0,0,.16);
+        }
+        #dakaLibraryCanvas {
+            max-width: 100%;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 22px 80px rgba(0,0,0,.42);
+            pointer-events: none;
+        }
+        @media (max-width: 840px) {
+            .daka-library-grid,
+            .daka-library-book,
+            .daka-library-guard {
+                grid-template-columns: 1fr;
+            }
+            .daka-library-toolbar {
+                top: 72px;
+                overflow-x: auto;
+                justify-content: flex-start;
+            }
+            .daka-library-toolbar .btn span {
+                display: none;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+function loadDakaPdfJs() {
+    if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+    if (window.__dakaPdfJsPromise) return window.__dakaPdfJsPromise;
+    window.__dakaPdfJsPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        script.async = true;
+        script.onload = () => {
+            if (!window.pdfjsLib) return reject(new Error('PDFJS_NOT_AVAILABLE'));
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = '';
+            resolve(window.pdfjsLib);
+        };
+        script.onerror = () => reject(new Error('PDFJS_LOAD_FAILED'));
+        document.head.appendChild(script);
+    });
+    return window.__dakaPdfJsPromise;
+}
+
+function refreshDakaLibraryCopy() {
+    if (!DAKA_LIBRARY_STATE.pdf) return;
+    const indicator = document.getElementById('dakaLibraryPageIndicator');
+    if (indicator) {
+        indicator.textContent = `${dakaLibraryT('library_page')} ${DAKA_LIBRARY_STATE.page} / ${DAKA_LIBRARY_STATE.pageCount || '?'}`;
+    }
+}
+window.refreshDakaLibraryCopy = refreshDakaLibraryCopy;
+
+async function fetchDakaLibraryPdf(itemId) {
+    const token = await getAuthAccessToken();
+    if (!token) {
+        if (typeof openAuthModal === 'function') openAuthModal();
+        throw new Error('AUTH_REQUIRED');
+    }
+    const response = await fetch(`${CONFIG.API_BASE_URL}/api/library/${encodeURIComponent(itemId)}/pdf`, {
+        method: 'GET',
+        headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/pdf'
+        },
+        cache: 'no-store'
+    });
+    if (response.status === 401) {
+        if (typeof openAuthModal === 'function') openAuthModal();
+        throw new Error('AUTH_REQUIRED');
+    }
+    if (!response.ok) throw new Error(`LIBRARY_HTTP_${response.status}`);
+    return new Uint8Array(await response.arrayBuffer());
+}
+
+function setDakaLibraryStatus(message, isError = false) {
+    const status = document.getElementById('dakaLibraryStatus');
+    if (!status) return;
+    status.hidden = false;
+    status.textContent = message;
+    status.style.color = isError ? '#fca5a5' : '#fcd34d';
+}
+
+function setDakaLibraryControls() {
+    const prev = document.getElementById('dakaLibraryPrev');
+    const next = document.getElementById('dakaLibraryNext');
+    if (prev) prev.disabled = !DAKA_LIBRARY_STATE.pdf || DAKA_LIBRARY_STATE.page <= 1 || DAKA_LIBRARY_STATE.isRendering;
+    if (next) next.disabled = !DAKA_LIBRARY_STATE.pdf || DAKA_LIBRARY_STATE.page >= DAKA_LIBRARY_STATE.pageCount || DAKA_LIBRARY_STATE.isRendering;
+    refreshDakaLibraryCopy();
+}
+
+async function renderDakaLibraryPage() {
+    if (!DAKA_LIBRARY_STATE.pdf || DAKA_LIBRARY_STATE.isRendering) return;
+    const canvas = document.getElementById('dakaLibraryCanvas');
+    const wrap = document.querySelector('.daka-library-canvas-wrap');
+    if (!canvas || !wrap) return;
+    DAKA_LIBRARY_STATE.isRendering = true;
+    setDakaLibraryControls();
+    try {
+        const page = await DAKA_LIBRARY_STATE.pdf.getPage(DAKA_LIBRARY_STATE.page);
+        const baseViewport = page.getViewport({ scale: 1 });
+        const maxWidth = Math.max(280, Math.min((wrap.clientWidth || 960) - 36, 980));
+        const scale = Math.max(0.55, Math.min(1.65, maxWidth / baseViewport.width));
+        const viewport = page.getViewport({ scale });
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const context = canvas.getContext('2d', { alpha: false });
+        canvas.width = Math.floor(viewport.width * ratio);
+        canvas.height = Math.floor(viewport.height * ratio);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, viewport.width, viewport.height);
+        await page.render({ canvasContext: context, viewport }).promise;
+        const status = document.getElementById('dakaLibraryStatus');
+        if (status) {
+            status.hidden = false;
+            status.textContent = dakaLibraryT('library_loaded');
+            status.style.color = '#86efac';
+        }
+    } catch (error) {
+        console.warn('[DakaLibrary] render failed:', error.message);
+        setDakaLibraryStatus(dakaLibraryT('library_error'), true);
+    } finally {
+        DAKA_LIBRARY_STATE.isRendering = false;
+        setDakaLibraryControls();
+    }
+}
+
+async function openDakaLibraryPdf(itemId = 'marketing-frameworks-explained') {
+    ensureDakaLibraryStyles();
+    const viewer = document.getElementById('dakaLibraryViewer');
+    if (!viewer) return;
+    viewer.hidden = false;
+    viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setDakaLibraryStatus(dakaLibraryT('library_loading'));
+    try {
+        const pdfjs = await loadDakaPdfJs();
+        const bytes = await fetchDakaLibraryPdf(itemId);
+        DAKA_LIBRARY_STATE.itemId = itemId;
+        DAKA_LIBRARY_STATE.pdf = await pdfjs.getDocument({
+            data: bytes,
+            disableWorker: true,
+            isEvalSupported: false,
+            useSystemFonts: true
+        }).promise;
+        DAKA_LIBRARY_STATE.page = 1;
+        DAKA_LIBRARY_STATE.pageCount = Number(DAKA_LIBRARY_STATE.pdf.numPages || 0);
+        await renderDakaLibraryPage();
+    } catch (error) {
+        console.warn('[DakaLibrary] open failed:', error.message);
+        setDakaLibraryStatus(dakaLibraryT('library_error'), true);
+        if (typeof toast !== 'undefined') toast.error(dakaLibraryT('library_error'));
+    }
+}
+window.openDakaLibraryPdf = openDakaLibraryPdf;
+
+function initDakaLibraryViewer() {
+    ensureDakaLibraryStyles();
+    document.getElementById('openDakaLibraryPdf')?.addEventListener('click', (event) => {
+        event.preventDefault();
+        const itemId = event.currentTarget?.dataset?.libraryId || 'marketing-frameworks-explained';
+        openDakaLibraryPdf(itemId);
+    });
+    document.getElementById('dakaLibraryPrev')?.addEventListener('click', () => {
+        if (!DAKA_LIBRARY_STATE.pdf || DAKA_LIBRARY_STATE.page <= 1) return;
+        DAKA_LIBRARY_STATE.page -= 1;
+        renderDakaLibraryPage();
+    });
+    document.getElementById('dakaLibraryNext')?.addEventListener('click', () => {
+        if (!DAKA_LIBRARY_STATE.pdf || DAKA_LIBRARY_STATE.page >= DAKA_LIBRARY_STATE.pageCount) return;
+        DAKA_LIBRARY_STATE.page += 1;
+        renderDakaLibraryPage();
+    });
+    document.getElementById('dakaLibraryClose')?.addEventListener('click', () => {
+        const viewer = document.getElementById('dakaLibraryViewer');
+        if (viewer) viewer.hidden = true;
+    });
+    document.addEventListener('contextmenu', (event) => {
+        if (event.target.closest('#dakaLibraryViewer')) event.preventDefault();
+    }, true);
+    document.addEventListener('keydown', (event) => {
+        const viewer = document.getElementById('dakaLibraryViewer');
+        if (!viewer || viewer.hidden) return;
+        const key = String(event.key || '').toLowerCase();
+        if ((event.ctrlKey || event.metaKey) && ['s', 'p'].includes(key)) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (typeof toast !== 'undefined') toast.info(dakaLibraryT('library_badge'));
+        }
+    }, true);
+}
+
+document.addEventListener('DOMContentLoaded', initDakaLibraryViewer);
 
         // ═══════════════════════════════════════════════════════════════════
         // 🔍 SERVER STATUS CHECKER

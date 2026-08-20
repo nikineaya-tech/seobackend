@@ -18851,10 +18851,21 @@ app.get('/api/job/:id', requireAuth, async (req, res) => {
 
 // ========== PUBLIC FRONTEND ROUTES ==========
 const DAKA_PUBLIC_DIR = path.join(__dirname, 'public');
+const DAKA_DOCS_DIR = path.join(__dirname, 'docs');
 const DAKA_APP_HTML = path.join(__dirname, 'index.html');
 const DAKA_LANDING_HTML = path.join(DAKA_PUBLIC_DIR, 'landing.html');
 const DAKA_ADMIN_HTML = path.join(DAKA_PUBLIC_DIR, 'admin.html');
 const DAKA_ACTIVITY_EVENTS = [];
+const DAKA_LIBRARY_ITEMS = Object.freeze({
+    'marketing-frameworks-explained': {
+        id: 'marketing-frameworks-explained',
+        title: 'Marketing Frameworks Explained',
+        subtitle: 'STP, personas, positioning, SWOT, funnels and core marketing frameworks.',
+        type: 'pdf',
+        fileName: 'marketing-frameworks-explained.pdf',
+        filePath: path.join(DAKA_DOCS_DIR, 'marketing-frameworks-explained.pdf')
+    }
+});
 
 const ADMIN_SESSION_TTL_MS = Number(process.env.DAKA_ADMIN_SESSION_TTL_MS || 1000 * 60 * 60 * 8);
 const ADMIN_PASSWORD_SCRYPT = Object.freeze({ N: 16384, r: 8, p: 1, keylen: 64 });
@@ -19165,6 +19176,55 @@ app.get('/api/admin/activity', requireAdminAccess, async (req, res) => {
 app.get('/', (req, res) => res.sendFile(DAKA_LANDING_HTML));
 app.get('/app', (req, res) => res.sendFile(DAKA_APP_HTML));
 app.get('/admin', (req, res) => res.sendFile(DAKA_ADMIN_HTML));
+
+function getDakaLibraryItemPayload(item) {
+    const exists = item?.filePath ? fs.existsSync(item.filePath) : false;
+    return {
+        id: item.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        type: item.type,
+        available: exists,
+        access: 'authenticated-read-only',
+        viewer: 'canvas',
+        antiDownload: 'best-effort',
+        route: `/api/library/${encodeURIComponent(item.id)}/pdf`
+    };
+}
+
+app.get('/api/library', requireAuth, (req, res) => {
+    res.set({
+        'Cache-Control': 'no-store, private, max-age=0',
+        Pragma: 'no-cache',
+        Expires: '0'
+    });
+    const items = Object.values(DAKA_LIBRARY_ITEMS).map(getDakaLibraryItemPayload);
+    return res.json({
+        success: true,
+        library: 'Daka Library',
+        mode: 'read-only',
+        items
+    });
+});
+
+app.get('/api/library/:id/pdf', requireAuth, (req, res) => {
+    const id = String(req.params.id || '').trim();
+    const item = DAKA_LIBRARY_ITEMS[id];
+    if (!item || !item.filePath || !fs.existsSync(item.filePath)) {
+        return res.status(404).json({ success: false, error: 'LIBRARY_ITEM_NOT_FOUND' });
+    }
+    res.set({
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': `inline; filename="${item.fileName}"`,
+        'Cache-Control': 'no-store, private, max-age=0',
+        Pragma: 'no-cache',
+        Expires: '0',
+        'X-Content-Type-Options': 'nosniff',
+        'X-Daka-Library-Mode': 'read-only',
+        'Accept-Ranges': 'none'
+    });
+    return fs.createReadStream(item.filePath).pipe(res);
+});
 
 // ========== HEALTH CHECK ==========
 app.get('/health', (req, res) => {
