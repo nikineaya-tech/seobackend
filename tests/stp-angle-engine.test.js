@@ -25,7 +25,7 @@ test('keeps security and outage/autonomy angles distinct', () => {
     { type: 'security_trust', name: 'Trust and guarantee', problem: 'buyer risk' },
     { type: 'offgrid_autonomy', name: 'Off-grid autonomy', problem: 'power outage usage' }
   );
-  assert.equal(relation, 'distinct_angle');
+  assert.equal(relation, 'DISTINCT');
 });
 
 test('rejects structurally duplicate personas', () => {
@@ -95,6 +95,33 @@ test('persona angle mapping supports multiple angles without duplicating persona
   assert.equal(mapped.length, 1);
   assert.ok(mapped[0].primaryAngle);
   assert.ok(mapped[0].angleMappings.length >= 2);
+  assert.ok(Number.isFinite(mapped[0].angleMappings[0].relevanceScore));
+  assert.ok(['high', 'medium', 'low'].includes(mapped[0].angleMappings[0].priority));
+  assert.ok(mapped[0].angleMappings[0].message);
+});
+
+test('marketing angle exposes canonical business fields', () => {
+  const model = buildAngleDrivenStpModel({
+    query: 'projecteur solaire exterieur',
+    geo: 'Morocco',
+    lang: 'fr',
+    segments: [],
+    personaCards: [{ id: 'p1', displayName: 'Persona 1', summary: 'wants safe outdoor lighting', details: { buyingTriggers: ['security'] } }],
+    competitorData: { marketInsights: { painPoint: 'security at night' } }
+  });
+  const angle = model.marketingAngles[0];
+  assert.ok(angle.id);
+  assert.ok(angle.name);
+  assert.ok(angle.slug);
+  assert.ok(angle.coreProblem);
+  assert.ok(angle.context);
+  assert.ok(angle.trigger);
+  assert.ok(angle.desiredOutcome);
+  assert.ok(angle.primaryBenefit);
+  assert.ok(angle.angleType);
+  assert.ok(Number.isFinite(angle.opportunityScore));
+  assert.ok(model.productUnderstanding);
+  assert.ok(model.problemsJtbdUseCases.length > 0);
 });
 
 test('solar projector market produces distinct useful angles', () => {
@@ -125,4 +152,6 @@ test('solar projector market produces distinct useful angles', () => {
   assert.ok(types.includes('offgrid_autonomy'));
   assert.ok(types.includes('installation_ease'));
   assert.ok(model.personaCards.every(p => p.primaryAngle && p.attackAngle));
+  assert.ok(model.marketingAngles.length >= 5);
+  assert.ok(model.observability.some(line => line.includes('candidates=')));
 });

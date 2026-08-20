@@ -11564,6 +11564,11 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     if (stpAngleModel?.personaCards?.length) {
         personaCards = stpAngleModel.personaCards;
     }
+    if (stpAngleModel?.observability?.length) {
+        console.log(`[api/stp] ${stpAngleModel.observability.join(' | ')}`);
+        console.log(`[api/stp] [AngleEngine] final_angles=${(stpAngleModel.marketingAngles || []).map(angle => angle.type).join(',')}`);
+        console.log(`[api/stp] [AngleEngine] mappings=${(stpAngleModel.personaAngleMappings || []).length}`);
+    }
 
     const evidenceLedger = [
         stpEvidence('observed', `${competitorData?.top10Competitors?.length || competitorData?.competitors?.length || 0} competitors observed`, 'Competitor SERP layer', 'HIGH', (competitorData?.top10Competitors || []).slice(0, 5).map(c => c.url || c.link)),
@@ -11645,6 +11650,8 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
             aiRefinement: false
         },
         inferredContext,
+        productUnderstanding: stpAngleModel?.productUnderstanding || null,
+        problemsJtbdUseCases: stpAngleModel?.problemsJtbdUseCases || [],
         personaPromptLayer: personaAiOverlay ? { model: personaAiOverlay.model } : null,
         segmentation: {
             archetype,
