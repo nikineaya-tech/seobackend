@@ -132,10 +132,20 @@ test('marketing angle exposes canonical business fields', () => {
   assert.ok(angle.trigger);
   assert.ok(angle.desiredOutcome);
   assert.ok(angle.primaryBenefit);
+  assert.ok(angle.angleFormula);
+  assert.ok(angle.corePromise);
+  assert.ok(angle.proofToShow);
+  assert.ok(angle.objectionToNeutralize);
+  assert.ok(angle.offerMove);
+  assert.ok(angle.channelFit);
+  assert.ok(angle.landingPageSection);
+  assert.ok(angle.hookExamples.length >= 2);
+  assert.ok(angle.antiHallucinationChecks.length >= 3);
   assert.ok(angle.angleType);
   assert.ok(Number.isFinite(angle.opportunityScore));
   assert.ok(model.productUnderstanding);
   assert.ok(model.problemsJtbdUseCases.length > 0);
+  assert.ok(model.ultimateAttackAngles.length > 0);
 });
 
 test('solar projector market produces distinct useful angles', () => {
@@ -168,6 +178,34 @@ test('solar projector market produces distinct useful angles', () => {
   assert.ok(model.personaCards.every(p => p.primaryAngle && p.attackAngle));
   assert.ok(new Set(model.personaCards.map(p => p.primaryAngle?.id).filter(Boolean)).size >= 3);
   assert.ok(new Set(model.personaCards.map(p => p.attackAngle).filter(Boolean)).size >= 3);
+  assert.ok(model.personaCards.every(p => p.details.attackFormula && p.details.proofToShow && p.details.objectionToNeutralize));
+  assert.ok(model.personaCards.some(p => /autonomie|إضاءة|light|grid/i.test(`${p.attackAngle} ${p.details.attackFormula}`)));
+  assert.ok(model.personaCards.some(p => /install|تركيب|montage/i.test(`${p.attackAngle} ${p.details.attackFormula}`)));
+  assert.ok(model.personaCards.some(p => /garantie|مخاطرة|risk|preuve|proof/i.test(`${p.attackAngle} ${p.details.attackFormula}`)));
   assert.ok(model.marketingAngles.length >= 5);
   assert.ok(model.observability.some(line => line.includes('candidates=')));
+});
+
+test('arabic STP formulas stay concrete for translated solar product', () => {
+  const model = buildAngleDrivenStpModel({
+    query: 'كشاف شمسي',
+    geo: 'Tunisia',
+    lang: 'ar',
+    budget: 'ميزانية صغيرة',
+    segments: [
+      { id: 'urgent', name: 'صاحب منزل', need: 'إضاءة المدخل ليلا', buyingTriggers: ['الأمان'] },
+      { id: 'rural', name: 'منزل خارج المدينة', need: 'إضاءة بدون كهرباء', buyingTriggers: ['استقلالية'] }
+    ],
+    personaCards: [
+      { id: 'p1', displayName: 'Persona 1', summary: 'يريد أمانا للمدخل ليلا', details: { pains: ['الخوف من الظلام'], buyingTriggers: ['الأمان'] } },
+      { id: 'p2', displayName: 'Persona 2', summary: 'يريد إضاءة عند انقطاع الكهرباء', details: { pains: ['انقطاع الكهرباء'], buyingTriggers: ['استقلالية'] } }
+    ],
+    competitorData: {
+      marketInsights: { painPoint: 'الأمان ليلا وانقطاع الكهرباء' },
+      productServiceAudit: { missingProof: 'الضمان والبطارية غير واضحين' }
+    }
+  });
+  assert.ok(model.marketingAngles.every(angle => angle.angleFormula.includes('كشاف شمسي') || angle.context.includes('كشاف شمسي')));
+  assert.ok(model.personaCards.every(persona => /كشاف شمسي|إضاءة|الكهرباء|الأمان/.test(`${persona.summary} ${persona.attackAngle} ${persona.details.attackFormula}`)));
+  assert.ok(new Set(model.personaCards.map(persona => persona.attackAngle)).size >= 2);
 });

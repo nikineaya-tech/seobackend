@@ -5743,6 +5743,14 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         objections: 'الاعتراضات',
         constraints: 'القيود',
         proofNeeded: 'أدلة يجب عرضها',
+        attackFormula: 'صيغة الهجوم',
+        corePromise: 'الوعد الأساسي',
+        proofToShow: 'الدليل المطلوب عرضه',
+        objectionToNeutralize: 'الاعتراض المطلوب كسره',
+        offerMove: 'حركة العرض',
+        landingPageSection: 'قسم الهبوط',
+        hooks: 'Hooks جاهزة',
+        antiHallucinationChecks: 'تحققات قبل الوعد',
         stpDetails: 'تفاصيل STP',
         inferredContext: 'السياق المستنتج',
         score: 'نقطة القرار',
@@ -5801,6 +5809,14 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         objections: 'Objections',
         constraints: 'Constraints',
         proofNeeded: 'Proofs to show',
+        attackFormula: 'Attack formula',
+        corePromise: 'Core promise',
+        proofToShow: 'Proof to show',
+        objectionToNeutralize: 'Objection to neutralize',
+        offerMove: 'Offer move',
+        landingPageSection: 'Landing section',
+        hooks: 'Ready hooks',
+        antiHallucinationChecks: 'Checks before promising',
         stpDetails: 'STP details',
         inferredContext: 'Inferred context',
         score: 'Decision score',
@@ -5859,6 +5875,14 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         objections: 'Objections',
         constraints: 'Contraintes',
         proofNeeded: 'Preuves à montrer',
+        attackFormula: 'Formule d’attaque',
+        corePromise: 'Promesse coeur',
+        proofToShow: 'Preuve à montrer',
+        objectionToNeutralize: 'Objection à casser',
+        offerMove: 'Mouvement d’offre',
+        landingPageSection: 'Section landing',
+        hooks: 'Hooks prêts',
+        antiHallucinationChecks: 'Vérifications avant promesse',
         stpDetails: 'Détails STP',
         inferredContext: 'Contexte déduit',
         score: 'Score décision',
@@ -5967,6 +5991,8 @@ function ensureStpDecisionStyles() {
       .daka-stp-angle-card{border:1px solid rgba(var(--angle-rgb,34,211,238),.22);border-radius:18px;background:linear-gradient(145deg,rgba(var(--angle-rgb,34,211,238),.13),rgba(2,6,23,.5));padding:12px;min-width:0}
       .daka-stp-angle-card strong{display:flex;align-items:center;gap:8px;color:#fff;font-size:.82rem;line-height:1.3}
       .daka-stp-angle-card p{margin:7px 0 0;color:#a8bad1;font-size:.74rem;line-height:1.45}
+      .daka-stp-angle-formula{margin-top:8px;border-top:1px solid rgba(148,163,184,.12);padding-top:8px;color:#dbeafe;font-size:.72rem;line-height:1.45}
+      .daka-stp-angle-hooks{display:grid;gap:5px;margin-top:8px}.daka-stp-angle-hooks span{display:block;border-radius:10px;background:rgba(255,255,255,.035);padding:6px 8px;color:#c8d7ec;font-size:.69rem;line-height:1.35}
       .daka-stp-angle-score{margin-top:8px;color:rgb(var(--angle-rgb,34,211,238));font-size:.7rem;font-weight:950}
       .daka-stp-persona-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:18px 0 12px}
       .daka-stp-persona-head p{margin:6px 0 0;color:#9fb2cb;line-height:1.55;font-size:.82rem}
@@ -6096,8 +6122,17 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
         `- ${copy.primaryAngle || 'Primary angle'}: ${stpUiText(primaryAngle.name || details.primaryMarketingAngle || card.attackAngle, copy.noData || 'N/A')}`,
         secondaryAngles.length ? `- ${copy.secondaryAngles || 'Support angles'}: ${secondaryAngles.map(a => stpUiText(a.name || a.label || a.type)).filter(Boolean).join(', ')}` : '',
         `- ${copy.attackAngle || 'Attack angle'}: ${stpUiText(card.attackAngle || details.attackAngle, copy.noData || 'N/A')}`,
+        `- ${copy.attackFormula || 'Attack formula'}: ${stpUiText(details.attackFormula || primaryAngle.angleFormula, copy.noData || 'N/A')}`,
+        `- ${copy.corePromise || 'Core promise'}: ${stpUiText(details.corePromise || primaryAngle.corePromise, copy.noData || 'N/A')}`,
+        `- ${copy.proofToShow || 'Proof to show'}: ${stpUiText(details.proofToShow || primaryAngle.proofToShow, copy.noData || 'N/A')}`,
+        `- ${copy.objectionToNeutralize || 'Objection'}: ${stpUiText(details.objectionToNeutralize || primaryAngle.objectionToNeutralize, copy.noData || 'N/A')}`,
+        `- ${copy.offerMove || 'Offer move'}: ${stpUiText(details.offerMove || primaryAngle.offerMove, copy.noData || 'N/A')}`,
+        `- ${copy.landingPageSection || 'Landing section'}: ${stpUiText(details.landingPageSection || primaryAngle.landingPageSection, copy.noData || 'N/A')}`,
         `- ${copy.jtbd || 'JTBD'}: ${stpUiText(details.primaryJobToBeDone || card.summary || details.need, copy.noData || 'N/A')}`,
         `- ${copy.budgetPath || 'Budget path'}: ${stpUiText(priority.budgetPath || details.budgetPath, copy.noData || 'N/A')}`,
+        '',
+        `## ${copy.hooks || 'Hooks'}`,
+        ...stpUiArray(details.hookExamples || primaryAngle.hookExamples, 8).map(item => `- ${item}`),
         '',
         `## ${copy.socialPlan || copy.channels || 'Channels'}`,
         ...stpUiArray(details.channels, 8).map(item => `- ${item}`),
@@ -6136,11 +6171,18 @@ function renderStpAngleOverview(angles = [], copy = {}) {
       ${cards.map((angle, index) => {
         const tone = stpUiText(angle.tone, index === 0 ? '34,197,94' : '34,211,238');
         const name = stpUiText(angle.name || angle.label || angle.type, `Angle ${index + 1}`);
-        const promise = stpUiText(angle.promise || angle.problem || angle.jobToBeDone, '');
+        const promise = stpUiText(angle.corePromise || angle.promise || angle.problem || angle.jobToBeDone, '');
+        const formula = stpUiText(angle.angleFormula || angle.formula, '');
+        const proof = stpUiText(angle.proofToShow, '');
+        const objection = stpUiText(angle.objectionToNeutralize, '');
+        const hooks = stpUiArray(angle.hookExamples, 3);
         const score = stpUiText(angle.score, '');
         return `<article class="daka-stp-angle-card" style="--angle-rgb:${stpUiEsc(tone)}">
           <strong><i class="fas ${stpUiEsc(angle.icon || 'fa-bullseye')}"></i>${stpUiEsc(name)}</strong>
           ${promise ? `<p>${stpUiEsc(promise)}</p>` : ''}
+          ${formula ? `<div class="daka-stp-angle-formula"><b>${stpUiEsc(copy.attackFormula || 'Formula')}:</b> ${stpUiEsc(formula)}</div>` : ''}
+          ${proof || objection ? `<div class="daka-stp-angle-formula">${proof ? `<b>${stpUiEsc(copy.proofToShow || 'Proof')}:</b> ${stpUiEsc(proof)}` : ''}${proof && objection ? '<br>' : ''}${objection ? `<b>${stpUiEsc(copy.objectionToNeutralize || 'Objection')}:</b> ${stpUiEsc(objection)}` : ''}</div>` : ''}
+          ${hooks.length ? `<div class="daka-stp-angle-hooks">${hooks.map(hook => `<span>${stpUiEsc(hook)}</span>`).join('')}</div>` : ''}
           ${score ? `<div class="daka-stp-angle-score">${stpUiEsc(copy.priority || 'Priority')}: ${stpUiEsc(score)}/100</div>` : ''}
         </article>`;
       }).join('')}
@@ -6201,6 +6243,13 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
           <div class="daka-stp-mini-grid">
             ${renderStpSocialPlan(details, copy)}
             ${renderStpMini(copy.attackAngle || 'Attack angle', card.attackAngle || details.attackAngle)}
+            ${renderStpMini(copy.attackFormula || 'Attack formula', details.attackFormula || primaryAngle.angleFormula)}
+            ${renderStpMini(copy.corePromise || 'Core promise', details.corePromise || primaryAngle.corePromise)}
+            ${renderStpMini(copy.proofToShow || 'Proof to show', details.proofToShow || primaryAngle.proofToShow)}
+            ${renderStpMini(copy.objectionToNeutralize || 'Objection', details.objectionToNeutralize || primaryAngle.objectionToNeutralize)}
+            ${renderStpMini(copy.offerMove || 'Offer move', details.offerMove || primaryAngle.offerMove)}
+            ${renderStpMini(copy.landingPageSection || 'Landing section', details.landingPageSection || primaryAngle.landingPageSection)}
+            ${renderStpMini(copy.hooks || 'Hooks', details.hookExamples || primaryAngle.hookExamples)}
             ${renderStpMini(copy.jtbd || 'JTBD', details.primaryJobToBeDone)}
             ${renderStpMini(copy.informationBehavior || 'Information behavior', details.informationBehavior)}
             ${renderStpMini(copy.buyingBehavior || 'Buying behavior', details.buyingBehavior)}

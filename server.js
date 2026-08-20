@@ -11785,6 +11785,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         persona,
         personaCards,
         marketingAngles: stpAngleModel?.marketingAngles || [],
+        ultimateAttackAngles: stpAngleModel?.ultimateAttackAngles || [],
         personaAngleMappings: stpAngleModel?.personaAngleMappings || [],
         angleDeduplication: stpAngleModel?.angleDeduplication || [],
         personaDeduplication: stpAngleModel?.personaDeduplication || [],
