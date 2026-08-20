@@ -10266,6 +10266,45 @@ function stpText(value, max = 220) {
     return cleanProofText(value, max);
 }
 
+function localizeStpSubjectForReport(value = '', lang = 'fr') {
+    const raw = stpText(value, 160);
+    if (!raw || lang !== 'ar') return raw;
+    if (/[\u0600-\u06FF]/.test(raw)) return raw;
+    let text = raw.toLowerCase();
+    const replacements = [
+        [/agence\s+marketing\s+ia|ai\s+marketing\s+agency/g, 'وكالة تسويق بالذكاء الاصطناعي'],
+        [/agence\s+marketing/g, 'وكالة تسويق'],
+        [/marketing\s+ia|ia\s+marketing|ai\s+marketing/g, 'تسويق بالذكاء الاصطناعي'],
+        [/intelligence\s+artificielle|artificial\s+intelligence|\bia\b|\bai\b/g, 'الذكاء الاصطناعي'],
+        [/projecteur\s+solaire|solar\s+projector|solar\s+flood\s*light/g, 'كشاف شمسي'],
+        [/projecteur/g, 'كشاف'],
+        [/solaire|solar/g, 'شمسي'],
+        [/lanterne|fanous/g, 'فانوس'],
+        [/logiciel\s+de\s+gestion|management\s+software/g, 'برنامج إدارة'],
+        [/\bsaas\b/g, 'برنامج ساس'],
+        [/e[\s-]?commerce/g, 'تجارة إلكترونية'],
+        [/formation|course|training/g, 'تكوين'],
+        [/audit/g, 'تدقيق'],
+        [/funnel/g, 'مسار البيع'],
+        [/seo/g, 'تحسين محركات البحث'],
+        [/blackheads?|points?\s+noirs?/g, 'الرؤوس السوداء'],
+        [/remover|extracteur/g, 'مزيل']
+    ];
+    replacements.forEach(([pattern, replacement]) => {
+        text = text.replace(pattern, replacement);
+    });
+    text = text
+        .replace(/\b(tunisie|tunisia)\b/g, 'تونس')
+        .replace(/\b(maroc|morocco)\b/g, 'المغرب')
+        .replace(/\b(libye|libya)\b/g, 'ليبيا')
+        .replace(/\b(france)\b/g, 'فرنسا')
+        .replace(/\b(usa|united states|états-unis)\b/g, 'الولايات المتحدة')
+        .replace(/[,_|/]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return /[a-z]{3,}/i.test(text) && !/[\u0600-\u06FF]/.test(text) ? raw : text || raw;
+}
+
 function stpArray(value, max = 8) {
     const input = Array.isArray(value) ? value : [value];
     return [...new Set(input
@@ -10338,7 +10377,7 @@ function buildStpSegmentCandidates({ query = '', geo = '', budget = '', objectiv
         ...(competitorData?.keywords || [])
     ], 8);
 
-    const baseNeed = stpText(query, 140);
+    const baseNeed = localizeStpSubjectForReport(query, lang) || stpText(query, 140);
     const candidates = [];
 
     if (archetype === 'b2b_service') {
@@ -10941,9 +10980,45 @@ function buildStpPersona(segment = {}, inputs = {}, competitorData = {}, lang = 
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
     const market = localizeCompetitorMarketName(inputs.geo || competitorData?.geo, lang);
-    const query = stpText(inputs.query || competitorData?.query, 120);
+    const query = localizeStpSubjectForReport(inputs.query || competitorData?.query, lang) || stpText(inputs.query || competitorData?.query, 120);
     const audience = stpText(inputs.context?.audience || inputs.context?.userAudience, 160);
     const leader = competitorData?.top10Competitors?.[0] || competitorData?.competitors?.[0] || {};
+    const segmentText = `${segment.id || ''} ${segment.name || ''} ${segment.need || ''} ${stpArray(segment.buyingTriggers, 4).join(' ')}`.toLowerCase();
+    const personaJtbd = (() => {
+        if (/compar|price|prix|سعر|مقارن|budget|ميزانية/.test(segmentText)) {
+            return isAr
+                ? `عندما أقارن ${query} في ${market}، أريد معرفة الفرق في السعر والشروط والدليل قبل أن أشتري.`
+                : isEn
+                    ? `When I compare ${query} in ${market}, I want price, terms and proof to be clear before I buy.`
+                    : `Quand je compare ${query} en ${market}, je veux comprendre le prix, les conditions et les preuves avant d’acheter.`;
+        }
+        if (/proof|trust|review|avis|guarantee|دليل|ثقة|ضمان|مراجعات/.test(segmentText)) {
+            return isAr
+                ? `عندما أرى ${query} في ${market}، أريد دليلا واضحا وضمانا يزيل الخوف من الاختيار الخاطئ.`
+                : isEn
+                    ? `When I discover ${query} in ${market}, I want proof and a guarantee that reduce the fear of choosing wrong.`
+                    : `Quand je découvre ${query} en ${market}, je veux des preuves et une garantie qui réduisent le risque de mauvais choix.`;
+        }
+        if (/urgent|ready|buy|achat|شراء|جاهز|عاجل/.test(segmentText)) {
+            return isAr
+                ? `عندما أبحث عن ${query} في ${market}، أريد عرضا مباشرا يوضح ماذا أفعل الآن وكيف أطلب بسرعة.`
+                : isEn
+                    ? `When I search for ${query} in ${market}, I want a direct offer that shows what to do now and how to order quickly.`
+                    : `Quand je cherche ${query} en ${market}, je veux une offre directe qui montre quoi faire maintenant et comment commander vite.`;
+        }
+        if (/expert|b2b|agency|service|خبير|وكالة|خدمة/.test(segmentText)) {
+            return isAr
+                ? `عندما أقيّم ${query} في ${market}، أريد رؤية خبرة ومنهج واضح قبل أن أثق بالجهة المقدمة.`
+                : isEn
+                    ? `When I evaluate ${query} in ${market}, I want expertise and a clear method before trusting the provider.`
+                    : `Quand j’évalue ${query} en ${market}, je veux voir l’expertise et la méthode avant de faire confiance.`;
+        }
+        return isAr
+            ? `عندما أحتاج ${query} في ${market}، أريد اختيار زاوية واضحة تناسب حالتي بدل عرض عام يشبه المنافسين.`
+            : isEn
+                ? `When I need ${query} in ${market}, I want a clear angle that fits my situation instead of a generic competitor-like offer.`
+                : `Quand j’ai besoin de ${query} en ${market}, je veux un angle clair adapté à ma situation, pas une offre générique comme les concurrents.`;
+    })();
     const alternatives = stpArray([
         ...(inputs.context?.knownCompetitors || []),
         leader.domain || leader.displayed_link || leader.link,
@@ -10955,11 +11030,7 @@ function buildStpPersona(segment = {}, inputs = {}, competitorData = {}, lang = 
         name: audience || (isAr ? 'الشخصية ذات الأولوية' : isEn ? 'Priority persona' : 'Persona prioritaire'),
         segmentId: segment.id,
         market,
-        jobToBeDone: isAr
-            ? `عندما أبحث عن ${query} في ${market}، أريد اختيار حل موثوق بسرعة دون مخاطرة غير واضحة.`
-            : isEn
-                ? `When I search for ${query} in ${market}, I want to choose a trusted solution quickly without unclear risk.`
-                : `Quand je cherche ${query} en ${market}, je veux choisir une solution fiable rapidement sans risque flou.`,
+        jobToBeDone: personaJtbd,
         pains: stpArray([
             competitorData?.productServiceAudit?.weakestProductFeature,
             competitorData?.marketInsights?.painPoint,
@@ -10988,12 +11059,12 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
     const market = localizeCompetitorMarketName(inputs.geo || competitorData?.geo, lang);
-    const query = stpText(inputs.query || competitorData?.query, 120);
+    const query = localizeStpSubjectForReport(inputs.query || competitorData?.query, lang) || stpText(inputs.query || competitorData?.query, 120);
     const ctx = inputs.context || {};
     const channels = stpArray(ctx.channels, 6);
     const constraints = stpArray(ctx.constraints, 5);
     const knownCompetitors = stpArray(ctx.knownCompetitors, 5);
-    const offer = stpText(ctx.offer || query, 160);
+    const offer = localizeStpSubjectForReport(ctx.offer || query, lang) || stpText(ctx.offer || query, 160);
     const defaultProof = stpArray([
         isAr ? 'إثبات النتيجة قبل الوعد' : isEn ? 'proof of result before the promise' : 'preuve du résultat avant la promesse',
         isAr ? 'سعر وشروط واضحة' : isEn ? 'clear price and terms' : 'prix et conditions clairs',
@@ -11185,6 +11256,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             confidence: segment.confidence || persona.confidence || 'MEDIUM',
             details: {
                 need: segment.need || persona.jobToBeDone,
+                primaryJobToBeDone: persona.jobToBeDone,
                 ageRange,
                 occupation,
                 segmentName,
@@ -11217,8 +11289,8 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
 function buildStpPositioning({ segment, persona, competitorData = {}, inputs = {}, lang = 'fr' }) {
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
-    const query = stpText(inputs.query || competitorData?.query, 140);
-    const offer = stpText(inputs.context?.offer || query, 160);
+    const query = localizeStpSubjectForReport(inputs.query || competitorData?.query, lang) || stpText(inputs.query || competitorData?.query, 140);
+    const offer = localizeStpSubjectForReport(inputs.context?.offer || query, lang) || stpText(inputs.context?.offer || query, 160);
     const market = localizeCompetitorMarketName(inputs.geo || competitorData?.geo, lang);
     const leader = competitorData?.top10Competitors?.[0] || competitorData?.competitors?.[0] || {};
     const alternative = stpText((inputs.context?.knownCompetitors || [])[0] || leader.domain || leader.displayed_link || leader.link || leader.url, 120);
@@ -11312,6 +11384,49 @@ function mergeStpPersonaAiOverlay(baseCards = [], aiCards = []) {
     });
 }
 
+function enforceStpPersonaDiversity(personaCards = [], lang = 'fr') {
+    const seenSummary = new Map();
+    const seenAttack = new Map();
+    return (personaCards || []).map((card, index) => {
+        const details = card.details || {};
+        const angleName = stpText(card.primaryAngle?.name || details.primaryMarketingAngle || card.segmentName || card.displayName || `Persona ${index + 1}`, 120);
+        const summary = stpText(card.summary || details.primaryJobToBeDone || details.need, 360);
+        const attack = stpText(card.attackAngle || details.attackAngle || details.stp?.positioning, 360);
+        const summaryKey = summary.toLowerCase();
+        const attackKey = attack.toLowerCase();
+        const duplicateSummary = summaryKey && seenSummary.has(summaryKey);
+        const duplicateAttack = attackKey && seenAttack.has(attackKey);
+        if (summaryKey) seenSummary.set(summaryKey, card.id || index);
+        if (attackKey) seenAttack.set(attackKey, card.id || index);
+        const summarySuffix = lang === 'ar'
+            ? ` زاوية هذه الشخصية: ${angleName}.`
+            : lang === 'en'
+                ? ` This persona angle: ${angleName}.`
+                : ` Angle spécifique de ce persona : ${angleName}.`;
+        const attackSuffix = lang === 'ar'
+            ? ` طبقها برسالة مخصصة لـ ${angleName}.`
+            : lang === 'en'
+                ? ` Apply it with messaging tailored to ${angleName}.`
+                : ` À appliquer avec un message adapté à ${angleName}.`;
+        const finalSummary = duplicateSummary && angleName ? stpText(`${summary}${summarySuffix}`, 420) : summary;
+        const finalAttack = duplicateAttack && angleName ? stpText(`${attack}${attackSuffix}`, 420) : attack;
+        return {
+            ...card,
+            summary: finalSummary || card.summary,
+            attackAngle: finalAttack || card.attackAngle,
+            details: {
+                ...details,
+                primaryJobToBeDone: duplicateSummary && angleName ? finalSummary : (details.primaryJobToBeDone || finalSummary),
+                attackAngle: duplicateAttack && angleName ? finalAttack : (details.attackAngle || finalAttack),
+                stp: {
+                    ...(details.stp || {}),
+                    positioning: duplicateAttack && angleName ? finalAttack : (details.stp?.positioning || finalAttack)
+                }
+            }
+        };
+    });
+}
+
 async function maybeRefineStpPersonasWithAi({ personaCards = [], inputs = {}, competitorData = {}, beachheadMarket = {}, positioning = {}, lang = 'fr' } = {}) {
     try {
         if (!personaCards.length) return null;
@@ -11322,6 +11437,8 @@ async function maybeRefineStpPersonasWithAi({ personaCards = [], inputs = {}, co
                 'Age is allowed only as an inferred demographic hypothesis, never as observed data.',
                 'Each persona must keep its primary marketing angle logic, attackAngle and beachhead/budget order.',
                 'Do not collapse personas that have different jobs-to-be-done, triggers, buying behavior or marketing angles.',
+                'Every persona summary / primaryJobToBeDone / attackAngle must be different. Never repeat the same "I want" sentence across personas.',
+                'If the report language is Arabic, translate the product/service name into Arabic in all visible persona text unless it is a domain or brand name.',
                 'Channels must come from behavior and observed/inferred market access, not from generic lists.',
                 'If proof is weak, say what must be verified.'
             ],
@@ -11551,8 +11668,9 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     if (personaAiOverlay?.personas?.length) {
         personaCards = mergeStpPersonaAiOverlay(personaCards, personaAiOverlay.personas);
     }
+    const reportSubject = localizeStpSubjectForReport(query, langPack.code) || query;
     const stpAngleModel = buildAngleDrivenStpModel({
-        query,
+        query: reportSubject,
         geo: safeGeo,
         lang: langPack.code,
         segments: scoredSegments,
@@ -11564,6 +11682,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     if (stpAngleModel?.personaCards?.length) {
         personaCards = stpAngleModel.personaCards;
     }
+    personaCards = enforceStpPersonaDiversity(personaCards, langPack.code);
     if (stpAngleModel?.observability?.length) {
         console.log(`[api/stp] ${stpAngleModel.observability.join(' | ')}`);
         console.log(`[api/stp] [AngleEngine] final_angles=${(stpAngleModel.marketingAngles || []).map(angle => angle.type).join(',')}`);

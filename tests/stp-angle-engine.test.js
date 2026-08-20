@@ -100,6 +100,20 @@ test('persona angle mapping supports multiple angles without duplicating persona
   assert.ok(mapped[0].angleMappings[0].message);
 });
 
+test('persona angle mapping distributes primary angles across distinct personas', () => {
+  const mapped = mapPersonasToAngles([
+    { id: 'urgent', summary: 'ready buyer wants fast ordering and clear CTA', details: { buyingTriggers: ['fast order'] } },
+    { id: 'proof', summary: 'trust seeker needs guarantee reviews and proof', details: { buyingTriggers: ['proof'], objections: ['unclear guarantee'] } },
+    { id: 'budget', summary: 'comparison shopper compares price and terms', details: { buyingTriggers: ['price'], objections: ['expensive'] } }
+  ], [
+    { id: 'angle-fast_action', type: 'fast_action', name: 'Fast action', promise: 'order quickly', score: 86 },
+    { id: 'angle-security_trust', type: 'security_trust', name: 'Trust', promise: 'proof and guarantee', score: 84 },
+    { id: 'angle-savings_budget', type: 'savings_budget', name: 'Budget', promise: 'price and terms clarity', score: 82 }
+  ]);
+  const primaryIds = mapped.map(persona => persona.primaryAngle?.id).filter(Boolean);
+  assert.equal(new Set(primaryIds).size, 3);
+});
+
 test('marketing angle exposes canonical business fields', () => {
   const model = buildAngleDrivenStpModel({
     query: 'projecteur solaire exterieur',
@@ -152,6 +166,8 @@ test('solar projector market produces distinct useful angles', () => {
   assert.ok(types.includes('offgrid_autonomy'));
   assert.ok(types.includes('installation_ease'));
   assert.ok(model.personaCards.every(p => p.primaryAngle && p.attackAngle));
+  assert.ok(new Set(model.personaCards.map(p => p.primaryAngle?.id).filter(Boolean)).size >= 3);
+  assert.ok(new Set(model.personaCards.map(p => p.attackAngle).filter(Boolean)).size >= 3);
   assert.ok(model.marketingAngles.length >= 5);
   assert.ok(model.observability.some(line => line.includes('candidates=')));
 });

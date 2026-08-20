@@ -5720,6 +5720,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         primaryAngle: 'الزاوية الرئيسية',
         secondaryAngles: 'زوايا مساعدة',
         jtbd: 'المهمة المطلوب إنجازها',
+        want: 'أريد',
         informationBehavior: 'سلوك البحث عن المعلومات',
         buyingBehavior: 'سلوك الشراء',
         searchBehavior: 'سلوك البحث',
@@ -5777,6 +5778,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         primaryAngle: 'Primary angle',
         secondaryAngles: 'Support angles',
         jtbd: 'Job to be done',
+        want: 'I want',
         informationBehavior: 'Information behavior',
         buyingBehavior: 'Buying behavior',
         searchBehavior: 'Search behavior',
@@ -5834,6 +5836,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         primaryAngle: 'Angle principal',
         secondaryAngles: 'Angles supports',
         jtbd: 'Job to be done',
+        want: 'Je veux',
         informationBehavior: 'Comportement information',
         buyingBehavior: 'Comportement achat',
         searchBehavior: 'Comportement recherche',
@@ -5978,6 +5981,9 @@ function ensureStpDecisionStyles() {
       .daka-stp-avatar i{color:rgb(var(--persona-rgb,34,211,238));font-size:1.35rem}
       .daka-stp-persona h3{font-size:.98rem;line-height:1.3;margin:0;color:#fff}
       .daka-stp-persona p{margin:0;color:#cbd5e1;line-height:1.55;font-size:.8rem}
+      .daka-stp-want{border:1px solid rgba(var(--persona-rgb,34,211,238),.24);border-radius:16px;background:linear-gradient(135deg,rgba(var(--persona-rgb,34,211,238),.12),rgba(2,6,23,.5));padding:11px;display:grid;gap:6px}
+      .daka-stp-want small{color:rgb(var(--persona-rgb,34,211,238));font-size:.64rem;font-weight:950;text-transform:uppercase;letter-spacing:.06em}
+      .daka-stp-want strong{color:#f8fafc;font-size:.84rem;line-height:1.45}
       .daka-stp-copy-md{border:1px solid rgba(var(--persona-rgb,34,211,238),.22);background:rgba(var(--persona-rgb,34,211,238),.1);color:#eaf6ff;border-radius:12px;padding:8px 10px;font-size:.72rem;font-weight:950;cursor:pointer;display:inline-flex;align-items:center;gap:7px;justify-content:center}
       .daka-stp-copy-md:hover{background:rgba(var(--persona-rgb,34,211,238),.18)}
       .daka-stp-md-source{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;white-space:pre-wrap}
@@ -6186,7 +6192,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
           ${primaryAngle.name ? `<div class="daka-stp-pill-row"><span class="daka-stp-chip"><i class="fas ${stpUiEsc(primaryAngle.icon || 'fa-bullseye')}"></i> ${stpUiEsc(copy.primaryAngle || 'Primary angle')}: ${stpUiEsc(primaryAngle.name)}</span>${secondaryAngles.slice(0, 2).map(angle => `<span class="daka-stp-chip">${stpUiEsc(angle.name || angle.label || angle.type)}</span>`).join('')}</div>` : ''}
           <button type="button" class="daka-stp-copy-md" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${stpUiEsc(mdId)}', this)"><i class="fas fa-copy"></i> Markdown</button>
           <pre id="${stpUiEsc(mdId)}" class="daka-stp-md-source">${stpUiEsc(markdown)}</pre>
-          ${card.summary ? `<p>${stpUiEsc(card.summary)}</p>` : ''}
+          ${card.summary ? `<div class="daka-stp-want"><small>${stpUiEsc(copy.want || copy.jtbd || 'JTBD')}</small><strong>${stpUiEsc(card.summary)}</strong></div>` : ''}
           <div class="daka-stp-persona-stp">
             ${renderStpMini(copy.stpSegmentation || 'Segmentation', details.stp?.segmentation || card.market || card.title)}
             ${renderStpMini(copy.stpTargeting || 'Targeting', details.stp?.targeting || card.role || card.summary)}
