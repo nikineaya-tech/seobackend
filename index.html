@@ -5744,7 +5744,69 @@ navkeywords: 'Market demand',
 
     <script src="https://seobackend-f81n.onrender.com/assets/daka-analytics.js?v=20260810-marketinsight1"></script>
     <script>window.DAKA_USE_COMPETITOR_REFONTE = false;</script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-stp-persona-cards-fix1"></script>
+    <script id="daka-library-click-guard">
+    (function () {
+        if (window.__dakaLibraryClickGuard) return;
+        window.__dakaLibraryClickGuard = true;
+        function libraryText(key, fallback) {
+            try {
+                if (window.i18n && typeof window.i18n.t === 'function') return window.i18n.t(key) || fallback;
+            } catch (_) {}
+            return fallback;
+        }
+        function setLibraryStatus(message, error) {
+            var viewer = document.getElementById('dakaLibraryViewer');
+            var status = document.getElementById('dakaLibraryStatus');
+            if (viewer) viewer.hidden = false;
+            if (status) {
+                status.hidden = false;
+                status.textContent = message;
+                status.style.color = error ? '#fca5a5' : '#fcd34d';
+            }
+            if (viewer) viewer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+        function openLibraryItem(trigger) {
+            var card = trigger && trigger.closest ? trigger.closest('.daka-library-book-card') : null;
+            if (card && card.classList.contains('is-soon')) {
+                setLibraryStatus(libraryText('library_soon', 'Bientôt disponible.'), false);
+                return;
+            }
+            var itemId = (trigger && trigger.dataset && trigger.dataset.libraryId) ||
+                (card && card.dataset && card.dataset.libraryId) ||
+                'marketing-frameworks-explained';
+            setLibraryStatus(libraryText('library_loading', 'Chargement de la bibliothèque...'), false);
+            var attempts = 0;
+            var run = function () {
+                attempts += 1;
+                if (typeof window.openDakaLibraryPdf === 'function') {
+                    window.openDakaLibraryPdf(itemId);
+                    return;
+                }
+                if (attempts < 80) {
+                    setTimeout(run, 100);
+                    return;
+                }
+                if (typeof window.openAuthModal === 'function') window.openAuthModal();
+                setLibraryStatus(libraryText('library_error', 'Impossible d’ouvrir le document. Connectez-vous puis réessayez.'), true);
+            };
+            run();
+        }
+        document.addEventListener('click', function (event) {
+            var trigger = event.target && event.target.closest ? event.target.closest('[data-library-open]') : null;
+            if (!trigger) return;
+            event.preventDefault();
+            event.stopPropagation();
+            openLibraryItem(trigger);
+        }, true);
+        document.addEventListener('keydown', function (event) {
+            var card = event.target && event.target.closest ? event.target.closest('.daka-library-book-card[data-library-open]') : null;
+            if (!card || (event.key !== 'Enter' && event.key !== ' ')) return;
+            event.preventDefault();
+            openLibraryItem(card);
+        }, true);
+    })();
+    </script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-library-click-stp-personas-fix2"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">
