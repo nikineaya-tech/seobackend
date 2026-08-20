@@ -366,7 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 this.translateRuntimeChrome();
                 hydrateCompetitorCountrySelect(STATE.lastInputs?.country || null, lang);
                 if (typeof refreshStpDecisionCopy === 'function') refreshStpDecisionCopy();
-                if (typeof refreshDakaLibraryCopy === 'function') refreshDakaLibraryCopy();
+                if (window.__dakaLibraryRuntimeReady && typeof window.refreshDakaLibraryCopy === 'function') {
+                    window.refreshDakaLibraryCopy();
+                }
 
                 if (CONFIG.DEBUG_MODE) console.log(`✅ Language changed to: ${lang}`);
             }
@@ -2193,6 +2195,7 @@ const DAKA_LIBRARY_STATE = {
     pageCount: 0,
     isRendering: false
 };
+window.__dakaLibraryRuntimeReady = true;
 
 function dakaLibraryT(key) {
     if (window.i18n && typeof window.i18n.t === 'function') return window.i18n.t(key);
@@ -2502,6 +2505,7 @@ function loadDakaPdfJs() {
 }
 
 function refreshDakaLibraryCopy() {
+    if (!window.__dakaLibraryRuntimeReady) return;
     if (!DAKA_LIBRARY_STATE.pdf) return;
     const indicator = document.getElementById('dakaLibraryPageIndicator');
     if (indicator) {

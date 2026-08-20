@@ -19301,7 +19301,7 @@ app.get('/api/library/:id/pdf', requireAuth, (req, res) => {
 app.get('/health', (req, res) => {
     const memUsage = process.memoryUsage();
     const uptime = Date.now() - METRICS.startTime;
-    const deployMarker = '2026-08-20-stp-persona-library-fix2';
+    const deployMarker = '2026-08-20-library-tab-runtime-fix3';
     
     res.json({
         success: true,
