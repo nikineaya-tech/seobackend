@@ -4672,24 +4672,38 @@ table tbody td {
                         </div>
                     </div>
                     <div class="daka-library-toolbar no-print">
-                        <button id="dakaLibraryPrev" class="btn btn-secondary" type="button">
-                            <i class="fas fa-chevron-left"></i>
-                            <span data-i18n="library_prev">Page précédente</span>
-                        </button>
-                        <strong id="dakaLibraryPageIndicator" data-i18n="library_page">Page</strong>
-                        <button id="dakaLibraryNext" class="btn btn-secondary" type="button">
-                            <span data-i18n="library_next">Page suivante</span>
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                        <button id="dakaLibraryFullscreen" class="btn btn-secondary" type="button">
-                            <i class="fas fa-expand"></i>
-                            <span data-i18n="library_fullscreen">Plein écran</span>
-                        </button>
-                        <button id="dakaLibraryClose" class="btn btn-secondary" type="button">
-                            <i class="fas fa-xmark"></i>
-                            <span data-i18n="library_close">Fermer</span>
-                        </button>
+                        <div class="daka-library-tool-group">
+                            <button id="dakaLibraryPrev" class="btn btn-secondary daka-library-icon-btn" type="button" data-i18n-title="library_prev" title="Page précédente">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <strong id="dakaLibraryPageIndicator" class="daka-library-page-pill" data-i18n="library_page">Page</strong>
+                            <button id="dakaLibraryNext" class="btn btn-secondary daka-library-icon-btn" type="button" data-i18n-title="library_next" title="Page suivante">
+                                <i class="fas fa-chevron-right"></i>
+                            </button>
+                        </div>
+                        <div class="daka-library-tool-group">
+                            <button id="dakaLibraryZoomOut" class="btn btn-secondary daka-library-icon-btn" type="button" data-i18n-title="library_zoom_out" title="Réduire">
+                                <i class="fas fa-magnifying-glass-minus"></i>
+                            </button>
+                            <strong id="dakaLibraryZoomIndicator" class="daka-library-zoom-pill">100%</strong>
+                            <button id="dakaLibraryZoomIn" class="btn btn-secondary daka-library-icon-btn" type="button" data-i18n-title="library_zoom_in" title="Agrandir">
+                                <i class="fas fa-magnifying-glass-plus"></i>
+                            </button>
+                            <button id="dakaLibraryFit" class="btn btn-secondary daka-library-icon-btn" type="button" data-i18n-title="library_fit" title="Ajuster">
+                                <i class="fas fa-arrows-left-right-to-line"></i>
+                            </button>
+                        </div>
+                        <div class="daka-library-tool-group daka-library-tool-group--exit">
+                            <button id="dakaLibraryFullscreen" class="btn btn-secondary daka-library-icon-btn" type="button" data-i18n-title="library_fullscreen" title="Plein écran">
+                                <i class="fas fa-expand"></i>
+                            </button>
+                            <button id="dakaLibraryClose" class="btn btn-primary daka-library-back-btn" type="button">
+                                <i class="fas fa-arrow-left"></i>
+                                <span data-i18n="library_close">Retour</span>
+                            </button>
+                        </div>
                     </div>
+                    <div class="daka-library-progress" aria-hidden="true"><span id="dakaLibraryProgressBar"></span></div>
                     <div id="dakaLibraryStatus" class="daka-library-status" data-i18n="library_loading">Chargement de la bibliothèque...</div>
                     <div class="daka-library-canvas-wrap">
                         <canvas id="dakaLibraryCanvas"></canvas>
@@ -5291,7 +5305,10 @@ navkeywords: 'Demande marché',
         library_prev: 'Page précédente',
         library_next: 'Page suivante',
         library_fullscreen: 'Plein écran',
-        library_close: 'Fermer',
+        library_zoom_out: 'Réduire',
+        library_zoom_in: 'Agrandir',
+        library_fit: 'Ajuster',
+        library_close: 'Retour',
         library_loading: 'Chargement de la bibliothèque...',
         library_page: 'Page',
 
@@ -5475,7 +5492,10 @@ navkeywords: 'طلب السوق',
         library_prev: 'الصفحة السابقة',
         library_next: 'الصفحة التالية',
         library_fullscreen: 'ملء الشاشة',
-        library_close: 'إغلاق',
+        library_zoom_out: 'تصغير',
+        library_zoom_in: 'تكبير',
+        library_fit: 'ملاءمة الصفحة',
+        library_close: 'رجوع',
         library_loading: 'جاري فتح المكتبة...',
         library_page: 'صفحة',
 
@@ -5659,7 +5679,10 @@ navkeywords: 'Market demand',
         library_prev: 'Previous page',
         library_next: 'Next page',
         library_fullscreen: 'Fullscreen',
-        library_close: 'Close',
+        library_zoom_out: 'Zoom out',
+        library_zoom_in: 'Zoom in',
+        library_fit: 'Fit page',
+        library_close: 'Back',
         library_loading: 'Loading library...',
         library_page: 'Page',
 
@@ -5813,7 +5836,7 @@ navkeywords: 'Market demand',
         }, true);
     })();
     </script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-stp-angle-persona-md1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-library-reader-pro1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">

@@ -443,6 +443,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         element.placeholder = translation;
                     }
                 });
+
+                document.querySelectorAll('[data-i18n-title]').forEach(element => {
+                    const key = element.getAttribute('data-i18n-title');
+                    const translation = this.t(key);
+                    if (translation) {
+                        element.title = translation;
+                        element.setAttribute('aria-label', translation);
+                    }
+                });
             }
 
             t(key) {
@@ -558,7 +567,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     library_book4_desc: 'Notes pratiques pour transformer une analyse funnel en sections, preuves client, CTA et ordre de page.',
                     library_prev: 'Page précédente',
                     library_next: 'Page suivante',
-                    library_close: 'Fermer',
+                    library_fullscreen: 'Plein écran',
+                    library_zoom_out: 'Réduire',
+                    library_zoom_in: 'Agrandir',
+                    library_fit: 'Ajuster',
+                    library_close: 'Retour',
                     library_loading: 'Chargement de la bibliothèque...',
                     library_loaded: 'Livre prêt dans le reader Daka.',
                     library_error: 'Impossible d’ouvrir le document. Connectez-vous puis réessayez.',
@@ -662,7 +675,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     library_book4_desc: 'Practical notes to turn funnel analysis into sections, customer proof, CTAs and page order.',
                     library_prev: 'Previous page',
                     library_next: 'Next page',
-                    library_close: 'Close',
+                    library_fullscreen: 'Fullscreen',
+                    library_zoom_out: 'Zoom out',
+                    library_zoom_in: 'Zoom in',
+                    library_fit: 'Fit page',
+                    library_close: 'Back',
                     library_loading: 'Loading library...',
                     library_loaded: 'Book ready in the Daka reader.',
                     library_error: 'Unable to open the document. Sign in and try again.',
@@ -725,7 +742,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     library_book4_desc: 'ملاحظات عملية لتحويل تحليل الفانل إلى أقسام وأدلة عملاء وCTA وترتيب الصفحة.',
                     library_prev: 'الصفحة السابقة',
                     library_next: 'الصفحة التالية',
-                    library_close: 'إغلاق',
+                    library_fullscreen: 'ملء الشاشة',
+                    library_zoom_out: 'تصغير',
+                    library_zoom_in: 'تكبير',
+                    library_fit: 'ملاءمة الصفحة',
+                    library_close: 'رجوع',
                     library_loading: 'جاري فتح المكتبة...',
                     library_loaded: 'الكتاب جاهز داخل قارئ Daka.',
                     library_error: 'تعذر فتح الوثيقة. سجل الدخول ثم حاول مرة أخرى.',
@@ -813,7 +834,11 @@ document.addEventListener('DOMContentLoaded', () => {
             library_book4_desc: 'Notes pratiques pour transformer une analyse funnel en sections, preuves client, CTA et ordre de page.',
             library_prev: 'Page précédente',
             library_next: 'Page suivante',
-            library_close: 'Fermer',
+            library_fullscreen: 'Plein écran',
+            library_zoom_out: 'Réduire',
+            library_zoom_in: 'Agrandir',
+            library_fit: 'Ajuster',
+            library_close: 'Retour',
             library_loading: 'Chargement de la bibliothèque...',
             library_loaded: 'Livre prêt dans le reader Daka.',
             library_error: 'Impossible d’ouvrir le document. Connectez-vous puis réessayez.',
@@ -875,7 +900,11 @@ document.addEventListener('DOMContentLoaded', () => {
             library_book4_desc: 'Practical notes to turn funnel analysis into sections, customer proof, CTAs and page order.',
             library_prev: 'Previous page',
             library_next: 'Next page',
-            library_close: 'Close',
+            library_fullscreen: 'Fullscreen',
+            library_zoom_out: 'Zoom out',
+            library_zoom_in: 'Zoom in',
+            library_fit: 'Fit page',
+            library_close: 'Back',
             library_loading: 'Loading library...',
             library_loaded: 'Book ready in the Daka reader.',
             library_error: 'Unable to open the document. Sign in and try again.',
@@ -937,7 +966,11 @@ document.addEventListener('DOMContentLoaded', () => {
             library_book4_desc: 'ملاحظات عملية لتحويل تحليل الفانل إلى أقسام وأدلة عملاء وCTA وترتيب الصفحة.',
             library_prev: 'الصفحة السابقة',
             library_next: 'الصفحة التالية',
-            library_close: 'إغلاق',
+            library_fullscreen: 'ملء الشاشة',
+            library_zoom_out: 'تصغير',
+            library_zoom_in: 'تكبير',
+            library_fit: 'ملاءمة الصفحة',
+            library_close: 'رجوع',
             library_loading: 'جاري فتح المكتبة...',
             library_loaded: 'الكتاب جاهز داخل قارئ Daka.',
             library_error: 'تعذر فتح الوثيقة. سجل الدخول ثم حاول مرة أخرى.',
@@ -2200,6 +2233,8 @@ const DAKA_LIBRARY_STATE = {
     itemId: '',
     page: 1,
     pageCount: 0,
+    zoom: 1,
+    fitMode: true,
     isRendering: false
 };
 window.__dakaLibraryRuntimeReady = true;
@@ -2394,35 +2429,50 @@ function ensureDakaLibraryStyles() {
             font-size: 1rem;
         }
         .daka-library-reader-head {
-            display: flex;
-            justify-content: space-between;
-            gap: 16px;
-            padding: 20px 20px 2px;
-            border-bottom: 1px solid rgba(148,163,184,.1);
+            position: relative;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr);
+            gap: 10px;
+            padding: 24px 24px 18px;
+            border-bottom: 1px solid rgba(148,163,184,.12);
             background:
-                radial-gradient(circle at 0 0, rgba(245,158,11,.12), transparent 32%),
-                rgba(2,6,23,.35);
+                radial-gradient(circle at 12% 0, rgba(34,211,238,.13), transparent 34%),
+                radial-gradient(circle at 100% 0, rgba(139,92,246,.14), transparent 30%),
+                linear-gradient(135deg, rgba(2,6,23,.78), rgba(8,17,31,.62));
+        }
+        .daka-library-reader-head::after {
+            content: "";
+            position: absolute;
+            inset: auto 24px 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(34,211,238,.42), transparent);
         }
         .daka-library-reader-head h2 {
-            margin: 0 0 8px;
-            color: #fff;
-            font-size: clamp(1.18rem, 2vw, 1.72rem);
-            letter-spacing: -.02em;
+            margin: 0;
+            color: #f8fafc;
+            font-size: clamp(1.32rem, 2.2vw, 2.1rem);
+            letter-spacing: -.035em;
+            line-height: 1.08;
         }
         .daka-library-reader-head p {
-            margin: 0 0 16px;
-            color: #aebdd3;
-            line-height: 1.62;
-            max-width: 72ch;
+            margin: 0;
+            color: #b7c7da;
+            line-height: 1.55;
+            max-width: 78ch;
+            font-size: .96rem;
         }
         .daka-library-viewer {
+            position: relative;
             margin-top: 22px;
-            border: 1px solid rgba(148,163,184,.14);
-            border-radius: 28px;
-            background: linear-gradient(180deg, rgba(2,6,23,.92), rgba(8,17,31,.78));
+            border: 1px solid rgba(125,211,252,.16);
+            border-radius: 30px;
+            background:
+                radial-gradient(circle at 50% -12%, rgba(34,211,238,.10), transparent 36%),
+                linear-gradient(180deg, rgba(2,6,23,.96), rgba(8,17,31,.82));
             overflow: hidden;
             -webkit-user-select: none;
             user-select: none;
+            box-shadow: 0 28px 90px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.05);
         }
         .daka-library-shell.is-reading > .card-header,
         .daka-library-shell.is-reading .daka-library-intro,
@@ -2433,27 +2483,92 @@ function ensureDakaLibraryStyles() {
             margin-top: 0;
         }
         .daka-library-toolbar {
-            position: sticky;
-            top: 86px;
-            z-index: 5;
-            display: flex;
+            position: absolute;
+            left: 50%;
+            bottom: 18px;
+            transform: translateX(-50%);
+            z-index: 7;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            width: min(980px, calc(100% - 36px));
+            border: 1px solid rgba(125,211,252,.18);
+            border-radius: 24px;
+            background: rgba(3,7,18,.86);
+            backdrop-filter: blur(22px);
+            direction: ltr;
+            box-shadow: 0 22px 70px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.06);
+        }
+        .daka-library-tool-group {
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
-            padding: 12px;
-            border-bottom: 1px solid rgba(148,163,184,.12);
-            background: rgba(2,6,23,.9);
-            backdrop-filter: blur(14px);
+            gap: 7px;
+            min-width: 0;
+            justify-self: center;
+            padding: 5px;
+            border: 1px solid rgba(148,163,184,.12);
+            border-radius: 18px;
+            background: rgba(15,23,42,.54);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,.04);
         }
-        .daka-library-toolbar .btn {
-            min-height: 40px;
+        .daka-library-tool-group:first-child { justify-self: start; }
+        .daka-library-tool-group--exit { justify-self: end; }
+        .daka-library-icon-btn {
+            width: 42px;
+            min-width: 42px;
+            height: 42px;
+            min-height: 42px;
+            padding: 0 !important;
+            border-radius: 13px !important;
+        }
+        .daka-library-back-btn {
+            min-height: 42px;
+            border-radius: 14px !important;
+            padding: 0 14px !important;
+            gap: 8px;
+        }
+        .daka-library-back-btn i {
+            transform: none;
+        }
+        [dir="rtl"] .daka-library-back-btn i {
+            transform: rotate(180deg);
+        }
+        .daka-library-page-pill,
+        .daka-library-zoom-pill {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 42px;
             border-radius: 13px;
+            padding: 0 13px;
+            color: #f8fafc;
+            background: rgba(2,6,23,.58);
+            border: 1px solid rgba(125,211,252,.14);
+            font-size: .86rem;
+            white-space: nowrap;
+            min-width: 116px;
         }
-        #dakaLibraryPageIndicator {
-            min-width: 132px;
-            text-align: center;
-            color: #eaf6ff;
-            font-size: .9rem;
+        .daka-library-zoom-pill {
+            min-width: 64px;
+            color: #67e8f9;
+        }
+        .daka-library-progress {
+            position: relative;
+            z-index: 2;
+            height: 3px;
+            background: rgba(15,23,42,.9);
+            overflow: hidden;
+        }
+        .daka-library-progress span {
+            display: block;
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #22c55e, #22d3ee, #8b5cf6);
+            box-shadow: 0 0 18px rgba(34,211,238,.42);
+            transition: width .22s ease;
         }
         .daka-library-status {
             min-height: 42px;
@@ -2464,32 +2579,40 @@ function ensureDakaLibraryStyles() {
         }
         .daka-library-status[hidden] { display: none; }
         .daka-library-canvas-wrap {
-            padding: 18px;
+            padding: clamp(16px, 2vw, 28px) clamp(16px, 2vw, 28px) 94px;
             display: grid;
-            place-items: start center;
+            place-items: center;
             overflow: auto;
-            max-height: min(78vh, 980px);
+            height: min(76vh, 920px);
+            max-height: min(76vh, 920px);
             background:
+                linear-gradient(90deg, rgba(34,211,238,.04) 1px, transparent 1px),
+                linear-gradient(rgba(34,211,238,.035) 1px, transparent 1px),
                 radial-gradient(circle at 50% 0%, rgba(34,211,238,.08), transparent 34%),
-                rgba(0,0,0,.16);
+                rgba(0,0,0,.20);
+            background-size: 42px 42px, 42px 42px, auto, auto;
         }
         .daka-library-viewer.is-fullscreen {
             position: fixed;
-            inset: 10px;
+            inset: 12px;
             z-index: 9999;
             overflow: auto;
-            border-radius: 22px;
-            background: radial-gradient(circle at 0 0, rgba(34,211,238,.14), transparent 28%), #020617;
+            border-radius: 26px;
+            background:
+                radial-gradient(circle at 0 0, rgba(34,211,238,.14), transparent 28%),
+                radial-gradient(circle at 100% 0, rgba(139,92,246,.14), transparent 30%),
+                #020617;
             box-shadow: 0 30px 100px rgba(0,0,0,.65);
         }
         .daka-library-viewer.is-fullscreen .daka-library-canvas-wrap {
-            max-height: calc(100vh - 210px);
+            height: calc(100vh - 148px);
+            max-height: calc(100vh - 148px);
         }
         #dakaLibraryCanvas {
             max-width: 100%;
-            border-radius: 10px;
+            border-radius: 12px;
             background: #fff;
-            box-shadow: 0 22px 80px rgba(0,0,0,.42);
+            box-shadow: 0 26px 90px rgba(0,0,0,.52);
             pointer-events: none;
         }
         @media (max-width: 840px) {
@@ -2501,12 +2624,27 @@ function ensureDakaLibraryStyles() {
                 grid-template-columns: 1fr;
             }
             .daka-library-toolbar {
-                top: 72px;
+                grid-template-columns: 1fr;
                 overflow-x: auto;
-                justify-content: flex-start;
+                justify-items: stretch;
+                bottom: 10px;
+                width: calc(100% - 20px);
+                max-height: 42vh;
             }
-            .daka-library-toolbar .btn span {
-                display: none;
+            .daka-library-tool-group,
+            .daka-library-tool-group:first-child,
+            .daka-library-tool-group--exit {
+                justify-self: stretch;
+                justify-content: center;
+            }
+            .daka-library-back-btn span {
+                display: inline;
+            }
+            .daka-library-reader-head {
+                padding: 18px 16px 14px;
+            }
+            .daka-library-reader-head p {
+                font-size: .88rem;
             }
         }
     `;
@@ -2537,6 +2675,16 @@ function refreshDakaLibraryCopy() {
     const indicator = document.getElementById('dakaLibraryPageIndicator');
     if (indicator) {
         indicator.textContent = `${dakaLibraryT('library_page')} ${DAKA_LIBRARY_STATE.page} / ${DAKA_LIBRARY_STATE.pageCount || '?'}`;
+    }
+    const zoomIndicator = document.getElementById('dakaLibraryZoomIndicator');
+    if (zoomIndicator) {
+        zoomIndicator.textContent = DAKA_LIBRARY_STATE.fitMode ? 'FIT' : `${Math.round(DAKA_LIBRARY_STATE.zoom * 100)}%`;
+    }
+    const progress = document.getElementById('dakaLibraryProgressBar');
+    if (progress) {
+        const total = Math.max(1, Number(DAKA_LIBRARY_STATE.pageCount || 1));
+        const percent = Math.max(0, Math.min(100, (Number(DAKA_LIBRARY_STATE.page || 1) / total) * 100));
+        progress.style.width = `${percent}%`;
     }
 }
 window.refreshDakaLibraryCopy = refreshDakaLibraryCopy;
@@ -2584,8 +2732,20 @@ function setDakaLibraryStatus(message, isError = false) {
 function setDakaLibraryControls() {
     const prev = document.getElementById('dakaLibraryPrev');
     const next = document.getElementById('dakaLibraryNext');
+    const zoomOut = document.getElementById('dakaLibraryZoomOut');
+    const zoomIn = document.getElementById('dakaLibraryZoomIn');
+    const fullscreen = document.getElementById('dakaLibraryFullscreen');
+    const viewer = document.getElementById('dakaLibraryViewer');
     if (prev) prev.disabled = !DAKA_LIBRARY_STATE.pdf || DAKA_LIBRARY_STATE.page <= 1 || DAKA_LIBRARY_STATE.isRendering;
     if (next) next.disabled = !DAKA_LIBRARY_STATE.pdf || DAKA_LIBRARY_STATE.page >= DAKA_LIBRARY_STATE.pageCount || DAKA_LIBRARY_STATE.isRendering;
+    if (zoomOut) zoomOut.disabled = !DAKA_LIBRARY_STATE.pdf || DAKA_LIBRARY_STATE.zoom <= 0.7 || DAKA_LIBRARY_STATE.isRendering;
+    if (zoomIn) zoomIn.disabled = !DAKA_LIBRARY_STATE.pdf || DAKA_LIBRARY_STATE.zoom >= 1.9 || DAKA_LIBRARY_STATE.isRendering;
+    if (fullscreen) {
+        const isFullscreen = Boolean(viewer?.classList?.contains('is-fullscreen'));
+        fullscreen.setAttribute('aria-pressed', String(isFullscreen));
+        const icon = fullscreen.querySelector('i');
+        if (icon) icon.className = `fas ${isFullscreen ? 'fa-compress' : 'fa-expand'}`;
+    }
     refreshDakaLibraryCopy();
 }
 
@@ -2599,8 +2759,10 @@ async function renderDakaLibraryPage() {
     try {
         const page = await DAKA_LIBRARY_STATE.pdf.getPage(DAKA_LIBRARY_STATE.page);
         const baseViewport = page.getViewport({ scale: 1 });
-        const maxWidth = Math.max(280, Math.min((wrap.clientWidth || 960) - 36, 980));
-        const scale = Math.max(0.55, Math.min(1.65, maxWidth / baseViewport.width));
+        const fitWidth = Math.max(280, Math.min((wrap.clientWidth || 960) - 36, 1180));
+        const fitHeight = Math.max(320, (wrap.clientHeight || 780) - 124);
+        const fitScale = Math.max(0.45, Math.min(1.85, fitWidth / baseViewport.width, fitHeight / baseViewport.height));
+        const scale = DAKA_LIBRARY_STATE.fitMode ? fitScale : Math.max(0.55, Math.min(2.2, fitScale * DAKA_LIBRARY_STATE.zoom));
         const viewport = page.getViewport({ scale });
         const ratio = Math.min(window.devicePixelRatio || 1, 2);
         const context = canvas.getContext('2d', { alpha: false });
@@ -2639,6 +2801,8 @@ async function openDakaLibraryPdf(itemId = 'marketing-frameworks-explained') {
         const pdfjs = await loadDakaPdfJs();
         const bytes = await fetchDakaLibraryPdf(itemId);
         DAKA_LIBRARY_STATE.itemId = itemId;
+        DAKA_LIBRARY_STATE.zoom = 1;
+        DAKA_LIBRARY_STATE.fitMode = true;
         DAKA_LIBRARY_STATE.pdf = await pdfjs.getDocument({
             data: bytes,
             disableWorker: true,
@@ -2690,6 +2854,24 @@ function initDakaLibraryViewer() {
         DAKA_LIBRARY_STATE.page += 1;
         renderDakaLibraryPage();
     });
+    document.getElementById('dakaLibraryZoomOut')?.addEventListener('click', () => {
+        if (!DAKA_LIBRARY_STATE.pdf) return;
+        DAKA_LIBRARY_STATE.fitMode = false;
+        DAKA_LIBRARY_STATE.zoom = Math.max(0.7, Number((DAKA_LIBRARY_STATE.zoom - 0.15).toFixed(2)));
+        renderDakaLibraryPage();
+    });
+    document.getElementById('dakaLibraryZoomIn')?.addEventListener('click', () => {
+        if (!DAKA_LIBRARY_STATE.pdf) return;
+        DAKA_LIBRARY_STATE.fitMode = false;
+        DAKA_LIBRARY_STATE.zoom = Math.min(1.9, Number((DAKA_LIBRARY_STATE.zoom + 0.15).toFixed(2)));
+        renderDakaLibraryPage();
+    });
+    document.getElementById('dakaLibraryFit')?.addEventListener('click', () => {
+        if (!DAKA_LIBRARY_STATE.pdf) return;
+        DAKA_LIBRARY_STATE.zoom = 1;
+        DAKA_LIBRARY_STATE.fitMode = true;
+        renderDakaLibraryPage();
+    });
     document.getElementById('dakaLibraryClose')?.addEventListener('click', () => {
         const viewer = document.getElementById('dakaLibraryViewer');
         if (viewer) {
@@ -2702,6 +2884,7 @@ function initDakaLibraryViewer() {
         const viewer = document.getElementById('dakaLibraryViewer');
         if (!viewer) return;
         viewer.classList.toggle('is-fullscreen');
+        setDakaLibraryControls();
         setTimeout(() => renderDakaLibraryPage(), 160);
     });
     document.addEventListener('contextmenu', (event) => {
@@ -2715,6 +2898,11 @@ function initDakaLibraryViewer() {
             event.preventDefault();
             event.stopPropagation();
             if (typeof toast !== 'undefined') toast.info(dakaLibraryT('library_badge'));
+        }
+        if (key === 'escape' && viewer.classList.contains('is-fullscreen')) {
+            viewer.classList.remove('is-fullscreen');
+            setDakaLibraryControls();
+            setTimeout(() => renderDakaLibraryPage(), 80);
         }
     }, true);
 }
