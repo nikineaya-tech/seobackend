@@ -4549,53 +4549,9 @@ table tbody td {
                         </div>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;">
-                        <div class="form-group">
-                            <label class="form-label" for="stpOffer" data-i18n="stp_label_offer">Offre exacte</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-box-open input-icon"></i>
-                                <input id="stpOffer" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_offer" placeholder="Ex: audit IA + plan marketing + exécution">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="stpAudience" data-i18n="stp_label_audience">Audience pressentie</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-users-line input-icon"></i>
-                                <input id="stpAudience" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_audience" placeholder="Ex: PME, agences, e-commerçants, freelances">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:15px;">
-                        <div class="form-group">
-                            <label class="form-label" for="stpBusinessModel" data-i18n="stp_label_model">Modèle business</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-sitemap input-icon"></i>
-                                <input id="stpBusinessModel" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_model" placeholder="Ex: service B2B, e-commerce, SaaS, local service">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="stpCityRegion" data-i18n="stp_label_region">Zone à gagner</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-location-dot input-icon"></i>
-                                <input id="stpCityRegion" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_region" placeholder="Ex: Casablanca, Tripoli, Tunis, GCC">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:15px;">
-                        <div class="form-group">
-                            <label class="form-label" for="stpKnownCompetitors" data-i18n="stp_label_competitors">Concurrents connus</label>
-                            <textarea id="stpKnownCompetitors" class="textarea-field" rows="3" data-i18n-placeholder="stp_placeholder_competitors" placeholder="site1.com, marque2, page Instagram..."></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="stpConstraints" data-i18n="stp_label_constraints">Contraintes réelles</label>
-                            <textarea id="stpConstraints" class="textarea-field" rows="3" data-i18n-placeholder="stp_placeholder_constraints" placeholder="Petit budget, pas d’équipe sales, livraison lente, preuves faibles..."></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label" for="stpChannels" data-i18n="stp_label_channels">Canaux accessibles</label>
-                            <textarea id="stpChannels" class="textarea-field" rows="3" data-i18n-placeholder="stp_placeholder_channels" placeholder="SEO, TikTok, Meta Ads, WhatsApp, Google Maps, LinkedIn..."></textarea>
-                        </div>
+                    <div class="context-hint" style="margin-top:8px;border:1px solid rgba(34,211,238,.18);border-radius:18px;background:linear-gradient(135deg,rgba(34,211,238,.08),rgba(139,92,246,.06));padding:14px 16px;color:#b7c7dd;line-height:1.65;font-size:.88rem;">
+                        <i class="fas fa-wand-magic-sparkles" style="color:#67e8f9;margin-inline-end:8px;"></i>
+                        <span data-i18n="stp_auto_deduce_note">Daka déduit automatiquement l’offre, l’audience, le modèle business, la zone à gagner, les concurrents, les contraintes et les canaux via SERP, concurrents et couches marché.</span>
                     </div>
 
                     <button type="submit" class="btn btn-cosmic btn-lg" id="stpBtn" style="width:100%;margin-top:15px;height:60px;font-size:1.05rem;">
@@ -5165,6 +5121,7 @@ navkeywords: 'Demande marché',
         stp_placeholder_constraints: 'Petit budget, pas d’équipe sales, livraison lente, preuves faibles...',
         stp_label_channels: 'Canaux accessibles',
         stp_placeholder_channels: 'SEO, TikTok, Meta Ads, WhatsApp, Google Maps, LinkedIn...',
+        stp_auto_deduce_note: 'Daka déduit automatiquement l’offre, l’audience, le modèle business, la zone à gagner, les concurrents, les contraintes et les canaux via SERP, concurrents et couches marché.',
         stp_btn: 'GÉNÉRER LA DÉCISION STP',
 
         // --- Loading States Tab 1 (Competitors) ---
@@ -5311,6 +5268,7 @@ navkeywords: 'طلب السوق',
         stp_placeholder_constraints: 'ميزانية صغيرة، لا يوجد فريق مبيعات، توصيل بطيء، أدلة ضعيفة...',
         stp_label_channels: 'القنوات المتاحة',
         stp_placeholder_channels: 'SEO، TikTok، Meta Ads، WhatsApp، Google Maps، LinkedIn...',
+        stp_auto_deduce_note: 'تستنتج Daka تلقائيا العرض والجمهور ونموذج العمل والمنطقة المراد كسبها والمنافسين والقيود والقنوات عبر SERP والمنافسين وطبقات السوق.',
         stp_btn: 'توليد قرار STP',
 
         // --- Loading States Tab 1 (Competitors) ---
@@ -5457,6 +5415,7 @@ navkeywords: 'Market demand',
         stp_placeholder_constraints: 'Small budget, no sales team, slow delivery, weak proof...',
         stp_label_channels: 'Accessible channels',
         stp_placeholder_channels: 'SEO, TikTok, Meta Ads, WhatsApp, Google Maps, LinkedIn...',
+        stp_auto_deduce_note: 'Daka automatically infers the offer, audience, business model, beachhead region, competitors, constraints and channels through SERP, competitor and market layers.',
         stp_btn: 'GENERATE STP DECISION',
 
         // --- Loading States Tab 1 (Competitors) ---
@@ -5547,7 +5506,7 @@ navkeywords: 'Market demand',
 
     <script src="https://seobackend-f81n.onrender.com/assets/daka-analytics.js?v=20260810-marketinsight1"></script>
     <script>window.DAKA_USE_COMPETITOR_REFONTE = false;</script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-stp-menu-beachhead1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260820-stp-personas1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">

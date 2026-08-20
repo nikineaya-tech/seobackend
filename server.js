@@ -10478,6 +10478,251 @@ function normalizeChannelName(value = '') {
     return text.replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 32);
 }
 
+function classifyStpAttackChannel(channel = '', lang = 'fr') {
+    const raw = stpText(channel, 80);
+    const norm = normalizeChannelName(raw);
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const label = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
+    if (/seo|serp|content|blog|landing/.test(norm)) {
+        return { name: raw || 'SEO', type: 'Inbound', role: label('Capturer la demande existante', 'Capture existing demand', 'التقاط الطلب الموجود'), timing: 'now' };
+    }
+    if (/linkedin|outreach|b2b|direct/.test(norm)) {
+        return { name: raw || 'Direct outreach', type: 'Outbound', role: label('Créer des conversations ciblées', 'Create targeted conversations', 'خلق محادثات مستهدفة'), timing: 'now' };
+    }
+    if (/meta|tiktok|shopping|ads|marketplace/.test(norm)) {
+        return { name: raw || 'Paid acquisition', type: 'Paid', role: label('Tester rapidement les angles et offres', 'Test angles and offers quickly', 'اختبار الزوايا والعروض بسرعة'), timing: 'after-proof' };
+    }
+    if (/whatsapp|email|newsletter|community/.test(norm)) {
+        return { name: raw || 'Owned channel', type: 'Owned', role: label('Convertir et relancer sans dépendre uniquement des ads', 'Convert and follow up without relying only on ads', 'التحويل والمتابعة دون الاعتماد فقط على الإعلانات'), timing: 'now' };
+    }
+    if (/local|maps|review/.test(norm)) {
+        return { name: raw || 'Local SEO', type: 'Local', role: label('Gagner la demande géographique proche', 'Win nearby geographic demand', 'كسب الطلب الجغرافي القريب'), timing: 'now' };
+    }
+    if (/partner|affiliate|reseller|influence/.test(norm)) {
+        return { name: raw || 'Partnership', type: 'Partnership', role: label('Accéder à une audience déjà agrégée', 'Access an already aggregated audience', 'الوصول إلى جمهور مجمع مسبقا'), timing: 'after-proof' };
+    }
+    return { name: raw || 'Market test', type: 'Experiment', role: label('Tester une poche de marché sans surinvestir', 'Test a market pocket without overinvesting', 'اختبار جيب سوقي دون استثمار زائد'), timing: 'test' };
+}
+
+function stpFirstUseful(values = [], max = 220) {
+    return stpArray(values, 12).map(value => stpText(value, max)).find(Boolean) || '';
+}
+
+function stpCompetitorCandidates(competitorData = {}) {
+    const buckets = [
+        competitorData?.top10Competitors,
+        competitorData?.competitors,
+        competitorData?.directCompetitors,
+        competitorData?.competitorIntelligence?.competitorProfiles,
+        competitorData?.competitorIntelligence?.surveillance?.competitors,
+        competitorData?.marketSources
+    ].filter(Array.isArray);
+    const seen = new Set();
+    return buckets.flat().map(item => {
+        const title = stpText(item?.title || item?.name || item?.domain || item?.displayed_link, 140);
+        const url = stpText(item?.url || item?.link || item?.website, 240);
+        const domain = stpText(item?.domain || item?.displayed_link || (() => {
+            try { return url ? new URL(url).hostname.replace(/^www\./, '') : ''; } catch (_) { return ''; }
+        })(), 140);
+        const key = (domain || title || url).toLowerCase();
+        if (!key || seen.has(key)) return null;
+        seen.add(key);
+        return {
+            title,
+            domain,
+            url,
+            snippet: stpText(item?.snippet || item?.description || item?.summary, 260),
+            type: stpText(item?.type || item?.classification || item?.category, 80)
+        };
+    }).filter(Boolean).slice(0, 10);
+}
+
+function inferStpBusinessModelLabel(archetype = 'general_market', corpus = '', lang = 'fr') {
+    const text = String(corpus || '').toLowerCase();
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    if (/saas|software|logiciel|subscription|abonnement|برنامج|منصة|اشتراك/.test(text)) {
+        return isAr ? 'نموذج SaaS / اشتراك' : isEn ? 'SaaS / subscription' : 'SaaS / abonnement';
+    }
+    if (/agency|agence|consult|audit|service|lead|b2b|وكالة|استشارة|خدمة/.test(text) || archetype === 'b2b_service') {
+        return isAr ? 'خدمة B2B / وكالة / استشارة' : isEn ? 'B2B service / agency / consulting' : 'Service B2B / agence / conseil';
+    }
+    if (/cod|cash on delivery|livraison|shop|boutique|ecommerce|e-commerce|منتج|شراء|توصيل|الدفع عند الاستلام/.test(text) || archetype === 'ecommerce_product') {
+        return isAr ? 'تجارة إلكترونية / بيع مباشر' : isEn ? 'E-commerce / direct response' : 'E-commerce / vente directe';
+    }
+    if (/maps|near me|local|clinic|restaurant|salon|garage|محلي|قريب/.test(text) || archetype === 'local_service') {
+        return isAr ? 'خدمة محلية عالية النية' : isEn ? 'High-intent local service' : 'Service local à forte intention';
+    }
+    if (/blog|guide|learn|cours|formation|تعلم|دليل|شرح/.test(text) || archetype === 'content_education') {
+        return isAr ? 'تعليم / محتوى / توليد طلب' : isEn ? 'Education / content demand generation' : 'Éducation / contenu / génération de demande';
+    }
+    return isAr ? 'نموذج سوق عام يحتاج اختبارا' : isEn ? 'General market model to validate' : 'Modèle marché général à valider';
+}
+
+function inferStpAudienceLabel(archetype = 'general_market', query = '', market = '', lang = 'fr') {
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const need = stpText(query, 90);
+    if (archetype === 'b2b_service') {
+        return isAr ? `شركات وفرق نمو تبحث عن ${need} في ${market}` : isEn ? `Companies and growth teams looking for ${need} in ${market}` : `Entreprises et équipes growth cherchant ${need} en ${market}`;
+    }
+    if (archetype === 'ecommerce_product') {
+        return isAr ? `مشترون جاهزون يقارنون ${need} في ${market}` : isEn ? `Ready-to-buy shoppers comparing ${need} in ${market}` : `Acheteurs prêts à commander qui comparent ${need} en ${market}`;
+    }
+    if (archetype === 'local_service') {
+        return isAr ? `باحثون محليون بنية عالية حول ${need} في ${market}` : isEn ? `High-intent local searchers around ${need} in ${market}` : `Recherches locales à forte intention autour de ${need} en ${market}`;
+    }
+    if (archetype === 'content_education') {
+        return isAr ? `جمهور يبحث عن فهم وحل مشكلة ${need}` : isEn ? `Audience trying to understand and solve ${need}` : `Audience qui cherche à comprendre et résoudre ${need}`;
+    }
+    return isAr ? `جمهور طلب ظاهر حول ${need} في ${market}` : isEn ? `Visible-demand audience around ${need} in ${market}` : `Audience de demande visible autour de ${need} en ${market}`;
+}
+
+function inferStpChannels({ archetype = 'general_market', competitorData = {}, query = '', lang = 'fr' } = {}) {
+    const competitorCorpus = stpCompetitorCandidates(competitorData)
+        .map(item => `${item.title} ${item.snippet} ${item.type} ${item.domain}`)
+        .join(' ')
+        .toLowerCase();
+    const corpus = `${query} ${competitorCorpus}`.toLowerCase();
+    const channels = [];
+    const add = (...items) => items.forEach(item => { if (item && !channels.includes(item)) channels.push(item); });
+
+    if (archetype === 'b2b_service') add('Google Search', 'LinkedIn', 'direct outreach', 'case studies');
+    if (archetype === 'ecommerce_product') add('Google Search/Shopping', 'Meta Ads', 'TikTok', 'WhatsApp');
+    if (archetype === 'local_service') add('Google Maps', 'local SEO', 'WhatsApp', 'reviews');
+    if (archetype === 'content_education') add('SEO', 'YouTube', 'communities', 'newsletter');
+    if (/instagram|facebook|meta/.test(corpus)) add('Meta Ads');
+    if (/tiktok|تيك/.test(corpus)) add('TikTok');
+    if (/maps|local|near|ville|محلي|قريب/.test(corpus) || competitorData?.geoSourceAudit?.localCompetitorsConfirmed) add('Google Maps', 'local SEO');
+    if (/marketplace|shop|shopping|amazon|noon|jumia|boutique|متجر|سوق/.test(corpus)) add('marketplaces', 'Google Shopping');
+    if (/whatsapp|واتساب|wa/.test(corpus)) add('WhatsApp');
+    if (!channels.length) add('SEO', 'landing page', 'competitor comparison');
+    return stpArray(channels, 8);
+}
+
+function inferStpConstraints({ competitorData = {}, archetype = '', budget = '', url = '', lang = 'fr' } = {}) {
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const constraints = [];
+    const competitorCount = Number(competitorData?.top10Competitors?.length || competitorData?.competitors?.length || 0);
+    const localConfirmed = Number(competitorData?.geoSourceAudit?.localCompetitorsConfirmed || 0);
+    const sourceCount = Number(competitorData?.observedUrls?.length || competitorData?.marketSources?.length || 0);
+    const budgetTier = inferStpBudgetTier(budget);
+
+    if (competitorData?.dataIntegrity?.riskLevel === 'HIGH') {
+        constraints.push(isAr ? 'الثقة في البيانات تحتاج تحقق إضافي قبل التوسع' : isEn ? 'data confidence needs extra verification before scaling' : 'confiance data à vérifier avant scale');
+    }
+    if (!url) {
+        constraints.push(isAr ? 'لا يوجد موقع مرجعي للمقارنة المباشرة' : isEn ? 'no benchmark URL provided for direct comparison' : 'aucune URL benchmark fournie pour comparaison directe');
+    }
+    if (competitorCount >= 8) {
+        constraints.push(isAr ? 'ضغط منافسين مرتفع على SERP' : isEn ? 'high competitor pressure on SERP' : 'pression concurrentielle élevée sur la SERP');
+    }
+    if (localConfirmed === 0) {
+        constraints.push(isAr ? 'الفائز المحلي يحتاج تأكيدا ميدانيا' : isEn ? 'local winner still needs field validation' : 'leader local à confirmer terrain');
+    }
+    if (sourceCount < 4) {
+        constraints.push(isAr ? 'عدد مصادر السوق محدود' : isEn ? 'limited market source depth' : 'profondeur de sources marché limitée');
+    }
+    if (budgetTier === 'lean') {
+        constraints.push(isAr ? 'الميزانية تفرض اختبارا ضيقا لا حملة واسعة' : isEn ? 'budget requires a narrow test, not a broad campaign' : 'budget impose un test étroit, pas une campagne large');
+    }
+    if (archetype === 'ecommerce_product') {
+        constraints.push(isAr ? 'يجب إثبات السعر والتوصيل والضمان قبل الوعد الكبير' : isEn ? 'price, delivery and guarantee must be proven before the big promise' : 'prix, livraison et garantie à prouver avant grande promesse');
+    }
+    return stpArray(constraints, 8);
+}
+
+function inferStpOperatingContext({ query = '', geo = '', lang = 'fr', url = '', budget = '', objective = '', businessModel = '', context = {}, competitorData = {}, userSiteData = null, archetype = 'general_market' } = {}) {
+    const market = localizeCompetitorMarketName(geo || competitorData?.geo || context?.selectedCountry, lang);
+    const competitors = stpCompetitorCandidates(competitorData);
+    const corpus = [
+        query,
+        competitorData?.productServiceAudit?.coreOffering,
+        competitorData?.grandSlamOfferBlueprint?.theIrresistibleOffer,
+        competitorData?.marketInsights?.serpIntent,
+        userSiteData?.content?.title,
+        userSiteData?.content?.description,
+        competitors.map(c => `${c.title} ${c.snippet} ${c.type}`).join(' ')
+    ].filter(Boolean).join(' ');
+
+    const inferredValues = {
+        offer: stpFirstUseful([
+            context?.offer,
+            competitorData?.productServiceAudit?.coreOffering,
+            competitorData?.grandSlamOfferBlueprint?.theIrresistibleOffer,
+            query
+        ], 180),
+        audience: stpFirstUseful([
+            context?.audience,
+            context?.userAudience,
+            inferStpAudienceLabel(archetype, query, market, lang)
+        ], 180),
+        objective: stpFirstUseful([
+            context?.objective,
+            objective,
+            competitorData?.winningMove,
+            lang === 'ar' ? 'اختيار شريحة أولى قابلة للكسب بسرعة' : lang === 'en' ? 'choose the first segment that can be won quickly' : 'choisir la première poche de marché gagnable rapidement'
+        ], 180),
+        businessModel: stpFirstUseful([
+            context?.businessModel,
+            businessModel,
+            inferStpBusinessModelLabel(archetype, corpus, lang)
+        ], 140),
+        cityOrRegion: stpFirstUseful([
+            context?.cityOrRegion,
+            competitorData?.geoSourceAudit?.target,
+            geo,
+            market
+        ], 110),
+        knownCompetitors: stpArray(context?.knownCompetitors?.length ? context.knownCompetitors : competitors.map(c => c.domain || c.title || c.url), 10),
+        constraints: stpArray(context?.constraints?.length ? context.constraints : inferStpConstraints({ competitorData, archetype, budget, url, lang }), 8),
+        channels: stpArray(context?.channels?.length ? context.channels : inferStpChannels({ archetype, competitorData, query, lang }), 8)
+    };
+
+    const userProvided = {
+        offer: Boolean(stpText(context?.offer, 30)),
+        audience: Boolean(stpText(context?.audience || context?.userAudience, 30)),
+        objective: Boolean(stpText(context?.objective || objective, 30)),
+        businessModel: Boolean(stpText(context?.businessModel || businessModel, 30)),
+        cityOrRegion: Boolean(stpText(context?.cityOrRegion, 30)),
+        knownCompetitors: Boolean(stpArray(context?.knownCompetitors, 1).length),
+        constraints: Boolean(stpArray(context?.constraints, 1).length),
+        channels: Boolean(stpArray(context?.channels, 1).length)
+    };
+
+    const field = (key, value, source, confidence = 'MEDIUM', evidence = []) => ({
+        key,
+        value,
+        source: userProvided[key] ? 'user_override' : source,
+        confidence: userProvided[key] ? 'HIGH' : confidence,
+        evidence: stpArray(evidence, 5),
+        inferred: !userProvided[key]
+    });
+
+    const fields = {
+        offer: field('offer', inferredValues.offer, 'Product/service + SERP intent layer', inferredValues.offer === query ? 'LOW' : 'MEDIUM', [competitorData?.productServiceAudit?.coreOffering, competitorData?.grandSlamOfferBlueprint?.theIrresistibleOffer, query]),
+        audience: field('audience', inferredValues.audience, 'Audience archetype layer', 'MEDIUM', [archetype, competitorData?.marketInsights?.serpIntent]),
+        objective: field('objective', inferredValues.objective, 'Winning move + STP objective layer', 'MEDIUM', [competitorData?.winningMove, objective]),
+        businessModel: field('businessModel', inferredValues.businessModel, 'Business archetype detector', 'MEDIUM', [archetype]),
+        cityOrRegion: field('cityOrRegion', inferredValues.cityOrRegion, 'Geo resolution layer', 'HIGH', [geo, competitorData?.geoSourceAudit?.target]),
+        knownCompetitors: field('knownCompetitors', inferredValues.knownCompetitors, 'Competitor SERP layer', competitors.length ? 'HIGH' : 'LOW', competitors.slice(0, 5).map(c => c.url || c.domain)),
+        constraints: field('constraints', inferredValues.constraints, 'Risk and feasibility layer', 'MEDIUM', [competitorData?.dataIntegrity?.riskLevel, inferStpBudgetTier(budget)]),
+        channels: field('channels', inferredValues.channels, 'Channel access layer', 'MEDIUM', [archetype, competitorData?.geoSourceAudit?.localCompetitorsConfirmed])
+    };
+
+    return {
+        mode: Object.values(userProvided).some(Boolean) ? 'user_enriched' : 'fully_deduced',
+        values: inferredValues,
+        fields,
+        evidence: Object.values(fields)
+            .filter(item => item.value && item.inferred)
+            .map(item => stpEvidence('inferred', Array.isArray(item.value) ? item.value.join(', ') : item.value, item.source, item.confidence, item.evidence))
+            .filter(Boolean)
+    };
+}
+
 function buildBeachheadMarketDecision({ segments = [], competitorData = {}, inputs = {}, archetype = 'general_market', lang = 'fr' } = {}) {
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
@@ -10694,15 +10939,17 @@ function buildStpPersona(segment = {}, inputs = {}, competitorData = {}, lang = 
     const isEn = lang === 'en';
     const market = localizeCompetitorMarketName(inputs.geo || competitorData?.geo, lang);
     const query = stpText(inputs.query || competitorData?.query, 120);
+    const audience = stpText(inputs.context?.audience || inputs.context?.userAudience, 160);
     const leader = competitorData?.top10Competitors?.[0] || competitorData?.competitors?.[0] || {};
     const alternatives = stpArray([
+        ...(inputs.context?.knownCompetitors || []),
         leader.domain || leader.displayed_link || leader.link,
         ...(competitorData?.foreignBenchmarkLinks || []).slice(0, 2).map(x => x.domain || x.url),
         isAr ? 'عدم الشراء أو انتظار توصية' : isEn ? 'doing nothing or waiting for a referral' : 'ne rien faire ou attendre une recommandation'
     ], 5);
 
     return {
-        name: isAr ? 'الشخصية ذات الأولوية' : isEn ? 'Priority persona' : 'Persona prioritaire',
+        name: audience || (isAr ? 'الشخصية ذات الأولوية' : isEn ? 'Priority persona' : 'Persona prioritaire'),
         segmentId: segment.id,
         market,
         jobToBeDone: isAr
@@ -10734,13 +10981,179 @@ function buildStpPersona(segment = {}, inputs = {}, competitorData = {}, lang = 
     };
 }
 
+function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {}, beachheadMarket = {}, archetype = 'general_market', lang = 'fr' } = {}) {
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const market = localizeCompetitorMarketName(inputs.geo || competitorData?.geo, lang);
+    const query = stpText(inputs.query || competitorData?.query, 120);
+    const ctx = inputs.context || {};
+    const channels = stpArray(ctx.channels, 6);
+    const constraints = stpArray(ctx.constraints, 5);
+    const knownCompetitors = stpArray(ctx.knownCompetitors, 5);
+    const offer = stpText(ctx.offer || query, 160);
+    const defaultProof = stpArray([
+        isAr ? 'إثبات النتيجة قبل الوعد' : isEn ? 'proof of result before the promise' : 'preuve du résultat avant la promesse',
+        isAr ? 'سعر وشروط واضحة' : isEn ? 'clear price and terms' : 'prix et conditions clairs',
+        isAr ? 'مقارنة واضحة مع البدائل' : isEn ? 'clear comparison against alternatives' : 'comparaison claire contre les alternatives'
+    ], 4);
+
+    const labels = {
+        highIntent: isAr ? 'صاحب نية شراء عالية' : isEn ? 'High-intent buyer' : 'Acheteur à forte intention',
+        comparator: isAr ? 'المقارن قبل القرار' : isEn ? 'Comparison shopper' : 'Comparateur avant décision',
+        trust: isAr ? 'طالب الثقة والدليل' : isEn ? 'Trust and proof seeker' : 'Chercheur de preuve',
+        budget: isAr ? 'حساس للميزانية' : isEn ? 'Budget-sensitive buyer' : 'Sensible au budget',
+        expert: isAr ? 'باحث عن الخبير' : isEn ? 'Expertise seeker' : 'Chercheur d’expertise',
+        first: isAr ? 'هاجم أولا' : isEn ? 'Attack first' : 'Attaquer en premier',
+        nextLean: isAr ? 'التالي بعد إثبات عضوي وميزانية صغيرة' : isEn ? 'Next after organic proof with lean budget' : 'Suivant après preuve organique avec petit budget',
+        nextFocused: isAr ? 'التالي إذا توفر Budget اختبار مركز' : isEn ? 'Next with a focused test budget' : 'Suivant avec budget test focalisé',
+        nextPower: isAr ? 'التالي إذا توفر Budget توسع' : isEn ? 'Next with scale budget' : 'Suivant avec budget de scale'
+    };
+    const fallbackSegments = [
+        {
+            id: 'persona-high-intent',
+            name: `${labels.highIntent} · ${market}`,
+            need: isAr ? `يريد ${offer} بسرعة وبأقل مخاطرة` : isEn ? `Wants ${offer} quickly with less risk` : `Veut ${offer} vite avec moins de risque`,
+            accessChannels: channels.length ? channels : ['SEO', 'landing page', 'WhatsApp'],
+            buyingTriggers: isAr ? ['سرعة القرار', 'وضوح العرض', 'دليل النتيجة'] : isEn ? ['speed to decision', 'clear offer', 'proof of outcome'] : ['rapidité de décision', 'offre claire', 'preuve du résultat'],
+            confidence: 'MEDIUM'
+        },
+        {
+            id: 'persona-comparator',
+            name: `${labels.comparator} · SERP`,
+            need: isAr ? 'يقارن المنافسين قبل أن يثق' : isEn ? 'Compares competitors before trusting' : 'Compare les concurrents avant de faire confiance',
+            accessChannels: ['SERP', 'comparison page', 'reviews'],
+            buyingTriggers: isAr ? ['السعر', 'البدائل', 'الشروط'] : isEn ? ['price', 'alternatives', 'terms'] : ['prix', 'alternatives', 'conditions'],
+            confidence: 'MEDIUM'
+        },
+        {
+            id: 'persona-proof-seeker',
+            name: `${labels.trust} · ${market}`,
+            need: isAr ? 'يريد إثباتا قبل ترك بياناته أو الشراء' : isEn ? 'Needs proof before submitting details or buying' : 'Veut une preuve avant de laisser ses infos ou acheter',
+            accessChannels: channels.length ? channels : ['case studies', 'social proof', 'retargeting'],
+            buyingTriggers: isAr ? ['آراء العملاء', 'الضمان', 'قبل/بعد'] : isEn ? ['reviews', 'guarantee', 'before/after'] : ['avis', 'garantie', 'avant/après'],
+            confidence: 'MEDIUM'
+        },
+        {
+            id: 'persona-budget-sensitive',
+            name: `${labels.budget} · ${market}`,
+            need: isAr ? 'يريد أفضل قيمة بدون مخاطرة مالية' : isEn ? 'Wants best value without financial risk' : 'Cherche la meilleure valeur sans risque financier',
+            accessChannels: ['offer page', 'pricing page', 'WhatsApp'],
+            buyingTriggers: isAr ? ['السعر', 'الدفع', 'العرض'] : isEn ? ['price', 'payment', 'offer'] : ['prix', 'paiement', 'offre'],
+            confidence: 'LOW'
+        },
+        {
+            id: 'persona-expertise-seeker',
+            name: `${labels.expert} · ${market}`,
+            need: isAr ? 'يريد اختيار حل يبدو أكثر خبرة وتنظيما' : isEn ? 'Wants the solution that looks most expert and structured' : 'Cherche la solution la plus experte et structurée',
+            accessChannels: archetype === 'b2b_service' ? ['LinkedIn', 'case studies', 'direct outreach'] : ['content', 'FAQ', 'comparison'],
+            buyingTriggers: isAr ? ['الخبرة', 'التخصص', 'وضوح المنهج'] : isEn ? ['expertise', 'specialization', 'clear method'] : ['expertise', 'spécialisation', 'méthode claire'],
+            confidence: 'LOW'
+        }
+    ];
+
+    const merged = [];
+    [...(segments || []), ...fallbackSegments].forEach(segment => {
+        if (!segment?.id || merged.some(item => item.id === segment.id)) return;
+        merged.push(segment);
+    });
+
+    if (beachheadMarket?.segmentId) {
+        merged.sort((a, b) => (a.id === beachheadMarket.segmentId ? -1 : b.id === beachheadMarket.segmentId ? 1 : 0));
+    }
+
+    const competitorCount = Number(competitorData?.top10Competitors?.length || competitorData?.competitors?.length || 0);
+    const sourceCount = Number(competitorData?.observedUrls?.length || competitorData?.marketSources?.length || 0);
+    const keywordCount = Number((competitorData?.keywordStrategy?.primary || []).length + (competitorData?.keywordStrategy?.longTail || []).length);
+    let targetCount = 3;
+    if (segments.length >= 4 || competitorCount >= 5 || keywordCount >= 5) targetCount = 4;
+    if (segments.length >= 5 || competitorCount >= 8 || keywordCount >= 8) targetCount = 5;
+    if (sourceCount >= 10 && competitorCount >= 8) targetCount = 6;
+    if (sourceCount >= 14 && keywordCount >= 10) targetCount = 7;
+    targetCount = Math.min(targetCount, merged.length, 7);
+
+    const icons = ['fa-user-tie', 'fa-user-check', 'fa-user-shield', 'fa-user-clock', 'fa-user-gear', 'fa-user-graduate', 'fa-user-tag'];
+    const tones = ['34,211,238', '34,197,94', '139,92,246', '245,158,11', '236,72,153', '59,130,246', '248,113,113'];
+    const ageRanges = {
+        b2b_service: ['28-45', '32-55', '26-40', '30-50', '35-60', '24-38', '40-60'],
+        ecommerce_product: ['22-44', '25-50', '20-38', '28-55', '18-34', '35-60', '24-45'],
+        local_service: ['25-55', '30-60', '22-45', '35-65', '24-50', '28-58', '40-70'],
+        content_education: ['18-35', '22-44', '25-50', '16-30', '30-55', '20-40', '35-60'],
+        general_market: ['24-45', '28-55', '22-40', '30-60', '18-34', '35-58', '25-50']
+    };
+    const budgetTier = inferStpBudgetTier(inputs.budget);
+    const budgetLabel = (index) => {
+        if (index === 0) return labels.first;
+        if (budgetTier === 'lean') return labels.nextLean;
+        if (budgetTier === 'power') return labels.nextPower;
+        return labels.nextFocused;
+    };
+    const attackAngleFor = (segment, index) => {
+        const text = `${segment?.id || ''} ${segment?.name || ''} ${segment?.need || ''}`.toLowerCase();
+        if (index === 0) return beachheadMarket?.accessPath || (isAr ? 'ابدأ برسالة دقيقة وقناة وصول واحدة' : isEn ? 'Start with one sharp message and one access channel' : 'Commencer par un message précis et un canal d’accès');
+        if (/compar|price|prix|سعر|budget/.test(text)) return isAr ? 'هاجمه بصفحة مقارنة وسعر وشروط واضحة' : isEn ? 'Attack with comparison, price clarity and terms' : 'Attaquer par comparaison, prix clair et conditions';
+        if (/proof|trust|avis|review|ثقة|دليل/.test(text)) return isAr ? 'هاجمه بالأدلة والضمان والاعتراضات' : isEn ? 'Attack with proof, guarantee and objections' : 'Attaquer par preuve, garantie et objections';
+        if (/agency|b2b|expert|service|وكالة|خبير/.test(text)) return isAr ? 'هاجمه بسلطة الخبرة وحالة استخدام واضحة' : isEn ? 'Attack with expertise authority and use case' : 'Attaquer par autorité experte et cas d’usage';
+        return isAr ? 'هاجمه بوعد أكثر وضوحا ودليل أسرع' : isEn ? 'Attack with a clearer promise and faster proof' : 'Attaquer avec une promesse plus claire et une preuve plus rapide';
+    };
+
+    return merged.slice(0, targetCount).map((segment, index) => {
+        const persona = buildStpPersona(segment, inputs, competitorData, lang);
+        const score = Number(segment?.scores?.total || Math.max(44, 78 - index * 7));
+        const segmentChannels = stpArray(segment.accessChannels || channels, 5);
+        const attackChannels = segmentChannels.map(channel => classifyStpAttackChannel(channel, lang));
+        const triggers = stpArray(segment.buyingTriggers || segment.evidence, 5);
+        const pains = stpArray(persona.pains, 4);
+        return {
+            id: segment.id || `persona-${index + 1}`,
+            number: index + 1,
+            avatar: `P${index + 1}`,
+            icon: icons[index] || 'fa-user',
+            tone: tones[index] || '34,211,238',
+            title: segment.name || persona.name,
+            role: isAr ? `Persona ${index + 1}` : isEn ? `Persona ${index + 1}` : `Persona ${index + 1}`,
+            ageRange: ageRanges[archetype]?.[index] || ageRanges.general_market[index] || '25-50',
+            summary: persona.jobToBeDone,
+            market,
+            priorityScore: clamp(Math.round(score), 0, 100),
+            beachheadPriority: {
+                rank: index + 1,
+                firstToAttack: index === 0,
+                budgetPath: budgetLabel(index),
+                reason: index === 0 ? beachheadMarket?.rationale || segment.need : segment.need
+            },
+            attackAngle: attackAngleFor(segment, index),
+            confidence: segment.confidence || persona.confidence || 'MEDIUM',
+            details: {
+                need: segment.need || persona.jobToBeDone,
+                ageRange: ageRanges[archetype]?.[index] || ageRanges.general_market[index] || '25-50',
+                attackAngle: attackAngleFor(segment, index),
+                budgetPath: budgetLabel(index),
+                channels: segmentChannels,
+                attackChannels,
+                buyingTriggers: triggers,
+                pains,
+                objections: stpArray(persona.objections, 4),
+                proofNeeded: stpArray(persona.proofNeeded || defaultProof, 4),
+                competitors: knownCompetitors.slice(0, 4),
+                constraints: constraints.slice(0, 4)
+            },
+            evidence: stpArray([
+                ...(segment.evidence || []),
+                knownCompetitors.length ? `Competitors: ${knownCompetitors.slice(0, 3).join(', ')}` : '',
+                channels.length ? `Channels: ${channels.slice(0, 3).join(', ')}` : ''
+            ], 5)
+        };
+    });
+}
+
 function buildStpPositioning({ segment, persona, competitorData = {}, inputs = {}, lang = 'fr' }) {
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
     const query = stpText(inputs.query || competitorData?.query, 140);
+    const offer = stpText(inputs.context?.offer || query, 160);
     const market = localizeCompetitorMarketName(inputs.geo || competitorData?.geo, lang);
     const leader = competitorData?.top10Competitors?.[0] || competitorData?.competitors?.[0] || {};
-    const alternative = stpText(leader.domain || leader.displayed_link || leader.link || leader.url, 120);
+    const alternative = stpText((inputs.context?.knownCompetitors || [])[0] || leader.domain || leader.displayed_link || leader.link || leader.url, 120);
     const differentiator = stpText(
         competitorData?.productServiceAudit?.killShotFeature ||
         competitorData?.blueOceanStrategy?.blueOceanMoves?.[0] ||
@@ -10754,10 +11167,10 @@ function buildStpPositioning({ segment, persona, competitorData = {}, inputs = {
     ], 4);
 
     const statement = isAr
-        ? `لـ ${segment?.name || 'الشريحة المختارة'} في ${market}، يتموضع "${query}" كحل أوضح وأكثر قابلية للتحقق من ${alternative || 'البدائل الحالية'} عبر ${differentiator || 'وعد محدد مدعوم بالأدلة قبل الادعاء'}.`
+        ? `لـ ${segment?.name || 'الشريحة المختارة'} في ${market}، يتموضع "${offer}" كحل أوضح وأكثر قابلية للتحقق من ${alternative || 'البدائل الحالية'} عبر ${differentiator || 'وعد محدد مدعوم بالأدلة قبل الادعاء'}.`
         : isEn
-            ? `For ${segment?.name || 'the selected segment'} in ${market}, "${query}" should be positioned as a clearer, more verifiable alternative to ${alternative || 'current alternatives'} through ${differentiator || 'a specific proof-led promise'}.`
-            : `Pour ${segment?.name || 'le segment choisi'} en ${market}, "${query}" doit se positionner comme une alternative plus claire et vérifiable que ${alternative || 'les alternatives actuelles'} grâce à ${differentiator || 'une promesse précise soutenue par des preuves'}.`;
+            ? `For ${segment?.name || 'the selected segment'} in ${market}, "${offer}" should be positioned as a clearer, more verifiable alternative to ${alternative || 'current alternatives'} through ${differentiator || 'a specific proof-led promise'}.`
+            : `Pour ${segment?.name || 'le segment choisi'} en ${market}, "${offer}" doit se positionner comme une alternative plus claire et vérifiable que ${alternative || 'les alternatives actuelles'} grâce à ${differentiator || 'une promesse précise soutenue par des preuves'}.`;
 
     return {
         statement,
@@ -10770,6 +11183,129 @@ function buildStpPositioning({ segment, persona, competitorData = {}, inputs = {
     };
 }
 
+function mergeStpPersonaAiOverlay(baseCards = [], aiCards = []) {
+    const overlayById = new Map((aiCards || [])
+        .filter(card => card && typeof card === 'object')
+        .map(card => [stpText(card.id || card.personaId, 80), card])
+        .filter(([id]) => id));
+    return (baseCards || []).map(card => {
+        const overlay = overlayById.get(card.id) || (aiCards || [])[Number(card.number || 1) - 1] || {};
+        if (!overlay || typeof overlay !== 'object') return card;
+        const mergedDetails = {
+            ...(card.details || {}),
+            ...(overlay.details && typeof overlay.details === 'object' ? overlay.details : {})
+        };
+        return {
+            ...card,
+            title: stpText(overlay.title || overlay.name, 180) || card.title,
+            ageRange: stpText(overlay.ageRange, 40) || card.ageRange,
+            summary: stpText(overlay.summary || overlay.jobToBeDone, 360) || card.summary,
+            attackAngle: stpText(overlay.attackAngle, 260) || card.attackAngle,
+            confidence: ['HIGH', 'MEDIUM', 'LOW'].includes(overlay.confidence) ? overlay.confidence : card.confidence,
+            details: {
+                ...mergedDetails,
+                need: stpText(mergedDetails.need, 260) || card.details?.need,
+                ageRange: stpText(mergedDetails.ageRange || overlay.ageRange, 40) || card.details?.ageRange,
+                attackAngle: stpText(mergedDetails.attackAngle || overlay.attackAngle, 260) || card.details?.attackAngle,
+                channels: stpArray(mergedDetails.channels || card.details?.channels, 6),
+                attackChannels: Array.isArray(mergedDetails.attackChannels) && mergedDetails.attackChannels.length
+                    ? mergedDetails.attackChannels.slice(0, 6).map(item => typeof item === 'string' ? classifyStpAttackChannel(item) : {
+                        name: stpText(item.name || item.channel, 80),
+                        type: stpText(item.type || 'Experiment', 40),
+                        role: stpText(item.role || item.why, 160),
+                        timing: stpText(item.timing || item.stage, 40)
+                    }).filter(item => item.name || item.type)
+                    : card.details?.attackChannels,
+                buyingTriggers: stpArray(mergedDetails.buyingTriggers || mergedDetails.triggers || card.details?.buyingTriggers, 6),
+                pains: stpArray(mergedDetails.pains || card.details?.pains, 5),
+                objections: stpArray(mergedDetails.objections || card.details?.objections, 5),
+                proofNeeded: stpArray(mergedDetails.proofNeeded || card.details?.proofNeeded, 5),
+                competitors: stpArray(mergedDetails.competitors || card.details?.competitors, 5),
+                constraints: stpArray(mergedDetails.constraints || card.details?.constraints, 5)
+            },
+            evidence: stpArray([...(card.evidence || []), ...(overlay.evidence || []), ...(overlay.limits || [])], 7),
+            aiRefined: true
+        };
+    });
+}
+
+async function maybeRefineStpPersonasWithAi({ personaCards = [], inputs = {}, competitorData = {}, beachheadMarket = {}, positioning = {}, lang = 'fr' } = {}) {
+    try {
+        if (!personaCards.length) return null;
+        const payload = JSON.stringify({
+            rules: [
+                'Keep the same number of personas and same ids.',
+                'Do not invent observed facts.',
+                'Age is allowed only as an inferred demographic hypothesis, never as observed data.',
+                'Each persona must include attackAngle and beachhead/budget order.',
+                'If proof is weak, say what must be verified.'
+            ],
+            inputs,
+            beachheadMarket,
+            positioning,
+            personaCards,
+            marketSignals: {
+                competitors: (competitorData?.top10Competitors || competitorData?.competitors || []).slice(0, 8).map(c => ({
+                    title: c.title,
+                    domain: c.domain || c.displayed_link,
+                    url: c.url || c.link,
+                    snippet: c.snippet
+                })),
+                keywordStrategy: competitorData?.keywordStrategy || {},
+                marketInsights: competitorData?.marketInsights || {},
+                productServiceAudit: competitorData?.productServiceAudit || {},
+                dataIntegrity: competitorData?.dataIntegrity || {}
+            }
+        }).slice(0, 14000);
+        const langName = lang === 'ar' ? 'Arabic' : lang === 'en' ? 'English' : 'French';
+        const prompt = `You are Daka STP Persona Layer. Answer only in ${langName}.
+You refine target personas for a professional STP report using only the provided market layers.
+Return strict JSON only:
+{
+  "personas": [
+    {
+      "id": "same id from input",
+      "title": "persona name",
+      "ageRange": "inferred age range",
+      "summary": "JTBD/persona story",
+      "attackAngle": "specific marketing attack angle",
+      "confidence": "HIGH|MEDIUM|LOW",
+      "details": {
+        "need": "...",
+        "channels": ["..."],
+        "attackChannels": [{"name":"...", "type":"Inbound|Outbound|Paid|Owned|Social|Local|Partnership|Experiment", "role":"why this channel matters", "timing":"now|after-proof|scale|test"}],
+        "buyingTriggers": ["..."],
+        "pains": ["..."],
+        "objections": ["..."],
+        "proofNeeded": ["..."],
+        "competitors": ["..."],
+        "constraints": ["..."]
+      },
+      "evidence": ["short evidence from input"],
+      "limits": ["what must be verified"]
+    }
+  ]
+}
+
+DATA:
+${payload}`;
+
+        const ai = await callOpenRouterAPI(prompt, {
+            expectedFormat: 'json',
+            maxTokens: 2200,
+            temperature: 0.08,
+            context: 'STP Persona Layer',
+            systemPrompt: 'You are a senior STP strategist. Use only provided data. Return strict JSON.'
+        });
+        const personas = ai?.response?.personas;
+        if (!ai?.success || !Array.isArray(personas) || !personas.length) return null;
+        return { model: ai.model, personas };
+    } catch (error) {
+        console.warn('[STP] Persona AI layer skipped:', error.message);
+        return null;
+    }
+}
+
 async function maybeRefineStpWithAi(stpDecision, lang = 'fr') {
     try {
         const payload = JSON.stringify({
@@ -10778,6 +11314,7 @@ async function maybeRefineStpWithAi(stpDecision, lang = 'fr') {
             chosenSegment: stpDecision.targeting?.chosenSegment,
             beachheadMarket: stpDecision.beachheadMarket,
             persona: stpDecision.persona,
+            personaCards: stpDecision.personaCards,
             positioning: stpDecision.positioning,
             evidenceLedger: stpDecision.evidenceLedger
         }).slice(0, 12000);
@@ -10849,38 +11386,84 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     }
 
     const archetype = inferStpArchetype(query, competitorData, userSiteData);
+    const inferredContext = inferStpOperatingContext({
+        query,
+        geo: safeGeo,
+        lang: langPack.code,
+        url,
+        budget,
+        objective,
+        businessModel,
+        context,
+        competitorData,
+        userSiteData,
+        archetype
+    });
+    const effectiveContext = {
+        ...context,
+        ...(inferredContext.values || {}),
+        selectedCountry: context?.selectedCountry || safeGeo,
+        userAudience: context?.userAudience || inferredContext.values?.audience || '',
+        knownCompetitors: stpArray(context?.knownCompetitors?.length ? context.knownCompetitors : inferredContext.values?.knownCompetitors, 10),
+        constraints: stpArray(context?.constraints?.length ? context.constraints : inferredContext.values?.constraints, 8),
+        channels: stpArray(context?.channels?.length ? context.channels : inferredContext.values?.channels, 8)
+    };
+    const effectiveBudget = budget || effectiveContext.budget || '';
+    const effectiveObjective = objective || effectiveContext.objective || '';
+    const effectiveBusinessModel = businessModel || effectiveContext.businessModel || archetype;
+
     const rawSegments = buildStpSegmentCandidates({
         query,
         geo: safeGeo,
-        budget,
-        objective,
+        budget: effectiveBudget,
+        objective: effectiveObjective,
         competitorData,
         archetype,
         lang: langPack.code
     });
-    const scoredSegments = scoreStpSegments(rawSegments, competitorData, { budget, url });
+    const scoredSegments = scoreStpSegments(rawSegments, competitorData, { budget: effectiveBudget, url });
     const beachheadMarket = buildBeachheadMarketDecision({
         segments: scoredSegments,
         competitorData,
-        inputs: { query, geo: safeGeo, budget, objective, url, context },
+        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
         archetype,
         lang: langPack.code
     });
     const chosenSegment = scoredSegments.find(segment => segment.id === beachheadMarket.segmentId) || scoredSegments[0] || null;
-    const persona = buildStpPersona(chosenSegment, { query, geo: safeGeo, budget, objective, url }, competitorData, langPack.code);
+    const persona = buildStpPersona(chosenSegment, { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext }, competitorData, langPack.code);
     const positioning = buildStpPositioning({
         segment: chosenSegment,
         persona,
         competitorData,
-        inputs: { query, geo: safeGeo, budget, objective, url },
+        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
         lang: langPack.code
     });
+    let personaCards = buildStpPersonaCards({
+        segments: scoredSegments,
+        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
+        competitorData,
+        beachheadMarket,
+        archetype,
+        lang: langPack.code
+    });
+    const personaAiOverlay = await maybeRefineStpPersonasWithAi({
+        personaCards,
+        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
+        competitorData,
+        beachheadMarket,
+        positioning,
+        lang: langPack.code
+    });
+    if (personaAiOverlay?.personas?.length) {
+        personaCards = mergeStpPersonaAiOverlay(personaCards, personaAiOverlay.personas);
+    }
 
     const evidenceLedger = [
         stpEvidence('observed', `${competitorData?.top10Competitors?.length || competitorData?.competitors?.length || 0} competitors observed`, 'Competitor SERP layer', 'HIGH', (competitorData?.top10Competitors || []).slice(0, 5).map(c => c.url || c.link)),
         stpEvidence('observed', competitorData?.geoSourceAudit?.target, 'Geo resolution layer', 'HIGH'),
         stpEvidence('observed', (competitorData?.keywordStrategy?.primary || []).join(', '), 'Keyword strategy layer', 'MEDIUM'),
         stpEvidence('inferred', archetype, 'Business archetype detector', 'MEDIUM'),
+        ...(inferredContext.evidence || []),
         stpEvidence('inferred', `${beachheadMarket?.name || ''} | fit ${beachheadMarket?.fitScore || 0}/100`, 'Beachhead market selector', beachheadMarket?.confidence || 'MEDIUM', beachheadMarket?.criteria || []),
         stpEvidence(positioning.proof?.length ? 'observed' : 'missing', positioning.proof?.length ? positioning.proof.join(', ') : 'Positioning proof still needs verification', 'STP proof guard', positioning.proof?.length ? 'MEDIUM' : 'LOW')
     ].filter(Boolean);
@@ -10905,6 +11488,17 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         type: 'stp_decision',
         method: {
             framework: 'Segmentation -> Targeting -> Positioning',
+            processingLayers: [
+                'Input normalization: keyword, geo, language, budget, optional URL',
+                'Market acquisition: SERP, competitors, geo, keyword and proof layers',
+                'Context inference: offer, audience, business model, region, competitors, constraints and channels',
+                'Segmentation layer: market pockets and behavioral/persona candidates',
+                'Targeting layer: profitability, accessibility, proof strength and scalability scoring',
+                'Beachhead layer: first persona/segment to attack and next market by budget path',
+                'Persona prompt layer: avatar, age hypothesis, pains, triggers and attack angle',
+                'Positioning layer: promise, alternative, differentiator and proof guard',
+                'Cards renderer: persona cards first, STP details below'
+            ],
             guardrails: [
                 'No segment without observable or targetable traits',
                 'Targeting scored by profitability, scalability, accessibility, proof strength',
@@ -10918,9 +11512,15 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
             geo: safeGeo,
             lang: langPack.code,
             url: url || null,
-            budget: budget || null,
-            objective: objective || null,
-            businessModel: businessModel || archetype
+            budget: effectiveBudget || null,
+            objective: effectiveObjective || null,
+            offer: effectiveContext.offer || null,
+            audience: effectiveContext.audience || effectiveContext.userAudience || null,
+            businessModel: effectiveBusinessModel || null,
+            cityOrRegion: effectiveContext.cityOrRegion || null,
+            knownCompetitors: effectiveContext.knownCompetitors || [],
+            constraints: effectiveContext.constraints || [],
+            channels: effectiveContext.channels || []
         },
         sourceLayers: {
             competitor: 'analyzeCompetitors',
@@ -10930,9 +11530,13 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
             marketProducts: Boolean(competitorData.marketProductSources),
             userBenchmark: Boolean(competitorData.userBenchmark),
             proofModel: Boolean(competitorData.proofModel),
+            contextInference: inferredContext.mode,
+            personaPromptLayer: Boolean(personaAiOverlay?.personas?.length),
             beachhead: true,
             aiRefinement: false
         },
+        inferredContext,
+        personaPromptLayer: personaAiOverlay ? { model: personaAiOverlay.model } : null,
         segmentation: {
             archetype,
             candidates: scoredSegments
@@ -10944,6 +11548,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         },
         beachheadMarket,
         persona,
+        personaCards,
         positioning,
         actionPlan,
         decisionCards: buildStpDecisionCards({

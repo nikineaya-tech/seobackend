@@ -4767,6 +4767,18 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         beachheadFit: 'ملاءمة الانطلاق',
         nextMarket: 'السوق التالي',
         cards: 'بطاقات القرار',
+        personas: 'Personas السوق',
+        personasSub: 'Daka يستخرج 5 شخصيات قابلة للاستهداف من SERP والمنافسين والسياق.',
+        priority: 'الأولوية',
+        age: 'العمر',
+        attackAngle: 'زاوية الهجوم',
+        budgetPath: 'مسار الميزانية',
+        channels: 'القنوات',
+        triggers: 'محفزات القرار',
+        pains: 'المشاكل',
+        proofNeeded: 'الدليل المطلوب',
+        stpDetails: 'تفاصيل STP',
+        inferredContext: 'السياق المستنتج',
         score: 'نقطة القرار',
         proof: 'حالة الدليل',
         noData: 'غير متوفر',
@@ -4794,6 +4806,18 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         beachheadFit: 'Beachhead fit',
         nextMarket: 'Next market',
         cards: 'Decision cards',
+        personas: 'Market personas',
+        personasSub: 'Daka extracts 5 targetable personas from SERP, competitors and market context.',
+        priority: 'Priority',
+        age: 'Age',
+        attackAngle: 'Attack angle',
+        budgetPath: 'Budget path',
+        channels: 'Channels',
+        triggers: 'Decision triggers',
+        pains: 'Pains',
+        proofNeeded: 'Proof needed',
+        stpDetails: 'STP details',
+        inferredContext: 'Inferred context',
         score: 'Decision score',
         proof: 'Proof status',
         noData: 'Not available',
@@ -4821,6 +4845,18 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         beachheadFit: 'Fit beachhead',
         nextMarket: 'Marché suivant',
         cards: 'Cartes décision',
+        personas: 'Personas marché',
+        personasSub: 'Daka extrait 5 personas ciblables depuis la SERP, les concurrents et le contexte marché.',
+        priority: 'Priorité',
+        age: 'Âge',
+        attackAngle: 'Angle d’attaque',
+        budgetPath: 'Chemin budget',
+        channels: 'Canaux',
+        triggers: 'Déclencheurs',
+        pains: 'Douleurs',
+        proofNeeded: 'Preuves à fournir',
+        stpDetails: 'Détails STP',
+        inferredContext: 'Contexte déduit',
         score: 'Score décision',
         proof: 'Statut preuve',
         noData: 'Non disponible',
@@ -4923,6 +4959,20 @@ function ensureStpDecisionStyles() {
       .daka-stp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.daka-stp-card{min-width:0;border:1px solid rgba(148,163,184,.13);border-radius:18px;background:rgba(2,6,23,.46);padding:14px}.daka-stp-card p{margin:8px 0 0;color:#cbd5e1;line-height:1.58;font-size:.83rem}
       .daka-stp-card small,.daka-stp-chip{color:#8aa0ba;font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.daka-stp-chip{display:inline-flex;padding:5px 8px;border-radius:999px;background:rgba(34,211,238,.1);color:#7dd3fc;margin:4px 6px 0 0}
       .daka-stp-decision-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+      .daka-stp-persona-head{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;margin:18px 0 12px}
+      .daka-stp-persona-head p{margin:6px 0 0;color:#9fb2cb;line-height:1.55;font-size:.82rem}
+      .daka-stp-personas{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:16px}
+      .daka-stp-persona{position:relative;overflow:hidden;border:1px solid rgba(var(--persona-rgb,34,211,238),.24);border-radius:22px;background:radial-gradient(circle at 0 0,rgba(var(--persona-rgb,34,211,238),.18),transparent 34%),linear-gradient(145deg,rgba(8,17,31,.92),rgba(2,6,23,.72));padding:16px;min-height:310px;display:grid;gap:10px;align-content:start}
+      .daka-stp-persona:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,rgba(var(--persona-rgb,34,211,238),1),transparent)}
+      .daka-stp-persona-top{display:flex;align-items:center;gap:12px;min-width:0}
+      .daka-stp-avatar{width:58px;height:58px;border-radius:999px;display:grid;place-items:center;flex:0 0 auto;background:radial-gradient(circle,rgba(var(--persona-rgb,34,211,238),.34),rgba(15,23,42,.88));border:1px solid rgba(var(--persona-rgb,34,211,238),.38);box-shadow:0 0 28px rgba(var(--persona-rgb,34,211,238),.18)}
+      .daka-stp-avatar i{color:rgb(var(--persona-rgb,34,211,238));font-size:1.35rem}
+      .daka-stp-persona h3{font-size:.98rem;line-height:1.3;margin:0;color:#fff}
+      .daka-stp-persona p{margin:0;color:#cbd5e1;line-height:1.55;font-size:.8rem}
+      .daka-stp-mini-grid{display:grid;grid-template-columns:1fr;gap:8px}
+      .daka-stp-mini{border:1px solid rgba(148,163,184,.09);border-radius:14px;background:rgba(2,6,23,.35);padding:9px}
+      .daka-stp-mini strong{display:block;color:#eaf6ff;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+      .daka-stp-mini span{display:block;color:#9fb2cb;font-size:.75rem;line-height:1.45}
       .daka-stp-card[data-tone]{position:relative;overflow:hidden;border-color:rgba(var(--tone-rgb,34,211,238),.22);background:linear-gradient(145deg,rgba(var(--tone-rgb,34,211,238),.10),rgba(2,6,23,.54))}
       .daka-stp-card[data-tone]:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,rgba(var(--tone-rgb,34,211,238),1),transparent)}
       .daka-stp-card[data-tone] i{color:rgb(var(--tone-rgb,34,211,238));filter:drop-shadow(0 0 10px rgba(var(--tone-rgb,34,211,238),.35))}
@@ -4934,7 +4984,7 @@ function ensureStpDecisionStyles() {
       .daka-stp-list{display:grid;gap:8px;margin:10px 0 0;padding:0}.daka-stp-list li{list-style:none;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(148,163,184,.08);color:#dbeafe;font-size:.78rem;line-height:1.5}
       .daka-stp-action{border-inline-start:3px solid #22c55e}.daka-stp-evidence[data-type="missing"]{border-inline-start:3px solid #f59e0b}.daka-stp-evidence[data-type="observed"]{border-inline-start:3px solid #22d3ee}.daka-stp-evidence[data-type="inferred"]{border-inline-start:3px solid #a78bfa}
       .daka-stp-section{margin-top:12px}.daka-stp-section summary{cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid rgba(148,163,184,.13);border-radius:16px;background:rgba(15,23,42,.62);color:#eaf6ff;font-weight:950}.daka-stp-section summary::-webkit-details-marker{display:none}.daka-stp-section-body{padding-top:12px}
-      @media(max-width:780px){.daka-stp-hero,.daka-stp-grid,.daka-stp-beachhead{grid-template-columns:1fr}.daka-stp-score{min-height:138px;max-width:180px;margin:auto}}
+      @media(max-width:780px){.daka-stp-hero,.daka-stp-grid,.daka-stp-beachhead{grid-template-columns:1fr}.daka-stp-score{min-height:138px;max-width:180px;margin:auto}.daka-stp-persona-head{display:grid}.daka-stp-personas{grid-template-columns:1fr}}
     `;
     document.head.appendChild(style);
 }
@@ -4975,6 +5025,126 @@ function normalizeBackendStpCard(card = {}) {
     };
 }
 
+function stpUiObjectArray(value, max = 6) {
+    const list = Array.isArray(value) ? value : [];
+    return list
+        .filter(item => item && typeof item === 'object')
+        .slice(0, max);
+}
+
+function renderStpMini(label, value) {
+    const text = Array.isArray(value) ? stpUiArray(value, 5).join(' · ') : stpUiText(value);
+    if (!text) return '';
+    return `<div class="daka-stp-mini"><strong>${stpUiEsc(label)}</strong><span>${stpUiEsc(text)}</span></div>`;
+}
+
+function renderStpAttackChannels(channels = [], copy = {}) {
+    const typed = stpUiObjectArray(channels, 4);
+    if (!typed.length) return '';
+    return `<div class="daka-stp-mini"><strong>${stpUiEsc(copy.channels || 'Channels')}</strong>${typed.map(item => {
+        const name = stpUiText(item.name || item.channel);
+        const type = stpUiText(item.type, 'Experiment');
+        const role = stpUiText(item.role || item.why);
+        return `<span><b style="color:#eaf6ff">${stpUiEsc(type)}</b>${name ? ` · ${stpUiEsc(name)}` : ''}${role ? `<br>${stpUiEsc(role)}` : ''}</span>`;
+    }).join('')}</div>`;
+}
+
+function renderStpPersonaCards(personaCards = [], copy = {}) {
+    const cards = Array.isArray(personaCards) ? personaCards.filter(Boolean) : [];
+    if (!cards.length) return '';
+    return `<div class="daka-stp-persona-head">
+      <div>
+        <span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas || 'Personas')}</span>
+        <p>${stpUiEsc(copy.personasSub || '')}</p>
+      </div>
+      <span class="daka-stp-chip">${cards.length} personas</span>
+    </div>
+    <div class="daka-stp-personas">
+      ${cards.map((card, index) => {
+        const details = card.details || {};
+        const tone = stpUiText(card.tone, '34,211,238');
+        const priority = card.beachheadPriority || {};
+        const score = stpUiText(card.priorityScore, '');
+        return `<article class="daka-stp-persona" style="--persona-rgb:${stpUiEsc(tone)}">
+          <div class="daka-stp-persona-top">
+            <div class="daka-stp-avatar"><i class="fas ${stpUiEsc(card.icon || 'fa-user')}"></i></div>
+            <div style="min-width:0">
+              <small class="daka-stp-chip">${stpUiEsc(card.role || `Persona ${index + 1}`)}</small>
+              <h3>${stpUiEsc(stpUiText(card.title, `Persona ${index + 1}`))}</h3>
+            </div>
+          </div>
+          <div class="daka-stp-pill-row">
+            ${score ? `<span class="daka-stp-chip">${stpUiEsc(copy.priority || 'Priority')}: ${stpUiEsc(score)}/100</span>` : ''}
+            ${card.ageRange || details.ageRange ? `<span class="daka-stp-chip">${stpUiEsc(copy.age || 'Age')}: ${stpUiEsc(stpUiText(card.ageRange || details.ageRange))}</span>` : ''}
+            ${card.confidence ? `<span class="daka-stp-chip">${stpUiEsc(card.confidence)}</span>` : ''}
+          </div>
+          ${card.summary ? `<p>${stpUiEsc(card.summary)}</p>` : ''}
+          <div class="daka-stp-mini-grid">
+            ${renderStpMini(copy.budgetPath || 'Budget path', priority.budgetPath || details.budgetPath)}
+            ${renderStpMini(copy.attackAngle || 'Attack angle', card.attackAngle || details.attackAngle)}
+            ${renderStpAttackChannels(details.attackChannels, copy)}
+            ${renderStpMini(copy.triggers || 'Triggers', details.buyingTriggers)}
+            ${renderStpMini(copy.pains || 'Pains', details.pains)}
+            ${renderStpMini(copy.proofNeeded || 'Proof needed', details.proofNeeded)}
+          </div>
+        </article>`;
+      }).join('')}
+    </div>`;
+}
+
+function renderStpInferredContext(inferredContext = {}, copy = {}) {
+    const fields = inferredContext?.fields && typeof inferredContext.fields === 'object' ? inferredContext.fields : {};
+    const isAr = /السياق|المستنتج|Personas السوق/.test(`${copy.inferredContext || ''} ${copy.personas || ''}`);
+    const isEn = /Inferred|Market personas/.test(`${copy.inferredContext || ''} ${copy.personas || ''}`);
+    const labels = isAr ? {
+        offer: 'العرض',
+        audience: 'الجمهور',
+        objective: 'الهدف',
+        businessModel: 'نموذج العمل',
+        cityOrRegion: 'منطقة الانطلاق',
+        knownCompetitors: 'المنافسون',
+        constraints: 'القيود',
+        channels: 'القنوات'
+    } : isEn ? {
+        offer: 'Offer',
+        audience: 'Audience',
+        objective: 'Objective',
+        businessModel: 'Business model',
+        cityOrRegion: 'Beachhead region',
+        knownCompetitors: 'Competitors',
+        constraints: 'Constraints',
+        channels: 'Channels'
+    } : {
+        offer: 'Offre',
+        audience: 'Audience',
+        objective: 'Objectif',
+        businessModel: 'Modèle business',
+        cityOrRegion: 'Zone beachhead',
+        knownCompetitors: 'Concurrents',
+        constraints: 'Contraintes',
+        channels: 'Canaux'
+    };
+    const rows = Object.entries(fields)
+        .map(([key, field]) => {
+            const value = Array.isArray(field?.value) ? stpUiArray(field.value, 8).join(' · ') : stpUiText(field?.value);
+            if (!value) return '';
+            return `<article class="daka-stp-card">
+              <small>${stpUiEsc(labels[key] || key)}</small>
+              <h4 dir="auto">${stpUiEsc(value)}</h4>
+              <div class="daka-stp-pill-row">
+                <span class="daka-stp-chip">${stpUiEsc(field?.inferred ? (copy.inferred || 'Inferred') : 'User')}</span>
+                <span class="daka-stp-chip">${stpUiEsc(stpUiText(field?.confidence, 'MEDIUM'))}</span>
+              </div>
+            </article>`;
+        })
+        .filter(Boolean);
+    if (!rows.length) return '';
+    return `<details class="daka-stp-section">
+      <summary><span><i class="fas fa-brain"></i> ${stpUiEsc(copy.inferredContext || 'Inferred context')}</span><i class="fas fa-chevron-down"></i></summary>
+      <div class="daka-stp-section-body daka-stp-grid">${rows.join('')}</div>
+    </details>`;
+}
+
 function renderStpDecision(data) {
     const container = document.getElementById('resultsStpDecision');
     if (!container) return;
@@ -4988,6 +5158,8 @@ function renderStpDecision(data) {
     const actions = Array.isArray(data?.actionPlan) ? data.actionPlan : [];
     const evidence = Array.isArray(data?.evidenceLedger) ? data.evidenceLedger : [];
     const competitors = Array.isArray(data?.competitorSnapshot?.top10Competitors) ? data.competitorSnapshot.top10Competitors : [];
+    const personaCardsHtml = renderStpPersonaCards(data?.personaCards || [], copy);
+    const inferredContextHtml = renderStpInferredContext(data?.inferredContext || {}, copy);
     const beachhead = data?.beachheadMarket || {};
     const proofStatus = stpUiText(positioning.proofStatus, copy.noData);
     const actionItems = actions
@@ -5060,6 +5232,8 @@ function renderStpDecision(data) {
         <div class="daka-stp-score" style="--stp-score:${score}%"><strong>${score}</strong><span>${stpUiEsc(copy.score)}</span></div>
       </div>
 
+      ${personaCardsHtml}
+
       ${beachhead.name || beachhead.rationale ? `<div class="daka-stp-beachhead">
         <div>
           <small class="daka-stp-kicker"><i class="fas fa-location-crosshairs"></i>${stpUiEsc(copy.beachhead)}</small>
@@ -5070,9 +5244,16 @@ function renderStpDecision(data) {
         <div class="daka-stp-score" style="--stp-score:${Number(beachhead.fitScore || score)}%"><strong>${stpUiEsc(stpUiText(beachhead.fitScore, score))}</strong><span>${stpUiEsc(copy.beachheadFit)}</span></div>
       </div>` : ''}
 
-      <div class="daka-stp-decision-grid">${decisionCards}</div>
-
       <details class="daka-stp-section" open>
+        <summary><span><i class="fas fa-diagram-project"></i> ${stpUiEsc(copy.stpDetails || copy.cards)}</span><i class="fas fa-chevron-down"></i></summary>
+        <div class="daka-stp-section-body">
+          <div class="daka-stp-decision-grid">${decisionCards}</div>
+        </div>
+      </details>
+
+      ${inferredContextHtml}
+
+      <details class="daka-stp-section">
         <summary><span><i class="fas fa-shield-halved"></i> ${stpUiEsc(copy.evidence)}</span><i class="fas fa-chevron-down"></i></summary>
         <div class="daka-stp-section-body">
           <ul class="daka-stp-list">${evidence.map(item => `<li class="daka-stp-evidence" data-type="${stpUiEsc(item.type || 'inferred')}"><strong>${stpUiEsc(item.type === 'missing' ? copy.missing : item.type === 'observed' ? copy.observed : copy.inferred)}</strong> · ${stpUiEsc(stpUiText(item.value, copy.noData))}<br><small>${stpUiEsc(stpUiText(item.source, 'Daka'))} · ${stpUiEsc(stpUiText(item.confidence, 'MEDIUM'))}</small></li>`).join('')}</ul>
