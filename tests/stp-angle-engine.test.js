@@ -283,3 +283,54 @@ test('arabic beauty STP personas do not expose english placeholders or evidence 
   assert.ok(model.personaCards.some(persona => /آراء|تجربة|قبل\/بعد|ضمان/.test(JSON.stringify(persona))));
   assert.ok(new Set(model.personaCards.map(persona => persona.attackAngle)).size >= 3);
 });
+
+test('arabic STP translates french product and market before visible persona formulas', () => {
+  const model = buildAngleDrivenStpModel({
+    query: 'projecteur solaire',
+    geo: 'Tunisia',
+    lang: 'ar',
+    budget: 'ميزانية صغيرة',
+    segments: [
+      { id: 's1', name: 'besoin urgent', need: 'acheter projecteur solaire rapidement', buyingTriggers: ['local', 'prix'] },
+      { id: 's2', name: 'comparateur', need: 'comparer projecteur solaire avant achat', buyingTriggers: ['comparaison', 'garantie'] }
+    ],
+    personaCards: [
+      { id: 'p1', displayName: 'Persona 1', summary: 'veut projecteur solaire rapidement', details: { buyingTriggers: ['local'], pains: ['delai flou'] } },
+      { id: 'p2', displayName: 'Persona 2', summary: 'compare projecteur solaire avant achat', details: { buyingTriggers: ['comparaison'], pains: ['choix difficile'] } },
+      { id: 'p3', displayName: 'Persona 3', summary: 'cherche preuve pour projecteur solaire', details: { buyingTriggers: ['preuve'], pains: ['peur de perdre argent'] } }
+    ],
+    competitorData: {
+      marketInsights: { painPoint: 'السعر والتوصيل والضمان غير واضحة' },
+      productServiceAudit: { missingProof: 'الضمان والبطارية ومدة التوصيل تحتاج توضيحا' }
+    }
+  });
+  const visible = JSON.stringify({ product: model.productUnderstanding, personas: model.personaCards, angles: model.marketingAngles, problems: model.problemsJtbdUseCases });
+  assert.doesNotMatch(visible, /projecteur solaire|Tunisia|veut projecteur|compare projecteur|cherche preuve pour projecteur/i);
+  assert.match(visible, /كشاف شمسي/);
+  assert.match(visible, /تونس/);
+  assert.ok(model.personaCards.every(persona => /كشاف شمسي/.test(`${persona.summary} ${persona.attackAngle} ${persona.details.attackFormula}`)));
+});
+
+test('french STP output does not expose english internal hooks', () => {
+  const model = buildAngleDrivenStpModel({
+    query: 'extracteur points noirs',
+    geo: 'Libya',
+    lang: 'fr',
+    budget: 'petit budget',
+    segments: [
+      { id: 's1', name: 'Besoin local', need: 'acheter vite', buyingTriggers: ['local', 'prix'] },
+      { id: 's2', name: 'Comparateur', need: 'comparer avant achat', buyingTriggers: ['comparaison', 'garantie'] }
+    ],
+    personaCards: [
+      { id: 'p1', displayName: 'Persona 1', summary: 'veut recevoir vite', details: { buyingTriggers: ['local'], pains: ['delai flou'] } },
+      { id: 'p2', displayName: 'Persona 2', summary: 'compare les alternatives', details: { buyingTriggers: ['comparaison'], pains: ['choix difficile'] } }
+    ],
+    competitorData: {
+      marketInsights: { painPoint: 'prix, preuve, livraison et garantie pas assez clairs' },
+      productServiceAudit: { missingProof: 'garantie, delai et preuve resultat a verifier' }
+    }
+  });
+  const visible = JSON.stringify({ personas: model.personaCards, angles: model.marketingAngles });
+  assert.doesNotMatch(visible, /win with local availability|make delivery or access concrete|show total cost and savings clearly|compare against the current alternatives|prove the result before asking/i);
+  assert.match(visible, /disponibilite locale|reponse rapide|comparer avec les alternatives|prouver le resultat/i);
+});
