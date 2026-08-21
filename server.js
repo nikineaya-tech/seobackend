@@ -10269,7 +10269,7 @@ function stpText(value, max = 220) {
 function localizeStpSubjectForReport(value = '', lang = 'fr') {
     const raw = stpText(value, 160);
     if (!raw || lang !== 'ar') return raw;
-    if (/[\u0600-\u06FF]/.test(raw)) return raw;
+    if (/[\u0600-\u06FF]/.test(raw) && !/[a-zA-Z]/.test(raw)) return raw;
     let text = raw.toLowerCase();
     const replacements = [
         [/agence\s+marketing\s+ia|ai\s+marketing\s+agency/g, 'وكالة تسويق بالذكاء الاصطناعي'],
@@ -10287,8 +10287,9 @@ function localizeStpSubjectForReport(value = '', lang = 'fr') {
         [/audit/g, 'تدقيق'],
         [/funnel/g, 'مسار البيع'],
         [/seo/g, 'تحسين محركات البحث'],
-        [/blackheads?|points?\s+noirs?/g, 'الرؤوس السوداء'],
-        [/remover|extracteur/g, 'مزيل']
+        [/blackheads?|points?\s+noirs?|الرؤوس السوداء/g, 'الرؤوس السوداء'],
+        [/extratecteur|extracteur|extractor|remover|مستخرج/g, 'مزيل'],
+        [/\bde\s+(?=الرؤوس السوداء)/g, '']
     ];
     replacements.forEach(([pattern, replacement]) => {
         text = text.replace(pattern, replacement);

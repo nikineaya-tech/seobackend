@@ -5916,6 +5916,7 @@ function stpUiText(value, fallback = '') {
         /^ev_\d+$/i.test(text) ||
         /^(proof|evidence|hook|channel|experiment|persona|angle|offer|market|result|demo|case|cta)$/i.test(text) ||
         /^(clear offer proof|price or terms clarity|proof source or proof need|short evidence from input|same id from input|same or sharper angle name)$/i.test(normalized) ||
+        /^(delivery area|response time|local contact|comparison table|competitor differences|objective criteria|verified reviews|verified customer reviews|warranty terms|visible delivery or result proof|guarantee terms|visible result proof|current price|old price if true|total cost and conditions|before-after|before-after proof|case or customer proof|customer or real-use case|real demonstration|demo|local seo|win with local availability and faster response|make delivery or access concrete)$/i.test(normalized) ||
         /^(دليل|القناة|الشخصية|العرض|السوق|hook|cta)$/i.test(text);
     return !weak ? text : fallback;
 }

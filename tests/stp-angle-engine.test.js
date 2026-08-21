@@ -243,3 +243,43 @@ test('persona display details remove nulls evidence ids and filler placeholders'
   assert.ok(model.personaCards.every(persona => persona.qualityScore >= 20));
   assert.ok(model.personaCards.every(persona => persona.details.proofNeeded.length > 0));
 });
+
+test('arabic beauty STP personas do not expose english placeholders or evidence ids', () => {
+  const model = buildAngleDrivenStpModel({
+    query: 'مزيل الرؤوس السوداء',
+    geo: 'Libya',
+    lang: 'ar',
+    budget: 'ميزانية صغيرة',
+    segments: [
+      { id: 'urgent-local', name: 'طلب محلي سريع', need: 'الحصول على أداة عناية بالبشرة بسرعة', buyingTriggers: ['توصيل سريع', 'توفر محلي'] },
+      { id: 'comparison', name: 'مقارن البدائل', need: 'اختيار أداة مناسبة دون ندم', buyingTriggers: ['مقارنة', 'سعر'] },
+      { id: 'proof-seeker', name: 'طالب الدليل', need: 'رؤية نتيجة حقيقية قبل الشراء', buyingTriggers: ['دليل', 'آراء'] }
+    ],
+    personaCards: [
+      { id: 'p1', displayName: 'سلمى المستعجلة', summary: 'تريد مزيل الرؤوس السوداء بتوصيل واضح داخل ليبيا', details: { buyingTriggers: ['توصيل سريع'], pains: ['غموض التوصيل'] } },
+      { id: 'p2', displayName: 'ليلى الباحثة عن الدليل', summary: 'تقارن مزيل الرؤوس السوداء حسب السعر والضمان وطريقة الاستعمال', details: { buyingTriggers: ['مقارنة السعر'], pains: ['عدم وضوح الفرق بين البدائل'] } },
+      { id: 'p3', displayName: 'يوسف طالب الثقة', summary: 'لا يشتري مزيل الرؤوس السوداء قبل رؤية آراء وتجربة واضحة', details: { buyingTriggers: ['آراء موثقة'], pains: ['الخوف من منتج غير مناسب'] } }
+    ],
+    competitorData: {
+      keywordStrategy: {
+        primary: ['مزيل الرؤوس السوداء', 'أداة إزالة الرؤوس السوداء'],
+        longTail: ['أفضل مزيل للرؤوس السوداء في ليبيا', 'طريقة استعمال مزيل الرؤوس السوداء']
+      },
+      marketInsights: { painPoint: 'الناس تريد أداة عناية بالبشرة مع سعر وتوصيل وضمان واضح' },
+      productServiceAudit: { missingProof: 'طريقة الاستعمال والضمان والتوصيل غير واضحة' },
+      top10Competitors: [
+        { title: 'Dukan DZ', snippet: 'أدوات عناية بالبشرة وأسعار مختلفة', domain: 'www.dukandz.com' },
+        { title: 'Instagram Shop', snippet: 'عروض تجميل مع تواصل عبر الرسائل', domain: 'www.instagram.com' },
+        { title: 'Shein', snippet: 'بدائل متعددة لأدوات البشرة', domain: 'jo.shein.com' }
+      ]
+    }
+  });
+  const visible = JSON.stringify({ personas: model.personaCards, angles: model.marketingAngles });
+  assert.doesNotMatch(visible, /\bev_\d+\b/i);
+  assert.doesNotMatch(visible, /delivery area|response time|local contact|comparison table|competitor differences|objective criteria|verified reviews|verified customer reviews|warranty terms|visible delivery or result proof|guarantee terms|visible result proof|current price|old price if true|total cost and conditions|before-after|case or customer proof|local SEO|win with local availability/i);
+  assert.ok(model.personaCards.every(persona => /مزيل الرؤوس السوداء/.test(`${persona.summary} ${persona.attackAngle} ${persona.details.attackFormula}`)));
+  assert.ok(model.personaCards.some(persona => /منطقة التوصيل|مدة التسليم|التواصل المحلي/.test(JSON.stringify(persona))));
+  assert.ok(model.personaCards.some(persona => /جدول|مقارنة|البدائل/.test(JSON.stringify(persona))));
+  assert.ok(model.personaCards.some(persona => /آراء|تجربة|قبل\/بعد|ضمان/.test(JSON.stringify(persona))));
+  assert.ok(new Set(model.personaCards.map(persona => persona.attackAngle)).size >= 3);
+});
