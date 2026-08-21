@@ -6028,6 +6028,12 @@ function ensureStpDecisionStyles() {
       .daka-stp-persona-stp{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
       .daka-stp-persona-stp .daka-stp-mini{background:rgba(var(--persona-rgb,34,211,238),.08);border-color:rgba(var(--persona-rgb,34,211,238),.18)}
       .daka-stp-social-line{display:block;margin-top:6px;padding-top:6px;border-top:1px solid rgba(148,163,184,.08)}
+      .daka-stp-more{border:1px solid rgba(var(--persona-rgb,34,211,238),.16);border-radius:16px;background:rgba(2,6,23,.28);overflow:hidden}
+      .daka-stp-more summary{cursor:pointer;list-style:none;padding:10px 12px;color:#eaf6ff;font-size:.75rem;font-weight:950;display:flex;align-items:center;justify-content:space-between;gap:10px}
+      .daka-stp-more summary::-webkit-details-marker{display:none}
+      .daka-stp-more summary:after{content:"+";display:grid;place-items:center;width:22px;height:22px;border-radius:999px;background:rgba(var(--persona-rgb,34,211,238),.14);color:rgb(var(--persona-rgb,34,211,238))}
+      .daka-stp-more[open] summary:after{content:"-"}
+      .daka-stp-more .daka-stp-mini-grid{padding:0 10px 10px}
       .daka-stp-card[data-tone]{position:relative;overflow:hidden;border-color:rgba(var(--tone-rgb,34,211,238),.22);background:linear-gradient(145deg,rgba(var(--tone-rgb,34,211,238),.10),rgba(2,6,23,.54))}
       .daka-stp-card[data-tone]:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,rgba(var(--tone-rgb,34,211,238),1),transparent)}
       .daka-stp-card[data-tone] i{color:rgb(var(--tone-rgb,34,211,238));filter:drop-shadow(0 0 10px rgba(var(--tone-rgb,34,211,238),.35))}
@@ -6106,7 +6112,11 @@ function renderStpSocialPlan(details = {}, copy = {}) {
     const channelHtml = renderStpAttackChannels(details.attackChannels, copy);
     const platformText = stpUiArray(social.platforms || details.channels, 5).join(' · ');
     const approach = stpUiText(social.approach);
-    const angles = stpUiArray(social.contentAngles, 5).join(' · ');
+    const attackText = stpUiText(details.attackAngle || details.stp?.positioning || '');
+    const angles = stpUiArray(social.contentAngles, 4)
+        .filter(item => item && item !== attackText)
+        .slice(0, 2)
+        .join(' · ');
     const lines = [
         platformText ? `<span>${stpUiEsc(platformText)}</span>` : '',
         approach ? `<span class="daka-stp-social-line">${stpUiEsc(approach)}</span>` : '',
@@ -6121,12 +6131,15 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
     const primaryAngle = card.primaryAngle || {};
     const secondaryAngles = Array.isArray(card.secondaryAngles) ? card.secondaryAngles : [];
     const priority = card.beachheadPriority || {};
+    const wantStatement = stpUiText(details.wantStatement || details.primaryJobToBeDone || card.summary || details.need, copy.noData || 'N/A');
+    const summary = stpUiText(card.summary, '');
     const lines = [
         `# Persona ${index + 1}: ${stpUiText(card.displayName || card.name || card.title, `Persona ${index + 1}`)}`,
         '',
         `- ${copy.age || 'Age'}: ${stpUiText(card.ageRange || details.ageRange, copy.noData || 'N/A')}`,
         `- ${copy.occupation || 'Role'}: ${stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName, copy.noData || 'N/A')}`,
         `- ${copy.priority || 'Priority'}: ${stpUiText(card.priorityScore, '0')}/100`,
+        summary ? `- ${copy.persona || 'Persona'}: ${summary}` : '',
         `- ${copy.primaryAngle || 'Primary angle'}: ${stpUiText(primaryAngle.name || details.primaryMarketingAngle || card.attackAngle, copy.noData || 'N/A')}`,
         secondaryAngles.length ? `- ${copy.secondaryAngles || 'Support angles'}: ${secondaryAngles.map(a => stpUiText(a.name || a.label || a.type)).filter(Boolean).join(', ')}` : '',
         `- ${copy.attackAngle || 'Attack angle'}: ${stpUiText(card.attackAngle || details.attackAngle, copy.noData || 'N/A')}`,
@@ -6136,7 +6149,7 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
         `- ${copy.objectionToNeutralize || 'Objection'}: ${stpUiText(details.objectionToNeutralize || primaryAngle.objectionToNeutralize, copy.noData || 'N/A')}`,
         `- ${copy.offerMove || 'Offer move'}: ${stpUiText(details.offerMove || primaryAngle.offerMove, copy.noData || 'N/A')}`,
         `- ${copy.landingPageSection || 'Landing section'}: ${stpUiText(details.landingPageSection || primaryAngle.landingPageSection, copy.noData || 'N/A')}`,
-        `- ${copy.jtbd || 'JTBD'}: ${stpUiText(details.primaryJobToBeDone || card.summary || details.need, copy.noData || 'N/A')}`,
+        `- ${copy.jtbd || 'JTBD'}: ${wantStatement}`,
         `- ${copy.budgetPath || 'Budget path'}: ${stpUiText(priority.budgetPath || details.budgetPath, copy.noData || 'N/A')}`,
         '',
         `## ${copy.hooks || 'Hooks'}`,
@@ -6223,6 +6236,8 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
         const personaRole = stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName || '');
         const primaryAngle = card.primaryAngle || {};
         const secondaryAngles = Array.isArray(card.secondaryAngles) ? card.secondaryAngles : [];
+        const wantStatement = stpUiText(details.wantStatement || details.primaryJobToBeDone || card.summary || details.need, '');
+        const personaSummary = stpUiText(card.summary, '');
         const mdId = `stpPersonaMarkdown_${index}_${String(card.id || index).replace(/[^a-z0-9_-]/gi, '_')}`;
         const markdown = buildStpPersonaMarkdown(card, index, copy);
         return `<article class="daka-stp-persona" style="--persona-rgb:${stpUiEsc(tone)}">
@@ -6232,6 +6247,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
               <small class="daka-stp-chip">${stpUiEsc(card.role || `Persona ${index + 1}`)}</small>
               <h3>${stpUiEsc(personaName)}</h3>
               ${personaRole ? `<p style="margin-top:4px;color:#8fb4cf;font-weight:800">${stpUiEsc(personaRole)}</p>` : ''}
+              ${personaSummary ? `<p style="margin-top:6px">${stpUiEsc(personaSummary)}</p>` : ''}
             </div>
           </div>
           <div class="daka-stp-pill-row">
@@ -6242,36 +6258,35 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
           ${primaryAngle.name ? `<div class="daka-stp-pill-row"><span class="daka-stp-chip"><i class="fas ${stpUiEsc(primaryAngle.icon || 'fa-bullseye')}"></i> ${stpUiEsc(copy.primaryAngle || 'Primary angle')}: ${stpUiEsc(primaryAngle.name)}</span>${secondaryAngles.slice(0, 2).map(angle => `<span class="daka-stp-chip">${stpUiEsc(angle.name || angle.label || angle.type)}</span>`).join('')}</div>` : ''}
           <button type="button" class="daka-stp-copy-md" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${stpUiEsc(mdId)}', this)"><i class="fas fa-copy"></i> Markdown</button>
           <pre id="${stpUiEsc(mdId)}" class="daka-stp-md-source">${stpUiEsc(markdown)}</pre>
-          ${card.summary ? `<div class="daka-stp-want"><small>${stpUiEsc(copy.want || copy.jtbd || 'JTBD')}</small><strong>${stpUiEsc(card.summary)}</strong></div>` : ''}
-          <div class="daka-stp-persona-stp">
-            ${renderStpMini(copy.stpSegmentation || 'Segmentation', details.stp?.segmentation || card.market || card.title)}
-            ${renderStpMini(copy.stpTargeting || 'Targeting', details.stp?.targeting || card.role || card.summary)}
-            ${renderStpMini(copy.stpPositioning || 'Positioning', details.stp?.positioning || card.attackAngle || details.attackAngle)}
-          </div>
+          ${wantStatement ? `<div class="daka-stp-want"><small>${stpUiEsc(copy.jtbd || copy.want || 'JTBD')}</small><strong>${stpUiEsc(wantStatement)}</strong></div>` : ''}
           <div class="daka-stp-mini-grid">
             ${renderStpSocialPlan(details, copy)}
             ${renderStpMini(copy.attackAngle || 'Attack angle', card.attackAngle || details.attackAngle)}
-            ${renderStpMini(copy.attackFormula || 'Attack formula', details.attackFormula || primaryAngle.angleFormula)}
             ${renderStpMini(copy.corePromise || 'Core promise', details.corePromise || primaryAngle.corePromise)}
             ${renderStpMini(copy.proofToShow || 'Proof to show', details.proofToShow || primaryAngle.proofToShow)}
             ${renderStpMini(copy.objectionToNeutralize || 'Objection', details.objectionToNeutralize || primaryAngle.objectionToNeutralize)}
             ${renderStpMini(copy.offerMove || 'Offer move', details.offerMove || primaryAngle.offerMove)}
-            ${renderStpMini(copy.landingPageSection || 'Landing section', details.landingPageSection || primaryAngle.landingPageSection)}
             ${renderStpMini(copy.hooks || 'Hooks', details.hookExamples || primaryAngle.hookExamples)}
-            ${renderStpMini(copy.jtbd || 'JTBD', details.primaryJobToBeDone)}
-            ${renderStpMini(copy.informationBehavior || 'Information behavior', details.informationBehavior)}
-            ${renderStpMini(copy.buyingBehavior || 'Buying behavior', details.buyingBehavior)}
-            ${renderStpMini(copy.searchBehavior || 'Search behavior', details.searchBehavior)}
-            ${renderStpMini(copy.discoveryBehavior || 'Discovery', details.discoveryBehavior)}
             ${renderStpMini(copy.budgetPath || 'Budget path', priority.budgetPath || details.budgetPath)}
             ${renderStpMini(copy.triggers || 'Triggers', details.buyingTriggers)}
             ${renderStpMini(copy.objections || 'Objections', details.objections)}
             ${renderStpMini(copy.pains || 'Pains', details.pains)}
             ${renderStpMini(copy.proofNeeded || 'Proofs to show', details.proofNeeded)}
-            ${renderStpMini(copy.trustSources || 'Trust sources', details.trustSources)}
-            ${renderStpMini(copy.competitors || 'Competitors', details.competitors)}
-            ${renderStpMini(copy.constraints || 'Constraints', details.constraints)}
           </div>
+          <details class="daka-stp-more">
+            <summary>${stpUiEsc(copy.stpDetails || 'Details')}</summary>
+            <div class="daka-stp-mini-grid">
+              ${renderStpMini(copy.attackFormula || 'Attack formula', details.attackFormula || primaryAngle.angleFormula)}
+              ${renderStpMini(copy.landingPageSection || 'Landing section', details.landingPageSection || primaryAngle.landingPageSection)}
+              ${renderStpMini(copy.informationBehavior || 'Information behavior', details.informationBehavior)}
+              ${renderStpMini(copy.buyingBehavior || 'Buying behavior', details.buyingBehavior)}
+              ${renderStpMini(copy.searchBehavior || 'Search behavior', details.searchBehavior)}
+              ${renderStpMini(copy.discoveryBehavior || 'Discovery', details.discoveryBehavior)}
+              ${renderStpMini(copy.trustSources || 'Trust sources', details.trustSources)}
+              ${renderStpMini(copy.competitors || 'Competitors', details.competitors)}
+              ${renderStpMini(copy.constraints || 'Constraints', details.constraints)}
+            </div>
+          </details>
         </article>`;
       }).join('')}
     </div>`;
