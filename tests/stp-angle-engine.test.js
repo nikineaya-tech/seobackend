@@ -209,3 +209,37 @@ test('arabic STP formulas stay concrete for translated solar product', () => {
   assert.ok(model.personaCards.every(persona => /كشاف شمسي|إضاءة|الكهرباء|الأمان/.test(`${persona.summary} ${persona.attackAngle} ${persona.details.attackFormula}`)));
   assert.ok(new Set(model.personaCards.map(persona => persona.attackAngle)).size >= 2);
 });
+
+test('persona display details remove nulls evidence ids and filler placeholders', () => {
+  const model = buildAngleDrivenStpModel({
+    query: 'projecteur solaire',
+    geo: 'Tunisia',
+    lang: 'fr',
+    segments: [{ id: 'weak', name: 'Weak segment', need: 'proof', buyingTriggers: ['evidence'] }],
+    personaCards: [{
+      id: 'p1',
+      displayName: 'Persona 1',
+      summary: 'proof',
+      attackAngle: 'clear offer proof',
+      details: {
+        primaryJobToBeDone: 'proof',
+        proofNeeded: ['clear offer proof', 'price or terms clarity', 'ev_1', null, 'not available'],
+        trustSources: ['ev_1', 'evidence', 'غير متوفر'],
+        pains: ['result'],
+        objections: ['n/a'],
+        constraints: ['undefined'],
+        socialPlan: { platforms: ['Experiment'], contentAngles: ['hook', 'clear offer proof'] }
+      }
+    }],
+    competitorData: {
+      marketInsights: { painPoint: 'projecteur solaire pour securite de nuit' },
+      productServiceAudit: { missingProof: 'garantie et autonomie a verifier' },
+      top10Competitors: [{ title: 'Projecteur solaire Tunisie', snippet: 'projecteur solaire avec batterie et garantie' }]
+    }
+  });
+  const visible = JSON.stringify(model.personaCards);
+  assert.doesNotMatch(visible, /\bev_\d+\b/i);
+  assert.doesNotMatch(visible, /clear offer proof|price or terms clarity|not available|غير متوفر|undefined|null/i);
+  assert.ok(model.personaCards.every(persona => persona.qualityScore >= 20));
+  assert.ok(model.personaCards.every(persona => persona.details.proofNeeded.length > 0));
+});

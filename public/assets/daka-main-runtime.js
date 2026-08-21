@@ -5910,7 +5910,14 @@ function stpUiText(value, fallback = '') {
     if (value === null || value === undefined) return fallback;
     if (Array.isArray(value)) return value.map(v => stpUiText(v)).filter(Boolean).join(', ') || fallback;
     const text = String(value).trim();
-    return text && !/^(null|undefined|---|n\/a|non disponible|not available|غير متوفر)$/i.test(text) ? text : fallback;
+    const normalized = text.toLowerCase().replace(/\s+/g, ' ').trim();
+    const weak = !text ||
+        /^(null|undefined|---|--|-|n\/a|na|nan|none|empty|non disponible|not available|غير متوفر|لا يوجد|aucun)$/i.test(text) ||
+        /^ev_\d+$/i.test(text) ||
+        /^(proof|evidence|hook|channel|experiment|persona|angle|offer|market|result|demo|case|cta)$/i.test(text) ||
+        /^(clear offer proof|price or terms clarity|proof source or proof need|short evidence from input|same id from input|same or sharper angle name)$/i.test(normalized) ||
+        /^(دليل|القناة|الشخصية|العرض|السوق|hook|cta)$/i.test(text);
+    return !weak ? text : fallback;
 }
 
 function stpUiArray(value, max = 6) {
