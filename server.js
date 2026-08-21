@@ -57,6 +57,9 @@ const { registerUserApiKeyRoutes } = require('./user-api-key-routes');
 const {
   buildAngleDrivenStpModel,
 } = require('./lib/stp-angle-engine');
+const {
+  sanitizeStpDecisionForClient: sanitizeStpDecisionPayload,
+} = require('./lib/stp-client-sanitizer');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -11851,7 +11854,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     }
 
     decision.elapsed = Date.now() - startedAt;
-    return decision;
+    return sanitizeStpDecisionPayload(decision, langPack.code);
 }
 
 
