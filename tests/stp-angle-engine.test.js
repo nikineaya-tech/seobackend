@@ -379,6 +379,7 @@ test('online ecommerce training blocks physical delivery local angle and keeps l
   assert.match(visible, /march[ée] local|Maroc|paiement|COD|fournisseur|WhatsApp|Instagram|YouTube|méthode|pas-a-pas|pas à pas/i);
   assert.ok(model.marketingAngles.some(angle => angle.angleType === 'local_market_fit' || /march[ée] local|paiement|COD|fournisseur/i.test(`${angle.name} ${angle.proofToShow} ${angle.offerMove}`)));
   assert.ok(model.personaCards.every(persona => Number(persona.details?.repetitionScore || 0) <= 0.92));
+  assert.ok(model.personaCards.every(persona => Array.isArray(persona.details?.buyingTriggers) && persona.details.buyingTriggers.length > 0));
 });
 
 test('arabic ecommerce training translates french product and rejects delivery-zone proof', () => {
@@ -403,4 +404,5 @@ test('arabic ecommerce training translates french product and rejects delivery-z
   const visible = JSON.stringify({ personas: model.personaCards, angles: model.marketingAngles });
   assert.doesNotMatch(visible, /formation e-commerce|e-commerce en ligne|Morocco|zone de livraison|delivery area|shipping|stock|خرائط|منطقة التوصيل|مدة التوصيل/i);
   assert.match(visible, /تكوين التجارة الإلكترونية|المغرب|الدفع|COD|مورد|واتساب|إنستغرام|منهج/i);
+  assert.ok(model.personaCards.every(persona => Array.isArray(persona.details?.buyingTriggers) && persona.details.buyingTriggers.length > 0));
 });
