@@ -8,7 +8,8 @@ const {
   buildAngleDrivenStpModel,
   sanitizeEvidenceIds,
   dedupePersonas,
-  mapPersonasToAngles
+  mapPersonasToAngles,
+  classifyProductSemantics
 } = require('../lib/stp-angle-engine');
 
 test('dedupes paraphrased savings angles', () => {
@@ -333,4 +334,73 @@ test('french STP output does not expose english internal hooks', () => {
   const visible = JSON.stringify({ personas: model.personaCards, angles: model.marketingAngles });
   assert.doesNotMatch(visible, /win with local availability|make delivery or access concrete|show total cost and savings clearly|compare against the current alternatives|prove the result before asking/i);
   assert.match(visible, /disponibilite locale|reponse rapide|comparer avec les alternatives|prouver le resultat/i);
+});
+
+test('online ecommerce training blocks physical delivery local angle and keeps local market fit', () => {
+  const semantics = classifyProductSemantics({
+    query: 'formation e-commerce en ligne',
+    geo: 'Morocco',
+    segments: [
+      { id: 'merchant', name: 'Commerçant physique', need: 'digitaliser une boutique au Maroc', buyingTriggers: ['WhatsApp', 'paiement local'] }
+    ]
+  });
+  assert.equal(semantics.productType, 'education');
+  assert.equal(semantics.deliveryMode, 'digital');
+  assert.equal(semantics.requiresPhysicalShipping, false);
+  assert.equal(semantics.physicalLocalDeliveryAllowed, false);
+  assert.equal(semantics.localRelevanceAllowed, true);
+
+  const model = buildAngleDrivenStpModel({
+    query: 'formation e-commerce en ligne',
+    geo: 'Morocco',
+    lang: 'fr',
+    budget: 'petit budget',
+    segments: [
+      { id: 'beginner', name: 'Débutant lancement business', need: 'savoir par où commencer sans outil compliqué', buyingTriggers: ['premier business', 'méthode'] },
+      { id: 'merchant', name: 'Commerçant physique', need: 'passer boutique physique vers WhatsApp Instagram et site', buyingTriggers: ['paiement local', 'COD', 'fournisseurs'] },
+      { id: 'skeptic', name: 'Prospect méfiant', need: 'éviter une formation trop générique', buyingTriggers: ['preuves', 'cas marocain'] }
+    ],
+    personaCards: [
+      { id: 'p1', displayName: 'Noura premier business', occupation: 'Débutant qui veut lancer son premier business', summary: 'veut une méthode e-commerce pas à pas', details: { buyingTriggers: ['méthode pas à pas'], pains: ['ne sait pas par où commencer'] } },
+      { id: 'p2', displayName: 'Karima commerçante physique', occupation: 'Commerçante physique qui veut vendre en ligne', summary: 'veut transformer sa boutique physique en canal digital au Maroc', details: { buyingTriggers: ['paiement local', 'WhatsApp', 'Instagram'], pains: ['contenu international peu adapté'] } },
+      { id: 'p3', displayName: 'Leila sceptique', occupation: 'Prospect méfiant envers les formations', summary: 'veut des preuves avant de payer une formation e-commerce', details: { buyingTriggers: ['preuve', 'avis'], pains: ['promesses irréalistes'] } }
+    ],
+    competitorData: {
+      keywordStrategy: {
+        primary: ['formation e-commerce Maroc', 'apprendre e-commerce'],
+        longTail: ['comment créer une boutique en ligne au Maroc', 'formation e-commerce paiement COD Maroc']
+      },
+      marketInsights: { painPoint: 'les prospects veulent une méthode adaptée au marché marocain et pas une théorie générique' },
+      productServiceAudit: { missingProof: 'cas client marocain, paiement local, fournisseurs et WhatsApp à montrer' }
+    }
+  });
+  const visible = JSON.stringify({ personas: model.personaCards, angles: model.marketingAngles, ultimate: model.ultimateAttackAngles });
+  assert.doesNotMatch(visible, /zone de livraison|d[ée]lai de livraison|livraison disponible|served cities|delivery area|delivery window|shipping|stock|google maps|\bMaps\b|local contact/i);
+  assert.match(visible, /march[ée] local|Maroc|paiement|COD|fournisseur|WhatsApp|Instagram|YouTube|méthode|pas-a-pas|pas à pas/i);
+  assert.ok(model.marketingAngles.some(angle => angle.angleType === 'local_market_fit' || /march[ée] local|paiement|COD|fournisseur/i.test(`${angle.name} ${angle.proofToShow} ${angle.offerMove}`)));
+  assert.ok(model.personaCards.every(persona => Number(persona.details?.repetitionScore || 0) <= 0.92));
+});
+
+test('arabic ecommerce training translates french product and rejects delivery-zone proof', () => {
+  const model = buildAngleDrivenStpModel({
+    query: 'formation e-commerce en ligne',
+    geo: 'Morocco',
+    lang: 'ar',
+    budget: 'ميزانية صغيرة',
+    segments: [
+      { id: 'merchant', name: 'commercant physique', need: 'digitaliser boutique Maroc', buyingTriggers: ['paiement local', 'COD', 'WhatsApp'] },
+      { id: 'beginner', name: 'debutant', need: 'lancer premier business e-commerce', buyingTriggers: ['méthode', 'pas à pas'] }
+    ],
+    personaCards: [
+      { id: 'p1', displayName: 'كريمة صاحبة المتجر', occupation: 'تاجرة فعلية', summary: 'veut vendre en ligne au Maroc', details: { buyingTriggers: ['paiement local'], pains: ['formation trop générique'] } },
+      { id: 'p2', displayName: 'نورة بداية المشروع', occupation: 'مبتدئة', summary: 'veut formation e-commerce pas à pas', details: { buyingTriggers: ['méthode'], pains: ['ne sait pas commencer'] } }
+    ],
+    competitorData: {
+      marketInsights: { painPoint: 'الحاجة إلى تطبيق التجارة الإلكترونية على السوق المغربي' },
+      productServiceAudit: { missingProof: 'حالات مغربية، دفع محلي، COD، موردون' }
+    }
+  });
+  const visible = JSON.stringify({ personas: model.personaCards, angles: model.marketingAngles });
+  assert.doesNotMatch(visible, /formation e-commerce|e-commerce en ligne|Morocco|zone de livraison|delivery area|shipping|stock|خرائط|منطقة التوصيل|مدة التوصيل/i);
+  assert.match(visible, /تكوين التجارة الإلكترونية|المغرب|الدفع|COD|مورد|واتساب|إنستغرام|منهج/i);
 });

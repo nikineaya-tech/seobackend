@@ -11069,6 +11069,8 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
     const constraints = stpArray(ctx.constraints, 5);
     const knownCompetitors = stpArray(ctx.knownCompetitors, 5);
     const offer = localizeStpSubjectForReport(ctx.offer || query, lang) || stpText(ctx.offer || query, 160);
+    const rawOfferForSemantics = `${ctx.offer || ''} ${inputs.query || ''} ${competitorData?.query || ''} ${query || ''}`;
+    const isOnlineEducationOffer = /formation|cours|course|training|coaching|e[-\s]?commerce|commerce en ligne|متجر إلكتروني|تكوين|دورة|تعلم|تعليم|التجارة الإلكترونية/i.test(rawOfferForSemantics);
     const defaultProof = stpArray([
         isAr ? 'إثبات النتيجة قبل الوعد' : isEn ? 'proof of result before the promise' : 'preuve du résultat avant la promesse',
         isAr ? 'سعر وشروط واضحة' : isEn ? 'clear price and terms' : 'prix et conditions clairs',
@@ -11086,7 +11088,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         nextFocused: isAr ? 'التالي إذا توفر Budget اختبار مركز' : isEn ? 'Next with a focused test budget' : 'Suivant avec budget test focalisé',
         nextPower: isAr ? 'التالي إذا توفر Budget توسع' : isEn ? 'Next with scale budget' : 'Suivant avec budget de scale'
     };
-    const fallbackSegments = [
+    const genericFallbackSegments = [
         {
             id: 'persona-high-intent',
             name: `${labels.highIntent} · ${market}`,
@@ -11128,6 +11130,63 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             confidence: 'LOW'
         }
     ];
+    const educationFallbackSegments = [
+        {
+            id: 'edu-first-business',
+            name: isAr ? `مبتدئ يريد إطلاق أول مشروع · ${market}` : isEn ? `Beginner launching first business · ${market}` : `Débutant qui lance son premier business · ${market}`,
+            need: isAr ? `يريد ${offer} بمنهج خطوة بخطوة بدون تشتت تقني` : isEn ? `Needs ${offer} with a step-by-step method and no technical overwhelm` : `Veut ${offer} avec une méthode pas-à-pas sans surcharge technique`,
+            accessChannels: ['SEO', 'YouTube', 'Instagram', 'WhatsApp'],
+            buyingTriggers: isAr ? ['لا يعرف من أين يبدأ', 'يريد أول قناة بيع', 'يخاف من الأدوات التقنية'] : isEn ? ['does not know where to start', 'wants first sales channel', 'fears technical tools'] : ['ne sait pas par où commencer', 'veut un premier canal de vente', 'craint les outils techniques'],
+            evidence: isAr ? ['منهج وحدة بوحدة', 'تمرين عملي لكل مرحلة', 'مثال متجر بسيط'] : isEn ? ['module-by-module path', 'practical exercise per step', 'simple store example'] : ['parcours module par module', 'exercice pratique par étape', 'exemple de boutique simple'],
+            confidence: 'HIGH'
+        },
+        {
+            id: 'edu-physical-merchant',
+            name: isAr ? `تاجر فعلي يريد البيع أونلاين · ${market}` : isEn ? `Physical merchant moving online · ${market}` : `Commerçant physique qui veut vendre en ligne · ${market}`,
+            need: isAr ? `يريد تحويل منتجاته الحالية إلى قناة بيع رقمية مناسبة للسوق المحلي` : isEn ? `Wants to turn existing products into a digital sales channel adapted to the local market` : `Veut transformer ses produits actuels en canal de vente digital adapté au marché local`,
+            accessChannels: ['Facebook', 'Instagram', 'WhatsApp', 'YouTube'],
+            buyingTriggers: isAr ? ['المنافسون بدأوا البيع أونلاين', 'يريد تنظيم WhatsApp', 'يحتاج دفع وCOD وموردين محليين'] : isEn ? ['competitors start selling online', 'needs to structure WhatsApp', 'needs payment, COD and local supplier logic'] : ['ses concurrents vendent en ligne', 'veut structurer WhatsApp', 'doit comprendre paiement, COD et fournisseurs locaux'],
+            evidence: isAr ? ['حالة متجر محلي', 'سيناريو WhatsApp وInstagram', 'شرح الدفع وCOD'] : isEn ? ['local store case', 'WhatsApp and Instagram scenario', 'payment and COD explanation'] : ['cas boutique locale', 'scénario WhatsApp et Instagram', 'explication paiement et COD'],
+            confidence: 'HIGH'
+        },
+        {
+            id: 'edu-career-switcher',
+            name: isAr ? `موظف يبحث عن دخل جديد · ${market}` : isEn ? `Employee seeking a new income path · ${market}` : `Salarié en reconversion vers un revenu e-commerce · ${market}`,
+            need: isAr ? `يريد تعلم التجارة الإلكترونية خارج وقت العمل وبخطة واقعية` : isEn ? `Needs to learn e-commerce outside work hours with a realistic plan` : `Veut apprendre l’e-commerce hors temps de travail avec un plan réaliste`,
+            accessChannels: ['YouTube', 'SEO', 'Email', 'WhatsApp'],
+            buyingTriggers: isAr ? ['يريد استقلالية', 'وقته محدود', 'يحتاج خطوات قصيرة'] : isEn ? ['wants autonomy', 'limited time', 'needs short steps'] : ['veut autonomie', 'temps limité', 'besoin d’étapes courtes'],
+            evidence: isAr ? ['خطة أسبوعية', 'دروس قصيرة', 'قوالب تنفيذ'] : isEn ? ['weekly plan', 'short lessons', 'execution templates'] : ['planning hebdomadaire', 'capsules courtes', 'templates d’exécution'],
+            confidence: 'MEDIUM'
+        },
+        {
+            id: 'edu-tried-failed',
+            name: isAr ? `صاحب تجربة سابقة بلا نتائج · ${market}` : isEn ? `Founder who tried and got no results · ${market}` : `Entrepreneur qui a déjà essayé sans résultats · ${market}`,
+            need: isAr ? `يريد معرفة لماذا لم ينجح سابقا وما الذي يختبره أولا بميزانية صغيرة` : isEn ? `Wants to understand why previous attempts failed and what to test first with a lean budget` : `Veut comprendre pourquoi ses essais ont échoué et quoi tester d’abord avec petit budget`,
+            accessChannels: ['Comparison page', 'SEO', 'Retargeting', 'Webinar'],
+            buyingTriggers: isAr ? ['خسر وقتا أو مالا', 'يريد تشخيصا', 'يريد معيار go/no-go'] : isEn ? ['lost time or money', 'wants diagnosis', 'needs go/no-go criteria'] : ['a perdu du temps ou de l’argent', 'veut un diagnostic', 'a besoin de critères go/no-go'],
+            evidence: isAr ? ['تشخيص أخطاء', 'خطة اختبار', 'معايير قرار'] : isEn ? ['mistake diagnosis', 'test plan', 'decision thresholds'] : ['diagnostic des erreurs', 'plan de test', 'seuils de décision'],
+            confidence: 'MEDIUM'
+        },
+        {
+            id: 'edu-local-project-owner',
+            name: isAr ? `حامل مشروع يحتاج تكييف محلي · ${market}` : isEn ? `Project owner needing local adaptation · ${market}` : `Porteur de projet qui veut une méthode adaptée au marché local · ${market}`,
+            need: isAr ? `يريد تكوينا لا ينسخ أمثلة أجنبية بل يشرح الدفع والموردين وقنوات السوق المحلي` : isEn ? `Needs training that does not copy foreign examples and explains payment, suppliers and local channels` : `Veut une formation qui ne copie pas des exemples étrangers et explique paiement, fournisseurs et canaux locaux`,
+            accessChannels: ['SEO', 'YouTube', 'Meta Ads', 'WhatsApp'],
+            buyingTriggers: isAr ? ['المحتوى الأجنبي لا يناسبه', 'يريد أمثلة محلية', 'يريد تطبيق مباشر'] : isEn ? ['foreign content does not fit', 'wants local examples', 'wants direct application'] : ['le contenu étranger ne colle pas', 'veut des exemples locaux', 'veut appliquer directement'],
+            evidence: isAr ? ['حالات محلية', 'طرق دفع محلية', 'موردون متاحون', 'سيناريو COD عند الحاجة'] : isEn ? ['local cases', 'local payment methods', 'accessible suppliers', 'COD scenario when relevant'] : ['cas locaux', 'moyens de paiement locaux', 'fournisseurs accessibles', 'scénario COD si pertinent'],
+            confidence: 'HIGH'
+        },
+        {
+            id: 'edu-skeptical-prospect',
+            name: isAr ? `متشكك من وعود الدورات · ${market}` : isEn ? `Prospect skeptical of course promises · ${market}` : `Prospect méfiant envers les promesses de formation · ${market}`,
+            need: isAr ? `يريد رؤية حدود واضحة، مقتطفات، دعم ونتيجة قابلة للتحقق قبل الدفع` : isEn ? `Needs clear limits, extracts, support and verifiable outcome before paying` : `Veut voir limites, extraits, support et résultat vérifiable avant de payer`,
+            accessChannels: ['Reviews', 'FAQ', 'YouTube', 'Email'],
+            buyingTriggers: isAr ? ['رأى وعودا مبالغا فيها', 'يريد دليل قبل الدفع', 'يحتاج شروطا واضحة'] : isEn ? ['has seen exaggerated promises', 'wants proof before payment', 'needs clear terms'] : ['a vu trop de promesses', 'veut une preuve avant paiement', 'exige des conditions claires'],
+            evidence: isAr ? ['مقتطف درس', 'حدود معلنة', 'آراء موثقة', 'سياسة دعم'] : isEn ? ['lesson extract', 'stated limits', 'verified reviews', 'support policy'] : ['extrait de cours', 'limites annoncées', 'avis vérifiés', 'politique support'],
+            confidence: 'MEDIUM'
+        }
+    ];
+    const fallbackSegments = isOnlineEducationOffer ? educationFallbackSegments : genericFallbackSegments;
 
     const merged = [];
     [...(segments || []), ...fallbackSegments].forEach(segment => {
@@ -11163,6 +11222,11 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         en: ['Amina the Decision Maker', 'Leila the Proof Seeker', 'Youssef the Comparator', 'Sara the Budget Guardian', 'Hind the Expertise Buyer', 'Marwan the Fast Mover', 'Nadia the Scale Buyer'],
         fr: ['Amina la décideuse', 'Leila chercheuse de preuve', 'Youssef le comparateur', 'Sara budget prudent', 'Hind acheteuse d’expertise', 'Marwan décision rapide', 'Nadia croissance et scale']
     };
+    const educationPersonaNames = {
+        ar: ['نورة بداية المشروع', 'كريمة صاحبة المتجر', 'سليم طالب دخل جديد', 'يوسف جرّب ولم ينجح', 'هند مشروع محلي', 'سارة وقتها محدود', 'ليلى المتشككة'],
+        en: ['Noura First Business', 'Karima Store Owner', 'Salim New Income', 'Youssef Tried Before', 'Hind Local Project', 'Sara Time-Limited', 'Leila The Skeptic'],
+        fr: ['Noura premier business', 'Karima commerçante physique', 'Salim revenu nouveau', 'Youssef déjà essayé', 'Hind projet local', 'Sara temps limité', 'Leila sceptique']
+    };
     const personaRoles = {
         b2b_service: isAr
             ? ['مدير مشروع', 'صاحبة شركة', 'مسؤول تسويق', 'مؤسس بميزانية محدودة', 'مديرة عمليات', 'Freelance B2B', 'مدير نمو']
@@ -11191,6 +11255,8 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 : ['Acheteur haute intention', 'Comparateur d’alternatives', 'Chercheur de confiance', 'Sensible au budget', 'Chercheur d’expertise', 'Décideur rapide', 'Acheteur scale']
     };
     const budgetTier = inferStpBudgetTier(inputs.budget);
+    const effectiveArchetype = isOnlineEducationOffer ? 'content_education' : archetype;
+    const selectedPersonaNames = isOnlineEducationOffer ? educationPersonaNames : personaNames;
     const budgetLabel = (index) => {
         if (index === 0) return labels.first;
         if (budgetTier === 'lean') return labels.nextLean;
@@ -11199,6 +11265,26 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
     };
     const attackAngleFor = (segment, index) => {
         const text = `${segment?.id || ''} ${segment?.name || ''} ${segment?.need || ''}`.toLowerCase();
+        if (isOnlineEducationOffer) {
+            if (/first-business|premier|début|debut|مبتدئ|البداية|start/.test(text)) {
+                return isAr ? 'هاجمه بمنهج خطوة بخطوة: من اختيار المنتج إلى أول قناة بيع، مع تمرين عملي في كل مرحلة.' : isEn ? 'Attack with a step-by-step method: from product choice to first sales channel, with one practical exercise per step.' : 'Attaquer par une méthode pas-à-pas : du choix produit au premier canal de vente, avec un exercice concret par étape.';
+            }
+            if (/physical-merchant|commer|store|boutique|متجر|تاجر/.test(text)) {
+                return isAr ? 'هاجمه بجسر من المتجر الفعلي إلى البيع الرقمي: WhatsApp، Instagram، الدفع المحلي وCOD عند الحاجة.' : isEn ? 'Attack with the bridge from physical store to online selling: WhatsApp, Instagram, local payment and COD when relevant.' : 'Attaquer par le pont boutique physique -> vente en ligne : WhatsApp, Instagram, paiement local et COD si pertinent.';
+            }
+            if (/career|revenu|income|salari|موظف|دخل/.test(text)) {
+                return isAr ? 'هاجمه بخطة تعلم قصيرة خارج وقت العمل: كبسولات، قوالب، ومهام أسبوعية تقود إلى أول اختبار.' : isEn ? 'Attack with a short learning plan outside work hours: capsules, templates and weekly missions leading to the first test.' : 'Attaquer par un apprentissage compatible avec son temps : capsules courtes, templates et missions hebdomadaires jusqu’au premier test.';
+            }
+            if (/failed|essay|tried|échoué|فشل|سابق/.test(text)) {
+                return isAr ? 'هاجمه بتشخيص ما فشل سابقا ثم اختبار صغير بحدود go/no-go واضحة قبل توسيع الميزانية.' : isEn ? 'Attack by diagnosing what failed before, then a small test with clear go/no-go thresholds before scaling budget.' : 'Attaquer par le diagnostic des anciens échecs, puis un test petit budget avec critères go/no-go avant scaling.';
+            }
+            if (/local-project|local|محلي|maroc|morocco|market/.test(text)) {
+                return isAr ? 'هاجمه بتكييف التجارة الإلكترونية مع السوق المحلي: الدفع، الموردون، COD، WhatsApp، Instagram وأمثلة محلية.' : isEn ? 'Attack with local market adaptation: payment, suppliers, COD, WhatsApp, Instagram and local examples.' : 'Attaquer par l’adaptation au marché local : paiement, fournisseurs, COD, WhatsApp, Instagram et exemples locaux.';
+            }
+            if (/skeptic|méfi|mefi|متشكك|وعود/.test(text)) {
+                return isAr ? 'هاجمه بالشفافية: مقتطفات درس، حدود معلنة، دعم واضح، وآراء قابلة للتحقق قبل الدفع.' : isEn ? 'Attack with transparency: lesson extracts, stated limits, visible support and verifiable reviews before payment.' : 'Attaquer par la transparence : extraits de cours, limites annoncées, support visible et avis vérifiables avant paiement.';
+            }
+        }
         if (index === 0) return beachheadMarket?.accessPath || (isAr ? 'ابدأ برسالة دقيقة وقناة وصول واحدة' : isEn ? 'Start with one sharp message and one access channel' : 'Commencer par un message précis et un canal d’accès');
         if (/compar|price|prix|سعر|budget/.test(text)) return isAr ? 'هاجمه بصفحة مقارنة وسعر وشروط واضحة' : isEn ? 'Attack with comparison, price clarity and terms' : 'Attaquer par comparaison, prix clair et conditions';
         if (/proof|trust|avis|review|ثقة|دليل/.test(text)) return isAr ? 'هاجمه بالاطمئنان والضمان والاعتراضات' : isEn ? 'Attack with reassurance, guarantee and objections' : 'Attaquer par réassurance, garantie et objections';
@@ -11215,9 +11301,9 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         const pains = stpArray(persona.pains, 4);
         const attackAngle = attackAngleFor(segment, index);
         const langKey = isAr ? 'ar' : isEn ? 'en' : 'fr';
-        const ageRange = ageRanges[archetype]?.[index] || ageRanges.general_market[index] || '25-50';
-        const displayName = personaNames[langKey]?.[index] || `${isAr ? 'Persona' : 'Persona'} ${index + 1}`;
-        const occupation = personaRoles[archetype]?.[index] || personaRoles.general_market[index] || '';
+        const ageRange = ageRanges[effectiveArchetype]?.[index] || ageRanges.general_market[index] || '25-50';
+        const displayName = selectedPersonaNames[langKey]?.[index] || `${isAr ? 'Persona' : 'Persona'} ${index + 1}`;
+        const occupation = personaRoles[effectiveArchetype]?.[index] || personaRoles.general_market[index] || '';
         const segmentName = segment.name || persona.name || '';
         const socialChannels = attackChannels
             .filter(channel => /social|paid|owned|inbound|outbound/i.test(`${channel?.type || ''} ${channel?.name || ''}`))

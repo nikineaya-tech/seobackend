@@ -54,7 +54,25 @@ const samples = [
   { name: 'arabic solar Tunisia', query: 'projecteur solaire', geo: 'Tunisia', lang: 'ar', budget: 'ميزانية صغيرة', mustContain: [/كشاف شمسي/, /تونس/] },
   { name: 'arabic agency Morocco', query: 'AGENCE MARKETING IA', geo: 'Morocco', lang: 'ar', budget: 'petit budget', mustContain: [/وكالة تسويق بالذكاء الاصطناعي/, /المغرب/] },
   { name: 'french beauty Libya', query: 'extracteur points noirs', geo: 'Libya', lang: 'fr', budget: 'petit budget', mustContain: [/extracteur points noirs|points noirs/i] },
-  { name: 'english saas Morocco', query: 'AI marketing agency', geo: 'Morocco', lang: 'en', budget: 'small test budget', mustContain: [/AI marketing agency/i] }
+  { name: 'english saas Morocco', query: 'AI marketing agency', geo: 'Morocco', lang: 'en', budget: 'small test budget', mustContain: [/AI marketing agency/i] },
+  {
+    name: 'french ecommerce training Morocco',
+    query: 'formation e-commerce en ligne',
+    geo: 'Morocco',
+    lang: 'fr',
+    budget: 'petit budget',
+    mustContain: [/formation e-commerce|e-commerce/i, /march[ée] local|Maroc|paiement|COD|fournisseur|WhatsApp|Instagram|YouTube|m[ée]thode/i],
+    mustNot: [/zone de livraison|d[ée]lai de livraison|delivery area|delivery window|shipping|stock|Google Maps|\bMaps\b|local contact/i]
+  },
+  {
+    name: 'arabic ecommerce training Morocco',
+    query: 'formation e-commerce en ligne',
+    geo: 'Morocco',
+    lang: 'ar',
+    budget: 'ميزانية صغيرة',
+    mustContain: [/تكوين التجارة الإلكترونية/, /المغرب/, /الدفع|COD|مورد|واتساب|إنستغرام|منهج/],
+    mustNot: [/formation e-commerce|e-commerce en ligne|Morocco|zone de livraison|delivery area|shipping|stock|خرائط|منطقة التوصيل|مدة التوصيل/i]
+  }
 ];
 
 const forbiddenVisible = /\bev_\d+\b|undefined|null|not available|غير متوفر|delivery area|response time|local contact|comparison table|verified reviews|verified customer reviews|warranty terms|visible delivery or result proof|clear offer proof|price or terms clarity|proof source or proof need|short evidence from input|win with local availability and faster response|make delivery or access concrete|show total cost and savings clearly|compare against the current alternatives/i;
@@ -86,6 +104,9 @@ for (const sample of samples) {
   if (uniqueJobs.size < Math.min(2, model.personaCards?.length || 0)) caseFailures.push('persona JTBD statements collapsed');
   for (const pattern of sample.mustContain || []) {
     if (!pattern.test(visibleText)) caseFailures.push(`missing expected localized signal: ${pattern}`);
+  }
+  for (const pattern of sample.mustNot || []) {
+    if (pattern.test(visibleText)) caseFailures.push(`forbidden case-specific signal: ${visibleText.match(pattern)?.[0]}`);
   }
   if (caseFailures.length) failures.push({ sample: sample.name, failures: caseFailures });
 }
