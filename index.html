@@ -5836,7 +5836,7 @@ navkeywords: 'Market demand',
         }, true);
     })();
     </script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260824-stp-ads-focus1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260824-module-docx-sidebar1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">
@@ -9156,6 +9156,144 @@ body.modal-open {
         top: auto !important;
     }
 }
+
+/* Module exports + desktop left navigation. */
+.daka-module-export-slot {
+    width: 100%;
+    margin-top: 12px;
+    display: flex;
+    justify-content: flex-end;
+}
+.daka-module-export-btn {
+    min-height: 42px;
+    padding: 9px 14px;
+    border: 1px solid rgba(148, 163, 184, .18);
+    border-radius: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #dbeafe;
+    background: rgba(15, 23, 42, .78);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05);
+    font-size: .78rem;
+    font-weight: 950;
+    letter-spacing: 0;
+    cursor: pointer;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+.daka-module-export-btn.ready {
+    color: #fff;
+    border-color: rgba(125, 211, 252, .36);
+    background: linear-gradient(135deg, rgba(37, 99, 235, .96), rgba(124, 58, 237, .94));
+    box-shadow: 0 14px 32px rgba(37, 99, 235, .22), inset 0 1px 0 rgba(255, 255, 255, .16);
+}
+.daka-module-export-btn.waiting {
+    opacity: .74;
+}
+.daka-module-export-btn:hover,
+.daka-module-export-btn:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(34, 211, 238, .48);
+    color: #fff;
+    outline: none;
+}
+.daka-module-export-btn.ready:hover,
+.daka-module-export-btn.ready:focus-visible {
+    box-shadow: 0 18px 42px rgba(124, 58, 237, .3), inset 0 1px 0 rgba(255, 255, 255, .2);
+}
+
+@media (min-width: 1181px) {
+    body:not(.daka-deal-editor) main {
+        padding-inline-start: 92px;
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .header-content {
+        grid-template-columns: minmax(170px, .9fr) 72px minmax(20px, .2fr) minmax(124px, auto) minmax(52px, auto) minmax(52px, auto) !important;
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .logo { grid-column: 1; }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .header-clock-center { grid-column: 2; }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .lang-selector { grid-column: 4; }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .header-tools { grid-column: 5; }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .auth-shell { grid-column: 6; }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        position: fixed !important;
+        left: 14px;
+        right: auto;
+        top: 112px;
+        z-index: 950;
+        width: 76px !important;
+        max-width: 76px !important;
+        height: auto !important;
+        max-height: calc(100dvh - 132px);
+        margin: 0 !important;
+        padding: 7px !important;
+        border-radius: 22px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        justify-content: flex-start !important;
+        gap: 7px !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        background:
+            radial-gradient(circle at 50% 0%, rgba(34, 211, 238, .16), transparent 36%),
+            linear-gradient(180deg, rgba(2, 6, 23, .92), rgba(15, 23, 42, .86));
+        border: 1px solid rgba(125, 211, 252, .16);
+        box-shadow: 0 22px 62px rgba(0, 0, 0, .42), inset 0 1px 0 rgba(255, 255, 255, .06);
+        scrollbar-width: none;
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs::-webkit-scrollbar {
+        display: none;
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn {
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 68px !important;
+        padding: 8px 6px !important;
+        flex: 0 0 auto !important;
+        display: inline-flex !important;
+        flex-direction: column !important;
+        gap: 6px !important;
+        border-radius: 16px !important;
+        font-size: .62rem !important;
+        line-height: 1.1 !important;
+        text-align: center;
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn i {
+        font-size: 1.05rem;
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn span {
+        display: block !important;
+        max-width: 64px !important;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: normal;
+    }
+    [dir="rtl"] body:not(.daka-deal-editor) main {
+        padding-inline-start: 0;
+        padding-inline-end: 92px;
+    }
+    [dir="rtl"] body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        right: 14px;
+        left: auto;
+    }
+}
+
+@media (max-width: 1180px) {
+    body:not(.daka-deal-editor) main {
+        padding-inline-start: 0;
+        padding-inline-end: 0;
+    }
+}
+
+@media (max-width: 640px) {
+    .daka-module-export-slot {
+        justify-content: stretch;
+    }
+    .daka-module-export-btn {
+        width: 100%;
+    }
+}
 </style>
 
 <style id="daka-mobile-activation">
@@ -10455,6 +10593,27 @@ body > div:has(#btn-export-global),
 
 @media (min-width: 1800px) {
     :root { --daka-command-max: 1760px; }
+}
+
+@media (min-width: 1181px) {
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .header-content {
+        grid-template-columns: minmax(170px, .9fr) 72px minmax(20px, .2fr) minmax(124px, auto) minmax(52px, auto) minmax(52px, auto) !important;
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        position: fixed !important;
+        left: 14px !important;
+        right: auto !important;
+        top: 112px !important;
+        width: 76px !important;
+        max-width: 76px !important;
+        height: auto !important;
+        max-height: calc(100dvh - 132px) !important;
+        flex-direction: column !important;
+    }
+    [dir="rtl"] body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        right: 14px !important;
+        left: auto !important;
+    }
 }
 
 @media (max-width: 900px) {

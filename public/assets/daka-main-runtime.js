@@ -29,6 +29,7 @@ const STATE = {
     lastAnalysisResults:  null,   // Tab 1 — Concurrents
     lastFunnelResults:    null,   // Tab 2 — Funnel AIDA
     lastTechnicalResults: null,   // Tab 3 — SEO Technique
+    lastStpResults:       null,   // Tab STP — Personas / Positioning
     lastKeywords:         null,   // Tab 4 - Keywords (objet complet)
 
     /* ── Inputs sauvegardés (utilisés par exportFullAnalysisToPDF) ── */
@@ -177,7 +178,7 @@ function resetAnalysis(type) {
     if (type === 'competitors' || type === 'all') {
         STATE.lastAnalysisResults = null;
         document.getElementById('btn-export-competitors-pdf')?.style
-    && (document.getElementById('btn-export-competitors-pdf').style.display = 'inline-flex');
+    && (document.getElementById('btn-export-competitors-pdf').style.display = 'none');
         window.currentCompetitorKeywords = [];
         if (window.compRadarInstance instanceof Chart) {
             window.compRadarInstance.destroy();
@@ -193,7 +194,7 @@ function resetAnalysis(type) {
     if (type === 'funnel' || type === 'all') {
         STATE.lastFunnelResults = null;
         document.getElementById('btn-export-funnel-pdf')?.style
-    && (document.getElementById('btn-export-funnel-pdf').style.display = 'inline-flex');
+    && (document.getElementById('btn-export-funnel-pdf').style.display = 'none');
         if (window.funnelChartInstance instanceof Chart) {
             window.funnelChartInstance.destroy();
             window.funnelChartInstance = null;
@@ -203,6 +204,8 @@ function resetAnalysis(type) {
     }
     if (type === 'technical' || type === 'all') {
         STATE.lastTechnicalResults = null;
+        document.getElementById('btn-export-technical-pdf')?.style
+    && (document.getElementById('btn-export-technical-pdf').style.display = 'none');
         window.currentSeoContext = null;
         const el = document.getElementById('resultsTechnical');
         if (el) { el.innerHTML = ''; el.classList.remove('active'); el.style.display = 'none'; }
@@ -211,11 +214,19 @@ function resetAnalysis(type) {
     }
     if (type === 'keywords' || type === 'all') {
         STATE.lastKeywords = null;
+        document.getElementById('btn-export-keywords-pdf')?.style
+    && (document.getElementById('btn-export-keywords-pdf').style.display = 'none');
         const el = document.getElementById('resultsKeywords');
         if (el) { el.innerHTML = ''; el.classList.remove('active'); el.style.display = 'none'; }
         const countEl = document.getElementById('kwFilterCount');
         if (countEl) countEl.textContent = '0';
     }
+    if (type === 'stp' || type === 'all') {
+        STATE.lastStpResults = null;
+        const el = document.getElementById('resultsStpDecision');
+        if (el) { el.innerHTML = ''; el.classList.remove('active'); el.style.display = 'none'; }
+    }
+    if (typeof refreshDakaModuleExportButtons === 'function') refreshDakaModuleExportButtons();
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -1668,17 +1679,22 @@ async function displaySavedReport(id, options = {}) {
         if (type === 'competitors') {
             STATE.lastAnalysisResults = data;
             displayCompetitorsResults(data);
+            refreshDakaModuleExportButtons?.();
         } else if (type === 'funnel') {
             STATE.lastFunnelResults = data;
             displayFunnelResults(data);
+            refreshDakaModuleExportButtons?.();
         } else if (type === 'technical') {
             STATE.lastTechnicalResults = data;
             displayTechnicalResults(data);
+            refreshDakaModuleExportButtons?.();
         } else if (type === 'keywords') {
             displayKeywordsResults(data);
+            refreshDakaModuleExportButtons?.();
         } else if (type === 'stp') {
             STATE.lastStpResults = data;
             renderStpDecision(data);
+            refreshDakaModuleExportButtons?.();
         } else {
             throw new Error('REPORT_TYPE_UNSUPPORTED');
         }
@@ -1835,9 +1851,10 @@ async function initSharedReportRoute() {
 
 document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.addEventListener('DOMContentLoaded', initSharedReportRoute);
+document.addEventListener('DOMContentLoaded', initDakaModuleExportButtons);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-08-24-stp-ads-focus1';
+window.DAKA_FRONTEND_BUILD = '2026-08-24-module-docx-sidebar1';
 
 function loaderTypeFromEndpoint(endpoint = '') {
     const value = String(endpoint || '').toLowerCase();
@@ -5638,6 +5655,7 @@ async function analyzeCompetitors(e) {
 
         // ── Affichage résultats ───────────────────────────────
         displayCompetitorsResults(response);
+        refreshDakaModuleExportButtons?.();
 
         // ── Afficher bouton export après succès ───────────────
         if (exportBtn) exportBtn.style.display = 'inline-flex';
@@ -6633,6 +6651,7 @@ function renderStpStrategyHierarchy(data = {}, copy = {}) {
 function renderStpDecision(data) {
     const container = document.getElementById('resultsStpDecision');
     if (!container) return;
+    data = data?.data || data || {};
     const lang = data?.inputs?.lang || document.getElementById('stpLang')?.value || document.getElementById('analysisLang')?.value || STATE.currentLang || 'fr';
     const copy = getStpCopy(lang);
     const dir = lang === 'ar' ? 'rtl' : 'ltr';
@@ -6683,11 +6702,12 @@ function renderStpDecision(data) {
     });
 
     const strategyHtml = renderStpStrategyHierarchy(data, copy);
-    container.innerHTML = `<section class="daka-stp-report daka-stp-persona-only" dir="${dir}">
+    container.innerHTML = `<section class="daka-stp-report daka-stp-persona-only" data-export-feature="summary" dir="${dir}">
       ${strategyHtml}
       ${personaCardsHtml || `<div class="daka-stp-persona-head"><div><span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas)}</span><p>${stpUiEsc(stpUiText(chosen.need, copy.subtitle))}</p></div></div>`}
     </section>`;
     container.classList.add('active');
+    if (typeof refreshDakaModuleExportButtons === 'function') refreshDakaModuleExportButtons();
 }
 
 async function requestStpDecision(e) {
@@ -6712,7 +6732,9 @@ async function requestStpDecision(e) {
         const response = await analyzeWithPolling('/api/stp', payload);
         if (!response?.success) throw new Error(response?.message || response?.error || copy.error);
         window.DAKA_LAST_STP_DECISION = response;
+        STATE.lastStpResults = response?.data || response;
         renderStpDecision(response);
+        refreshDakaModuleExportButtons?.();
         toast.success(copy.success);
     } catch (error) {
         if (error?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
@@ -6812,6 +6834,7 @@ async function analyzeTechnical(e) {
       window.currentSeoUrl       = url;
 
       displayTechnicalResults(response);
+      refreshDakaModuleExportButtons?.();
       toast.success(lang === 'ar'
         ? '✅ اكتمل الفحص التقني!'
         : '✅ Audit SEO technique terminé !');
@@ -9051,6 +9074,16 @@ function getDakaExportModules() {
             ]
         },
         {
+            key: 'stp', id: 'resultsStpDecision', icon: 'fa-diagram-project',
+            available: !!STATE.lastStpResults || !!window.DAKA_LAST_STP_DECISION,
+            title: isAr ? 'STP والشخصيات' : isEn ? 'STP & Personas' : 'STP & personas',
+            subtitle: isAr ? 'الشخصيات، الزوايا، القنوات والاستهداف الإعلاني' : isEn ? 'Personas, angles, channels and ads targeting' : 'Personas, angles, canaux et ciblage Ads',
+            team: isAr ? 'فريق Daka للاستراتيجية والشخصيات' : isEn ? 'Daka Strategy & Persona Team' : 'Équipe Daka Stratégie & Personas',
+            features: [
+                feature('summary', 'fa-users-viewfinder', 'Personas, STP et détails exploitables', 'Personas, STP and actionable details', 'الشخصيات وSTP والتفاصيل القابلة للتنفيذ')
+            ]
+        },
+        {
             key: 'technical', id: 'resultsTechnical', icon: 'fa-gauge-high',
             available: !!STATE.lastTechnicalResults,
             title: isAr ? 'أداء الموقع' : isEn ? 'Site Performance' : 'Performance du site',
@@ -9120,6 +9153,74 @@ function setAllDakaExportSections(value) {
         input.closest('.export-pack-card')?.classList.toggle('selected', !!value);
     });
 }
+
+function getDakaModuleExportLabel(moduleKey = '') {
+    const isAr = STATE.currentLang === 'ar';
+    const isEn = STATE.currentLang === 'en';
+    if (isAr) return 'تصدير DOCX';
+    if (isEn) return 'Export DOCX';
+    return 'Export DOCX';
+}
+
+function refreshDakaModuleExportButtons() {
+    const modules = typeof getDakaExportModules === 'function' ? getDakaExportModules() : [];
+    const byKey = new Map(modules.map(module => [module.key, module]));
+    document.querySelectorAll('[data-daka-module-export]').forEach(button => {
+        const key = button.getAttribute('data-daka-module-export') || '';
+        const module = byKey.get(key);
+        const ready = !!module?.available;
+        button.classList.toggle('ready', ready);
+        button.classList.toggle('waiting', !ready);
+        button.setAttribute('aria-disabled', ready ? 'false' : 'true');
+        button.title = ready
+            ? module?.title || getDakaModuleExportLabel(key)
+            : (STATE.currentLang === 'ar' ? 'أطلق هذا التحليل أولا' : STATE.currentLang === 'en' ? 'Run this analysis first' : 'Lancez d’abord cette analyse');
+        const label = button.querySelector('[data-export-label]');
+        if (label) label.textContent = getDakaModuleExportLabel(key);
+    });
+}
+
+function initDakaModuleExportButtons() {
+    const configs = [
+        ['competitors', 'competitorsTab', 'fa-file-word'],
+        ['stp', 'stpTab', 'fa-file-word'],
+        ['funnel', 'funnelTab', 'fa-file-word'],
+        ['technical', 'technicalTab', 'fa-file-word'],
+        ['keywords', 'keywordsTab', 'fa-file-word']
+    ];
+    configs.forEach(([key, tabId, icon]) => {
+        const tab = document.getElementById(tabId);
+        const header = tab?.querySelector('.card-header');
+        if (!header || header.querySelector(`[data-daka-module-export="${key}"]`)) return;
+        const action = document.createElement('div');
+        action.className = 'daka-module-export-slot no-print';
+        action.innerHTML = `<button type="button" class="daka-module-export-btn waiting" data-no-collapse="true" data-daka-module-export="${key}" onclick="window.exportDakaModuleToWord('${key}')">
+            <i class="fas ${icon}"></i><span data-export-label>${getDakaModuleExportLabel(key)}</span>
+        </button>`;
+        header.appendChild(action);
+    });
+    refreshDakaModuleExportButtons();
+}
+
+window.exportDakaModuleToWord = async function exportDakaModuleToWord(moduleKey = '') {
+    const key = String(moduleKey || STATE.currentTab || '').trim();
+    const module = getDakaExportModules().find(item => item.key === key);
+    const isAr = STATE.currentLang === 'ar';
+    const isEn = STATE.currentLang === 'en';
+    if (!module || !module.available) {
+        return toast.warning(isAr ? 'أطلق هذا التحليل أولا قبل التصدير.' : isEn ? 'Run this analysis first before exporting.' : 'Lancez d’abord cette analyse avant l’export.');
+    }
+    const root = document.getElementById(module.id);
+    const featureKeys = module.features
+        .filter(feature => !!root?.querySelector(`[data-export-feature="${feature.key}"]`))
+        .map(feature => feature.key);
+    await window.exportFullAnalysisToWord({
+        prepared: true,
+        sections: [module.key],
+        features: { [module.key]: featureKeys },
+        includeDetails: true
+    });
+};
 
 function openDakaExportStudio(preselect = null) {
     const modal = document.getElementById('export-studio-modal');
@@ -9317,6 +9418,7 @@ function getDakaPdfReportUrl() {
 function getDakaPdfModuleData(key) {
     if (key === 'competitors') return STATE.lastAnalysisResults || {};
     if (key === 'funnel') return STATE.lastFunnelResults || {};
+    if (key === 'stp') return STATE.lastStpResults || window.DAKA_LAST_STP_DECISION || {};
     if (key === 'technical') return STATE.lastTechnicalResults || {};
     if (key === 'keywords') return STATE.lastKeywords || {};
     return {};
@@ -11036,6 +11138,7 @@ async function analyzeKeywords(e) {
       STATE.lastInputs.kwGeo       = geo;
 
       displayKeywordsResults(response); // displayKeywordsResults gère showResults en interne
+      refreshDakaModuleExportButtons?.();
       const total = response.totalKeywords || response.keywords?.length || 0;
       toast.success(
         isAr ? `✅ تم توليد ${total} كلمة مفتاحية!`
@@ -11103,6 +11206,7 @@ function displayKeywordsResults(data) {
         countPerLanguage: parseInt(document.getElementById('kwCount')?.value) || 20,
         geoInput:       document.getElementById('kwGeo')?.value || 'auto',
     };
+    refreshDakaModuleExportButtons?.();
 
     const kwList = STATE.lastKeywords.keywords;
     const stats  = STATE.lastKeywords.stats;
@@ -12156,6 +12260,43 @@ function buildFunnelExecutiveSummaryModel(data, lang = STATE.currentLang || 'fr'
 
 function buildExecutiveSummaryModel(data, type, lang = STATE.currentLang || 'fr') {
     if (type === 'funnel') return buildFunnelExecutiveSummaryModel(data || {}, lang);
+    if (type === 'stp') {
+        const source = data?.data || data || {};
+        const personas = Array.isArray(source.personaCards) ? source.personaCards : [];
+        const firstPersona = personas[0] || {};
+        const personaActions = personas.slice(0, 5).map((persona, index) => ({
+            title: executiveText(persona.attackAngle || persona.details?.attackAngle || persona.details?.corePromise || persona.summary || persona.displayName),
+            impact: persona.beachheadPriority?.firstToAttack ? (lang === 'ar' ? 'مرتفع' : lang === 'en' ? 'High' : 'Élevé') : (lang === 'ar' ? 'متوسط' : lang === 'en' ? 'Medium' : 'Moyen'),
+            effort: lang === 'ar' ? 'متوسط' : lang === 'en' ? 'Medium' : 'Moyen',
+            priority: String(index + 1)
+        })).filter(action => action.title);
+        const opportunities = executiveList([
+            personas.map(persona => persona.details?.corePromise || persona.primaryAngle?.corePromise || persona.attackAngle),
+            source.beachheadMarket?.rationale,
+            source.positioningObjects?.map(position => position.statement || position.differentiatedValue)
+        ], 3);
+        const weaknesses = executiveList([
+            personas.map(persona => persona.details?.objectionToNeutralize || persona.details?.pains),
+            source.qualityGate?.issues,
+            source.antiHallucinationChecks
+        ], 3);
+        return {
+            score: executiveScore(firstPersona, type) || firstPersona.priorityScore || null,
+            verdict: executiveText(
+                source.targeting?.chosenSegment?.need ||
+                firstPersona.details?.primaryJobToBeDone ||
+                firstPersona.summary ||
+                firstPersona.attackAngle ||
+                opportunities[0] ||
+                weaknesses[0]
+            ),
+            opportunities,
+            weaknesses,
+            actions: personaActions,
+            quickWins: executiveList([personas.map(persona => persona.details?.offerMove || persona.details?.landingPageSection)], 3),
+            plan30: executiveList([personaActions.map(action => action.title)], 5)
+        };
+    }
     const actions = executiveActions(data);
     const opportunities = executiveList([
         data.swot?.opportunities,
@@ -17118,6 +17259,7 @@ function displayFunnelResults(data = {}) {
             showResults('resultsFunnel');
             STATE.lastFunnelResults = data;
             window.updateExportBadges?.();
+            refreshDakaModuleExportButtons?.();
             return;
         }
         const surgerySource = data.funnelSurgery || data.funnelSectionSurgery || data.sectionSurgery || data.funnelSectionScanner || {};
@@ -17207,11 +17349,13 @@ function displayFunnelResults(data = {}) {
         showResults('resultsFunnel');
         STATE.lastFunnelResults = data;
         window.updateExportBadges?.();
+        refreshDakaModuleExportButtons?.();
     } catch (error) {
         console.error('[FunnelV2] Render failed:', error);
         container.innerHTML = `<section class="funnel-v2-render-error" dir="${dir}"><i class="fas fa-triangle-exclamation"></i><div><strong>${safe(copy.partial)}</strong><p>${safe(copy.noData)}</p></div></section>`;
         showResults('resultsFunnel');
         STATE.lastFunnelResults = data;
+        refreshDakaModuleExportButtons?.();
     }
 }
 // ════════════════════════════════════════════════════════════════
