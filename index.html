@@ -5836,7 +5836,7 @@ navkeywords: 'Market demand',
         }, true);
     })();
     </script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260824-module-docx-sidebar1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260824-readable-sidebar-toggle1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">
@@ -10613,6 +10613,134 @@ body > div:has(#btn-export-global),
     [dir="rtl"] body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
         right: 14px !important;
         left: auto !important;
+    }
+}
+
+/* Readable module sidebar: open by default, hideable when the report needs space. */
+@media (min-width: 1181px) {
+    :root {
+        --daka-sidebar-open-width: 228px;
+        --daka-sidebar-edge: 16px;
+    }
+    body:not(.daka-deal-editor) main {
+        padding-inline-start: calc(var(--daka-sidebar-open-width) + 26px) !important;
+        transition: padding-inline-start .24s ease, padding-inline-end .24s ease;
+    }
+    body.daka-sidebar-hidden:not(.daka-deal-editor) main {
+        padding-inline-start: 0 !important;
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        left: var(--daka-sidebar-edge) !important;
+        top: 126px !important;
+        width: var(--daka-sidebar-open-width) !important;
+        max-width: var(--daka-sidebar-open-width) !important;
+        max-height: calc(100dvh - 150px) !important;
+        padding: 10px !important;
+        gap: 8px !important;
+        border-radius: 24px !important;
+        transition: transform .24s ease, opacity .2s ease, width .24s ease, box-shadow .24s ease;
+    }
+    body.daka-sidebar-hidden:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(calc(-100% - 28px));
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn {
+        min-height: 54px !important;
+        width: 100% !important;
+        padding: 10px 13px !important;
+        flex-direction: row !important;
+        justify-content: flex-start !important;
+        align-items: center !important;
+        gap: 12px !important;
+        border-radius: 16px !important;
+        font-size: .88rem !important;
+        line-height: 1.18 !important;
+        text-align: start !important;
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn i {
+        width: 28px;
+        min-width: 28px;
+        height: 28px;
+        display: inline-grid;
+        place-items: center;
+        font-size: 1.03rem !important;
+    }
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn span {
+        display: block !important;
+        max-width: none !important;
+        overflow: visible !important;
+        color: inherit;
+        white-space: normal !important;
+        text-overflow: clip !important;
+        word-break: normal;
+    }
+    .daka-sidebar-toggle {
+        position: fixed;
+        left: var(--daka-sidebar-edge);
+        top: 76px;
+        z-index: 980;
+        min-width: 146px;
+        min-height: 42px;
+        padding: 8px 12px;
+        border: 1px solid rgba(125, 211, 252, .22);
+        border-radius: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        color: #eaf6ff;
+        background: linear-gradient(135deg, rgba(2, 6, 23, .94), rgba(15, 23, 42, .88));
+        box-shadow: 0 16px 44px rgba(0, 0, 0, .38), inset 0 1px 0 rgba(255, 255, 255, .07);
+        font-size: .75rem;
+        font-weight: 950;
+        cursor: pointer;
+        transition: transform .18s ease, border-color .18s ease, background .18s ease, color .18s ease;
+    }
+    .daka-sidebar-toggle:hover,
+    .daka-sidebar-toggle:focus-visible {
+        transform: translateY(-1px);
+        border-color: rgba(34, 211, 238, .5);
+        color: #fff;
+        outline: none;
+    }
+    .daka-sidebar-toggle i {
+        color: #67e8f9;
+    }
+    body.daka-sidebar-hidden .daka-sidebar-toggle {
+        min-width: 116px;
+    }
+    [dir="rtl"] body:not(.daka-deal-editor) main {
+        padding-inline-start: 0 !important;
+        padding-inline-end: calc(var(--daka-sidebar-open-width) + 26px) !important;
+    }
+    [dir="rtl"] body.daka-sidebar-hidden:not(.daka-deal-editor) main {
+        padding-inline-end: 0 !important;
+    }
+    [dir="rtl"] body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        right: var(--daka-sidebar-edge) !important;
+        left: auto !important;
+    }
+    [dir="rtl"] body.daka-sidebar-hidden:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        transform: translateX(calc(100% + 28px));
+    }
+    [dir="rtl"] .daka-sidebar-toggle {
+        right: var(--daka-sidebar-edge);
+        left: auto;
+    }
+    [dir="rtl"] .daka-sidebar-toggle i {
+        transform: scaleX(-1);
+    }
+}
+
+@media (max-width: 1180px) {
+    .daka-sidebar-toggle {
+        display: none !important;
+    }
+    body.daka-sidebar-hidden .header[data-nav-density="compact"] .nav-tabs {
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        transform: none !important;
     }
 }
 

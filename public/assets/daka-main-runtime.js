@@ -1852,9 +1852,77 @@ async function initSharedReportRoute() {
 document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.addEventListener('DOMContentLoaded', initSharedReportRoute);
 document.addEventListener('DOMContentLoaded', initDakaModuleExportButtons);
+document.addEventListener('DOMContentLoaded', initDakaSidebarVisibilityToggle);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-08-24-module-docx-sidebar1';
+window.DAKA_FRONTEND_BUILD = '2026-08-24-readable-sidebar-toggle1';
+
+function getDakaSidebarToggleCopy() {
+    const lang = STATE.currentLang || document.getElementById('langSelector')?.value || 'fr';
+    if (lang === 'ar') return {
+        show: 'إظهار القائمة',
+        hide: 'إخفاء القائمة',
+        title: 'إظهار أو إخفاء قائمة الوحدات'
+    };
+    if (lang === 'en') return {
+        show: 'Show menu',
+        hide: 'Hide menu',
+        title: 'Show or hide module navigation'
+    };
+    return {
+        show: 'Afficher menu',
+        hide: 'Masquer menu',
+        title: 'Afficher ou masquer la navigation des modules'
+    };
+}
+
+function refreshDakaSidebarToggle() {
+    const btn = document.getElementById('dakaSidebarToggle');
+    if (!btn) return;
+    document.querySelectorAll('.nav-btn').forEach(navBtn => {
+        const label = (navBtn.textContent || '').replace(/\s+/g, ' ').trim();
+        if (label) navBtn.setAttribute('title', label);
+    });
+    const copy = getDakaSidebarToggleCopy();
+    const hidden = document.body.classList.contains('daka-sidebar-hidden');
+    btn.innerHTML = `<i class="fas ${hidden ? 'fa-bars-staggered' : 'fa-chevron-left'}" aria-hidden="true"></i><span>${hidden ? copy.show : copy.hide}</span>`;
+    btn.setAttribute('aria-expanded', hidden ? 'false' : 'true');
+    btn.setAttribute('title', copy.title);
+    btn.setAttribute('aria-label', hidden ? copy.show : copy.hide);
+}
+
+function initDakaSidebarVisibilityToggle() {
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+        const label = (btn.textContent || '').replace(/\s+/g, ' ').trim();
+        if (label) btn.setAttribute('title', label);
+    });
+    if (document.getElementById('dakaSidebarToggle')) {
+        refreshDakaSidebarToggle();
+        return;
+    }
+    const btn = document.createElement('button');
+    btn.id = 'dakaSidebarToggle';
+    btn.type = 'button';
+    btn.className = 'daka-sidebar-toggle no-print';
+    let savedHidden = false;
+    try {
+        savedHidden = localStorage.getItem('dakaSidebarHidden') === '1';
+    } catch (_) {}
+    document.body.classList.toggle('daka-sidebar-hidden', savedHidden);
+    btn.addEventListener('click', () => {
+        const hidden = !document.body.classList.contains('daka-sidebar-hidden');
+        document.body.classList.toggle('daka-sidebar-hidden', hidden);
+        try {
+            localStorage.setItem('dakaSidebarHidden', hidden ? '1' : '0');
+        } catch (_) {}
+        refreshDakaSidebarToggle();
+    });
+    document.body.appendChild(btn);
+    refreshDakaSidebarToggle();
+    document.getElementById('langSelector')?.addEventListener('change', () => {
+        setTimeout(refreshDakaSidebarToggle, 0);
+    });
+}
 
 function loaderTypeFromEndpoint(endpoint = '') {
     const value = String(endpoint || '').toLowerCase();
