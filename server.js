@@ -25809,7 +25809,9 @@ function cleanDocxText(value, lang = 'fr', offerType = 'product') {
     return text.replace(/\s+/g, ' ').trim();
 }
 
-function loadDakaDocxLogoBuffer(uploadedLogoDataUrl = '') {
+function loadDakaDocxLogoBuffer(uploadedLogoDataUrl = '', logoMode = 'daka') {
+    const normalizedMode = ['daka', 'custom', 'none'].includes(String(logoMode || 'daka')) ? String(logoMode || 'daka') : 'daka';
+    if (normalizedMode === 'none') return null;
     const dataUrl = String(uploadedLogoDataUrl || '');
     const match = dataUrl.match(/^data:image\/(png|jpe?g);base64,([a-z0-9+/=\s]+)$/i);
     if (match) {
@@ -25818,6 +25820,7 @@ function loadDakaDocxLogoBuffer(uploadedLogoDataUrl = '') {
             return { buffer, extension: /^jpe?g$/i.test(match[1]) ? 'jpg' : 'png' };
         }
     }
+    if (normalizedMode === 'custom') return null;
     const logoPath = path.join(__dirname, 'assets', 'daka-report-logo.png');
     if (fs.existsSync(logoPath)) return { buffer: fs.readFileSync(logoPath), extension: 'png' };
     return null;
@@ -26151,6 +26154,72 @@ function createDocxExecutiveDashboard(model, lang, offerType) {
     ].filter(Boolean);
 }
 
+function createDocxExportManifest(model, lang, offerType) {
+    const modules = Array.isArray(model.modules) ? model.modules.slice(0, 8) : [];
+    if (!modules.length) return [];
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const rows = [
+        new TableRow({
+            children: [
+                new TableCell({
+                    shading: { fill: 'E0F2FE' },
+                    width: { size: 34, type: WidthType.PERCENTAGE },
+                    children: [createDocxParagraph(isAr ? 'الوحدة' : isEn ? 'Module' : 'Interface', lang, { bold: true, size: 20, color: '075985', alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT, offerType })].filter(Boolean),
+                }),
+                new TableCell({
+                    shading: { fill: 'E0F2FE' },
+                    width: { size: 66, type: WidthType.PERCENTAGE },
+                    children: [createDocxParagraph(isAr ? 'الفريق المسؤول' : isEn ? 'Responsible team' : 'Équipe responsable', lang, { bold: true, size: 20, color: '075985', alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT, offerType })].filter(Boolean),
+                }),
+            ],
+        }),
+        ...modules.map((module, index) => new TableRow({
+            children: [
+                new TableCell({
+                    shading: { fill: index % 2 === 0 ? 'FFFFFF' : 'F8FAFC' },
+                    children: [createDocxParagraph(module.title || module.key || '', lang, { bold: true, size: 20, color: '0F172A', alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT, offerType })].filter(Boolean),
+                }),
+                new TableCell({
+                    shading: { fill: index % 2 === 0 ? 'FFFFFF' : 'F8FAFC' },
+                    children: [
+                        createDocxParagraph(module.team || '', lang, { size: 20, color: '334155', alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT, offerType }),
+                        ...normalizeWordExportList(module.features, 6).map(feature => createDocxParagraph(feature, lang, {
+                            bullet: true,
+                            size: 18,
+                            color: '475569',
+                            alignment: isAr ? AlignmentType.RIGHT : AlignmentType.LEFT,
+                            offerType,
+                        })),
+                    ].filter(Boolean),
+                }),
+            ],
+        })),
+    ];
+    return [
+        createDocxHeading(isAr ? 'محتوى الملف' : isEn ? 'Export contents' : 'Contenu du dossier', lang, 2, offerType),
+        createDocxParagraph(
+            isAr ? 'تم إنشاء هذا الملف حسب اختيارك في Daka Report Studio.' :
+                isEn ? 'This file was generated from your choices in Daka Report Studio.' :
+                    'Ce fichier est généré selon vos choix dans Daka Report Studio.',
+            lang,
+            { size: 20, color: '475569', after: 140, offerType }
+        ),
+        new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            borders: {
+                top: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                bottom: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                left: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                right: { style: BorderStyle.SINGLE, size: 1, color: 'CBD5E1' },
+                insideHorizontal: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+                insideVertical: { style: BorderStyle.SINGLE, size: 1, color: 'E2E8F0' },
+            },
+            rows,
+        }),
+    ].filter(Boolean);
+}
+
 function createDocxBranchSchema(model, lang, offerType) {
     const isAr = lang === 'ar';
     const isEn = lang === 'en';
@@ -26341,7 +26410,7 @@ async function buildDakaDocxDocument(payload = {}) {
     const sectionHtml = sanitizeWordExportFragment(payload.sectionHtml);
     const offerType = inferWordExportBusinessContext(model, sectionHtml);
     const title = cleanDocxText(payload.title || (isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport executif Daka'), lang, offerType).slice(0, 140);
-    const logoAsset = loadDakaDocxLogoBuffer(payload.logoDataUrl);
+    const logoAsset = loadDakaDocxLogoBuffer(payload.logoDataUrl, payload.logoMode);
     const children = [];
     if (logoAsset) {
         children.push(new Paragraph({
@@ -26367,6 +26436,7 @@ async function buildDakaDocxDocument(payload = {}) {
         [isAr ? 'النتيجة' : isEn ? 'Score' : 'Score', Number.isFinite(Number(model.score)) ? `${Number(model.score)}/100` : ''],
     ], lang);
     if (metaTable) children.push(metaTable);
+    children.push(...createDocxExportManifest(model, lang, offerType));
     children.push(...createDocxExecutiveDashboard(model, lang, offerType));
     children.push(createDocxHeading(isAr ? 'الملخص التنفيذي' : isEn ? 'Executive summary' : 'Synthese executive', lang, 2, offerType));
     children.push(createDocxParagraph(model.verdict || model.priorityDecision || '', lang, { bold: true, size: 24, color: '0F172A', offerType }));

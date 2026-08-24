@@ -9076,6 +9076,7 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
     }
     const title = isAr ? 'تقرير Daka التنفيذي' : isEn ? 'Daka Executive Report' : 'Rapport exécutif Daka';
     const visualAssets = await collectDakaDocxVisualAssets(selectedModules);
+    const logoMode = exportOptions.logoMode || window.dakaExportLogoMode || 'daka';
     const slug = (model.domain || 'report').replace(/[^a-zA-Z0-9]/g, '-').substring(0, 34);
     const filename = 'Daka-Editable-Report-' + slug + '-' + Date.now() + '.docx';
     const response = await fetch(`${CONFIG.API_BASE_URL}/api/export/word`, {
@@ -9085,7 +9086,8 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
             lang,
             title,
             filename,
-            logoDataUrl: window.dakaExportLogoDataUrl || '',
+            logoMode,
+            logoDataUrl: logoMode === 'custom' ? (window.dakaExportLogoDataUrl || '') : '',
             model: {
                 siteTitle: model.siteTitle || model.domain || '',
                 domain: model.domain || '',
@@ -9101,7 +9103,16 @@ window.exportFullAnalysisToWord = async function (exportOptions = null) {
                 plan30: model.plan30 || [],
                 after30: model.after30 || [],
                 branches: model.branches || [],
-                modules: model.modules || [],
+                modules: (model.modules || []).map(function (entry) {
+                    const sourceModule = selectedModules.find(function (module) { return module.key === entry.key; });
+                    const selectedFeatureKeys = selectedFeatures[entry.key] || [];
+                    return {
+                        ...entry,
+                        features: (sourceModule?.features || [])
+                            .filter(function (feature) { return selectedFeatureKeys.includes(feature.key); })
+                            .map(function (feature) { return feature.title; })
+                    };
+                }),
                 geo: model.geo || '',
                 objective: model.objective || ''
             },
@@ -9227,6 +9238,32 @@ function closeDakaExportStudio() {
 }
 
 window.dakaExportLogoDataUrl = window.dakaExportLogoDataUrl || '';
+window.dakaExportLogoMode = window.dakaExportLogoMode || 'daka';
+
+function setDakaExportLogoMode(mode = 'daka') {
+    const normalized = ['daka', 'custom', 'none'].includes(mode) ? mode : 'daka';
+    window.dakaExportLogoMode = normalized;
+    document.querySelectorAll('input[name="daka-export-logo-mode"]').forEach(input => {
+        input.checked = input.value === normalized;
+    });
+    const upload = document.getElementById('export-logo-input');
+    const preview = document.querySelector('#export-logo-preview img');
+    const previewBox = document.getElementById('export-logo-preview');
+    if (upload) upload.disabled = normalized !== 'custom';
+    if (previewBox) previewBox.classList.toggle('is-empty', normalized === 'none');
+    if (preview) {
+        if (normalized === 'none') {
+            preview.removeAttribute('src');
+            preview.alt = 'Sans logo';
+        } else if (normalized === 'custom' && window.dakaExportLogoDataUrl) {
+            preview.src = window.dakaExportLogoDataUrl;
+            preview.alt = 'Logo personnalisé';
+        } else {
+            preview.src = DAKA_PUBLIC_LOGO_URL;
+            preview.alt = 'Logo Daka';
+        }
+    }
+}
 
 function handleDakaExportLogoUpload(event) {
     const file = event?.target?.files?.[0];
@@ -9242,6 +9279,7 @@ function handleDakaExportLogoUpload(event) {
     const reader = new FileReader();
     reader.onload = () => {
         window.dakaExportLogoDataUrl = String(reader.result || '');
+        setDakaExportLogoMode('custom');
         const preview = document.querySelector('#export-logo-preview img');
         if (preview && window.dakaExportLogoDataUrl) preview.src = window.dakaExportLogoDataUrl;
         toast.success(isAr ? 'تم تحديث شعار التقرير.' : isEn ? 'Report logo updated.' : 'Logo du rapport mis à jour.');
@@ -9252,9 +9290,8 @@ function handleDakaExportLogoUpload(event) {
 function resetDakaExportLogo() {
     window.dakaExportLogoDataUrl = '';
     const input = document.getElementById('export-logo-input');
-    const preview = document.querySelector('#export-logo-preview img');
     if (input) input.value = '';
-    if (preview) preview.src = DAKA_PUBLIC_LOGO_URL;
+    setDakaExportLogoMode('daka');
 }
 
 function setAllDakaExportSections(value) {
@@ -9320,16 +9357,7 @@ window.exportDakaModuleToWord = async function exportDakaModuleToWord(moduleKey 
     if (!module || !module.available) {
         return toast.warning(isAr ? 'أطلق هذا التحليل أولا قبل التصدير.' : isEn ? 'Run this analysis first before exporting.' : 'Lancez d’abord cette analyse avant l’export.');
     }
-    const root = document.getElementById(module.id);
-    const featureKeys = module.features
-        .filter(feature => !!root?.querySelector(`[data-export-feature="${feature.key}"]`))
-        .map(feature => feature.key);
-    await window.exportFullAnalysisToWord({
-        prepared: true,
-        sections: [module.key],
-        features: { [module.key]: featureKeys },
-        includeDetails: true
-    });
+    openDakaExportStudio(module.key);
 };
 
 function openDakaExportStudio(preselect = null) {
@@ -9394,8 +9422,18 @@ function openDakaExportStudio(preselect = null) {
     const logoHelp = document.getElementById('export-logo-help');
     const logoReset = document.getElementById('export-logo-reset-label');
     if (logoTitle) logoTitle.textContent = isAr ? 'شعار التقرير' : isEn ? 'Report logo' : 'Logo du rapport';
-    if (logoHelp) logoHelp.textContent = isAr ? 'ارفع PNG/JPG ليظهر في ملف Word. إذا لم ترفع شيئا سنستخدم شعار Daka.' : isEn ? 'Upload a PNG/JPG for the Word file. If empty, Daka uses its official logo.' : 'Ajoutez un PNG/JPG pour le fichier Word. Sans image, Daka utilise son logo officiel.';
+    if (logoHelp) logoHelp.textContent = isAr ? 'اختر شعار Daka أو ارفع شعارا مخصصا أو صدّر الملف بدون شعار.' : isEn ? 'Use the Daka logo, upload a custom logo, or export without a logo.' : 'Choisissez le logo Daka, un logo personnalisé, ou un export sans logo.';
     if (logoReset) logoReset.textContent = isAr ? 'شعار Daka' : isEn ? 'Daka logo' : 'Logo Daka';
+    const logoModes = {
+        daka: isAr ? 'شعار Daka' : isEn ? 'Daka logo' : 'Logo Daka',
+        custom: isAr ? 'شعار مخصص' : isEn ? 'Custom logo' : 'Logo personnalisé',
+        none: isAr ? 'بدون شعار' : isEn ? 'No logo' : 'Sans logo'
+    };
+    document.querySelectorAll('.export-logo-choice span[data-logo-choice-label]').forEach(label => {
+        const key = label.getAttribute('data-logo-choice-label');
+        label.textContent = logoModes[key] || logoModes.daka;
+    });
+    setDakaExportLogoMode(window.dakaExportLogoMode || 'daka');
     modal.classList.add('active');
     document.body.classList.add('modal-open');
 }
@@ -9404,6 +9442,9 @@ async function confirmDakaExportStudio(format = 'word') {
     const sections = [...document.querySelectorAll('#export-studio-sections input[data-export-section]:checked')].map(input => input.value);
     if (!sections.length) {
         return toast.warning(STATE.currentLang === 'ar' ? 'اختر قسماً واحداً على الأقل.' : STATE.currentLang === 'en' ? 'Select at least one section.' : 'Sélectionnez au moins une section.');
+    }
+    if (window.dakaExportLogoMode === 'custom' && !window.dakaExportLogoDataUrl) {
+        return toast.warning(STATE.currentLang === 'ar' ? 'ارفع الشعار المخصص أو اختر شعار Daka.' : STATE.currentLang === 'en' ? 'Upload the custom logo or choose the Daka logo.' : 'Ajoutez le logo personnalisé ou choisissez le logo Daka.');
     }
     const features = {};
     sections.forEach(section => {

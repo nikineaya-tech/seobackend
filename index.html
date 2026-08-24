@@ -4343,7 +4343,21 @@ table tbody td {
                 </div>
                 <label class="export-logo-field">
                     <span id="export-logo-title">Logo du rapport</span>
-                    <small id="export-logo-help">Ajoutez un logo PNG/JPG pour le fichier DOCX. Sinon Daka utilise son logo officiel.</small>
+                    <small id="export-logo-help">Choisissez le logo Daka, un logo personnalisé, ou un export sans logo.</small>
+                    <div class="export-logo-choices" role="radiogroup" aria-label="Choix du logo">
+                        <label class="export-logo-choice">
+                            <input type="radio" name="daka-export-logo-mode" value="daka" checked data-no-collapse="true" onchange="setDakaExportLogoMode('daka')">
+                            <i class="fas fa-shield-halved"></i><span data-logo-choice-label="daka">Logo Daka</span>
+                        </label>
+                        <label class="export-logo-choice">
+                            <input type="radio" name="daka-export-logo-mode" value="custom" data-no-collapse="true" onchange="setDakaExportLogoMode('custom')">
+                            <i class="fas fa-image"></i><span data-logo-choice-label="custom">Logo personnalisé</span>
+                        </label>
+                        <label class="export-logo-choice">
+                            <input type="radio" name="daka-export-logo-mode" value="none" data-no-collapse="true" onchange="setDakaExportLogoMode('none')">
+                            <i class="fas fa-ban"></i><span data-logo-choice-label="none">Sans logo</span>
+                        </label>
+                    </div>
                     <input id="export-logo-input" type="file" accept="image/png,image/jpeg" data-no-collapse="true" onchange="handleDakaExportLogoUpload(event)">
                 </label>
                 <button class="export-logo-reset" type="button" data-no-collapse="true" onclick="resetDakaExportLogo()">
@@ -6016,7 +6030,7 @@ navkeywords: 'Market demand',
         }, true);
     })();
     </script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260824-stp-objective-required1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260824-export-studio1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">
@@ -8476,6 +8490,13 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     height: 100%;
     object-fit: cover;
 }
+.export-logo-preview.is-empty::before {
+    content: "—";
+    color: #64748b;
+    font-size: 1.7rem;
+    font-weight: 900;
+}
+.export-logo-preview.is-empty img { display: none; }
 .export-logo-field {
     display: grid;
     gap: 5px;
@@ -8492,6 +8513,39 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     font-size: .64rem;
     line-height: 1.45;
 }
+.export-logo-choices {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0,1fr));
+    gap: 7px;
+    margin: 4px 0 2px;
+}
+.export-logo-choice {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    min-height: 38px;
+    padding: 7px 9px;
+    border: 1px solid rgba(148,163,184,.13);
+    border-radius: 9px;
+    background: rgba(2,6,23,.46);
+    color: #b8c5d8;
+    font-size: .62rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: border-color .18s ease, background .18s ease, color .18s ease;
+}
+.export-logo-choice input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+.export-logo-choice:has(input:checked) {
+    border-color: rgba(34,211,238,.48);
+    background: rgba(8,145,178,.13);
+    color: #ecfeff;
+}
+.export-logo-choice i { color: #67e8f9; }
 .export-logo-field input {
     width: 100%;
     min-height: 36px;
@@ -8500,6 +8554,10 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     border-radius: 9px;
     color: #cbd5e1;
     background: rgba(2,6,23,.48);
+}
+.export-logo-field input:disabled {
+    opacity: .45;
+    cursor: not-allowed;
 }
 .export-logo-reset {
     display: inline-flex;
@@ -8730,7 +8788,8 @@ main > .container { width: min(1220px, calc(100% - 32px)); }
     #btn-export-global { width: 44px !important; height: 44px !important; }
     .export-studio-sections,
     .export-depth-fieldset { grid-template-columns: 1fr; }
-    .export-logo-upload { grid-template-columns: 1fr; }
+    .export-logo-upload,
+    .export-logo-choices { grid-template-columns: 1fr; }
     .export-logo-preview { width: 64px; height: 64px; }
     .export-studio-footer { align-items: stretch; flex-direction: column; }
     .export-studio-footer .btn { width: 100%; }
