@@ -1837,7 +1837,7 @@ document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.addEventListener('DOMContentLoaded', initSharedReportRoute);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-08-24-stp-persona-engine2';
+window.DAKA_FRONTEND_BUILD = '2026-08-24-stp-social-culture1';
 
 function loaderTypeFromEndpoint(endpoint = '') {
     const value = String(endpoint || '').toLowerCase();
@@ -5731,6 +5731,10 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         occupation: 'الدور',
         priority: 'الأولوية',
         age: 'العمر',
+        socialCulture: 'الثقافة الاجتماعية',
+        lifeSituation: 'الوضعية الحياتية',
+        digitalMaturity: 'النضج الرقمي',
+        purchasePower: 'القدرة الشرائية',
         attackAngle: 'زاوية الهجوم',
         budgetPath: 'مسار الميزانية',
         channels: 'القنوات',
@@ -5797,6 +5801,10 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         occupation: 'Role',
         priority: 'Priority',
         age: 'Age',
+        socialCulture: 'Social culture',
+        lifeSituation: 'Life situation',
+        digitalMaturity: 'Digital maturity',
+        purchasePower: 'Purchase power',
         attackAngle: 'Attack angle',
         budgetPath: 'Budget path',
         channels: 'Channels',
@@ -5863,6 +5871,10 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         occupation: 'Rôle',
         priority: 'Priorité',
         age: 'Âge',
+        socialCulture: 'Culture sociale',
+        lifeSituation: 'Situation de vie',
+        digitalMaturity: 'Maturité digitale',
+        purchasePower: 'Pouvoir d’achat',
         attackAngle: 'Angle d’attaque',
         budgetPath: 'Chemin budget',
         channels: 'Canaux',
@@ -6149,6 +6161,10 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
         '',
         `- ${copy.age || 'Age'}: ${stpUiText(card.ageRange || details.ageRange, copy.noData || 'N/A')}`,
         `- ${copy.occupation || 'Role'}: ${stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName, copy.noData || 'N/A')}`,
+        `- ${copy.socialCulture || 'Social culture'}: ${stpUiText(details.socialCulture, copy.noData || 'N/A')}`,
+        `- ${copy.lifeSituation || 'Life situation'}: ${stpUiText(details.lifeSituation, copy.noData || 'N/A')}`,
+        `- ${copy.digitalMaturity || 'Digital maturity'}: ${stpUiText(details.digitalMaturity, copy.noData || 'N/A')}`,
+        `- ${copy.purchasePower || 'Purchase power'}: ${stpUiText(details.purchasePower, copy.noData || 'N/A')}`,
         `- ${copy.priority || 'Priority'}: ${stpUiText(card.priorityScore, '0')}/100`,
         summary ? `- ${copy.persona || 'Persona'}: ${summary}` : '',
         `- ${copy.primaryAngle || 'Primary angle'}: ${stpUiText(primaryAngle.name || details.primaryMarketingAngle || card.attackAngle, copy.noData || 'N/A')}`,
@@ -6271,6 +6287,10 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
           <pre id="${stpUiEsc(mdId)}" class="daka-stp-md-source">${stpUiEsc(markdown)}</pre>
           ${wantStatement ? `<div class="daka-stp-want"><small>${stpUiEsc(copy.jtbd || copy.want || 'JTBD')}</small><strong>${stpUiEsc(wantStatement)}</strong></div>` : ''}
           <div class="daka-stp-mini-grid">
+            ${renderStpMini(copy.socialCulture || 'Social culture', details.socialCulture)}
+            ${renderStpMini(copy.lifeSituation || 'Life situation', details.lifeSituation)}
+            ${renderStpMini(copy.digitalMaturity || 'Digital maturity', details.digitalMaturity)}
+            ${renderStpMini(copy.purchasePower || 'Purchase power', details.purchasePower)}
             ${renderStpSocialPlan(details, copy)}
             ${renderStpMini(copy.attackAngle || 'Attack angle', card.attackAngle || details.attackAngle)}
             ${renderStpMini(copy.corePromise || 'Core promise', details.corePromise || primaryAngle.corePromise)}

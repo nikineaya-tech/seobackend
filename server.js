@@ -11432,6 +11432,92 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         if (/skeptic|scept|méfi|mefi|متشكك|وعود/.test(text)) return 6;
         return Math.min(fallbackIndex, 6);
     };
+    const socioCulturalProfileFor = (segment, personaIndex = 0) => {
+        const text = `${segment?.id || ''} ${segment?.name || ''} ${segment?.need || ''}`.toLowerCase();
+        const pack = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
+        const defaultBudget = budgetTier === 'lean'
+            ? pack('budget prudent, test avant engagement', 'careful budget, tests before commitment', 'ميزانية حذرة واختبار قبل الالتزام')
+            : budgetTier === 'power'
+                ? pack('budget de croissance, exige preuves et ROI', 'growth budget, requires proof and ROI', 'ميزانية نمو تتطلب دليلا وROI')
+                : pack('budget focalisé, arbitre selon clarté et preuve', 'focused budget, decides from clarity and proof', 'ميزانية مركزة والقرار حسب الوضوح والدليل');
+        if (effectiveArchetype === 'content_education') {
+            const educationProfiles = [
+                {
+                    socialCulture: pack(`jeune urbain ou périurbain de ${market}, très exposé à Instagram, YouTube et WhatsApp`, `young urban or suburban learner in ${market}, highly exposed to Instagram, YouTube and WhatsApp`, `شاب حضري أو شبه حضري في ${market} يتابع Instagram وYouTube وWhatsApp بكثافة`),
+                    lifeSituation: pack('débute un projet parallèle ou cherche son premier business digital', 'starts a side project or first digital business', 'يبدأ مشروعا جانبيا أو أول بزنس رقمي'),
+                    digitalMaturity: pack('intermédiaire faible: consomme du contenu mais manque de méthode exécution', 'low-intermediate: consumes content but lacks execution method', 'متوسط منخفض: يستهلك المحتوى لكنه يفتقد منهج التنفيذ'),
+                    purchasePower: defaultBudget
+                },
+                {
+                    socialCulture: pack(`commerçant local connecté aux clients via WhatsApp, Facebook et recommandations de proximité`, `local merchant connected to customers through WhatsApp, Facebook and nearby referrals`, `تاجر محلي مرتبط بزبنائه عبر WhatsApp وFacebook والتوصيات القريبة`),
+                    lifeSituation: pack('possède déjà produits, stock ou boutique physique et veut digitaliser sans tout casser', 'already has products, stock or a physical shop and wants to digitize safely', 'لديه منتجات أو مخزون أو محل ويريد الرقمنة دون مخاطرة كبيرة'),
+                    digitalMaturity: pack('pratique: sait vendre, mais veut structurer paiement, contenu et suivi online', 'practical: knows selling, needs structure for payment, content and online follow-up', 'عملي: يعرف البيع لكنه يحتاج تنظيم الدفع والمحتوى والمتابعة أونلاين'),
+                    purchasePower: pack('budget orienté rentabilité, accepte de payer si le lien avec les ventes est clair', 'ROI-oriented budget, pays when link to sales is clear', 'ميزانية مرتبطة بالربحية ويدفع إذا ظهر أثرها على المبيعات')
+                },
+                {
+                    socialCulture: pack(`salarié ou freelance de ${market}, apprend le soir depuis mobile et contenus courts`, `employee or freelancer in ${market}, learns at night from mobile and short content`, `موظف أو مستقل في ${market} يتعلم مساء من الهاتف والمحتوى القصير`),
+                    lifeSituation: pack('cherche revenu secondaire, autonomie ou reconversion progressive', 'seeks secondary income, autonomy or gradual career switch', 'يبحث عن دخل إضافي أو استقلالية أو انتقال مهني تدريجي'),
+                    digitalMaturity: pack('curieux mais contraint par le temps: besoin de missions courtes et mesurables', 'curious but time-constrained: needs short measurable missions', 'فضولي لكن وقته محدود ويحتاج مهام قصيرة قابلة للقياس'),
+                    purchasePower: defaultBudget
+                },
+                {
+                    socialCulture: pack('profil méfiant après essais, pubs ou formations trop prometteuses', 'skeptical profile after failed attempts, ads or overpromising courses', 'شخصية حذرة بعد تجارب أو إعلانات أو دورات بوعود مبالغ فيها'),
+                    lifeSituation: pack('a déjà dépensé du temps ou argent et veut comprendre l’erreur avant de recommencer', 'already spent time or money and wants to understand the mistake before restarting', 'صرف وقتا أو مالا ويريد فهم الخطأ قبل إعادة المحاولة'),
+                    digitalMaturity: pack('intermédiaire: connaît les outils mais manque de diagnostic et priorités', 'intermediate: knows tools but lacks diagnosis and priorities', 'متوسط: يعرف الأدوات لكنه يفتقد التشخيص والأولويات'),
+                    purchasePower: pack('budget défensif: paie seulement avec diagnostic, preuve et garde-fous', 'defensive budget: pays only with diagnosis, proof and safeguards', 'ميزانية دفاعية: يدفع فقط مع تشخيص ودليل وضمانات')
+                },
+                {
+                    socialCulture: pack(`porteur de projet sensible aux réalités commerciales de ${market}: paiement, fournisseurs, COD, confiance`, `project owner sensitive to ${market} commercial realities: payment, suppliers, COD, trust`, `حامل مشروع حساس لواقع ${market}: الدفع والموردون وCOD والثقة`),
+                    lifeSituation: pack('veut adapter une idée e-commerce au terrain local avant d’investir', 'wants to adapt an e-commerce idea to local reality before investing', 'يريد تكييف فكرة التجارة الإلكترونية مع الواقع المحلي قبل الاستثمار'),
+                    digitalMaturity: pack('variable: comprend l’idée, cherche surtout application locale et preuves', 'variable: understands the idea, mainly seeks local application and proof', 'متغير: يفهم الفكرة لكنه يبحث عن التطبيق المحلي والدليل'),
+                    purchasePower: defaultBudget
+                },
+                {
+                    socialCulture: pack('personne active, familiale ou étudiante, qui apprend sur mobile entre obligations', 'busy learner, student or family-constrained, learning on mobile between obligations', 'شخص مشغول أو طالب أو لديه التزامات يتعلم عبر الهاتف بين المسؤوليات'),
+                    lifeSituation: pack('peu de temps disponible, préfère templates, checklists et actions rapides', 'limited time, prefers templates, checklists and quick actions', 'وقته محدود ويفضل القوالب والقوائم والإجراءات السريعة'),
+                    digitalMaturity: pack('fonctionnelle: veut suivre sans friction technique', 'functional: wants to follow without technical friction', 'عملي: يريد المتابعة دون تعقيد تقني'),
+                    purchasePower: defaultBudget
+                },
+                {
+                    socialCulture: pack('public prudent, habitué aux promesses marketing et sensible aux preuves vérifiables', 'careful audience used to marketing promises and sensitive to verifiable proof', 'جمهور حذر تعود على الوعود التسويقية ويهتم بالدليل القابل للتحقق'),
+                    lifeSituation: pack('attend de voir extraits, limites, support et avis avant de croire', 'needs extracts, limits, support and reviews before believing', 'ينتظر رؤية مقتطفات وحدود ودعم وآراء قبل الثقة'),
+                    digitalMaturity: pack('observateur: compare beaucoup avant de laisser ses informations ou payer', 'observer: compares heavily before leaving data or paying', 'مراقب: يقارن كثيرا قبل ترك بياناته أو الدفع'),
+                    purchasePower: pack('budget conditionnel: déclenché par transparence, support et preuve', 'conditional budget: unlocked by transparency, support and proof', 'ميزانية مشروطة: تتحرك بالشفافية والدعم والدليل')
+                }
+            ];
+            return educationProfiles[personaIndex] || educationProfiles[0];
+        }
+        if (effectiveArchetype === 'ecommerce_product') {
+            return {
+                socialCulture: pack(`acheteur digital de ${market}, influencé par avis, WhatsApp, réseaux sociaux et prix clair`, `digital shopper in ${market}, influenced by reviews, WhatsApp, social media and clear price`, `مشتري رقمي في ${market} يتأثر بالآراء وWhatsApp والسوشيال والسعر الواضح`),
+                lifeSituation: /budget|price|سعر/.test(text) ? pack('compare avant achat pour éviter une mauvaise dépense', 'compares before buying to avoid bad spend', 'يقارن قبل الشراء لتجنب إنفاق خاطئ') : pack('veut résoudre un besoin concret rapidement', 'wants to solve a concrete need quickly', 'يريد حل حاجة ملموسة بسرعة'),
+                digitalMaturity: pack('mobile-first: décide via preuve visuelle, chat et simplicité de commande', 'mobile-first: decides through visual proof, chat and easy order flow', 'يعتمد على الهاتف: يقرر عبر الدليل المرئي والدردشة وسهولة الطلب'),
+                purchasePower: defaultBudget
+            };
+        }
+        if (effectiveArchetype === 'local_service') {
+            return {
+                socialCulture: pack(`client local de ${market}, sensible à proximité, recommandation et avis`, `local customer in ${market}, sensitive to proximity, referral and reviews`, `عميل محلي في ${market} يهتم بالقرب والتوصية والآراء`),
+                lifeSituation: pack('besoin souvent concret, pratique ou urgent', 'often concrete, practical or urgent need', 'حاجة غالبا عملية أو عاجلة'),
+                digitalMaturity: pack('utilise Google/Maps/WhatsApp pour réduire le risque avant contact', 'uses Google/Maps/WhatsApp to reduce risk before contact', 'يستخدم Google/Maps/WhatsApp لتقليل المخاطرة قبل التواصل'),
+                purchasePower: defaultBudget
+            };
+        }
+        if (effectiveArchetype === 'b2b_service') {
+            return {
+                socialCulture: pack(`décideur business de ${market}, juge la crédibilité par preuve, méthode et ROI`, `business decision maker in ${market}, judges credibility by proof, method and ROI`, `صاحب قرار تجاري في ${market} يقيم الثقة عبر الدليل والمنهج وROI`),
+                lifeSituation: pack('pression de croissance, leads, différenciation ou exécution plus rapide', 'pressure around growth, leads, differentiation or faster execution', 'ضغط نمو أو عملاء محتملين أو تميز أو تنفيذ أسرع'),
+                digitalMaturity: pack('professionnelle: attend cadrage, livrables et preuves avant rendez-vous', 'professional: expects framing, deliverables and proof before booking', 'مهني: ينتظر التأطير والمخرجات والدليل قبل الموعد'),
+                purchasePower: defaultBudget
+            };
+        }
+        return {
+            socialCulture: pack(`audience de ${market} à clarifier par signaux SERP et concurrents`, `audience in ${market} to clarify through SERP and competitor signals`, `جمهور في ${market} يحتاج توضيحا عبر SERP والمنافسين`),
+            lifeSituation: pack('situation déduite du besoin et des concurrents observés', 'situation inferred from need and observed competitors', 'الوضعية مستنتجة من الحاجة والمنافسين المرصودين'),
+            digitalMaturity: pack('à valider par comportement de recherche et canaux', 'to validate through search behavior and channels', 'تحتاج تحقق عبر سلوك البحث والقنوات'),
+            purchasePower: defaultBudget
+        };
+    };
 
     return merged.slice(0, targetCount).map((segment, index) => {
         const persona = buildStpPersona(segment, inputs, competitorData, lang);
@@ -11446,6 +11532,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         const ageRange = ageRanges[effectiveArchetype]?.[personaIndex] || ageRanges.general_market[personaIndex] || '25-50';
         const displayName = selectedPersonaNames[langKey]?.[personaIndex] || `${isAr ? 'Persona' : 'Persona'} ${index + 1}`;
         const occupation = personaRoles[effectiveArchetype]?.[personaIndex] || personaRoles.general_market[personaIndex] || '';
+        const socioCulturalProfile = socioCulturalProfileFor(segment, personaIndex);
         const segmentName = segment.name || persona.name || '';
         const socialChannels = attackChannels
             .filter(channel => /social|paid|owned|inbound|outbound/i.test(`${channel?.type || ''} ${channel?.name || ''}`))
@@ -11491,6 +11578,10 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 primaryJobToBeDone: persona.jobToBeDone,
                 ageRange,
                 occupation,
+                socialCulture: socioCulturalProfile.socialCulture,
+                lifeSituation: socioCulturalProfile.lifeSituation,
+                digitalMaturity: socioCulturalProfile.digitalMaturity,
+                purchasePower: socioCulturalProfile.purchasePower,
                 segmentName,
                 attackAngle,
                 budgetPath: budgetLabel(index),
