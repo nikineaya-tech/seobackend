@@ -285,6 +285,46 @@ test('arabic beauty STP personas do not expose english placeholders or evidence 
   assert.ok(new Set(model.personaCards.map(persona => persona.attackAngle)).size >= 3);
 });
 
+test('beauty device personas stay product-specific across skin proof safety and alternatives', () => {
+  const model = buildAngleDrivenStpModel({
+    query: 'extracteur de points noirs',
+    geo: 'Libya',
+    lang: 'fr',
+    budget: 'petit budget',
+    segments: [
+      { id: 'beauty-visible-result', name: 'Chercheurs de résultat visible', need: 'voir un avant apres reel sur peau', buyingTriggers: ['demo peau reelle', 'avant apres'] },
+      { id: 'beauty-sensitive-skin-safety', name: 'Peaux sensibles', need: 'eviter irritation marques et mauvais niveau aspiration', buyingTriggers: ['peau sensible', 'hygiene', 'niveaux aspiration'] },
+      { id: 'beauty-alternative-comparison', name: 'Comparateurs soins', need: 'comparer appareil patchs institut selon peau et budget', buyingTriggers: ['patchs', 'institut', 'budget'] },
+      { id: 'beauty-whatsapp-order-trust', name: 'Commande WhatsApp', need: 'connaitre pack prix final delai retour avant commande', buyingTriggers: ['pack', 'prix final', 'retour'] }
+    ],
+    personaCards: [
+      { id: 'p1', displayName: 'Salma resultat visible', summary: 'veut une demo sur peau reelle', details: { buyingTriggers: ['avant apres'], pains: ['preuve retouchee'] } },
+      { id: 'p2', displayName: 'Leila peau sensible', summary: 'craint irritation et traces sur le visage', details: { buyingTriggers: ['peau sensible'], pains: ['irritation'] } },
+      { id: 'p3', displayName: 'Mariam comparatrice soins', summary: 'compare appareil patchs et institut', details: { buyingTriggers: ['comparaison patch institut'], pains: ['choix au hasard'] } },
+      { id: 'p4', displayName: 'Nadia commande WhatsApp', summary: 'veut prix pack delai et retour clairs', details: { buyingTriggers: ['prix final'], pains: ['conditions floues'] } }
+    ],
+    competitorData: {
+      keywordStrategy: {
+        primary: ['extracteur de points noirs', 'aspirateur points noirs'],
+        longTail: ['extracteur points noirs peau sensible', 'meilleur appareil points noirs visage']
+      },
+      marketInsights: { painPoint: 'les acheteurs veulent voir le resultat sans risquer irritation ou arnaque avant apres' },
+      productServiceAudit: { missingProof: 'demo peau reelle, niveaux aspiration, hygiene et retour a montrer' },
+      top10Competitors: [
+        { title: 'Beauty marketplace', snippet: 'appareil points noirs avec embouts et avis clients', domain: 'beauty.example' }
+      ]
+    }
+  });
+  const visible = JSON.stringify({ personas: model.personaCards, angles: model.marketingAngles, ultimate: model.ultimateAttackAngles });
+  const personaOnly = JSON.stringify(model.personaCards);
+  assert.match(visible, /peau|hygiene|hygiène|aspiration|embouts|patchs|institut|avant\/apres|avant\/après|routine|retour/i);
+  assert.doesNotMatch(personaOnly, /solution localement et rapidement|besoin localement|zone servie|google maps|promesse plus claire et preuve plus rapide/i);
+  assert.ok(model.marketingAngles[0].type !== 'local_speed');
+  assert.ok(model.personaCards.every(persona => Array.isArray(persona.details?.categorySpecificProofs) && persona.details.categorySpecificProofs.length >= 3));
+  assert.ok(model.personaCards.every(persona => Array.isArray(persona.details?.categoryDecisionCriteria) && persona.details.categoryDecisionCriteria.length >= 3));
+  assert.ok(new Set(model.personaCards.map(persona => persona.attackAngle)).size >= 4);
+});
+
 test('arabic STP translates french product and market before visible persona formulas', () => {
   const model = buildAngleDrivenStpModel({
     query: 'projecteur solaire',

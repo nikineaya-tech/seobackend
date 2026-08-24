@@ -10470,6 +10470,8 @@ function buildStpSegmentCandidates({ query = '', geo = '', budget = '', objectiv
     ], 8);
 
     const baseNeed = localizeStpSubjectForReport(query, lang) || stpText(query, 140);
+    const productSemantics = classifyProductSemantics({ query: `${query} ${baseNeed}`, geo, competitorData });
+    const productFamily = productSemantics.productFamily || 'general_offer';
     const candidates = [];
 
     if (archetype === 'content_education') {
@@ -10543,6 +10545,42 @@ function buildStpSegmentCandidates({ query = '', geo = '', budget = '', objectiv
             }
         );
     } else if (archetype === 'ecommerce_product') {
+        if (productFamily === 'beauty_skin') {
+            candidates.push(
+                {
+                    id: 'beauty-visible-result',
+                    name: lang === 'ar' ? `باحثون عن نتيجة مرئية لـ ${baseNeed}` : lang === 'en' ? `Visible-result seekers for ${baseNeed}` : `Chercheurs de résultat visible pour ${baseNeed}`,
+                    type: 'outcome+skin-proof',
+                    need: lang === 'ar' ? 'رؤية نتيجة حقيقية على البشرة قبل تصديق الوعد' : lang === 'en' ? 'See a real skin result before trusting the promise' : 'Voir un résultat réel sur peau avant de croire la promesse',
+                    accessChannels: ['TikTok/Instagram Reels', 'Google Search', 'UGC', 'landing page'],
+                    buyingTriggers: lang === 'ar' ? ['قبل/بعد غير معدل', 'تجربة على بشرة حقيقية', 'نتيجة بدون مبالغة'] : lang === 'en' ? ['unedited before/after', 'real-skin demo', 'non-exaggerated result'] : ['avant/après non retouché', 'démo sur peau réelle', 'résultat non exagéré']
+                },
+                {
+                    id: 'beauty-sensitive-skin-safety',
+                    name: lang === 'ar' ? `أصحاب بشرة حساسة يقارنون ${baseNeed}` : lang === 'en' ? `Sensitive-skin buyers comparing ${baseNeed}` : `Peaux sensibles qui comparent ${baseNeed}`,
+                    type: 'risk+skin-safety',
+                    need: lang === 'ar' ? 'فهم هل الجهاز مناسب لنوع البشرة دون تهيج أو آثار' : lang === 'en' ? 'Understand whether the device fits their skin type without irritation or marks' : 'Comprendre si l’appareil convient au type de peau sans irritation ni marques',
+                    accessChannels: ['Google Search', 'FAQ', 'WhatsApp', 'reviews'],
+                    buyingTriggers: lang === 'ar' ? ['نوع البشرة', 'مستويات الشفط', 'احتياطات الاستعمال', 'النظافة'] : lang === 'en' ? ['skin type', 'suction levels', 'usage precautions', 'hygiene'] : ['type de peau', 'niveaux d’aspiration', 'précautions usage', 'hygiène']
+                },
+                {
+                    id: 'beauty-alternative-comparison',
+                    name: lang === 'ar' ? `مقارنون بين الجهاز واللصقات والصالون في ${marketName}` : lang === 'en' ? `Comparers between device, strips and salon in ${marketName}` : `Comparateurs appareil, patchs et institut en ${marketName}`,
+                    type: 'alternatives+budget-fit',
+                    need: lang === 'ar' ? 'اختيار الحل الأنسب بين جهاز شفط ولصقات وصالون حسب البشرة والميزانية' : lang === 'en' ? 'Choose between vacuum device, strips and salon by skin type and budget' : 'Choisir entre appareil aspirant, patchs et institut selon peau et budget',
+                    accessChannels: ['SERP', 'comparison page', 'Meta Ads', 'marketplaces'],
+                    buyingTriggers: lang === 'ar' ? ['مقارنة السعر', 'الراحة المنزلية', 'الضمان', 'الفرق عن اللصقات'] : lang === 'en' ? ['price comparison', 'home convenience', 'warranty', 'difference vs strips'] : ['comparaison prix', 'confort à domicile', 'garantie', 'différence vs patchs']
+                },
+                {
+                    id: 'beauty-whatsapp-order-trust',
+                    name: lang === 'ar' ? `مشترون يريدون طلبا واضحا ومتابعة في ${marketName}` : lang === 'en' ? `Buyers needing clear order and follow-up in ${marketName}` : `Acheteurs qui veulent commande claire et suivi en ${marketName}`,
+                    type: 'purchase-mode+follow-up',
+                    need: lang === 'ar' ? 'معرفة السعر ومحتوى العرض ومدة الاستلام وسياسة الإرجاع قبل إرسال الطلب' : lang === 'en' ? 'Know price, pack contents, delivery window and return policy before ordering' : 'Connaître prix, contenu du pack, délai et retour avant de commander',
+                    accessChannels: ['Facebook Ads', 'Instagram', 'WhatsApp', 'Google Shopping/Search'],
+                    buyingTriggers: lang === 'ar' ? ['السعر النهائي', 'محتوى العرض', 'COD/الدفع', 'سياسة الإرجاع'] : lang === 'en' ? ['final price', 'pack contents', 'COD/payment', 'return policy'] : ['prix final', 'contenu du pack', 'COD/paiement', 'politique retour']
+                }
+            );
+        } else {
         candidates.push(
             {
                 id: 'local-purchase-intent',
@@ -10569,6 +10607,7 @@ function buildStpSegmentCandidates({ query = '', geo = '', budget = '', objectiv
                 buyingTriggers: ['seller responsiveness', 'terms clarity', 'after-sale follow-up', 'social proof']
             }
         );
+        }
     } else if (archetype === 'local_service') {
         candidates.push(
             {
@@ -11135,7 +11174,37 @@ function buildStpPersona(segment = {}, inputs = {}, competitorData = {}, lang = 
     const audience = stpText(inputs.context?.audience || inputs.context?.userAudience, 160);
     const leader = competitorData?.top10Competitors?.[0] || competitorData?.competitors?.[0] || {};
     const segmentText = `${segment.id || ''} ${segment.name || ''} ${segment.need || ''} ${stpArray(segment.buyingTriggers, 4).join(' ')}`.toLowerCase();
+    const productSemantics = classifyProductSemantics({ query: `${query} ${segmentText}`, geo: market, competitorData });
+    const isBeautySkinOffer = productSemantics.productFamily === 'beauty_skin';
     const personaJtbd = (() => {
+        if (isBeautySkinOffer && /visible-result|outcome|result|نتيجة|قبل|بعد|demo|démo/.test(segmentText)) {
+            return isAr
+                ? `أريد ${query} في ${market} أرى نتيجته على بشرة حقيقية قبل أن أصدق صورة قبل/بعد.`
+                : isEn
+                    ? `I want ${query} in ${market} with a real-skin demo before I trust any before/after claim.`
+                    : `Je veux ${query} en ${market} avec une démo sur peau réelle avant de croire un avant/après.`;
+        }
+        if (isBeautySkinOffer && /sensitive|skin|peau|بشرة|hygiene|hygi|نظافة|شفط|irrit/.test(segmentText)) {
+            return isAr
+                ? `أريد ${query} يناسب نوع بشرتي، مع شرح مستويات الشفط والنظافة حتى لا أسبب تهيجا أو آثارا.`
+                : isEn
+                    ? `I want ${query} that fits my skin type, with suction levels and hygiene explained so I avoid irritation or marks.`
+                    : `Je veux ${query} adapté à mon type de peau, avec niveaux d’aspiration et hygiène expliqués pour éviter irritation ou marques.`;
+        }
+        if (isBeautySkinOffer && /alternative|comparison|compar|patch|institut|salon|لصقات|صالون|بدائل/.test(segmentText)) {
+            return isAr
+                ? `أريد مقارنة ${query} مع اللصقات والصالون والتنظيف اليدوي لأعرف الحل الأنسب لبشرتي وميزانيتي.`
+                : isEn
+                    ? `I want to compare ${query} with strips, salon care and manual cleaning to choose the best fit for my skin and budget.`
+                    : `Je veux comparer ${query} avec patchs, institut et nettoyage manuel pour choisir selon ma peau et mon budget.`;
+        }
+        if (isBeautySkinOffer && /whatsapp|order|commande|purchase|طلب|متابعة|cod|paiement|دفع/.test(segmentText)) {
+            return isAr
+                ? `أريد طلب ${query} بسعر نهائي ومحتوى عرض ومدة استلام وسياسة إرجاع واضحة قبل أن أرسل معلوماتي.`
+                : isEn
+                    ? `I want to order ${query} only after seeing final price, pack contents, delivery window and return policy.`
+                    : `Je veux commander ${query} seulement après avoir vu prix final, contenu du pack, délai et politique retour.`;
+        }
         if (/edu-first-business|premier business|first business|début|debut|مبتدئ|أول مشروع/.test(segmentText)) {
             return isAr
                 ? `أريد ${query} في ${market} يعلمني من أين أبدأ، خطوة بخطوة، دون أن أغرق في الأدوات التقنية.`
@@ -11259,7 +11328,10 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
     const knownCompetitors = stpArray(ctx.knownCompetitors, 5);
     const offer = localizeStpSubjectForReport(ctx.offer || query, lang) || stpText(ctx.offer || query, 160);
     const rawOfferForSemantics = `${ctx.offer || ''} ${inputs.query || ''} ${competitorData?.query || ''} ${query || ''}`;
+    const productSemantics = classifyProductSemantics({ query: rawOfferForSemantics, geo: market, competitorData });
+    const productFamily = productSemantics.productFamily || 'general_offer';
     const isOnlineEducationOffer = /formation|cours|course|training|coaching|e[-\s]?commerce|commerce en ligne|متجر إلكتروني|تكوين|دورة|تعلم|تعليم|التجارة الإلكترونية/i.test(rawOfferForSemantics);
+    const isBeautySkinOffer = productFamily === 'beauty_skin';
     const defaultProof = stpArray([
         isAr ? 'إثبات النتيجة قبل الوعد' : isEn ? 'proof of result before the promise' : 'preuve du résultat avant la promesse',
         isAr ? 'سعر وشروط واضحة' : isEn ? 'clear price and terms' : 'prix et conditions clairs',
@@ -11418,6 +11490,11 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         en: ['Noura First Business', 'Karima Store Owner', 'Salim New Income', 'Youssef Tried Before', 'Hind Local Project', 'Sara Time-Limited', 'Leila The Skeptic'],
         fr: ['Noura premier business', 'Karima commerçante physique', 'Salim revenu nouveau', 'Youssef déjà essayé', 'Hind projet local', 'Sara temps limité', 'Leila sceptique']
     };
+    const beautyPersonaNames = {
+        ar: ['سلمى تريد النتيجة', 'ليلى بشرة حساسة', 'مريم تقارن البدائل', 'نادية تطلب عبر واتساب', 'هند روتين منزلي', 'سارة ميزانية حذرة', 'آمنة تخاف الآثار'],
+        en: ['Salma Result Seeker', 'Leila Sensitive Skin', 'Mariam Alternative Comparer', 'Nadia WhatsApp Buyer', 'Hind At-Home Routine', 'Sara Careful Budget', 'Amina Mark-Averse'],
+        fr: ['Salma résultat visible', 'Leila peau sensible', 'Mariam comparatrice soins', 'Nadia commande WhatsApp', 'Hind routine maison', 'Sara budget prudent', 'Amina zéro marques']
+    };
     const personaRoles = {
         b2b_service: isAr
             ? ['مدير مشروع', 'صاحبة شركة', 'مسؤول تسويق', 'مؤسس بميزانية محدودة', 'مديرة عمليات', 'Freelance B2B', 'مدير نمو']
@@ -11445,9 +11522,14 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 ? ['High-intent buyer', 'Alternative comparer', 'Trust seeker', 'Budget-sensitive buyer', 'Expertise seeker', 'Fast decision maker', 'Scale buyer']
                 : ['Acheteur haute intention', 'Comparateur d’alternatives', 'Chercheur de confiance', 'Sensible au budget', 'Chercheur d’expertise', 'Décideur rapide', 'Acheteur scale']
     };
+    const beautyPersonaRoles = isAr
+        ? ['تبحث عن قبل/بعد حقيقي', 'تخاف من تهيج البشرة', 'تقارن الجهاز مع اللصقات والصالون', 'تشتري عبر السوشيال وواتساب', 'تريد روتين عناية منزلي قصير', 'حذرة في السعر والمحتوى', 'تخاف من آثار على الوجه']
+        : isEn
+            ? ['Needs real before/after proof', 'Fears skin irritation', 'Compares device vs strips and salon', 'Buys through social and WhatsApp', 'Wants a short at-home skincare routine', 'Careful about price and pack contents', 'Fears facial marks']
+            : ['Cherche un vrai avant/après', 'Craint irritation peau', 'Compare appareil, patchs et institut', 'Achète via social et WhatsApp', 'Veut une routine visage maison courte', 'Surveille prix et contenu du pack', 'Craint les marques sur le visage'];
     const budgetTier = inferStpBudgetTier(inputs.budget);
     const effectiveArchetype = isOnlineEducationOffer ? 'content_education' : archetype;
-    const selectedPersonaNames = isOnlineEducationOffer ? educationPersonaNames : personaNames;
+    const selectedPersonaNames = isOnlineEducationOffer ? educationPersonaNames : isBeautySkinOffer ? beautyPersonaNames : personaNames;
     const budgetLabel = (index) => {
         if (index === 0) return labels.first;
         if (budgetTier === 'lean') return labels.nextLean;
@@ -11490,6 +11572,17 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         if (/tried-failed|failed|essay|tried|échoué|echec|فشل|سابق/.test(text)) return 3;
         if (/local-project|adapt|market-fit|marché local|marche local|محلي|أمثلة محلية/.test(text)) return 4;
         if (/skeptic|scept|méfi|mefi|متشكك|وعود/.test(text)) return 6;
+        return Math.min(fallbackIndex, 6);
+    };
+    const beautyPersonaIndexFor = (segment, fallbackIndex = 0) => {
+        const text = `${segment?.id || ''} ${segment?.name || ''} ${segment?.need || ''} ${stpArray(segment?.buyingTriggers, 5).join(' ')}`.toLowerCase();
+        if (/visible-result|outcome|result|avant|before|بعد|قبل|نتيجة|demo|démo/.test(text)) return 0;
+        if (/sensitive|skin|peau|irrit|hygiene|hygi|بشرة|نظافة|شفط/.test(text)) return 1;
+        if (/alternative|comparison|compar|patch|institut|salon|لصقات|صالون|بدائل/.test(text)) return 2;
+        if (/whatsapp|order|commande|purchase|طلب|متابعة|cod|paiement|دفع/.test(text)) return 3;
+        if (/routine|comfort|usage|استعمال|روتين|راحة/.test(text)) return 4;
+        if (/price|prix|budget|سعر|ميزانية|pack/.test(text)) return 5;
+        if (/risk|mark|marque|trace|أثر|آثار|خوف/.test(text)) return 6;
         return Math.min(fallbackIndex, 6);
     };
     const socioCulturalProfileFor = (segment, personaIndex = 0) => {
@@ -11547,6 +11640,41 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             ];
             return educationProfiles[personaIndex] || educationProfiles[0];
         }
+        if (isBeautySkinOffer) {
+            const beautyProfiles = [
+                {
+                    socialCulture: pack(`acheteuse mobile de ${market}, exposée aux Reels/TikTok beauté et sensible aux vrais avant/après`, `mobile beauty shopper in ${market}, exposed to beauty Reels/TikTok and sensitive to real before/after proof`, `مشترية عبر الهاتف في ${market} تتأثر بفيديوهات الجمال وتهتم بقبل/بعد الحقيقي`),
+                    lifeSituation: pack('veut traiter pores visibles ou points noirs avant une sortie, une photo ou une routine visage', 'wants to handle visible pores or blackheads before an outing, photo or face routine', 'تريد معالجة المسام أو الرؤوس السوداء قبل مناسبة أو صورة أو روتين وجه'),
+                    digitalMaturity: pack('très visuelle: décide avec démonstration courte, preuve non retouchée et commentaires clients', 'highly visual: decides from short demo, unedited proof and customer comments', 'بصرية جدا: تقرر عبر تجربة قصيرة ودليل غير معدل وتعليقات العملاء'),
+                    purchasePower: defaultBudget
+                },
+                {
+                    socialCulture: pack(`public prudent de ${market}, demande conseil via WhatsApp et lit les avis avant de toucher à la peau`, `careful audience in ${market}, asks on WhatsApp and reads reviews before using anything on skin`, `جمهور حذر في ${market} يسأل عبر واتساب ويقرأ الآراء قبل استعمال شيء على البشرة`),
+                    lifeSituation: pack('a peur irritation, rougeurs ou traces visibles après usage', 'fears irritation, redness or visible marks after use', 'تخاف من التهيج أو الاحمرار أو آثار بعد الاستعمال'),
+                    digitalMaturity: pack('compare FAQ, mode d’emploi, niveaux d’intensité et politique retour', 'compares FAQ, instructions, intensity levels and return policy', 'تقارن FAQ وطريقة الاستعمال ومستويات الشفط وسياسة الإرجاع'),
+                    purchasePower: defaultBudget
+                },
+                {
+                    socialCulture: pack(`compare beaucoup entre marketplaces, boutiques Instagram, patchs et institut`, `compares across marketplaces, Instagram shops, strips and salon care`, `تقارن كثيرا بين الأسواق ومتاجر إنستغرام واللصقات والصالون`),
+                    lifeSituation: pack('veut éviter de payer deux fois pour une solution qui ne convient pas', 'wants to avoid paying twice for the wrong solution', 'تريد تجنب دفع مرتين لحل لا يناسبها'),
+                    digitalMaturity: pack('cherche tableaux comparatifs, prix final, garantie et preuve d’usage', 'looks for comparison grids, final price, warranty and use proof', 'تبحث عن جداول مقارنة وسعر نهائي وضمان ودليل استعمال'),
+                    purchasePower: pack('budget comparatif: paie si la différence avec patchs/institut est claire', 'comparison budget: pays if difference vs strips/salon is clear', 'ميزانية مقارنة: تدفع إذا ظهر الفرق مع اللصقات/الصالون')
+                },
+                {
+                    socialCulture: pack(`acheteur social de ${market}, déclenché par Messenger/WhatsApp, COD et suivi simple`, `social buyer in ${market}, triggered by Messenger/WhatsApp, COD and simple follow-up`, `مشتري اجتماعي في ${market} يتحرك عبر Messenger/WhatsApp وCOD والمتابعة السهلة`),
+                    lifeSituation: pack('veut savoir ce qui arrive, quand, avec quel contenu de pack et comment retourner si problème', 'needs to know what arrives, when, pack contents and how to return if needed', 'يريد معرفة ماذا سيصل ومتى ومحتوى العرض وكيفية الإرجاع عند المشكلة'),
+                    digitalMaturity: pack('mobile-first: préfère chat, preuve courte et bouton de commande clair', 'mobile-first: prefers chat, short proof and clear order CTA', 'يعتمد على الهاتف: يفضل الدردشة والدليل القصير وزر طلب واضح'),
+                    purchasePower: defaultBudget
+                },
+                {
+                    socialCulture: pack(`utilisatrice routine beauté maison, inspirée par tutoriels courts et conseils pratiques`, `at-home beauty routine user, inspired by short tutorials and practical tips`, `مستخدمة روتين عناية منزلي تتأثر بالشروحات القصيرة والنصائح العملية`),
+                    lifeSituation: pack('veut intégrer l’appareil sans douleur, désordre ou longues étapes', 'wants to use the device without pain, mess or long steps', 'تريد استعمال الجهاز بدون ألم أو فوضى أو خطوات طويلة'),
+                    digitalMaturity: pack('suit tutoriels courts, checklists hygiène et routines avant/après', 'follows short tutorials, hygiene checklists and before/after routines', 'تتابع الشروحات القصيرة وقوائم النظافة وروتين قبل/بعد'),
+                    purchasePower: defaultBudget
+                }
+            ];
+            return beautyProfiles[personaIndex] || beautyProfiles[0];
+        }
         if (effectiveArchetype === 'ecommerce_product') {
             return {
                 socialCulture: pack(`acheteur digital de ${market}, influencé par avis, WhatsApp, réseaux sociaux et prix clair`, `digital shopper in ${market}, influenced by reviews, WhatsApp, social media and clear price`, `مشتري رقمي في ${market} يتأثر بالآراء وWhatsApp والسوشيال والسعر الواضح`),
@@ -11600,7 +11728,9 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         ], 10);
         const baseMetaInterests = effectiveArchetype === 'content_education'
             ? ['E-commerce', 'Entrepreneuriat', 'Shopify', 'WooCommerce', 'Instagram Shopping', 'WhatsApp Business', 'Marketing digital']
-            : effectiveArchetype === 'ecommerce_product'
+            : isBeautySkinOffer
+                ? ['Skincare', 'Soins du visage', 'Beauty device', 'Routine beauté', 'Acné et points noirs', 'Dermocosmétique', 'Instagram Shopping', 'WhatsApp']
+                : effectiveArchetype === 'ecommerce_product'
                 ? ['Online shopping', 'Marketplace', 'Facebook Marketplace', 'Instagram Shopping', 'WhatsApp']
                 : effectiveArchetype === 'b2b_service'
                     ? ['Business', 'Marketing digital', 'Entrepreneuriat', 'CRM', 'Lead generation']
@@ -11615,6 +11745,13 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 if (/local-project|adapt|market-fit|محلي/.test(text)) return ['Commerce au Maroc', 'Paiement en ligne', 'Cash on delivery', 'Fournisseurs'];
                 if (/skeptic|scept|méfi|mefi|متشكك/.test(text)) return ['Avis clients', 'Témoignages', 'Formation certifiante', 'Support client'];
                 return ['Créer une entreprise', 'Business en ligne', 'E-commerce', 'YouTube Education'];
+            }
+            if (isBeautySkinOffer) {
+                if (/sensitive|skin|peau|irrit|بشرة|حساس/.test(text)) return ['Sensitive skin care', 'Soins peau sensible', 'Routine visage', 'Dermocosmétique'];
+                if (/alternative|compar|patch|institut|salon|بدائل|صالون/.test(text)) return ['Beauty salon', 'Blackhead strips', 'Comparaison de prix', 'Marketplace'];
+                if (/visible|result|avant|before|بعد|قبل|نتيجة/.test(text)) return ['Before after skincare', 'UGC beauté', 'TikTok Beauty', 'Instagram Reels'];
+                if (/whatsapp|order|commande|طلب|cod/.test(text)) return ['Instagram Shopping', 'Facebook Marketplace', 'WhatsApp', 'Cash on delivery'];
+                return ['Skincare routine', 'Face cleansing', 'Beauty tools', 'UGC beauté'];
             }
             if (/compar|price|prix|budget|سعر/.test(text)) return ['Comparaison de prix', 'Coupons', 'Marketplace'];
             if (/proof|trust|avis|review|ثقة|دليل/.test(text)) return ['Avis clients', 'Trustpilot', 'Démonstration produit'];
@@ -11659,7 +11796,9 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 ? ['Job title', 'Company size', 'Industry', 'Business services']
                 : isLocal
                     ? ['In-market local services', 'Recently moved if relevant']
-                    : ['In-market shoppers', 'Life events if relevant', 'Affinity by product category'];
+                    : isBeautySkinOffer
+                        ? ['In-market beauty and personal care', 'Skincare interest signals', 'Engaged shoppers', 'Video viewers retargeting']
+                        : ['In-market shoppers', 'Life events if relevant', 'Affinity by product category'];
         return {
             objective: pack('Test acquisition + preuve de demande', 'Acquisition test + demand proof', 'اختبار الاستحواذ وإثبات الطلب'),
             funnelStage: personaIndex === 0 ? 'TOFU/MOFU' : personaIndex <= 2 ? 'MOFU' : 'MOFU/BOFU',
@@ -11746,10 +11885,12 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         const pains = stpArray(persona.pains, 4);
         const attackAngle = attackAngleFor(segment, index);
         const langKey = isAr ? 'ar' : isEn ? 'en' : 'fr';
-        const personaIndex = isOnlineEducationOffer ? educationPersonaIndexFor(segment, index) : index;
+        const personaIndex = isOnlineEducationOffer ? educationPersonaIndexFor(segment, index) : isBeautySkinOffer ? beautyPersonaIndexFor(segment, index) : index;
         const ageRange = ageRanges[effectiveArchetype]?.[personaIndex] || ageRanges.general_market[personaIndex] || '25-50';
         const displayName = selectedPersonaNames[langKey]?.[personaIndex] || `${isAr ? 'Persona' : 'Persona'} ${index + 1}`;
-        const occupation = personaRoles[effectiveArchetype]?.[personaIndex] || personaRoles.general_market[personaIndex] || '';
+        const occupation = isBeautySkinOffer
+            ? (beautyPersonaRoles[personaIndex] || beautyPersonaRoles[index] || personaRoles.ecommerce_product?.[personaIndex] || '')
+            : (personaRoles[effectiveArchetype]?.[personaIndex] || personaRoles.general_market[personaIndex] || '');
         const socioCulturalProfile = socioCulturalProfileFor(segment, personaIndex);
         const segmentName = segment.name || persona.name || '';
         const socialChannels = attackChannels

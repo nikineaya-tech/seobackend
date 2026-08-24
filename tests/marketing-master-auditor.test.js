@@ -75,6 +75,41 @@ test('blocks physical shipping evidence when STP product is digital education', 
   assert.equal(audit.issues.some(issue => issue.code === 'PRODUCT_ANGLE_MISMATCH'), true);
 });
 
+test('blocks beauty STP personas that stay generic instead of product-specific', () => {
+  const audit = auditMarketingResponse('stp', {
+    success: true,
+    productUnderstanding: { productSemantics: { productFamily: 'beauty_skin' } },
+    personaCards: [
+      {
+        displayName: 'Persona 1',
+        ageRange: '22-44',
+        summary: 'Acheteur digital qui veut une offre claire avec prix et garantie.',
+        attackAngle: 'Attaquer avec prix clair, preuve visible et commande simple.'
+      }
+    ]
+  }, { lang: 'fr', query: 'extracteur de points noirs' });
+
+  assert.equal(audit.needsCorrection, true);
+  assert.equal(audit.issues.some(issue => issue.code === 'PRODUCT_SPECIFICITY_LOW'), true);
+});
+
+test('approves beauty STP personas with skin-care specific proof language', () => {
+  const audit = auditMarketingResponse('stp', {
+    success: true,
+    productUnderstanding: { productSemantics: { productFamily: 'beauty_skin' } },
+    personaCards: [
+      {
+        displayName: 'Leila peau sensible',
+        ageRange: '22-44',
+        summary: 'Compare un extracteur de points noirs selon type de peau, embouts et niveaux aspiration.',
+        attackAngle: 'Prouver avec demo peau reelle, hygiene apres usage, precautions peau sensible et retour clair.'
+      }
+    ]
+  }, { lang: 'fr', query: 'extracteur de points noirs' });
+
+  assert.equal(audit.approved, true);
+});
+
 test('repairs weak placeholders when deterministic pruning is enough', async () => {
   assert.equal(isWeakVisibleText('ev_1'), true);
   const pruned = pruneWeakVisibleText({ success: true, keywords: [{ keyword: 'projecteur solaire', proof: 'ev_1' }] });
