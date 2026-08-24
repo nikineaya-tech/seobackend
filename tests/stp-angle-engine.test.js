@@ -446,3 +446,33 @@ test('arabic ecommerce training translates french product and rejects delivery-z
   assert.match(visible, /تكوين التجارة الإلكترونية|المغرب|الدفع|COD|مورد|واتساب|إنستغرام|منهج/i);
   assert.ok(model.personaCards.every(persona => Array.isArray(persona.details?.buyingTriggers) && persona.details.buyingTriggers.length > 0));
 });
+
+test('budget resources and first objective become hard STP persona constraints', () => {
+  const model = buildAngleDrivenStpModel({
+    query: 'extracteur de points noirs',
+    geo: 'Libya',
+    lang: 'fr',
+    budget: 'petit budget 100 MAD/j',
+    objective: 'sales: ventes WhatsApp et commandes COD',
+    resources: 'solo, pas de studio video, peu de temps',
+    price: '199 MAD',
+    segments: [
+      { id: 'ready-buyer', name: 'Acheteur prêt WhatsApp', need: 'acheter rapidement avec preuve et prix clair', accessChannels: ['SEO', 'WhatsApp', 'landing page'], buyingTriggers: ['prix', 'preuve', 'commande'] },
+      { id: 'beauty-proof', name: 'Cherche preuve beauté', need: 'voir le résultat avant achat', accessChannels: ['UGC', 'landing page'], buyingTriggers: ['avant après', 'avis'] }
+    ],
+    personaCards: [
+      { id: 'p1', displayName: 'Salma résultat visible', occupation: 'Acheteuse mobile', summary: 'veut commander un extracteur avec preuve claire', details: { channels: ['SEO', 'WhatsApp'], buyingTriggers: ['commande WhatsApp'], pains: ['peur de perdre son argent'] } },
+      { id: 'p2', displayName: 'Leila peau sensible', occupation: 'Acheteuse prudente', summary: 'veut vérifier le risque pour la peau avant de commander', details: { channels: ['reviews', 'landing page'], buyingTriggers: ['avis'], pains: ['irritation'] } }
+    ],
+    competitorData: {
+      keywordStrategy: { primary: ['extracteur points noirs'], longTail: ['extracteur points noirs prix Libya'] },
+      productServiceAudit: { missingProof: 'avis et démonstration à montrer' }
+    }
+  });
+  assert.equal(model.constraintModel.budgetTier, 'lean');
+  assert.equal(model.constraintModel.resourceTier, 'lean');
+  assert.equal(model.constraintModel.objectiveType, 'sales');
+  const visible = JSON.stringify({ personas: model.personaCards, angles: model.marketingAngles, constraints: model.constraintModel });
+  assert.match(visible, /Petit budget|Ressources limit|ventes|commande|WhatsApp|preuve|risque/i);
+  assert.ok(model.marketingAngles.some(angle => ['proof_outcome', 'security_trust', 'comparison_alternative', 'savings_budget'].includes(angle.type)));
+});

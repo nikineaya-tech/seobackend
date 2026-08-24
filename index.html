@@ -1646,6 +1646,110 @@ body.loading-active { overflow: hidden !important; }
   padding-left: 1rem;
 }
 
+.daka-stp-objective-field {
+  grid-column: 1 / -1;
+}
+
+.daka-stp-objective-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.daka-stp-objective-card {
+  position: relative;
+  min-height: 118px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, 0.84), rgba(2, 6, 23, 0.62));
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.daka-stp-objective-card:hover {
+  border-color: rgba(34, 211, 238, 0.42);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(34, 211, 238, 0.10), transparent 36%),
+    linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(2, 6, 23, 0.72));
+}
+
+.daka-stp-objective-card input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.daka-stp-objective-card span {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: #67e8f9;
+  background: rgba(34, 211, 238, 0.10);
+  border: 1px solid rgba(34, 211, 238, 0.18);
+}
+
+.daka-stp-objective-card strong {
+  color: #f8fafc;
+  font-size: .92rem;
+  line-height: 1.2;
+}
+
+.daka-stp-objective-card small {
+  color: #9fb2cb;
+  font-size: .72rem;
+  line-height: 1.4;
+}
+
+.daka-stp-objective-card:has(input:focus-visible) {
+  outline: 2px solid rgba(34, 211, 238, 0.72);
+  outline-offset: 3px;
+}
+
+.daka-stp-objective-card:has(input:checked),
+.daka-stp-objective-card.is-selected {
+  border-color: rgba(34, 197, 94, 0.72);
+  box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.22), 0 18px 42px rgba(34, 197, 94, 0.10);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(34, 197, 94, 0.18), transparent 38%),
+    linear-gradient(145deg, rgba(5, 20, 24, 0.95), rgba(2, 6, 23, 0.76));
+}
+
+.daka-stp-objective-card:has(input:checked) span,
+.daka-stp-objective-card.is-selected span {
+  color: #03111c;
+  background: linear-gradient(135deg, #22c55e, #22d3ee);
+}
+
+.daka-stp-objective-detail {
+  margin-top: 12px;
+}
+
+.daka-stp-required-note {
+  display: block;
+  margin-top: 8px;
+  color: #9fb2cb;
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+.daka-stp-objective-field.is-invalid .daka-stp-objective-grid {
+  border-radius: 20px;
+  box-shadow: 0 0 0 2px rgba(248, 113, 113, 0.42);
+}
+
+.daka-stp-objective-field.is-invalid .daka-stp-required-note {
+  color: #fecaca;
+}
+
 /* Checkboxes pill */
 .pill-group {
   display  : flex;
@@ -3747,6 +3851,15 @@ table tbody td {
     padding-inline-start: 42px;
   }
 
+  .daka-stp-objective-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .daka-stp-objective-card {
+    min-height: 104px;
+    padding: 12px;
+  }
+
   .btn,
   .btn-gen,
   .btn-lg,
@@ -4548,12 +4661,46 @@ table tbody td {
                                 <input id="stpBudget" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_budget" placeholder="Ex: 200 DH/j ads, 499 DH/mois, petite équipe">
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label" for="stpObjective" data-i18n="stp_label_objective">Objectif prioritaire</label>
-                            <div class="input-wrapper">
-                                <i class="fas fa-flag-checkered input-icon"></i>
-                                <input id="stpObjective" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_objective" placeholder="Ex: leads qualifiés, ventes COD, rendez-vous, abonnement">
+                        <div class="form-group daka-stp-objective-field">
+                            <label class="form-label" id="stpObjectiveLegend" data-i18n="stp_label_objective">Objectif prioritaire</label>
+                            <input id="stpObjective" type="hidden" required>
+                            <div class="daka-stp-objective-grid" role="radiogroup" aria-labelledby="stpObjectiveLegend" aria-required="true">
+                                <label class="daka-stp-objective-card">
+                                    <input type="radio" name="stpObjectiveChoice" value="sales">
+                                    <span><i class="fas fa-cart-shopping"></i></span>
+                                    <strong data-i18n="stp_obj_sales">Ventes</strong>
+                                    <small data-i18n="stp_obj_sales_desc">Commandes, achat, COD, checkout</small>
+                                </label>
+                                <label class="daka-stp-objective-card">
+                                    <input type="radio" name="stpObjectiveChoice" value="lead_capture">
+                                    <span><i class="fas fa-comments-dollar"></i></span>
+                                    <strong data-i18n="stp_obj_leads">Leads</strong>
+                                    <small data-i18n="stp_obj_leads_desc">WhatsApp, formulaire, appel, RDV</small>
+                                </label>
+                                <label class="daka-stp-objective-card">
+                                    <input type="radio" name="stpObjectiveChoice" value="validation">
+                                    <span><i class="fas fa-vial-circle-check"></i></span>
+                                    <strong data-i18n="stp_obj_validation">Validation</strong>
+                                    <small data-i18n="stp_obj_validation_desc">Tester demande, preuve, go/no-go</small>
+                                </label>
+                                <label class="daka-stp-objective-card">
+                                    <input type="radio" name="stpObjectiveChoice" value="awareness">
+                                    <span><i class="fas fa-bullhorn"></i></span>
+                                    <strong data-i18n="stp_obj_awareness">Visibilité</strong>
+                                    <small data-i18n="stp_obj_awareness_desc">Notoriété, audience, mémorisation</small>
+                                </label>
+                                <label class="daka-stp-objective-card">
+                                    <input type="radio" name="stpObjectiveChoice" value="retention">
+                                    <span><i class="fas fa-rotate"></i></span>
+                                    <strong data-i18n="stp_obj_retention">Rétention</strong>
+                                    <small data-i18n="stp_obj_retention_desc">Réachat, fidélité, upsell</small>
+                                </label>
                             </div>
+                            <div class="input-wrapper daka-stp-objective-detail">
+                                <i class="fas fa-pen-nib input-icon"></i>
+                                <input id="stpObjectiveDetail" class="input-field" type="text" data-i18n-placeholder="stp_placeholder_objective" placeholder="Ex: leads qualifiés, ventes COD, rendez-vous, abonnement">
+                            </div>
+                            <small class="daka-stp-required-note" data-i18n="stp_objective_required_note">Choisissez l’objectif premier: Daka va classer les personas, les canaux et le budget autour de cette priorité.</small>
                         </div>
                     </div>
 
@@ -5256,6 +5403,17 @@ navkeywords: 'Demande marché',
         stp_placeholder_budget: 'Ex: 200 DH/j ads, 499 DH/mois, petite équipe',
         stp_label_objective: 'Objectif prioritaire',
         stp_placeholder_objective: 'Ex: leads qualifiés, ventes COD, rendez-vous, abonnement',
+        stp_obj_sales: 'Ventes',
+        stp_obj_sales_desc: 'Commandes, achat, COD, checkout',
+        stp_obj_leads: 'Leads',
+        stp_obj_leads_desc: 'WhatsApp, formulaire, appel, RDV',
+        stp_obj_validation: 'Validation',
+        stp_obj_validation_desc: 'Tester demande, preuve, go/no-go',
+        stp_obj_awareness: 'Visibilité',
+        stp_obj_awareness_desc: 'Notoriété, audience, mémorisation',
+        stp_obj_retention: 'Rétention',
+        stp_obj_retention_desc: 'Réachat, fidélité, upsell',
+        stp_objective_required_note: 'Choisissez l’objectif premier: Daka va classer les personas, les canaux et le budget autour de cette priorité.',
         stp_label_offer: 'Offre exacte',
         stp_placeholder_offer: 'Ex: audit IA + plan marketing + exécution',
         stp_label_audience: 'Audience pressentie',
@@ -5443,6 +5601,17 @@ navkeywords: 'طلب السوق',
         stp_placeholder_budget: 'مثال: 200 درهم يوميا للإعلانات، فريق صغير',
         stp_label_objective: 'الهدف الأول',
         stp_placeholder_objective: 'مثال: عملاء محتملون، مبيعات COD، مواعيد، اشتراك',
+        stp_obj_sales: 'المبيعات',
+        stp_obj_sales_desc: 'طلبات، شراء، COD، دفع',
+        stp_obj_leads: 'عملاء محتملون',
+        stp_obj_leads_desc: 'واتساب، نموذج، اتصال، موعد',
+        stp_obj_validation: 'التحقق',
+        stp_obj_validation_desc: 'اختبار الطلب، دليل، قرار go/no-go',
+        stp_obj_awareness: 'الظهور',
+        stp_obj_awareness_desc: 'وعي، جمهور، تذكر العلامة',
+        stp_obj_retention: 'الاحتفاظ',
+        stp_obj_retention_desc: 'إعادة شراء، ولاء، upsell',
+        stp_objective_required_note: 'اختر الهدف الأول: ستقوم Daka بترتيب الشخصيات والقنوات والميزانية حول هذه الأولوية.',
         stp_label_offer: 'العرض الدقيق',
         stp_placeholder_offer: 'مثال: تدقيق IA + خطة تسويق + تنفيذ',
         stp_label_audience: 'الجمهور المتوقع',
@@ -5630,6 +5799,17 @@ navkeywords: 'Market demand',
         stp_placeholder_budget: 'Ex: 200 MAD/day ads, 499 MAD/month, small team',
         stp_label_objective: 'Priority objective',
         stp_placeholder_objective: 'Ex: qualified leads, COD sales, appointments, subscription',
+        stp_obj_sales: 'Sales',
+        stp_obj_sales_desc: 'Orders, purchase, COD, checkout',
+        stp_obj_leads: 'Leads',
+        stp_obj_leads_desc: 'WhatsApp, form, call, appointment',
+        stp_obj_validation: 'Validation',
+        stp_obj_validation_desc: 'Test demand, proof, go/no-go',
+        stp_obj_awareness: 'Awareness',
+        stp_obj_awareness_desc: 'Reach, audience, brand recall',
+        stp_obj_retention: 'Retention',
+        stp_obj_retention_desc: 'Repeat purchase, loyalty, upsell',
+        stp_objective_required_note: 'Choose the first objective: Daka will rank personas, channels and budget around this priority.',
         stp_label_offer: 'Exact offer',
         stp_placeholder_offer: 'Ex: AI audit + marketing plan + execution',
         stp_label_audience: 'Assumed audience',
@@ -5836,7 +6016,7 @@ navkeywords: 'Market demand',
         }, true);
     })();
     </script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260824-readable-sidebar-toggle1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260824-stp-objective-required1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">

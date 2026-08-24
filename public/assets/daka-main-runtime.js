@@ -5870,6 +5870,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         inferred: 'مستنتج',
         success: 'تم بناء قرار STP.',
         needInput: 'أدخل كلمة السوق أو رابطا أولا.',
+        needObjective: 'اختر الهدف الأول قبل توليد STP.',
         error: 'تعذر بناء STP الآن.'
     };
     if (lang === 'en') return {
@@ -5959,6 +5960,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         inferred: 'Inferred',
         success: 'STP decision is ready.',
         needInput: 'Enter a market keyword or URL first.',
+        needObjective: 'Choose the first objective before generating STP.',
         error: 'Unable to build STP right now.'
     };
     return {
@@ -6048,6 +6050,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         inferred: 'Déduit',
         success: 'Décision STP prête.',
         needInput: 'Entrez un mot-clé marché ou une URL d’abord.',
+        needObjective: 'Choisissez l’objectif premier avant de générer le STP.',
         error: 'Impossible de construire le STP maintenant.'
     };
 }
@@ -6085,6 +6088,36 @@ function stpUiArray(value, max = 6) {
         .slice(0, max);
 }
 
+function syncStpObjectiveChoice() {
+    const hidden = document.getElementById('stpObjective');
+    const selected = document.querySelector('input[name="stpObjectiveChoice"]:checked');
+    const detail = document.getElementById('stpObjectiveDetail')?.value?.trim() || '';
+    const value = stpUiArray([selected?.value || '', detail], 2).join(': ');
+    if (hidden) hidden.value = value;
+    document.querySelectorAll('.daka-stp-objective-card').forEach(card => {
+        const input = card.querySelector('input[name="stpObjectiveChoice"]');
+        card.classList.toggle('is-selected', Boolean(input?.checked));
+    });
+    document.querySelector('.daka-stp-objective-field')?.classList.remove('is-invalid');
+    return value;
+}
+
+function initStpObjectiveSelector() {
+    const choices = document.querySelectorAll('input[name="stpObjectiveChoice"]');
+    if (!choices.length) return;
+    choices.forEach(input => {
+        if (input.dataset.stpObjectiveBound) return;
+        input.addEventListener('change', syncStpObjectiveChoice);
+        input.dataset.stpObjectiveBound = '1';
+    });
+    const detail = document.getElementById('stpObjectiveDetail');
+    if (detail && !detail.dataset.stpObjectiveBound) {
+        detail.addEventListener('input', syncStpObjectiveChoice);
+        detail.dataset.stpObjectiveBound = '1';
+    }
+    syncStpObjectiveChoice();
+}
+
 function collectStpPayload() {
     const read = (id) => document.getElementById(id)?.value?.trim() || '';
     const splitList = (value, max = 8) => String(value || '')
@@ -6098,10 +6131,13 @@ function collectStpPayload() {
     const country = document.getElementById('stpCountry')?.value || document.getElementById('country')?.value || 'Morocco';
     const lang = document.getElementById('stpLang')?.value || document.getElementById('analysisLang')?.value || STATE.currentLang || 'fr';
     const context = collectBusinessContext('comp');
+    const objectiveChoice = document.querySelector('input[name="stpObjectiveChoice"]:checked')?.value || '';
+    const objectiveDetail = read('stpObjectiveDetail');
+    const objectiveValue = stpUiArray([objectiveChoice, objectiveDetail], 2).join(': ');
     const stpContext = {
         offer: read('stpOffer') || context.offer,
         audience: read('stpAudience') || context.audience,
-        objective: read('stpObjective') || context.objective,
+        objective: objectiveValue || read('stpObjective') || context.objective,
         budget: read('stpBudget') || context.priceRange,
         businessModel: read('stpBusinessModel') || '',
         knownCompetitors: splitList(read('stpKnownCompetitors')).length ? splitList(read('stpKnownCompetitors')) : context.knownCompetitors,
@@ -6783,6 +6819,11 @@ async function requestStpDecision(e) {
     const payload = collectStpPayload();
     const copy = getStpCopy(payload.lang);
     if (!payload.query) return toast.warning(copy.needInput);
+    if (!document.querySelector('input[name="stpObjectiveChoice"]:checked')) {
+        document.querySelector('.daka-stp-objective-field')?.classList.add('is-invalid');
+        document.querySelector('.daka-stp-objective-card input')?.focus();
+        return toast.warning(copy.needObjective);
+    }
 
     const btn = document.getElementById('stpBtn') || document.getElementById('stpDecisionBtn');
     const original = btn?.innerHTML || '';
@@ -6820,6 +6861,7 @@ async function requestStpDecision(e) {
 function initStpDecisionTools() {
     ensureStpDecisionStyles();
     hydrateCompetitorCountrySelect(null, document.getElementById('stpLang')?.value || STATE.currentLang || 'fr');
+    initStpObjectiveSelector();
 
     const form = document.getElementById('stpForm');
     if (form && !form.dataset.stpBound) {

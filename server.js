@@ -10650,12 +10650,22 @@ function scoreStpSegments(segments = [], competitorData = {}, inputs = {}) {
     const keywordCount = Number((competitorData?.keywordStrategy?.primary || []).length + (competitorData?.keywordStrategy?.longTail || []).length);
     const hasBudget = Boolean(stpText(inputs.budget, 60));
     const hasUrl = Boolean(stpText(inputs.url, 120));
+    const budgetTier = inferStpBudgetTier(`${inputs.budget || ''} ${inputs.price || ''}`);
+    const resourceTier = inferStpResourceTier(inputs.resources || inputs.context?.resources || '', inputs.budget);
+    const objectiveType = inferStpObjectiveType(inputs.objective || inputs.context?.objective || '');
 
     return segments.map(segment => {
         let profitability = 45;
         let scalability = 42;
         let accessibility = 44;
         let proofStrength = 35;
+        const segmentText = `${segment.id || ''} ${segment.name || ''} ${segment.need || ''} ${stpArray(segment.accessChannels, 8).join(' ')} ${stpArray(segment.buyingTriggers, 8).join(' ')}`.toLowerCase();
+        const segmentChannels = stpArray(segment.accessChannels || [], 8).map(normalizeChannelName).join(' ');
+        const isLowCostAccess = /seo|serp|content|landing|whatsapp|reviews|faq/.test(segmentChannels);
+        const isPaidHeavy = /ads|meta|tiktok|shopping|marketplace|linkedin|webinar/.test(segmentChannels);
+        const isConversionReady = /ready|buy|acheter|purchase|order|commande|whatsapp|مشتر|شراء|طلب/.test(segmentText);
+        const isLeadReady = /lead|contact|form|whatsapp|appel|call|demo|consult|عميل|اتصال|واتساب/.test(segmentText);
+        const isValidationReady = /test|valid|proof|preuve|comparison|compar|go\/no-go|budget|دليل|اختبار|مقارن/.test(segmentText);
 
         if (/ready|buy|acheter|مشتر/.test(segment.id + ' ' + segment.name)) profitability += 18;
         if (/b2b|growth|agency|service/.test(segment.id + ' ' + segment.name)) profitability += 14;
@@ -10665,6 +10675,29 @@ function scoreStpSegments(segments = [], competitorData = {}, inputs = {}) {
         if (sourceCount >= 5) proofStrength += 18;
         if (hasUrl) proofStrength += 8;
         if (hasBudget) profitability += 5;
+        if (budgetTier === 'lean') {
+            if (isLowCostAccess) {
+                profitability += 10;
+                accessibility += 12;
+                proofStrength += 5;
+            }
+            if (isPaidHeavy && !isValidationReady) {
+                profitability -= 10;
+                accessibility -= 8;
+            }
+            scalability -= 4;
+        } else if (budgetTier === 'power') {
+            if (isPaidHeavy) scalability += 10;
+            if (isConversionReady || isLeadReady) profitability += 6;
+        }
+        if (resourceTier === 'lean') {
+            if (/whatsapp|seo|serp|content|landing/.test(segmentChannels)) accessibility += 9;
+            if (/webinar|linkedin|direct|outreach|agency|scale|shopping/.test(segmentChannels)) accessibility -= 7;
+        }
+        if (objectiveType === 'sales' && isConversionReady) profitability += 12;
+        if (objectiveType === 'lead_capture' && isLeadReady) profitability += 10;
+        if (objectiveType === 'validation' && isValidationReady) proofStrength += 12;
+        if (objectiveType === 'awareness' && /content|social|youtube|tiktok|instagram|meta/.test(segmentChannels)) scalability += 8;
 
         const penalty = competitorData?.dataIntegrity?.riskLevel === 'HIGH' ? 12 : 0;
         const score = Math.round(
@@ -10696,6 +10729,57 @@ function inferStpBudgetTier(budget = '') {
     if (/free|gratuit|zero|0 dh|0 mad|petit|small|low|faible|محدود|صغير|قليل/.test(text) || (max > 0 && max <= 300)) return 'lean';
     if (/enterprise|large|big|agency|équipe|team|فريق|كبير/.test(text) || max >= 5000) return 'power';
     return 'focused';
+}
+
+function inferStpResourceTier(resources = '', budget = '') {
+    const text = stpText(`${resources || ''} ${budget || ''}`, 220).toLowerCase();
+    if (!text) return 'unknown';
+    if (/solo|seul|one person|1 personne|sans equipe|sans équipe|temps limit|peu de temps|no team|no studio|محدود|فرد|لوحد|وقت قليل|بدون فريق/.test(text)) return 'lean';
+    if (/team|équipe|equipe|agency|studio|designer|media buyer|sales team|فريق|وكالة|مصمم|مسوق/.test(text)) return 'team';
+    return 'focused';
+}
+
+function inferStpObjectiveType(objective = '') {
+    const text = stpText(objective, 220).toLowerCase();
+    if (!text) return 'unspecified';
+    if (/sale|sell|vente|vendre|achat|commande|order|checkout|شراء|بيع|مبيعات|طلب/.test(text)) return 'sales';
+    if (/lead|prospect|contact|form|whatsapp|appel|call|عميل محتمل|عملاء|واتساب|اتصال/.test(text)) return 'lead_capture';
+    if (/test|valid|preuve|proof|go\/no-go|go no go|mvp|اختبار|تحقق|إثبات/.test(text)) return 'validation';
+    if (/brand|notor|awareness|visibil|reach|وعي|شهرة|انتشار/.test(text)) return 'awareness';
+    if (/retention|repeat|loyal|upsell|réachat|reachat|ولاء|إعادة شراء/.test(text)) return 'retention';
+    return 'custom';
+}
+
+function buildStpExecutionConstraintModel({ budget = '', objective = '', resources = '', price = '', lang = 'fr' } = {}) {
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const pack = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
+    const budgetTier = inferStpBudgetTier(`${budget || ''} ${price || ''}`);
+    const resourceTier = inferStpResourceTier(resources, budget);
+    const objectiveType = inferStpObjectiveType(objective);
+    const firstObjective = stpText(objective, 180) || pack('Objectif premier non fourni: valider la demande avant scale', 'First objective not provided: validate demand before scaling', 'الهدف الأول غير محدد: إثبات الطلب قبل التوسع');
+    const budgetLabel = budgetTier === 'lean'
+        ? pack('Petit budget: une poche, un canal, une preuve rapide', 'Lean budget: one pocket, one channel, fast proof', 'ميزانية صغيرة: شريحة واحدة، قناة واحدة، ودليل سريع')
+        : budgetTier === 'power'
+            ? pack('Budget de scale: tester plusieurs angles après preuve', 'Scale budget: test multiple angles after proof', 'ميزانية توسع: اختبار عدة زوايا بعد الدليل')
+            : budgetTier === 'focused'
+                ? pack('Budget focalisé: test limité avec seuil go/no-go', 'Focused budget: limited test with go/no-go threshold', 'ميزانية مركزة: اختبار محدود مع معيار قرار')
+                : pack('Budget non précisé: commencer par l’option la moins risquée', 'Budget unknown: start with the lowest-risk route', 'الميزانية غير واضحة: ابدأ بأقل مسار مخاطرة');
+    const resourceLabel = resourceTier === 'lean'
+        ? pack('Ressources légères: éviter les plans lourds et privilégier contenu court, WhatsApp, SEO ciblé', 'Lean resources: avoid heavy plans; use short content, WhatsApp and focused SEO', 'موارد محدودة: تجنب الخطط الثقيلة واعتمد محتوى قصير وWhatsApp وSEO مركز')
+        : resourceTier === 'team'
+            ? pack('Ressources équipe: possible de séparer créa, acquisition et suivi', 'Team resources: creative, acquisition and follow-up can be split', 'موارد فريق: يمكن فصل الإبداع والاستحواذ والمتابعة')
+            : pack('Ressources à valider: proposer une exécution simple par défaut', 'Resources to validate: default to simple execution', 'الموارد تحتاج تحقق: اعتمد تنفيذ بسيط افتراضيا');
+    const objectiveLabel = objectiveType === 'sales'
+        ? pack('Objectif premier: ventes/commandes mesurables', 'First objective: measurable sales/orders', 'الهدف الأول: مبيعات/طلبات قابلة للقياس')
+        : objectiveType === 'lead_capture'
+            ? pack('Objectif premier: leads, contacts ou conversations qualifiées', 'First objective: qualified leads, contacts or conversations', 'الهدف الأول: عملاء محتملون أو محادثات مؤهلة')
+            : objectiveType === 'validation'
+                ? pack('Objectif premier: validation avant dépenses lourdes', 'First objective: validation before heavy spend', 'الهدف الأول: التحقق قبل الإنفاق الكبير')
+                : objectiveType === 'awareness'
+                    ? pack('Objectif premier: visibilité et mémorisation', 'First objective: awareness and recall', 'الهدف الأول: الوعي والتذكر')
+                    : pack('Objectif premier: à traduire en action mesurable', 'First objective: translate into a measurable action', 'الهدف الأول: تحويله إلى فعل قابل للقياس');
+    return { budgetTier, resourceTier, objectiveType, firstObjective, budgetLabel, resourceLabel, objectiveLabel };
 }
 
 function normalizeChannelName(value = '') {
@@ -10960,6 +11044,8 @@ function buildBeachheadMarketDecision({ segments = [], competitorData = {}, inpu
     const isEn = lang === 'en';
     const market = localizeCompetitorMarketName(inputs.geo || competitorData?.geo, lang);
     const budgetTier = inferStpBudgetTier(inputs.budget);
+    const resourceTier = inferStpResourceTier(inputs.resources || inputs.context?.resources || '', inputs.budget);
+    const objectiveType = inferStpObjectiveType(inputs.objective || inputs.context?.objective || '');
     const contextChannels = stpArray(inputs.context?.channels || [], 8).map(normalizeChannelName).filter(Boolean);
     const constraints = stpArray(inputs.context?.constraints || [], 6);
     const competitorCount = Number(competitorData?.top10Competitors?.length || competitorData?.competitors?.length || 0);
@@ -10981,7 +11067,12 @@ function buildBeachheadMarketDecision({ segments = [], competitorData = {}, inpu
         let expansion = /b2b|agency|growth|service|serp|search|demand/i.test(`${segment.id} ${segment.name}`) ? 72 : 58;
 
         if (budgetTier === 'lean' && /seo|serp|content|whatsapp/.test(segmentChannels.join(' '))) budgetFit += 12;
-        if (budgetTier === 'lean' && /marketplace|ads/.test(segmentChannels.join(' '))) budgetFit -= 7;
+        if (budgetTier === 'lean' && /marketplace|ads|shopping|linkedin|webinar/.test(segmentChannels.join(' '))) budgetFit -= 10;
+        if (resourceTier === 'lean' && /seo|serp|content|landing|whatsapp/.test(segmentChannels.join(' '))) access += 10;
+        if (resourceTier === 'lean' && /webinar|linkedin|direct|outreach|shopping|scale/.test(segmentChannels.join(' '))) access -= 8;
+        if (objectiveType === 'sales' && /buy|ready|purchase|order|commande|whatsapp|achat|شراء|طلب/.test(`${segment.id} ${segment.name} ${segment.need}`)) urgency += 10;
+        if (objectiveType === 'lead_capture' && /lead|contact|form|whatsapp|consult|appel|demo|عميل|واتساب/.test(`${segment.id} ${segment.name} ${segment.need}`)) urgency += 9;
+        if (objectiveType === 'validation' && /proof|preuve|test|compar|budget|go\/no-go|دليل|اختبار/.test(`${segment.id} ${segment.name} ${segment.need}`)) proof += 12;
         if (constraints.length) proof += 4;
         if (competitorData?.dataIntegrity?.riskLevel === 'HIGH') proof -= 12;
 
@@ -11034,6 +11125,8 @@ function buildBeachheadMarketDecision({ segments = [], competitorData = {}, inpu
         confidence: winner.confidence,
         budgetTier,
         budgetFit: budgetLabel,
+        resourceFit: buildStpExecutionConstraintModel({ budget: inputs.budget, objective: inputs.objective, resources: inputs.resources || inputs.context?.resources, lang }).resourceLabel,
+        firstObjective: buildStpExecutionConstraintModel({ budget: inputs.budget, objective: inputs.objective, resources: inputs.resources || inputs.context?.resources, lang }).objectiveLabel,
         accessPath: isAr
             ? `القناة الأولى: ${firstAccess}`
             : isEn
@@ -11327,6 +11420,15 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
     const constraints = stpArray(ctx.constraints, 5);
     const knownCompetitors = stpArray(ctx.knownCompetitors, 5);
     const offer = localizeStpSubjectForReport(ctx.offer || query, lang) || stpText(ctx.offer || query, 160);
+    const resourceInput = stpText(ctx.resources || ctx.ressources || ctx.availableResources || ctx.team || ctx.time || inputs.resources, 260);
+    const priceInput = stpText(ctx.price || ctx.priceRange || ctx.pricing || inputs.price, 180);
+    const constraintModel = buildStpExecutionConstraintModel({
+        budget: inputs.budget,
+        objective: inputs.objective || ctx.objective,
+        resources: resourceInput,
+        price: priceInput,
+        lang
+    });
     const rawOfferForSemantics = `${ctx.offer || ''} ${inputs.query || ''} ${competitorData?.query || ''} ${query || ''}`;
     const productSemantics = classifyProductSemantics({ query: rawOfferForSemantics, geo: market, competitorData });
     const productFamily = productSemantics.productFamily || 'general_offer';
@@ -11527,7 +11629,9 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         : isEn
             ? ['Needs real before/after proof', 'Fears skin irritation', 'Compares device vs strips and salon', 'Buys through social and WhatsApp', 'Wants a short at-home skincare routine', 'Careful about price and pack contents', 'Fears facial marks']
             : ['Cherche un vrai avant/après', 'Craint irritation peau', 'Compare appareil, patchs et institut', 'Achète via social et WhatsApp', 'Veut une routine visage maison courte', 'Surveille prix et contenu du pack', 'Craint les marques sur le visage'];
-    const budgetTier = inferStpBudgetTier(inputs.budget);
+    const budgetTier = constraintModel.budgetTier;
+    const objectiveType = constraintModel.objectiveType;
+    const resourceTier = constraintModel.resourceTier;
     const effectiveArchetype = isOnlineEducationOffer ? 'content_education' : archetype;
     const selectedPersonaNames = isOnlineEducationOffer ? educationPersonaNames : isBeautySkinOffer ? beautyPersonaNames : personaNames;
     const budgetLabel = (index) => {
@@ -11719,6 +11823,18 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         const isProduct = effectiveArchetype === 'ecommerce_product';
         const isB2b = effectiveArchetype === 'b2b_service';
         const isLocal = effectiveArchetype === 'local_service';
+        const objectiveGuidance = objectiveType === 'sales'
+            ? pack('Optimiser vers commande/achat; mesurer clic commande, checkout et WhatsApp qualifié', 'Optimize for order/purchase; measure order clicks, checkout and qualified WhatsApp', 'حسن نحو الطلب/الشراء؛ قس نقر الطلب والدفع وواتساب المؤهل')
+            : objectiveType === 'lead_capture'
+                ? pack('Optimiser vers lead/conversation; formulaire court ou WhatsApp avec qualification', 'Optimize for lead/conversation; short form or qualified WhatsApp', 'حسن نحو العميل المحتمل/المحادثة؛ نموذج قصير أو واتساب مؤهل')
+                : objectiveType === 'validation'
+                    ? pack('Optimiser vers preuve de demande: clics qualifiés, messages, coût par signal', 'Optimize for demand proof: qualified clicks, messages and cost per signal', 'حسن نحو إثبات الطلب: نقرات مؤهلة ورسائل وتكلفة كل إشارة')
+                    : pack('Optimiser vers signal mesurable lié au premier objectif', 'Optimize for a measurable signal tied to the first objective', 'حسن نحو إشارة قابلة للقياس مرتبطة بالهدف الأول');
+        const resourceGuidance = resourceTier === 'lean'
+            ? pack('Ressources limitées: pas plus de 1 canal principal + 1 retargeting léger', 'Limited resources: no more than 1 main channel + light retargeting', 'موارد محدودة: قناة رئيسية واحدة + إعادة استهداف خفيفة')
+            : resourceTier === 'team'
+                ? pack('Ressources équipe: séparer acquisition, preuve créative et suivi commercial', 'Team resources: split acquisition, creative proof and sales follow-up', 'موارد فريق: افصل الاستحواذ والدليل الإبداعي والمتابعة التجارية')
+                : pack('Ressources à valider: garder un plan simple et mesurable', 'Resources to validate: keep a simple measurable plan', 'الموارد تحتاج تحقق: حافظ على خطة بسيطة قابلة للقياس');
         const intentKeywords = stpArray([
             product,
             `${product} ${localMarket}`,
@@ -11843,8 +11959,12 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                     ? pack('Commander maintenant', 'Order now', 'اطلب الآن')
                     : pack('Voir la méthode', 'See the method', 'شاهد المنهج'),
                 budgetGuidance: isFirstAttack
-                    ? pack('Petit budget: 1-2 adsets broad, 3-5 créas, ne pas sursegmenter', 'Small budget: 1-2 broad ad sets, 3-5 creatives, avoid over-segmentation', 'ميزانية صغيرة: 1-2 Adsets Broad و3-5 كرياتيف، تجنب التقسيم الزائد')
-                    : pack('Après signaux: séparer retargeting, lookalike et angle gagnant', 'After signals: split retargeting, lookalike and winning angle', 'بعد الإشارات: افصل retargeting وlookalike والزاوية الرابحة')
+                    ? (budgetTier === 'lean'
+                        ? pack('Petit budget: 1 adset broad, 2-3 créas, 1 promesse, seuil go/no-go rapide', 'Lean budget: 1 broad ad set, 2-3 creatives, 1 promise, fast go/no-go threshold', 'ميزانية صغيرة: Adset واحد واسع، 2-3 كرياتيف، وعد واحد، معيار قرار سريع')
+                        : pack('Budget test: 1-2 adsets broad, 3-5 créas, ne pas sursegmenter', 'Test budget: 1-2 broad ad sets, 3-5 creatives, avoid over-segmentation', 'ميزانية اختبار: 1-2 Adsets Broad و3-5 كرياتيف، تجنب التقسيم الزائد'))
+                    : pack('Après signaux: séparer retargeting, lookalike et angle gagnant seulement si le budget suit', 'After signals: split retargeting, lookalike and winning angle only if budget allows', 'بعد الإشارات: افصل retargeting وlookalike والزاوية الرابحة فقط إذا سمحت الميزانية'),
+                objectiveGuidance,
+                resourceGuidance
             },
             googleAds: {
                 campaignType: pack('Search + remarketing YouTube/display léger', 'Search + light YouTube/display remarketing', 'بحث + إعادة استهداف خفيفة YouTube/display'),
@@ -11942,6 +12062,11 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 lifeSituation: socioCulturalProfile.lifeSituation,
                 digitalMaturity: socioCulturalProfile.digitalMaturity,
                 purchasePower: socioCulturalProfile.purchasePower,
+                firstObjective: constraintModel.firstObjective,
+                objectiveAlignment: constraintModel.objectiveLabel,
+                budgetConstraint: constraintModel.budgetLabel,
+                resourceConstraint: constraintModel.resourceLabel,
+                priceConstraint: priceInput || '',
                 segmentName,
                 attackAngle,
                 budgetPath: budgetLabel(index),
@@ -12124,6 +12249,9 @@ async function maybeRefineStpPersonasWithAi({ personaCards = [], inputs = {}, co
                 'Every persona summary / primaryJobToBeDone / attackAngle must be different. Never repeat the same "I want" sentence across personas.',
                 'If the report language is Arabic, translate the product/service name into Arabic in all visible persona text unless it is a domain or brand name.',
                 'Channels must come from behavior and observed/inferred market access, not from generic lists.',
+                'Budget, price, resources and first objective are hard constraints: reorder personas and channels to fit them.',
+                'If budget/resources are lean, prioritize one reachable persona, one low-cost channel and fast proof; postpone expensive scale channels.',
+                'Each persona must explain how it helps the first objective: sales, leads, validation, awareness or retention.',
                 'If proof is weak, say what must be verified.'
             ],
             inputs,
@@ -12306,6 +12434,8 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     const effectiveBudget = budget || effectiveContext.budget || '';
     const effectiveObjective = objective || effectiveContext.objective || '';
     const effectiveBusinessModel = businessModel || effectiveContext.businessModel || archetype;
+    const effectiveResources = stpText(effectiveContext.resources || effectiveContext.ressources || effectiveContext.availableResources || effectiveContext.team || effectiveContext.time || context?.resources || '', 260);
+    const effectivePrice = stpText(effectiveContext.price || effectiveContext.priceRange || effectiveContext.pricing || context?.price || context?.priceRange || '', 180);
 
     const rawSegments = buildStpSegmentCandidates({
         query,
@@ -12316,7 +12446,14 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         archetype,
         lang: langPack.code
     });
-    const preliminaryScoredSegments = scoreStpSegments(rawSegments, competitorData, { budget: effectiveBudget, url });
+    const preliminaryScoredSegments = scoreStpSegments(rawSegments, competitorData, {
+        budget: effectiveBudget,
+        objective: effectiveObjective,
+        resources: effectiveResources,
+        price: effectivePrice,
+        url,
+        context: effectiveContext
+    });
     const segmentMerge = mergeRealStpSegments(preliminaryScoredSegments);
     const scoredSegments = segmentMerge.segments;
     const realTargets = buildRealStpTargeting(scoredSegments, { budget: effectiveBudget, competitorData });
@@ -12330,7 +12467,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     const beachheadMarket = buildBeachheadMarketDecision({
         segments: realTargets,
         competitorData,
-        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
+        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, resources: effectiveResources, price: effectivePrice, url, context: effectiveContext },
         archetype,
         lang: langPack.code
     });
@@ -12339,12 +12476,12 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         || realTargets[0]
         || null;
     const primaryPositioning = positioningObjects.find(item => item.targetSegmentId === chosenSegment?.id) || positioningObjects[0] || null;
-    const persona = buildStpPersona(chosenSegment, { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext }, competitorData, langPack.code);
+    const persona = buildStpPersona(chosenSegment, { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, resources: effectiveResources, price: effectivePrice, url, context: effectiveContext }, competitorData, langPack.code);
     const legacyPositioning = buildStpPositioning({
         segment: chosenSegment,
         persona,
         competitorData,
-        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
+        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, resources: effectiveResources, price: effectivePrice, url, context: effectiveContext },
         lang: langPack.code
     });
     const positioning = {
@@ -12359,7 +12496,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     };
     let personaCards = buildStpPersonaCards({
         segments: selectedTargets.length ? selectedTargets : (chosenSegment ? [chosenSegment] : []),
-        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
+        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, resources: effectiveResources, price: effectivePrice, url, context: effectiveContext },
         competitorData,
         beachheadMarket,
         archetype,
@@ -12385,7 +12522,10 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         personaCards,
         competitorData,
         beachheadMarket,
-        budget: effectiveBudget
+            budget: effectiveBudget,
+            objective: effectiveObjective,
+            resources: effectiveResources,
+            price: effectivePrice
     });
     if (Array.isArray(stpAngleModel?.personaCards) && stpAngleModel.personaCards.length) {
         personaCards = stpAngleModel.personaCards;
