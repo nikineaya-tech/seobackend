@@ -5995,6 +5995,17 @@ function ensureStpDecisionStyles() {
       .daka-stp-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.daka-stp-card{min-width:0;border:1px solid rgba(148,163,184,.13);border-radius:18px;background:rgba(2,6,23,.46);padding:14px}.daka-stp-card p{margin:8px 0 0;color:#cbd5e1;line-height:1.58;font-size:.83rem}
       .daka-stp-card small,.daka-stp-chip{color:#8aa0ba;font-size:.64rem;font-weight:900;text-transform:uppercase;letter-spacing:.05em}.daka-stp-chip{display:inline-flex;padding:5px 8px;border-radius:999px;background:rgba(34,211,238,.1);color:#7dd3fc;margin:4px 6px 0 0}
       .daka-stp-decision-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:14px}
+      .daka-stp-flow{display:grid;gap:14px;margin-bottom:18px}
+      .daka-stp-flow-step{border:1px solid rgba(125,211,252,.16);border-radius:22px;background:linear-gradient(145deg,rgba(8,17,31,.82),rgba(2,6,23,.54));padding:15px}
+      .daka-stp-flow-step h3{display:flex;align-items:center;gap:10px;font-size:.96rem;margin:0 0 10px;color:#fff}
+      .daka-stp-flow-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+      .daka-stp-flow-item{border:1px solid rgba(148,163,184,.12);border-radius:16px;background:rgba(2,6,23,.42);padding:12px;min-width:0}
+      .daka-stp-flow-item strong{display:block;color:#ecfeff;font-size:.83rem;line-height:1.35}
+      .daka-stp-flow-item p{margin:7px 0 0;color:#a9bad0;font-size:.75rem;line-height:1.45}
+      .daka-stp-flow-item small{display:block;color:#67e8f9;font-size:.64rem;font-weight:950;text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+      .daka-stp-flow-score{display:inline-flex;margin-top:8px;border-radius:999px;background:rgba(34,211,238,.10);padding:5px 8px;color:#7dd3fc;font-size:.66rem;font-weight:950}
+      .daka-stp-gate{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;border:1px solid rgba(34,197,94,.20);border-radius:18px;background:rgba(34,197,94,.08);padding:12px;color:#dcfce7}
+      .daka-stp-gate.bad{border-color:rgba(248,113,113,.34);background:rgba(248,113,113,.08);color:#fecaca}
       .daka-stp-angle-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin:0 0 16px}
       .daka-stp-angle-card{border:1px solid rgba(var(--angle-rgb,34,211,238),.22);border-radius:18px;background:linear-gradient(145deg,rgba(var(--angle-rgb,34,211,238),.13),rgba(2,6,23,.5));padding:12px;min-width:0}
       .daka-stp-angle-card strong{display:flex;align-items:center;gap:8px;color:#fff;font-size:.82rem;line-height:1.3}
@@ -6292,6 +6303,70 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
     </div>`;
 }
 
+function renderStpStrategyHierarchy(data = {}, copy = {}) {
+    const segmentation = data?.segmentation || {};
+    const targeting = data?.targeting || {};
+    const positions = Array.isArray(data?.positioningObjects) ? data.positioningObjects : [];
+    const validatedSegments = Array.isArray(segmentation.validatedSegments) && segmentation.validatedSegments.length
+        ? segmentation.validatedSegments
+        : (Array.isArray(segmentation.candidates) ? segmentation.candidates : []);
+    const targets = Array.isArray(targeting.targets) && targeting.targets.length
+        ? targeting.targets
+        : [targeting.chosenSegment, ...(targeting.rejectedSegments || [])].filter(Boolean);
+    const gate = data?.qualityGate || {};
+    const selectedTargets = targets.filter(item => item?.targetSelected || /PRIMARY|SECONDARY|EXPERIMENTAL/.test(String(item?.targetStatus || '')));
+    const segmentCards = validatedSegments.slice(0, 5).map((segment, index) => `
+      <article class="daka-stp-flow-item">
+        <small>${stpUiEsc(copy.stpSegmentation || 'Segmentation')} ${index + 1}</small>
+        <strong>${stpUiEsc(stpUiText(segment.name || segment.id, `Segment ${index + 1}`))}</strong>
+        <p>${stpUiEsc(stpUiText(segment.need, ''))}</p>
+        ${stpUiArray(segment.validation?.basis || segment.buyingTriggers || segment.evidence, 4).map(item => `<span class="daka-stp-chip">${stpUiEsc(item)}</span>`).join('')}
+      </article>`).join('');
+    const targetCards = targets.slice(0, 6).map((target, index) => `
+      <article class="daka-stp-flow-item">
+        <small>${stpUiEsc(target.targetStatus || (index === 0 ? 'PRIMARY_TARGET' : 'LOW_PRIORITY'))}</small>
+        <strong>${stpUiEsc(stpUiText(target.name || target.id, `Target ${index + 1}`))}</strong>
+        <p>${stpUiEsc(stpUiText((target.targetRationale || []).join(' · ') || target.need, ''))}</p>
+        <span class="daka-stp-flow-score">${stpUiEsc(copy.score || 'Score')}: ${stpUiEsc(stpUiText(target.targetScores?.total || target.scores?.total || ''))}/100</span>
+      </article>`).join('');
+    const positionCards = positions.slice(0, 4).map((position, index) => `
+      <article class="daka-stp-flow-item">
+        <small>${stpUiEsc(copy.positioning || 'Positioning')} ${index + 1}</small>
+        <strong>${stpUiEsc(stpUiText(position.frameOfReference || position.targetSegmentId, `Position ${index + 1}`))}</strong>
+        <p>${stpUiEsc(stpUiText(position.statement || position.differentiatedValue, ''))}</p>
+        ${stpUiArray([position.alternative, position.differentiatedValue, ...(position.reasonToBelieve || [])], 4).map(item => `<span class="daka-stp-chip">${stpUiEsc(item)}</span>`).join('')}
+      </article>`).join('');
+    return `<div class="daka-stp-flow">
+      <div class="daka-stp-hero">
+        <div>
+          <span class="daka-stp-kicker"><i class="fas fa-diagram-project"></i>${stpUiEsc(copy.title || 'STP')}</span>
+          <h2>${stpUiEsc(copy.title || 'Daka STP Decision')}</h2>
+          <p>${stpUiEsc(copy.subtitle || '')}</p>
+        </div>
+        <div class="daka-stp-score" style="--stp-score:${Math.max(0, Math.min(100, Number(selectedTargets[0]?.targetScores?.total || targeting.chosenSegment?.targetScores?.total || targeting.chosenSegment?.scores?.total || 64)))}%">
+          <strong>${stpUiEsc(stpUiText(selectedTargets[0]?.targetScores?.total || targeting.chosenSegment?.targetScores?.total || targeting.chosenSegment?.scores?.total || 0))}</strong>
+          <span>STP</span>
+        </div>
+      </div>
+      <div class="daka-stp-gate ${gate.valid === false ? 'bad' : ''}">
+        <strong><i class="fas ${gate.valid === false ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> ${gate.valid === false ? 'Quality gate failed' : 'Quality gate passed'}</strong>
+        <span>${gate.valid === false ? stpUiEsc(stpUiArray(gate.failures, 3).join(' · ')) : 'SEGMENT → TARGET → POSITIONING exists before personas.'}</span>
+      </div>
+      <section class="daka-stp-flow-step">
+        <h3><i class="fas fa-layer-group"></i>${stpUiEsc(copy.stpSegmentation || 'Segmentation')}</h3>
+        <div class="daka-stp-flow-grid">${segmentCards || `<p>${stpUiEsc(copy.noData || 'No data')}</p>`}</div>
+      </section>
+      <section class="daka-stp-flow-step">
+        <h3><i class="fas fa-bullseye"></i>${stpUiEsc(copy.stpTargeting || 'Targeting')}</h3>
+        <div class="daka-stp-flow-grid">${targetCards || `<p>${stpUiEsc(copy.noData || 'No data')}</p>`}</div>
+      </section>
+      <section class="daka-stp-flow-step">
+        <h3><i class="fas fa-chess-knight"></i>${stpUiEsc(copy.stpPositioning || 'Positioning')}</h3>
+        <div class="daka-stp-flow-grid">${positionCards || `<p>${stpUiEsc(copy.noData || 'No data')}</p>`}</div>
+      </section>
+    </div>`;
+}
+
 function renderStpDecision(data) {
     const container = document.getElementById('resultsStpDecision');
     if (!container) return;
@@ -6343,7 +6418,9 @@ function renderStpDecision(data) {
         marketingAngles: data?.marketingAngles || []
     });
 
+    const strategyHtml = renderStpStrategyHierarchy(data, copy);
     container.innerHTML = `<section class="daka-stp-report daka-stp-persona-only" dir="${dir}">
+      ${strategyHtml}
       ${personaCardsHtml || `<div class="daka-stp-persona-head"><div><span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas)}</span><p>${stpUiEsc(stpUiText(chosen.need, copy.subtitle))}</p></div></div>`}
     </section>`;
     container.classList.add('active');

@@ -58,6 +58,14 @@ const {
   buildAngleDrivenStpModel,
 } = require('./lib/stp-angle-engine');
 const {
+  mergeDuplicateSegments: mergeRealStpSegments,
+  buildTargeting: buildRealStpTargeting,
+  buildPositioningObjects: buildRealStpPositioningObjects,
+  decisionTrace: realStpDecisionTrace,
+  validateRealStpDecision,
+  overlapScore: realStpOverlapScore,
+} = require('./lib/stp-real-engine');
+const {
   sanitizeStpDecisionForClient: sanitizeStpDecisionPayload,
 } = require('./lib/stp-client-sanitizer');
 // Security & Performance
@@ -10406,20 +10414,28 @@ function buildStpSegmentCandidates({ query = '', geo = '', budget = '', objectiv
     } else if (archetype === 'ecommerce_product') {
         candidates.push(
             {
-                id: 'ready-to-buy-local',
-                name: lang === 'ar' ? `مشترون محليون جاهزون في ${marketName}` : lang === 'en' ? `Ready-to-buy local shoppers in ${marketName}` : `Acheteurs locaux prêts à acheter en ${marketName}`,
+                id: 'local-purchase-intent',
+                name: lang === 'ar' ? `طلب شراء محلي حول ${baseNeed} في ${marketName}` : lang === 'en' ? `Local purchase intent for ${baseNeed} in ${marketName}` : `Intention d’achat locale pour ${baseNeed} en ${marketName}`,
                 type: 'geographic+behavioral',
-                need: lang === 'ar' ? `شراء ${baseNeed} بثقة وسرعة` : lang === 'en' ? `Buy ${baseNeed} with trust and speed` : `Acheter ${baseNeed} avec confiance et rapidité`,
+                need: lang === 'ar' ? `العثور على عرض متاح محليا مع سعر وطريقة طلب واضحة` : lang === 'en' ? `Find a locally reachable offer with clear price and ordering terms` : `Trouver une offre accessible localement avec prix et conditions de commande clairs`,
                 accessChannels: ['Google Shopping/Search', 'Facebook Ads', 'TikTok', 'WhatsApp'],
                 buyingTriggers: ['visible result', 'delivery speed', 'COD/payment trust', 'price clarity']
             },
             {
-                id: 'comparison-shoppers',
-                name: lang === 'ar' ? 'مشترون يقارنون السعر والدليل' : lang === 'en' ? 'Comparison shoppers checking price and proof' : 'Acheteurs qui comparent prix et preuves',
-                type: 'behavioral',
-                need: lang === 'ar' ? 'فهم الفرق بين العروض قبل الطلب' : lang === 'en' ? 'Understand the difference between offers before ordering' : 'Comprendre la différence entre les offres avant commande',
-                accessChannels: ['SERP', 'marketplaces', 'reviews', 'retargeting'],
-                buyingTriggers: ['reviews', 'guarantee', 'before/after proof', 'clear return policy']
+                id: 'assortment-fit-buyers',
+                name: lang === 'ar' ? `مشترون يحتاجون اختيارا مناسبا من بدائل ${baseNeed}` : lang === 'en' ? `Buyers needing the right ${baseNeed} variant` : `Acheteurs qui doivent choisir la bonne variante de ${baseNeed}`,
+                type: 'use-case+behavioral',
+                need: lang === 'ar' ? 'اختيار المنتج أو النكهة أو النسخة المناسبة لحالة الاستخدام بدون قرار عشوائي' : lang === 'en' ? 'Choose the right model, flavor, variant or use-case fit without guessing' : 'Choisir le bon modèle, parfum, variant ou cas d’usage sans décision au hasard',
+                accessChannels: ['SERP', 'marketplaces', 'reviews', 'WhatsApp'],
+                buyingTriggers: ['variant choice', 'usage fit', 'price clarity', 'seller answer']
+            },
+            {
+                id: 'social-shop-switchers',
+                name: lang === 'ar' ? `مشترون بين المتاجر الاجتماعية والبدائل الرسمية في ${marketName}` : lang === 'en' ? `Buyers switching between social shops and formal alternatives in ${marketName}` : `Acheteurs entre boutiques sociales et alternatives formelles en ${marketName}`,
+                type: 'purchase-mode+trust-context',
+                need: lang === 'ar' ? 'تحديد أي قناة شراء تعطي شروطا أوضح ومتابعة أسهل بعد الطلب' : lang === 'en' ? 'Decide which buying channel gives clearer terms and easier follow-up' : 'Savoir quel canal d’achat donne des conditions plus claires et un meilleur suivi',
+                accessChannels: ['Instagram', 'Facebook Ads', 'WhatsApp', 'reviews'],
+                buyingTriggers: ['seller responsiveness', 'terms clarity', 'after-sale follow-up', 'social proof']
             }
         );
     } else if (archetype === 'local_service') {
@@ -11186,7 +11202,9 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             confidence: 'MEDIUM'
         }
     ];
-    const fallbackSegments = isOnlineEducationOffer ? educationFallbackSegments : genericFallbackSegments;
+    const fallbackSegments = (segments || []).length
+        ? []
+        : (isOnlineEducationOffer ? educationFallbackSegments : genericFallbackSegments);
 
     const merged = [];
     [...(segments || []), ...fallbackSegments].forEach(segment => {
@@ -11722,25 +11740,49 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         archetype,
         lang: langPack.code
     });
-    const scoredSegments = scoreStpSegments(rawSegments, competitorData, { budget: effectiveBudget, url });
+    const preliminaryScoredSegments = scoreStpSegments(rawSegments, competitorData, { budget: effectiveBudget, url });
+    const segmentMerge = mergeRealStpSegments(preliminaryScoredSegments);
+    const scoredSegments = segmentMerge.segments;
+    const realTargets = buildRealStpTargeting(scoredSegments, { budget: effectiveBudget, competitorData });
+    const selectedTargets = realTargets.filter(segment => segment.targetSelected);
+    const positioningObjects = buildRealStpPositioningObjects(selectedTargets, {
+        query: localizeStpSubjectForReport(query, langPack.code) || query,
+        geo: safeGeo,
+        competitorData,
+        lang: langPack.code
+    });
     const beachheadMarket = buildBeachheadMarketDecision({
-        segments: scoredSegments,
+        segments: realTargets,
         competitorData,
         inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
         archetype,
         lang: langPack.code
     });
-    const chosenSegment = scoredSegments.find(segment => segment.id === beachheadMarket.segmentId) || scoredSegments[0] || null;
+    const chosenSegment = realTargets.find(segment => segment.id === beachheadMarket.segmentId && segment.targetSelected)
+        || selectedTargets[0]
+        || realTargets[0]
+        || null;
+    const primaryPositioning = positioningObjects.find(item => item.targetSegmentId === chosenSegment?.id) || positioningObjects[0] || null;
     const persona = buildStpPersona(chosenSegment, { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext }, competitorData, langPack.code);
-    const positioning = buildStpPositioning({
+    const legacyPositioning = buildStpPositioning({
         segment: chosenSegment,
         persona,
         competitorData,
         inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
         lang: langPack.code
     });
+    const positioning = {
+        ...legacyPositioning,
+        ...(primaryPositioning || {}),
+        id: primaryPositioning?.id || `pos-${chosenSegment?.id || 'primary'}`,
+        targetSegmentId: primaryPositioning?.targetSegmentId || chosenSegment?.id || '',
+        targetStatus: primaryPositioning?.targetStatus || chosenSegment?.targetStatus || '',
+        audience: chosenSegment?.name || legacyPositioning.audience || '',
+        statement: primaryPositioning?.statement || legacyPositioning.statement || '',
+        proof: primaryPositioning?.reasonToBelieve?.length ? primaryPositioning.reasonToBelieve : legacyPositioning.proof
+    };
     let personaCards = buildStpPersonaCards({
-        segments: scoredSegments,
+        segments: selectedTargets.length ? selectedTargets : (chosenSegment ? [chosenSegment] : []),
         inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
         competitorData,
         beachheadMarket,
@@ -11769,10 +11811,58 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         beachheadMarket,
         budget: effectiveBudget
     });
-    if (stpAngleModel?.personaCards?.length) {
-        personaCards = stpAngleModel.personaCards;
-    }
-    personaCards = enforceStpPersonaDiversity(personaCards, langPack.code);
+    const positioningBySegment = new Map(positioningObjects.map(item => [item.targetSegmentId, item]));
+    personaCards = enforceStpPersonaDiversity(personaCards, langPack.code).map((card, index) => {
+        const sourceTarget = selectedTargets[index] || selectedTargets.find(target => target.id === card.segmentId) || chosenSegment || {};
+        const pos = positioningBySegment.get(sourceTarget.id) || primaryPositioning || {};
+        return {
+            ...card,
+            segmentId: sourceTarget.id || card.segmentId || '',
+            targetStatus: sourceTarget.targetStatus || card.targetStatus || '',
+            positioningId: pos.id || card.positioningId || '',
+            parentSegment: sourceTarget.name || card.parentSegment || card.segmentName || '',
+            details: {
+                ...(card.details || {}),
+                stp: {
+                    ...(card.details?.stp || {}),
+                    segmentId: sourceTarget.id || card.segmentId || '',
+                    targetStatus: sourceTarget.targetStatus || card.targetStatus || '',
+                    positioningId: pos.id || card.positioningId || '',
+                    segmentation: sourceTarget.name || card.details?.stp?.segmentation || '',
+                    targeting: sourceTarget.targetStatus || card.details?.stp?.targeting || '',
+                    positioning: pos.statement || card.details?.stp?.positioning || ''
+                }
+            }
+        };
+    });
+    const personaAngleActivations = personaCards.map((card, index) => {
+        const personaText = `${card.summary || ''} ${card.attackAngle || ''} ${JSON.stringify(card.details || {})}`;
+        const ranked = (stpAngleModel?.marketingAngles || []).map(angle => ({
+            angle,
+            fit: Math.round(Math.max(35, Math.min(100, (realStpOverlapScore(personaText, `${angle.name || ''} ${angle.corePromise || ''} ${angle.jobToBeDone || ''} ${angle.primaryBenefit || ''}`) * 62) + Number(angle.score || 55) * 0.38)))
+        })).sort((a, b) => b.fit - a.fit);
+        const primary = ranked[0]?.angle || {};
+        return {
+            personaId: card.id || `persona-${index + 1}`,
+            segmentId: card.segmentId,
+            targetStatus: card.targetStatus,
+            positioningId: card.positioningId,
+            primaryAngleId: primary.id || '',
+            secondaryAngleIds: ranked.slice(1, 3).map(item => item.angle.id).filter(Boolean),
+            personaAngleFit: ranked[0]?.fit || 0,
+            proof: stpArray([primary.proofToShow, ...(card.details?.proofNeeded || [])], 5),
+            objection: stpText(primary.objectionToNeutralize || card.details?.objectionToNeutralize, 220),
+            hook: stpArray(primary.hookExamples || card.details?.hookExamples, 2)[0] || '',
+            channels: stpArray(card.details?.channels || primary.channels, 5)
+        };
+    });
+    const qualityGate = validateRealStpDecision({
+        segmentation: { validatedSegments: scoredSegments },
+        targeting: { targets: realTargets },
+        positioning: positioningObjects,
+        personaCards,
+        activations: personaAngleActivations
+    });
     if (stpAngleModel?.observability?.length) {
         console.log(`[api/stp] ${stpAngleModel.observability.join(' | ')}`);
         console.log(`[api/stp] [AngleEngine] final_angles=${(stpAngleModel.marketingAngles || []).map(angle => angle.type).join(',')}`);
@@ -11813,19 +11903,22 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
                 'Input normalization: keyword, geo, language, budget, optional URL',
                 'Market acquisition: SERP, competitors, geo, keyword and proof layers',
                 'Context inference: offer, audience, business model, region, competitors, constraints and channels',
-                'Segmentation layer: market pockets and behavioral/persona candidates',
-                'Targeting layer: profitability, accessibility, proof strength and scalability scoring',
-                'Beachhead layer: first persona/segment to attack and next market by budget path',
-                'Angle layer: problems, JTBD, proof needs and marketing angles are deduplicated before persona generation',
-                'Persona prompt layer: avatar, age hypothesis, pains, triggers, behavior and attack angle',
-                'Positioning layer: promise, alternative, differentiator and proof guard',
-                'Cards renderer: persona cards first, STP details below'
+                'Segmentation layer: market-condition segments, merge test, angle-as-segment rejection',
+                'Targeting layer: comparative scoring and target status selection',
+                'Positioning layer: target-specific frame, alternative, differentiated value and reason to believe',
+                'Persona representation layer: avatars inherit segmentId, targetStatus and positioningId',
+                'Angle layer: marketing angles generated only after positioning exists',
+                'Activation layer: persona x angle fit, proof, objection, hook and channels',
+                'Cards renderer: STP hierarchy first, personas second'
             ],
             guardrails: [
-                'No segment without observable or targetable traits',
-                'Targeting scored by profitability, scalability, accessibility, proof strength',
+                'No persona without segmentId, targetStatus and positioningId',
+                'No positioning without targetSegmentId',
+                'No angle activation without persona x angle fit',
+                'No segment without a strategic market basis',
+                'Targeting scored comparatively by fit, intensity, intent, reachability, differentiation, evidence, potential and risk',
                 'Beachhead market selected by urgency, budget fit, accessible channels, proof, competitive space and expansion path',
-                'Positioning requires audience, pain, alternatives, differentiators',
+                'Positioning requires target, frame of reference, alternative, differentiated value and reason to believe',
                 'Missing proof is marked instead of invented'
             ]
         },
@@ -11864,12 +11957,17 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         personaPromptLayer: personaAiOverlay ? { model: personaAiOverlay.model } : null,
         segmentation: {
             archetype,
-            candidates: scoredSegments
+            candidates: preliminaryScoredSegments,
+            validatedSegments: scoredSegments,
+            rejectedOrMerged: segmentMerge.rejected,
+            segmentTest: 'If merging with another segment would not materially change positioning, proof, offer or channel strategy, the segment is merged.'
         },
         targeting: {
             chosenSegment,
-            rejectedSegments: scoredSegments.filter(segment => segment.id !== chosenSegment?.id),
-            scoringFormula: 'STP score = profitability 34% + scalability 24% + accessibility 24% + proof strength 18%; final first market is refined by beachhead fit.'
+            targets: realTargets,
+            selectedTargets,
+            rejectedSegments: realTargets.filter(segment => !segment.targetSelected),
+            scoringFormula: 'Comparative STP score = productFit + problemIntensity + purchaseIntent + reachability + differentiationPotential + evidenceStrength + commercialPotential - risk.'
         },
         beachheadMarket,
         persona,
@@ -11879,8 +11977,38 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         personaAngleMappings: stpAngleModel?.personaAngleMappings || [],
         angleDeduplication: stpAngleModel?.angleDeduplication || [],
         personaDeduplication: stpAngleModel?.personaDeduplication || [],
+        personaAngleActivations,
         stpObservability: stpAngleModel?.observability || [],
         positioning,
+        positioningObjects,
+        qualityGate,
+        decisionTrace: [
+            realStpDecisionTrace('SEGMENTATION', `${scoredSegments.length} validated segments`, {
+                inputs: rawSegments.map(segment => segment.name || segment.id),
+                alternatives: rawSegments.map(segment => segment.name || segment.id),
+                rejectedAlternatives: segmentMerge.rejected,
+                confidence: scoredSegments.length ? 'MEDIUM' : 'LOW'
+            }),
+            realStpDecisionTrace('TARGETING', `${selectedTargets.length} selected targets`, {
+                inputs: scoredSegments.map(segment => segment.name || segment.id),
+                alternatives: realTargets.map(segment => `${segment.name}: ${segment.targetScores?.total}/100 ${segment.targetStatus}`),
+                rejectedAlternatives: realTargets.filter(segment => !segment.targetSelected).map(segment => ({ id: segment.id, reason: segment.targetStatus })),
+                risks: realTargets.flatMap(segment => segment.targetScores?.risk ? [`${segment.name}: risk ${segment.targetScores.risk}/100`] : []),
+                confidence: selectedTargets.length ? 'MEDIUM' : 'LOW'
+            }),
+            realStpDecisionTrace('POSITIONING', `${positioningObjects.length} positioning objects`, {
+                inputs: selectedTargets.map(segment => segment.name || segment.id),
+                alternatives: positioningObjects.map(item => item.alternative),
+                risks: positioningObjects.filter(item => !item.validation?.valid).map(item => `POSITIONING_TOO_GENERIC: ${item.id}`),
+                confidence: positioningObjects.length ? 'MEDIUM' : 'LOW'
+            }),
+            realStpDecisionTrace('ACTIVATION', `${personaAngleActivations.length} persona-angle activations`, {
+                inputs: personaCards.map(card => card.displayName || card.id),
+                alternatives: (stpAngleModel?.marketingAngles || []).map(angle => angle.name || angle.id),
+                risks: qualityGate.failures,
+                confidence: qualityGate.valid ? 'MEDIUM' : 'LOW'
+            })
+        ],
         actionPlan,
         decisionCards: buildStpDecisionCards({
             chosenSegment,
