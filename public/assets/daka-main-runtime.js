@@ -1837,7 +1837,7 @@ document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.addEventListener('DOMContentLoaded', initSharedReportRoute);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-08-24-stp-social-culture1';
+window.DAKA_FRONTEND_BUILD = '2026-08-24-stp-ads-focus1';
 
 function loaderTypeFromEndpoint(endpoint = '') {
     const value = String(endpoint || '').toLowerCase();
@@ -5735,6 +5735,25 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         lifeSituation: 'الوضعية الحياتية',
         digitalMaturity: 'النضج الرقمي',
         purchasePower: 'القدرة الشرائية',
+        adsTargeting: 'إعدادات الإعلانات',
+        metaAds: 'Meta Ads',
+        googleAds: 'Google Ads',
+        measurement: 'القياس',
+        viewPersona: 'عرض التفاصيل',
+        closePersona: 'إغلاق',
+        adObjective: 'هدف الحملة',
+        funnelStage: 'مرحلة الفانل',
+        audienceType: 'نوع الجمهور',
+        coreTargeting: 'الاستهداف الأساسي',
+        customAudiences: 'جمهور مخصص',
+        lookalike: 'Lookalike',
+        advantagePlus: 'Advantage+',
+        budgetGuidance: 'توجيه الميزانية',
+        basicDemographics: 'الديموغرافيا الأساسية',
+        detailedDemographics: 'الديموغرافيا التفصيلية',
+        audienceSegments: 'شرائح الجمهور',
+        bidding: 'المزايدة',
+        privacyAndQuality: 'الخصوصية والجودة',
         attackAngle: 'زاوية الهجوم',
         budgetPath: 'مسار الميزانية',
         channels: 'القنوات',
@@ -5805,6 +5824,25 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         lifeSituation: 'Life situation',
         digitalMaturity: 'Digital maturity',
         purchasePower: 'Purchase power',
+        adsTargeting: 'Ads targeting',
+        metaAds: 'Meta Ads',
+        googleAds: 'Google Ads',
+        measurement: 'Measurement',
+        viewPersona: 'View details',
+        closePersona: 'Close',
+        adObjective: 'Campaign objective',
+        funnelStage: 'Funnel stage',
+        audienceType: 'Audience type',
+        coreTargeting: 'Core targeting',
+        customAudiences: 'Custom audiences',
+        lookalike: 'Lookalike',
+        advantagePlus: 'Advantage+',
+        budgetGuidance: 'Budget guidance',
+        basicDemographics: 'Basic demographics',
+        detailedDemographics: 'Detailed demographics',
+        audienceSegments: 'Audience segments',
+        bidding: 'Bidding',
+        privacyAndQuality: 'Privacy and quality',
         attackAngle: 'Attack angle',
         budgetPath: 'Budget path',
         channels: 'Channels',
@@ -5875,6 +5913,25 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         lifeSituation: 'Situation de vie',
         digitalMaturity: 'Maturité digitale',
         purchasePower: 'Pouvoir d’achat',
+        adsTargeting: 'Paramètres Ads',
+        metaAds: 'Meta Ads',
+        googleAds: 'Google Ads',
+        measurement: 'Mesure',
+        viewPersona: 'Voir détails',
+        closePersona: 'Fermer',
+        adObjective: 'Objectif campagne',
+        funnelStage: 'Étape funnel',
+        audienceType: 'Type d’audience',
+        coreTargeting: 'Core targeting',
+        customAudiences: 'Audiences personnalisées',
+        lookalike: 'Lookalike',
+        advantagePlus: 'Advantage+',
+        budgetGuidance: 'Guidage budget',
+        basicDemographics: 'Démographies de base',
+        detailedDemographics: 'Démographies détaillées',
+        audienceSegments: 'Segments audience',
+        bidding: 'Enchères',
+        privacyAndQuality: 'Confidentialité et qualité',
         attackAngle: 'Angle d’attaque',
         budgetPath: 'Chemin budget',
         channels: 'Canaux',
@@ -6031,7 +6088,9 @@ function ensureStpDecisionStyles() {
       .daka-stp-persona-only{padding-top:20px}
       .daka-stp-persona-only .daka-stp-persona-head{margin-top:0}
       .daka-stp-persona-only .daka-stp-personas{grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:16px;margin-bottom:0}
-      .daka-stp-persona{position:relative;overflow:hidden;border:1px solid rgba(var(--persona-rgb,34,211,238),.24);border-radius:22px;background:radial-gradient(circle at 0 0,rgba(var(--persona-rgb,34,211,238),.18),transparent 34%),linear-gradient(145deg,rgba(8,17,31,.92),rgba(2,6,23,.72));padding:16px;min-height:310px;display:grid;gap:10px;align-content:start}
+      .daka-stp-persona{position:relative;overflow:hidden;border:1px solid rgba(var(--persona-rgb,34,211,238),.24);border-radius:22px;background:radial-gradient(circle at 0 0,rgba(var(--persona-rgb,34,211,238),.18),transparent 34%),linear-gradient(145deg,rgba(8,17,31,.92),rgba(2,6,23,.72));padding:16px;min-height:280px;display:grid;gap:10px;align-content:start;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .2s}
+      .daka-stp-persona:hover{border-color:rgba(var(--persona-rgb,34,211,238),.48);box-shadow:0 18px 44px rgba(var(--persona-rgb,34,211,238),.14);transform:translateY(-1px)}
+      .daka-stp-persona.active{border-color:rgba(var(--persona-rgb,34,211,238),.68);box-shadow:0 22px 60px rgba(var(--persona-rgb,34,211,238),.20)}
       .daka-stp-persona:before{content:"";position:absolute;inset:0 0 auto;height:3px;background:linear-gradient(90deg,rgba(var(--persona-rgb,34,211,238),1),transparent)}
       .daka-stp-persona-top{display:flex;align-items:center;gap:12px;min-width:0}
       .daka-stp-avatar{width:58px;height:58px;border-radius:999px;display:grid;place-items:center;flex:0 0 auto;background:radial-gradient(circle,rgba(var(--persona-rgb,34,211,238),.34),rgba(15,23,42,.88));border:1px solid rgba(var(--persona-rgb,34,211,238),.38);box-shadow:0 0 28px rgba(var(--persona-rgb,34,211,238),.18)}
@@ -6043,7 +6102,19 @@ function ensureStpDecisionStyles() {
       .daka-stp-want strong{color:#f8fafc;font-size:.84rem;line-height:1.45}
       .daka-stp-copy-md{border:1px solid rgba(var(--persona-rgb,34,211,238),.22);background:rgba(var(--persona-rgb,34,211,238),.1);color:#eaf6ff;border-radius:12px;padding:8px 10px;font-size:.72rem;font-weight:950;cursor:pointer;display:inline-flex;align-items:center;gap:7px;justify-content:center}
       .daka-stp-copy-md:hover{background:rgba(var(--persona-rgb,34,211,238),.18)}
+      .daka-stp-view-btn{border:0;background:linear-gradient(135deg,rgba(var(--persona-rgb,34,211,238),.9),rgba(139,92,246,.88));color:#f8fafc;border-radius:12px;padding:9px 11px;font-size:.75rem;font-weight:950;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:7px}
       .daka-stp-md-source{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;white-space:pre-wrap}
+      .daka-stp-focus-panel{display:none;margin:0 0 16px;border:1px solid rgba(var(--focus-rgb,34,211,238),.30);border-radius:24px;background:radial-gradient(circle at 0 0,rgba(var(--focus-rgb,34,211,238),.16),transparent 34%),linear-gradient(145deg,rgba(8,17,31,.96),rgba(2,6,23,.84));padding:clamp(14px,2vw,20px);box-shadow:0 26px 70px rgba(0,0,0,.28)}
+      .daka-stp-focus-panel.active{display:grid;gap:14px}
+      .daka-stp-focus-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:14px;align-items:center}
+      .daka-stp-focus-head h3{font-size:1.15rem;line-height:1.22}
+      .daka-stp-focus-head p{margin:5px 0 0;color:#aec0d6;font-size:.82rem;line-height:1.5}
+      .daka-stp-focus-close{border:1px solid rgba(148,163,184,.18);background:rgba(15,23,42,.78);color:#eaf6ff;border-radius:12px;padding:9px 12px;font-weight:950;cursor:pointer}
+      .daka-stp-focus-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+      .daka-stp-ads-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+      .daka-stp-ads-card{border:1px solid rgba(34,211,238,.16);border-radius:16px;background:rgba(2,6,23,.42);padding:11px}
+      .daka-stp-ads-card strong{display:flex;align-items:center;gap:8px;color:#eaf6ff;font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+      .daka-stp-ads-card span{display:block;color:#a9bad0;font-size:.74rem;line-height:1.45;margin-top:5px}
       .daka-stp-mini-grid{display:grid;grid-template-columns:1fr;gap:8px}
       .daka-stp-mini{border:1px solid rgba(148,163,184,.09);border-radius:14px;background:rgba(2,6,23,.35);padding:9px}
       .daka-stp-mini strong{display:block;color:#eaf6ff;font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
@@ -6065,7 +6136,7 @@ function ensureStpDecisionStyles() {
       .daka-stp-pill-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
       .daka-stp-list{display:grid;gap:8px;margin:10px 0 0;padding:0}.daka-stp-list li{list-style:none;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.035);border:1px solid rgba(148,163,184,.08);color:#dbeafe;font-size:.78rem;line-height:1.5}
       .daka-stp-action{border-inline-start:3px solid #22c55e}
-      @media(max-width:780px){.daka-stp-hero,.daka-stp-grid,.daka-stp-persona-stp{grid-template-columns:1fr}.daka-stp-score{min-height:138px;max-width:180px;margin:auto}.daka-stp-persona-head{display:grid}.daka-stp-personas,.daka-stp-persona-only .daka-stp-personas{grid-template-columns:1fr}}
+      @media(max-width:780px){.daka-stp-hero,.daka-stp-grid,.daka-stp-persona-stp,.daka-stp-focus-head,.daka-stp-focus-grid{grid-template-columns:1fr}.daka-stp-score{min-height:138px;max-width:180px;margin:auto}.daka-stp-persona-head{display:grid}.daka-stp-personas,.daka-stp-persona-only .daka-stp-personas{grid-template-columns:1fr}}
     `;
     document.head.appendChild(style);
 }
@@ -6149,6 +6220,71 @@ function renderStpSocialPlan(details = {}, copy = {}) {
     return `<div class="daka-stp-mini"><strong>${stpUiEsc(copy.socialPlan || copy.channels || 'Social')}</strong>${lines || ''}</div>${channelHtml}`;
 }
 
+function renderStpAdsTargeting(details = {}, copy = {}) {
+    const ads = details.adsTargeting && typeof details.adsTargeting === 'object' ? details.adsTargeting : {};
+    if (!Object.keys(ads).length) return '';
+    const meta = ads.metaAds || {};
+    const google = ads.googleAds || {};
+    const measurement = ads.measurement || {};
+    const flat = (value, max = 10) => {
+        if (!value) return [];
+        if (Array.isArray(value)) return stpUiArray(value, max);
+        if (typeof value === 'object') {
+            return stpUiArray(Object.entries(value).flatMap(([key, val]) => {
+                const parts = stpUiArray(val, max);
+                return parts.length ? `${key}: ${parts.join(' · ')}` : '';
+            }), max);
+        }
+        return stpUiArray(value, max);
+    };
+    const line = (label, value) => {
+        const text = Array.isArray(value) || (value && typeof value === 'object') ? flat(value, 8).join(' · ') : stpUiText(value);
+        return text ? `<span><b style="color:#eaf6ff">${stpUiEsc(label)}:</b> ${stpUiEsc(text)}</span>` : '';
+    };
+    return `<section class="daka-stp-ads-grid" aria-label="${stpUiEsc(copy.adsTargeting || 'Ads targeting')}">
+      <article class="daka-stp-ads-card">
+        <strong><i class="fab fa-facebook"></i>${stpUiEsc(copy.metaAds || 'Meta Ads')}</strong>
+        ${line(copy.adObjective || 'Objective', ads.objective)}
+        ${line(copy.funnelStage || 'Funnel stage', ads.funnelStage)}
+        ${line(copy.audienceType || 'Audience type', meta.audienceType)}
+        ${line('Audience', meta.audienceName)}
+        ${line('Geo', meta.geo)}
+        ${line(copy.age || 'Age', meta.ageRange)}
+        ${line(copy.coreTargeting || 'Core targeting', meta.coreTargeting)}
+        ${line('Interests', meta.interests)}
+        ${line('Behaviors', meta.behaviors)}
+        ${line(copy.customAudiences || 'Custom audiences', meta.customAudiences)}
+        ${line(copy.lookalike || 'Lookalike', meta.lookalike)}
+        ${line(copy.advantagePlus || 'Advantage+', meta.advantagePlus)}
+        ${line('Exclusions', meta.exclusions)}
+        ${line('Hooks', meta.creativeHooks)}
+        ${line('CTA', meta.recommendedCTA)}
+        ${line(copy.budgetGuidance || 'Budget guidance', meta.budgetGuidance)}
+      </article>
+      <article class="daka-stp-ads-card">
+        <strong><i class="fab fa-google"></i>${stpUiEsc(copy.googleAds || 'Google Ads')}</strong>
+        ${line('Type', google.campaignType)}
+        ${line('Intent', google.searchIntent)}
+        ${line('Ad group', google.adGroupIdea)}
+        ${line('Keywords', google.keywords)}
+        ${line(copy.basicDemographics || 'Basic demographics', google.basicDemographics)}
+        ${line(copy.detailedDemographics || 'Detailed demographics', google.detailedDemographics)}
+        ${line(copy.audienceSegments || 'Audience segments', google.audienceSegments)}
+        ${line('Negative', google.negativeKeywords)}
+        ${line('Exclusions', google.exclusions)}
+        ${line(copy.bidding || 'Bidding', google.bidding)}
+        ${line('Landing', google.landingMessage)}
+      </article>
+      <article class="daka-stp-ads-card">
+        <strong><i class="fas fa-chart-line"></i>${stpUiEsc(copy.measurement || 'Measurement')}</strong>
+        ${line('Primary', measurement.primaryEvent)}
+        ${line('Secondary', measurement.secondaryEvent)}
+        ${line('Rule', measurement.testBudgetRule)}
+        ${line(copy.privacyAndQuality || 'Privacy and quality', measurement.privacyAndQuality)}
+      </article>
+    </section>`;
+}
+
 function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
     const details = card.details || {};
     const primaryAngle = card.primaryAngle || {};
@@ -6184,6 +6320,41 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
         '',
         `## ${copy.socialPlan || copy.channels || 'Channels'}`,
         ...stpUiArray(details.channels, 8).map(item => `- ${item}`),
+        '',
+        `## ${copy.adsTargeting || 'Ads targeting'}`,
+        `- ${copy.adObjective || 'Campaign objective'}: ${stpUiText(details.adsTargeting?.objective, copy.noData || 'N/A')}`,
+        `- ${copy.funnelStage || 'Funnel stage'}: ${stpUiText(details.adsTargeting?.funnelStage, copy.noData || 'N/A')}`,
+        `### ${copy.metaAds || 'Meta Ads'}`,
+        `- ${copy.audienceType || 'Audience type'}: ${stpUiText(details.adsTargeting?.metaAds?.audienceType, copy.noData || 'N/A')}`,
+        `- Audience: ${stpUiText(details.adsTargeting?.metaAds?.audienceName, copy.noData || 'N/A')}`,
+        `- Geo: ${stpUiText(details.adsTargeting?.metaAds?.geo, copy.noData || 'N/A')}`,
+        `- ${copy.age || 'Age'}: ${stpUiText(details.adsTargeting?.metaAds?.ageRange, copy.noData || 'N/A')}`,
+        `- ${copy.coreTargeting || 'Core targeting'}: ${stpUiArray(details.adsTargeting?.metaAds?.coreTargeting?.demographics, 8).join(', ') || (copy.noData || 'N/A')}`,
+        `- Interests: ${stpUiArray(details.adsTargeting?.metaAds?.interests, 10).join(', ') || (copy.noData || 'N/A')}`,
+        `- Behaviors: ${stpUiArray(details.adsTargeting?.metaAds?.behaviors, 8).join(', ') || (copy.noData || 'N/A')}`,
+        `- ${copy.customAudiences || 'Custom audiences'}: ${stpUiArray(details.adsTargeting?.metaAds?.customAudiences, 8).join(', ') || (copy.noData || 'N/A')}`,
+        `- ${copy.lookalike || 'Lookalike'}: ${stpUiText(details.adsTargeting?.metaAds?.lookalike, copy.noData || 'N/A')}`,
+        `- ${copy.advantagePlus || 'Advantage+'}: ${stpUiText(details.adsTargeting?.metaAds?.advantagePlus, copy.noData || 'N/A')}`,
+        `- Exclusions: ${stpUiArray(details.adsTargeting?.metaAds?.exclusions, 6).join(', ') || (copy.noData || 'N/A')}`,
+        `- Hooks: ${stpUiArray(details.adsTargeting?.metaAds?.creativeHooks, 6).join(' | ') || (copy.noData || 'N/A')}`,
+        `- CTA: ${stpUiText(details.adsTargeting?.metaAds?.recommendedCTA, copy.noData || 'N/A')}`,
+        `- ${copy.budgetGuidance || 'Budget guidance'}: ${stpUiText(details.adsTargeting?.metaAds?.budgetGuidance, copy.noData || 'N/A')}`,
+        `### ${copy.googleAds || 'Google Ads'}`,
+        `- Type: ${stpUiText(details.adsTargeting?.googleAds?.campaignType, copy.noData || 'N/A')}`,
+        `- Intent: ${stpUiText(details.adsTargeting?.googleAds?.searchIntent, copy.noData || 'N/A')}`,
+        `- Keywords: ${stpUiArray(details.adsTargeting?.googleAds?.keywords, 12).join(', ') || (copy.noData || 'N/A')}`,
+        `- ${copy.basicDemographics || 'Basic demographics'}: ${details.adsTargeting?.googleAds?.basicDemographics ? Object.entries(details.adsTargeting.googleAds.basicDemographics).map(([k,v]) => `${k}: ${stpUiText(v)}`).filter(Boolean).join(', ') : (copy.noData || 'N/A')}`,
+        `- ${copy.detailedDemographics || 'Detailed demographics'}: ${stpUiArray(details.adsTargeting?.googleAds?.detailedDemographics, 8).join(', ') || (copy.noData || 'N/A')}`,
+        `- ${copy.audienceSegments || 'Audience segments'}: ${stpUiArray(details.adsTargeting?.googleAds?.audienceSegments, 8).join(', ') || (copy.noData || 'N/A')}`,
+        `- Negative keywords: ${stpUiArray(details.adsTargeting?.googleAds?.negativeKeywords, 8).join(', ') || (copy.noData || 'N/A')}`,
+        `- Exclusions: ${stpUiArray(details.adsTargeting?.googleAds?.exclusions, 10).join(', ') || (copy.noData || 'N/A')}`,
+        `- ${copy.bidding || 'Bidding'}: ${stpUiText(details.adsTargeting?.googleAds?.bidding, copy.noData || 'N/A')}`,
+        `- Landing message: ${stpUiText(details.adsTargeting?.googleAds?.landingMessage, copy.noData || 'N/A')}`,
+        `### ${copy.measurement || 'Measurement'}`,
+        `- Primary event: ${stpUiText(details.adsTargeting?.measurement?.primaryEvent, copy.noData || 'N/A')}`,
+        `- Secondary event: ${stpUiText(details.adsTargeting?.measurement?.secondaryEvent, copy.noData || 'N/A')}`,
+        `- Test rule: ${stpUiText(details.adsTargeting?.measurement?.testBudgetRule, copy.noData || 'N/A')}`,
+        `- ${copy.privacyAndQuality || 'Privacy and quality'}: ${stpUiText(details.adsTargeting?.measurement?.privacyAndQuality, copy.noData || 'N/A')}`,
         '',
         `## ${copy.triggers || 'Triggers'}`,
         ...stpUiArray(details.buyingTriggers, 8).map(item => `- ${item}`),
@@ -6237,11 +6408,99 @@ function renderStpAngleOverview(angles = [], copy = {}) {
     </div>`;
 }
 
+function stpPersonaKey(card = {}, index = 0) {
+    return String(card.id || card.segmentId || card.displayName || `persona-${index}`).replace(/[^a-z0-9_-]/gi, '_');
+}
+
+function renderStpPersonaFocusContent(card = {}, index = 0, copy = {}) {
+    const details = card.details || {};
+    const primaryAngle = card.primaryAngle || {};
+    const priority = card.beachheadPriority || {};
+    const tone = stpUiText(card.tone, '34,211,238');
+    const personaName = stpUiText(card.displayName || card.name || card.title, `Persona ${index + 1}`);
+    const personaRole = stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName || '');
+    const wantStatement = stpUiText(details.wantStatement || details.primaryJobToBeDone || card.summary || details.need, '');
+    const mdId = `stpPersonaFocusMarkdown_${index}_${stpPersonaKey(card, index)}`;
+    const markdown = buildStpPersonaMarkdown(card, index, copy);
+    return `<div class="daka-stp-focus-head" style="--focus-rgb:${stpUiEsc(tone)}">
+      <div class="daka-stp-avatar"><i class="fas ${stpUiEsc(card.icon || 'fa-user')}"></i></div>
+      <div>
+        <span class="daka-stp-kicker">${stpUiEsc(card.role || `Persona ${index + 1}`)}</span>
+        <h3>${stpUiEsc(personaName)}</h3>
+        ${personaRole ? `<p>${stpUiEsc(personaRole)}</p>` : ''}
+      </div>
+      <button type="button" class="daka-stp-focus-close" onclick="window.closeDakaStpPersonaPanel && window.closeDakaStpPersonaPanel()">${stpUiEsc(copy.closePersona || 'Close')}</button>
+    </div>
+    <pre id="${stpUiEsc(mdId)}" class="daka-stp-md-source">${stpUiEsc(markdown)}</pre>
+    ${wantStatement ? `<div class="daka-stp-want" style="--persona-rgb:${stpUiEsc(tone)}"><small>${stpUiEsc(copy.jtbd || copy.want || 'JTBD')}</small><strong>${stpUiEsc(wantStatement)}</strong></div>` : ''}
+    <div class="daka-stp-focus-grid">
+      ${renderStpMini(copy.age || 'Age', card.ageRange || details.ageRange)}
+      ${renderStpMini(copy.socialCulture || 'Social culture', details.socialCulture)}
+      ${renderStpMini(copy.lifeSituation || 'Life situation', details.lifeSituation)}
+      ${renderStpMini(copy.digitalMaturity || 'Digital maturity', details.digitalMaturity)}
+      ${renderStpMini(copy.purchasePower || 'Purchase power', details.purchasePower)}
+      ${renderStpMini(copy.priority || 'Priority', card.priorityScore ? `${card.priorityScore}/100` : '')}
+    </div>
+    <div class="daka-stp-focus-grid">
+      ${renderStpMini(copy.attackAngle || 'Attack angle', card.attackAngle || details.attackAngle)}
+      ${renderStpMini(copy.corePromise || 'Core promise', details.corePromise || primaryAngle.corePromise)}
+      ${renderStpMini(copy.proofToShow || 'Proof to show', details.proofToShow || primaryAngle.proofToShow)}
+      ${renderStpMini(copy.objectionToNeutralize || 'Objection', details.objectionToNeutralize || primaryAngle.objectionToNeutralize)}
+      ${renderStpMini(copy.offerMove || 'Offer move', details.offerMove || primaryAngle.offerMove)}
+      ${renderStpMini(copy.budgetPath || 'Budget path', priority.budgetPath || details.budgetPath)}
+    </div>
+    ${renderStpAdsTargeting(details, copy)}
+    <div class="daka-stp-focus-grid">
+      ${renderStpSocialPlan(details, copy)}
+      ${renderStpMini(copy.hooks || 'Hooks', details.hookExamples || primaryAngle.hookExamples)}
+      ${renderStpMini(copy.triggers || 'Triggers', details.buyingTriggers)}
+      ${renderStpMini(copy.pains || 'Pains', details.pains)}
+      ${renderStpMini(copy.objections || 'Objections', details.objections)}
+      ${renderStpMini(copy.proofNeeded || 'Proofs to show', details.proofNeeded)}
+      ${renderStpMini(copy.attackFormula || 'Attack formula', details.attackFormula || primaryAngle.angleFormula)}
+      ${renderStpMini(copy.landingPageSection || 'Landing section', details.landingPageSection || primaryAngle.landingPageSection)}
+      ${renderStpMini(copy.informationBehavior || 'Information behavior', details.informationBehavior)}
+      ${renderStpMini(copy.buyingBehavior || 'Buying behavior', details.buyingBehavior)}
+      ${renderStpMini(copy.searchBehavior || 'Search behavior', details.searchBehavior)}
+      ${renderStpMini(copy.discoveryBehavior || 'Discovery', details.discoveryBehavior)}
+      ${renderStpMini(copy.trustSources || 'Trust sources', details.trustSources)}
+      ${renderStpMini(copy.competitors || 'Competitors', details.competitors)}
+      ${renderStpMini(copy.constraints || 'Constraints', details.constraints)}
+    </div>
+    <button type="button" class="daka-stp-copy-md" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${stpUiEsc(mdId)}', this)"><i class="fas fa-copy"></i> Markdown</button>`;
+}
+
+window.openDakaStpPersonaPanel = function openDakaStpPersonaPanel(key) {
+    const cache = Array.isArray(window.DAKA_STP_PERSONA_CACHE) ? window.DAKA_STP_PERSONA_CACHE : [];
+    const item = cache.find(entry => entry.key === key);
+    const panel = document.getElementById('dakaStpPersonaFocusPanel');
+    if (!item || !panel) return;
+    const lang = window.DAKA_STP_PERSONA_LANG || STATE.currentLang || 'fr';
+    const copy = getStpCopy(lang);
+    panel.style.setProperty('--focus-rgb', stpUiText(item.card.tone, '34,211,238'));
+    panel.innerHTML = renderStpPersonaFocusContent(item.card, item.index, copy);
+    panel.classList.add('active');
+    document.querySelectorAll('.daka-stp-persona[data-persona-key]').forEach(node => node.classList.toggle('active', node.getAttribute('data-persona-key') === key));
+    panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+};
+
+window.closeDakaStpPersonaPanel = function closeDakaStpPersonaPanel() {
+    const panel = document.getElementById('dakaStpPersonaFocusPanel');
+    if (panel) {
+        panel.classList.remove('active');
+        panel.innerHTML = '';
+    }
+    document.querySelectorAll('.daka-stp-persona[data-persona-key]').forEach(node => node.classList.remove('active'));
+};
+
 function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
     const cards = Array.isArray(personaCards) ? personaCards.filter(Boolean) : [];
     if (!cards.length) return '';
     const competitorCount = Number(meta.competitorCount || 0);
     const anglesHtml = '';
+    const cachedCards = cards.map((card, index) => ({ key: stpPersonaKey(card, index), card, index }));
+    window.DAKA_STP_PERSONA_CACHE = cachedCards;
+    window.DAKA_STP_PERSONA_LANG = meta.lang || document.getElementById('stpLang')?.value || STATE.currentLang || 'fr';
     return `<div class="daka-stp-persona-head">
       <div>
         <span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas || 'Personas')}</span>
@@ -6253,8 +6512,10 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
       </div>
     </div>
     ${anglesHtml}
+    <section id="dakaStpPersonaFocusPanel" class="daka-stp-focus-panel" aria-live="polite"></section>
     <div class="daka-stp-personas">
       ${cards.map((card, index) => {
+        const key = stpPersonaKey(card, index);
         const details = card.details || {};
         const tone = stpUiText(card.tone, '34,211,238');
         const priority = card.beachheadPriority || {};
@@ -6267,7 +6528,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
         const personaSummary = stpUiText(card.summary, '');
         const mdId = `stpPersonaMarkdown_${index}_${String(card.id || index).replace(/[^a-z0-9_-]/gi, '_')}`;
         const markdown = buildStpPersonaMarkdown(card, index, copy);
-        return `<article class="daka-stp-persona" style="--persona-rgb:${stpUiEsc(tone)}">
+        return `<article class="daka-stp-persona" data-persona-key="${stpUiEsc(key)}" style="--persona-rgb:${stpUiEsc(tone)}" onclick="window.openDakaStpPersonaPanel && window.openDakaStpPersonaPanel('${stpUiEsc(key)}')">
           <div class="daka-stp-persona-top">
             <div class="daka-stp-avatar"><i class="fas ${stpUiEsc(card.icon || 'fa-user')}"></i></div>
             <div style="min-width:0">
@@ -6283,41 +6544,23 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
             ${card.confidence ? `<span class="daka-stp-chip">${stpUiEsc(card.confidence)}</span>` : ''}
           </div>
           ${primaryAngle.name ? `<div class="daka-stp-pill-row"><span class="daka-stp-chip"><i class="fas ${stpUiEsc(primaryAngle.icon || 'fa-bullseye')}"></i> ${stpUiEsc(copy.primaryAngle || 'Primary angle')}: ${stpUiEsc(primaryAngle.name)}</span>${secondaryAngles.slice(0, 2).map(angle => `<span class="daka-stp-chip">${stpUiEsc(angle.name || angle.label || angle.type)}</span>`).join('')}</div>` : ''}
-          <button type="button" class="daka-stp-copy-md" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${stpUiEsc(mdId)}', this)"><i class="fas fa-copy"></i> Markdown</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button type="button" class="daka-stp-view-btn" data-no-collapse="true" onclick="event.stopPropagation();window.openDakaStpPersonaPanel && window.openDakaStpPersonaPanel('${stpUiEsc(key)}')"><i class="fas fa-up-right-from-square"></i> ${stpUiEsc(copy.viewPersona || 'View details')}</button>
+            <button type="button" class="daka-stp-copy-md" data-no-collapse="true" onclick="event.stopPropagation();copyToClipboard('${stpUiEsc(mdId)}', this)"><i class="fas fa-copy"></i> Markdown</button>
+          </div>
           <pre id="${stpUiEsc(mdId)}" class="daka-stp-md-source">${stpUiEsc(markdown)}</pre>
           ${wantStatement ? `<div class="daka-stp-want"><small>${stpUiEsc(copy.jtbd || copy.want || 'JTBD')}</small><strong>${stpUiEsc(wantStatement)}</strong></div>` : ''}
           <div class="daka-stp-mini-grid">
             ${renderStpMini(copy.socialCulture || 'Social culture', details.socialCulture)}
             ${renderStpMini(copy.lifeSituation || 'Life situation', details.lifeSituation)}
-            ${renderStpMini(copy.digitalMaturity || 'Digital maturity', details.digitalMaturity)}
-            ${renderStpMini(copy.purchasePower || 'Purchase power', details.purchasePower)}
-            ${renderStpSocialPlan(details, copy)}
             ${renderStpMini(copy.attackAngle || 'Attack angle', card.attackAngle || details.attackAngle)}
-            ${renderStpMini(copy.corePromise || 'Core promise', details.corePromise || primaryAngle.corePromise)}
+            ${renderStpMini(copy.adsTargeting || 'Ads targeting', [
+                details.adsTargeting?.metaAds?.audienceType,
+                details.adsTargeting?.googleAds?.campaignType,
+                ...(stpUiArray(details.adsTargeting?.metaAds?.interests, 2))
+            ])}
             ${renderStpMini(copy.proofToShow || 'Proof to show', details.proofToShow || primaryAngle.proofToShow)}
-            ${renderStpMini(copy.objectionToNeutralize || 'Objection', details.objectionToNeutralize || primaryAngle.objectionToNeutralize)}
-            ${renderStpMini(copy.offerMove || 'Offer move', details.offerMove || primaryAngle.offerMove)}
-            ${renderStpMini(copy.hooks || 'Hooks', details.hookExamples || primaryAngle.hookExamples)}
-            ${renderStpMini(copy.budgetPath || 'Budget path', priority.budgetPath || details.budgetPath)}
-            ${renderStpMini(copy.triggers || 'Triggers', details.buyingTriggers)}
-            ${renderStpMini(copy.objections || 'Objections', details.objections)}
-            ${renderStpMini(copy.pains || 'Pains', details.pains)}
-            ${renderStpMini(copy.proofNeeded || 'Proofs to show', details.proofNeeded)}
           </div>
-          <details class="daka-stp-more">
-            <summary>${stpUiEsc(copy.stpDetails || 'Details')}</summary>
-            <div class="daka-stp-mini-grid">
-              ${renderStpMini(copy.attackFormula || 'Attack formula', details.attackFormula || primaryAngle.angleFormula)}
-              ${renderStpMini(copy.landingPageSection || 'Landing section', details.landingPageSection || primaryAngle.landingPageSection)}
-              ${renderStpMini(copy.informationBehavior || 'Information behavior', details.informationBehavior)}
-              ${renderStpMini(copy.buyingBehavior || 'Buying behavior', details.buyingBehavior)}
-              ${renderStpMini(copy.searchBehavior || 'Search behavior', details.searchBehavior)}
-              ${renderStpMini(copy.discoveryBehavior || 'Discovery', details.discoveryBehavior)}
-              ${renderStpMini(copy.trustSources || 'Trust sources', details.trustSources)}
-              ${renderStpMini(copy.competitors || 'Competitors', details.competitors)}
-              ${renderStpMini(copy.constraints || 'Constraints', details.constraints)}
-            </div>
-          </details>
         </article>`;
       }).join('')}
     </div>`;
@@ -6435,7 +6678,8 @@ function renderStpDecision(data) {
     );
     const personaCardsHtml = renderStpPersonaCards(data?.personaCards?.length ? data.personaCards : fallbackPersona, copy, {
         competitorCount,
-        marketingAngles: data?.marketingAngles || []
+        marketingAngles: data?.marketingAngles || [],
+        lang
     });
 
     const strategyHtml = renderStpStrategyHierarchy(data, copy);

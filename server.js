@@ -11518,6 +11518,164 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             purchasePower: defaultBudget
         };
     };
+    const adsTargetingFor = ({ segment, personaIndex = 0, persona, ageRange = '', attackAngle, triggers = [], pains = [], segmentChannels = [] } = {}) => {
+        const text = `${segment?.id || ''} ${segment?.name || ''} ${segment?.need || ''} ${triggers.join(' ')} ${pains.join(' ')}`.toLowerCase();
+        const pack = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
+        const product = offer || query;
+        const localMarket = market;
+        const audienceLabel = persona?.name || segment?.name || product;
+        const isFirstAttack = personaIndex === 0;
+        const isComparison = /compar|price|prix|budget|سعر|مقارن|بديل/.test(text);
+        const isTrust = /proof|trust|avis|review|ثقة|دليل|guarantee|ضمان/.test(text);
+        const isEducation = effectiveArchetype === 'content_education';
+        const isProduct = effectiveArchetype === 'ecommerce_product';
+        const isB2b = effectiveArchetype === 'b2b_service';
+        const isLocal = effectiveArchetype === 'local_service';
+        const intentKeywords = stpArray([
+            product,
+            `${product} ${localMarket}`,
+            ...(triggers || []),
+            ...(competitorData?.keywordStrategy?.primary || []),
+            ...(competitorData?.keywordStrategy?.longTail || [])
+        ], 10);
+        const baseMetaInterests = effectiveArchetype === 'content_education'
+            ? ['E-commerce', 'Entrepreneuriat', 'Shopify', 'WooCommerce', 'Instagram Shopping', 'WhatsApp Business', 'Marketing digital']
+            : effectiveArchetype === 'ecommerce_product'
+                ? ['Online shopping', 'Marketplace', 'Facebook Marketplace', 'Instagram Shopping', 'WhatsApp']
+                : effectiveArchetype === 'b2b_service'
+                    ? ['Business', 'Marketing digital', 'Entrepreneuriat', 'CRM', 'Lead generation']
+                    : effectiveArchetype === 'local_service'
+                        ? ['Services locaux', 'Google Maps', 'Avis clients', 'WhatsApp']
+                        : ['Marketing digital', 'Recherche Google', 'WhatsApp'];
+        const personaSpecificInterests = (() => {
+            if (effectiveArchetype === 'content_education') {
+                if (/physical-merchant|commer|merchant|store|boutique|متجر|تاجر/.test(text)) return ['Commerce de détail', 'Boutique en ligne', 'WhatsApp Business', 'Instagram for Business'];
+                if (/career|revenu|income|salari|employee|موظف|دخل/.test(text)) return ['Formation en ligne', 'Reconversion professionnelle', 'Freelance', 'Business en ligne'];
+                if (/tried-failed|failed|essay|tried|فشل|سابق/.test(text)) return ['Marketing performance', 'Publicité Facebook', 'Google Ads', 'Conversion'];
+                if (/local-project|adapt|market-fit|محلي/.test(text)) return ['Commerce au Maroc', 'Paiement en ligne', 'Cash on delivery', 'Fournisseurs'];
+                if (/skeptic|scept|méfi|mefi|متشكك/.test(text)) return ['Avis clients', 'Témoignages', 'Formation certifiante', 'Support client'];
+                return ['Créer une entreprise', 'Business en ligne', 'E-commerce', 'YouTube Education'];
+            }
+            if (/compar|price|prix|budget|سعر/.test(text)) return ['Comparaison de prix', 'Coupons', 'Marketplace'];
+            if (/proof|trust|avis|review|ثقة|دليل/.test(text)) return ['Avis clients', 'Trustpilot', 'Démonstration produit'];
+            return [];
+        })();
+        const searchKeywords = stpArray(intentKeywords, 12);
+        const negativeKeywords = isEducation
+            ? ['gratuit pdf', 'emploi', 'stage', 'diplome gratuit', 'zone de livraison', 'stock']
+            : isProduct
+                ? ['formation', 'cours gratuit', 'emploi', 'pdf']
+                : ['gratuit', 'emploi', 'definition', 'pdf'];
+        const adAngles = stpArray([
+            attackAngle,
+            persona?.jobToBeDone,
+            segment?.need,
+            ...(triggers || [])
+        ], 6);
+        const metaAudienceType = isFirstAttack
+            ? pack('Core broad + Advantage+', 'Core broad + Advantage+', 'Core واسع + Advantage+')
+            : isTrust
+                ? pack('Custom Audience + retargeting engagement', 'Custom Audience + engagement retargeting', 'جمهور مخصص + إعادة استهداف التفاعل')
+                : isComparison
+                    ? pack('Core intérêts + visiteurs comparaison', 'Core interests + comparison visitors', 'اهتمامات أساسية + زوار المقارنة')
+                    : pack('Lookalike 1-3% après premiers signaux', '1-3% lookalike after first signals', 'Lookalike 1-3% بعد أول الإشارات');
+        const customAudienceSeed = isTrust
+            ? pack('visiteurs page preuve, vues vidéo 50%, clics WhatsApp/formulaire', 'proof page visitors, 50% video viewers, WhatsApp/form clicks', 'زوار صفحة الدليل، مشاهدو 50% من الفيديو، نقرات WhatsApp/النموذج')
+            : pack('visiteurs site 30-180 jours, engagés Instagram/Facebook, leads formulaire', '30-180 day website visitors, Instagram/Facebook engagers, lead form users', 'زوار الموقع 30-180 يوم، متفاعلو Instagram/Facebook، مستخدمو نموذج العملاء');
+        const lookalikeSeed = isProduct
+            ? pack('acheteurs ou clics commande qualifiés, puis 1%, 3%, 5%', 'buyers or qualified order clicks, then 1%, 3%, 5%', 'المشترون أو نقرات الطلب المؤهلة ثم 1% و3% و5%')
+            : pack('leads qualifiés, inscrits ou visiteurs forte intention, puis 1%, 3%, 5%', 'qualified leads, subscribers or high-intent visitors, then 1%, 3%, 5%', 'عملاء مؤهلون أو مشتركون أو زوار نية عالية ثم 1% و3% و5%');
+        const googleDemographics = {
+            age: ageRange || '25-54',
+            gender: pack('Tous, sauf preuve de sous-performance', 'All, unless data proves underperformance', 'الكل إلا إذا أثبتت البيانات ضعف الأداء'),
+            parentalStatus: isProduct && /baby|kids|child|enfant|طفل|أطفال/.test(text)
+                ? pack('Tester Parents + Unknown', 'Test Parents + Unknown', 'اختبار Parents + Unknown')
+                : pack('Tous', 'All', 'الكل'),
+            householdIncome: pack('Ne pas exclure au départ; observer puis ajuster', 'Do not exclude first; observe then adjust', 'لا تستبعد في البداية؛ راقب ثم عدل')
+        };
+        const detailedDemographics = isEducation
+            ? ['Education level', 'Field of study', 'Business education', 'Recently started business']
+            : isB2b
+                ? ['Job title', 'Company size', 'Industry', 'Business services']
+                : isLocal
+                    ? ['In-market local services', 'Recently moved if relevant']
+                    : ['In-market shoppers', 'Life events if relevant', 'Affinity by product category'];
+        return {
+            objective: pack('Test acquisition + preuve de demande', 'Acquisition test + demand proof', 'اختبار الاستحواذ وإثبات الطلب'),
+            funnelStage: personaIndex === 0 ? 'TOFU/MOFU' : personaIndex <= 2 ? 'MOFU' : 'MOFU/BOFU',
+            metaAds: {
+                audienceType: metaAudienceType,
+                audienceName: pack(`Persona ${personaIndex + 1} · ${audienceLabel}`, `Persona ${personaIndex + 1} · ${audienceLabel}`, `Persona ${personaIndex + 1} · ${audienceLabel}`),
+                geo: localMarket,
+                ageRange,
+                coreTargeting: {
+                    demographics: stpArray([
+                        ageRange ? `${pack('Âge', 'Age', 'العمر')}: ${ageRange}` : '',
+                        `${pack('Lieu', 'Location', 'الموقع')}: ${localMarket}`,
+                        pack('Langue selon rapport et marché', 'Language matched to report and market', 'اللغة حسب التقرير والسوق'),
+                        isEducation ? pack('Niveau/centre d’intérêt éducation sans trop réduire', 'Education level/interest without over-narrowing', 'مستوى/اهتمام تعليمي دون تضييق زائد') : ''
+                    ], 6),
+                    interests: stpArray([...baseMetaInterests, ...personaSpecificInterests], 10),
+                    behaviors: stpArray([
+                        pack('Intention achat ou engagement digital', 'Purchase intent or digital engagement', 'نية شراء أو تفاعل رقمي'),
+                        pack('Utilisation mobile / WhatsApp / Instagram', 'Mobile / WhatsApp / Instagram usage', 'استخدام الهاتف / WhatsApp / Instagram')
+                    ], 5)
+                },
+                interests: stpArray([...baseMetaInterests, ...personaSpecificInterests], 10),
+                behaviors: stpArray([
+                    pack('Engagement avec contenu éducatif ou comparatif', 'Engages with educational or comparison content', 'يتفاعل مع محتوى تعليمي أو مقارن'),
+                    pack('Clique vers WhatsApp, landing page ou vidéo', 'Clicks to WhatsApp, landing page or video', 'ينقر نحو WhatsApp أو صفحة الهبوط أو الفيديو'),
+                    ...(segmentChannels || [])
+                ], 8),
+                customAudiences: stpArray([
+                    customAudienceSeed,
+                    pack('exclure acheteurs/leads déjà convertis en acquisition', 'exclude existing buyers/leads from acquisition', 'استبعاد المشترين/العملاء المحولين من حملات الاستحواذ'),
+                    pack('Pixel + CAPI pour fiabiliser le retargeting', 'Pixel + CAPI for stronger retargeting', 'Pixel + CAPI لتقوية إعادة الاستهداف')
+                ], 5),
+                lookalike: lookalikeSeed,
+                advantagePlus: pack('Activé comme expansion/suggestion si volume de conversion suffisant; sinon broad simple', 'Use as expansion/suggestion if conversion volume is enough; otherwise simple broad', 'يفعل كتوسيع/اقتراح إذا كان حجم التحويلات كافيا؛ وإلا Broad بسيط'),
+                exclusions: stpArray([
+                    pack('Chasseurs de gratuit uniquement', 'Free-only seekers', 'باحثون عن المجاني فقط'),
+                    pack('Profils hors zone marché', 'Profiles outside target market', 'حسابات خارج السوق المستهدف'),
+                    pack('convertis récents pour éviter la dépense inutile', 'recent converters to avoid wasted spend', 'المحولون حديثا لتجنب هدر الإنفاق')
+                ], 5),
+                creativeHooks: stpArray(adAngles, 5),
+                recommendedCTA: isProduct
+                    ? pack('Commander maintenant', 'Order now', 'اطلب الآن')
+                    : pack('Voir la méthode', 'See the method', 'شاهد المنهج'),
+                budgetGuidance: isFirstAttack
+                    ? pack('Petit budget: 1-2 adsets broad, 3-5 créas, ne pas sursegmenter', 'Small budget: 1-2 broad ad sets, 3-5 creatives, avoid over-segmentation', 'ميزانية صغيرة: 1-2 Adsets Broad و3-5 كرياتيف، تجنب التقسيم الزائد')
+                    : pack('Après signaux: séparer retargeting, lookalike et angle gagnant', 'After signals: split retargeting, lookalike and winning angle', 'بعد الإشارات: افصل retargeting وlookalike والزاوية الرابحة')
+            },
+            googleAds: {
+                campaignType: pack('Search + remarketing YouTube/display léger', 'Search + light YouTube/display remarketing', 'بحث + إعادة استهداف خفيفة YouTube/display'),
+                searchIntent: pack('requêtes problème + solution + marché local', 'problem + solution + local market queries', 'طلبات بحث المشكلة + الحل + السوق المحلي'),
+                keywords: searchKeywords,
+                negativeKeywords: stpArray(negativeKeywords, 8),
+                basicDemographics: googleDemographics,
+                detailedDemographics: stpArray(detailedDemographics, 6),
+                audienceSegments: stpArray([
+                    pack('In-market selon catégorie produit/service', 'In-market for the product/service category', 'In-market حسب فئة المنتج/الخدمة'),
+                    pack('remarketing visiteurs et engagés', 'visitor and engager remarketing', 'إعادة استهداف الزوار والمتفاعلين'),
+                    isEducation ? pack('segment éducation/business', 'education/business segment', 'شريحة التعليم/الأعمال') : '',
+                    isProduct ? pack('acheteurs en recherche active', 'active shoppers', 'مشترون في بحث نشط') : ''
+                ], 6),
+                exclusions: stpArray([
+                    ...negativeKeywords,
+                    pack('ne pas exclure Unknown au départ sans données', 'do not exclude Unknown first without data', 'لا تستبعد Unknown في البداية دون بيانات')
+                ], 10),
+                bidding: pack('Smart Bidding si conversions propres; sinon mesurer micro-conversions', 'Smart Bidding with clean conversions; otherwise track micro-conversions', 'Smart Bidding عند وجود تحويلات نظيفة؛ وإلا قياس micro-conversions'),
+                adGroupIdea: pack(`Angle ${personaIndex + 1}: ${segment?.name || product}`, `Angle ${personaIndex + 1}: ${segment?.name || product}`, `زاوية ${personaIndex + 1}: ${segment?.name || product}`),
+                landingMessage: stpText(attackAngle, 220)
+            },
+            measurement: {
+                primaryEvent: pack('clic CTA / WhatsApp / formulaire', 'CTA / WhatsApp / form click', 'نقرة CTA / WhatsApp / نموذج'),
+                secondaryEvent: pack('scroll 50%, temps page, clic preuve', '50% scroll, time on page, proof click', 'تمرير 50%، وقت الصفحة، نقرة الدليل'),
+                testBudgetRule: pack('Tester 3-5 jours, couper si aucun signal qualifié', 'Test 3-5 days, cut if no qualified signal', 'اختبار 3-5 أيام، إيقاف إذا لا توجد إشارة مؤهلة'),
+                privacyAndQuality: pack('Consentement, exclusions propres, pas de ciblage sensible', 'Consent, clean exclusions, no sensitive targeting', 'موافقة، استبعادات نظيفة، لا استهداف حساس')
+            }
+        };
+    };
 
     return merged.slice(0, targetCount).map((segment, index) => {
         const persona = buildStpPersona(segment, inputs, competitorData, lang);
@@ -11550,6 +11708,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 ...(pains || [])
             ], 5)
         };
+        const adsTargeting = adsTargetingFor({ segment, personaIndex, persona, ageRange, attackAngle, triggers, pains, segmentChannels });
         return {
             id: segment.id || `persona-${index + 1}`,
             number: index + 1,
@@ -11588,6 +11747,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 channels: segmentChannels,
                 attackChannels,
                 socialPlan,
+                adsTargeting,
                 stp: {
                     segmentation: segmentName,
                     targeting: persona.name || persona.jobToBeDone,
