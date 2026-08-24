@@ -56,6 +56,7 @@ const { registerReportRoutes } = require('./supabase-report-routes');
 const { registerUserApiKeyRoutes } = require('./user-api-key-routes');
 const {
   buildAngleDrivenStpModel,
+  classifyProductSemantics,
 } = require('./lib/stp-angle-engine');
 const {
   mergeDuplicateSegments: mergeRealStpSegments,
@@ -10363,7 +10364,26 @@ function inferStpArchetype(query = '', competitorData = {}, urlIntel = null) {
         urlIntel?.content?.description
     ].filter(Boolean).join(' ').toLowerCase();
 
-    if (/b2b|saas|software|logiciel|crm|platform|plateforme|agency|agence|consult|audit|service|lead|automation|formation|coaching|استشارة|خدمة|وكالة|برنامج|منصة/.test(corpus)) {
+    const semantics = classifyProductSemantics({ query: corpus, competitorData });
+    if (semantics.productType === 'education') {
+        return 'content_education';
+    }
+    if (semantics.productType === 'saas') {
+        return 'b2b_service';
+    }
+    if (semantics.productType === 'service' && semantics.requiresLocalPresence) {
+        return 'local_service';
+    }
+    if (semantics.productType === 'service') {
+        return 'b2b_service';
+    }
+    if (semantics.productType === 'physical_product') {
+        return 'ecommerce_product';
+    }
+    if (/blog|guide|how to|comment|learn|cours|education|formation|training|coaching|academy|bootcamp|تعلم|تعليم|تكوين|دورة|شرح|دليل/.test(corpus)) {
+        return 'content_education';
+    }
+    if (/b2b|saas|software|logiciel|crm|platform|plateforme|agency|agence|consult|audit|service|lead|automation|استشارة|خدمة|وكالة|برنامج|منصة/.test(corpus)) {
         return 'b2b_service';
     }
     if (/prix|acheter|shop|boutique|livraison|cod|cash on delivery|ecommerce|e-commerce|produit|product|سعر|شراء|توصيل|الدفع عند الاستلام|منتج/.test(corpus)) {
@@ -10372,7 +10392,7 @@ function inferStpArchetype(query = '', competitorData = {}, urlIntel = null) {
     if (/local|near me|restaurant|clinic|salon|hotel|immobilier|real estate|garage|repair|ville|près|قريب|محلي/.test(corpus)) {
         return 'local_service';
     }
-    if (/blog|guide|how to|comment|learn|cours|education|formation|تعلم|شرح|دليل/.test(corpus)) {
+    if (/blog|guide|how to|comment|learn|cours|education|تعلم|شرح|دليل/.test(corpus)) {
         return 'content_education';
     }
     return 'general_market';
@@ -10392,7 +10412,58 @@ function buildStpSegmentCandidates({ query = '', geo = '', budget = '', objectiv
     const baseNeed = localizeStpSubjectForReport(query, lang) || stpText(query, 140);
     const candidates = [];
 
-    if (archetype === 'b2b_service') {
+    if (archetype === 'content_education') {
+        candidates.push(
+            {
+                id: 'edu-first-business',
+                name: lang === 'ar' ? `مبتدئ يريد إطلاق أول مشروع في ${marketName}` : lang === 'en' ? `Beginner launching first business in ${marketName}` : `Débutant qui lance son premier business en ${marketName}`,
+                type: 'context+jtbd',
+                need: lang === 'ar' ? `تعلم ${baseNeed} بمنهج خطوة بخطوة دون تشتت تقني` : lang === 'en' ? `Learn ${baseNeed} with a step-by-step path and no technical overwhelm` : `Apprendre ${baseNeed} avec une méthode pas-à-pas sans surcharge technique`,
+                accessChannels: ['SEO', 'YouTube', 'Instagram', 'WhatsApp'],
+                buyingTriggers: lang === 'ar' ? ['لا يعرف من أين يبدأ', 'يريد أول قناة بيع', 'يخاف من الأدوات التقنية'] : lang === 'en' ? ['does not know where to start', 'wants first sales channel', 'fears technical tools'] : ['ne sait pas par où commencer', 'veut un premier canal de vente', 'craint les outils techniques']
+            },
+            {
+                id: 'edu-physical-merchant',
+                name: lang === 'ar' ? `تاجر فعلي يريد البيع أونلاين في ${marketName}` : lang === 'en' ? `Physical merchant moving online in ${marketName}` : `Commerçant physique qui veut vendre en ligne en ${marketName}`,
+                type: 'business-context+transition',
+                need: lang === 'ar' ? `تحويل منتجاته الحالية إلى قناة بيع رقمية مناسبة للسوق المحلي` : lang === 'en' ? `Turn existing products into a digital sales channel adapted to the local market` : `Transformer ses produits actuels en canal de vente digital adapté au marché local`,
+                accessChannels: ['Facebook', 'Instagram', 'WhatsApp', 'YouTube'],
+                buyingTriggers: lang === 'ar' ? ['المنافسون بدأوا البيع أونلاين', 'يريد تنظيم WhatsApp', 'يحتاج الدفع المحلي وCOD والموردين'] : lang === 'en' ? ['competitors start selling online', 'needs to structure WhatsApp', 'needs local payment, COD and suppliers'] : ['ses concurrents vendent en ligne', 'veut structurer WhatsApp', 'doit comprendre paiement local, COD et fournisseurs']
+            },
+            {
+                id: 'edu-career-switcher',
+                name: lang === 'ar' ? `موظف يبحث عن دخل جديد في ${marketName}` : lang === 'en' ? `Employee seeking a new income path in ${marketName}` : `Salarié qui cherche un nouveau revenu en ${marketName}`,
+                type: 'life-stage+time-constraint',
+                need: lang === 'ar' ? `تعلم التجارة الإلكترونية خارج وقت العمل بخطة واقعية قصيرة` : lang === 'en' ? `Learn e-commerce outside work hours with a realistic short-step plan` : `Apprendre l’e-commerce hors temps de travail avec un plan réaliste en étapes courtes`,
+                accessChannels: ['YouTube', 'SEO', 'Email', 'WhatsApp'],
+                buyingTriggers: lang === 'ar' ? ['يريد استقلالية', 'وقته محدود', 'يحتاج مهام قصيرة'] : lang === 'en' ? ['wants autonomy', 'limited time', 'needs short tasks'] : ['veut autonomie', 'temps limité', 'besoin de missions courtes']
+            },
+            {
+                id: 'edu-tried-failed',
+                name: lang === 'ar' ? `صاحب تجربة سابقة بلا نتائج في ${marketName}` : lang === 'en' ? `Founder who tried and got no results in ${marketName}` : `Entrepreneur qui a déjà essayé sans résultats en ${marketName}`,
+                type: 'behavioral+failure-history',
+                need: lang === 'ar' ? `فهم لماذا فشل سابقا وما الذي يختبره أولا بميزانية صغيرة` : lang === 'en' ? `Understand why previous attempts failed and what to test first with a lean budget` : `Comprendre pourquoi ses essais ont échoué et quoi tester d’abord avec petit budget`,
+                accessChannels: ['SEO', 'comparison page', 'webinar', 'retargeting'],
+                buyingTriggers: lang === 'ar' ? ['خسر وقتا أو مالا', 'يريد تشخيصا', 'يحتاج معيار go/no-go'] : lang === 'en' ? ['lost time or money', 'wants diagnosis', 'needs go/no-go criteria'] : ['a perdu du temps ou de l’argent', 'veut un diagnostic', 'a besoin de critères go/no-go']
+            },
+            {
+                id: 'edu-local-project-owner',
+                name: lang === 'ar' ? `حامل مشروع يحتاج تكييفا محليا في ${marketName}` : lang === 'en' ? `Project owner needing local adaptation in ${marketName}` : `Porteur de projet qui veut une méthode adaptée au marché ${marketName}`,
+                type: 'geographic+market-fit',
+                need: lang === 'ar' ? `تكوين لا ينسخ أمثلة أجنبية بل يشرح الدفع والموردين والقنوات المحلية` : lang === 'en' ? `Training that does not copy foreign examples and explains payment, suppliers and local channels` : `Une formation qui ne copie pas des exemples étrangers et explique paiement, fournisseurs et canaux locaux`,
+                accessChannels: ['SEO', 'YouTube', 'Meta Ads', 'WhatsApp'],
+                buyingTriggers: lang === 'ar' ? ['المحتوى الأجنبي لا يناسبه', 'يريد أمثلة محلية', 'يريد تطبيق مباشر'] : lang === 'en' ? ['foreign content does not fit', 'wants local examples', 'wants direct application'] : ['le contenu étranger ne colle pas', 'veut des exemples locaux', 'veut appliquer directement']
+            },
+            {
+                id: 'edu-skeptical-prospect',
+                name: lang === 'ar' ? `متشكك من وعود الدورات في ${marketName}` : lang === 'en' ? `Prospect skeptical of course promises in ${marketName}` : `Prospect méfiant envers les promesses de formation en ${marketName}`,
+                type: 'psychographic+risk-reduction',
+                need: lang === 'ar' ? `رؤية حدود واضحة ومقتطفات ودعم ونتيجة قابلة للتحقق قبل الدفع` : lang === 'en' ? `See clear limits, extracts, support and verifiable outcome before paying` : `Voir limites, extraits, support et résultat vérifiable avant de payer`,
+                accessChannels: ['reviews', 'FAQ', 'YouTube', 'Email'],
+                buyingTriggers: lang === 'ar' ? ['رأى وعودا مبالغا فيها', 'يريد دليلا قبل الدفع', 'يحتاج شروطا واضحة'] : lang === 'en' ? ['has seen exaggerated promises', 'wants proof before payment', 'needs clear terms'] : ['a vu trop de promesses', 'veut une preuve avant paiement', 'exige des conditions claires']
+            }
+        );
+    } else if (archetype === 'b2b_service') {
         candidates.push(
             {
                 id: 'b2b-growth-operators',
@@ -11005,6 +11076,48 @@ function buildStpPersona(segment = {}, inputs = {}, competitorData = {}, lang = 
     const leader = competitorData?.top10Competitors?.[0] || competitorData?.competitors?.[0] || {};
     const segmentText = `${segment.id || ''} ${segment.name || ''} ${segment.need || ''} ${stpArray(segment.buyingTriggers, 4).join(' ')}`.toLowerCase();
     const personaJtbd = (() => {
+        if (/edu-first-business|premier business|first business|début|debut|مبتدئ|أول مشروع/.test(segmentText)) {
+            return isAr
+                ? `أريد ${query} في ${market} يعلمني من أين أبدأ، خطوة بخطوة، دون أن أغرق في الأدوات التقنية.`
+                : isEn
+                    ? `I want ${query} in ${market} to show me where to start, step by step, without drowning in technical tools.`
+                    : `Je veux ${query} en ${market} pour savoir par où commencer, étape par étape, sans me perdre dans les outils techniques.`;
+        }
+        if (/edu-physical-merchant|commer|merchant|store|boutique|متجر|تاجر/.test(segmentText)) {
+            return isAr
+                ? `أريد ${query} في ${market} يحول منتجات متجري إلى قناة بيع رقمية عبر WhatsApp وInstagram والدفع المحلي.`
+                : isEn
+                    ? `I want ${query} in ${market} to turn my store products into an online sales channel with WhatsApp, Instagram and local payment.`
+                    : `Je veux ${query} en ${market} pour transformer mes produits de boutique en canal de vente en ligne via WhatsApp, Instagram et paiement local.`;
+        }
+        if (/edu-career-switcher|salari|employee|revenu|income|موظف|دخل/.test(segmentText)) {
+            return isAr
+                ? `أريد ${query} في ${market} يمكنني اتباعه خارج وقت العمل، بمهام قصيرة تقود إلى أول اختبار حقيقي.`
+                : isEn
+                    ? `I want ${query} in ${market} that I can follow outside work hours, with short tasks leading to a first real test.`
+                    : `Je veux ${query} en ${market} que je peux suivre hors temps de travail, avec des missions courtes jusqu’à un premier test réel.`;
+        }
+        if (/edu-tried-failed|already tried|tried|essay|échec|echec|فشل|سابق/.test(segmentText)) {
+            return isAr
+                ? `أريد ${query} في ${market} يبدأ بتشخيص ما فشل سابقا، ثم يحدد تجربة صغيرة بقرار go/no-go واضح.`
+                : isEn
+                    ? `I want ${query} in ${market} to diagnose what failed before, then define a small test with clear go/no-go criteria.`
+                    : `Je veux ${query} en ${market} pour diagnostiquer ce qui a échoué avant, puis lancer un test petit budget avec critères go/no-go.`;
+        }
+        if (/edu-local-project-owner|local-project|adapt|market-fit|marché local|marche local|محلي|أمثلة محلية/.test(segmentText)) {
+            return isAr
+                ? `أريد ${query} في ${market} مبنيا على واقع السوق المحلي: الدفع، COD، الموردون، WhatsApp وInstagram.`
+                : isEn
+                    ? `I want ${query} in ${market} built around the local market reality: payment, COD, suppliers, WhatsApp and Instagram.`
+                    : `Je veux ${query} en ${market} adapté au marché local : paiement, COD, fournisseurs, WhatsApp et Instagram.`;
+        }
+        if (/edu-skeptical-prospect|skeptic|scept|méfi|mefi|متشكك|وعود/.test(segmentText)) {
+            return isAr
+                ? `أريد ${query} في ${market} يثبت حدوده ونتائجه قبل الدفع، لا وعودا كبيرة بلا دليل.`
+                : isEn
+                    ? `I want ${query} in ${market} to prove its limits and outcomes before I pay, not big claims without evidence.`
+                    : `Je veux ${query} en ${market} qui montre ses limites et ses résultats avant paiement, pas de grandes promesses sans preuve.`;
+        }
         if (/compar|price|prix|سعر|مقارن|budget|ميزانية/.test(segmentText)) {
             return isAr
                 ? `عندما أقارن ${query} في ${market}، أريد معرفة الفرق في السعر والشروط والدليل قبل أن أشتري.`
@@ -11262,10 +11375,10 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 ? ['Urgent local buyer', 'Maps searcher', 'Price comparer', 'Guarantee seeker', 'Referral-led buyer', 'Nearby buyer', 'Repeat service buyer']
                 : ['Client local urgent', 'Chercheur Maps', 'Comparateur prix', 'Chercheur garantie', 'Client par recommandation', 'Client de proximité', 'Client récurrent'],
         content_education: isAr
-            ? ['متعلم مبتدئ', 'مقارن الدورات', 'طالب شهادة', 'باحث عن تطبيق', 'صاحب تحول مهني', 'متابع محتوى', 'مشتري برنامج']
+            ? ['مبتدئ يطلق أول مشروع', 'تاجرة فعلية تريد البيع أونلاين', 'موظف يبحث عن دخل جديد', 'صاحب تجربة سابقة بلا نتائج', 'حامل مشروع محلي', 'متعلم بوقت محدود', 'متشكك من وعود الدورات']
             : isEn
-                ? ['Beginner learner', 'Course comparer', 'Certificate seeker', 'Practice seeker', 'Career switcher', 'Content follower', 'Program buyer']
-                : ['Apprenant débutant', 'Comparateur de formations', 'Chercheur certification', 'Chercheur pratique', 'Reconvertion professionnelle', 'Abonné contenu', 'Acheteur programme'],
+                ? ['Beginner launching first business', 'Physical store owner moving online', 'Employee seeking new income', 'Founder who already tried', 'Local project owner', 'Time-limited learner', 'Skeptical course buyer']
+                : ['Débutant qui lance son premier business', 'Commerçante physique qui veut vendre en ligne', 'Salarié en reconversion revenu', 'Entrepreneur qui a déjà essayé', 'Porteur de projet local', 'Apprenant avec peu de temps', 'Prospect méfiant envers les formations'],
         general_market: isAr
             ? ['عميل عالي النية', 'مقارن البدائل', 'طالب الثقة', 'حساس للميزانية', 'باحث عن الخبير', 'سريع القرار', 'مشتري توسع']
             : isEn
@@ -11309,6 +11422,16 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         if (/agency|b2b|expert|service|وكالة|خبير/.test(text)) return isAr ? 'هاجمه بسلطة الخبرة وحالة استخدام واضحة' : isEn ? 'Attack with expertise authority and use case' : 'Attaquer par autorité experte et cas d’usage';
         return isAr ? 'هاجمه بوعد أكثر وضوحا ودليل أسرع' : isEn ? 'Attack with a clearer promise and faster proof' : 'Attaquer avec une promesse plus claire et une preuve plus rapide';
     };
+    const educationPersonaIndexFor = (segment, fallbackIndex = 0) => {
+        const text = `${segment?.id || ''} ${segment?.name || ''} ${segment?.need || ''}`.toLowerCase();
+        if (/first-business|premier|début|debut|مبتدئ|أول مشروع|start/.test(text)) return 0;
+        if (/physical-merchant|commer|merchant|store|boutique|متجر|تاجر/.test(text)) return 1;
+        if (/career|revenu|income|salari|employee|موظف|دخل/.test(text)) return 2;
+        if (/tried-failed|failed|essay|tried|échoué|echec|فشل|سابق/.test(text)) return 3;
+        if (/local-project|adapt|market-fit|marché local|marche local|محلي|أمثلة محلية/.test(text)) return 4;
+        if (/skeptic|scept|méfi|mefi|متشكك|وعود/.test(text)) return 6;
+        return Math.min(fallbackIndex, 6);
+    };
 
     return merged.slice(0, targetCount).map((segment, index) => {
         const persona = buildStpPersona(segment, inputs, competitorData, lang);
@@ -11319,9 +11442,10 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         const pains = stpArray(persona.pains, 4);
         const attackAngle = attackAngleFor(segment, index);
         const langKey = isAr ? 'ar' : isEn ? 'en' : 'fr';
-        const ageRange = ageRanges[effectiveArchetype]?.[index] || ageRanges.general_market[index] || '25-50';
-        const displayName = selectedPersonaNames[langKey]?.[index] || `${isAr ? 'Persona' : 'Persona'} ${index + 1}`;
-        const occupation = personaRoles[effectiveArchetype]?.[index] || personaRoles.general_market[index] || '';
+        const personaIndex = isOnlineEducationOffer ? educationPersonaIndexFor(segment, index) : index;
+        const ageRange = ageRanges[effectiveArchetype]?.[personaIndex] || ageRanges.general_market[personaIndex] || '25-50';
+        const displayName = selectedPersonaNames[langKey]?.[personaIndex] || `${isAr ? 'Persona' : 'Persona'} ${index + 1}`;
+        const occupation = personaRoles[effectiveArchetype]?.[personaIndex] || personaRoles.general_market[personaIndex] || '';
         const segmentName = segment.name || persona.name || '';
         const socialChannels = attackChannels
             .filter(channel => /social|paid|owned|inbound|outbound/i.test(`${channel?.type || ''} ${channel?.name || ''}`))
@@ -11343,8 +11467,8 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             id: segment.id || `persona-${index + 1}`,
             number: index + 1,
             avatar: `P${index + 1}`,
-            icon: icons[index] || 'fa-user',
-            tone: tones[index] || '34,211,238',
+            icon: icons[personaIndex] || icons[index] || 'fa-user',
+            tone: tones[personaIndex] || tones[index] || '34,211,238',
             title: displayName,
             displayName,
             occupation,
@@ -11811,9 +11935,12 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         beachheadMarket,
         budget: effectiveBudget
     });
+    if (Array.isArray(stpAngleModel?.personaCards) && stpAngleModel.personaCards.length) {
+        personaCards = stpAngleModel.personaCards;
+    }
     const positioningBySegment = new Map(positioningObjects.map(item => [item.targetSegmentId, item]));
     personaCards = enforceStpPersonaDiversity(personaCards, langPack.code).map((card, index) => {
-        const sourceTarget = selectedTargets[index] || selectedTargets.find(target => target.id === card.segmentId) || chosenSegment || {};
+        const sourceTarget = selectedTargets.find(target => target.id === card.segmentId) || selectedTargets[index] || chosenSegment || {};
         const pos = positioningBySegment.get(sourceTarget.id) || primaryPositioning || {};
         return {
             ...card,

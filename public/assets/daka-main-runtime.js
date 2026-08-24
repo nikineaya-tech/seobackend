@@ -1837,7 +1837,7 @@ document.addEventListener('DOMContentLoaded', initSupabaseAuth);
 document.addEventListener('DOMContentLoaded', initSharedReportRoute);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-08-20-stp-angle-persona-md1';
+window.DAKA_FRONTEND_BUILD = '2026-08-24-stp-persona-engine2';
 
 function loaderTypeFromEndpoint(endpoint = '') {
     const value = String(endpoint || '').toLowerCase();
@@ -6225,7 +6225,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
     const cards = Array.isArray(personaCards) ? personaCards.filter(Boolean) : [];
     if (!cards.length) return '';
     const competitorCount = Number(meta.competitorCount || 0);
-    const anglesHtml = renderStpAngleOverview(meta.marketingAngles, copy);
+    const anglesHtml = '';
     return `<div class="daka-stp-persona-head">
       <div>
         <span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas || 'Personas')}</span>
