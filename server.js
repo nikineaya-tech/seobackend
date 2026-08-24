@@ -69,6 +69,9 @@ const {
 const {
   sanitizeStpDecisionForClient: sanitizeStpDecisionPayload,
 } = require('./lib/stp-client-sanitizer');
+const {
+  runMarketingMasterGate,
+} = require('./lib/marketing-master-auditor');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -167,6 +170,63 @@ function repairTruncatedJSON(str) {
   // Fermer les structures ouvertes
   while (stack.length > 0) result += stack.pop();
   return result;
+}
+
+function marketingMasterLang(context = {}, payload = {}) {
+  return context.lang || payload.lang || payload.analysisLang || payload.inputs?.lang || payload.userLang || 'fr';
+}
+
+async function requestMarketingMasterAiRepair({ reportType, payload, audit, lang = 'fr' } = {}) {
+  const compactPayload = JSON.stringify(payload || {}).slice(0, 14000);
+  const compactIssues = JSON.stringify((audit?.issues || []).slice(0, 12));
+  const prompt = `
+Tu es le MAITRE MARKETING DAKA: correcteur, auditeur et inspecteur final.
+Mission: corriger une reponse JSON ${reportType} avant affichage.
+
+Regles non negociables:
+- Retourne uniquement un JSON complet, valide, sans markdown.
+- Garde la structure utile existante.
+- Supprime placeholders, preuves fictives, champs internes, repetitions et hallucinations.
+- Si une affirmation n'est pas prouvee, transforme-la en hypothese clairement marquee ou retire-la.
+- STP: chaque persona doit avoir age, situation, angle d'attaque different, canaux, objections, preuves a montrer.
+- Ne remplace jamais des donnees observees par de l'invention.
+- Langue cible: ${lang}.
+
+ANOMALIES:
+${compactIssues}
+
+JSON A CORRIGER:
+${compactPayload}
+`;
+  const ai = await callOpenRouterAPI(prompt, {
+    expectedFormat: 'json',
+    maxTokens: 5000,
+    temperature: 0.12,
+    timeout: 9000,
+    context: `Marketing Master Repair ${reportType}`
+  });
+  const parsed = typeof ai?.response === 'string'
+    ? extractJSON(ai.response)
+    : (ai?.response || ai);
+  if (!parsed || typeof parsed !== 'object') throw new Error('MARKETING_MASTER_AI_REPAIR_EMPTY');
+  return { ...payload, ...parsed, success: parsed.success !== false };
+}
+
+async function applyMarketingMasterGate(reportType, payload = {}, context = {}) {
+  if (!payload || payload.success === false) return payload;
+  const lang = marketingMasterLang(context, payload);
+  const { payload: guarded, audit } = await runMarketingMasterGate(reportType, payload, {
+    ...context,
+    lang,
+    repairWithAi: async ({ reportType: type, payload: candidate, audit: candidateAudit }) =>
+      requestMarketingMasterAiRepair({ reportType: type, payload: candidate, audit: candidateAudit, lang })
+  });
+  if (guarded?.success === false) {
+    console.warn(`[MarketingMaster] ${reportType} blocked: ${(audit?.issues || []).map(issue => issue.code).join(',')}`);
+  } else {
+    console.log(`[MarketingMaster] ${reportType} ${guarded.marketingMaster?.status || 'approved'} | issues=${audit?.issues?.length || 0}`);
+  }
+  return guarded;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -13703,11 +13763,15 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
             console.warn(`❌ [/api/competitors] ÉCHEC :`, result.error);
         }
 
+        const guardedResult = result.success
+            ? await applyMarketingMasterGate('competitors', result, { lang, query: query.trim(), geo: safeGeo })
+            : result;
+
         if (typeof updateMetrics === 'function') {
-            updateMetrics(req.method, req.path, result.success ? 200 : 500, elapsed);
+            updateMetrics(req.method, req.path, guardedResult.success ? 200 : (guardedResult.error === 'MARKETING_MASTER_NEEDS_CORRECTION' ? 422 : 500), elapsed);
         }
 
-        res.json(result);
+        res.status(guardedResult.success ? 200 : (guardedResult.error === 'MARKETING_MASTER_NEEDS_CORRECTION' ? 422 : 500)).json(guardedResult);
 
     } catch (error) {
         const elapsed = Date.now() - startTime;
@@ -13828,12 +13892,16 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
         });
 
         const elapsed = Date.now() - startTime;
+        const guardedResult = result.success
+            ? await applyMarketingMasterGate('stp', result, { lang, query, geo: safeGeo, budget, objective, businessModel })
+            : result;
+        const statusCode = guardedResult.success ? 200 : (guardedResult.error === 'MARKETING_MASTER_NEEDS_CORRECTION' ? 422 : 500);
         if (typeof updateMetrics === 'function') {
-            updateMetrics(req.method, req.path, result.success ? 200 : 500, elapsed);
+            updateMetrics(req.method, req.path, statusCode, elapsed);
         }
 
-        console.log(`[api/stp] DONE in ${elapsed}ms | success=${Boolean(result.success)} | ai=${Boolean(result.sourceLayers?.aiRefinement)}`);
-        return res.status(result.success ? 200 : 500).json(result);
+        console.log(`[api/stp] DONE in ${elapsed}ms | success=${Boolean(guardedResult.success)} | ai=${Boolean(result.sourceLayers?.aiRefinement)} | master=${guardedResult.marketingMaster?.status || guardedResult.error || 'n/a'}`);
+        return res.status(statusCode).json(guardedResult);
 
     } catch (error) {
         const elapsed = Date.now() - startTime;
@@ -16068,7 +16136,13 @@ const langInstr = isAr
         const cached   = cache.get(cacheKey);
         if (cached && !req.body.skipCache) {
             console.log(`💾 [${requestId}] Cache HIT — ${validUrl}`);
-            return res.json({ ...cached, fromCache: true });
+            const guardedCached = await applyMarketingMasterGate('funnel', { ...cached, fromCache: true }, {
+                lang: validLang,
+                query: req.body?.query || '',
+                geo: req.body?.geo || req.body?.country || '',
+                url: validUrl
+            });
+            return res.status(guardedCached.success ? 200 : 422).json(guardedCached);
         }
 
         console.log(`[${requestId}] 🚀 FUNNEL SPY V12 GOD TIER — ${validUrl}`);
@@ -18185,8 +18259,14 @@ try {
     );
 }
         const safeFinalResponse = cleanFunnelScrapePayload(finalResponse);
-        cache.set(cacheKey, safeFinalResponse);
-        res.json(safeFinalResponse);
+        const guardedFunnelResponse = await applyMarketingMasterGate('funnel', safeFinalResponse, {
+            lang: validLang,
+            query: req.body?.query || '',
+            geo: req.body?.geo || req.body?.country || '',
+            url: validUrl
+        });
+        if (guardedFunnelResponse.success) cache.set(cacheKey, guardedFunnelResponse);
+        res.status(guardedFunnelResponse.success ? 200 : 422).json(guardedFunnelResponse);
 
     } catch (error) {
         // ═══════════════════════════════════════════════════════════════════════
@@ -20216,7 +20296,7 @@ app.post('/api/generate-keywords', requireAuth, requireReportQuota, persistGener
 
         const keywords = Array.isArray(result) ? result : (result.keywords || []);
 
-        res.json({
+        const keywordResponse = {
             success:       true,
             keywords:      keywords.slice(0, 500),
             totalKeywords: keywords.length,
@@ -20227,7 +20307,13 @@ app.post('/api/generate-keywords', requireAuth, requireReportQuota, persistGener
             stats:         result.stats || {},
             geo:           geo,
             generationTime: `${Date.now() - start}ms`
+        };
+        const guardedKeywords = await applyMarketingMasterGate('keywords', keywordResponse, {
+            lang: validLangs[0] || 'fr',
+            query: seedKeyword.trim(),
+            geo
         });
+        res.status(guardedKeywords.success ? 200 : 422).json(guardedKeywords);
 
     } catch (error) {
         console.error('Keywords error:', error);
@@ -20352,7 +20438,11 @@ app.post('/api/technical-seo', requireAuth, requireReportQuota, persistGenerated
         const cached   = cache.get(cacheKey);
         if (cached) {
             console.log(`${requestId} Cache HIT`);
-            return res.json({ ...cached, fromCache: true });
+            const guardedCached = await applyMarketingMasterGate('technical', { ...cached, fromCache: true }, {
+                lang,
+                url: validUrl
+            });
+            return res.status(guardedCached.success ? 200 : 422).json(guardedCached);
         }
 
         // ══════════════════════════════════════════════════════════
@@ -20816,12 +20906,16 @@ Return this exact JSON (language: ${targetLangName}):
             socialProofs: []
         });
 
-        cache.set(cacheKey, finalResponse);
+        const guardedTechnical = await applyMarketingMasterGate('technical', finalResponse, {
+            lang,
+            url: validUrl
+        });
+        if (guardedTechnical.success) cache.set(cacheKey, guardedTechnical);
         if (typeof updateMetrics === 'function')
-            updateMetrics(req.method, req.path, 200, Date.now() - startTime);
+            updateMetrics(req.method, req.path, guardedTechnical.success ? 200 : 422, Date.now() - startTime);
 
         console.log(`✅ [${requestId}] TechSEO V7 OK — ${Date.now() - startTime}ms | Score: ${seoScore}/100`);
-        res.json(finalResponse);
+        res.status(guardedTechnical.success ? 200 : 422).json(guardedTechnical);
 
     } catch (error) {
         console.error(`❌ [${requestId}] DEEP ERROR: ${error.message}`);
