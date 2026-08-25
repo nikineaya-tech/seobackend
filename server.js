@@ -13972,11 +13972,13 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
         const isValidUrl = (u) => {
             try {
                 const p = new URL(u);
+                const host = p.hostname.replace(/^www\./i, '').toLowerCase();
+                if (/^(votre-site|your-site|yoursite|example|exemple)\./i.test(host)) return false;
                 return (
                     ['http:', 'https:'].includes(p.protocol) &&
                     !['localhost', '127.0.0.1', '0.0.0.0',
                       '::1', '169.254', '10.', '192.168.']
-                      .some(h => p.hostname.includes(h))
+                      .some(h => host.includes(h))
                 );
             } catch { return false; }
         };
@@ -14148,10 +14150,12 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
         const isValidUrl = (u) => {
             try {
                 const p = new URL(u);
+                const host = p.hostname.replace(/^www\./i, '').toLowerCase();
+                if (/^(votre-site|your-site|yoursite|example|exemple)\./i.test(host)) return false;
                 return (
                     ['http:', 'https:'].includes(p.protocol) &&
                     !['localhost', '127.0.0.1', '0.0.0.0', '::1', '169.254', '10.', '192.168.']
-                        .some(h => p.hostname.includes(h))
+                        .some(h => host.includes(h))
                 );
             } catch { return false; }
         };

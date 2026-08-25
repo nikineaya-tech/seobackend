@@ -6143,6 +6143,15 @@ function initStpObjectiveSelector() {
 
 function collectStpPayload() {
     const read = (id) => document.getElementById(id)?.value?.trim() || '';
+    const cleanOptionalBenchmarkUrl = (value = '') => {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        try {
+            const host = new URL(raw).hostname.replace(/^www\./i, '').toLowerCase();
+            if (/^(votre-site|your-site|yoursite|example|exemple)\./i.test(host)) return '';
+        } catch (_) {}
+        return raw;
+    };
     const splitList = (value, max = 8) => String(value || '')
         .split(/[\n,;]/)
         .map(x => x.trim())
@@ -6150,7 +6159,7 @@ function collectStpPayload() {
         .slice(0, max);
 
     const keyword = read('stpKeyword') || read('keyword');
-    const url = read('stpUrl') || read('url');
+    const url = cleanOptionalBenchmarkUrl(read('stpUrl') || read('url'));
     const country = document.getElementById('stpCountry')?.value || document.getElementById('country')?.value || 'Morocco';
     const lang = document.getElementById('stpLang')?.value || document.getElementById('analysisLang')?.value || STATE.currentLang || 'fr';
     const context = collectBusinessContext('comp');
@@ -6851,6 +6860,7 @@ async function requestStpDecision(e) {
     const btn = document.getElementById('stpBtn') || document.getElementById('stpDecisionBtn');
     const original = btn?.innerHTML || '';
     const resultBox = document.getElementById('resultsStpDecision');
+    let slowStpTimer = null;
     if (btn) {
         btn.disabled = true;
         btn.innerHTML = `<i class="fas fa-circle-notch fa-spin"></i><span>${stpUiEsc(copy.running)}</span>`;
@@ -6858,6 +6868,19 @@ async function requestStpDecision(e) {
     if (resultBox) {
         resultBox.innerHTML = `<section class="daka-stp-report"><span class="daka-stp-kicker"><i class="fas fa-circle-notch fa-spin"></i>${stpUiEsc(copy.running)}</span></section>`;
         resultBox.classList.add('active');
+        slowStpTimer = setTimeout(() => {
+            if (!resultBox.querySelector('.daka-stp-report')) return;
+            resultBox.innerHTML = `<section class="daka-stp-report daka-stp-persona-only">
+              <div class="daka-stp-gate">
+                <strong><i class="fas fa-clock"></i> ${stpUiEsc(copy.running)}</strong>
+                <span>${stpUiEsc(lang === 'ar'
+                    ? 'ما زال التحليل يعمل. إذا بقيت هذه الرسالة طويلا، أعد المحاولة بدون رابط benchmark أو غيّر المدخلات.'
+                    : lang === 'en'
+                        ? 'The analysis is still running. If this stays too long, retry without a benchmark URL or adjust the inputs.'
+                        : 'L’analyse continue. Si ce message reste trop longtemps, relance sans URL de benchmark ou ajuste les inputs.')}</span>
+              </div>
+            </section>`;
+        }, 45000);
     }
 
     try {
@@ -6886,6 +6909,7 @@ async function requestStpDecision(e) {
             btn.disabled = false;
             btn.innerHTML = original;
         }
+        if (slowStpTimer) clearTimeout(slowStpTimer);
         hideDakaLoader();
     }
 }
