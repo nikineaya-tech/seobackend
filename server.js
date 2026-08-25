@@ -14205,7 +14205,11 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
 
         const elapsed = Date.now() - startTime;
         const guardedResult = result.success
-            ? await applyMarketingMasterGate('stp', result, { lang, query, geo: safeGeo, budget, objective, businessModel })
+            ? (await stpOptionalLayer(
+                applyMarketingMasterGate('stp', result, { lang, query, geo: safeGeo, budget, objective, businessModel }),
+                9000,
+                'marketing-master-gate'
+            )) || result
             : result;
         const statusCode = guardedResult.success ? 200 : (guardedResult.error === 'MARKETING_MASTER_NEEDS_CORRECTION' ? 422 : 500);
         if (typeof updateMetrics === 'function') {
