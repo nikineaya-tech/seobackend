@@ -12494,8 +12494,18 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         statement: primaryPositioning?.statement || legacyPositioning.statement || '',
         proof: primaryPositioning?.reasonToBelieve?.length ? primaryPositioning.reasonToBelieve : legacyPositioning.proof
     };
+    const personaSourceSegments = (() => {
+        const byId = new Map();
+        [...selectedTargets, ...realTargets, ...scoredSegments].forEach(segment => {
+            const id = stpText(segment?.id, 90);
+            if (!id || byId.has(id)) return;
+            if (segment?.targetStatus === 'REJECTED') return;
+            byId.set(id, segment);
+        });
+        return [...byId.values()].slice(0, 7);
+    })();
     let personaCards = buildStpPersonaCards({
-        segments: selectedTargets.length ? selectedTargets : (chosenSegment ? [chosenSegment] : []),
+        segments: personaSourceSegments.length ? personaSourceSegments : (chosenSegment ? [chosenSegment] : []),
         inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, resources: effectiveResources, price: effectivePrice, url, context: effectiveContext },
         competitorData,
         beachheadMarket,
@@ -12532,7 +12542,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     }
     const positioningBySegment = new Map(positioningObjects.map(item => [item.targetSegmentId, item]));
     personaCards = enforceStpPersonaDiversity(personaCards, langPack.code).map((card, index) => {
-        const sourceTarget = selectedTargets.find(target => target.id === card.segmentId) || selectedTargets[index] || chosenSegment || {};
+        const sourceTarget = personaSourceSegments.find(target => target.id === card.segmentId) || personaSourceSegments[index] || chosenSegment || {};
         const pos = positioningBySegment.get(sourceTarget.id) || primaryPositioning || {};
         return {
             ...card,

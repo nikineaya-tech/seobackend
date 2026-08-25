@@ -1927,6 +1927,7 @@ function initDakaSidebarVisibilityToggle() {
 function loaderTypeFromEndpoint(endpoint = '') {
     const value = String(endpoint || '').toLowerCase();
     if (value.includes('funnel')) return 'funnel';
+    if (value.includes('stp')) return 'stp';
     if (value.includes('technical') || value.includes('audit')) return 'technical';
     if (value.includes('keyword')) return 'keywords';
     return 'competitors';
@@ -3064,6 +3065,28 @@ const DAKA_LOADER_COPY = {
         { title: 'الرادار يعزل المنافسين الحقيقيين', subtitle: 'ندخل المنافسين المباشرين في التحليل ونستبعد التشابهات الضعيفة.', hooks: ['مباشرون', 'غير مباشرون', 'قابلون للهجوم'], icons: ['fa-signal', 'fa-filter', 'fa-bolt'] },
         { title: 'نبحث عن الثغرة التجارية', subtitle: 'أقوى زاوية غالبا تختبئ داخل وعد غير مثبت بما يكفي.', hooks: ['الوعد', 'الدليل', 'الثغرة'], icons: ['fa-bullhorn', 'fa-link', 'fa-triangle-exclamation'] },
         { title: 'خطة الهجوم تتشكل', subtitle: 'لا ضباب: فقط روافع قادرة على تحريك السوق.', hooks: ['تهديدات', 'مكاسب سريعة', 'مصادر'], icons: ['fa-shield-halved', 'fa-wand-magic-sparkles', 'fa-database'] }
+      ]
+    }
+  },
+  stp: {
+    icon: 'fa-users-viewfinder',
+    accent: '#a78bfa',
+    kicker: { fr: 'Décision STP', en: 'STP decision', ar: 'قرار STP' },
+    variants: {
+      fr: [
+        { title: 'Daka construit le STP depuis les signaux marché', subtitle: 'Segmentation, ciblage, positionnement et personas sont reliés dans un seul raisonnement.', hooks: ['Segments', 'Personas', 'Angles'], icons: ['fa-layer-group', 'fa-users', 'fa-bullseye'] },
+        { title: 'Les personas passent le test du réel', subtitle: 'Chaque profil doit avoir un besoin, une objection, un canal et une preuve différents.', hooks: ['JTBD', 'Objections', 'Preuves'], icons: ['fa-user-check', 'fa-triangle-exclamation', 'fa-shield-halved'] },
+        { title: 'Daka trie les cibles utiles', subtitle: 'Les profils prioritaires montent, les profils faibles restent en lecture secondaire.', hooks: ['Priorité', 'Budget', 'Canaux'], icons: ['fa-ranking-star', 'fa-coins', 'fa-route'] }
+      ],
+      en: [
+        { title: 'Daka is building STP from market signals', subtitle: 'Segmentation, targeting, positioning and personas are connected into one decision layer.', hooks: ['Segments', 'Personas', 'Angles'], icons: ['fa-layer-group', 'fa-users', 'fa-bullseye'] },
+        { title: 'Personas pass the real-market test', subtitle: 'Each profile needs a different need, objection, channel and proof point.', hooks: ['JTBD', 'Objections', 'Proof'], icons: ['fa-user-check', 'fa-triangle-exclamation', 'fa-shield-halved'] },
+        { title: 'Daka sorts useful targets', subtitle: 'Priority profiles rise first while weaker profiles stay secondary.', hooks: ['Priority', 'Budget', 'Channels'], icons: ['fa-ranking-star', 'fa-coins', 'fa-route'] }
+      ],
+      ar: [
+        { title: 'Daka تبني STP من إشارات السوق', subtitle: 'التقسيم والاستهداف والتموضع والشخصيات في طبقة قرار واحدة.', hooks: ['الشرائح', 'الشخصيات', 'الزوايا'], icons: ['fa-layer-group', 'fa-users', 'fa-bullseye'] },
+        { title: 'الشخصيات تمر من اختبار السوق الحقيقي', subtitle: 'كل شخصية تحتاج حاجة واعتراضا وقناة ودليلا مختلفا.', hooks: ['الوظيفة', 'الاعتراضات', 'الدليل'], icons: ['fa-user-check', 'fa-triangle-exclamation', 'fa-shield-halved'] },
+        { title: 'Daka ترتب الأهداف المفيدة', subtitle: 'الشخصيات ذات الأولوية تصعد أولا، والأضعف يبقى ثانويا.', hooks: ['الأولوية', 'الميزانية', 'القنوات'], icons: ['fa-ranking-star', 'fa-coins', 'fa-route'] }
       ]
     }
   },
@@ -6848,13 +6871,22 @@ async function requestStpDecision(e) {
     } catch (error) {
         if (error?.name === 'AbortError' || window.dakaAnalysisCancelled) return;
         console.error('[requestStpDecision]', error);
+        if (resultBox) {
+            resultBox.innerHTML = `<section class="daka-stp-report daka-stp-persona-only">
+              <div class="daka-stp-gate bad">
+                <strong><i class="fas fa-triangle-exclamation"></i> ${stpUiEsc(copy.error || 'Erreur STP')}</strong>
+                <span>${stpUiEsc(error.message || copy.error || 'Impossible de construire le STP pour le moment.')}</span>
+              </div>
+            </section>`;
+            resultBox.classList.add('active');
+        }
         toast.error(error.message || copy.error);
     } finally {
         if (btn) {
             btn.disabled = false;
             btn.innerHTML = original;
         }
-        hideLoading('loadingState');
+        hideDakaLoader();
     }
 }
 
