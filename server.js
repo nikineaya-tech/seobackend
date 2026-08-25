@@ -12378,6 +12378,23 @@ ${payload}`;
     }
 }
 
+async function stpOptionalLayer(promise, timeoutMs, label) {
+    let timer = null;
+    try {
+        return await Promise.race([
+            promise,
+            new Promise(resolve => {
+                timer = setTimeout(() => {
+                    console.warn(`[STP] Optional layer skipped after ${timeoutMs}ms: ${label}`);
+                    resolve(null);
+                }, timeoutMs);
+            })
+        ]);
+    } finally {
+        if (timer) clearTimeout(timer);
+    }
+}
+
 async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget = '', objective = '', businessModel = '', forceRefresh = false, context = {}, userSiteData = null } = {}) {
     const startedAt = Date.now();
     const langPack = stpLangPack(lang);
@@ -12512,14 +12529,14 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         archetype,
         lang: langPack.code
     });
-    const personaAiOverlay = await maybeRefineStpPersonasWithAi({
+    const personaAiOverlay = await stpOptionalLayer(maybeRefineStpPersonasWithAi({
         personaCards,
         inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
         competitorData,
         beachheadMarket,
         positioning,
         lang: langPack.code
-    });
+    }), 9000, 'persona-ai-overlay');
     if (personaAiOverlay?.personas?.length) {
         personaCards = mergeStpPersonaAiOverlay(personaCards, personaAiOverlay.personas);
     }
@@ -12769,7 +12786,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         elapsed: Date.now() - startedAt
     };
 
-    const aiOverlay = await maybeRefineStpWithAi(decision, langPack.code);
+    const aiOverlay = await stpOptionalLayer(maybeRefineStpWithAi(decision, langPack.code), 7000, 'decision-ai-overlay');
     if (aiOverlay) {
         decision.sourceLayers.aiRefinement = true;
         decision.aiOverlay = aiOverlay;
