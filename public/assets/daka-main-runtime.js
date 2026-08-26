@@ -6265,6 +6265,8 @@ function collectStpPayload() {
     const url = cleanOptionalBenchmarkUrl(read('stpUrl') || read('url'));
     const country = document.getElementById('stpCountry')?.value || document.getElementById('country')?.value || 'Morocco';
     const lang = document.getElementById('stpLang')?.value || document.getElementById('analysisLang')?.value || STATE.currentLang || 'fr';
+    const modelModeRaw = document.getElementById('stpModelMode')?.value || localStorage.getItem('dakaAiModelMode') || 'auto';
+    const modelMode = ['auto', 'free', 'paid'].includes(String(modelModeRaw).toLowerCase()) ? String(modelModeRaw).toLowerCase() : 'auto';
     const context = collectBusinessContext('comp');
     const objectiveChoice = document.querySelector('input[name="stpObjectiveChoice"]:checked')?.value || '';
     const objectiveDetail = read('stpObjectiveDetail');
@@ -6288,9 +6290,11 @@ function collectStpPayload() {
         budget: stpContext.budget || '',
         objective: stpContext.objective || '',
         businessModel: stpContext.businessModel || stpContext.offer || '',
+        modelMode,
         context: {
             ...context,
             ...stpContext,
+            modelMode,
             selectedCountry: country,
             userAudience: stpContext.audience || '',
             knownCompetitors: stpContext.knownCompetitors || []

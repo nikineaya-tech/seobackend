@@ -176,7 +176,7 @@ function marketingMasterLang(context = {}, payload = {}) {
   return context.lang || payload.lang || payload.analysisLang || payload.inputs?.lang || payload.userLang || 'fr';
 }
 
-async function requestMarketingMasterAiRepair({ reportType, payload, audit, lang = 'fr' } = {}) {
+async function requestMarketingMasterAiRepair({ reportType, payload, audit, lang = 'fr', modelMode = '' } = {}) {
   const compactPayload = JSON.stringify(payload || {}).slice(0, 14000);
   const compactIssues = JSON.stringify((audit?.issues || []).slice(0, 12));
   const prompt = `
@@ -203,6 +203,8 @@ ${compactPayload}
     maxTokens: 5000,
     temperature: 0.12,
     timeout: 9000,
+    task: 'marketing',
+    modelMode,
     context: `Marketing Master Repair ${reportType}`
   });
   const parsed = typeof ai?.response === 'string'
@@ -215,11 +217,12 @@ ${compactPayload}
 async function applyMarketingMasterGate(reportType, payload = {}, context = {}) {
   if (!payload || payload.success === false) return payload;
   const lang = marketingMasterLang(context, payload);
+  const modelMode = normalizeAiModelMode(context.modelMode || context.aiModelMode || payload.inputs?.modelMode || payload.sourceLayers?.aiModelMode);
   const { payload: guarded, audit } = await runMarketingMasterGate(reportType, payload, {
     ...context,
     lang,
     repairWithAi: async ({ reportType: type, payload: candidate, audit: candidateAudit }) =>
-      requestMarketingMasterAiRepair({ reportType: type, payload: candidate, audit: candidateAudit, lang })
+      requestMarketingMasterAiRepair({ reportType: type, payload: candidate, audit: candidateAudit, lang, modelMode })
   });
   if (guarded?.success === false) {
     console.warn(`[MarketingMaster] ${reportType} blocked: ${(audit?.issues || []).map(issue => issue.code).join(',')}`);
@@ -2625,12 +2628,14 @@ function buildAiModelQueue(options = {}) {
         ...(Array.isArray(options.models) ? options.models : []),
         options.model
     ].filter(Boolean).map(id => aiModelSpec(id));
+    const requestedFree = requested.filter(model => model.free);
+    const requestedPaid = requested.filter(model => !model.free);
     const paid = route.paid.map(id => aiModelSpec(id, { timeout: task === 'meta_ads' ? 14000 : 9000 }));
     const free = route.free.map(id => aiModelSpec(id, { timeout: task === 'meta_ads' ? 14000 : 12000 }));
     const autoFallback = mode === 'free' ? [] : [aiModelSpec('openrouter/auto', { timeout: 15000, maxContext: 100000 })];
     const allowPaidFallbackFromFree = ['1', 'true', 'yes', 'on'].includes(String(process.env.OPENROUTER_FREE_MODE_ALLOW_PAID_FALLBACK || '').toLowerCase());
     const queue = mode === 'free'
-        ? [...requested, ...free, ...(allowPaidFallbackFromFree ? paid : [])]
+        ? [...requestedFree, ...free, ...(allowPaidFallbackFromFree ? [...requestedPaid, ...paid] : [])]
         : mode === 'paid'
             ? [...requested, ...paid, ...free, ...autoFallback]
             : HAS_PAID_CREDITS
@@ -12379,7 +12384,7 @@ function enforceStpPersonaDiversity(personaCards = [], lang = 'fr') {
     });
 }
 
-async function maybeRefineStpPersonasWithAi({ personaCards = [], inputs = {}, competitorData = {}, beachheadMarket = {}, positioning = {}, lang = 'fr' } = {}) {
+async function maybeRefineStpPersonasWithAi({ personaCards = [], inputs = {}, competitorData = {}, beachheadMarket = {}, positioning = {}, lang = 'fr', modelMode = '' } = {}) {
     try {
         if (!personaCards.length) return null;
         const payload = JSON.stringify({
@@ -12461,6 +12466,7 @@ ${payload}`;
             maxTokens: 2200,
             temperature: 0.08,
             task: 'marketing',
+            modelMode,
             context: 'STP Persona Layer',
             systemPrompt: 'You are a senior STP strategist. Use only provided data. Return strict JSON.'
         });
@@ -12473,7 +12479,7 @@ ${payload}`;
     }
 }
 
-async function maybeRefineStpWithAi(stpDecision, lang = 'fr') {
+async function maybeRefineStpWithAi(stpDecision, lang = 'fr', modelMode = '') {
     try {
         const payload = JSON.stringify({
             inputs: stpDecision.inputs,
@@ -12508,6 +12514,7 @@ ${payload}`;
             maxTokens: 1400,
             temperature: 0.12,
             task: 'marketing',
+            modelMode,
             context: 'STP Decision Layer',
             systemPrompt: 'You are a senior market strategist. Use only provided data. Return strict JSON.'
         });
@@ -12540,7 +12547,7 @@ async function stpOptionalLayer(promise, timeoutMs, label) {
     }
 }
 
-async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget = '', objective = '', businessModel = '', forceRefresh = false, context = {}, userSiteData = null } = {}) {
+async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget = '', objective = '', businessModel = '', modelMode = '', forceRefresh = false, context = {}, userSiteData = null } = {}) {
     const startedAt = Date.now();
     const langPack = stpLangPack(lang);
     const safeGeo = resolveSerpGeo(geo || 'Morocco').location || 'Morocco';
@@ -12680,7 +12687,8 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         competitorData,
         beachheadMarket,
         positioning,
-        lang: langPack.code
+        lang: langPack.code,
+        modelMode
     }), 9000, 'persona-ai-overlay');
     if (personaAiOverlay?.personas?.length) {
         personaCards = mergeStpPersonaAiOverlay(personaCards, personaAiOverlay.personas);
@@ -12823,6 +12831,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
             offer: effectiveContext.offer || null,
             audience: effectiveContext.audience || effectiveContext.userAudience || null,
             businessModel: effectiveBusinessModel || null,
+            modelMode: normalizeAiModelMode(modelMode),
             cityOrRegion: effectiveContext.cityOrRegion || null,
             knownCompetitors: effectiveContext.knownCompetitors || [],
             constraints: effectiveContext.constraints || [],
@@ -12837,6 +12846,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
             userBenchmark: Boolean(competitorData.userBenchmark),
             proofModel: Boolean(competitorData.proofModel),
             contextInference: inferredContext.mode,
+            aiModelMode: normalizeAiModelMode(modelMode),
             marketingAngleEngine: Boolean(stpAngleModel?.marketingAngles?.length),
             personaPromptLayer: Boolean(personaAiOverlay?.personas?.length),
             beachhead: true,
@@ -12931,7 +12941,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         elapsed: Date.now() - startedAt
     };
 
-    const aiOverlay = await stpOptionalLayer(maybeRefineStpWithAi(decision, langPack.code), 7000, 'decision-ai-overlay');
+    const aiOverlay = await stpOptionalLayer(maybeRefineStpWithAi(decision, langPack.code, modelMode), 7000, 'decision-ai-overlay');
     if (aiOverlay) {
         decision.sourceLayers.aiRefinement = true;
         decision.aiOverlay = aiOverlay;
@@ -14278,6 +14288,7 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
             budget = '',
             objective = '',
             businessModel = '',
+            modelMode = '',
             forceRefresh = false,
             context = {}
         } = req.body || {};
@@ -14306,6 +14317,7 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
         const safeGeo = geoData.location || 'Morocco';
         const safeForceRefresh = Boolean(forceRefresh) && !!req.user?.isAdmin;
         const safeContext = safeUserContextFromBody({ ...req.body, context });
+        const safeModelMode = normalizeAiModelMode(modelMode || context?.modelMode || context?.aiModelMode);
 
         const isValidUrl = (u) => {
             try {
@@ -14341,6 +14353,7 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
             budget: stpText(budget, 80),
             objective: stpText(objective, 160),
             businessModel: stpText(businessModel, 80),
+            modelMode: safeModelMode,
             forceRefresh: safeForceRefresh,
             context: safeContext,
             userSiteData
@@ -14349,7 +14362,7 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
         const elapsed = Date.now() - startTime;
         const guardedResult = result.success
             ? (await stpOptionalLayer(
-                applyMarketingMasterGate('stp', result, { lang, query, geo: safeGeo, budget, objective, businessModel }),
+                applyMarketingMasterGate('stp', result, { lang, query, geo: safeGeo, budget, objective, businessModel, modelMode: safeModelMode }),
                 9000,
                 'marketing-master-gate'
             )) || result
