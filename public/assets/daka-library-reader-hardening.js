@@ -76,12 +76,12 @@
 
       .daka-library-reader-head {
         flex: 0 0 auto !important;
-        min-height: 96px !important;
-        display: flex !important;
+        min-height: 78px !important;
+        display: grid !important;
+        grid-template-columns: auto minmax(150px, auto) minmax(220px, 1fr) !important;
         align-items: center !important;
-        justify-content: flex-end !important;
-        gap: 18px !important;
-        padding: 18px clamp(16px, 3vw, 34px) 14px !important;
+        gap: 14px !important;
+        padding: 12px clamp(14px, 2vw, 24px) !important;
         border-bottom: 1px solid rgba(148,163,184,.12) !important;
         background: rgba(2,6,23,.78) !important;
         backdrop-filter: blur(18px) !important;
@@ -92,6 +92,7 @@
         display: grid !important;
         justify-items: end !important;
         gap: 8px !important;
+        grid-column: 3 !important;
       }
 
       .daka-library-reader-head h2 {
@@ -118,15 +119,14 @@
       }
 
       .daka-library-status {
-        position: fixed !important;
-        left: clamp(14px, 3vw, 34px) !important;
-        top: 84px !important;
-        bottom: auto !important;
+        position: static !important;
+        left: auto !important;
+        top: auto !important;
         transform: none !important;
-        z-index: 24004 !important;
+        z-index: auto !important;
         min-height: 0 !important;
-        width: auto !important;
-        max-width: min(520px, calc(100vw - 44px)) !important;
+        width: max-content !important;
+        max-width: min(330px, 22vw) !important;
         padding: 8px 12px !important;
         border: 1px solid rgba(34,197,94,.2) !important;
         border-radius: 999px !important;
@@ -137,6 +137,11 @@
         font-weight: 900 !important;
         backdrop-filter: blur(16px) !important;
         pointer-events: none !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        grid-column: 2 !important;
+        justify-self: center !important;
       }
 
       .daka-library-status[hidden] {
@@ -164,7 +169,7 @@
         width: auto !important;
         height: auto !important;
         max-width: calc(100vw - 34px) !important;
-        max-height: calc(100dvh - 132px) !important;
+        max-height: calc(100dvh - 106px) !important;
         border-radius: 14px !important;
         background: #fff !important;
         box-shadow: 0 24px 90px rgba(0,0,0,.62), 0 0 0 1px rgba(255,255,255,.08) !important;
@@ -176,27 +181,29 @@
       .daka-library-toolbar,
       .daka-library-viewer.is-fullscreen .daka-library-toolbar,
       .daka-library-shell.is-reading .daka-library-toolbar {
-        position: fixed !important;
-        left: clamp(14px, 3vw, 34px) !important;
+        position: static !important;
+        left: auto !important;
         right: auto !important;
-        top: 18px !important;
+        top: auto !important;
         bottom: auto !important;
-        z-index: 24005 !important;
+        z-index: auto !important;
         transform: none !important;
         width: auto !important;
-        max-width: min(980px, calc(100vw - 44px)) !important;
-        min-height: 62px !important;
+        max-width: min(760px, 50vw) !important;
+        min-height: 54px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 10px !important;
-        padding: 10px !important;
+        gap: 8px !important;
+        padding: 7px !important;
         border: 1px solid rgba(148,163,184,.18) !important;
         border-radius: 20px !important;
         background: rgba(8,15,30,.92) !important;
         box-shadow: 0 24px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06) !important;
         backdrop-filter: blur(18px) !important;
-        overflow: hidden !important;
+        overflow: visible !important;
+        grid-column: 1 !important;
+        justify-self: start !important;
       }
 
       .daka-library-toolbar .btn {
@@ -225,13 +232,16 @@
 
       @media (max-width: 760px) {
         .daka-library-reader-head {
-          min-height: 116px !important;
-          align-items: flex-start !important;
-          padding: 74px 14px 8px !important;
+          min-height: 134px !important;
+          grid-template-columns: 1fr !important;
+          align-items: stretch !important;
+          padding: 8px 10px !important;
+          gap: 8px !important;
         }
         .daka-library-reader-head > div {
           width: 100% !important;
           justify-items: start !important;
+          grid-column: 1 !important;
         }
         .daka-library-reader-head h2 {
           max-width: calc(100vw - 28px) !important;
@@ -245,15 +255,14 @@
         }
         #dakaLibraryCanvas {
           max-width: calc(100vw - 16px) !important;
-          max-height: calc(100dvh - 130px) !important;
+          max-height: calc(100dvh - 154px) !important;
           border-radius: 10px !important;
         }
         .daka-library-toolbar {
-          top: 8px !important;
-          left: 7px !important;
           width: calc(100vw - 14px) !important;
           max-width: calc(100vw - 14px) !important;
           min-height: 58px !important;
+          grid-column: 1 !important;
           justify-content: flex-start !important;
           overflow-x: auto !important;
           scrollbar-width: none !important;
@@ -262,8 +271,9 @@
         .daka-library-toolbar .btn span { display: inline !important; }
         #dakaLibraryPageIndicator { min-width: 94px !important; }
         .daka-library-status {
-          top: 68px !important;
-          left: 10px !important;
+          grid-column: 1 !important;
+          justify-self: start !important;
+          width: fit-content !important;
           max-width: calc(100vw - 20px) !important;
           font-size: .72rem !important;
         }
@@ -276,6 +286,28 @@
     return Boolean(viewer && !viewer.hidden && viewer.offsetParent !== null);
   }
 
+  function dockReaderChrome(viewer) {
+    if (!viewer) return;
+    const head = viewer.querySelector('.daka-library-reader-head');
+    const toolbar = viewer.querySelector('.daka-library-toolbar');
+    const status = viewer.querySelector('.daka-library-status');
+    if (!head) return;
+    if (toolbar && toolbar.parentElement !== head) head.insertBefore(toolbar, head.firstChild);
+    if (status && status.parentElement !== head) {
+      const titleWrap = head.querySelector(':scope > div:last-child');
+      head.insertBefore(status, titleWrap || null);
+    }
+  }
+
+  function enterAutomaticFullscreen(viewer) {
+    if (!viewer) return;
+    viewer.hidden = false;
+    viewer.classList.add('is-fullscreen');
+    viewer.closest('.daka-library-shell')?.classList.add('is-reading');
+    document.documentElement.classList.add(ACTIVE_CLASS);
+    document.body.classList.add('daka-library-reader-open');
+  }
+
   function syncReaderState() {
     const viewer = document.getElementById('dakaLibraryViewer');
     const open = isReaderOpen(viewer);
@@ -285,7 +317,10 @@
     viewer.classList.toggle('is-fullscreen', open);
     const shell = viewer.closest('.daka-library-shell');
     if (shell) shell.classList.toggle('is-reading', open);
-    if (open) hardenNode(viewer);
+    if (open) {
+      dockReaderChrome(viewer);
+      hardenNode(viewer);
+    }
   }
 
   function clickByHint(hints) {
@@ -342,6 +377,15 @@
   function watchReader() {
     injectStyle();
     bindGlobalGuards();
+    document.addEventListener('click', (event) => {
+      const trigger = event.target && event.target.closest ? event.target.closest('[data-library-open]') : null;
+      if (!trigger) return;
+      const card = trigger.closest('.daka-library-book-card');
+      if (card && card.classList.contains('is-soon')) return;
+      enterAutomaticFullscreen(document.getElementById('dakaLibraryViewer'));
+      setTimeout(syncReaderState, 0);
+      setTimeout(syncReaderState, 180);
+    }, true);
     const observer = new MutationObserver(syncReaderState);
     observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden', 'class', 'style'] });
     window.addEventListener('resize', syncReaderState, { passive: true });
