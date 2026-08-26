@@ -1855,7 +1855,7 @@ document.addEventListener('DOMContentLoaded', initDakaModuleExportButtons);
 document.addEventListener('DOMContentLoaded', initDakaSidebarVisibilityToggle);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-08-26-fixed-left-sidebar1';
+window.DAKA_FRONTEND_BUILD = '2026-08-26-library-progress1';
 
 function getDakaSidebarToggleCopy() {
     const lang = STATE.currentLang || document.getElementById('langSelector')?.value || 'fr';
@@ -2331,6 +2331,94 @@ function dakaLibraryT(key) {
     return TRANSLATIONS?.[lang]?.[key] || TRANSLATIONS?.fr?.[key] || key;
 }
 
+function getDakaLibraryProgressKey(itemId = DAKA_LIBRARY_STATE.itemId || 'marketing-frameworks-explained') {
+    return `dakaLibraryProgress:${String(itemId || 'book').replace(/[^a-z0-9_-]/gi, '-')}`;
+}
+
+function getDakaLibrarySavedProgress(itemId = DAKA_LIBRARY_STATE.itemId) {
+    try {
+        const raw = localStorage.getItem(getDakaLibraryProgressKey(itemId));
+        if (!raw) return null;
+        const saved = JSON.parse(raw);
+        const page = Math.max(1, parseInt(saved?.page, 10) || 1);
+        const pageCount = Math.max(0, parseInt(saved?.pageCount, 10) || 0);
+        if (!pageCount || page > pageCount) return null;
+        return {
+            ...saved,
+            page,
+            pageCount,
+            percent: Math.max(0, Math.min(100, Math.round((page / pageCount) * 100)))
+        };
+    } catch (_) {
+        return null;
+    }
+}
+
+function formatDakaLibraryProgressText(saved = null) {
+    const lang = STATE.currentLang || document.getElementById('langSelector')?.value || 'fr';
+    const page = Math.max(1, Number(saved?.page || DAKA_LIBRARY_STATE.page || 1));
+    const total = Math.max(1, Number(saved?.pageCount || DAKA_LIBRARY_STATE.pageCount || 1));
+    const percent = Math.max(0, Math.min(100, Math.round((page / total) * 100)));
+    if (lang === 'ar') return `تقدم القراءة ${percent}% · الصفحة ${page} / ${total}`;
+    if (lang === 'en') return `Reading progress ${percent}% · page ${page} / ${total}`;
+    return `Progression ${percent}% · page ${page} / ${total}`;
+}
+
+function formatDakaLibraryResumeText(saved) {
+    if (!saved) return '';
+    const lang = STATE.currentLang || document.getElementById('langSelector')?.value || 'fr';
+    if (lang === 'ar') return `متابعة من الصفحة ${saved.page}`;
+    if (lang === 'en') return `Resume page ${saved.page}`;
+    return `Reprendre page ${saved.page}`;
+}
+
+function saveDakaLibraryProgress() {
+    if (!DAKA_LIBRARY_STATE.itemId || !DAKA_LIBRARY_STATE.pageCount) return;
+    try {
+        const title = stpUiText(document.getElementById('dakaLibraryReaderTitle')?.textContent, dakaLibraryT('library_pdf_title'));
+        localStorage.setItem(getDakaLibraryProgressKey(DAKA_LIBRARY_STATE.itemId), JSON.stringify({
+            itemId: DAKA_LIBRARY_STATE.itemId,
+            title,
+            page: Math.max(1, Number(DAKA_LIBRARY_STATE.page || 1)),
+            pageCount: Math.max(1, Number(DAKA_LIBRARY_STATE.pageCount || 1)),
+            updatedAt: new Date().toISOString()
+        }));
+    } catch (_) {}
+}
+
+function ensureDakaLibraryReadingChip() {
+    const head = document.querySelector('#dakaLibraryViewer .daka-library-reader-head');
+    if (!head) return null;
+    let chip = document.getElementById('dakaLibraryReadingChip');
+    if (!chip) {
+        chip = document.createElement('div');
+        chip.id = 'dakaLibraryReadingChip';
+        chip.className = 'daka-library-reading-chip';
+        chip.setAttribute('aria-live', 'polite');
+        head.appendChild(chip);
+    }
+    return chip;
+}
+
+function refreshDakaLibraryShelfProgress() {
+    document.querySelectorAll('.daka-library-book-card[data-library-id]').forEach(card => {
+        const itemId = card.dataset.libraryId || 'marketing-frameworks-explained';
+        const saved = getDakaLibrarySavedProgress(itemId);
+        let badge = card.querySelector('.daka-library-reading-memory');
+        if (!saved) {
+            badge?.remove();
+            return;
+        }
+        if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'daka-library-reading-memory';
+            const copy = card.querySelector('.daka-library-book-copy') || card;
+            copy.appendChild(badge);
+        }
+        badge.textContent = `${formatDakaLibraryResumeText(saved)} · ${saved.percent}%`;
+    });
+}
+
 function ensureDakaLibraryStyles() {
     if (document.getElementById('daka-library-style')) return;
     const style = document.createElement('style');
@@ -2479,6 +2567,31 @@ function ensureDakaLibraryStyles() {
             color: #c4b5fd;
             background: rgba(139,92,246,.12);
             border-color: rgba(139,92,246,.22);
+        }
+        .daka-library-reading-memory,
+        .daka-library-reading-chip {
+            display: inline-flex;
+            align-items: center;
+            width: fit-content;
+            min-height: 28px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            color: #67e8f9;
+            background: rgba(34,211,238,.10);
+            border: 1px solid rgba(34,211,238,.24);
+            font-size: .68rem;
+            font-weight: 950;
+            letter-spacing: .02em;
+        }
+        .daka-library-reading-memory {
+            margin-top: 2px;
+            color: #a7f3d0;
+            background: rgba(34,197,94,.10);
+            border-color: rgba(34,197,94,.22);
+        }
+        .daka-library-reading-chip {
+            justify-self: start;
+            margin-top: 4px;
         }
         .daka-library-card-action {
             justify-self: start;
@@ -2816,6 +2929,9 @@ function refreshDakaLibraryCopy() {
         const percent = Math.max(0, Math.min(100, (Number(DAKA_LIBRARY_STATE.page || 1) / total) * 100));
         progress.style.width = `${percent}%`;
     }
+    const chip = ensureDakaLibraryReadingChip();
+    if (chip) chip.textContent = formatDakaLibraryProgressText();
+    refreshDakaLibraryShelfProgress();
 }
 window.refreshDakaLibraryCopy = refreshDakaLibraryCopy;
 
@@ -2891,6 +3007,8 @@ function setDakaLibraryReaderOpen(isOpen) {
 
 function closeDakaLibraryReader() {
     const viewer = document.getElementById('dakaLibraryViewer');
+    saveDakaLibraryProgress();
+    refreshDakaLibraryShelfProgress();
     if (document.fullscreenElement && document.fullscreenElement === viewer && document.exitFullscreen) {
         document.exitFullscreen().catch(() => {});
     }
@@ -2925,9 +3043,11 @@ async function renderDakaLibraryPage() {
         const status = document.getElementById('dakaLibraryStatus');
         if (status) {
             status.hidden = false;
-            status.textContent = dakaLibraryT('library_loaded');
+            status.textContent = formatDakaLibraryProgressText();
             status.style.color = '#86efac';
         }
+        saveDakaLibraryProgress();
+        refreshDakaLibraryShelfProgress();
     } catch (error) {
         console.warn('[DakaLibrary] render failed:', error.message);
         setDakaLibraryStatus(dakaLibraryT('library_error'), true);
@@ -2955,8 +3075,12 @@ async function openDakaLibraryPdf(itemId = 'marketing-frameworks-explained') {
             isEvalSupported: false,
             useSystemFonts: true
         }).promise;
-        DAKA_LIBRARY_STATE.page = 1;
         DAKA_LIBRARY_STATE.pageCount = Number(DAKA_LIBRARY_STATE.pdf.numPages || 0);
+        const saved = getDakaLibrarySavedProgress(itemId);
+        DAKA_LIBRARY_STATE.page = saved
+            ? Math.max(1, Math.min(saved.page, DAKA_LIBRARY_STATE.pageCount || saved.page))
+            : 1;
+        if (saved) setDakaLibraryStatus(formatDakaLibraryResumeText(saved), false);
         await renderDakaLibraryPage();
     } catch (error) {
         console.warn('[DakaLibrary] open failed:', error.message);
@@ -2968,6 +3092,7 @@ window.openDakaLibraryPdf = openDakaLibraryPdf;
 
 function initDakaLibraryViewer() {
     ensureDakaLibraryStyles();
+    refreshDakaLibraryShelfProgress();
     if (window.__dakaLibraryViewerBound) return;
     window.__dakaLibraryViewerBound = true;
     document.addEventListener('click', (event) => {
@@ -3039,6 +3164,11 @@ function initDakaLibraryViewer() {
     document.addEventListener('contextmenu', (event) => {
         if (event.target.closest('#dakaLibraryViewer')) event.preventDefault();
     }, true);
+    window.addEventListener('pagehide', saveDakaLibraryProgress);
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) saveDakaLibraryProgress();
+        else refreshDakaLibraryShelfProgress();
+    });
     document.addEventListener('keydown', (event) => {
         const viewer = document.getElementById('dakaLibraryViewer');
         if (!viewer || viewer.hidden) return;
