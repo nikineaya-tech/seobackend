@@ -76,11 +76,22 @@
 
       .daka-library-reader-head {
         flex: 0 0 auto !important;
-        min-height: 72px !important;
-        padding: 16px clamp(16px, 3vw, 34px) 12px !important;
+        min-height: 96px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 18px !important;
+        padding: 18px clamp(16px, 3vw, 34px) 14px !important;
         border-bottom: 1px solid rgba(148,163,184,.12) !important;
         background: rgba(2,6,23,.78) !important;
         backdrop-filter: blur(18px) !important;
+      }
+
+      .daka-library-reader-head > div {
+        min-width: 0 !important;
+        display: grid !important;
+        justify-items: end !important;
+        gap: 8px !important;
       }
 
       .daka-library-reader-head h2 {
@@ -89,6 +100,10 @@
         font-size: clamp(1rem, 1.7vw, 1.32rem) !important;
         line-height: 1.15 !important;
         letter-spacing: 0 !important;
+        max-width: min(640px, 42vw) !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
       }
 
       .daka-library-reader-head p,
@@ -104,12 +119,14 @@
 
       .daka-library-status {
         position: fixed !important;
-        left: 50% !important;
-        bottom: 86px !important;
-        transform: translateX(-50%) !important;
+        left: clamp(14px, 3vw, 34px) !important;
+        top: 84px !important;
+        bottom: auto !important;
+        transform: none !important;
         z-index: 24004 !important;
         min-height: 0 !important;
-        width: min(720px, calc(100vw - 28px)) !important;
+        width: auto !important;
+        max-width: min(520px, calc(100vw - 44px)) !important;
         padding: 8px 12px !important;
         border: 1px solid rgba(34,197,94,.2) !important;
         border-radius: 999px !important;
@@ -132,7 +149,7 @@
         height: auto !important;
         max-height: none !important;
         width: 100% !important;
-        padding: 12px 16px 104px !important;
+        padding: 12px 16px 22px !important;
         display: grid !important;
         place-items: center !important;
         align-items: center !important;
@@ -147,7 +164,7 @@
         width: auto !important;
         height: auto !important;
         max-width: calc(100vw - 34px) !important;
-        max-height: calc(100dvh - 188px) !important;
+        max-height: calc(100dvh - 132px) !important;
         border-radius: 14px !important;
         background: #fff !important;
         box-shadow: 0 24px 90px rgba(0,0,0,.62), 0 0 0 1px rgba(255,255,255,.08) !important;
@@ -160,13 +177,14 @@
       .daka-library-viewer.is-fullscreen .daka-library-toolbar,
       .daka-library-shell.is-reading .daka-library-toolbar {
         position: fixed !important;
-        left: 50% !important;
+        left: clamp(14px, 3vw, 34px) !important;
         right: auto !important;
-        top: auto !important;
-        bottom: max(12px, env(safe-area-inset-bottom)) !important;
+        top: 18px !important;
+        bottom: auto !important;
         z-index: 24005 !important;
-        transform: translateX(-50%) !important;
-        width: min(980px, calc(100vw - 24px)) !important;
+        transform: none !important;
+        width: auto !important;
+        max-width: min(980px, calc(100vw - 44px)) !important;
         min-height: 62px !important;
         display: flex !important;
         align-items: center !important;
@@ -207,19 +225,34 @@
 
       @media (max-width: 760px) {
         .daka-library-reader-head {
-          min-height: 58px !important;
-          padding: 12px 14px 8px !important;
+          min-height: 116px !important;
+          align-items: flex-start !important;
+          padding: 74px 14px 8px !important;
+        }
+        .daka-library-reader-head > div {
+          width: 100% !important;
+          justify-items: start !important;
+        }
+        .daka-library-reader-head h2 {
+          max-width: calc(100vw - 28px) !important;
+          white-space: normal !important;
+          display: -webkit-box !important;
+          -webkit-line-clamp: 2 !important;
+          -webkit-box-orient: vertical !important;
         }
         .daka-library-canvas-wrap {
-          padding: 10px 8px 96px !important;
+          padding: 10px 8px 12px !important;
         }
         #dakaLibraryCanvas {
           max-width: calc(100vw - 16px) !important;
-          max-height: calc(100dvh - 158px) !important;
+          max-height: calc(100dvh - 130px) !important;
           border-radius: 10px !important;
         }
         .daka-library-toolbar {
+          top: 8px !important;
+          left: 7px !important;
           width: calc(100vw - 14px) !important;
+          max-width: calc(100vw - 14px) !important;
           min-height: 58px !important;
           justify-content: flex-start !important;
           overflow-x: auto !important;
@@ -228,6 +261,12 @@
         .daka-library-toolbar::-webkit-scrollbar { display: none !important; }
         .daka-library-toolbar .btn span { display: inline !important; }
         #dakaLibraryPageIndicator { min-width: 94px !important; }
+        .daka-library-status {
+          top: 68px !important;
+          left: 10px !important;
+          max-width: calc(100vw - 20px) !important;
+          font-size: .72rem !important;
+        }
       }
     `;
     document.head.appendChild(style);

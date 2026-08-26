@@ -1,2 +1,2 @@
 Render redeploy marker.
-Last trigger: 2026-08-26 library PDF reading progress memory.
+Last trigger: 2026-08-26 library PDF reader title and toolbar aligned.

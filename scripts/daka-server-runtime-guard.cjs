@@ -6,7 +6,7 @@ const path = require('path');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const INDEX_PATH = path.join(ROOT_DIR, 'index.html');
-const HARDENING_TAG = '<script src="/assets/daka-library-reader-hardening.js?v=20260826-fullscreen-secure" defer></script>';
+const HARDENING_TAG = '<script src="/assets/daka-library-reader-hardening.js?v=20260826-reader-header-tools1" defer></script>';
 
 function ensureLibraryReaderHardening() {
   try {
