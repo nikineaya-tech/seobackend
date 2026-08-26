@@ -149,6 +149,32 @@ test('marketing angle exposes canonical business fields', () => {
   assert.ok(model.ultimateAttackAngles.length > 0);
 });
 
+test('product description is the first classification handoff for downstream STP layers', () => {
+  const model = buildAngleDrivenStpModel({
+    query: 'formation e-commerce',
+    productDescription: 'Formation e-commerce en ligne pour débutants avec modules vidéo, exercices pratiques et support WhatsApp.',
+    productIntake: {
+      status: 'ready',
+      reportLabel: 'تكوين التجارة الإلكترونية',
+      reportDescription: 'تكوين التجارة الإلكترونية عبر الإنترنت للمبتدئين',
+      translationSource: 'translation',
+      semantics: classifyProductSemantics({
+        query: 'formation e-commerce',
+        description: 'Formation e-commerce en ligne pour débutants avec modules vidéo et support WhatsApp.',
+        geo: 'Morocco'
+      })
+    },
+    geo: 'Morocco',
+    lang: 'ar',
+    personaCards: [{ id: 'p1', displayName: 'Persona 1', summary: 'يريد مسارا واضحا', details: { buyingTriggers: ['منهج'] } }]
+  });
+  assert.equal(model.productUnderstanding.classificationLayer, 'product_service_intake');
+  assert.equal(model.productUnderstanding.productSemantics.productType, 'education');
+  assert.equal(model.productUnderstanding.productSemantics.deliveryMode, 'digital');
+  assert.equal(model.productUnderstanding.reportLabel, 'تكوين التجارة الإلكترونية');
+  assert.match(model.productUnderstanding.originalDescription, /Formation e-commerce/);
+});
+
 test('solar projector market produces distinct useful angles', () => {
   const model = buildAngleDrivenStpModel({
     query: 'projecteur solaire Libya',

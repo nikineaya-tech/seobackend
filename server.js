@@ -4739,6 +4739,7 @@ function safeUserContextFromBody(body = {}) {
   const ctx = body?.context || body?.businessContext || {};
   return {
     offer: cleanProofText(ctx.offer || body.offer, 180),
+    productDescription: cleanProofText(ctx.productDescription || body.productDescription, 900),
     audience: cleanProofText(ctx.audience || body.audience, 180),
     objective: cleanProofText(ctx.objective || body.objective, 160),
     priceRange: cleanProofText(ctx.priceRange || body.priceRange, 80),
@@ -4747,6 +4748,8 @@ function safeUserContextFromBody(body = {}) {
     selectedCountry: cleanProofText(ctx.selectedCountry || body.selectedCountry || body.geo, 90),
     userAudience: cleanProofText(ctx.userAudience || ctx.audience || body.userAudience, 180),
     businessModel: cleanProofText(ctx.businessModel || body.businessModel, 120),
+    resources: cleanProofText(ctx.resources || ctx.ressources || body.resources, 180),
+    price: cleanProofText(ctx.price || ctx.pricing || body.price, 100),
     constraints: cleanProofArray(ctx.constraints || body.constraints, 6, 120),
     channels: cleanProofArray(ctx.channels || body.channels, 6, 90)
   };
@@ -4755,16 +4758,18 @@ function safeUserContextFromBody(body = {}) {
 function formatUserContextForPrompt(context = {}, noDataLabel = 'Not provided') {
   const ctx = context && typeof context === 'object' ? context : {};
   const known = Array.isArray(ctx.knownCompetitors) ? ctx.knownCompetitors.join(', ') : ctx.knownCompetitors;
-  const hasContext = [ctx.offer, ctx.audience, ctx.objective, ctx.priceRange, known, ctx.cityOrRegion].some(Boolean);
+  const hasContext = [ctx.productDescription, ctx.offer, ctx.audience, ctx.objective, ctx.priceRange, ctx.price, known, ctx.cityOrRegion].some(Boolean);
   if (!hasContext) return '';
   return `
-USER-PROVIDED BUSINESS CONTEXT:
+ USER-PROVIDED BUSINESS CONTEXT:
+- Product/service description: ${ctx.productDescription || noDataLabel}
 - Offer: ${ctx.offer || noDataLabel}
 - Audience: ${ctx.audience || noDataLabel}
 - Objective: ${ctx.objective || noDataLabel}
 - Price: ${ctx.priceRange || noDataLabel}
 - Known competitors: ${known || noDataLabel}
 - City/region: ${ctx.cityOrRegion || noDataLabel}
+- Product classification handoff: ${ctx.productIntake?.handoff ? JSON.stringify(ctx.productIntake.handoff) : noDataLabel}
 
 RULES:
 - Use this context to adapt recommendations.
@@ -10014,13 +10019,15 @@ JSON uniquement :
 const safeUserCtx = (userIntentContext && typeof userIntentContext === 'object') ? userIntentContext : {};
 const hasUserContext = Object.values(safeUserCtx).some(v => v && (typeof v === 'string' ? v.length > 0 : Array.isArray(v) ? v.length > 0 : false));
 const userBusinessContextBlock = hasUserContext ? `
-CONTEXTE BUSINESS FOURNI PAR L'UTILISATEUR :
-Offre : ${safeUserCtx.offer || ND}
+ CONTEXTE BUSINESS FOURNI PAR L'UTILISATEUR :
+ Description obligatoire du produit/service : ${safeUserCtx.productDescription || ND}
+ Offre : ${safeUserCtx.offer || ND}
 Audience : ${safeUserCtx.audience || ND}
 Objectif : ${safeUserCtx.objective || ND}
 Prix : ${safeUserCtx.priceRange || ND}
 Concurrents connus : ${Array.isArray(safeUserCtx.knownCompetitors) ? safeUserCtx.knownCompetitors.join(', ') : (safeUserCtx.knownCompetitors || ND)}
-Ville/région : ${safeUserCtx.cityOrRegion || ND}
+ Ville/région : ${safeUserCtx.cityOrRegion || ND}
+ FICHE DE TRANSMISSION DE LA PREMIÈRE COUCHE : ${safeUserCtx.productIntake?.handoff ? JSON.stringify(safeUserCtx.productIntake.handoff) : ND}
 
 RÈGLES D'UTILISATION DU CONTEXTE :
 - Utilise ce contexte pour adapter les recommandations à la situation réelle.
@@ -10449,6 +10456,71 @@ function stpText(value, max = 220) {
     return cleanProofText(value, max);
 }
 
+/**
+ * First STP handoff: the user's explicit offer description is classified and
+ * localized before SERP, competitor, angle and persona layers receive it.
+ * This is a structured handoff, not a generated marketing claim.
+ */
+async function buildStpProductIntakeLayer({ query = '', description = '', geo = '', lang = 'fr' } = {}) {
+    const originalQuery = stpText(query, 180);
+    const originalDescription = stpText(description, 900);
+    const semantics = classifyProductSemantics({
+        query: originalQuery,
+        description: originalDescription,
+        geo: stpText(geo, 80)
+    });
+    const [queryLocale, descriptionLocale] = await Promise.all([
+        localizeCompetitorQueryForAnalysis(originalQuery, lang),
+        localizeCompetitorQueryForAnalysis(originalDescription, lang)
+    ]);
+    const reportLabel = stpText(
+        queryLocale?.localizedQuery || localizeStpSubjectForReport(originalQuery, lang) || originalQuery,
+        180
+    );
+    const reportDescription = stpText(
+        descriptionLocale?.localizedQuery || localizeStpSubjectForReport(originalDescription, lang) || originalDescription,
+        900
+    );
+    const translationSource = [queryLocale?.source, descriptionLocale?.source]
+        .filter(Boolean)
+        .every(source => source === 'original')
+        ? 'original'
+        : (descriptionLocale?.source || queryLocale?.source || 'local_report_normalization');
+
+    return {
+        status: 'ready',
+        layer: 'product_service_intake',
+        inputRequired: true,
+        originalQuery,
+        originalDescription,
+        reportLanguage: resolveLang(lang).code,
+        inputLanguage: detectCompetitorQueryLanguage(`${originalQuery} ${originalDescription}`) || 'unknown',
+        reportLabel,
+        reportDescription,
+        translationSource,
+        classificationConfidence: 'MEDIUM',
+        semantics,
+        handoff: {
+            reportLabel,
+            reportDescription,
+            productType: semantics.productType,
+            productFamily: semantics.productFamily,
+            deliveryMode: semantics.deliveryMode,
+            requiresPhysicalShipping: semantics.requiresPhysicalShipping,
+            requiresLocalPresence: semantics.requiresLocalPresence,
+            geographicRelevance: semantics.geographicRelevance,
+            purchaseNature: semantics.purchaseNature,
+            primaryOutcomeTypes: semantics.primaryOutcomeTypes,
+            localRelevanceAllowed: semantics.localRelevanceAllowed,
+            physicalLocalDeliveryAllowed: semantics.physicalLocalDeliveryAllowed,
+            categoryDecisionCriteria: semantics.categoryDecisionCriteria,
+            categoryProofLexicon: semantics.categoryProofLexicon,
+            categoryRiskLexicon: semantics.categoryRiskLexicon,
+            rule: 'Use this product/service classification as the source of truth for downstream STP layers; do not infer a different delivery model from a generic keyword.'
+        }
+    };
+}
+
 function localizeStpSubjectForReport(value = '', lang = 'fr') {
     const raw = stpText(value, 160);
     if (!raw || lang !== 'ar') return raw;
@@ -10524,9 +10596,10 @@ function stpLangPack(lang = 'fr') {
     };
 }
 
-function inferStpArchetype(query = '', competitorData = {}, urlIntel = null) {
+function inferStpArchetype(query = '', competitorData = {}, urlIntel = null, productDescription = '') {
     const corpus = [
         query,
+        productDescription,
         competitorData?.productServiceAudit?.coreOffering,
         competitorData?.grandSlamOfferBlueprint?.theIrresistibleOffer,
         competitorData?.marketInsights?.serpIntent,
@@ -10569,7 +10642,7 @@ function inferStpArchetype(query = '', competitorData = {}, urlIntel = null) {
     return 'general_market';
 }
 
-function buildStpSegmentCandidates({ query = '', geo = '', budget = '', objective = '', competitorData = {}, archetype = 'general_market', lang = 'fr' } = {}) {
+function buildStpSegmentCandidates({ query = '', productDescription = '', productIntake = null, geo = '', budget = '', objective = '', competitorData = {}, archetype = 'general_market', lang = 'fr' } = {}) {
     const marketName = localizeCompetitorMarketName(geo, lang);
     const intent = stpText(competitorData?.marketInsights?.serpIntent || competitorData?.marketInsights?.intent || '', 120);
     const leader = competitorData?.top10Competitors?.[0] || competitorData?.competitors?.[0] || {};
@@ -10581,7 +10654,7 @@ function buildStpSegmentCandidates({ query = '', geo = '', budget = '', objectiv
     ], 8);
 
     const baseNeed = localizeStpSubjectForReport(query, lang) || stpText(query, 140);
-    const productSemantics = classifyProductSemantics({ query: `${query} ${baseNeed}`, geo, competitorData });
+    const productSemantics = productIntake?.semantics || classifyProductSemantics({ query: `${query} ${baseNeed}`, description: productDescription, geo, competitorData });
     const productFamily = productSemantics.productFamily || 'general_offer';
     const candidates = [];
 
@@ -11540,8 +11613,8 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         price: priceInput,
         lang
     });
-    const rawOfferForSemantics = `${ctx.offer || ''} ${inputs.query || ''} ${competitorData?.query || ''} ${query || ''}`;
-    const productSemantics = classifyProductSemantics({ query: rawOfferForSemantics, geo: market, competitorData });
+    const rawOfferForSemantics = `${ctx.productDescription || ''} ${ctx.offer || ''} ${inputs.query || ''} ${competitorData?.query || ''} ${query || ''}`;
+    const productSemantics = ctx.productIntake?.semantics || classifyProductSemantics({ query: rawOfferForSemantics, description: ctx.productDescription || '', geo: market, competitorData });
     const productFamily = productSemantics.productFamily || 'general_offer';
     const isOnlineEducationOffer = /formation|cours|course|training|coaching|e[-\s]?commerce|commerce en ligne|متجر إلكتروني|تكوين|دورة|تعلم|تعليم|التجارة الإلكترونية/i.test(rawOfferForSemantics);
     const isBeautySkinOffer = productFamily === 'beauty_skin';
@@ -12547,7 +12620,7 @@ async function stpOptionalLayer(promise, timeoutMs, label) {
     }
 }
 
-async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget = '', objective = '', businessModel = '', modelMode = '', forceRefresh = false, context = {}, userSiteData = null } = {}) {
+async function buildDakaStpDecision({ query, productDescription = '', productIntake = null, geo, lang = 'fr', url = '', budget = '', objective = '', businessModel = '', modelMode = '', forceRefresh = false, context = {}, userSiteData = null } = {}) {
     const startedAt = Date.now();
     const langPack = stpLangPack(lang);
     const safeGeo = resolveSerpGeo(geo || 'Morocco').location || 'Morocco';
@@ -12564,7 +12637,9 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
             stpMode: true,
             budget,
             objective,
-            businessModel
+            businessModel,
+            productDescription,
+            productIntake
         }
     );
 
@@ -12577,7 +12652,7 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         };
     }
 
-    const archetype = inferStpArchetype(query, competitorData, userSiteData);
+    const archetype = inferStpArchetype(query, competitorData, userSiteData, productDescription);
     const inferredContext = inferStpOperatingContext({
         query,
         geo: safeGeo,
@@ -12600,6 +12675,8 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         constraints: stpArray(context?.constraints?.length ? context.constraints : inferredContext.values?.constraints, 8),
         channels: stpArray(context?.channels?.length ? context.channels : inferredContext.values?.channels, 8)
     };
+    if (productDescription) effectiveContext.productDescription = stpText(productDescription, 900);
+    if (productIntake) effectiveContext.productIntake = productIntake;
     const effectiveBudget = budget || effectiveContext.budget || '';
     const effectiveObjective = objective || effectiveContext.objective || '';
     const effectiveBusinessModel = businessModel || effectiveContext.businessModel || archetype;
@@ -12608,6 +12685,8 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
 
     const rawSegments = buildStpSegmentCandidates({
         query,
+        productDescription,
+        productIntake,
         geo: safeGeo,
         budget: effectiveBudget,
         objective: effectiveObjective,
@@ -12693,9 +12772,11 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
     if (personaAiOverlay?.personas?.length) {
         personaCards = mergeStpPersonaAiOverlay(personaCards, personaAiOverlay.personas);
     }
-    const reportSubject = localizeStpSubjectForReport(query, langPack.code) || query;
+    const reportSubject = productIntake?.reportLabel || localizeStpSubjectForReport(query, langPack.code) || query;
     const stpAngleModel = buildAngleDrivenStpModel({
         query: reportSubject,
+        productDescription,
+        productIntake,
         geo: safeGeo,
         lang: langPack.code,
         segments: scoredSegments,
@@ -12799,7 +12880,8 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         method: {
             framework: 'Segmentation -> Targeting -> Positioning',
             processingLayers: [
-                'Input normalization: keyword, geo, language, budget, optional URL',
+                'Product/service intake: mandatory user description, classification and report-language handoff',
+                'Input normalization: keyword, geo, language, budget, objective and optional URL',
                 'Market acquisition: SERP, competitors, geo, keyword and proof layers',
                 'Context inference: offer, audience, business model, region, competitors, constraints and channels',
                 'Segmentation layer: market-condition segments, merge test, angle-as-segment rejection',
@@ -12823,6 +12905,8 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
         },
         inputs: {
             query,
+            productDescription: productDescription || effectiveContext.productDescription || null,
+            productIntake: productIntake || null,
             geo: safeGeo,
             lang: langPack.code,
             url: url || null,
@@ -12847,12 +12931,15 @@ async function buildDakaStpDecision({ query, geo, lang = 'fr', url = '', budget 
             proofModel: Boolean(competitorData.proofModel),
             contextInference: inferredContext.mode,
             aiModelMode: normalizeAiModelMode(modelMode),
+            productServiceIntake: Boolean(productIntake?.status === 'ready'),
+            reportLanguageHandoff: Boolean(productIntake?.reportDescription),
             marketingAngleEngine: Boolean(stpAngleModel?.marketingAngles?.length),
             personaPromptLayer: Boolean(personaAiOverlay?.personas?.length),
             beachhead: true,
             aiRefinement: false
         },
         inferredContext,
+        productIntake: productIntake || null,
         productUnderstanding: stpAngleModel?.productUnderstanding || null,
         problemsJtbdUseCases: stpAngleModel?.problemsJtbdUseCases || [],
         personaPromptLayer: personaAiOverlay ? { model: personaAiOverlay.model } : null,
@@ -14285,6 +14372,7 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
             geo = 'Morocco',
             lang = 'fr',
             url = '',
+            productDescription = '',
             budget = '',
             objective = '',
             businessModel = '',
@@ -14313,11 +14401,35 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
         if (!['fr', 'ar', 'en'].includes(lang)) lang = 'fr';
         requestLang = lang;
 
+        productDescription = stpText(productDescription || context?.productDescription, 900);
+        if (!productDescription || productDescription.length < 12) {
+            return res.status(400).json({
+                success: false,
+                error: 'PRODUCT_DESCRIPTION_REQUIRED',
+                message: lang === 'ar'
+                    ? 'وصف المنتج أو الخدمة مطلوب قبل تشغيل طبقة STP.'
+                    : lang === 'en'
+                        ? 'A product or service description is required before running STP.'
+                        : 'La description du produit ou service est obligatoire avant de lancer le STP.'
+            });
+        }
+
         const geoData = resolveSerpGeo(String(geo || '').trim() || 'Morocco');
         const safeGeo = geoData.location || 'Morocco';
         const safeForceRefresh = Boolean(forceRefresh) && !!req.user?.isAdmin;
         const safeContext = safeUserContextFromBody({ ...req.body, context });
         const safeModelMode = normalizeAiModelMode(modelMode || context?.modelMode || context?.aiModelMode);
+        const productIntake = await buildStpProductIntakeLayer({
+            query,
+            description: productDescription,
+            geo: safeGeo,
+            lang
+        });
+        const handoffContext = {
+            ...safeContext,
+            productDescription,
+            productIntake
+        };
 
         const isValidUrl = (u) => {
             try {
@@ -14355,7 +14467,9 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
             businessModel: stpText(businessModel, 80),
             modelMode: safeModelMode,
             forceRefresh: safeForceRefresh,
-            context: safeContext,
+            context: handoffContext,
+            productDescription,
+            productIntake,
             userSiteData
         });
 

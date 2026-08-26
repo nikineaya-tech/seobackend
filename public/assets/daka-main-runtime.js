@@ -5968,6 +5968,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         dataNeededToUpgrade: 'بيانات ترفع الثقة',
         success: 'تم بناء قرار STP.',
         needInput: 'أدخل كلمة السوق أو رابطا أولا.',
+        needDescription: 'أدخل وصف المنتج أو الخدمة قبل توليد STP.',
         needObjective: 'اختر الهدف الأول قبل توليد STP.',
         error: 'تعذر بناء STP الآن.'
     };
@@ -6072,6 +6073,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         dataNeededToUpgrade: 'Data to improve confidence',
         success: 'STP decision is ready.',
         needInput: 'Enter a market keyword or URL first.',
+        needDescription: 'Enter the product or service description before generating STP.',
         needObjective: 'Choose the first objective before generating STP.',
         error: 'Unable to build STP right now.'
     };
@@ -6176,6 +6178,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         dataNeededToUpgrade: 'Données pour monter la confiance',
         success: 'Décision STP prête.',
         needInput: 'Entrez un mot-clé marché ou une URL d’abord.',
+        needDescription: 'Décrivez le produit ou service avant de générer le STP.',
         needObjective: 'Choisissez l’objectif premier avant de générer le STP.',
         error: 'Impossible de construire le STP maintenant.'
     };
@@ -6244,6 +6247,25 @@ function initStpObjectiveSelector() {
     syncStpObjectiveChoice();
 }
 
+function syncStpProductDescription() {
+    const field = document.getElementById('stpProductDescription');
+    const shell = document.getElementById('stpProductIntake');
+    if (!field || !shell) return '';
+    const value = String(field.value || '').trim();
+    const valid = value.length >= 12;
+    shell.classList.toggle('is-ready', valid);
+    shell.classList.toggle('is-invalid', Boolean(value) && !valid);
+    return value;
+}
+
+function initStpProductDescription() {
+    const field = document.getElementById('stpProductDescription');
+    if (!field || field.dataset.stpDescriptionBound) return;
+    field.addEventListener('input', syncStpProductDescription);
+    field.dataset.stpDescriptionBound = '1';
+    syncStpProductDescription();
+}
+
 function collectStpPayload() {
     const read = (id) => document.getElementById(id)?.value?.trim() || '';
     const cleanOptionalBenchmarkUrl = (value = '') => {
@@ -6263,6 +6285,7 @@ function collectStpPayload() {
 
     const keyword = read('stpKeyword') || read('keyword');
     const url = cleanOptionalBenchmarkUrl(read('stpUrl') || read('url'));
+    const productDescription = read('stpProductDescription');
     const country = document.getElementById('stpCountry')?.value || document.getElementById('country')?.value || 'Morocco';
     const lang = document.getElementById('stpLang')?.value || document.getElementById('analysisLang')?.value || STATE.currentLang || 'fr';
     const modelModeRaw = document.getElementById('stpModelMode')?.value || localStorage.getItem('dakaAiModelMode') || 'auto';
@@ -6272,6 +6295,7 @@ function collectStpPayload() {
     const objectiveDetail = read('stpObjectiveDetail');
     const objectiveValue = stpUiArray([objectiveChoice, objectiveDetail], 2).join(': ');
     const stpContext = {
+        productDescription,
         offer: read('stpOffer') || context.offer,
         audience: read('stpAudience') || context.audience,
         objective: objectiveValue || read('stpObjective') || context.objective,
@@ -6284,6 +6308,7 @@ function collectStpPayload() {
     };
     return {
         query: keyword || url,
+        productDescription,
         url: url || '',
         geo: stpContext.cityOrRegion || country,
         lang,
@@ -6316,6 +6341,15 @@ function ensureStpDecisionStyles() {
       .daka-stp-btn[disabled]{opacity:.62;cursor:wait}
       .daka-stp-report{margin-top:18px;border:1px solid rgba(125,211,252,.18);border-radius:24px;background:radial-gradient(circle at 0 0,rgba(34,211,238,.13),transparent 28%),linear-gradient(145deg,rgba(7,17,32,.96),rgba(2,6,23,.86));padding:clamp(16px,2.4vw,24px);box-shadow:0 24px 70px rgba(0,0,0,.28)}
       .daka-stp-report h2,.daka-stp-report h3,.daka-stp-report h4{margin:0;color:#fff}
+      .daka-stp-product-understanding{display:grid;gap:12px;margin-bottom:16px;border:1px solid rgba(34,211,238,.24);border-radius:20px;background:linear-gradient(145deg,rgba(8,28,44,.78),rgba(2,6,23,.52));padding:15px}
+      .daka-stp-product-understanding-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+      .daka-stp-product-understanding-head h3{display:flex;align-items:center;gap:9px;color:#ecfeff;font-size:.96rem}
+      .daka-stp-product-understanding-head p{margin:5px 0 0;color:#9fb2cb;font-size:.76rem;line-height:1.5}
+      .daka-stp-product-understanding-head i{color:#67e8f9}
+      .daka-stp-product-understanding-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:9px}
+      .daka-stp-product-understanding-item{min-width:0;border:1px solid rgba(148,163,184,.12);border-radius:14px;background:rgba(2,6,23,.42);padding:10px}
+      .daka-stp-product-understanding-item small{display:block;color:#7dd3fc;font-size:.63rem;font-weight:950;letter-spacing:.05em;text-transform:uppercase;margin-bottom:5px}
+      .daka-stp-product-understanding-item strong{display:block;color:#f8fafc;font-size:.78rem;line-height:1.45;overflow-wrap:anywhere}
       .daka-stp-hero{display:grid;grid-template-columns:minmax(0,1fr) minmax(170px,.28fr);gap:16px;align-items:stretch;margin-bottom:16px}
       .daka-stp-kicker{display:inline-flex;align-items:center;gap:8px;color:#67e8f9;font-size:.68rem;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
       .daka-stp-hero p{margin:8px 0 0;color:#b7c7dd;line-height:1.65}
@@ -6966,6 +7000,34 @@ function renderStpStrategyHierarchy(data = {}, copy = {}) {
     </div>`;
 }
 
+function renderStpProductUnderstanding(product = {}, lang = 'fr') {
+    if (!product || typeof product !== 'object') return '';
+    const isAr = lang === 'ar';
+    const isEn = lang === 'en';
+    const label = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
+    const semantics = product.productSemantics || product.semantics || product;
+    const value = (item, fallback = '') => stpUiText(item, fallback);
+    const reportLabel = value(product.reportLabel || product.query, label('Offre identifiée', 'Identified offer', 'العرض المحدد'));
+    const reportDescription = value(product.reportDescription, value(product.originalDescription, ''));
+    const fields = [
+        [label('Nature', 'Offer type', 'طبيعة العرض'), semantics.productType],
+        [label('Mode d’accès', 'Access model', 'طريقة الوصول'), semantics.deliveryMode],
+        [label('Dépendance géographique', 'Geographic dependency', 'الاعتماد الجغرافي'), semantics.geographicRelevance],
+        [label('Résultats attendus', 'Expected outcomes', 'النتائج المتوقعة'), semantics.primaryOutcomeTypes]
+    ].filter(item => value(item[1], ''));
+    return `<section class="daka-stp-product-understanding">
+      <div class="daka-stp-product-understanding-head">
+        <div><h3><i class="fas fa-layer-group"></i>${stpUiEsc(label('Première couche · Produit / service compris', 'First layer · Product / service understood', 'الطبقة الأولى · فهم المنتج أو الخدمة'))}</h3><p>${stpUiEsc(label('Cette fiche est transmise aux couches SERP, concurrents, STP, angles et personas.', 'This handoff is passed to the SERP, competitor, STP, angle and persona layers.', 'يتم تمرير هذه البطاقة إلى طبقات SERP والمنافسين وSTP والزوايا والشخصيات.'))}</p></div>
+        <span class="daka-stp-chip"><i class="fas fa-language"></i> ${stpUiEsc(label('Langue du rapport', 'Report language', 'لغة التقرير'))}: ${stpUiEsc(lang.toUpperCase())}</span>
+      </div>
+      <div class="daka-stp-product-understanding-grid">
+        <div class="daka-stp-product-understanding-item"><small>${stpUiEsc(label('Nom traduit', 'Report label', 'الاسم المترجم'))}</small><strong>${stpUiEsc(reportLabel)}</strong></div>
+        ${reportDescription ? `<div class="daka-stp-product-understanding-item"><small>${stpUiEsc(label('Description normalisée', 'Normalized description', 'الوصف المنظم'))}</small><strong>${stpUiEsc(reportDescription)}</strong></div>` : ''}
+        ${fields.map(([name, val]) => `<div class="daka-stp-product-understanding-item"><small>${stpUiEsc(name)}</small><strong>${stpUiEsc(value(val))}</strong></div>`).join('')}
+      </div>
+    </section>`;
+}
+
 function renderStpDecision(data) {
     const container = document.getElementById('resultsStpDecision');
     if (!container) return;
@@ -7019,8 +7081,10 @@ function renderStpDecision(data) {
         lang
     });
 
+    const productUnderstandingHtml = renderStpProductUnderstanding(data?.productUnderstanding || data?.productIntake, lang);
     const strategyHtml = renderStpStrategyHierarchy(data, copy);
     container.innerHTML = `<section class="daka-stp-report daka-stp-persona-only" data-export-feature="summary" dir="${dir}">
+      ${productUnderstandingHtml}
       ${strategyHtml}
       ${personaCardsHtml || `<div class="daka-stp-persona-head"><div><span class="daka-stp-kicker"><i class="fas fa-users-viewfinder"></i>${stpUiEsc(copy.personas)}</span><p>${stpUiEsc(stpUiText(chosen.need, copy.subtitle))}</p></div></div>`}
     </section>`;
@@ -7033,6 +7097,11 @@ async function requestStpDecision(e) {
     const payload = collectStpPayload();
     const copy = getStpCopy(payload.lang);
     if (!payload.query) return toast.warning(copy.needInput);
+    if (!payload.productDescription || payload.productDescription.length < 12) {
+        document.getElementById('stpProductIntake')?.classList.add('is-invalid');
+        document.getElementById('stpProductDescription')?.focus();
+        return toast.warning(copy.needDescription);
+    }
     if (!document.querySelector('input[name="stpObjectiveChoice"]:checked')) {
         document.querySelector('.daka-stp-objective-field')?.classList.add('is-invalid');
         document.querySelector('.daka-stp-objective-card input')?.focus();
@@ -7099,6 +7168,7 @@ async function requestStpDecision(e) {
 function initStpDecisionTools() {
     ensureStpDecisionStyles();
     hydrateCompetitorCountrySelect(null, document.getElementById('stpLang')?.value || STATE.currentLang || 'fr');
+    initStpProductDescription();
     initStpObjectiveSelector();
 
     const form = document.getElementById('stpForm');

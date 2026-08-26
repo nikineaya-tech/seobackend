@@ -9,15 +9,51 @@
     (function () {
         try {
             var params = new URLSearchParams(window.location.search || '');
+            var referrer = document.referrer || '';
+            var href = window.location.href || '';
+            var host = window.location.hostname || '';
+            var isDealHost =
+                /(^|\.)deal\.ai$/i.test(host) ||
+                /https?:\/\/([^/]+\.)?deal\.ai\//i.test(referrer);
             var isDealEditor =
-                /(^|\.)deal\.ai$/i.test(window.location.hostname || '') &&
+                isDealHost &&
                 (/\/simple-websites\/edit\//i.test(window.location.pathname || '') ||
+                 /simple-websites\/edit|preview_mode|pagePath|funnel=/i.test(href + ' ' + referrer) ||
                  params.has('preview_mode') ||
                  params.has('funnel') ||
                  params.has('pagePath'));
+            try {
+                if (!isDealEditor && window.parent && window.parent !== window) {
+                    isDealEditor = /(^|\.)deal\.ai$/i.test(window.parent.location.hostname || '');
+                }
+            } catch (_) {}
             if (!isDealEditor) return;
             window.DAKA_DEAL_EDITOR_SAFE = true;
             document.documentElement.classList.add('daka-deal-editor');
+            var style = document.createElement('style');
+            style.id = 'daka-deal-editor-safe-style';
+            style.textContent = [
+                'html.daka-deal-editor,html.daka-deal-editor body{overflow-x:hidden!important;background:#020617!important;}',
+                'html.daka-deal-editor #dakaAppMatrixCanvas,html.daka-deal-editor .daka-app-matrix-glow,html.daka-deal-editor .daka-app-matrix-glow:before,html.daka-deal-editor .daka-app-matrix-glow:after,html.daka-deal-editor .daka-form-matrix-canvas{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;}',
+                'html.daka-deal-editor body:before,html.daka-deal-editor .tab-content>.card:after,html.daka-deal-editor .form-section:after{display:none!important;content:none!important;pointer-events:none!important;}',
+                'html.daka-deal-editor .main-wrapper,html.daka-deal-editor main,html.daka-deal-editor main>.container,html.daka-deal-editor .tab-content,html.daka-deal-editor .form-section{position:relative!important;z-index:auto!important;isolation:auto!important;}',
+                'html.daka-deal-editor .header{position:relative!important;top:auto!important;}'
+            ].join('');
+            (document.head || document.documentElement).appendChild(style);
+            function applyDealBodySafeMode() {
+                if (!document.body) return;
+                document.body.classList.add('daka-deal-editor');
+                document.querySelectorAll('#dakaAppMatrixCanvas,.daka-app-matrix-glow,.daka-form-matrix-canvas').forEach(function (el) {
+                    el.setAttribute('hidden', '');
+                    el.style.setProperty('display', 'none', 'important');
+                    el.style.setProperty('visibility', 'hidden', 'important');
+                    el.style.setProperty('pointer-events', 'none', 'important');
+                });
+            }
+            applyDealBodySafeMode();
+            document.addEventListener('DOMContentLoaded', applyDealBodySafeMode);
+            window.addEventListener('load', applyDealBodySafeMode);
+            window.setTimeout(applyDealBodySafeMode, 200);
         } catch (_) {}
     })();
     </script>
@@ -1644,6 +1680,100 @@ body.loading-active { overflow: hidden !important; }
   min-height  : 120px;
   resize      : vertical;
   padding-left: 1rem;
+}
+
+.daka-stp-product-intake {
+  position: relative;
+  margin: 0 0 18px;
+  padding: 18px;
+  border: 1px solid rgba(34, 211, 238, 0.30);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 100% 0%, rgba(139, 92, 246, 0.14), transparent 34%),
+    linear-gradient(145deg, rgba(8, 28, 44, 0.92), rgba(2, 6, 23, 0.82));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05), 0 18px 45px rgba(0,0,0,.18);
+}
+
+.daka-stp-product-intake::before {
+  content: '01';
+  position: absolute;
+  inset-inline-end: 18px;
+  top: 14px;
+  color: rgba(103, 232, 249, .32);
+  font-size: 2rem;
+  font-weight: 950;
+  letter-spacing: .04em;
+}
+
+.daka-stp-product-intake-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding-inline-end: 48px;
+}
+
+.daka-stp-product-intake-icon {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #03111c;
+  background: linear-gradient(135deg, #22d3ee, #8b5cf6);
+  box-shadow: 0 10px 28px rgba(34,211,238,.20);
+}
+
+.daka-stp-product-intake-title {
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1rem;
+  font-weight: 950;
+}
+
+.daka-stp-product-intake-subtitle {
+  margin: 4px 0 0;
+  color: #a9c0d8;
+  font-size: .78rem;
+  line-height: 1.55;
+}
+
+.daka-stp-product-intake .textarea-field {
+  min-height: 112px;
+  width: 100%;
+  border-color: rgba(103, 232, 249, .25);
+  background: rgba(2, 6, 23, .60);
+}
+
+.daka-stp-product-intake .textarea-field:focus {
+  border-color: #22d3ee;
+  box-shadow: 0 0 0 3px rgba(34,211,238,.13), 0 0 28px rgba(34,211,238,.10);
+}
+
+.daka-stp-product-intake-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  color: #8fa8c2;
+  font-size: .72rem;
+}
+
+.daka-stp-product-intake-required {
+  color: #86efac;
+  font-weight: 900;
+}
+
+.daka-stp-product-intake.is-invalid {
+  border-color: rgba(248,113,113,.72);
+  box-shadow: 0 0 0 2px rgba(248,113,113,.14), 0 18px 45px rgba(0,0,0,.18);
+}
+
+.daka-stp-product-intake.is-ready {
+  border-color: rgba(34,197,94,.42);
 }
 
 .daka-stp-objective-field {
@@ -4139,8 +4269,6 @@ table tbody td {
 
     </style>
 <body>
- <canvas id="dakaAppMatrixCanvas" aria-hidden="true"></canvas>
- <div class="daka-app-matrix-glow" aria-hidden="true"></div>
  <div class="main-wrapper">
     <header class="header" data-nav-density="compact">
         <div class="container">
@@ -4629,6 +4757,21 @@ table tbody td {
                 </div>
 
                 <form id="stpForm">
+                    <div class="daka-stp-product-intake" id="stpProductIntake">
+                        <div class="daka-stp-product-intake-head">
+                            <span class="daka-stp-product-intake-icon"><i class="fas fa-cubes-stacked"></i></span>
+                            <div>
+                                <h2 class="daka-stp-product-intake-title" data-i18n="stp_product_description_title">Décrivez d’abord votre produit ou service</h2>
+                                <p class="daka-stp-product-intake-subtitle" data-i18n="stp_product_description_subtitle">Cette première couche identifie la nature de l’offre, son mode d’accès et les preuves compatibles avant de construire les personas.</p>
+                            </div>
+                        </div>
+                        <label class="form-label" for="stpProductDescription" data-i18n="stp_label_product_description">Description exacte du produit ou service *</label>
+                        <textarea id="stpProductDescription" class="textarea-field" required minlength="12" maxlength="900" aria-required="true" data-i18n-placeholder="stp_placeholder_product_description" placeholder="Ex: formation e-commerce en ligne pour débutants au Maroc, avec modules vidéo, exercices pratiques et accompagnement WhatsApp."></textarea>
+                        <div class="daka-stp-product-intake-meta">
+                            <span data-i18n="stp_product_description_hint">Décrivez ce que c’est, pour qui, le résultat attendu et comment le client y accède.</span>
+                            <span class="daka-stp-product-intake-required"><i class="fas fa-lock"></i> <span data-i18n="stp_required_field">Champ obligatoire</span></span>
+                        </div>
+                    </div>
                     <div class="form-group">
                         <label class="form-label" for="stpKeyword" data-i18n="stp_label_keyword">Marché, niche ou offre à positionner</label>
                         <div class="input-wrapper">
@@ -5409,6 +5552,12 @@ navkeywords: 'Demande marché',
         stp_layer_badge: 'STP BACKEND LAYER',
         stp_label_keyword: 'Marché, niche ou offre à positionner',
         stp_placeholder_keyword: 'Ex: agence marketing IA Maroc',
+        stp_product_description_title: 'Décrivez d’abord votre produit ou service',
+        stp_product_description_subtitle: 'Cette première couche identifie la nature de l’offre, son mode d’accès et les preuves compatibles avant de construire les personas.',
+        stp_label_product_description: 'Description exacte du produit ou service *',
+        stp_placeholder_product_description: 'Ex: formation e-commerce en ligne pour débutants au Maroc, avec modules vidéo, exercices pratiques et accompagnement WhatsApp.',
+        stp_product_description_hint: 'Décrivez ce que c’est, pour qui, le résultat attendu et comment le client y accède.',
+        stp_required_field: 'Champ obligatoire',
         stp_label_url: 'Votre site pour benchmark direct',
         stp_placeholder_url: 'https://votre-site.com',
         stp_label_country: 'Pays et marché cible',
@@ -5607,6 +5756,12 @@ navkeywords: 'طلب السوق',
         stp_layer_badge: 'طبقة STP في الخلفية',
         stp_label_keyword: 'السوق أو النيتش أو العرض المراد تموضعه',
         stp_placeholder_keyword: 'مثال: وكالة تسويق بالذكاء الاصطناعي المغرب',
+        stp_product_description_title: 'صف منتجك أو خدمتك أولا',
+        stp_product_description_subtitle: 'تحدد هذه الطبقة الأولى طبيعة العرض وطريقة الوصول إليه والأدلة المناسبة قبل بناء الشخصيات.',
+        stp_label_product_description: 'الوصف الدقيق للمنتج أو الخدمة *',
+        stp_placeholder_product_description: 'مثال: تكوين تجارة إلكترونية عبر الإنترنت للمبتدئين في المغرب مع دروس فيديو وتمارين ودعم عبر واتساب.',
+        stp_product_description_hint: 'اشرح ما هو العرض ولمن والنتيجة المتوقعة وكيف يصل إليه العميل.',
+        stp_required_field: 'حقل إجباري',
         stp_label_url: 'موقعك للقياس المباشر',
         stp_placeholder_url: 'https://yoursite.com',
         stp_label_country: 'البلد والسوق المستهدف',
@@ -5805,6 +5960,12 @@ navkeywords: 'Market demand',
         stp_layer_badge: 'STP BACKEND LAYER',
         stp_label_keyword: 'Market, niche or offer to position',
         stp_placeholder_keyword: 'Ex: AI marketing agency Morocco',
+        stp_product_description_title: 'Describe your product or service first',
+        stp_product_description_subtitle: 'This first layer identifies the offer type, access model and compatible proof before building personas.',
+        stp_label_product_description: 'Exact product or service description *',
+        stp_placeholder_product_description: 'Ex: online e-commerce training for beginners in Morocco, with video modules, practical exercises and WhatsApp support.',
+        stp_product_description_hint: 'Explain what it is, who it is for, the expected outcome and how the customer accesses it.',
+        stp_required_field: 'Required field',
         stp_label_url: 'Your site for direct benchmark',
         stp_placeholder_url: 'https://your-site.com',
         stp_label_country: 'Target country and market',
@@ -6030,7 +6191,7 @@ navkeywords: 'Market demand',
         }, true);
     })();
     </script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260824-export-studio1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260825-stp-intake1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
 
 <style id="daka-brand-loader-style">
@@ -11298,8 +11459,19 @@ html.daka-deal-editor .header {
 
 (function initDakaAppMatrix() {
     if (window.DAKA_DEAL_EDITOR_SAFE || document.documentElement.classList.contains('daka-deal-editor')) return;
-    const canvas = document.getElementById('dakaAppMatrixCanvas');
-    if (!canvas || canvas.dataset.ready === '1') return;
+    let canvas = document.getElementById('dakaAppMatrixCanvas');
+    if (!canvas) {
+        const glow = document.createElement('div');
+        glow.className = 'daka-app-matrix-glow';
+        glow.setAttribute('aria-hidden', 'true');
+        canvas = document.createElement('canvas');
+        canvas.id = 'dakaAppMatrixCanvas';
+        canvas.setAttribute('aria-hidden', 'true');
+        canvas.style.pointerEvents = 'none';
+        document.body.prepend(glow);
+        document.body.prepend(canvas);
+    }
+    if (canvas.dataset.ready === '1') return;
     if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const ctx = canvas.getContext('2d');
