@@ -11916,9 +11916,14 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                         ? ['In-market beauty and personal care', 'Skincare interest signals', 'Engaged shoppers', 'Video viewers retargeting']
                         : ['In-market shoppers', 'Life events if relevant', 'Affinity by product category'];
         return {
+            assumptionStatus: pack('Hypothese d execution a valider', 'Execution hypothesis to validate', 'فرضية تنفيذ يجب التحقق منها'),
+            confidence: '40-55%',
+            validationNote: pack('Parametres Ads/Search indicatifs: valider par clics, leads, cout et objections avant scaling.', 'Indicative Ads/Search settings: validate with clicks, leads, cost and objections before scaling.', 'إعدادات إعلانية/بحثية تقديرية: تحقق عبر النقرات والعملاء والتكلفة والاعتراضات قبل التوسع.'),
             objective: pack('Test acquisition + preuve de demande', 'Acquisition test + demand proof', 'اختبار الاستحواذ وإثبات الطلب'),
             funnelStage: personaIndex === 0 ? 'TOFU/MOFU' : personaIndex <= 2 ? 'MOFU' : 'MOFU/BOFU',
             metaAds: {
+                confidence: '40-55%',
+                assumptionStatus: pack('Hypothese Meta Ads', 'Meta Ads hypothesis', 'فرضية Meta Ads'),
                 audienceType: metaAudienceType,
                 audienceName: pack(`Persona ${personaIndex + 1} · ${audienceLabel}`, `Persona ${personaIndex + 1} · ${audienceLabel}`, `Persona ${personaIndex + 1} · ${audienceLabel}`),
                 geo: localMarket,
@@ -11967,6 +11972,8 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 resourceGuidance
             },
             googleAds: {
+                confidence: '45-60%',
+                assumptionStatus: pack('Hypothese Search/SEO', 'Search/SEO hypothesis', 'فرضية Search/SEO'),
                 campaignType: pack('Search + remarketing YouTube/display léger', 'Search + light YouTube/display remarketing', 'بحث + إعادة استهداف خفيفة YouTube/display'),
                 searchIntent: pack('requêtes problème + solution + marché local', 'problem + solution + local market queries', 'طلبات بحث المشكلة + الحل + السوق المحلي'),
                 keywords: searchKeywords,
@@ -11990,7 +11997,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             measurement: {
                 primaryEvent: pack('clic CTA / WhatsApp / formulaire', 'CTA / WhatsApp / form click', 'نقرة CTA / WhatsApp / نموذج'),
                 secondaryEvent: pack('scroll 50%, temps page, clic preuve', '50% scroll, time on page, proof click', 'تمرير 50%، وقت الصفحة، نقرة الدليل'),
-                testBudgetRule: pack('Tester 3-5 jours, couper si aucun signal qualifié', 'Test 3-5 days, cut if no qualified signal', 'اختبار 3-5 أيام، إيقاف إذا لا توجد إشارة مؤهلة'),
+                testBudgetRule: pack('Tester 7-14 jours selon volume; couper si aucun signal qualifié', 'Test 7-14 days depending on volume; cut if no qualified signal', 'اختبار 7-14 يوما حسب الحجم؛ إيقاف إذا لا توجد إشارة مؤهلة'),
                 privacyAndQuality: pack('Consentement, exclusions propres, pas de ciblage sensible', 'Consent, clean exclusions, no sensitive targeting', 'موافقة، استبعادات نظيفة، لا استهداف حساس')
             }
         };
