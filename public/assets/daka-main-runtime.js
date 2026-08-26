@@ -5964,6 +5964,8 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         strategyVsExecution: 'استراتيجية مقابل تنفيذ',
         priorityTest: 'أولوية اختبار',
         assumptionWarning: 'تنبيه الثقة',
+        ageConfidence: 'ثقة العمر',
+        dataNeededToUpgrade: 'بيانات ترفع الثقة',
         success: 'تم بناء قرار STP.',
         needInput: 'أدخل كلمة السوق أو رابطا أولا.',
         needObjective: 'اختر الهدف الأول قبل توليد STP.',
@@ -6066,6 +6068,8 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         strategyVsExecution: 'Strategy vs execution',
         priorityTest: 'Test priority',
         assumptionWarning: 'Confidence warning',
+        ageConfidence: 'Age confidence',
+        dataNeededToUpgrade: 'Data to improve confidence',
         success: 'STP decision is ready.',
         needInput: 'Enter a market keyword or URL first.',
         needObjective: 'Choose the first objective before generating STP.',
@@ -6168,6 +6172,8 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         strategyVsExecution: 'Stratégie vs exécution',
         priorityTest: 'Priorité test',
         assumptionWarning: 'Avertissement confiance',
+        ageConfidence: 'Fiabilité âge',
+        dataNeededToUpgrade: 'Données pour monter la confiance',
         success: 'Décision STP prête.',
         needInput: 'Entrez un mot-clé marché ou une URL d’abord.',
         needObjective: 'Choisissez l’objectif premier avant de générer le STP.',
@@ -6445,6 +6451,10 @@ function renderStpMini(label, value) {
     return `<div class="daka-stp-mini"><strong>${stpUiEsc(label)}</strong><span>${stpUiEsc(text)}</span></div>`;
 }
 
+function stpDisplayAge(card = {}, details = {}) {
+    return stpUiText(card.ageRangeLabel || details.ageRangeLabel || card.ageRange || details.ageRange, '');
+}
+
 function renderStpAttackChannels(channels = [], copy = {}) {
     const typed = stpUiObjectArray(channels, 4);
     if (!typed.length) return '';
@@ -6501,6 +6511,7 @@ function renderStpReliability(details = {}, copy = {}) {
       <article class="daka-stp-reliability-card">
         <strong><i class="fas fa-vial-circle-check"></i>${stpUiEsc(copy.validationPlan || 'Validation')}</strong>
         ${lineList(model.validationPlan, 4)}
+        ${stpUiArray(model.dataNeededToUpgrade, 5).length ? `<span><b>${stpUiEsc(copy.dataNeededToUpgrade || 'Data to improve confidence')}:</b></span>${lineList(model.dataNeededToUpgrade, 5)}` : ''}
         ${dimensionScores.length ? `<span><b>${stpUiEsc(copy.confidenceScore || 'Scores')}:</b> ${stpUiEsc(dimensionScores.join(' · '))}</span>` : ''}
       </article>
     </section>`;
@@ -6581,10 +6592,12 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
     const priority = card.beachheadPriority || {};
     const wantStatement = stpUiText(details.wantStatement || details.primaryJobToBeDone || card.summary || details.need, copy.noData || 'N/A');
     const summary = stpUiText(card.summary, '');
+    const displayAge = stpDisplayAge(card, details);
     const lines = [
         `# Persona ${index + 1}: ${stpUiText(card.displayName || card.name || card.title, `Persona ${index + 1}`)}`,
         '',
-        `- ${copy.age || 'Age'}: ${stpUiText(card.ageRange || details.ageRange, copy.noData || 'N/A')}`,
+        `- ${copy.age || 'Age'}: ${stpUiText(displayAge, copy.noData || 'N/A')}`,
+        `- ${copy.ageConfidence || 'Age confidence'}: ${stpUiText(details.ageConfidence || card.ageConfidence, copy.noData || 'N/A')}`,
         `- ${copy.occupation || 'Role'}: ${stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName, copy.noData || 'N/A')}`,
         `- ${copy.socialCulture || 'Social culture'}: ${stpUiText(details.socialCulture, copy.noData || 'N/A')}`,
         `- ${copy.lifeSituation || 'Life situation'}: ${stpUiText(details.lifeSituation, copy.noData || 'N/A')}`,
@@ -6621,6 +6634,9 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
         '',
         `## ${copy.validationPlan || 'Field validation'}`,
         ...stpUiArray(details.reliability?.validationPlan, 8).map(item => `- ${item}`),
+        '',
+        `## ${copy.dataNeededToUpgrade || 'Data to improve confidence'}`,
+        ...stpUiArray(details.reliability?.dataNeededToUpgrade || details.dataNeededToUpgrade, 8).map(item => `- ${item}`),
         '',
         `## ${copy.hooks || 'Hooks'}`,
         ...stpUiArray(details.hookExamples || primaryAngle.hookExamples, 8).map(item => `- ${item}`),
@@ -6729,6 +6745,7 @@ function renderStpPersonaFocusContent(card = {}, index = 0, copy = {}) {
     const wantStatement = stpUiText(details.wantStatement || details.primaryJobToBeDone || card.summary || details.need, '');
     const mdId = `stpPersonaFocusMarkdown_${index}_${stpPersonaKey(card, index)}`;
     const markdown = buildStpPersonaMarkdown(card, index, copy);
+    const displayAge = stpDisplayAge(card, details);
     return `<div class="daka-stp-focus-head" style="--focus-rgb:${stpUiEsc(tone)}">
       <div class="daka-stp-avatar"><i class="fas ${stpUiEsc(card.icon || 'fa-user')}"></i></div>
       <div>
@@ -6741,7 +6758,8 @@ function renderStpPersonaFocusContent(card = {}, index = 0, copy = {}) {
     <pre id="${stpUiEsc(mdId)}" class="daka-stp-md-source">${stpUiEsc(markdown)}</pre>
     ${wantStatement ? `<div class="daka-stp-want" style="--persona-rgb:${stpUiEsc(tone)}"><small>${stpUiEsc(copy.jtbd || copy.want || 'JTBD')}</small><strong>${stpUiEsc(wantStatement)}</strong></div>` : ''}
     <div class="daka-stp-focus-grid">
-      ${renderStpMini(copy.age || 'Age', card.ageRange || details.ageRange)}
+      ${renderStpMini(copy.age || 'Age', displayAge)}
+      ${renderStpMini(copy.ageConfidence || 'Age confidence', details.ageConfidence || card.ageConfidence)}
       ${renderStpMini(copy.socialCulture || 'Social culture', details.socialCulture)}
       ${renderStpMini(copy.lifeSituation || 'Life situation', details.lifeSituation)}
       ${renderStpMini(copy.digitalMaturity || 'Digital maturity', details.digitalMaturity)}
@@ -6773,6 +6791,7 @@ function renderStpPersonaFocusContent(card = {}, index = 0, copy = {}) {
       ${renderStpMini(copy.searchBehavior || 'Search behavior', details.searchBehavior)}
       ${renderStpMini(copy.discoveryBehavior || 'Discovery', details.discoveryBehavior)}
       ${renderStpMini(copy.trustSources || 'Trust sources', details.trustSources)}
+      ${renderStpMini(copy.dataNeededToUpgrade || 'Data to improve confidence', details.reliability?.dataNeededToUpgrade || details.dataNeededToUpgrade)}
       ${renderStpMini(copy.competitors || 'Competitors', details.competitors)}
       ${renderStpMini(copy.constraints || 'Constraints', details.constraints)}
     </div>
@@ -6838,6 +6857,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
         const mdId = `stpPersonaMarkdown_${index}_${String(card.id || index).replace(/[^a-z0-9_-]/gi, '_')}`;
         const markdown = buildStpPersonaMarkdown(card, index, copy);
         const reliability = details.reliability && typeof details.reliability === 'object' ? details.reliability : {};
+        const displayAge = stpDisplayAge(card, details);
         return `<article class="daka-stp-persona" data-persona-key="${stpUiEsc(key)}" style="--persona-rgb:${stpUiEsc(tone)}" onclick="window.openDakaStpPersonaPanel && window.openDakaStpPersonaPanel('${stpUiEsc(key)}')">
           <div class="daka-stp-persona-top">
             <div class="daka-stp-avatar"><i class="fas ${stpUiEsc(card.icon || 'fa-user')}"></i></div>
@@ -6850,7 +6870,8 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
           </div>
           <div class="daka-stp-pill-row">
             ${score ? `<span class="daka-stp-chip">${stpUiEsc(copy.priorityTest || copy.priority || 'Test priority')}: ${stpUiEsc(score)}/100</span>` : ''}
-            ${card.ageRange || details.ageRange ? `<span class="daka-stp-chip">${stpUiEsc(copy.age || 'Age')}: ${stpUiEsc(stpUiText(card.ageRange || details.ageRange))}</span>` : ''}
+            ${displayAge ? `<span class="daka-stp-chip">${stpUiEsc(copy.age || 'Age')}: ${stpUiEsc(displayAge)}</span>` : ''}
+            ${details.ageConfidence || card.ageConfidence ? `<span class="daka-stp-chip">${stpUiEsc(copy.ageConfidence || 'Age confidence')}: ${stpUiEsc(stpUiText(details.ageConfidence || card.ageConfidence))}</span>` : ''}
             ${card.confidenceScore || reliability.globalScore ? `<span class="daka-stp-chip">${stpUiEsc(copy.confidenceScore || 'Confidence')}: ${stpUiEsc(card.confidenceScore || reliability.globalScore)}%</span>` : ''}
             ${card.confidence ? `<span class="daka-stp-chip">${stpUiEsc(card.confidence)}</span>` : ''}
           </div>

@@ -2537,6 +2537,112 @@ function trackAIModelUsage(modelId, success, duration) {
 
 console.log('✅ AI Models configured - Gemini 2.0 priority strategy');
 
+const AI_MODEL_ROUTES = {
+    default: {
+        paid: [
+            'google/gemini-2.5-flash-lite',
+            'google/gemini-2.0-flash-001',
+            'google/gemini-2.0-flash-lite-001',
+            'xiaomi/mimo-v2.5',
+            'google/gemma-4-26b-a4b-it'
+        ],
+        free: [
+            'mistralai/mistral-small-24b-instruct-2501:free',
+            'meta-llama/llama-3.3-70b-instruct:free',
+            'deepseek/deepseek-chat-v3-0324:free',
+            'nvidia/nemotron-nano-12b-2-vl:free'
+        ]
+    },
+    marketing: {
+        paid: [
+            'google/gemini-2.5-flash-lite',
+            'google/gemini-2.0-flash-001',
+            'google/gemini-2.0-flash-lite-001'
+        ],
+        free: [
+            'google/gemini-2.0-flash-exp:free',
+            'mistralai/mistral-small-24b-instruct-2501:free',
+            'qwen/qwen-2.5-72b-instruct:free',
+            'deepseek/deepseek-chat-v3-0324:free'
+        ]
+    },
+    meta_ads: {
+        paid: [
+            'meta-llama/llama-3.3-70b-instruct',
+            'meta-llama/llama-3.1-70b-instruct',
+            'google/gemini-2.0-flash-lite-001'
+        ],
+        free: [
+            'meta-llama/llama-3.3-70b-instruct:free',
+            'meta-llama/llama-3.1-8b-instruct:free',
+            'mistralai/mistral-small-24b-instruct-2501:free',
+            'qwen/qwen-2.5-72b-instruct:free'
+        ]
+    }
+};
+
+function normalizeAiTask(options = {}) {
+    const raw = String(options.task || options.aiTask || options.route || '').toLowerCase().replace(/[\s-]+/g, '_');
+    if (AI_MODEL_ROUTES[raw]) return raw;
+    const contextText = `${options.context || ''} ${options.systemPrompt || ''}`.toLowerCase();
+    if (/meta\s*ads|facebook\s*ads|ads targeting|meta audience|ads audience|ad audience|adset|creative hook/.test(contextText)) return 'meta_ads';
+    if (/marketing|stp|persona|positioning|funnel|copy|seo|keyword|market strategist/.test(contextText)) return 'marketing';
+    return 'default';
+}
+
+function normalizeAiModelMode(value = '') {
+    const mode = String(value || process.env.DAKA_AI_MODEL_MODE || process.env.OPENROUTER_MODEL_MODE || 'auto').toLowerCase();
+    return ['auto', 'paid', 'free'].includes(mode) ? mode : 'auto';
+}
+
+function aiModelSpec(id, fallback = {}) {
+    const modelId = String(id || '').trim();
+    const isFree = modelId.endsWith(':free');
+    const isGemini = /gemini/i.test(modelId);
+    const isLlama = /llama/i.test(modelId);
+    return {
+        id: modelId,
+        free: isFree,
+        timeout: fallback.timeout || (isGemini ? 9000 : isLlama ? 14000 : isFree ? 12000 : 11000),
+        maxContext: fallback.maxContext || (isGemini ? 1000000 : isLlama ? 128000 : 128000)
+    };
+}
+
+function dedupeAiModels(models = []) {
+    const seen = new Set();
+    return models.filter(model => {
+        if (!model?.id || seen.has(model.id)) return false;
+        seen.add(model.id);
+        return true;
+    });
+}
+
+function buildAiModelQueue(options = {}) {
+    const task = normalizeAiTask(options);
+    const mode = normalizeAiModelMode(options.modelMode || options.mode);
+    const route = AI_MODEL_ROUTES[task] || AI_MODEL_ROUTES.default;
+    const requested = [
+        ...(Array.isArray(options.models) ? options.models : []),
+        options.model
+    ].filter(Boolean).map(id => aiModelSpec(id));
+    const paid = route.paid.map(id => aiModelSpec(id, { timeout: task === 'meta_ads' ? 14000 : 9000 }));
+    const free = route.free.map(id => aiModelSpec(id, { timeout: task === 'meta_ads' ? 14000 : 12000 }));
+    const autoFallback = mode === 'free' ? [] : [aiModelSpec('openrouter/auto', { timeout: 15000, maxContext: 100000 })];
+    const allowPaidFallbackFromFree = ['1', 'true', 'yes', 'on'].includes(String(process.env.OPENROUTER_FREE_MODE_ALLOW_PAID_FALLBACK || '').toLowerCase());
+    const queue = mode === 'free'
+        ? [...requested, ...free, ...(allowPaidFallbackFromFree ? paid : [])]
+        : mode === 'paid'
+            ? [...requested, ...paid, ...free, ...autoFallback]
+            : HAS_PAID_CREDITS
+                ? [...requested, ...paid, ...free, ...autoFallback]
+                : [...requested, ...free, ...paid, ...autoFallback];
+    return {
+        task,
+        mode,
+        models: dedupeAiModels(queue)
+    };
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // 💾 CACHE MANAGER ULTRA-OPTIMIZED (LRU + TTL + COMPRESSION)
 // ═══════════════════════════════════════════════════════════════════
@@ -11579,9 +11685,10 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         b2b_service: ['28-45', '32-55', '26-40', '30-50', '35-60', '24-38', '40-60'],
         ecommerce_product: ['22-44', '25-50', '20-38', '28-55', '18-34', '35-60', '24-45'],
         local_service: ['25-55', '30-60', '22-45', '35-65', '24-50', '28-58', '40-70'],
-        content_education: ['18-35', '22-44', '25-50', '16-30', '30-55', '20-40', '35-60'],
+        content_education: ['18-35', '22-44', '22-45', '22-45', '30-55', '20-40', '25-50'],
         general_market: ['24-45', '28-55', '22-40', '30-60', '18-34', '35-58', '25-50']
     };
+    const personaPack = (fr, en, ar) => isAr ? ar : isEn ? en : fr;
     const personaNames = {
         ar: ['أمين صاحب القرار', 'ليلى الباحثة عن الدليل', 'يوسف المقارن', 'سارة محدودة الميزانية', 'هند الباحثة عن الخبير', 'مروان سريع القرار', 'نادية صاحبة التوسع'],
         en: ['Amina the Decision Maker', 'Leila the Proof Seeker', 'Youssef the Comparator', 'Sara the Budget Guardian', 'Hind the Expertise Buyer', 'Marwan the Fast Mover', 'Nadia the Scale Buyer'],
@@ -11835,6 +11942,9 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             : resourceTier === 'team'
                 ? pack('Ressources équipe: séparer acquisition, preuve créative et suivi commercial', 'Team resources: split acquisition, creative proof and sales follow-up', 'موارد فريق: افصل الاستحواذ والدليل الإبداعي والمتابعة التجارية')
                 : pack('Ressources à valider: garder un plan simple et mesurable', 'Resources to validate: keep a simple measurable plan', 'الموارد تحتاج تحقق: حافظ على خطة بسيطة قابلة للقياس');
+        const ageRangeDisplay = ageRange
+            ? pack(`${ageRange} · indicatif, a valider`, `${ageRange} · indicative, validate`, `${ageRange} · تقديري، يحتاج تحقق`)
+            : '';
         const intentKeywords = stpArray([
             product,
             `${product} ${localMarket}`,
@@ -11899,7 +12009,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             ? pack('acheteurs ou clics commande qualifiés, puis 1%, 3%, 5%', 'buyers or qualified order clicks, then 1%, 3%, 5%', 'المشترون أو نقرات الطلب المؤهلة ثم 1% و3% و5%')
             : pack('leads qualifiés, inscrits ou visiteurs forte intention, puis 1%, 3%, 5%', 'qualified leads, subscribers or high-intent visitors, then 1%, 3%, 5%', 'عملاء مؤهلون أو مشتركون أو زوار نية عالية ثم 1% و3% و5%');
         const googleDemographics = {
-            age: ageRange || '25-54',
+            age: ageRangeDisplay || ageRange || pack('25-54 · indicatif, a valider', '25-54 · indicative, validate', '25-54 · تقديري، يحتاج تحقق'),
             gender: pack('Tous, sauf preuve de sous-performance', 'All, unless data proves underperformance', 'الكل إلا إذا أثبتت البيانات ضعف الأداء'),
             parentalStatus: isProduct && /baby|kids|child|enfant|طفل|أطفال/.test(text)
                 ? pack('Tester Parents + Unknown', 'Test Parents + Unknown', 'اختبار Parents + Unknown')
@@ -11924,13 +12034,14 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             metaAds: {
                 confidence: '40-55%',
                 assumptionStatus: pack('Hypothese Meta Ads', 'Meta Ads hypothesis', 'فرضية Meta Ads'),
+                demographicConfidence: 'LOW',
                 audienceType: metaAudienceType,
                 audienceName: pack(`Persona ${personaIndex + 1} · ${audienceLabel}`, `Persona ${personaIndex + 1} · ${audienceLabel}`, `Persona ${personaIndex + 1} · ${audienceLabel}`),
                 geo: localMarket,
-                ageRange,
+                ageRange: ageRangeDisplay || ageRange,
                 coreTargeting: {
                     demographics: stpArray([
-                        ageRange ? `${pack('Âge', 'Age', 'العمر')}: ${ageRange}` : '',
+                        ageRangeDisplay ? `${pack('Âge', 'Age', 'العمر')}: ${ageRangeDisplay}` : '',
                         `${pack('Lieu', 'Location', 'الموقع')}: ${localMarket}`,
                         pack('Langue selon rapport et marché', 'Language matched to report and market', 'اللغة حسب التقرير والسوق'),
                         isEducation ? pack('Niveau/centre d’intérêt éducation sans trop réduire', 'Education level/interest without over-narrowing', 'مستوى/اهتمام تعليمي دون تضييق زائد') : ''
@@ -11974,6 +12085,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             googleAds: {
                 confidence: '45-60%',
                 assumptionStatus: pack('Hypothese Search/SEO', 'Search/SEO hypothesis', 'فرضية Search/SEO'),
+                demographicConfidence: 'LOW',
                 campaignType: pack('Search + remarketing YouTube/display léger', 'Search + light YouTube/display remarketing', 'بحث + إعادة استهداف خفيفة YouTube/display'),
                 searchIntent: pack('requêtes problème + solution + marché local', 'problem + solution + local market queries', 'طلبات بحث المشكلة + الحل + السوق المحلي'),
                 keywords: searchKeywords,
@@ -12014,6 +12126,16 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
         const langKey = isAr ? 'ar' : isEn ? 'en' : 'fr';
         const personaIndex = isOnlineEducationOffer ? educationPersonaIndexFor(segment, index) : isBeautySkinOffer ? beautyPersonaIndexFor(segment, index) : index;
         const ageRange = ageRanges[effectiveArchetype]?.[personaIndex] || ageRanges.general_market[personaIndex] || '25-50';
+        const ageRangeLabel = ageRange
+            ? personaPack(`${ageRange} · indicatif, a valider`, `${ageRange} · indicative, validate`, `${ageRange} · تقديري، يحتاج تحقق`)
+            : '';
+        const dataNeededToUpgrade = stpArray([
+            personaPack('volume de recherche et CPC par mot-cle', 'search volume and CPC per keyword', 'حجم البحث وCPC لكل كلمة'),
+            personaPack('CTR landing, clic CTA et clic WhatsApp/formulaire', 'landing CTR, CTA click and WhatsApp/form click', 'CTR الصفحة ونقر CTA وWhatsApp/النموذج'),
+            personaPack('cout par lead qualifie et taux de reponse', 'qualified CPL and reply rate', 'تكلفة العميل المؤهل ونسبة الرد'),
+            personaPack('objections recues en DM/appel/commentaires', 'objections received in DMs/calls/comments', 'الاعتراضات في الرسائل/المكالمات/التعليقات'),
+            personaPack('ventes ou premieres conversions par angle', 'sales or first conversions by angle', 'المبيعات أو أول التحويلات حسب الزاوية')
+        ], 6);
         const displayName = selectedPersonaNames[langKey]?.[personaIndex] || `${isAr ? 'Persona' : 'Persona'} ${index + 1}`;
         const occupation = isBeautySkinOffer
             ? (beautyPersonaRoles[personaIndex] || beautyPersonaRoles[index] || personaRoles.ecommerce_product?.[personaIndex] || '')
@@ -12049,6 +12171,9 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
             segmentName,
             role: isAr ? `Persona ${index + 1}` : isEn ? `Persona ${index + 1}` : `Persona ${index + 1}`,
             ageRange,
+            ageRangeLabel,
+            ageConfidence: 'LOW',
+            ageEvidenceStatus: 'hypothesis',
             summary: persona.jobToBeDone,
             market,
             priorityScore: clamp(Math.round(score), 0, 100),
@@ -12064,6 +12189,9 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 need: segment.need || persona.jobToBeDone,
                 primaryJobToBeDone: persona.jobToBeDone,
                 ageRange,
+                ageRangeLabel,
+                ageConfidence: 'LOW',
+                ageEvidenceStatus: 'hypothesis',
                 occupation,
                 socialCulture: socioCulturalProfile.socialCulture,
                 lifeSituation: socioCulturalProfile.lifeSituation,
@@ -12081,6 +12209,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
                 attackChannels,
                 socialPlan,
                 adsTargeting,
+                dataNeededToUpgrade,
                 stp: {
                     segmentation: segmentName,
                     targeting: persona.name || persona.jobToBeDone,
@@ -12161,6 +12290,9 @@ function mergeStpPersonaAiOverlay(baseCards = [], aiCards = []) {
             angleType: card.angleType,
             occupation: stpText(overlay.occupation || mergedDetails.occupation, 80) || card.occupation,
             ageRange: stpText(overlay.ageRange, 40) || card.ageRange,
+            ageRangeLabel: stpText(overlay.ageRangeLabel || mergedDetails.ageRangeLabel, 80) || card.ageRangeLabel,
+            ageConfidence: stpText(overlay.ageConfidence || mergedDetails.ageConfidence, 20) || card.ageConfidence,
+            ageEvidenceStatus: stpText(overlay.ageEvidenceStatus || mergedDetails.ageEvidenceStatus, 40) || card.ageEvidenceStatus,
             summary: stpText(overlay.summary || overlay.jobToBeDone, 360) || card.summary,
             attackAngle: stpText(overlay.attackAngle, 260) || card.attackAngle,
             confidence: ['HIGH', 'MEDIUM', 'LOW'].includes(overlay.confidence) ? overlay.confidence : card.confidence,
@@ -12176,6 +12308,9 @@ function mergeStpPersonaAiOverlay(baseCards = [], aiCards = []) {
                 occupation: stpText(mergedDetails.occupation || overlay.occupation, 80) || card.details?.occupation,
                 segmentName: stpText(mergedDetails.segmentName || card.segmentName, 180) || card.details?.segmentName,
                 ageRange: stpText(mergedDetails.ageRange || overlay.ageRange, 40) || card.details?.ageRange,
+                ageRangeLabel: stpText(mergedDetails.ageRangeLabel || overlay.ageRangeLabel, 80) || card.details?.ageRangeLabel,
+                ageConfidence: stpText(mergedDetails.ageConfidence || overlay.ageConfidence, 20) || card.details?.ageConfidence,
+                ageEvidenceStatus: stpText(mergedDetails.ageEvidenceStatus || overlay.ageEvidenceStatus, 40) || card.details?.ageEvidenceStatus,
                 attackAngle: stpText(mergedDetails.attackAngle || overlay.attackAngle, 260) || card.details?.attackAngle,
                 channels: stpArray(mergedDetails.channels || card.details?.channels, 6),
                 attackChannels: Array.isArray(mergedDetails.attackChannels) && mergedDetails.attackChannels.length
@@ -12188,6 +12323,7 @@ function mergeStpPersonaAiOverlay(baseCards = [], aiCards = []) {
                     : card.details?.attackChannels,
                 buyingTriggers: stpArray(mergedDetails.buyingTriggers || mergedDetails.triggers || card.details?.buyingTriggers, 6),
                 trustSources: stpArray(mergedDetails.trustSources || card.details?.trustSources, 6),
+                dataNeededToUpgrade: stpArray(mergedDetails.dataNeededToUpgrade || card.details?.dataNeededToUpgrade, 6),
                 pains: stpArray(mergedDetails.pains || card.details?.pains, 5),
                 objections: stpArray(mergedDetails.objections || card.details?.objections, 5),
                 proofNeeded: stpArray(mergedDetails.proofNeeded || card.details?.proofNeeded, 5),
@@ -12324,6 +12460,7 @@ ${payload}`;
             expectedFormat: 'json',
             maxTokens: 2200,
             temperature: 0.08,
+            task: 'marketing',
             context: 'STP Persona Layer',
             systemPrompt: 'You are a senior STP strategist. Use only provided data. Return strict JSON.'
         });
@@ -12370,6 +12507,7 @@ ${payload}`;
             expectedFormat: 'json',
             maxTokens: 1400,
             temperature: 0.12,
+            task: 'marketing',
             context: 'STP Decision Layer',
             systemPrompt: 'You are a senior market strategist. Use only provided data. Return strict JSON.'
         });
@@ -13076,30 +13214,24 @@ async function callOpenRouterAPI(prompt, options = {}) {
         systemPrompt   = 'You are an expert SEO consultant and content strategist.',
         expectedFormat = 'json',
         context        = 'AI Generation',
-        useCache       = true
+        useCache       = true,
+        task           = undefined,
+        aiTask         = undefined,
+        route          = undefined,
+        modelMode      = undefined,
+        mode           = undefined,
+        model          = undefined,
+        models         = undefined
     } = options;
 
-    // ── 2. FILE D'ATTENTE OPTIMISÉE POUR LA VITESSE (Ordre : Latence ultra-basse -> Modèles lourds)
-    // Chaque modèle a son propre "timeout". Si le modèle "Flash" bloque, on le tue en 8s max pour passer au suivant.
- // ── MODELS QUEUE — Payants d'abord, :free en fallback
-    // maxContext : Le nombre maximum de tokens (Prompt + Réponse) que le modèle peut gérer.
-    const allModels = [
-        { id: 'google/gemini-2.5-flash-lite',                 free: false, timeout: 9000,  maxContext: 1000000 },
-        { id: 'google/gemini-2.0-flash-001',                  free: false, timeout: 9000,  maxContext: 1000000 },
-        { id: 'google/gemini-2.0-flash-lite-001',             free: false, timeout: 8000,  maxContext: 1000000 },
-        { id: 'xiaomi/mimo-v2.5',                             free: false, timeout: 10000, maxContext: 262000 },
-        { id: 'google/gemma-4-26b-a4b-it',                    free: false, timeout: 12000, maxContext: 262000 },
-        { id: 'mistralai/mistral-small-24b-instruct-2501:free', free: true, timeout: 12000, maxContext: 128000 },
-        { id: 'meta-llama/llama-3.3-70b-instruct:free',       free: true,  timeout: 12000, maxContext: 128000 },
-        { id: 'deepseek/deepseek-chat-v3-0324:free',          free: true,  timeout: 12000, maxContext: 128000 },
-        { id: 'nvidia/nemotron-nano-12b-2-vl:free',           free: true,  timeout: 12000, maxContext: 128000 },
-        { id: 'openrouter/auto',                              free: false, timeout: 15000, maxContext: 100000 }
-    ];
+    const routeOptions = { task, aiTask, route, modelMode, mode, model, models, context, systemPrompt };
+    const modelRoute = buildAiModelQueue(routeOptions);
+    const allModels = modelRoute.models;
 
-    console.log(`🤖 AI Models queue: ${allModels.length} models ready`);
+    console.log(`🤖 AI Models queue: ${allModels.length} models ready | task=${modelRoute.task} | mode=${modelRoute.mode}`);
 
     // ── 3. GESTION DU CACHE
-    const hash     = crypto.createHash('sha256').update(prompt + systemPrompt).digest('hex');
+    const hash     = crypto.createHash('sha256').update(`${modelRoute.task}|${modelRoute.mode}|${prompt}|${systemPrompt}`).digest('hex');
     const cacheKey = `ai_${hash}`;
     const cached   = cache.get(cacheKey);
     if (cached && useCache) {
@@ -13189,6 +13321,8 @@ async function callOpenRouterAPI(prompt, options = {}) {
                 success:     true,
                 model:       modelId,
                 isFree:      isFreeModel,
+                route:       modelRoute.task,
+                mode:        modelRoute.mode,
                 response:    parsedResponse,
                 rawResponse: expectedFormat === 'json' ? aiResponse : undefined,
                 usage: {
@@ -13262,6 +13396,8 @@ async function callOpenRouterAPI(prompt, options = {}) {
         response: null,
         model:    'N/A',
         isFree:   false,
+        route:    modelRoute.task,
+        mode:     modelRoute.mode,
         error:    finalError,
         is402,
         freeModelBlocked,
