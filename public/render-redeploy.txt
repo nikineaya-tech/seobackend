@@ -1,2 +1,2 @@
 Render redeploy marker.
-Last trigger: 2026-08-26 fullscreen secure PDF reader hardening.
+Last trigger: 2026-08-26 fixed left module sidebar rail.

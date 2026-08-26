@@ -11144,6 +11144,71 @@ body > div:has(#btn-export-global),
     }
 }
 
+/* Final module rail fix: keep the report menu physically pinned to the left,
+   including Arabic/RTL reports, so it never floats above the report body. */
+@media (min-width: 1181px) {
+    body:not(.daka-deal-editor) {
+        --daka-sidebar-open-width: 228px;
+        --daka-sidebar-edge: 16px;
+        --daka-sidebar-content-gap: 34px;
+    }
+
+    body:not(.daka-deal-editor) main {
+        padding-left: calc(var(--daka-sidebar-open-width) + var(--daka-sidebar-content-gap)) !important;
+        padding-right: 0 !important;
+        transition: padding-left .24s ease !important;
+    }
+
+    body.daka-sidebar-hidden:not(.daka-deal-editor) main {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs,
+    [dir="rtl"] body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        position: fixed !important;
+        left: var(--daka-sidebar-edge) !important;
+        right: auto !important;
+        top: 126px !important;
+        z-index: 950 !important;
+        width: var(--daka-sidebar-open-width) !important;
+        max-width: var(--daka-sidebar-open-width) !important;
+        max-height: calc(100dvh - 150px) !important;
+        margin: 0 !important;
+        padding: 10px !important;
+        direction: ltr !important;
+        transform-origin: left top !important;
+    }
+
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn {
+        direction: inherit !important;
+        text-align: left !important;
+    }
+
+    [dir="rtl"] body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+
+    body.daka-sidebar-hidden:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs,
+    [dir="rtl"] body.daka-sidebar-hidden:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transform: translateX(calc(-100% - 28px)) !important;
+    }
+
+    .daka-sidebar-toggle,
+    [dir="rtl"] .daka-sidebar-toggle {
+        left: var(--daka-sidebar-edge) !important;
+        right: auto !important;
+        top: 76px !important;
+    }
+
+    [dir="rtl"] .daka-sidebar-toggle i {
+        transform: none !important;
+    }
+}
+
 @media (max-width: 900px) {
     #dakaAppMatrixCanvas { opacity: .26 !important; }
     .daka-form-matrix-canvas { opacity: .22; }

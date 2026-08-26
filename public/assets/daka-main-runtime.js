@@ -1855,7 +1855,7 @@ document.addEventListener('DOMContentLoaded', initDakaModuleExportButtons);
 document.addEventListener('DOMContentLoaded', initDakaSidebarVisibilityToggle);
 document.getElementById('langSelector')?.addEventListener('change', refreshAuthCopy);
 
-window.DAKA_FRONTEND_BUILD = '2026-08-24-readable-sidebar-toggle1';
+window.DAKA_FRONTEND_BUILD = '2026-08-26-fixed-left-sidebar1';
 
 function getDakaSidebarToggleCopy() {
     const lang = STATE.currentLang || document.getElementById('langSelector')?.value || 'fr';
@@ -18957,6 +18957,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
     console.log("📱 Mobile Patch UI/UX Injecté avec succès !");
 });
-
-
-    
