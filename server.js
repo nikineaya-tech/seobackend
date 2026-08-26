@@ -72,6 +72,9 @@ const {
 const {
   runMarketingMasterGate,
 } = require('./lib/marketing-master-auditor');
+const {
+  sanitizeCompetitorReport,
+} = require('./lib/competitor-evidence-engine');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -4661,7 +4664,7 @@ function buildCompetitorProofModel(ctx = {}) {
   ];
 
   const deduced = [
-    proofFact({ type: 'deduced', title: lang === 'en' ? 'Market difficulty' : lang === 'ar' ? 'صعوبة السوق' : 'Difficulte du marche', value: mergedData.marketInsights?.difficulty || null, source: 'Top competitors + market signals', confidence: 'MEDIUM', formula: 'difficulty = SERP strength + competitor count + authority labels + geo relevance', inputs: { competitors: enrichedCompetitors.length, topDominance: enrichedCompetitors[0]?.dominance || null, source } }),
+    proofFact({ type: 'deduced', title: lang === 'en' ? 'SERP competition signal' : lang === 'ar' ? 'إشارة تنافس SERP' : 'Signal de concurrence SERP', value: mergedData.marketInsights?.difficulty || null, source: 'Top competitors + market signals', confidence: 'MEDIUM', formula: 'signal = SERP position + competitor count + authority labels + geo relevance', inputs: { competitors: enrichedCompetitors.length, topSerpRelevance: enrichedCompetitors[0]?.serpRelevanceScore || enrichedCompetitors[0]?.observedVisibilityScore || null, source } }),
     proofFact({ type: 'deduced', title: lang === 'en' ? 'Search intent' : lang === 'ar' ? 'نية البحث' : 'Intention de recherche', value: mergedData.marketInsights?.serpIntent || null, source: 'Titles, snippets, PAA, related searches', confidence: 'MEDIUM', formula: 'intent = classification of top titles/snippets + query wording', inputs: { paa: cleanProofArray(peopleAlsoAsk, 4), related: cleanProofArray(relatedSearches, 4) } }),
     proofFact({ type: 'deduced', title: lang === 'en' ? 'User context used' : lang === 'ar' ? 'سياق المستخدم المستعمل' : 'Contexte utilisateur utilise', value: Object.values(userIntentContext || {}).filter(Boolean).length, source: 'Optional form context', confidence: Object.values(userIntentContext || {}).filter(Boolean).length ? 'HIGH' : 'LOW', inputs: userIntentContext })
   ];
@@ -10380,7 +10383,7 @@ const executiveBrief = buildExecutiveBrief({
 });
 const dataIntegrity = proofIntegrity(proofModel);
 
-const finalResult = {
+let finalResult = {
     success: true,
     source,
     elapsed,
@@ -10440,6 +10443,16 @@ const finalResult = {
     executiveBrief,
     dataIntegrity
 };
+
+finalResult = sanitizeCompetitorReport(finalResult, {
+    lang: langObj.code,
+    query: cleanQuery,
+    geo: geoData.location,
+    userSiteAudited: Boolean(userSiteData?.url),
+    userSiteData,
+    trendsData,
+    mainKwData
+});
 
 cache.set(cacheKey, finalResult);
 return finalResult;
@@ -25445,7 +25458,8 @@ function buildPDFFromReport(R) {
     divider();
     secTitle(isEn?'IDENTIFIED TARGETS':'CIBLES IDENTIFIEES', C.cyan);
     (B.competitors||[]).slice(0,10).forEach(function(comp,i){
-      var dc=(comp.dominance||0)>70?C.green:(comp.dominance||0)>40?C.orange:C.red;
+      var visibilityScore = comp.serpRelevanceScore || comp.observedVisibilityScore || comp.dominance || 0;
+      var dc=visibilityScore>70?C.green:visibilityScore>40?C.orange:C.red;
       check(22);
       fill(C.bgCard); doc.roundedRect(ML,y,CW,20,2,2,'F');
       fill(dc); doc.rect(ML,y,3,20,'F');
@@ -25453,7 +25467,7 @@ function buildPDFFromReport(R) {
       bold(8); tc(C.white); doc.text(san(comp.title||comp.domain||'',55).substring(0,55), ML+18, y+7);
       norm(7); tc(C.muted); doc.text(san(comp.domain||'',40), ML+18, y+13);
       norm(6.5);tc(C.sub);  doc.text(doc.splitTextToSize(san(comp.snippet||'',120),CW-55)[0]||'', ML+18, y+18);
-      norm(7);  tc(dc);     doc.text('Dominance: '+(comp.dominance||0)+'%', ML+CW-3, y+7, {align:'right'});
+      norm(7);  tc(dc);     doc.text('SERP relevance: '+visibilityScore+'/100', ML+CW-3, y+7, {align:'right'});
       y+=23;
     });
   }

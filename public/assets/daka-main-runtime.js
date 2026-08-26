@@ -4553,7 +4553,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         weaknesses:        isAr ? 'نقاط العمى'              : (isEn ? 'Glaring Weaknesses'       : 'Angles Morts Flagrants'),
         trafficGuess:      isAr ? 'استنتاج قناة الاكتساب'  : (isEn ? 'Traffic Strategy Guess'   : "Déduction Canal d'Acquisition"),
         copyAll:           isAr ? 'نسخ الكل'                : (isEn ? 'Copy all'                 : 'Copier tout'),
-        dominance:         isAr ? 'الهيمنة'                 : (isEn ? 'DOMINANCE'                : 'DOMINANCE'),
+        dominance:         isAr ? 'ملاءمة SERP'             : (isEn ? 'SERP RELEVANCE'           : 'PERTINENCE SERP'),
         spyFunnel:         isAr ? 'فحص القمع'               : (isEn ? 'Website & Funnel Audit Funnel'               : 'Website & Funnel Audit Funnel'),
         spyTech:           isAr ? 'فحص تقني'                : (isEn ? 'Website & Funnel Audit Tech'                 : 'Website & Funnel Audit Tech'),
         stepLabel:         isAr ? 'الخطوة'                  : (isEn ? 'STEP'                     : 'ÉTAPE'),
@@ -5308,7 +5308,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
     // ══════════════════════════════════════════════════════════════
     const competitors = Array.isArray(data.competitors) ? data.competitors : [];
     const competitorsList = competitors.map((comp, idx) => {
-        const dom      = Math.min(100, Math.max(0, parseInt(comp.dominance) || 0));
+        const dom      = Math.min(100, Math.max(0, parseInt(comp.serpRelevanceScore ?? comp.observedVisibilityScore ?? comp.dominance) || 0));
         const domColor = dom > 70 ? '#ef4444' : (dom > 40 ? '#f59e0b' : '#10b981');
         const safeUrl  = escapeHtml(comp.url || '');
         return `
