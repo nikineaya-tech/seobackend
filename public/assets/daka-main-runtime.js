@@ -5952,6 +5952,18 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         missing: 'دليل ناقص',
         observed: 'مرصود',
         inferred: 'مستنتج',
+        hypothesis: 'فرضية للاختبار',
+        executionHypothesis: 'فرضية تنفيذ',
+        reliability: 'موثوقية الاستراتيجية',
+        confidenceScore: 'درجة الثقة',
+        observedBasis: 'ما تم رصده',
+        inferredBasis: 'ما تم استنتاجه',
+        hypothesesToTest: 'ما يجب اختباره',
+        executionHypotheses: 'فرضيات التنفيذ',
+        validationPlan: 'اختبار ميداني',
+        strategyVsExecution: 'استراتيجية مقابل تنفيذ',
+        priorityTest: 'أولوية اختبار',
+        assumptionWarning: 'تنبيه الثقة',
         success: 'تم بناء قرار STP.',
         needInput: 'أدخل كلمة السوق أو رابطا أولا.',
         needObjective: 'اختر الهدف الأول قبل توليد STP.',
@@ -6042,6 +6054,18 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         missing: 'Missing proof',
         observed: 'Observed',
         inferred: 'Inferred',
+        hypothesis: 'Hypothesis to test',
+        executionHypothesis: 'Execution hypothesis',
+        reliability: 'Strategic reliability',
+        confidenceScore: 'Confidence score',
+        observedBasis: 'Observed basis',
+        inferredBasis: 'Inferred basis',
+        hypothesesToTest: 'Hypotheses to test',
+        executionHypotheses: 'Execution hypotheses',
+        validationPlan: 'Field validation',
+        strategyVsExecution: 'Strategy vs execution',
+        priorityTest: 'Test priority',
+        assumptionWarning: 'Confidence warning',
         success: 'STP decision is ready.',
         needInput: 'Enter a market keyword or URL first.',
         needObjective: 'Choose the first objective before generating STP.',
@@ -6132,6 +6156,18 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         missing: 'Preuve manquante',
         observed: 'Observé',
         inferred: 'Déduit',
+        hypothesis: 'Hypothèse à tester',
+        executionHypothesis: 'Hypothèse d’exécution',
+        reliability: 'Fiabilité stratégique',
+        confidenceScore: 'Score de confiance',
+        observedBasis: 'Ce qui est observé',
+        inferredBasis: 'Ce qui est déduit',
+        hypothesesToTest: 'Hypothèses à tester',
+        executionHypotheses: 'Hypothèses d’exécution',
+        validationPlan: 'Validation terrain',
+        strategyVsExecution: 'Stratégie vs exécution',
+        priorityTest: 'Priorité test',
+        assumptionWarning: 'Avertissement confiance',
         success: 'Décision STP prête.',
         needInput: 'Entrez un mot-clé marché ou une URL d’abord.',
         needObjective: 'Choisissez l’objectif premier avant de générer le STP.',
@@ -6326,8 +6362,12 @@ function ensureStpDecisionStyles() {
       .daka-stp-focus-head p{margin:5px 0 0;color:#aec0d6;font-size:.82rem;line-height:1.5}
       .daka-stp-focus-close{border:1px solid rgba(148,163,184,.18);background:rgba(15,23,42,.78);color:#eaf6ff;border-radius:12px;padding:9px 12px;font-weight:950;cursor:pointer}
       .daka-stp-focus-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-      .daka-stp-ads-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
-      .daka-stp-ads-card{border:1px solid rgba(34,211,238,.16);border-radius:16px;background:rgba(2,6,23,.42);padding:11px}
+      .daka-stp-ads-grid,.daka-stp-reliability-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+      .daka-stp-reliability-grid{margin:0 0 10px}
+      .daka-stp-ads-card,.daka-stp-reliability-card{border:1px solid rgba(34,211,238,.16);border-radius:16px;background:rgba(2,6,23,.42);padding:11px}
+      .daka-stp-reliability-card{border-color:rgba(245,158,11,.24);background:linear-gradient(135deg,rgba(245,158,11,.10),rgba(2,6,23,.46))}
+      .daka-stp-reliability-card strong{display:flex;align-items:center;gap:8px;color:#fef3c7;font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
+      .daka-stp-reliability-card span{display:block;color:#d8e4f3;font-size:.74rem;line-height:1.45;margin-top:5px}
       .daka-stp-ads-card strong{display:flex;align-items:center;gap:8px;color:#eaf6ff;font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;margin-bottom:7px}
       .daka-stp-ads-card span{display:block;color:#a9bad0;font-size:.74rem;line-height:1.45;margin-top:5px}
       .daka-stp-mini-grid{display:grid;grid-template-columns:1fr;gap:8px}
@@ -6435,6 +6475,37 @@ function renderStpSocialPlan(details = {}, copy = {}) {
     return `<div class="daka-stp-mini"><strong>${stpUiEsc(copy.socialPlan || copy.channels || 'Social')}</strong>${lines || ''}</div>${channelHtml}`;
 }
 
+
+function renderStpReliability(details = {}, copy = {}) {
+    const model = details.reliability && typeof details.reliability === 'object' ? details.reliability : {};
+    if (!Object.keys(model).length) return '';
+    const lineList = (items, limit = 3) => stpUiArray(items, limit).map(item => `<span>• ${stpUiEsc(item)}</span>`).join('');
+    const dimensionScores = model.dimensionScores && typeof model.dimensionScores === 'object'
+        ? Object.entries(model.dimensionScores).slice(0, 4).map(([key, value]) => `${key}: ${value}`)
+        : [];
+    return `<section class="daka-stp-reliability-grid" aria-label="${stpUiEsc(copy.reliability || 'Reliability')}">
+      <article class="daka-stp-reliability-card">
+        <strong><i class="fas fa-shield-halved"></i>${stpUiEsc(copy.reliability || 'Reliability')}</strong>
+        ${model.confidenceLabel ? `<span><b>${stpUiEsc(copy.confidenceScore || 'Confidence')}:</b> ${stpUiEsc(model.confidenceLabel)}</span>` : ''}
+        ${model.caveat ? `<span>${stpUiEsc(model.caveat)}</span>` : ''}
+        ${model.strategyVsExecution ? `<span><b>${stpUiEsc(copy.strategyVsExecution || 'Strategy vs execution')}:</b> ${stpUiEsc(model.strategyVsExecution)}</span>` : ''}
+      </article>
+      <article class="daka-stp-reliability-card">
+        <strong><i class="fas fa-eye"></i>${stpUiEsc(copy.observedBasis || copy.observed || 'Observed')}</strong>
+        ${lineList(model.observed, 4)}
+      </article>
+      <article class="daka-stp-reliability-card">
+        <strong><i class="fas fa-lightbulb"></i>${stpUiEsc(copy.hypothesesToTest || 'Hypotheses')}</strong>
+        ${lineList([...(model.hypotheses || []), ...(model.executionHypotheses || [])], 4)}
+      </article>
+      <article class="daka-stp-reliability-card">
+        <strong><i class="fas fa-vial-circle-check"></i>${stpUiEsc(copy.validationPlan || 'Validation')}</strong>
+        ${lineList(model.validationPlan, 4)}
+        ${dimensionScores.length ? `<span><b>${stpUiEsc(copy.confidenceScore || 'Scores')}:</b> ${stpUiEsc(dimensionScores.join(' · '))}</span>` : ''}
+      </article>
+    </section>`;
+}
+
 function renderStpAdsTargeting(details = {}, copy = {}) {
     const ads = details.adsTargeting && typeof details.adsTargeting === 'object' ? details.adsTargeting : {};
     if (!Object.keys(ads).length) return '';
@@ -6456,7 +6527,10 @@ function renderStpAdsTargeting(details = {}, copy = {}) {
         const text = Array.isArray(value) || (value && typeof value === 'object') ? flat(value, 8).join(' · ') : stpUiText(value);
         return text ? `<span><b style="color:#eaf6ff">${stpUiEsc(label)}:</b> ${stpUiEsc(text)}</span>` : '';
     };
+    const status = stpUiText(ads.assumptionStatus || ads.validationNote || '');
+    const confidence = stpUiText(ads.confidence || '');
     return `<section class="daka-stp-ads-grid" aria-label="${stpUiEsc(copy.adsTargeting || 'Ads targeting')}">
+      ${status || confidence ? `<article class="daka-stp-ads-card"><strong><i class="fas fa-triangle-exclamation"></i>${stpUiEsc(copy.executionHypothesis || 'Execution hypothesis')}</strong>${confidence ? `<span><b style="color:#eaf6ff">${stpUiEsc(copy.confidenceScore || 'Confidence')}:</b> ${stpUiEsc(confidence)}</span>` : ''}${status ? `<span>${stpUiEsc(status)}</span>` : ''}</article>` : ''}
       <article class="daka-stp-ads-card">
         <strong><i class="fab fa-facebook"></i>${stpUiEsc(copy.metaAds || 'Meta Ads')}</strong>
         ${line(copy.adObjective || 'Objective', ads.objective)}
@@ -6516,7 +6590,9 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
         `- ${copy.lifeSituation || 'Life situation'}: ${stpUiText(details.lifeSituation, copy.noData || 'N/A')}`,
         `- ${copy.digitalMaturity || 'Digital maturity'}: ${stpUiText(details.digitalMaturity, copy.noData || 'N/A')}`,
         `- ${copy.purchasePower || 'Purchase power'}: ${stpUiText(details.purchasePower, copy.noData || 'N/A')}`,
-        `- ${copy.priority || 'Priority'}: ${stpUiText(card.priorityScore, '0')}/100`,
+        `- ${copy.priorityTest || copy.priority || 'Test priority'}: ${stpUiText(card.priorityScore, '0')}/100`,
+        details.reliability?.confidenceLabel ? `- ${copy.confidenceScore || 'Confidence score'}: ${stpUiText(details.reliability.confidenceLabel)}` : '',
+        details.reliability?.priorityScoreMeaning ? `- ${copy.assumptionWarning || 'Confidence warning'}: ${stpUiText(details.reliability.priorityScoreMeaning)}` : '',
         summary ? `- ${copy.persona || 'Persona'}: ${summary}` : '',
         `- ${copy.primaryAngle || 'Primary angle'}: ${stpUiText(primaryAngle.name || details.primaryMarketingAngle || card.attackAngle, copy.noData || 'N/A')}`,
         secondaryAngles.length ? `- ${copy.secondaryAngles || 'Support angles'}: ${secondaryAngles.map(a => stpUiText(a.name || a.label || a.type)).filter(Boolean).join(', ')}` : '',
@@ -6529,6 +6605,22 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
         `- ${copy.landingPageSection || 'Landing section'}: ${stpUiText(details.landingPageSection || primaryAngle.landingPageSection, copy.noData || 'N/A')}`,
         `- ${copy.jtbd || 'JTBD'}: ${wantStatement}`,
         `- ${copy.budgetPath || 'Budget path'}: ${stpUiText(priority.budgetPath || details.budgetPath, copy.noData || 'N/A')}`,
+        '',
+        `## ${copy.reliability || 'Strategic reliability'}`,
+        details.reliability?.caveat || '',
+        details.reliability?.strategyVsExecution || '',
+        '',
+        `## ${copy.observedBasis || copy.observed || 'Observed'}`,
+        ...stpUiArray(details.reliability?.observed, 8).map(item => `- ${item}`),
+        '',
+        `## ${copy.inferredBasis || copy.inferred || 'Inferred'}`,
+        ...stpUiArray(details.reliability?.inferred, 8).map(item => `- ${item}`),
+        '',
+        `## ${copy.hypothesesToTest || 'Hypotheses to test'}`,
+        ...stpUiArray([...(details.reliability?.hypotheses || []), ...(details.reliability?.executionHypotheses || [])], 10).map(item => `- ${item}`),
+        '',
+        `## ${copy.validationPlan || 'Field validation'}`,
+        ...stpUiArray(details.reliability?.validationPlan, 8).map(item => `- ${item}`),
         '',
         `## ${copy.hooks || 'Hooks'}`,
         ...stpUiArray(details.hookExamples || primaryAngle.hookExamples, 8).map(item => `- ${item}`),
@@ -6654,8 +6746,10 @@ function renderStpPersonaFocusContent(card = {}, index = 0, copy = {}) {
       ${renderStpMini(copy.lifeSituation || 'Life situation', details.lifeSituation)}
       ${renderStpMini(copy.digitalMaturity || 'Digital maturity', details.digitalMaturity)}
       ${renderStpMini(copy.purchasePower || 'Purchase power', details.purchasePower)}
-      ${renderStpMini(copy.priority || 'Priority', card.priorityScore ? `${card.priorityScore}/100` : '')}
+      ${renderStpMini(copy.priorityTest || copy.priority || 'Test priority', card.priorityScore ? `${card.priorityScore}/100` : '')}
+      ${renderStpMini(copy.confidenceScore || 'Confidence score', card.confidenceScore ? `${card.confidenceScore}%` : details.reliability?.confidenceLabel)}
     </div>
+    ${renderStpReliability(details, copy)}
     <div class="daka-stp-focus-grid">
       ${renderStpMini(copy.attackAngle || 'Attack angle', card.attackAngle || details.attackAngle)}
       ${renderStpMini(copy.corePromise || 'Core promise', details.corePromise || primaryAngle.corePromise)}
@@ -6743,6 +6837,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
         const personaSummary = stpUiText(card.summary, '');
         const mdId = `stpPersonaMarkdown_${index}_${String(card.id || index).replace(/[^a-z0-9_-]/gi, '_')}`;
         const markdown = buildStpPersonaMarkdown(card, index, copy);
+        const reliability = details.reliability && typeof details.reliability === 'object' ? details.reliability : {};
         return `<article class="daka-stp-persona" data-persona-key="${stpUiEsc(key)}" style="--persona-rgb:${stpUiEsc(tone)}" onclick="window.openDakaStpPersonaPanel && window.openDakaStpPersonaPanel('${stpUiEsc(key)}')">
           <div class="daka-stp-persona-top">
             <div class="daka-stp-avatar"><i class="fas ${stpUiEsc(card.icon || 'fa-user')}"></i></div>
@@ -6754,8 +6849,9 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
             </div>
           </div>
           <div class="daka-stp-pill-row">
-            ${score ? `<span class="daka-stp-chip">${stpUiEsc(copy.priority || 'Priority')}: ${stpUiEsc(score)}/100</span>` : ''}
+            ${score ? `<span class="daka-stp-chip">${stpUiEsc(copy.priorityTest || copy.priority || 'Test priority')}: ${stpUiEsc(score)}/100</span>` : ''}
             ${card.ageRange || details.ageRange ? `<span class="daka-stp-chip">${stpUiEsc(copy.age || 'Age')}: ${stpUiEsc(stpUiText(card.ageRange || details.ageRange))}</span>` : ''}
+            ${card.confidenceScore || reliability.globalScore ? `<span class="daka-stp-chip">${stpUiEsc(copy.confidenceScore || 'Confidence')}: ${stpUiEsc(card.confidenceScore || reliability.globalScore)}%</span>` : ''}
             ${card.confidence ? `<span class="daka-stp-chip">${stpUiEsc(card.confidence)}</span>` : ''}
           </div>
           ${primaryAngle.name ? `<div class="daka-stp-pill-row"><span class="daka-stp-chip"><i class="fas ${stpUiEsc(primaryAngle.icon || 'fa-bullseye')}"></i> ${stpUiEsc(copy.primaryAngle || 'Primary angle')}: ${stpUiEsc(primaryAngle.name)}</span>${secondaryAngles.slice(0, 2).map(angle => `<span class="daka-stp-chip">${stpUiEsc(angle.name || angle.label || angle.type)}</span>`).join('')}</div>` : ''}
@@ -6769,10 +6865,10 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
             ${renderStpMini(copy.socialCulture || 'Social culture', details.socialCulture)}
             ${renderStpMini(copy.lifeSituation || 'Life situation', details.lifeSituation)}
             ${renderStpMini(copy.attackAngle || 'Attack angle', card.attackAngle || details.attackAngle)}
-            ${renderStpMini(copy.adsTargeting || 'Ads targeting', [
-                details.adsTargeting?.metaAds?.audienceType,
-                details.adsTargeting?.googleAds?.campaignType,
-                ...(stpUiArray(details.adsTargeting?.metaAds?.interests, 2))
+            ${renderStpMini(copy.executionHypotheses || copy.adsTargeting || 'Execution hypotheses', [
+                details.adsTargeting?.assumptionStatus,
+                details.adsTargeting?.confidence,
+                details.adsTargeting?.validationNote
             ])}
             ${renderStpMini(copy.proofToShow || 'Proof to show', details.proofToShow || primaryAngle.proofToShow)}
           </div>
