@@ -87,6 +87,9 @@ const {
 const {
   buildDecisionReportV2,
 } = require('./lib/market-intelligence/report-v2');
+const {
+  buildMarketDiscoveryPlan,
+} = require('./lib/market-intelligence/source-router');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -9571,21 +9574,27 @@ top5BusinessProfiles.forEach((profile, index) => {
 });
 console.log(`[WarRoom-V10.0] Business profiles explored: ${top5BusinessProfiles.filter(Boolean).length}/${Math.min(10, enrichedCompetitors.length)}`);
 
+const marketDiscoveryPlan = buildMarketDiscoveryPlan({
+    query: reportQuery,
+    country: geoData.location,
+    lang: langObj.code,
+    competitors: enrichedCompetitors,
+    agentReachEnabled: shouldUseAgentReachMarketSensor()
+});
+
 let agentReachMarketEvidence = null;
 if (shouldUseAgentReachMarketSensor()) {
-    const sensorUrls = enrichedCompetitors
-        .map(item => item.url || item.link)
-        .filter(Boolean)
-        .slice(0, Number(process.env.AGENT_REACH_COMPETITOR_URLS || 4));
-    if (sensorUrls.length) {
+    const sensorUrls = marketDiscoveryPlan.railwayPayload.urls || [];
+    const sensorSearches = marketDiscoveryPlan.railwayPayload.searches || [];
+    const sensorFeeds = marketDiscoveryPlan.railwayPayload.feeds || [];
+    if (sensorUrls.length || sensorSearches.length || sensorFeeds.length) {
         try {
             agentReachMarketEvidence = await runAgentReachMarketSensorOnRailway({
-                query: reportQuery,
-                country: geoData.location,
-                urls: sensorUrls,
+                ...marketDiscoveryPlan.railwayPayload,
                 clientAnalysisId,
                 requestId,
-                purpose: 'competitor-market-sensor'
+                purpose: 'competitor-market-sensor',
+                marketDiscoveryPlan
             }, Number(process.env.AGENT_REACH_SENSOR_TIMEOUT_MS || 90000));
             console.log(
                 `[WarRoom-V10.0] Agent Reach sensor evidence=${agentReachMarketEvidence?.counts?.evidence || 0} unavailable=${agentReachMarketEvidence?.counts?.unavailable || 0}`
@@ -10545,6 +10554,7 @@ let finalResult = {
     ...mergedData,
     competitorIntelligence,
     externalBot: GPT_BOT,
+    marketDiscoveryPlan,
     apify: apifyData,
     marketEvidence: agentReachMarketEvidence,
     agentReachEvidence: agentReachMarketEvidence,

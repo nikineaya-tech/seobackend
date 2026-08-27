@@ -78,6 +78,36 @@ test('RSS entries become dated market evidence, not market-growth proof', async 
   }
 });
 
+test('Jina searches become market evidence, not strategy claims', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async url => ({
+    ok: true,
+    status: 200,
+    url,
+    text: async () => [
+      'Title: Search results',
+      'Result: buyers compare return policy, proof and price before ordering.'
+    ].join('\n')
+  });
+
+  try {
+    const result = await collectAgentReachMarketEvidence({
+      query: 'blackhead remover',
+      country: 'Libya',
+      searches: ['blackhead remover Libya reviews']
+    });
+
+    assert.equal(result.counts.searches, 1);
+    assert.equal(result.evidenceRegistry.evidence.length, 1);
+    assert.equal(result.evidenceRegistry.evidence[0].claimType, 'JINA_SEARCH_RESULTS');
+    assert.equal(result.evidenceRegistry.evidence[0].sourcePlatform, 'jina_search');
+    assert.equal(result.evidenceRegistry.evidence[0].scope, 'MARKET');
+    assert.doesNotMatch(JSON.stringify(result), /winning strategy|market leader|dominates/i);
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('Agent Reach evidence can be merged into the common competitor evidence registry', async () => {
   const originalFetch = global.fetch;
   global.fetch = async url => ({

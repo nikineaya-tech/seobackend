@@ -5,6 +5,7 @@ const cheerio = require('cheerio');
 
 const MAX_URLS = Math.max(1, Number(process.env.AGENT_REACH_MAX_URLS || 8));
 const MAX_FEEDS = Math.max(0, Number(process.env.AGENT_REACH_MAX_FEEDS || 4));
+const MAX_SEARCHES = Math.max(0, Number(process.env.AGENT_REACH_MAX_SEARCHES || 6));
 const MAX_TEXT_CHARS = Math.max(800, Number(process.env.AGENT_REACH_MAX_TEXT_CHARS || 5000));
 const FETCH_TIMEOUT_MS = Math.max(3000, Number(process.env.AGENT_REACH_FETCH_TIMEOUT_MS || 25000));
 
@@ -82,6 +83,12 @@ async function readViaJina(targetUrl) {
   const normalized = normalizeUrl(targetUrl);
   if (!normalized) throw new Error('Invalid public URL');
   return fetchText(`https://r.jina.ai/${normalized}`, { accept: 'text/plain' });
+}
+
+async function searchViaJina(query) {
+  const cleanQuery = clean(query, 180);
+  if (!cleanQuery) throw new Error('Empty search query');
+  return fetchText(`https://s.jina.ai/${encodeURIComponent(cleanQuery)}`, { accept: 'text/plain' });
 }
 
 function evidenceFromText({ url, text, title, country, query, claimType = 'WEB_CONTENT', platform }) {
@@ -179,6 +186,31 @@ async function collectFeedEvidence(feedUrl, context = {}) {
   }
 }
 
+async function collectSearchEvidence(searchQuery, context = {}) {
+  const query = clean(searchQuery, 180);
+  if (!query) return { unavailable: { query: searchQuery, reason: 'empty_search_query' }, evidence: null };
+  try {
+    const read = await searchViaJina(query);
+    if (!read.ok || !read.text) {
+      return { unavailable: { query, reason: `http_${read.status || 'unknown'}` }, evidence: null };
+    }
+    return {
+      unavailable: null,
+      evidence: evidenceFromText({
+        url: read.url || `https://s.jina.ai/${encodeURIComponent(query)}`,
+        text: read.text,
+        title: `Jina search results: ${query}`,
+        country: context.country,
+        query: context.query || query,
+        platform: 'jina_search',
+        claimType: 'JINA_SEARCH_RESULTS'
+      })
+    };
+  } catch (error) {
+    return { unavailable: { query, reason: clean(error.message, 220) }, evidence: null };
+  }
+}
+
 function dedupeEvidence(evidence = []) {
   const seen = new Set();
   return evidence.filter(item => {
@@ -197,8 +229,15 @@ async function collectAgentReachMarketEvidence(payload = {}) {
   };
   const urls = arr(payload.urls || [payload.url, payload.targetUrl]).map(normalizeUrl).filter(Boolean).slice(0, MAX_URLS);
   const feeds = arr(payload.feeds || payload.rssFeeds).map(normalizeUrl).filter(Boolean).slice(0, MAX_FEEDS);
+  const searches = arr(payload.searches || payload.searchQueries).map(item => clean(item, 180)).filter(Boolean).slice(0, MAX_SEARCHES);
   const evidence = [];
   const unavailable = [];
+
+  for (const search of searches) {
+    const result = await collectSearchEvidence(search, context);
+    if (result.evidence) evidence.push(result.evidence);
+    if (result.unavailable) unavailable.push(result.unavailable);
+  }
 
   for (const url of urls) {
     const result = await collectUrlEvidence(url, context);
@@ -220,6 +259,7 @@ async function collectAgentReachMarketEvidence(payload = {}) {
     layer: 'market-sensor',
     sourceRouter: {
       web: 'Jina Reader compatible path',
+      search: 'Jina Search compatible path',
       rss: 'direct RSS parser',
       youtube: 'captured as readable page evidence when URL is provided',
       note: 'Agent Reach remains an acquisition layer; no business conclusion is produced here.'
@@ -233,6 +273,7 @@ async function collectAgentReachMarketEvidence(payload = {}) {
     },
     unavailable,
     counts: {
+      searches: searches.length,
       urls: urls.length,
       feeds: feeds.length,
       evidence: normalizedEvidence.length,
