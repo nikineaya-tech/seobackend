@@ -108,6 +108,70 @@ test('Jina searches become market evidence, not strategy claims', async () => {
   }
 });
 
+test('YouTube search creates dated customer evidence when API key exists', async () => {
+  const originalFetch = global.fetch;
+  const originalKey = process.env.YOUTUBE_API_KEY;
+  process.env.YOUTUBE_API_KEY = 'test-key';
+  global.fetch = async url => ({
+    ok: true,
+    status: 200,
+    url,
+    text: async () => JSON.stringify({
+      items: [
+        {
+          id: { videoId: 'abc123' },
+          snippet: {
+            publishedAt: '2026-08-24T10:00:00Z',
+            title: 'Blackhead remover review',
+            description: 'Customers compare proof, safe use and visible results.'
+          }
+        }
+      ]
+    })
+  });
+
+  try {
+    const result = await collectAgentReachMarketEvidence({
+      query: 'blackhead remover',
+      country: 'Libya',
+      youtubeSearches: ['blackhead remover review Libya']
+    });
+
+    const item = result.evidenceRegistry.evidence[0];
+    assert.equal(result.counts.youtubeSearches, 1);
+    assert.equal(item.claimType, 'YOUTUBE_SEARCH_RESULT');
+    assert.equal(item.sourcePlatform, 'youtube');
+    assert.equal(item.scope, 'CUSTOMER');
+    assert.equal(item.publishedAt, '2026-08-24T10:00:00Z');
+    assert.match(item.sourceUrl, /youtube\.com\/watch\?v=abc123/);
+    assert.match(item.limitations.join(' '), /not representative market statistics/i);
+    assert.doesNotMatch(JSON.stringify(result), /market leader|winning strategy|demand growth/i);
+  } finally {
+    global.fetch = originalFetch;
+    if (originalKey == null) delete process.env.YOUTUBE_API_KEY;
+    else process.env.YOUTUBE_API_KEY = originalKey;
+  }
+});
+
+test('YouTube search records unavailable state when API key is missing', async () => {
+  const originalKey = process.env.YOUTUBE_API_KEY;
+  delete process.env.YOUTUBE_API_KEY;
+  try {
+    const result = await collectAgentReachMarketEvidence({
+      query: 'blackhead remover',
+      country: 'Libya',
+      youtubeSearches: ['blackhead remover review Libya']
+    });
+
+    assert.equal(result.counts.youtubeSearches, 1);
+    assert.equal(result.evidenceRegistry.evidence.length, 0);
+    assert.ok(result.unavailable.some(item => item.provider === 'youtube' && item.reason === 'missing_api_key'));
+  } finally {
+    if (originalKey == null) delete process.env.YOUTUBE_API_KEY;
+    else process.env.YOUTUBE_API_KEY = originalKey;
+  }
+});
+
 test('Agent Reach evidence can be merged into the common competitor evidence registry', async () => {
   const originalFetch = global.fetch;
   global.fetch = async url => ({

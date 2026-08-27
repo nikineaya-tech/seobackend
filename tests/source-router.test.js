@@ -14,7 +14,7 @@ test('source router plans acquisition routes without creating claims', () => {
     lang: 'fr',
     agentReachEnabled: true,
     hasExaApiKey: false,
-    hasYoutubeApiKey: false,
+    hasYoutubeApiKey: true,
     competitors: [
       { url: 'https://competitor.example/course', domain: 'competitor.example' }
     ],
@@ -28,6 +28,7 @@ test('source router plans acquisition routes without creating claims', () => {
   assert.ok(plan.routes.some(route => route.provider === 'exa' && route.status === 'MISSING_API_KEY'));
   assert.ok(plan.railwayPayload.urls.includes('https://competitor.example/course'));
   assert.ok(plan.railwayPayload.searches.some(item => /formation e-commerce/i.test(item)));
+  assert.ok(plan.railwayPayload.youtubeSearches.some(item => /formation e-commerce/i.test(item)));
   assert.ok(plan.railwayPayload.feeds.includes('https://news.example/feed.xml'));
   assert.doesNotMatch(JSON.stringify(plan), /market leader|dominance|growth proven/i);
 });

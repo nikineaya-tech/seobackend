@@ -6,6 +6,8 @@ const cheerio = require('cheerio');
 const MAX_URLS = Math.max(1, Number(process.env.AGENT_REACH_MAX_URLS || 8));
 const MAX_FEEDS = Math.max(0, Number(process.env.AGENT_REACH_MAX_FEEDS || 4));
 const MAX_SEARCHES = Math.max(0, Number(process.env.AGENT_REACH_MAX_SEARCHES || 6));
+const MAX_YOUTUBE_SEARCHES = Math.max(0, Number(process.env.AGENT_REACH_MAX_YOUTUBE_SEARCHES || 3));
+const MAX_YOUTUBE_RESULTS = Math.max(1, Number(process.env.AGENT_REACH_MAX_YOUTUBE_RESULTS || 5));
 const MAX_TEXT_CHARS = Math.max(800, Number(process.env.AGENT_REACH_MAX_TEXT_CHARS || 5000));
 const FETCH_TIMEOUT_MS = Math.max(3000, Number(process.env.AGENT_REACH_FETCH_TIMEOUT_MS || 25000));
 
@@ -211,6 +213,59 @@ async function collectSearchEvidence(searchQuery, context = {}) {
   }
 }
 
+function youtubeEvidenceFromItem(item = {}, query = '', context = {}) {
+  const snippet = item.snippet || {};
+  const videoId = item.id?.videoId || item.id;
+  const sourceUrl = videoId ? `https://www.youtube.com/watch?v=${videoId}` : null;
+  const title = clean(snippet.title, 220);
+  const description = clean(snippet.description, MAX_TEXT_CHARS);
+  const value = clean([title, description].filter(Boolean).join(' — '), MAX_TEXT_CHARS);
+  if (!sourceUrl || !value) return null;
+  return {
+    id: `ev_agent_reach_${hash(`${sourceUrl}|YOUTUBE_SEARCH_RESULT|${value.slice(0, 180)}`)}`,
+    scope: 'CUSTOMER',
+    entityId: null,
+    country: clean(context.country, 80) || null,
+    query: clean(context.query || query, 180) || null,
+    claimType: 'YOUTUBE_SEARCH_RESULT',
+    value,
+    title,
+    sourcePlatform: 'youtube',
+    sourceUrl,
+    publishedAt: clean(snippet.publishedAt, 80) || null,
+    collectedAt: new Date().toISOString(),
+    confidence: 'MEDIUM',
+    verificationStatus: 'CONFIRMED',
+    limitations: ['YouTube result is sampled customer/content evidence; it is not representative market statistics.']
+  };
+}
+
+async function collectYouTubeSearchEvidence(searchQuery, context = {}) {
+  const apiKey = clean(process.env.YOUTUBE_API_KEY || process.env.GOOGLE_YOUTUBE_API_KEY, 300);
+  const query = clean(searchQuery, 180);
+  if (!query) return { unavailable: { query: searchQuery, provider: 'youtube', reason: 'empty_youtube_query' }, evidence: [] };
+  if (!apiKey) return { unavailable: { query, provider: 'youtube', reason: 'missing_api_key' }, evidence: [] };
+  const endpoint = new URL('https://www.googleapis.com/youtube/v3/search');
+  endpoint.searchParams.set('part', 'snippet');
+  endpoint.searchParams.set('type', 'video');
+  endpoint.searchParams.set('maxResults', String(MAX_YOUTUBE_RESULTS));
+  endpoint.searchParams.set('q', query);
+  endpoint.searchParams.set('key', apiKey);
+  try {
+    const read = await fetchText(endpoint.toString(), { accept: 'application/json' });
+    if (!read.ok || !read.text) {
+      return { unavailable: { query, provider: 'youtube', reason: `http_${read.status || 'unknown'}` }, evidence: [] };
+    }
+    const parsed = JSON.parse(read.text);
+    return {
+      unavailable: null,
+      evidence: arr(parsed.items).map(item => youtubeEvidenceFromItem(item, query, context)).filter(Boolean)
+    };
+  } catch (error) {
+    return { unavailable: { query, provider: 'youtube', reason: clean(error.message, 220) }, evidence: [] };
+  }
+}
+
 function dedupeEvidence(evidence = []) {
   const seen = new Set();
   return evidence.filter(item => {
@@ -230,8 +285,15 @@ async function collectAgentReachMarketEvidence(payload = {}) {
   const urls = arr(payload.urls || [payload.url, payload.targetUrl]).map(normalizeUrl).filter(Boolean).slice(0, MAX_URLS);
   const feeds = arr(payload.feeds || payload.rssFeeds).map(normalizeUrl).filter(Boolean).slice(0, MAX_FEEDS);
   const searches = arr(payload.searches || payload.searchQueries).map(item => clean(item, 180)).filter(Boolean).slice(0, MAX_SEARCHES);
+  const youtubeSearches = arr(payload.youtubeSearches || payload.youtubeQueries).map(item => clean(item, 180)).filter(Boolean).slice(0, MAX_YOUTUBE_SEARCHES);
   const evidence = [];
   const unavailable = [];
+
+  for (const youtubeQuery of youtubeSearches) {
+    const result = await collectYouTubeSearchEvidence(youtubeQuery, context);
+    evidence.push(...arr(result.evidence));
+    if (result.unavailable) unavailable.push(result.unavailable);
+  }
 
   for (const search of searches) {
     const result = await collectSearchEvidence(search, context);
@@ -260,8 +322,9 @@ async function collectAgentReachMarketEvidence(payload = {}) {
     sourceRouter: {
       web: 'Jina Reader compatible path',
       search: 'Jina Search compatible path',
+      youtube: 'YouTube Data API search when YOUTUBE_API_KEY is configured',
       rss: 'direct RSS parser',
-      youtube: 'captured as readable page evidence when URL is provided',
+      youtubeUrl: 'captured as readable page evidence when URL is provided',
       note: 'Agent Reach remains an acquisition layer; no business conclusion is produced here.'
     },
     query: context.query || null,
@@ -274,6 +337,7 @@ async function collectAgentReachMarketEvidence(payload = {}) {
     unavailable,
     counts: {
       searches: searches.length,
+      youtubeSearches: youtubeSearches.length,
       urls: urls.length,
       feeds: feeds.length,
       evidence: normalizedEvidence.length,
