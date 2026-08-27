@@ -6,6 +6,7 @@ const {
   SIGNAL_TYPES,
   SIGNAL_STATUS,
   buildMarketSignalEngine,
+  buildSocialContentModel,
   evidenceRowsFrom,
   topicFor
 } = require('../lib/market-intelligence/signal-engine');
@@ -225,4 +226,64 @@ test('offer intelligence patterns are quantified without inventing commercial te
   assert.ok(offer.patterns.every(pattern => pattern.evidenceIds.length > 0));
   assert.match(offer.quality.limitations.join(' '), /Exact price, stock, delivery speed/i);
   assert.doesNotMatch(JSON.stringify(offer), /confirmed market price|guaranteed 24h|market share/i);
+});
+
+test('social content intelligence quantifies content patterns without inventing engagement', () => {
+  const model = buildMarketSignalEngine({
+    now: NOW,
+    evidenceRegistry: {
+      evidence: [
+        {
+          id: 'ev_youtube_tutorial_1',
+          scope: 'CONTENT',
+          claimType: 'YOUTUBE_SEARCH_RESULT',
+          title: 'Blackhead remover tutorial and review',
+          value: 'A video tutorial shows safe usage, visible result proof and before after demo.',
+          sourceUrl: 'https://youtube.com/watch?v=demo',
+          sourcePlatform: 'youtube',
+          publishedAt: '2026-08-24T10:00:00.000Z',
+          verificationStatus: 'CONFIRMED'
+        },
+        {
+          id: 'ev_rss_comparison_1',
+          scope: 'CONTENT',
+          claimType: 'RSS_ITEM',
+          title: 'New comparison guide for facial cleaning devices',
+          value: 'The article compares alternatives and lists buyer questions before purchase.',
+          sourceUrl: 'https://publisher.example/guide',
+          sourcePlatform: 'rss',
+          publishedAt: '2026-08-22T10:00:00.000Z',
+          verificationStatus: 'CONFIRMED'
+        },
+        {
+          id: 'ev_instagram_offer_1',
+          scope: 'SOCIAL',
+          claimType: 'SOCIAL_POST',
+          title: 'Promo post',
+          value: 'Instagram post promotes the offer and comments ask about price, order and refund.',
+          sourceUrl: 'https://instagram.com/p/demo',
+          sourcePlatform: 'instagram',
+          observedAt: NOW,
+          verificationStatus: 'CONFIRMED'
+        }
+      ]
+    }
+  });
+
+  const social = model.socialContent;
+  assert.equal(social.version, 'social-content-intelligence-v1');
+  assert.equal(social.quality.quantifiedFromEvidence, true);
+  assert.equal(social.quality.noInventedEngagementClaims, true);
+  assert.equal(social.quality.unsupportedPatterns, 0);
+  assert.ok(social.patternCount >= 5);
+  assert.ok(social.byFormat.review.some(pattern => pattern.evidenceIds.includes('ev_youtube_tutorial_1')));
+  assert.ok(social.byFormat.tutorial.some(pattern => pattern.evidenceIds.includes('ev_youtube_tutorial_1')));
+  assert.ok(social.byFormat.comparison.some(pattern => pattern.evidenceIds.includes('ev_rss_comparison_1')));
+  assert.ok(social.byFormat.offer_post.some(pattern => pattern.evidenceIds.includes('ev_instagram_offer_1')));
+  assert.ok(social.patterns.every(pattern => pattern.evidenceIds.length > 0));
+  assert.match(social.quality.limitations.join(' '), /not audience size, engagement rate or campaign performance/i);
+  assert.doesNotMatch(JSON.stringify(social), /viral hit|engagement rate\s*[:=]\s*\d|influencer roi|campaign performance proven/i);
+
+  const direct = buildSocialContentModel([], new Date(NOW));
+  assert.equal(direct.quality.noInventedEngagementClaims, true);
 });

@@ -3026,7 +3026,7 @@ async function renderDakaLibraryPage() {
         const page = await DAKA_LIBRARY_STATE.pdf.getPage(DAKA_LIBRARY_STATE.page);
         const baseViewport = page.getViewport({ scale: 1 });
         const fitWidth = Math.max(280, Math.min((wrap.clientWidth || 960) - 36, 1180));
-        const fitHeight = Math.max(320, (wrap.clientHeight || 780) - 124);
+        const fitHeight = Math.max(320, (wrap.clientHeight || 780) - 24);
         const fitScale = Math.max(0.45, Math.min(1.85, fitWidth / baseViewport.width, fitHeight / baseViewport.height));
         const scale = DAKA_LIBRARY_STATE.fitMode ? fitScale : Math.max(0.55, Math.min(2.2, fitScale * DAKA_LIBRARY_STATE.zoom));
         const viewport = page.getViewport({ scale });
@@ -3062,6 +3062,12 @@ async function openDakaLibraryPdf(itemId = 'marketing-frameworks-explained') {
     const viewer = document.getElementById('dakaLibraryViewer');
     if (!viewer) return;
     setDakaLibraryReaderOpen(true);
+    if (viewer.requestFullscreen && document.fullscreenElement !== viewer) {
+        try {
+            const fullscreenRequest = viewer.requestFullscreen({ navigationUI: 'hide' });
+            if (fullscreenRequest?.catch) fullscreenRequest.catch(() => {});
+        } catch (_) {}
+    }
     setDakaLibraryStatus(dakaLibraryT('library_loading'));
     try {
         const pdfjs = await loadDakaPdfJs();

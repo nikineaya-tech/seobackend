@@ -76,11 +76,11 @@
 
       .daka-library-reader-head {
         flex: 0 0 auto !important;
-        min-height: 78px !important;
+        min-height: 74px !important;
         display: grid !important;
-        grid-template-columns: auto minmax(150px, auto) minmax(220px, 1fr) !important;
+        grid-template-columns: minmax(430px, auto) minmax(160px, auto) minmax(220px, 1fr) !important;
         align-items: center !important;
-        gap: 14px !important;
+        gap: 12px !important;
         padding: 12px clamp(14px, 2vw, 24px) !important;
         border-bottom: 1px solid rgba(148,163,184,.12) !important;
         background: rgba(2,6,23,.78) !important;
@@ -101,7 +101,7 @@
         font-size: clamp(1rem, 1.7vw, 1.32rem) !important;
         line-height: 1.15 !important;
         letter-spacing: 0 !important;
-        max-width: min(640px, 42vw) !important;
+        max-width: min(760px, 45vw) !important;
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
@@ -154,7 +154,7 @@
         height: auto !important;
         max-height: none !important;
         width: 100% !important;
-        padding: 12px 16px 22px !important;
+        padding: 10px 16px 14px !important;
         display: grid !important;
         place-items: center !important;
         align-items: center !important;
@@ -169,7 +169,7 @@
         width: auto !important;
         height: auto !important;
         max-width: calc(100vw - 34px) !important;
-        max-height: calc(100dvh - 106px) !important;
+        max-height: calc(100dvh - 92px) !important;
         border-radius: 14px !important;
         background: #fff !important;
         box-shadow: 0 24px 90px rgba(0,0,0,.62), 0 0 0 1px rgba(255,255,255,.08) !important;
@@ -189,7 +189,7 @@
         z-index: auto !important;
         transform: none !important;
         width: auto !important;
-        max-width: min(760px, 50vw) !important;
+        max-width: min(820px, 46vw) !important;
         min-height: 54px !important;
         display: flex !important;
         align-items: center !important;
@@ -232,7 +232,7 @@
 
       @media (max-width: 760px) {
         .daka-library-reader-head {
-          min-height: 134px !important;
+          min-height: 142px !important;
           grid-template-columns: 1fr !important;
           align-items: stretch !important;
           padding: 8px 10px !important;
@@ -255,7 +255,7 @@
         }
         #dakaLibraryCanvas {
           max-width: calc(100vw - 16px) !important;
-          max-height: calc(100dvh - 154px) !important;
+          max-height: calc(100dvh - 164px) !important;
           border-radius: 10px !important;
         }
         .daka-library-toolbar {
@@ -276,6 +276,12 @@
           width: fit-content !important;
           max-width: calc(100vw - 20px) !important;
           font-size: .72rem !important;
+        }
+      }
+
+      @media (min-width: 1180px) {
+        .daka-library-reader-head {
+          grid-template-columns: minmax(520px, auto) minmax(170px, auto) minmax(280px, 1fr) !important;
         }
       }
     `;
@@ -299,6 +305,14 @@
     }
   }
 
+  function requestNativeFullscreen(viewer) {
+    if (!viewer || document.fullscreenElement === viewer || !viewer.requestFullscreen) return;
+    try {
+      const result = viewer.requestFullscreen({ navigationUI: 'hide' });
+      if (result && typeof result.catch === 'function') result.catch(() => {});
+    } catch (_) {}
+  }
+
   function enterAutomaticFullscreen(viewer) {
     if (!viewer) return;
     viewer.hidden = false;
@@ -306,6 +320,7 @@
     viewer.closest('.daka-library-shell')?.classList.add('is-reading');
     document.documentElement.classList.add(ACTIVE_CLASS);
     document.body.classList.add('daka-library-reader-open');
+    window.setTimeout(() => requestNativeFullscreen(viewer), 40);
   }
 
   function syncReaderState() {

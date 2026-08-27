@@ -6191,9 +6191,9 @@ navkeywords: 'Market demand',
         }, true);
     })();
     </script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260826-library-progress1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260827-market-signal-social1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-library-reader-hardening.js?v=20260826-reader-auto-fullscreen-fit3" defer></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-library-reader-hardening.js?v=20260827-reader-fullscreen-fit4" defer></script>
 
 <style id="daka-brand-loader-style">
 .logo-mark {
@@ -11595,6 +11595,145 @@ html.daka-deal-editor .header {
     resizeMatrix();
     window.addEventListener('resize', resizeMatrix, { passive: true });
     tickMatrix();
+})();
+</script>
+<style id="daka-final-ux-fixes-20260827">
+/* Final UX hardening: the module rail stays on the physical left, matrix layers never intercept clicks. */
+#dakaAppMatrixCanvas,
+.daka-app-matrix-glow,
+.daka-app-matrix-glow::before,
+.daka-app-matrix-glow::after,
+.daka-form-matrix-canvas {
+    pointer-events: none !important;
+}
+
+@media (min-width: 1181px) {
+    body:not(.daka-deal-editor) {
+        --daka-sidebar-open-width: 238px;
+        --daka-sidebar-edge: 18px;
+    }
+
+    body:not(.daka-deal-editor) main {
+        padding-left: calc(var(--daka-sidebar-open-width) + 38px) !important;
+        padding-right: 0 !important;
+    }
+
+    body.daka-sidebar-hidden:not(.daka-deal-editor) main {
+        padding-left: 0 !important;
+    }
+
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs,
+    html[dir="rtl"] body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        position: fixed !important;
+        left: var(--daka-sidebar-edge) !important;
+        right: auto !important;
+        top: 128px !important;
+        width: var(--daka-sidebar-open-width) !important;
+        max-width: var(--daka-sidebar-open-width) !important;
+        max-height: calc(100dvh - 154px) !important;
+        margin: 0 !important;
+        padding: 12px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 9px !important;
+        border-radius: 24px !important;
+        overflow: hidden auto !important;
+        direction: ltr !important;
+        z-index: 980 !important;
+        transform: translateX(0) !important;
+    }
+
+    body.daka-sidebar-hidden:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs,
+    html[dir="rtl"] body.daka-sidebar-hidden:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-tabs {
+        opacity: 0 !important;
+        pointer-events: none !important;
+        transform: translateX(calc(-100% - 32px)) !important;
+    }
+
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn {
+        width: 100% !important;
+        min-height: 56px !important;
+        padding: 11px 13px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 12px !important;
+        text-align: left !important;
+        white-space: normal !important;
+    }
+
+    html[dir="rtl"] body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn {
+        direction: rtl !important;
+        text-align: right !important;
+    }
+
+    body:not(.daka-deal-editor) .header[data-nav-density="compact"] .nav-btn span {
+        display: block !important;
+        overflow: visible !important;
+        text-overflow: clip !important;
+        max-width: none !important;
+        white-space: normal !important;
+    }
+
+    .daka-sidebar-toggle,
+    html[dir="rtl"] .daka-sidebar-toggle {
+        position: fixed !important;
+        left: var(--daka-sidebar-edge) !important;
+        right: auto !important;
+        top: 78px !important;
+        z-index: 990 !important;
+    }
+}
+
+html.daka-deal-editor #dakaAppMatrixCanvas,
+html.daka-deal-editor .daka-app-matrix-glow,
+html.daka-deal-editor .daka-form-matrix-canvas,
+html.daka-deal-editor .tab-content > .card::after,
+html.daka-deal-editor .form-section::after {
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+</style>
+<script>
+(function enforceDakaFinalUxFixes() {
+    function isDealEditor() {
+        try {
+            return window.DAKA_DEAL_EDITOR_SAFE ||
+                document.documentElement.classList.contains('daka-deal-editor') ||
+                /(^|\.)deal\.ai$/i.test(document.referrer || '') ||
+                /preview_mode|pagePath|funnel=|simple-websites\/edit/i.test(location.href || '');
+        } catch (_) {
+            return false;
+        }
+    }
+
+    function forceLeftRail() {
+        if (isDealEditor()) {
+            document.documentElement.classList.add('daka-deal-editor');
+            document.body?.classList.add('daka-deal-editor');
+            return;
+        }
+        if (!window.matchMedia || !window.matchMedia('(min-width: 1181px)').matches) return;
+        var nav = document.querySelector('.header[data-nav-density="compact"] .nav-tabs');
+        if (!nav) return;
+        nav.style.setProperty('position', 'fixed', 'important');
+        nav.style.setProperty('left', '18px', 'important');
+        nav.style.setProperty('right', 'auto', 'important');
+        nav.style.setProperty('top', '128px', 'important');
+        nav.style.setProperty('width', '238px', 'important');
+        nav.style.setProperty('max-width', '238px', 'important');
+        nav.style.setProperty('direction', 'ltr', 'important');
+        document.querySelectorAll('.nav-btn').forEach(function (button) {
+            var label = (button.textContent || '').replace(/\s+/g, ' ').trim();
+            if (label) button.setAttribute('title', label);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', forceLeftRail);
+    window.addEventListener('resize', forceLeftRail, { passive: true });
+    window.setTimeout(forceLeftRail, 300);
+    window.setTimeout(forceLeftRail, 1200);
 })();
 </script>
 </body>
