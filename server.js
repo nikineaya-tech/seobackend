@@ -305,7 +305,7 @@ async function waitForJobResult(jobId, timeout = 90000) {
     throw timeoutError;
 }
 // ═══════════════════════════════════════════════════════════════════
-// SCRAPING ROUTER — Render business / Railway scraping-only
+// COLLECTION ROUTER — Render business / Railway collection-only
 // ═══════════════════════════════════════════════════════════════════
 
 const SCRAPING_EXECUTION_LAYER = String(
@@ -345,7 +345,11 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
         'product-scrape',
         'product_scrape',
         'page-scrape',
-        'page_scrape'
+        'page_scrape',
+        'agent-reach',
+        'agent_reach',
+        'market-sensor',
+        'market_sensor'
     ]);
 
     if (!allowedTypes.has(type)) {
@@ -374,6 +378,25 @@ async function runScrapeOnRailway(type, payload = {}, timeout = 120000) {
         sourceJobId: jobId,
         executionLayer: 'railway'
     };
+}
+
+const AGENT_REACH_MARKET_SENSOR_ENABLED = ['1', 'true', 'yes', 'on'].includes(
+    String(process.env.AGENT_REACH_MARKET_SENSOR_ENABLED || 'false').toLowerCase()
+);
+
+function shouldUseAgentReachMarketSensor() {
+    return (
+        AGENT_REACH_MARKET_SENSOR_ENABLED &&
+        supabase &&
+        process.env.WORKER_MODE !== 'scraping-only'
+    );
+}
+
+async function runAgentReachMarketSensorOnRailway(payload = {}, timeout = 90000) {
+    return runScrapeOnRailway('market-sensor', {
+        ...payload,
+        purpose: payload.purpose || 'market-sensor'
+    }, timeout);
 }
 
 async function scrapeUrlViaRailway(url, options = {}) {
@@ -9536,6 +9559,38 @@ top5BusinessProfiles.forEach((profile, index) => {
 });
 console.log(`[WarRoom-V10.0] Business profiles explored: ${top5BusinessProfiles.filter(Boolean).length}/${Math.min(10, enrichedCompetitors.length)}`);
 
+let agentReachMarketEvidence = null;
+if (shouldUseAgentReachMarketSensor()) {
+    const sensorUrls = enrichedCompetitors
+        .map(item => item.url || item.link)
+        .filter(Boolean)
+        .slice(0, Number(process.env.AGENT_REACH_COMPETITOR_URLS || 4));
+    if (sensorUrls.length) {
+        try {
+            agentReachMarketEvidence = await runAgentReachMarketSensorOnRailway({
+                query: reportQuery,
+                country: geoData.location,
+                urls: sensorUrls,
+                clientAnalysisId,
+                requestId,
+                purpose: 'competitor-market-sensor'
+            }, Number(process.env.AGENT_REACH_SENSOR_TIMEOUT_MS || 90000));
+            console.log(
+                `[WarRoom-V10.0] Agent Reach sensor evidence=${agentReachMarketEvidence?.counts?.evidence || 0} unavailable=${agentReachMarketEvidence?.counts?.unavailable || 0}`
+            );
+        } catch (sensorError) {
+            console.warn(`[WarRoom-V10.0] Agent Reach sensor skipped: ${sensorError.message}`);
+            agentReachMarketEvidence = {
+                success: false,
+                kind: 'market-sensor',
+                provider: 'agent-reach-railway-adapter',
+                unavailable: sensorUrls.map(url => ({ url, reason: sensorError.message })),
+                evidenceRegistry: { version: 'market-evidence-v1', evidence: [] }
+            };
+        }
+    }
+}
+
   let leaderMoat = { status: ND };
 
 try {
@@ -10401,6 +10456,7 @@ const proofModel = buildCompetitorProofModel({
     realVolume,
     mergedData,
     apifyData,
+    agentReachMarketEvidence,
     peopleAlsoAsk,
     relatedSearches,
     userIntentContext,
@@ -10478,6 +10534,8 @@ let finalResult = {
     competitorIntelligence,
     externalBot: GPT_BOT,
     apify: apifyData,
+    marketEvidence: agentReachMarketEvidence,
+    agentReachEvidence: agentReachMarketEvidence,
     proofModel,
     executiveBrief,
     dataIntegrity
@@ -10490,7 +10548,9 @@ finalResult = sanitizeCompetitorReport(finalResult, {
     userSiteAudited: Boolean(userSiteData?.url),
     userSiteData,
     trendsData,
-    mainKwData
+    mainKwData,
+    agentReachEvidence: agentReachMarketEvidence,
+    marketEvidence: agentReachMarketEvidence
 });
 finalResult.dataIntegrity = proofIntegrity(finalResult.proofModel || {});
 

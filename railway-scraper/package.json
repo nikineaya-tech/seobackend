@@ -2,13 +2,13 @@
   "name": "daka-railway-scraper",
   "version": "1.0.0",
   "private": true,
-  "description": "Isolated Railway service for scraping jobs only. No AI routes, no pricing pipeline, no frontend.",
+  "description": "Isolated Railway service for scraping and market-sensor collection jobs only. No AI routes, no pricing pipeline, no frontend.",
   "main": "scraper-worker.js",
   "scripts": {
     "start": "node scraper-worker.js",
     "start:orchestrator": "node scraper-orchestrator.js",
     "postinstall": "echo Playwright browsers provided by Docker image",
-    "check": "node -v && node --check scraper-worker.js && node --check scraper-orchestrator.js"
+    "check": "node -v && node --check scraper-worker.js && node --check scraper-orchestrator.js && node --check agent-reach-sensor.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",

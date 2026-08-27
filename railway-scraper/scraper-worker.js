@@ -1,12 +1,13 @@
 'use strict';
 
 require('dotenv').config();
-process.env.WORKER_MODE = 'scraping-only';
+process.env.WORKER_MODE = 'scraping-and-market-sensor';
 
 const http = require('http');
 const { createClient } = require('@supabase/supabase-js');
 const ws = require('ws');
 const { scrapeUrl, scrapeMany } = require('./scraper-orchestrator');
+const { collectAgentReachMarketEvidence } = require('./agent-reach-sensor');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_KEY || '';
@@ -26,7 +27,11 @@ const ALLOWED_JOB_TYPES = new Set([
   'product-scrape',
   'product_scrape',
   'page-scrape',
-  'page_scrape'
+  'page_scrape',
+  'agent-reach',
+  'agent_reach',
+  'market-sensor',
+  'market_sensor'
 ]);
 
 class NonScrapingJobError extends Error {
@@ -69,7 +74,7 @@ let interval = null;
 const healthServer = http.createServer((req, res) => {
   const payload = {
     service: 'railway-scraper',
-    mode: 'scraping-only',
+    mode: 'scraping-and-market-sensor',
     status: stopping ? 'stopping' : processing ? 'busy' : 'idle',
     workerId: WORKER_ID,
     uptimeSeconds: Math.round((Date.now() - METRICS.startedAt) / 1000),
@@ -448,6 +453,10 @@ async function processScrapingJob(job) {
   }
 
   const payload = job.payload || {};
+  if (['agent-reach', 'agent_reach', 'market-sensor', 'market_sensor'].includes(job.type)) {
+    return collectAgentReachMarketEvidence(payload);
+  }
+
   const urls = extractUrls(payload);
 
   if (!urls.length) {
@@ -505,15 +514,22 @@ const startedAt = Date.now();
 try {
   const rawResult = await processScrapingJob(job);
   const rawResultBytes = assertJsonSafe(rawResult);
-  const safeResult = buildSafeJobResult({
-    ...rawResult,
-    jobContext: {
-      clientAnalysisId: job.payload?.clientAnalysisId || null,
-      requestId: job.payload?.requestId || null,
-      purpose: job.payload?.purpose || 'deep-scrape',
-      railwayJobId: job.id
-    }
-  });
+  const jobContext = {
+    clientAnalysisId: job.payload?.clientAnalysisId || null,
+    requestId: job.payload?.requestId || null,
+    purpose: job.payload?.purpose || 'deep-scrape',
+    railwayJobId: job.id
+  };
+  const safeResult = rawResult?.kind === 'market-sensor'
+    ? {
+        ...rawResult,
+        jobContext,
+        compactStrategy: 'market-evidence-registry'
+      }
+    : buildSafeJobResult({
+        ...rawResult,
+        jobContext
+      });
   const safeResultBytes = assertJsonSafe(safeResult);
 
   console.log(
@@ -1282,6 +1298,6 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('unhandledRejection', reason => console.error('[RailwayScraper] Unhandled rejection:', reason));
 process.on('uncaughtException', err => console.error('[RailwayScraper] Uncaught exception:', err));
 
-console.log(`[RailwayScraper:${WORKER_ID}] Started in scraping-only mode. Poll=${POLL_MS}ms`);
+console.log(`[RailwayScraper:${WORKER_ID}] Started in scraping-and-market-sensor mode. Poll=${POLL_MS}ms`);
 interval = setInterval(claimAndProcess, POLL_MS);
 claimAndProcess();
