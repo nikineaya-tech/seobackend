@@ -84,6 +84,9 @@ const {
 const {
   buildMarketEntityMap,
 } = require('./lib/market-intelligence/entity-classifier');
+const {
+  buildDecisionReportV2,
+} = require('./lib/market-intelligence/report-v2');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -10591,6 +10594,24 @@ finalResult.strategicAgentsV2 = strategicAgentsV2;
 finalResult.marketPatternAnalyst = strategicAgentsV2.marketPatternAnalyst;
 finalResult.gapAnalyst = strategicAgentsV2.gapAnalyst;
 finalResult.decisionStrategist = strategicAgentsV2.decisionStrategist;
+finalResult.decisionReportV2 = buildDecisionReportV2({
+    evidenceRegistry: finalResult.evidenceRegistry,
+    marketEvidence: agentReachMarketEvidence,
+    agentReachEvidence: agentReachMarketEvidence,
+    marketSignalModel,
+    marketEntityMap,
+    strategicAgentsV2,
+    supplierIntelligence: finalResult.supplierIntelligence,
+    geoSourceAudit: finalResult.geoSourceAudit,
+    relatedSearches: finalResult.relatedSearches,
+    peopleAlsoAsk: finalResult.peopleAlsoAsk,
+    query: cleanQuery,
+    originalQuery: finalResult.originalQuery,
+    localizedQuery: finalResult.localizedQuery,
+    country: geoData.location,
+    geo: geoData.location,
+    lang: langObj.code
+});
 finalResult.dataIntegrity = proofIntegrity(finalResult.proofModel || {});
 finalResult.dataIntegrity.marketSignalCoverage = {
     evidenceCount: marketSignalModel.sourceEvidenceCount,
@@ -10604,7 +10625,12 @@ finalResult.dataIntegrity.marketSignalCoverage = {
     strategicActions: strategicAgentsV2.decisionStrategist.actions.length,
     unsupportedStrategicActions: strategicAgentsV2.quality.unsupportedActionCount,
     entityTypes: Object.keys(marketEntityMap.byType || {}),
-    supplierIntelligenceStatus: marketEntityMap.supplierIntelligence.status
+    supplierIntelligenceStatus: marketEntityMap.supplierIntelligence.status,
+    decisionReportV2: {
+        observationsWithEvidence: finalResult.decisionReportV2.quality.observationsWithEvidence,
+        maxThreeActions: finalResult.decisionReportV2.quality.maxThreeActions,
+        noObservedClaimWithoutEvidence: finalResult.decisionReportV2.quality.noObservedClaimWithoutEvidence
+    }
 };
 
 cache.set(cacheKey, finalResult);
