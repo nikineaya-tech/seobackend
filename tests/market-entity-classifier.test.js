@@ -116,3 +116,47 @@ test('supplier intelligence is partial only when supplier candidate is traceable
   assert.equal(map.supplierIntelligence.confidence, 'MEDIUM');
   assert.ok(map.supplierIntelligence.suppliers[0].evidenceIds.includes('ev_supplier'));
 });
+
+test('agent reach exa supplier evidence becomes supplier candidate without confirmed sourcing claims', () => {
+  const map = buildMarketEntityMap({
+    evidenceRegistry: {
+      evidence: [{
+        id: 'ev_agent_reach_exa_supplier',
+        sourcePlatform: 'exa_search',
+        claimType: 'EXA_SEARCH_RESULT',
+        sourceUrl: 'https://www.alibaba.com/product-detail/example',
+        title: 'OEM wholesale blackhead remover factory',
+        query: 'blackhead remover supplier wholesale',
+        value: 'OEM factory wholesale listing for blackhead remover devices.',
+        confidence: 'MEDIUM'
+      }]
+    }
+  });
+
+  assert.equal(map.counts[ENTITY_TYPES.SUPPLIER], 1);
+  assert.equal(map.supplierIntelligence.status, 'PARTIAL');
+  assert.match(map.supplierIntelligence.limitations.join(' '), /MOQ, FOB, lead time or OEM claims/i);
+  assert.ok(map.supplierIntelligence.suppliers[0].evidenceIds.includes('ev_agent_reach_exa_supplier'));
+});
+
+test('agent reach exa content evidence is not promoted to a direct competitor', () => {
+  const map = buildMarketEntityMap({
+    evidenceRegistry: {
+      evidence: [{
+        id: 'ev_agent_reach_exa_guide',
+        sourcePlatform: 'exa_search',
+        resultPlatform: 'web',
+        claimType: 'EXA_SEARCH_RESULT',
+        sourceUrl: 'https://example.com/blackhead-remover-comparison',
+        title: 'How buyers compare blackhead remover devices',
+        query: 'blackhead remover comparison Libya',
+        value: 'Guide comparing suction levels, reviews and return terms.',
+        confidence: 'MEDIUM'
+      }]
+    }
+  });
+
+  assert.equal(map.counts[ENTITY_TYPES.SUBSTITUTE], 1);
+  assert.equal(map.counts[ENTITY_TYPES.DIRECT_COMPETITOR], 0);
+  assert.equal(map.counts[ENTITY_TYPES.LOCAL_SELLER], 0);
+});

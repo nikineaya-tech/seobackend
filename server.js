@@ -10593,6 +10593,8 @@ const marketEntityMap = buildMarketEntityMap({
     competitors: finalResult.competitors,
     marketProductSources: finalResult.marketProductSources,
     evidenceRegistry: finalResult.evidenceRegistry,
+    agentReachEvidence: agentReachMarketEvidence,
+    marketEvidence: agentReachMarketEvidence,
     geoData,
     country: geoData.location
 });
