@@ -78,6 +78,9 @@ const {
 const {
   buildMarketSignalEngine,
 } = require('./lib/market-intelligence/signal-engine');
+const {
+  runStrategicAgentsV2,
+} = require('./lib/market-intelligence/strategic-agents-v2');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -10564,6 +10567,17 @@ const marketSignalModel = buildMarketSignalEngine({
 });
 finalResult.marketSignalModel = marketSignalModel;
 finalResult.marketSignals = marketSignalModel.signals.slice(0, 15);
+const strategicAgentsV2 = runStrategicAgentsV2({
+    marketSignalModel,
+    query: cleanQuery,
+    country: geoData.location,
+    lang: langObj.code,
+    maxActions: 3
+});
+finalResult.strategicAgentsV2 = strategicAgentsV2;
+finalResult.marketPatternAnalyst = strategicAgentsV2.marketPatternAnalyst;
+finalResult.gapAnalyst = strategicAgentsV2.gapAnalyst;
+finalResult.decisionStrategist = strategicAgentsV2.decisionStrategist;
 finalResult.dataIntegrity = proofIntegrity(finalResult.proofModel || {});
 finalResult.dataIntegrity.marketSignalCoverage = {
     evidenceCount: marketSignalModel.sourceEvidenceCount,
@@ -10573,7 +10587,9 @@ finalResult.dataIntegrity.marketSignalCoverage = {
     inferredSignals: marketSignalModel.quality.inferredSignals,
     unsupportedObservedSignals: marketSignalModel.quality.unsupportedObservedSignals,
     hasTemporalEvidence: marketSignalModel.quality.hasTemporalEvidence,
-    noMarketGrowthClaim: marketSignalModel.quality.noMarketGrowthClaim
+    noMarketGrowthClaim: marketSignalModel.quality.noMarketGrowthClaim,
+    strategicActions: strategicAgentsV2.decisionStrategist.actions.length,
+    unsupportedStrategicActions: strategicAgentsV2.quality.unsupportedActionCount
 };
 
 cache.set(cacheKey, finalResult);

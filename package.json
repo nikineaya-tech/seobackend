@@ -19,7 +19,7 @@
     "pm2:monit": "pm2 monit",
     "check": "node -v && node --check server.js && node --check scripts/daka-server-runtime-guard.cjs && node scripts/apply-render-routing-patch.cjs",
     "test:marketing-master": "node --test tests/marketing-master-auditor.test.js",
-    "test:competitors": "node --test tests/competitor-evidence-engine.test.js tests/marketing-master-auditor.test.js tests/agent-reach-sensor.test.js tests/market-signal-engine.test.js",
+    "test:competitors": "node --test tests/competitor-evidence-engine.test.js tests/marketing-master-auditor.test.js tests/agent-reach-sensor.test.js tests/market-signal-engine.test.js tests/strategic-agents-v2.test.js",
     "test:stp": "node --test tests/stp-angle-engine.test.js tests/stp-client-sanitizer.test.js tests/stp-real-engine.test.js && node scripts/audit-stp-output.cjs",
     "env:check": "node -e \"console.log({NODE_ENV:process.env.NODE_ENV||'development',PORT:process.env.PORT||'not-set'});\""
   },
