@@ -3796,7 +3796,7 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
     const esc = typeof escapeHtml === 'function' ? escapeHtml : (v => String(v || ''));
     const dir = isAr ? 'rtl' : 'ltr';
     const labels = isAr ? {
-        kicker: 'قرار السوق', verdict: 'من يتصدر السوق ولماذا؟', attack: 'زاوية الهجوم الموصى بها',
+        kicker: 'قرار السوق', verdict: 'أول نتيجة تجارية مرصودة ولماذا؟', attack: 'زاوية الهجوم الموصى بها',
         actions: 'خطة التنفيذ ذات الأولوية', week: 'هذا الأسبوع', month: 'خلال 30 يوما',
         profiles: 'ملفات المنافسين الخمسة الرئيسيين', watch: 'مراقبة السوق',
         observed: 'ملاحظ', deduced: 'مستنتج', recommended: 'موصى به', confidence: 'الثقة',
@@ -3804,7 +3804,7 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
         sell: 'ما الذي يبيعه', promise: 'وعده الرئيسي', angle: 'فرصة الهجوم', proof: 'مصادر قابلة للتحقق',
         position: 'عبارة التموضع', answers: 'الإجابات الحاسمة السبع', study: 'دراسة العرض والسوق المحلي', demand: 'إشارات الطلب', patterns: 'أنماط العروض المرصودة', factors: 'عوامل قرار الشراء', noData: 'لا توجد بيانات كافية'
     } : isEn ? {
-        kicker: 'Market decision', verdict: 'Who leads the market, and why?', attack: 'Recommended attack angle',
+        kicker: 'Market decision', verdict: 'Top observed result, and why?', attack: 'Recommended attack angle',
         actions: 'Priority execution plan', week: 'This week', month: 'Next 30 days',
         profiles: 'Top 5 competitor business profiles', watch: 'Market watch',
         observed: 'Observed', deduced: 'Deduced', recommended: 'Recommended', confidence: 'Confidence',
@@ -3812,7 +3812,7 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
         sell: 'What they sell', promise: 'Primary promise', angle: 'Attack opening', proof: 'Verifiable sources',
         position: 'Positioning statement', answers: 'Seven decisive answers', study: 'Offer and local market study', demand: 'Demand signals', patterns: 'Observed offer patterns', factors: 'Purchase decision factors', noData: 'Insufficient data'
     } : {
-        kicker: 'Decision marche', verdict: 'Qui domine le marche, et pourquoi ?', attack: "Angle d'attaque recommande",
+        kicker: 'Decision marche', verdict: 'Premier résultat observé, et pourquoi ?', attack: "Angle d'attaque recommande",
         actions: "Plan d'execution prioritaire", week: 'Cette semaine', month: 'Dans les 30 prochains jours',
         profiles: 'Fiches business des 5 concurrents principaux', watch: 'Surveillance du marche',
         observed: 'Observe', deduced: 'Deduit', recommended: 'Recommande', confidence: 'Confiance',
@@ -3886,7 +3886,7 @@ function renderCompetitorDecisionLayer(data, { isAr = false, isEn = false } = {}
     const finalAnswers = intel.finalAnswers || {};
     const study = intel.productMarketStudy || {};
     const answerRows = [
-        [isAr ? 'من يتصدر؟' : isEn ? 'Who wins?' : 'Qui gagne ?', finalAnswers.whoWins],
+        [isAr ? 'أول نتيجة مرصودة؟' : isEn ? 'Top observed result?' : 'Premier résultat observé ?', finalAnswers.whoWins],
         [isAr ? 'لماذا؟' : isEn ? 'Why do they win?' : 'Pourquoi ?', finalAnswers.whyTheyWin],
         [isAr ? 'أين نقاط الضعف؟' : isEn ? 'Where are the openings?' : 'Ou sont les faiblesses ?', finalAnswers.weaknesses],
         [isAr ? 'ما الموقع الذي يجب اتخاذه؟' : isEn ? 'What position should you take?' : 'Quelle position prendre ?', finalAnswers.positionToTake],
@@ -3996,7 +3996,7 @@ function getCompetitorRenderLabels(langCode = 'fr') {
             whyAdvance: 'Why are they ahead?',
             whereAttack: 'Where can you attack?',
             whatNow: 'What should move now?',
-            verdict: 'Who leads this market?',
+            verdict: 'Top observed result in this market?',
             attack: 'Recommended strategic position',
             study: 'Market reading',
             actions: 'Priority attack plan',
@@ -4046,7 +4046,7 @@ function getCompetitorRenderLabels(langCode = 'fr') {
         whyAdvance: 'Pourquoi il avance ?',
         whereAttack: 'O\u00f9 attaquer ?',
         whatNow: 'Quoi faire maintenant ?',
-        verdict: 'Qui domine ce march\u00e9 ?',
+        verdict: 'Premier r\u00e9sultat observ\u00e9 sur ce march\u00e9 ?',
         attack: 'Position strat\u00e9gique recommand\u00e9e',
         study: 'Lecture du march\u00e9',
         actions: 'Plan d\'attaque prioritaire',
@@ -4584,7 +4584,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         gslTitle: isAr ? 'العرض الذي ينتظره السوق' : (isEn ? 'The offer people expect' : 'L’offre que le marché attend'),
         revEngTitle: isAr ? 'ما ينجح عند الافضل' : (isEn ? 'What works for the best' : 'Ce qui marche chez les meilleurs'),
         masterTitle: isAr ? 'كيف تربح السوق' : (isEn ? 'How to win the market' : 'Comment gagner le marché'),
-        moatTitle: isAr ? 'لماذا القائد يربح' : (isEn ? 'Why the leader wins' : 'Pourquoi le leader gagne'),
+        moatTitle: isAr ? 'لماذا تظهر النتيجة الأولى بقوة' : (isEn ? 'Why the top observed result looks strong' : 'Pourquoi le premier résultat observé paraît fort'),
         productKill: isAr ? 'اجعل عرضك اقوى' : (isEn ? 'Make your offer stronger' : 'Rendre votre offre plus forte'),
         powerBalance: isAr ? 'ميزان القوة' : (isEn ? 'Power balance' : 'Rapport de force'),
         swotTitle: isAr ? 'فرص وفجوات' : (isEn ? 'Opportunities and gaps' : 'Opportunites et failles'),

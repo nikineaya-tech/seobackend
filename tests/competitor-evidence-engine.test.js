@@ -57,6 +57,7 @@ test('no user URL means no user comparison claims survive', () => {
   assert.equal(clean.comparisonScores.user, null);
   assert.deepEqual(clean.userWeaknesses, []);
   assert.equal(clean.userEvaluationNotice, noUserMessage('ar'));
+  assert.equal(clean.recommendedBenchmark.status, STATUS.RECOMMENDED);
   assert.doesNotMatch(JSON.stringify(clean), /تجربة مستخدم ضعيفة|your site|votre site/i);
 });
 
@@ -120,4 +121,34 @@ test('validator flags unsafe legacy output before sanitization', () => {
   assert.equal(audit.status, 'downgraded');
   assert.ok(audit.issues.some(issue => issue.code === 'UNSUPPORTED_USER_SITE_CLAIM'));
   assert.ok(audit.issues.some(issue => issue.code === 'UNSUPPORTED_DEMAND_GROWTH'));
+});
+
+test('market leader wording is rejected without market-share evidence', () => {
+  const report = sampleReport();
+  report.competitorIntelligence = {
+    marketVerdict: {
+      currentLeader: 'aelastore.shop',
+      marketPattern: 'من يتصدر السوق ولماذا؟ هذا المنافس هو market leader.'
+    }
+  };
+  const audit = validateCompetitorClaims(report, createEvidenceRegistry(report), { lang: 'ar', userSiteAudited: false });
+  assert.ok(audit.issues.some(issue => issue.code === 'UNSUPPORTED_MARKET_LEADER_CLAIM'));
+
+  const clean = sanitizeCompetitorReport(report, { lang: 'ar', userSiteAudited: false });
+  assert.doesNotMatch(JSON.stringify(clean), /من يتصدر السوق|market leader|leader du marché|domine le marché/i);
+});
+
+test('sanitized report exposes competitor geo groups separately', () => {
+  const report = sampleReport();
+  report.competitors.push({
+    title: 'Foreign benchmark',
+    domain: 'amazingegp.com',
+    url: 'https://amazingegp.com/product',
+    snippet: 'Egypt store',
+    geoTier: 'FOREIGN_BENCHMARK',
+    geoConfirmed: false
+  });
+  const clean = sanitizeCompetitorReport(report, { lang: 'ar', userSiteAudited: false });
+  assert.equal(clean.competitorGeoGroups.probableLocalCompetitors.length, 1);
+  assert.equal(clean.competitorGeoGroups.foreignBenchmarks.length, 1);
 });

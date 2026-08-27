@@ -4613,16 +4613,45 @@ function proofIntegrity(proofModel = {}) {
   const deduced = proofModel.deduced || [];
   const recommended = proofModel.recommended || [];
   const unavailable = proofModel.unavailable || [];
+  const hasSupport = claim => {
+    if (!claim || typeof claim !== 'object') return false;
+    if (Array.isArray(claim.evidence) && claim.evidence.length > 0) return true;
+    if (Array.isArray(claim.evidenceIds) && claim.evidenceIds.length > 0) return true;
+    if (/user input|geo resolver|html extraction|direct scrape|serp|keyword provider/i.test(String(claim.source || ''))) return true;
+    return false;
+  };
+  const supportedObservedClaims = observed.filter(hasSupport).length;
+  const unsupportedObservedClaims = Math.max(0, observed.length - supportedObservedClaims);
+  const supportedInferredClaims = deduced.filter(claim => hasSupport(claim) || claim.formula || claim.inputs).length;
+  const rejectedClaims = [
+    ...observed,
+    ...deduced,
+    ...recommended
+  ].filter(claim => /rejected|unsupported|not_verified|unknown/i.test(String(claim.status || claim.verificationStatus || ''))).length;
+  const denominator = observed.length + deduced.length;
+  const evidenceCoverage = denominator
+    ? Number(((supportedObservedClaims + supportedInferredClaims) / denominator).toFixed(2))
+    : 0;
   return {
-    realDataFirst: true,
+    realDataFirst: unsupportedObservedClaims === 0,
     factsAreSeparated: true,
+    observedClaims: observed.length,
+    supportedObservedClaims,
+    unsupportedObservedClaims,
+    inferredClaims: deduced.length,
+    supportedInferredClaims,
+    rejectedClaims,
+    evidenceCoverage,
     counts: {
       observed: observed.length,
       deduced: deduced.length,
       recommended: recommended.length,
       unavailable: unavailable.length
     },
-    warnings: unavailable.map(x => x.title).slice(0, 6)
+    warnings: [
+      ...unavailable.map(x => x.title),
+      ...(unsupportedObservedClaims ? [`${unsupportedObservedClaims} observed claims need explicit evidence`] : [])
+    ].slice(0, 8)
   };
 }
 
@@ -9453,6 +9482,8 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
     const richScore = (r.sitelinks ? 20 : 0) + (hasRichSnippet ? 20 : 0);
     const geoScore = x.geoScore;
 
+    const observedVisibilityScore = Math.min(posScore + richScore + Math.min(geoScore, 30), 100);
+
     return {
         position: i + 1,
         title: r.title || (isAr ? 'بدون عنوان' : isEn ? 'No title' : 'Sans titre'),
@@ -9460,7 +9491,9 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
         domain,
         snippet: r.snippet || r.description || '',
         type,
-        dominance: Math.min(posScore + richScore + Math.min(geoScore, 30), 100),
+        serpRelevanceScore: observedVisibilityScore,
+        observedVisibilityScore,
+        dominance: observedVisibilityScore,
         geoMatchScore: geoScore,
         geoMatched: ['LOCAL_CONFIRMED', 'LOCAL_PROBABLE'].includes(x.geoMatch?.tier),
         geoConfirmed: x.geoMatch?.tier === 'LOCAL_CONFIRMED',
@@ -9965,8 +9998,8 @@ let mergedData = {
     }).join('\n');
 
     const comparisonUserInstruction = hasUserSite
-        ? `Pour "user", estime 6 scores réalistes (0-100) basés sur le contexte fourni.`
-        : `L'utilisateur n'a pas de site. Pour "user", génère les scores MOYENS du Top 3 (ex: [50, 45, 55, 40, 60, 50]).`;
+        ? `Pour "user", estime 6 scores réalistes (0-100) uniquement à partir de l'URL utilisateur auditée et des données fournies.`
+        : `L'utilisateur n'a pas de site audité. "user" DOIT rester null. Ne fabrique aucun score, faiblesse, force, UX, prix, funnel ou valeur pour l'utilisateur. Si un repère est utile, appelle-le "recommendedBenchmark" et marque-le comme recommandation.`;
 
     const keContext = kwData
         ? `\n── DONNÉES KEYWORDS EVERYWHERE (RÉELLES) ──\n` +
@@ -10078,7 +10111,7 @@ ${keContext}
 CADRE STRATÉGIQUE :
 1. Analyse les offres, promesses et preuves des Top 5 pour identifier leurs piliers de succes et leurs faiblesses concretes.
 2. Utilise le framework "Grand Slam Offer" d'Alex Hormozi.
-3. RÈGLE : Si l'utilisateur n'a pas de site, la section "user" du duel DOIT être le "Gold Standard" déduit du Top 3.
+3. RÈGLE : Si l'utilisateur n'a pas de site audité, "duelComparison" DOIT être null ou contenir "user": null partout. Ne déduis jamais un faux site utilisateur du Top 3. Tu peux proposer un "recommendedBenchmark" séparé, marqué comme recommandation.
 4. RÈGLE COHÉRENCE : 'killShotFeature' DOIT être la solution exacte qui détruit la 'weakestProductFeature'.
 5. REGLE ANTI-FLUFF : Interdiction d'ecrire seulement "manque de personnalisation". Cite les frais, delais, garanties, retours, preuve client, couverture ou friction lorsque les profils inspectes le permettent.
 ${gscData ? `6. RÈGLE GSC : Utilise les données GSC réelles pour calibrer les recommandations.` : ''}
@@ -10093,7 +10126,7 @@ JSON uniquement :
   "grandSlamOfferBlueprint": {
     "dreamOutcome":         "résultat de rêve ultime du client",
     "perceivedLikelihood":  "preuve sociale ex: études de cas vérifiées",
-    "timeDelay":            "promesse de vitesse exacte ex: livré en 24h",
+    "timeDelay":            "délai exact uniquement s'il est observé, sinon Non vérifié",
     "effortAndSacrifice":   "réduction friction ex: zéro setup requis",
     "theIrresistibleOffer": "la promesse finale irrésistible"
   },
@@ -10109,7 +10142,7 @@ JSON uniquement :
     "retentionLoop":    "...",
     "monetizationHack": "..."
   },
-  "duelComparison": {
+  "duelComparison": ${hasUserSite ? `{
     "offerAndRisk":     { "competitor": "...", "user": "...", "killShot": "..." },
     "jtbdPsychology":   { "competitor": "...", "user": "...", "killShot": "..." },
     "kanoDelighter":    { "competitor": "...", "user": "...", "killShot": "..." },
@@ -10118,7 +10151,12 @@ JSON uniquement :
     "pricingBundling":  { "competitor": "...", "user": "...", "killShot": "..." },
     "valueLadder":      { "competitor": "...", "user": "...", "killShot": "..." },
     "uxTeardown":       { "competitor": "...", "user": "...", "killShot": "..." }
-  }
+  }` : `null,
+  "recommendedBenchmark": {
+    "status": "RECOMMENDED",
+    "note": "repère conseillé sans évaluation du site utilisateur",
+    "priorities": ["preuve à montrer", "risque à retirer", "message à clarifier"]
+  }`}
 }`;
 
     const agent4Prompt = `${langInstr}
@@ -10148,7 +10186,7 @@ JSON uniquement :
     "positioningMap":  ["positionnement idéal sur la carte de valeur"]
   },
   "comparisonScores": {
-    "user":       [0,0,0,0,0,0],
+    "user":       ${hasUserSite ? '[0,0,0,0,0,0]' : 'null'},
     "competitor": [0,0,0,0,0,0],
     "labels":     ${labelsJson}
   },
@@ -10185,6 +10223,7 @@ JSON uniquement :
     if (r3.productServiceAudit)     mergedData.productServiceAudit     = { ...mergedData.productServiceAudit, ...r3.productServiceAudit };
     if (r3.masteringTechniques)     mergedData.masteringTechniques     = r3.masteringTechniques;
     if (r3.duelComparison)          mergedData.duelComparison          = { ...mergedData.duelComparison,      ...r3.duelComparison      };
+    if (r3.recommendedBenchmark)    mergedData.recommendedBenchmark    = r3.recommendedBenchmark;
     if (r4.swot)                    mergedData.swot                    = r4.swot;
     if (r4.blueOceanStrategy)       mergedData.blueOceanStrategy       = r4.blueOceanStrategy;
     if (r4.comparisonScores)        mergedData.comparisonScores        = r4.comparisonScores;
@@ -10372,10 +10411,10 @@ const executiveBrief = buildExecutiveBrief({
     priority: competitorIntelligence.finalAnswers?.positionToTake,
     why: enrichedCompetitors[0]?.domain
         ? (isAr
-            ? `${enrichedCompetitors[0].domain} هو المتصدر التجاري المرصود، وتم تفسير تفوقه من إشارات الموقع والعلامة وليس من وصف المنتج فقط.`
+            ? `${enrichedCompetitors[0].domain} هو أول نتيجة تجارية مرصودة، وتم تفسير قوته من إشارات الموقع والعلامة وليس من وصف المنتج فقط.`
             : isEn
-                ? `${enrichedCompetitors[0].domain} is the observed commercial leader; its advantage is explained from site and brand signals, not only the product description.`
-                : `${enrichedCompetitors[0].domain} est le leader commercial observe ; son avantage est explique par les signaux du site et de la marque, pas seulement par la fiche produit.`)
+                ? `${enrichedCompetitors[0].domain} is the first observed commercial result; its advantage is explained from site and brand signals, not only the product description.`
+                : `${enrichedCompetitors[0].domain} est le premier résultat commercial observé ; son avantage est expliqué par les signaux du site et de la marque, pas seulement par la fiche produit.`)
         : null,
     actions: competitorIntelligence.priorityActions?.slice(0, 5).map(x => x.action) || [],
     confidence: enrichedCompetitors.length ? 'MEDIUM' : 'LOW',
@@ -10453,6 +10492,7 @@ finalResult = sanitizeCompetitorReport(finalResult, {
     trendsData,
     mainKwData
 });
+finalResult.dataIntegrity = proofIntegrity(finalResult.proofModel || {});
 
 cache.set(cacheKey, finalResult);
 return finalResult;
@@ -13286,7 +13326,7 @@ function calculateDifficulty(competitors) {
     const top3Domains = competitors.slice(0, 3).map(c => c.domain ? c.domain.toLowerCase() : '');
     
     const hasGiant = top3Domains.some(d => giants.some(g => d.includes(g)));
-    return hasGiant ? "🔥 DIFFICILE (Géants présents)" : "🟢 ACCESSIBLE (Opportunité SEO)";
+    return hasGiant ? "Signal SERP difficile (grandes plateformes visibles dans le top 3)" : "Signal SERP accessible (pas de grande plateforme dans le top 3)";
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -14719,7 +14759,7 @@ app.post('/api/decision-layer', async (req, res) => {
         const realityContext = `
 [RÉALITÉ DU MARCHÉ - DONNÉES TEMPS RÉEL (SCRAPE.DO)]
 ${serpData ? `
-- Top domaines dominants (tes concurrents) : ${serpData.domains.slice(0, 3).join(', ')}
+- Top domaines visibles dans la SERP (candidats concurrents ou benchmarks) : ${serpData.domains.slice(0, 3).join(', ')}
 - Questions EXACTES que les gens posent à Google (PAA) : ${serpData.paa.map(p => p.question).join(' | ')}
 ` : ''}
 ${keContextString}
@@ -14736,8 +14776,8 @@ FORMAT JSON ATTENDU :
 {
   "marketInsights": { "difficulty": "facile/moyen/difficile", "serpIntent": "intention principale" },
   "top3ReverseEngineering": { "commonSuccessFactors": ["Facteur 1", "Facteur 2"], "glaringWeaknesses": ["Faiblesse 1"] },
-  "leaderMoat": { "mainMoat": "Pourquoi le leader gagne", "summary": "Résumé" },
-  "swot": { "weaknesses": ["Faiblesse leader"], "opportunities": ["Demande mal servie"] },
+  "leaderMoat": { "mainMoat": "Pourquoi le premier résultat observé paraît fort", "summary": "Résumé" },
+  "swot": { "weaknesses": ["Faiblesse du premier résultat observé"], "opportunities": ["Demande mal servie"] },
   "strategicBlueprint": { "uniqueAngle": "Le meilleur angle d'attaque" },
   "winningMove": "Action principale",
   "actionRoadmap": [
@@ -14901,15 +14941,15 @@ const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
     const decisionLayer = isAr ? {
       topLabel: 'الذكاء التنافسي',
       title: 'موقعك الاستراتيجي في هذا السوق',
-      subtitle: `افهم من يهيمن في "${keyword || 'هذا السوق'}"، ولماذا يربح، وأين يمكنك الدخول بقوة.`,
+      subtitle: `افهم أقوى النتائج المرصودة في "${keyword || 'هذا السوق'}"، ولماذا تبدو قوية، وأين يمكنك الدخول بقوة.`,
       snapshot: 'ملخص استراتيجي',
       verdictLabel: 'حكم السوق',
       verdictMain: `هذا السوق ${difficulty} ويعتمد على ${primaryIntent}.`,
       verdictSub: `النجاح هنا يحتاج إلى ${compact(dominantSuccessFactor, 'تموضع ذكي')} وليس فقط منتج أفضل.`,
       verdictMicro: 'هذا التقدير مبني على شدة المنافسة ونية البحث ومستوى تموضع اللاعبين.',
-      leaderLabel: 'لماذا يتفوق القائد',
-      leaderMain: `المتصدر الحالي يتفوق بفضل ${compact(coreMoat, 'السلطة والثقة والتنفيذ')}.`,
-      leaderMicro: 'هذه هي المنظومة التي تحافظ على تفوقه، وليس مجرد تفاصيل سطحية.',
+      leaderLabel: 'لماذا تظهر النتيجة الأولى بقوة',
+      leaderMain: `أول نتيجة تجارية مرصودة تتقدم بفضل ${compact(coreMoat, 'السلطة والثقة والتنفيذ')}.`,
+      leaderMicro: 'هذه قراءة لإشارات مرصودة، وليست حكما على حصة السوق.',
       gapLabel: 'أهم ثغرة قابلة للاستغلال',
       gapMain: `أضعف نقطة لديه هي ${compact(weakness, 'ثغرة تنفيذية واضحة')}.`,
       gapSub: `هذه الثغرة تفتح لك فرصة لالتقاط ${compact(underservedSegment, 'طلب غير مخدوم جيداً')}.`,
@@ -14928,15 +14968,15 @@ const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
     } : isEn ? {
       topLabel: 'COMPETITIVE INTELLIGENCE',
       title: 'Your Strategic Position in This Market',
-      subtitle: `Understand who dominates in "${keyword || 'this market'}", why they win, and where you can break through.`,
+      subtitle: `Understand the top observed results for "${keyword || 'this market'}", why they look strong, and where you can break through.`,
       snapshot: 'STRATEGIC SNAPSHOT',
       verdictLabel: 'Market Verdict',
       verdictMain: `This market is ${difficulty} and driven by ${primaryIntent}.`,
       verdictSub: `Winning here requires ${compact(dominantSuccessFactor, 'smart positioning')}, not just a better product.`,
       verdictMicro: 'This view is based on competition intensity, search intent, and positioning maturity.',
-      leaderLabel: 'Why the Leader Wins',
-      leaderMain: `The leader wins through ${compact(coreMoat, 'authority, trust, and execution')}.`,
-      leaderMicro: 'This is the system protecting their position, not just surface strengths.',
+      leaderLabel: 'Why the Top Observed Result Looks Strong',
+      leaderMain: `The top observed commercial result advances through ${compact(coreMoat, 'authority, trust, and execution')}.`,
+      leaderMicro: 'This is an observed-signal read, not a market-share verdict.',
       gapLabel: 'Most Exploitable Gap',
       gapMain: `Their weakest point is ${compact(weakness, 'a clear execution gap')}.`,
       gapSub: `That creates an opening to capture ${compact(underservedSegment, 'underserved demand')}.`,
@@ -14955,15 +14995,15 @@ const clickableChannels = Array.isArray(lm.brandAuthority?.channelEvidence)
     } : {
       topLabel: 'INTELLIGENCE CONCURRENTIELLE',
       title: 'Ta position stratégique sur ce marché',
-      subtitle: `Comprends qui domine sur "${keyword || 'ce marché'}", pourquoi il gagne, et où tu peux percer.`,
+      subtitle: `Comprends les premiers résultats observés sur "${keyword || 'ce marché'}", pourquoi ils semblent forts, et où tu peux percer.`,
       snapshot: 'PHOTO STRATÉGIQUE',
       verdictLabel: 'Verdict du marché',
       verdictMain: `Ce marché est ${difficulty} et porté par ${primaryIntent}.`,
       verdictSub: `Pour gagner, il faut ${compact(dominantSuccessFactor, 'un positionnement intelligent')}, pas seulement un meilleur produit.`,
       verdictMicro: 'Cette lecture repose sur l’intensité concurrentielle, l’intention de recherche et la maturité du marché.',
-      leaderLabel: 'Pourquoi le leader gagne',
-      leaderMain: `Le leader domine grâce à ${compact(coreMoat, 'l’autorité, la confiance et l’exécution')}.`,
-      leaderMicro: 'C’est le système qui protège sa place, pas seulement des qualités visibles.',
+      leaderLabel: 'Pourquoi le premier résultat observé paraît fort',
+      leaderMain: `Le premier résultat commercial observé avance grâce à ${compact(coreMoat, 'l’autorité, la confiance et l’exécution')}.`,
+      leaderMicro: 'C’est une lecture de signaux observés, pas un verdict de part de marché.',
       gapLabel: 'Faille la plus exploitable',
       gapMain: `Son point faible principal est ${compact(weakness, 'une faiblesse claire dans l’exécution')}.`,
       gapSub: `Cela te donne une ouverture pour capter ${compact(underservedSegment, 'une demande encore mal servie')}.`,
@@ -17835,7 +17875,7 @@ Prix confirmé  : ${getConfirmedFunnelPrice(priceIntel) > 0 ? `${getConfirmedFun
     "globalVerdict": "verdict global 2-3 phrases percutantes",
     "killShot": "UNE action qui change tout — spécifique et actionnable",
     "competitiveAdvantage": "avantage unique à exploiter immédiatement",
-    "counterAttackStrategy": "stratégie pour dominer la concurrence",
+    "counterAttackStrategy": "stratégie pour gagner une poche de demande vérifiable",
     "salesAngleRecommended": "angle de vente optimal pour ce marché"
   },
   "quickWins": [
