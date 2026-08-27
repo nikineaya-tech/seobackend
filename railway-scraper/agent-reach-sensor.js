@@ -6,6 +6,9 @@ const cheerio = require('cheerio');
 const MAX_URLS = Math.max(1, Number(process.env.AGENT_REACH_MAX_URLS || 8));
 const MAX_FEEDS = Math.max(0, Number(process.env.AGENT_REACH_MAX_FEEDS || 4));
 const MAX_SEARCHES = Math.max(0, Number(process.env.AGENT_REACH_MAX_SEARCHES || 6));
+const MAX_EXA_SEARCHES = Math.max(0, Number(process.env.AGENT_REACH_MAX_EXA_SEARCHES || 3));
+const MAX_EXA_RESULTS = Math.min(10, Math.max(1, Number(process.env.AGENT_REACH_MAX_EXA_RESULTS || 5)));
+const MAX_EXA_RESPONSE_CHARS = Math.max(2000, Number(process.env.AGENT_REACH_MAX_EXA_RESPONSE_CHARS || 30000));
 const MAX_YOUTUBE_SEARCHES = Math.max(0, Number(process.env.AGENT_REACH_MAX_YOUTUBE_SEARCHES || 3));
 const MAX_YOUTUBE_RESULTS = Math.max(1, Number(process.env.AGENT_REACH_MAX_YOUTUBE_RESULTS || 5));
 const MAX_TEXT_CHARS = Math.max(800, Number(process.env.AGENT_REACH_MAX_TEXT_CHARS || 5000));
@@ -58,15 +61,18 @@ function scopeForPlatform(platform) {
   return 'MARKET';
 }
 
-async function fetchText(url, { accept = 'text/plain' } = {}) {
+async function fetchText(url, { accept = 'text/plain', method = 'GET', headers = {}, body = null, maxChars = MAX_TEXT_CHARS } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
     const response = await fetch(url, {
+      method,
       headers: {
         'User-Agent': 'Daka-Agent-Reach-Sensor/1.0',
-        Accept: accept
+        Accept: accept,
+        ...headers
       },
+      body,
       signal: controller.signal
     });
     const text = await response.text();
@@ -74,7 +80,7 @@ async function fetchText(url, { accept = 'text/plain' } = {}) {
       ok: response.ok,
       status: response.status,
       url: response.url || url,
-      text: clean(text, MAX_TEXT_CHARS)
+      text: clean(text, maxChars)
     };
   } finally {
     clearTimeout(timer);
@@ -213,6 +219,82 @@ async function collectSearchEvidence(searchQuery, context = {}) {
   }
 }
 
+function exaCountryHint(country) {
+  const value = clean(country, 10).toUpperCase();
+  return /^[A-Z]{2}$/.test(value) ? value : null;
+}
+
+function exaEvidenceFromResult(item = {}, query = '', context = {}) {
+  const sourceUrl = normalizeUrl(item.url || item.id);
+  const title = clean(item.title, 220);
+  const highlights = arr(item.highlights).map(value => clean(value, 900)).filter(Boolean);
+  const summary = clean(item.summary, 1200);
+  const text = clean(item.text, 1800);
+  const value = clean([title, highlights.join(' '), summary, text].filter(Boolean).join(' — '), MAX_TEXT_CHARS);
+  if (!sourceUrl || !value) return null;
+  const resultPlatform = platformOf(sourceUrl);
+  return {
+    id: `ev_agent_reach_${hash(`${sourceUrl}|EXA_SEARCH_RESULT|${value.slice(0, 180)}`)}`,
+    scope: scopeForPlatform(resultPlatform),
+    entityId: null,
+    country: clean(context.country, 80) || null,
+    query: clean(context.query || query, 180) || null,
+    claimType: 'EXA_SEARCH_RESULT',
+    value,
+    title,
+    sourcePlatform: 'exa_search',
+    resultPlatform,
+    sourceUrl,
+    publishedAt: clean(item.publishedDate || item.publishedAt, 80) || null,
+    collectedAt: new Date().toISOString(),
+    confidence: highlights.length || summary || text.length > 240 ? 'MEDIUM' : 'LOW',
+    verificationStatus: 'CONFIRMED',
+    limitations: ['Exa semantic result is discovery evidence; it does not verify business claims or market size by itself.']
+  };
+}
+
+async function collectExaSearchEvidence(searchQuery, context = {}) {
+  const apiKey = clean(process.env.EXA_API_KEY || process.env.EXA_SEARCH_API_KEY, 500);
+  const query = clean(searchQuery, 220);
+  if (!query) return { unavailable: { query: searchQuery, provider: 'exa', reason: 'empty_exa_query' }, evidence: [] };
+  if (!apiKey) return { unavailable: { query, provider: 'exa', reason: 'missing_api_key' }, evidence: [] };
+
+  const body = {
+    query,
+    type: 'auto',
+    numResults: MAX_EXA_RESULTS,
+    moderation: true,
+    contents: {
+      highlights: true
+    }
+  };
+  const userLocation = exaCountryHint(context.country);
+  if (userLocation) body.userLocation = userLocation;
+
+  try {
+    const read = await fetchText('https://api.exa.ai/search', {
+      method: 'POST',
+      accept: 'application/json',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body),
+      maxChars: MAX_EXA_RESPONSE_CHARS
+    });
+    if (!read.ok || !read.text) {
+      return { unavailable: { query, provider: 'exa', reason: `http_${read.status || 'unknown'}` }, evidence: [] };
+    }
+    const parsed = JSON.parse(read.text);
+    return {
+      unavailable: null,
+      evidence: arr(parsed.results).map(item => exaEvidenceFromResult(item, query, context)).filter(Boolean)
+    };
+  } catch (error) {
+    return { unavailable: { query, provider: 'exa', reason: clean(error.message, 220) }, evidence: [] };
+  }
+}
+
 function youtubeEvidenceFromItem(item = {}, query = '', context = {}) {
   const snippet = item.snippet || {};
   const videoId = item.id?.videoId || item.id;
@@ -285,9 +367,16 @@ async function collectAgentReachMarketEvidence(payload = {}) {
   const urls = arr(payload.urls || [payload.url, payload.targetUrl]).map(normalizeUrl).filter(Boolean).slice(0, MAX_URLS);
   const feeds = arr(payload.feeds || payload.rssFeeds).map(normalizeUrl).filter(Boolean).slice(0, MAX_FEEDS);
   const searches = arr(payload.searches || payload.searchQueries).map(item => clean(item, 180)).filter(Boolean).slice(0, MAX_SEARCHES);
+  const exaSearches = arr(payload.exaSearches || payload.exaQueries).map(item => clean(item, 220)).filter(Boolean).slice(0, MAX_EXA_SEARCHES);
   const youtubeSearches = arr(payload.youtubeSearches || payload.youtubeQueries).map(item => clean(item, 180)).filter(Boolean).slice(0, MAX_YOUTUBE_SEARCHES);
   const evidence = [];
   const unavailable = [];
+
+  for (const exaQuery of exaSearches) {
+    const result = await collectExaSearchEvidence(exaQuery, context);
+    evidence.push(...arr(result.evidence));
+    if (result.unavailable) unavailable.push(result.unavailable);
+  }
 
   for (const youtubeQuery of youtubeSearches) {
     const result = await collectYouTubeSearchEvidence(youtubeQuery, context);
@@ -322,6 +411,7 @@ async function collectAgentReachMarketEvidence(payload = {}) {
     sourceRouter: {
       web: 'Jina Reader compatible path',
       search: 'Jina Search compatible path',
+      exa: 'Exa semantic search when EXA_API_KEY is configured',
       youtube: 'YouTube Data API search when YOUTUBE_API_KEY is configured',
       rss: 'direct RSS parser',
       youtubeUrl: 'captured as readable page evidence when URL is provided',
@@ -336,6 +426,7 @@ async function collectAgentReachMarketEvidence(payload = {}) {
     },
     unavailable,
     counts: {
+      exaSearches: exaSearches.length,
       searches: searches.length,
       youtubeSearches: youtubeSearches.length,
       urls: urls.length,

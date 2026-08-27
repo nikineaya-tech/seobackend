@@ -108,6 +108,77 @@ test('Jina searches become market evidence, not strategy claims', async () => {
   }
 });
 
+test('Exa search creates semantic discovery evidence when API key exists', async () => {
+  const originalFetch = global.fetch;
+  const originalKey = process.env.EXA_API_KEY;
+  process.env.EXA_API_KEY = 'test-exa-key';
+  global.fetch = async (url, options = {}) => {
+    assert.equal(url, 'https://api.exa.ai/search');
+    assert.equal(options.method, 'POST');
+    assert.match(options.headers.Authorization, /^Bearer test-exa-key$/);
+    const requestBody = JSON.parse(options.body);
+    assert.equal(requestBody.query, 'blackhead remover Libya alternatives');
+    assert.equal(requestBody.contents.highlights, true);
+    return {
+      ok: true,
+      status: 200,
+      url,
+      text: async () => JSON.stringify({
+        results: [
+          {
+            title: 'Best blackhead remover alternatives',
+            url: 'https://example.com/blackhead-guide',
+            publishedDate: '2026-08-20T00:00:00.000Z',
+            highlights: ['Buyers compare suction levels, proof photos and return terms before choosing.']
+          }
+        ]
+      })
+    };
+  };
+
+  try {
+    const result = await collectAgentReachMarketEvidence({
+      query: 'blackhead remover',
+      country: 'LY',
+      exaSearches: ['blackhead remover Libya alternatives']
+    });
+
+    const item = result.evidenceRegistry.evidence[0];
+    assert.equal(result.counts.exaSearches, 1);
+    assert.equal(item.claimType, 'EXA_SEARCH_RESULT');
+    assert.equal(item.sourcePlatform, 'exa_search');
+    assert.equal(item.resultPlatform, 'web');
+    assert.equal(item.scope, 'MARKET');
+    assert.equal(item.publishedAt, '2026-08-20T00:00:00.000Z');
+    assert.match(item.sourceUrl, /example\.com\/blackhead-guide/);
+    assert.match(item.limitations.join(' '), /does not verify business claims/i);
+    assert.doesNotMatch(JSON.stringify(result), /market leader|winning strategy|demand growth/i);
+  } finally {
+    global.fetch = originalFetch;
+    if (originalKey == null) delete process.env.EXA_API_KEY;
+    else process.env.EXA_API_KEY = originalKey;
+  }
+});
+
+test('Exa search records unavailable state when API key is missing', async () => {
+  const originalKey = process.env.EXA_API_KEY;
+  delete process.env.EXA_API_KEY;
+  try {
+    const result = await collectAgentReachMarketEvidence({
+      query: 'blackhead remover',
+      country: 'Libya',
+      exaSearches: ['blackhead remover Libya alternatives']
+    });
+
+    assert.equal(result.counts.exaSearches, 1);
+    assert.equal(result.evidenceRegistry.evidence.length, 0);
+    assert.ok(result.unavailable.some(item => item.provider === 'exa' && item.reason === 'missing_api_key'));
+  } finally {
+    if (originalKey == null) delete process.env.EXA_API_KEY;
+    else process.env.EXA_API_KEY = originalKey;
+  }
+});
+
 test('YouTube search creates dated customer evidence when API key exists', async () => {
   const originalFetch = global.fetch;
   const originalKey = process.env.YOUTUBE_API_KEY;

@@ -13,7 +13,7 @@ test('source router plans acquisition routes without creating claims', () => {
     country: 'Morocco',
     lang: 'fr',
     agentReachEnabled: true,
-    hasExaApiKey: false,
+    hasExaApiKey: true,
     hasYoutubeApiKey: true,
     competitors: [
       { url: 'https://competitor.example/course', domain: 'competitor.example' }
@@ -25,9 +25,10 @@ test('source router plans acquisition routes without creating claims', () => {
   assert.equal(plan.quality.acquisitionOnly, true);
   assert.equal(plan.quality.routesProduceNoClaims, true);
   assert.ok(plan.routes.some(route => route.provider === 'agent-reach-railway' && route.status === 'ACTIVE'));
-  assert.ok(plan.routes.some(route => route.provider === 'exa' && route.status === 'MISSING_API_KEY'));
+  assert.ok(plan.routes.some(route => route.provider === 'exa' && route.status === 'AVAILABLE'));
   assert.ok(plan.railwayPayload.urls.includes('https://competitor.example/course'));
   assert.ok(plan.railwayPayload.searches.some(item => /formation e-commerce/i.test(item)));
+  assert.ok(plan.railwayPayload.exaSearches.some(item => /formation e-commerce/i.test(item)));
   assert.ok(plan.railwayPayload.youtubeSearches.some(item => /formation e-commerce/i.test(item)));
   assert.ok(plan.railwayPayload.feeds.includes('https://news.example/feed.xml'));
   assert.doesNotMatch(JSON.stringify(plan), /market leader|dominance|growth proven/i);
