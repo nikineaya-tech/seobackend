@@ -126,3 +126,58 @@ test('evidence rows are deduplicated before signal creation', () => {
   assert.equal(rows.length, 1);
   assert.equal(topicFor(rows[0]), 'delivery');
 });
+
+test('customer voice patterns are quantified from social and semantic evidence', () => {
+  const model = buildMarketSignalEngine({
+    now: NOW,
+    evidenceRegistry: {
+      evidence: [
+        {
+          id: 'ev_youtube_review_1',
+          scope: 'CUSTOMER',
+          claimType: 'YOUTUBE_SEARCH_RESULT',
+          title: 'Blackhead remover review',
+          value: 'Customers ask for visible results, safe use and real before after proof.',
+          sourceUrl: 'https://youtube.com/watch?v=abc',
+          sourcePlatform: 'youtube',
+          publishedAt: '2026-08-25T10:00:00.000Z',
+          verificationStatus: 'CONFIRMED'
+        },
+        {
+          id: 'ev_exa_review_1',
+          scope: 'CUSTOMER',
+          claimType: 'EXA_SEARCH_RESULT',
+          title: 'Buyer comparison guide',
+          value: 'Buyers compare price, refund guarantee and verified reviews before ordering.',
+          sourceUrl: 'https://example.com/guide',
+          sourcePlatform: 'exa_search',
+          publishedAt: '2026-08-20T10:00:00.000Z',
+          verificationStatus: 'CONFIRMED'
+        },
+        {
+          id: 'ev_jina_question_1',
+          scope: 'CUSTOMER',
+          claimType: 'JINA_SEARCH_RESULTS',
+          title: 'Search questions',
+          value: 'People ask whether the return policy is real and if the product is safe for sensitive skin.',
+          sourceUrl: 'https://s.jina.ai/http%3A%2F%2Fexample.com',
+          sourcePlatform: 'jina_search',
+          observedAt: NOW,
+          verificationStatus: 'CONFIRMED'
+        }
+      ]
+    }
+  });
+
+  const voice = model.customerVoice;
+  assert.equal(voice.version, 'customer-voice-v1');
+  assert.equal(voice.quality.quantifiedFromEvidence, true);
+  assert.equal(voice.quality.unsupportedPatterns, 0);
+  assert.ok(voice.patternCount >= 4);
+  assert.ok(voice.byType[SIGNAL_TYPES.OBJECTION].some(pattern => pattern.key === 'guarantee_or_return_risk'));
+  assert.ok(voice.byType[SIGNAL_TYPES.BUYING_CRITERION].some(pattern => pattern.key === 'price_budget_clarity'));
+  assert.ok(voice.byType[SIGNAL_TYPES.CUSTOMER_DESIRE].some(pattern => pattern.key === 'visible_result_fast'));
+  assert.ok(voice.patterns.every(pattern => pattern.evidenceIds.length > 0));
+  assert.match(voice.quality.limitations.join(' '), /must not be presented as full-market statistics/i);
+  assert.doesNotMatch(JSON.stringify(voice), /market share|demand growth|sales growth/i);
+});
