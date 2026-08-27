@@ -81,6 +81,9 @@ const {
 const {
   runStrategicAgentsV2,
 } = require('./lib/market-intelligence/strategic-agents-v2');
+const {
+  buildMarketEntityMap,
+} = require('./lib/market-intelligence/entity-classifier');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -10567,6 +10570,16 @@ const marketSignalModel = buildMarketSignalEngine({
 });
 finalResult.marketSignalModel = marketSignalModel;
 finalResult.marketSignals = marketSignalModel.signals.slice(0, 15);
+const marketEntityMap = buildMarketEntityMap({
+    competitors: finalResult.competitors,
+    marketProductSources: finalResult.marketProductSources,
+    evidenceRegistry: finalResult.evidenceRegistry,
+    geoData,
+    country: geoData.location
+});
+finalResult.marketEntityMap = marketEntityMap;
+finalResult.supplierIntelligence = marketEntityMap.supplierIntelligence;
+finalResult.substituteSources = marketEntityMap.byType?.SUBSTITUTE || [];
 const strategicAgentsV2 = runStrategicAgentsV2({
     marketSignalModel,
     query: cleanQuery,
@@ -10589,7 +10602,9 @@ finalResult.dataIntegrity.marketSignalCoverage = {
     hasTemporalEvidence: marketSignalModel.quality.hasTemporalEvidence,
     noMarketGrowthClaim: marketSignalModel.quality.noMarketGrowthClaim,
     strategicActions: strategicAgentsV2.decisionStrategist.actions.length,
-    unsupportedStrategicActions: strategicAgentsV2.quality.unsupportedActionCount
+    unsupportedStrategicActions: strategicAgentsV2.quality.unsupportedActionCount,
+    entityTypes: Object.keys(marketEntityMap.byType || {}),
+    supplierIntelligenceStatus: marketEntityMap.supplierIntelligence.status
 };
 
 cache.set(cacheKey, finalResult);
