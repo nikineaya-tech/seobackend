@@ -93,6 +93,9 @@ const {
 const {
   buildTemporalIntelligence,
 } = require('./lib/market-intelligence/temporal-intelligence');
+const {
+  auditMarketEvidenceContract,
+} = require('./lib/market-intelligence/evidence-contract');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -10634,6 +10637,16 @@ finalResult.decisionReportV2 = buildDecisionReportV2({
     geo: geoData.location,
     lang: langObj.code
 });
+finalResult.evidenceContractAudit = auditMarketEvidenceContract({
+    evidenceRegistry: finalResult.evidenceRegistry,
+    marketEvidence: agentReachMarketEvidence,
+    agentReachEvidence: agentReachMarketEvidence,
+    marketSignalModel,
+    marketEntityMap,
+    temporalIntelligence,
+    strategicAgentsV2,
+    decisionReportV2: finalResult.decisionReportV2
+});
 finalResult.dataIntegrity = proofIntegrity(finalResult.proofModel || {});
 finalResult.dataIntegrity.marketSignalCoverage = {
     evidenceCount: marketSignalModel.sourceEvidenceCount,
@@ -10654,6 +10667,13 @@ finalResult.dataIntegrity.marketSignalCoverage = {
         noDemandGrowthClaim: temporalIntelligence.quality.noDemandGrowthClaim,
         boundedToObservedSample: temporalIntelligence.quality.boundedToObservedSample,
         allShiftsTraceable: temporalIntelligence.quality.allShiftsTraceable
+    },
+    evidenceContract: {
+        status: finalResult.evidenceContractAudit.status,
+        highIssues: finalResult.evidenceContractAudit.summary.high,
+        mediumIssues: finalResult.evidenceContractAudit.summary.medium,
+        observedClaimIssues: finalResult.evidenceContractAudit.summary.observedClaimIssues,
+        recommendationsRemainTests: finalResult.evidenceContractAudit.quality.recommendationsRemainTests
     },
     decisionReportV2: {
         claimValidationStatus: finalResult.decisionReportV2.claimValidation.status,
