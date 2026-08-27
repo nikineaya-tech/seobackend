@@ -181,3 +181,48 @@ test('customer voice patterns are quantified from social and semantic evidence',
   assert.match(voice.quality.limitations.join(' '), /must not be presented as full-market statistics/i);
   assert.doesNotMatch(JSON.stringify(voice), /market share|demand growth|sales growth/i);
 });
+
+test('offer intelligence patterns are quantified without inventing commercial terms', () => {
+  const model = buildMarketSignalEngine({
+    now: NOW,
+    evidenceRegistry: {
+      evidence: [
+        {
+          id: 'ev_offer_page_1',
+          scope: 'COMPETITOR',
+          claimType: 'WEB_PAGE_CONTENT',
+          title: 'Product page',
+          value: 'The product page mentions price, COD payment, delivery and return policy.',
+          sourceUrl: 'https://shop.example/product',
+          sourcePlatform: 'inspected_page',
+          observedAt: NOW,
+          verificationStatus: 'CONFIRMED'
+        },
+        {
+          id: 'ev_shopping_1',
+          scope: 'OFFER',
+          claimType: 'shopping_offer',
+          title: 'Marketplace offer',
+          value: 'Offer includes LED feature, USB charging and a bundle kit.',
+          sourceUrl: 'https://market.example/item',
+          sourcePlatform: 'shopping',
+          observedAt: NOW,
+          verificationStatus: 'CONFIRMED'
+        }
+      ]
+    }
+  });
+
+  const offer = model.offerIntelligence;
+  assert.equal(offer.version, 'offer-intelligence-v1');
+  assert.equal(offer.quality.quantifiedFromEvidence, true);
+  assert.equal(offer.quality.noInventedCommercialTerms, true);
+  assert.equal(offer.quality.unsupportedPatterns, 0);
+  assert.ok(offer.byAspect.pricing.some(pattern => pattern.key === 'pricing_visible'));
+  assert.ok(offer.byAspect.payment.some(pattern => pattern.key === 'payment_or_cod'));
+  assert.ok(offer.byAspect.fulfillment.some(pattern => pattern.key === 'delivery_or_stock'));
+  assert.ok(offer.byAspect.feature_set.some(pattern => pattern.key === 'product_specs'));
+  assert.ok(offer.patterns.every(pattern => pattern.evidenceIds.length > 0));
+  assert.match(offer.quality.limitations.join(' '), /Exact price, stock, delivery speed/i);
+  assert.doesNotMatch(JSON.stringify(offer), /confirmed market price|guaranteed 24h|market share/i);
+});

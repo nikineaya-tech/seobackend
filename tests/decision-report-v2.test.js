@@ -118,6 +118,9 @@ test('decision report v2 exposes short executive surface and deep dive', () => {
   assert.equal(report.mainReport.customerVoice.mode, 'quantified_evidence_patterns');
   assert.equal(report.mainReport.customerVoice.quality.quantifiedFromEvidence, true);
   assert.ok(report.mainReport.customerVoice.objections.some(pattern => pattern.count >= 1));
+  assert.equal(report.mainReport.sellerFight.mode, 'quantified_offer_patterns');
+  assert.equal(report.mainReport.sellerFight.quality.noInventedCommercialTerms, true);
+  assert.ok(report.mainReport.sellerFight.payment.some(pattern => pattern.evidenceIds.includes('ev_offer_1')));
   assert.ok(report.mainReport.opportunityGaps.length <= 3);
   assert.ok(report.mainReport.priorityActions.length <= 3);
   assert.ok(report.mainReport.priorityActions.every(action => action.status === 'RECOMMENDED_TEST'));
