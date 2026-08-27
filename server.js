@@ -90,6 +90,9 @@ const {
 const {
   buildMarketDiscoveryPlan,
 } = require('./lib/market-intelligence/source-router');
+const {
+  buildTemporalIntelligence,
+} = require('./lib/market-intelligence/temporal-intelligence');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -10593,6 +10596,14 @@ const marketEntityMap = buildMarketEntityMap({
 finalResult.marketEntityMap = marketEntityMap;
 finalResult.supplierIntelligence = marketEntityMap.supplierIntelligence;
 finalResult.substituteSources = marketEntityMap.byType?.SUBSTITUTE || [];
+const temporalIntelligence = buildTemporalIntelligence({
+    evidenceRegistry: finalResult.evidenceRegistry,
+    marketEvidence: agentReachMarketEvidence,
+    agentReachEvidence: agentReachMarketEvidence,
+    query: cleanQuery,
+    country: geoData.location
+});
+finalResult.temporalIntelligence = temporalIntelligence;
 const strategicAgentsV2 = runStrategicAgentsV2({
     marketSignalModel,
     query: cleanQuery,
@@ -10610,6 +10621,7 @@ finalResult.decisionReportV2 = buildDecisionReportV2({
     agentReachEvidence: agentReachMarketEvidence,
     marketSignalModel,
     marketEntityMap,
+    temporalIntelligence,
     strategicAgentsV2,
     supplierIntelligence: finalResult.supplierIntelligence,
     geoSourceAudit: finalResult.geoSourceAudit,
@@ -10636,6 +10648,13 @@ finalResult.dataIntegrity.marketSignalCoverage = {
     unsupportedStrategicActions: strategicAgentsV2.quality.unsupportedActionCount,
     entityTypes: Object.keys(marketEntityMap.byType || {}),
     supplierIntelligenceStatus: marketEntityMap.supplierIntelligence.status,
+    temporalIntelligence: {
+        datedEvidenceCount: temporalIntelligence.quality.datedEvidenceCount,
+        sampleShiftCount: temporalIntelligence.quality.sampleShiftCount,
+        noDemandGrowthClaim: temporalIntelligence.quality.noDemandGrowthClaim,
+        boundedToObservedSample: temporalIntelligence.quality.boundedToObservedSample,
+        allShiftsTraceable: temporalIntelligence.quality.allShiftsTraceable
+    },
     decisionReportV2: {
         claimValidationStatus: finalResult.decisionReportV2.claimValidation.status,
         validationIssues: finalResult.decisionReportV2.claimValidation.issues.length,
