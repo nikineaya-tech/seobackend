@@ -12,7 +12,8 @@ const {
   buildMarketEntityMap
 } = require('../lib/market-intelligence/entity-classifier');
 const {
-  buildDecisionReportV2
+  buildDecisionReportV2,
+  validateDecisionReportV2
 } = require('../lib/market-intelligence/report-v2');
 
 const NOW = '2026-08-27T12:00:00.000Z';
@@ -121,6 +122,7 @@ test('decision report v2 exposes short executive surface and deep dive', () => {
   assert.ok(report.deepDive.substitutes.some(item => item.type === 'SUBSTITUTE'));
   assert.equal(report.quality.evidenceFirst, true);
   assert.equal(report.quality.noObservedClaimWithoutEvidence, true);
+  assert.equal(report.claimValidation.status, 'approved');
 });
 
 test('decision report v2 does not promote unsupported observations or supplier claims', () => {
@@ -168,4 +170,31 @@ test('decision report v2 does not promote unsupported observations or supplier c
   assert.equal(report.deepDive.supplierLandscape.status, 'UNKNOWN');
   assert.equal(report.quality.noObservedClaimWithoutEvidence, true);
   assert.doesNotMatch(JSON.stringify(report.mainReport), /market leader|100% dominance/i);
+});
+
+test('decision report validator blocks untraceable output contracts', () => {
+  const validation = validateDecisionReportV2({
+    mainReport: {
+      marketIn60Seconds: [
+        {
+          status: 'OBSERVED',
+          title: 'leader',
+          insight: 'This is the market leader with 100% dominance.',
+          evidenceIds: []
+        }
+      ],
+      opportunityGaps: [{ statement: 'Gap without limits', evidenceIds: [] }],
+      priorityActions: [{ status: 'OBSERVED', action: 'Scale ads now', signalIds: [], evidenceIds: [] }]
+    },
+    deepDive: {
+      supplierLandscape: { status: 'CONFIRMED', evidenceIds: [] },
+      rawEvidence: []
+    }
+  });
+
+  assert.equal(validation.status, 'downgraded');
+  assert.ok(validation.issues.some(issue => issue.code === 'OBSERVED_WITHOUT_EVIDENCE'));
+  assert.ok(validation.issues.some(issue => issue.code === 'UNTRACEABLE_ACTION'));
+  assert.ok(validation.issues.some(issue => issue.code === 'UNSUPPORTED_STRONG_MARKET_CLAIM'));
+  assert.ok(validation.issues.some(issue => issue.code === 'SUPPLIER_CONFIRMED_WITHOUT_EVIDENCE'));
 });

@@ -10637,9 +10637,12 @@ finalResult.dataIntegrity.marketSignalCoverage = {
     entityTypes: Object.keys(marketEntityMap.byType || {}),
     supplierIntelligenceStatus: marketEntityMap.supplierIntelligence.status,
     decisionReportV2: {
+        claimValidationStatus: finalResult.decisionReportV2.claimValidation.status,
+        validationIssues: finalResult.decisionReportV2.claimValidation.issues.length,
         observationsWithEvidence: finalResult.decisionReportV2.quality.observationsWithEvidence,
         maxThreeActions: finalResult.decisionReportV2.quality.maxThreeActions,
-        noObservedClaimWithoutEvidence: finalResult.decisionReportV2.quality.noObservedClaimWithoutEvidence
+        noObservedClaimWithoutEvidence: finalResult.decisionReportV2.quality.noObservedClaimWithoutEvidence,
+        approved: finalResult.decisionReportV2.quality.claimValidationApproved
     }
 };
 
