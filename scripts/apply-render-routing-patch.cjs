@@ -31,4 +31,4 @@ if (violations.length) {
   process.exit(1);
 }
 
-console.log('[RenderRoutingCheck] Business routes run on Render. Railway remains scraping-only.');
+console.log('[RenderRoutingCheck] Business routes run on Render. Railway remains collection-only.');

@@ -75,6 +75,9 @@ const {
 const {
   sanitizeCompetitorReport,
 } = require('./lib/competitor-evidence-engine');
+const {
+  buildMarketSignalEngine,
+} = require('./lib/market-intelligence/signal-engine');
 // Security & Performance
 const helmet = require('helmet');
 const compression = require('compression');
@@ -10552,7 +10555,26 @@ finalResult = sanitizeCompetitorReport(finalResult, {
     agentReachEvidence: agentReachMarketEvidence,
     marketEvidence: agentReachMarketEvidence
 });
+const marketSignalModel = buildMarketSignalEngine({
+    evidenceRegistry: finalResult.evidenceRegistry,
+    marketEvidence: agentReachMarketEvidence,
+    agentReachEvidence: agentReachMarketEvidence,
+    query: cleanQuery,
+    country: geoData.location
+});
+finalResult.marketSignalModel = marketSignalModel;
+finalResult.marketSignals = marketSignalModel.signals.slice(0, 15);
 finalResult.dataIntegrity = proofIntegrity(finalResult.proofModel || {});
+finalResult.dataIntegrity.marketSignalCoverage = {
+    evidenceCount: marketSignalModel.sourceEvidenceCount,
+    sourceDiversity: marketSignalModel.sourceDiversity,
+    signalTypes: marketSignalModel.signalTypes,
+    observedSignals: marketSignalModel.quality.observedSignals,
+    inferredSignals: marketSignalModel.quality.inferredSignals,
+    unsupportedObservedSignals: marketSignalModel.quality.unsupportedObservedSignals,
+    hasTemporalEvidence: marketSignalModel.quality.hasTemporalEvidence,
+    noMarketGrowthClaim: marketSignalModel.quality.noMarketGrowthClaim
+};
 
 cache.set(cacheKey, finalResult);
 return finalResult;
