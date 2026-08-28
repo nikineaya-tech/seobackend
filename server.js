@@ -9017,6 +9017,15 @@ async function analyzeCompetitors(
     userIntentContext = {}
 ) {
     const startTime = Date.now();
+    const requestId = String(
+        userIntentContext?.requestId ||
+        `COMP-${Date.now()}-${Math.random().toString(36).slice(2, 9).toUpperCase()}`
+    ).slice(0, 120);
+    const clientAnalysisId = String(
+        userIntentContext?.clientAnalysisId ||
+        userIntentContext?.analysisId ||
+        requestId
+    ).slice(0, 120);
 
     // ── 1. LANGUE ─────────────────────────────────────────────
     const langObj = resolveLang(lang);
@@ -14517,7 +14526,11 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
 
         // ── PATCH 4 : forceRefresh réservé admin ─────────────
         const safeForceRefresh = Boolean(forceRefresh) && !!req.user?.isAdmin;
-        const safeContext = safeUserContextFromBody(req.body);
+        const safeContext = {
+            ...safeUserContextFromBody(req.body),
+            requestId: req.id || `REQ-${Date.now()}`,
+            clientAnalysisId: String(req.body?.clientAnalysisId || req.id || `COMP-${Date.now()}`).slice(0, 120)
+        };
 
         console.log(
     `[api/competitors] DÉMARRAGE WAR ROOM | query="${query.trim()}" | rawGeo="${rawGeo}" | resolvedGeo="${safeGeo}" | gl="${geoData.gl}" | lang="${lang}"`
