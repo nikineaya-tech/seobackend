@@ -13,7 +13,13 @@ const MAX_YOUTUBE_SEARCHES = Math.max(0, Number(process.env.AGENT_REACH_MAX_YOUT
 const MAX_YOUTUBE_RESULTS = Math.max(1, Number(process.env.AGENT_REACH_MAX_YOUTUBE_RESULTS || 5));
 const MAX_TEXT_CHARS = Math.max(800, Number(process.env.AGENT_REACH_MAX_TEXT_CHARS || 5000));
 const FETCH_TIMEOUT_MS = Math.max(3000, Number(process.env.AGENT_REACH_FETCH_TIMEOUT_MS || 25000));
+const JINA_API_KEY = String(process.env.JINA_API_KEY || '').trim();
 
+function jinaAuthHeaders() {
+  return JINA_API_KEY
+    ? { Authorization: `Bearer ${JINA_API_KEY}` }
+    : {};
+}
 function arr(value) {
   return Array.isArray(value) ? value.filter(Boolean) : [];
 }
@@ -61,9 +67,23 @@ function scopeForPlatform(platform) {
   return 'MARKET';
 }
 
-async function fetchText(url, { accept = 'text/plain', method = 'GET', headers = {}, body = null, maxChars = MAX_TEXT_CHARS } = {}) {
+async function fetchText(
+  url,
+  {
+    accept = 'text/plain',
+    method = 'GET',
+    headers = {},
+    body = null,
+    maxChars = MAX_TEXT_CHARS,
+    preserveRaw = false
+  } = {}
+) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(
+    () => controller.abort(),
+    FETCH_TIMEOUT_MS
+  );
+
   try {
     const response = await fetch(url, {
       method,
@@ -75,30 +95,58 @@ async function fetchText(url, { accept = 'text/plain', method = 'GET', headers =
       body,
       signal: controller.signal
     });
-    const text = await response.text();
+
+    const rawText = await response.text();
+
     return {
       ok: response.ok,
       status: response.status,
       url: response.url || url,
-      text: clean(text, maxChars)
+
+      // IMPORTANT:
+      // JSON ne doit jamais être tronqué avant JSON.parse().
+      text: preserveRaw
+        ? rawText
+        : clean(rawText, maxChars)
     };
   } finally {
     clearTimeout(timer);
   }
 }
-
 async function readViaJina(targetUrl) {
   const normalized = normalizeUrl(targetUrl);
-  if (!normalized) throw new Error('Invalid public URL');
-  return fetchText(`https://r.jina.ai/${normalized}`, { accept: 'text/plain' });
+
+  if (!normalized) {
+    throw new Error('Invalid public URL');
+  }
+
+  return fetchText(`https://r.jina.ai/${normalized}`, {
+    accept: 'text/plain',
+    headers: jinaAuthHeaders()
+  });
 }
 
 async function searchViaJina(query) {
   const cleanQuery = clean(query, 180);
-  if (!cleanQuery) throw new Error('Empty search query');
-  return fetchText(`https://s.jina.ai/${encodeURIComponent(cleanQuery)}`, { accept: 'text/plain' });
-}
 
+  if (!cleanQuery) {
+    throw new Error('Empty search query');
+  }
+
+  if (!JINA_API_KEY) {
+    throw new Error('missing_jina_api_key');
+  }
+
+  return fetchText(
+    `https://s.jina.ai/${encodeURIComponent(cleanQuery)}`,
+    {
+      accept: 'text/plain',
+      headers: {
+        Authorization: `Bearer ${JINA_API_KEY}`
+      }
+    }
+  );
+}
 function evidenceFromText({ url, text, title, country, query, claimType = 'WEB_CONTENT', platform }) {
   const value = clean(text, MAX_TEXT_CHARS);
   const sourcePlatform = platform || platformOf(url);
@@ -196,16 +244,57 @@ async function collectFeedEvidence(feedUrl, context = {}) {
 
 async function collectSearchEvidence(searchQuery, context = {}) {
   const query = clean(searchQuery, 180);
-  if (!query) return { unavailable: { query: searchQuery, reason: 'empty_search_query' }, evidence: null };
+
+  if (!query) {
+    return {
+      unavailable: {
+        query: searchQuery,
+        provider: 'jina',
+        channel: 'search',
+        status: 'INVALID_INPUT',
+        reason: 'empty_search_query'
+      },
+      evidence: null
+    };
+  }
+
   try {
     const read = await searchViaJina(query);
-    if (!read.ok || !read.text) {
-      return { unavailable: { query, reason: `http_${read.status || 'unknown'}` }, evidence: null };
+
+    if (read.authRequired) {
+      return {
+        unavailable: {
+          query,
+          provider: 'jina',
+          channel: 'search',
+          backend: 'jina-search',
+          status: 'AUTH_REQUIRED',
+          reason: read.reason || 'jina_search_auth_failed'
+        },
+        evidence: null
+      };
     }
+
+    if (!read.ok || !read.text) {
+      return {
+        unavailable: {
+          query,
+          provider: 'jina',
+          channel: 'search',
+          backend: 'jina-search',
+          status: 'FAILED',
+          reason: read.reason || `http_${read.status || 'unknown'}`
+        },
+        evidence: null
+      };
+    }
+
     return {
       unavailable: null,
       evidence: evidenceFromText({
-        url: read.url || `https://s.jina.ai/${encodeURIComponent(query)}`,
+        url:
+          read.url ||
+          `https://s.jina.ai/${encodeURIComponent(query)}`,
         text: read.text,
         title: `Jina search results: ${query}`,
         country: context.country,
@@ -215,7 +304,17 @@ async function collectSearchEvidence(searchQuery, context = {}) {
       })
     };
   } catch (error) {
-    return { unavailable: { query, reason: clean(error.message, 220) }, evidence: null };
+    return {
+      unavailable: {
+        query,
+        provider: 'jina',
+        channel: 'search',
+        backend: 'jina-search',
+        status: 'FAILED',
+        reason: clean(error.message, 220)
+      },
+      evidence: null
+    };
   }
 }
 
@@ -273,15 +372,15 @@ async function collectExaSearchEvidence(searchQuery, context = {}) {
 
   try {
     const read = await fetchText('https://api.exa.ai/search', {
-      method: 'POST',
-      accept: 'application/json',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(body),
-      maxChars: MAX_EXA_RESPONSE_CHARS
-    });
+  method: 'POST',
+  accept: 'application/json',
+  headers: {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${apiKey}`
+  },
+  body: JSON.stringify(body),
+  preserveRaw: true
+});
     if (!read.ok || !read.text) {
       return { unavailable: { query, provider: 'exa', reason: `http_${read.status || 'unknown'}` }, evidence: [] };
     }
@@ -334,7 +433,10 @@ async function collectYouTubeSearchEvidence(searchQuery, context = {}) {
   endpoint.searchParams.set('q', query);
   endpoint.searchParams.set('key', apiKey);
   try {
-    const read = await fetchText(endpoint.toString(), { accept: 'application/json' });
+    const read = await fetchText(endpoint.toString(), {
+  accept: 'application/json',
+  preserveRaw: true
+});
     if (!read.ok || !read.text) {
       return { unavailable: { query, provider: 'youtube', reason: `http_${read.status || 'unknown'}` }, evidence: [] };
     }
@@ -358,62 +460,6 @@ function dedupeEvidence(evidence = []) {
   });
 }
 
-function evidenceListFromResult(result = {}) {
-  if (Array.isArray(result.evidence)) return result.evidence.filter(Boolean);
-  return result.evidence ? [result.evidence] : [];
-}
-
-function diagnosticStatus(result = {}) {
-  const evidenceCount = evidenceListFromResult(result).length;
-  if (evidenceCount > 0) return 'READY';
-  if (!result.unavailable) return 'NO_RESULTS';
-  const reason = clean(result.unavailable.reason || '', 120);
-  if (/missing_api_key/i.test(reason)) return 'UNAVAILABLE';
-  if (/auth|unauthor|http_401|http_403/i.test(reason)) return 'AUTH_REQUIRED';
-  if (/empty|no_results|not_found/i.test(reason)) return 'NO_RESULTS';
-  return 'ERROR';
-}
-
-async function collectWithDiagnostic({ channel, provider, backend, query = '', url = '', collector }) {
-  const startedAt = Date.now();
-  try {
-    const result = await collector();
-    const evidenceList = evidenceListFromResult(result);
-    const unavailable = result.unavailable || null;
-    return {
-      result,
-      diagnostic: {
-        channel,
-        provider,
-        backend,
-        query: clean(query, 220) || null,
-        url: clean(url, 900) || null,
-        resultCount: evidenceList.length,
-        evidenceCount: evidenceList.length,
-        status: diagnosticStatus(result),
-        reason: unavailable ? clean(unavailable.reason || unavailable.error || 'unavailable', 220) : (evidenceList.length ? null : 'no_evidence_returned'),
-        durationMs: Date.now() - startedAt
-      }
-    };
-  } catch (error) {
-    return {
-      result: { unavailable: { query: query || null, url: url || null, provider, reason: clean(error.message, 220) }, evidence: [] },
-      diagnostic: {
-        channel,
-        provider,
-        backend,
-        query: clean(query, 220) || null,
-        url: clean(url, 900) || null,
-        resultCount: 0,
-        evidenceCount: 0,
-        status: /auth|unauthor/i.test(error.message) ? 'AUTH_REQUIRED' : 'ERROR',
-        reason: clean(error.message, 220),
-        durationMs: Date.now() - startedAt
-      }
-    };
-  }
-}
-
 async function collectAgentReachMarketEvidence(payload = {}) {
   const startedAt = Date.now();
   const context = {
@@ -427,107 +473,38 @@ async function collectAgentReachMarketEvidence(payload = {}) {
   const youtubeSearches = arr(payload.youtubeSearches || payload.youtubeQueries).map(item => clean(item, 180)).filter(Boolean).slice(0, MAX_YOUTUBE_SEARCHES);
   const evidence = [];
   const unavailable = [];
-  const channelDiagnostics = [];
 
   for (const exaQuery of exaSearches) {
-    const { result, diagnostic } = await collectWithDiagnostic({
-      channel: 'exa',
-      provider: 'agent-reach-railway',
-      backend: 'exa-search',
-      query: exaQuery,
-      collector: () => collectExaSearchEvidence(exaQuery, context)
-    });
-    channelDiagnostics.push(diagnostic);
+    const result = await collectExaSearchEvidence(exaQuery, context);
     evidence.push(...arr(result.evidence));
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
   for (const youtubeQuery of youtubeSearches) {
-    const { result, diagnostic } = await collectWithDiagnostic({
-      channel: 'youtube',
-      provider: 'agent-reach-railway',
-      backend: 'youtube-data-api',
-      query: youtubeQuery,
-      collector: () => collectYouTubeSearchEvidence(youtubeQuery, context)
-    });
-    channelDiagnostics.push(diagnostic);
+    const result = await collectYouTubeSearchEvidence(youtubeQuery, context);
     evidence.push(...arr(result.evidence));
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
-  let jinaSearchAuthBlocked = false;
   for (const search of searches) {
-    if (jinaSearchAuthBlocked) {
-      channelDiagnostics.push({
-        channel: 'search',
-        provider: 'agent-reach-railway',
-        backend: 'jina-search',
-        query: search,
-        url: null,
-        resultCount: 0,
-        evidenceCount: 0,
-        status: 'AUTH_REQUIRED',
-        reason: 'jina_search_auth_failed_after_first_attempt',
-        durationMs: 0
-      });
-      unavailable.push({ query: search, provider: 'agent-reach-railway', reason: 'jina_search_auth_failed_after_first_attempt' });
-      continue;
-    }
-    const { result, diagnostic } = await collectWithDiagnostic({
-      channel: 'search',
-      provider: 'agent-reach-railway',
-      backend: 'jina-search',
-      query: search,
-      collector: () => collectSearchEvidence(search, context)
-    });
-    channelDiagnostics.push(diagnostic);
+    const result = await collectSearchEvidence(search, context);
     if (result.evidence) evidence.push(result.evidence);
     if (result.unavailable) unavailable.push(result.unavailable);
-    if (diagnostic.status === 'AUTH_REQUIRED') {
-      jinaSearchAuthBlocked = true;
-    }
   }
 
   for (const url of urls) {
-    const channel = platformOf(url);
-    const { result, diagnostic } = await collectWithDiagnostic({
-      channel: channel === 'web' ? 'web' : `${channel}-url`,
-      provider: 'agent-reach-railway',
-      backend: 'jina-reader',
-      url,
-      collector: () => collectUrlEvidence(url, context)
-    });
-    channelDiagnostics.push(diagnostic);
+    const result = await collectUrlEvidence(url, context);
     if (result.evidence) evidence.push(result.evidence);
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
   for (const feed of feeds) {
-    const { result, diagnostic } = await collectWithDiagnostic({
-      channel: 'rss',
-      provider: 'agent-reach-railway',
-      backend: 'direct-rss-parser',
-      url: feed,
-      collector: () => collectFeedEvidence(feed, context)
-    });
-    channelDiagnostics.push(diagnostic);
+    const result = await collectFeedEvidence(feed, context);
     evidence.push(...arr(result.evidence));
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
   const normalizedEvidence = dedupeEvidence(evidence);
-  const channelSummary = channelDiagnostics.reduce((summary, item) => {
-    const key = item.channel || 'unknown';
-    if (!summary[key]) {
-      summary[key] = { attempts: 0, evidence: 0, unavailable: 0, errors: 0, statuses: {} };
-    }
-    summary[key].attempts += 1;
-    summary[key].evidence += Number(item.evidenceCount || 0);
-    if (item.status !== 'READY') summary[key].unavailable += 1;
-    if (item.status === 'ERROR') summary[key].errors += 1;
-    summary[key].statuses[item.status] = (summary[key].statuses[item.status] || 0) + 1;
-    return summary;
-  }, {});
   return {
     success: normalizedEvidence.length > 0,
     kind: 'market-sensor',
@@ -550,8 +527,6 @@ async function collectAgentReachMarketEvidence(payload = {}) {
       evidence: normalizedEvidence
     },
     unavailable,
-    channelDiagnostics,
-    channelSummary,
     counts: {
       exaSearches: exaSearches.length,
       searches: searches.length,
