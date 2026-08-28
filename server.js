@@ -14318,7 +14318,8 @@ module.exports = {
     trackAgentSkipped,
     trackSessionEnd,
     getBehaviorReport,
-    cleanupOldSessions
+    cleanupOldSessions,
+    analyzeCompetitors
 };
 
 
