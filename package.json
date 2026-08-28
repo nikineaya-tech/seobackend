@@ -18,6 +18,7 @@
     "pm2:logs": "pm2 logs daka-all-in-one",
     "pm2:monit": "pm2 monit",
     "check": "node -v && node --check server.js && node --check scripts/daka-server-runtime-guard.cjs && node scripts/apply-render-routing-patch.cjs",
+    "audit:insight-readiness": "node scripts/audit-insight-readiness.cjs",
     "test:marketing-master": "node --test tests/marketing-master-auditor.test.js",
     "test:competitors": "node --test tests/competitor-evidence-engine.test.js tests/marketing-master-auditor.test.js tests/agent-reach-sensor.test.js tests/source-router.test.js tests/market-signal-engine.test.js tests/insight-engine.test.js tests/temporal-intelligence.test.js tests/evidence-contract.test.js tests/strategic-agents-v2.test.js tests/market-entity-classifier.test.js tests/decision-report-v2.test.js",
     "test:insight-e2e": "node scripts/run-insight-e2e.cjs",
