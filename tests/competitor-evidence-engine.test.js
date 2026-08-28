@@ -147,6 +147,57 @@ test('price-only values are removed from promise fields', () => {
   assert.match(text, /PRICE_VALUE_REMOVED_FROM_PROMISE_FIELD/);
 });
 
+test('advanced frameworks are suppressed when market coverage is thin', () => {
+  const report = sampleReport();
+  report.marketInsights.sophisticationLevel = '2';
+  report.marketDynamics = {
+    porterVerdict: 'Competition is moderate and supplier power is high.',
+    threatLevel: 'Medium',
+    barrierToEntry: 'Entry requires strong product quality.'
+  };
+  report.swot = {
+    strengths: ['Advanced LED and suction features'],
+    weaknesses: ['Limited social proof'],
+    opportunities: ['Influencer marketing and SEO'],
+    threats: ['Many similar sellers']
+  };
+  report.blueOceanStrategy = {
+    blueOceanMoves: ['Create a unique skincare education experience'],
+    create: ['New premium category']
+  };
+
+  const clean = sanitizeCompetitorReport(report, { lang: 'en', userSiteAudited: false });
+  const text = JSON.stringify(clean);
+  assert.equal(clean.marketInsights.sophisticationLevel, undefined);
+  assert.equal(clean.marketInsights.sophisticationStatus, STATUS.INSUFFICIENT_EVIDENCE);
+  assert.equal(clean.marketDynamics.frameworkStatus, STATUS.INSUFFICIENT_EVIDENCE);
+  assert.equal(clean.swot.status, STATUS.INSUFFICIENT_EVIDENCE);
+  assert.equal(clean.blueOceanStrategy.status, STATUS.INSUFFICIENT_EVIDENCE);
+  assert.doesNotMatch(text, /Competition is moderate|supplier power is high|unique skincare education experience/i);
+});
+
+test('unsupported retention upsell and refund claims become unknown instead of strategy', () => {
+  const report = sampleReport();
+  report.masteringTechniques = {
+    retentionLoop: 'Build loyalty with recurring skincare advice.',
+    monetizationHack: 'Sell complementary accessories after purchase.'
+  };
+  report.grandSlamOfferBlueprint = {
+    timeDelay: 'delivery in 24h',
+    perceivedLikelihood: '30 days refund guarantee',
+    theIrresistibleOffer: '30 days money-back offer'
+  };
+
+  const clean = sanitizeCompetitorReport(report, { lang: 'en', userSiteAudited: false });
+  const text = JSON.stringify(clean);
+  assert.equal(clean.masteringTechniques.retentionLoop.status, STATUS.UNKNOWN);
+  assert.equal(clean.masteringTechniques.monetizationHack.status, STATUS.UNKNOWN);
+  assert.match(text, /Retention or loyalty loop is not verified/);
+  assert.match(text, /Accessories, upsell or monetization mechanics are not verified/);
+  assert.doesNotMatch(text, /recurring skincare advice|complementary accessories|30 days refund guarantee|30 days money-back offer/i);
+  assert.match(text, /refund policy not verified/);
+});
+
 test('every observed competitor has evidence ids', () => {
   const clean = sanitizeCompetitorReport(sampleReport(), { lang: 'ar', userSiteAudited: false });
   assert.ok(clean.evidenceRegistry.evidence.length >= 3);

@@ -42,6 +42,7 @@ const detectorRegistryFile = 'lib/market-intelligence/insights/detector-registry
 const scorerFile = 'lib/market-intelligence/insights/insight-scorer.js';
 const validatorFile = 'lib/market-intelligence/insights/insight-validator.js';
 const reportFile = 'lib/market-intelligence/report-v2.js';
+const competitorEvidenceFile = 'lib/competitor-evidence-engine.js';
 const runtimeFile = 'public/assets/daka-main-runtime.js';
 const e2eFile = 'scripts/run-insight-e2e.cjs';
 const packageFile = 'package.json';
@@ -103,11 +104,20 @@ const checks = [
   row(
     'generic-filter',
     'Generic advice and unsupported growth/leader claims are blocked by gates',
-    [validatorFile, e2eFile, reportFile],
+    [validatorFile, e2eFile, reportFile, competitorEvidenceFile],
     has(validatorFile, /GENERIC_ADVICE_PATTERNS/) &&
       has(e2eFile, /GENERIC_TOP_INSIGHT/) &&
       has(e2eFile, /FORBIDDEN_CLAIMS/) &&
-      has(reportFile, /market leader/i)
+      has(reportFile, /market leader/i) &&
+      has(competitorEvidenceFile, /PRICE_VALUE_REMOVED_FROM_PROMISE_FIELD/)
+  ),
+  row(
+    'framework-policy',
+    'Legacy frameworks are evidence-gated instead of promoted from thin samples',
+    [competitorEvidenceFile, 'tests/competitor-evidence-engine.test.js'],
+    has(competitorEvidenceFile, /evidence-gated-frameworks-v1/) &&
+      has(competitorEvidenceFile, /suppressUnsupportedFrameworks/) &&
+      has('tests/competitor-evidence-engine.test.js', /advanced frameworks are suppressed/)
   ),
   row(
     'server-wiring',

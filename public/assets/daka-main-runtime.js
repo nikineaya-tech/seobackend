@@ -4697,7 +4697,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
     // §1b — MARKET DYNAMICS (Porter) — NOUVEAU
     // ══════════════════════════════════════════════════════════════
     let marketDynHtml = '';
-    if (data.marketDynamics) {
+    if (data.marketDynamics && data.marketDynamics.frameworkStatus !== 'INSUFFICIENT_EVIDENCE') {
         const md = data.marketDynamics;
         const lvlColor = { Low: '#10b981', Medium: '#f59e0b', High: '#ef4444', Critical: '#dc2626' };
         const tColor   = lvlColor[md.threatLevel] || '#94a3b8';
@@ -4819,7 +4819,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
     // §2b — GRAND SLAM OFFER BLUEPRINT — NOUVEAU
     // ══════════════════════════════════════════════════════════════
     let gslHtml = '';
-    if (data.grandSlamOfferBlueprint) {
+    if (data.grandSlamOfferBlueprint && data.grandSlamOfferBlueprint.status !== 'INSUFFICIENT_EVIDENCE') {
         const gsl = data.grandSlamOfferBlueprint;
         const gslItems = [
             { key: 'dreamOutcome',        label: t.dreamOutcome,  icon: 'fa-star',        color: '#fcd34d' },
@@ -5065,7 +5065,9 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
     // §5 — WAR ROOM : Radar + SWOT + Blue Ocean COMPLET
     // ══════════════════════════════════════════════════════════════
     let warRoomHtml = '';
-    if (data.swot || data.comparisonScores || data.blueOceanStrategy) {
+    const swotAllowed = data.swot && data.swot.status !== 'INSUFFICIENT_EVIDENCE';
+    const blueOceanAllowed = data.blueOceanStrategy && data.blueOceanStrategy.status !== 'INSUFFICIENT_EVIDENCE';
+    if (swotAllowed || data.comparisonScores || blueOceanAllowed) {
         const swot         = data.swot || {};
         const strengths    = Array.isArray(swot.strengths)     ? swot.strengths     : [];
         const weaknesses   = Array.isArray(swot.weaknesses)    ? swot.weaknesses    : [];
