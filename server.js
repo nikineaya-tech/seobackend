@@ -88,6 +88,9 @@ const {
   buildDecisionReportV2,
 } = require('./lib/market-intelligence/report-v2');
 const {
+  buildInsightDiscoveryEngine,
+} = require('./lib/market-intelligence/insights/insight-engine');
+const {
   buildMarketDiscoveryPlan,
 } = require('./lib/market-intelligence/source-router');
 const {
@@ -10609,6 +10612,20 @@ const temporalIntelligence = buildTemporalIntelligence({
     country: geoData.location
 });
 finalResult.temporalIntelligence = temporalIntelligence;
+const insightDiscoveryModel = buildInsightDiscoveryEngine({
+    evidenceRegistry: finalResult.evidenceRegistry,
+    marketEvidence: agentReachMarketEvidence,
+    agentReachEvidence: agentReachMarketEvidence,
+    marketSignalModel,
+    marketEntityMap,
+    temporalIntelligence,
+    supplierIntelligence: finalResult.supplierIntelligence,
+    query: cleanQuery,
+    country: geoData.location
+});
+finalResult.insightDiscoveryModel = insightDiscoveryModel;
+finalResult.discoveryInsights = insightDiscoveryModel.topInsights;
+finalResult.insightTrace = insightDiscoveryModel.insightTrace;
 const strategicAgentsV2 = runStrategicAgentsV2({
     marketSignalModel,
     query: cleanQuery,
@@ -10627,6 +10644,7 @@ finalResult.decisionReportV2 = buildDecisionReportV2({
     marketSignalModel,
     marketEntityMap,
     temporalIntelligence,
+    insightDiscoveryModel,
     strategicAgentsV2,
     supplierIntelligence: finalResult.supplierIntelligence,
     geoSourceAudit: finalResult.geoSourceAudit,

@@ -5629,6 +5629,7 @@ console.log('DECISION LAYER PREVIEW:', decisionLayerHtml?.slice(0, 300));
 const reportLabels = getReportLabels({ isAr, isEn });
     container.innerHTML = `
         ${renderExecutiveSummary(data, 'competitors', { isAr, isEn })}
+        ${renderDiscoveryInsights(data, { isAr, isEn })}
         ${renderCompetitorDecisionLayerV2(data, { isAr, isEn })}
         ${renderReportSection('market', reportLabels.market, reportLabels.marketSub, 'fa-compass', `
             ${kgHtml}
@@ -12947,6 +12948,102 @@ function navigateReportView(button, mode) {
     }
     if (mode === 'full') sections.forEach(section => setReportSectionOpen(section, true));
     sections[0]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderDiscoveryInsights(data, opts = {}) {
+    const isAr = opts.isAr ?? STATE.currentLang === 'ar';
+    const isEn = opts.isEn ?? STATE.currentLang === 'en';
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : String;
+    const text = (value, fallback = '') => {
+        if (value === null || value === undefined) return fallback;
+        if (typeof value === 'string') return value.trim() || fallback;
+        if (typeof value === 'number') return String(value);
+        if (typeof value === 'object') {
+            return value.finding || value.title || value.interpretation || value.action || value.value || fallback;
+        }
+        return String(value);
+    };
+    const arr = (value) => Array.isArray(value) ? value.filter(Boolean) : [];
+    const insights = arr(
+        data?.discoveryInsights ||
+        data?.mainReport?.discoveryInsights ||
+        data?.decisionReportV2?.mainReport?.discoveryInsights ||
+        data?.reportV2?.mainReport?.discoveryInsights ||
+        data?.insightDiscoveryModel?.topInsights
+    ).slice(0, 5);
+    if (!insights.length) return '';
+    const copy = isAr ? {
+        kicker: 'اكتشاف العلاقات',
+        title: 'ماذا يكشف السوق فعلا؟',
+        sub: 'ليست نصائح عامة: هذه نتائج تربط صوت العميل، المنافسين، العرض، القنوات والأدلة المرصودة.',
+        found: 'ما الذي وجدناه',
+        why: 'لماذا يهم',
+        test: 'اختبار مقترح',
+        confidence: 'الثقة',
+        sources: 'مصادر'
+    } : isEn ? {
+        kicker: 'Relationship discovery',
+        title: 'What is the market really telling you?',
+        sub: 'Not generic advice: these findings cross customer voice, competitors, offers, channels and observed evidence.',
+        found: 'Finding',
+        why: 'Why it matters',
+        test: 'Test',
+        confidence: 'Confidence',
+        sources: 'Sources'
+    } : {
+        kicker: 'Découverte relationnelle',
+        title: 'Ce que le marché révèle vraiment',
+        sub: 'Pas des conseils génériques : ces cartes croisent voix client, concurrents, offres, canaux et preuves observées.',
+        found: 'Ce qui est trouvé',
+        why: 'Pourquoi c’est utile',
+        test: 'Test à lancer',
+        confidence: 'Confiance',
+        sources: 'Sources'
+    };
+    const typeColor = {
+        CUSTOMER_COMPETITOR_CONTRADICTION: '#fb7185',
+        CUSTOMER_OFFER_GAP: '#22d3ee',
+        SATURATION: '#f59e0b',
+        LOCAL_GLOBAL_ASYMMETRY: '#a78bfa',
+        SOCIAL_CONTENT_GAP: '#10b981',
+        PROOF_GAP: '#38bdf8',
+        TRUST_GAP: '#f97316',
+        PRICE_VALUE_ASYMMETRY: '#e879f9'
+    };
+    const cards = insights.map((insight, index) => {
+        const sources = arr(insight.sourceUrls || insight.sources || insight.evidenceSources).slice(0, 3);
+        const confidence = text(insight.confidence || insight.status, isAr ? 'متوسطة' : isEn ? 'Medium' : 'Moyenne');
+        const accent = typeColor[insight.type] || '#22d3ee';
+        return `
+        <article class="daka-discovery-card" style="--discovery-accent:${accent}">
+            <header>
+                <span>${safe(String(index + 1).padStart(2, '0'))}</span>
+                <div>
+                    <small>${safe(text(insight.type, copy.kicker).replace(/_/g, ' '))}</small>
+                    <h3 dir="auto">${safe(text(insight.title, copy.title))}</h3>
+                </div>
+                <b>${safe(confidence)}</b>
+            </header>
+            <div class="daka-discovery-body">
+                <section><strong>${safe(copy.found)}</strong><p dir="auto">${safe(text(insight.finding || insight.relationship, ''))}</p></section>
+                <section><strong>${safe(copy.why)}</strong><p dir="auto">${safe(text(insight.interpretation || insight.whyItMatters, ''))}</p></section>
+                <section><strong>${safe(copy.test)}</strong><p dir="auto">${safe(text(insight.decisionTest || insight.recommendedTest?.action, ''))}</p></section>
+            </div>
+            <footer>
+                <span>${safe(copy.confidence)}: ${safe(confidence)}</span>
+                ${sources.length ? `<span>${safe(copy.sources)}: ${sources.map(src => safe(String(src).replace(/^https?:\/\//, '').slice(0, 42))).join(' · ')}</span>` : ''}
+            </footer>
+        </article>`;
+    }).join('');
+    return `
+    <section class="daka-discovery-insights" data-export-feature="summary" dir="${isAr ? 'rtl' : 'ltr'}">
+        <div class="daka-discovery-head">
+            <span><i class="fas fa-network-wired"></i>${safe(copy.kicker)}</span>
+            <h2>${safe(copy.title)}</h2>
+            <p>${safe(copy.sub)}</p>
+        </div>
+        <div class="daka-discovery-grid">${cards}</div>
+    </section>`;
 }
 
 function renderExecutiveSummary(data, type, opts = {}) {

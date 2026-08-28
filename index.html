@@ -6191,7 +6191,7 @@ navkeywords: 'Market demand',
         }, true);
     })();
     </script>
-    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260827-market-signal-social1"></script>
+    <script src="https://seobackend-f81n.onrender.com/assets/daka-main-runtime.js?v=20260828-insight-discovery1"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-report-runtime.js?v=20260811-executive-report-ux2"></script>
     <script src="https://seobackend-f81n.onrender.com/assets/daka-library-reader-hardening.js?v=20260827-reader-fullscreen-fit4" defer></script>
 
@@ -10434,8 +10434,173 @@ body.modal-open {
     .daka-report-executive-mode .competitor-action-stack {
         grid-template-columns: 1fr;
     }
-    .daka-report-executive-mode .report-section-body .result-card:has(#competitorRadarChart) {
-        min-height: 340px !important;
+.daka-report-executive-mode .report-section-body .result-card:has(#competitorRadarChart) {
+    min-height: 340px !important;
+}
+}
+
+.daka-discovery-insights {
+    position: relative;
+    margin: 0 0 24px;
+    padding: clamp(16px, 2.4vw, 24px);
+    border: 1px solid rgba(34, 211, 238, .20);
+    border-radius: 24px;
+    background:
+        radial-gradient(circle at 8% 0%, rgba(34, 211, 238, .14), transparent 26%),
+        radial-gradient(circle at 100% 8%, rgba(168, 85, 247, .14), transparent 30%),
+        linear-gradient(145deg, rgba(2, 8, 20, .94), rgba(8, 16, 34, .90));
+    box-shadow: 0 24px 74px rgba(0, 0, 0, .28), inset 0 1px 0 rgba(255, 255, 255, .05);
+    overflow: hidden;
+}
+
+.daka-discovery-head {
+    display: grid;
+    gap: 8px;
+    max-width: 860px;
+    margin-bottom: 16px;
+}
+
+.daka-discovery-head span {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    width: fit-content;
+    padding: 8px 11px;
+    border: 1px solid rgba(34, 211, 238, .18);
+    border-radius: 999px;
+    background: rgba(34, 211, 238, .08);
+    color: #67e8f9;
+    font-size: .68rem;
+    font-weight: 950;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.daka-discovery-head h2 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.22rem, 2.5vw, 2rem);
+    line-height: 1.18;
+}
+
+.daka-discovery-head p {
+    margin: 0;
+    color: #aebfd6;
+    font-size: .88rem;
+    line-height: 1.65;
+}
+
+.daka-discovery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+    gap: 14px;
+}
+
+.daka-discovery-card {
+    min-width: 0;
+    display: grid;
+    gap: 13px;
+    padding: 15px;
+    border: 1px solid color-mix(in srgb, var(--discovery-accent, #22d3ee) 35%, transparent);
+    border-radius: 18px;
+    background:
+        linear-gradient(145deg, color-mix(in srgb, var(--discovery-accent, #22d3ee) 11%, transparent), rgba(2, 6, 23, .60));
+}
+
+.daka-discovery-card header {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: start;
+}
+
+.daka-discovery-card header > span,
+.daka-discovery-card header > b {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 5px 9px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--discovery-accent, #22d3ee) 20%, rgba(2, 6, 23, .72));
+    color: #e0f2fe;
+    font-size: .68rem;
+    font-weight: 950;
+}
+
+.daka-discovery-card small {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--discovery-accent, #67e8f9);
+    font-size: .62rem;
+    font-weight: 950;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.daka-discovery-card h3 {
+    margin: 0;
+    color: #fff;
+    font-size: .98rem;
+    line-height: 1.35;
+}
+
+.daka-discovery-body {
+    display: grid;
+    gap: 9px;
+}
+
+.daka-discovery-body section {
+    min-width: 0;
+    padding: 10px 11px;
+    border: 1px solid rgba(148, 163, 184, .10);
+    border-radius: 14px;
+    background: rgba(2, 6, 23, .28);
+}
+
+.daka-discovery-body strong {
+    display: block;
+    margin-bottom: 5px;
+    color: #bae6fd;
+    font-size: .68rem;
+    font-weight: 950;
+}
+
+.daka-discovery-body p {
+    margin: 0;
+    color: #dbeafe;
+    font-size: .78rem;
+    line-height: 1.62;
+}
+
+.daka-discovery-card footer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+}
+
+.daka-discovery-card footer span {
+    min-width: 0;
+    max-width: 100%;
+    padding: 6px 9px;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, .72);
+    color: #9fb1c9;
+    font-size: .66rem;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+    .daka-discovery-grid {
+        grid-template-columns: 1fr;
+    }
+    .daka-discovery-card header {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+    .daka-discovery-card header > b {
+        grid-column: 1 / -1;
+        justify-self: start;
     }
 }
 </style>

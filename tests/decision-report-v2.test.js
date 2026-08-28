@@ -12,6 +12,9 @@ const {
   buildMarketEntityMap
 } = require('../lib/market-intelligence/entity-classifier');
 const {
+  buildInsightDiscoveryEngine
+} = require('../lib/market-intelligence/insights/insight-engine');
+const {
   buildDecisionReportV2,
   validateDecisionReportV2
 } = require('../lib/market-intelligence/report-v2');
@@ -94,11 +97,19 @@ function buildFixture() {
     evidenceRegistry,
     country: 'Libya'
   });
+  const insightDiscoveryModel = buildInsightDiscoveryEngine({
+    evidenceRegistry,
+    marketSignalModel,
+    marketEntityMap,
+    country: 'Libya',
+    query: 'blackhead remover'
+  });
   return {
     evidenceRegistry,
     marketSignalModel,
     strategicAgentsV2,
-    marketEntityMap
+    marketEntityMap,
+    insightDiscoveryModel
   };
 }
 
@@ -121,6 +132,12 @@ test('decision report v2 exposes short executive surface and deep dive', () => {
   assert.equal(report.mainReport.sellerFight.mode, 'quantified_offer_patterns');
   assert.equal(report.mainReport.sellerFight.quality.noInventedCommercialTerms, true);
   assert.ok(report.mainReport.sellerFight.payment.some(pattern => pattern.evidenceIds.includes('ev_offer_1')));
+  assert.ok(Array.isArray(report.mainReport.discoveryInsights));
+  assert.ok(report.deepDive.insightDiscovery);
+  assert.deepEqual(
+    Object.keys(report.deepDive.insightDiscovery.insightTrace).sort(),
+    report.deepDive.insightDiscovery.insights.map(item => item.id).sort()
+  );
   assert.equal(report.deepDive.socialContentIntelligence.mode, 'quantified_content_patterns');
   assert.equal(report.deepDive.socialContentIntelligence.quality.noInventedEngagementClaims, true);
   assert.ok(report.deepDive.socialContentIntelligence.reviews.some(pattern => pattern.evidenceIds.includes('ev_social_1')));
