@@ -53,6 +53,7 @@ const detectorTypes = [
   'CUSTOMER_COMPETITOR_CONTRADICTION',
   'CUSTOMER_OFFER_GAP',
   'SATURATION',
+  'OFFER_SIMILARITY_PROOF_GAP',
   'LOCAL_GLOBAL_ASYMMETRY',
   'SOCIAL_CONTENT_GAP',
   'PROOF_GAP',
@@ -150,6 +151,7 @@ const checks = [
     exists('tests/insight-engine.test.js') &&
       has('tests/insight-engine.test.js', /trust gap/) &&
       has('tests/insight-engine.test.js', /price value asymmetry/) &&
+      has('tests/insight-engine.test.js', /offer similarity proof gap/) &&
       has('tests/insight-engine.test.js', /substitute risk/) &&
       has('tests/insight-engine.test.js', /verified supplier evidence/) &&
       has('tests/decision-report-v2.test.js', /recommendedTest/) &&

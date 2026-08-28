@@ -137,6 +137,54 @@ test('saturation detects common LED feature without calling it market dominance'
   assert.doesNotMatch(JSON.stringify(saturation), /dominance|market leader/i);
 });
 
+test('offer similarity proof gap turns repeated feature lists into a proof-differentiation insight', () => {
+  const featureRows = Array.from({ length: 7 }, (_, index) => ({
+    id: `ev_feature_similarity_${index + 1}`,
+    scope: 'COMPETITOR',
+    claimType: 'offer',
+    value: 'Seller product page repeats LED light, USB charging, suction levels, battery display and silicone heads in a feature list.',
+    sourceUrl: `https://seller${(index % 4) + 1}.ly/product-${index + 1}`,
+    sourcePlatform: 'inspected_page',
+    verificationStatus: 'CONFIRMED',
+    observedAt: NOW
+  }));
+  const proofRows = [{
+    id: 'ev_similarity_proof_1',
+    scope: 'COMPETITOR',
+    claimType: 'offer',
+    value: 'Seller shows verified review proof with a customer photo.',
+    sourceUrl: 'https://seller1.ly/product-proof',
+    sourcePlatform: 'inspected_page',
+    verificationStatus: 'CONFIRMED',
+    observedAt: NOW
+  }];
+  const { insightModel } = buildModels([...featureRows, ...proofRows], entityMap({ local: 4 }));
+  const insight = insightModel.insights.find(item => item.type === 'OFFER_SIMILARITY_PROOF_GAP');
+
+  assert.ok(insight);
+  assert.match(insight.relationship, /Repeated offer features \+ low proof-host coverage/i);
+  assert.match(insight.interpretation, /another feature claim is unlikely/i);
+  assert.doesNotMatch(JSON.stringify(insight), /same supplier|market share|dominan/i);
+  assert.ok(insight.evidenceIds.includes('ev_similarity_proof_1'));
+});
+
+test('offer similarity proof gap is suppressed from thin copied samples', () => {
+  const rows = Array.from({ length: 7 }, (_, index) => ({
+    id: `ev_thin_similarity_${index + 1}`,
+    scope: 'COMPETITOR',
+    claimType: 'offer',
+    value: 'Copied product page repeats LED light, USB charging and suction levels.',
+    sourceUrl: `https://seller1.ly/copied-${index + 1}`,
+    sourcePlatform: 'inspected_page',
+    verificationStatus: 'CONFIRMED',
+    observedAt: NOW
+  }));
+  const { insightModel } = buildModels(rows, entityMap({ local: 1 }));
+
+  assert.equal(insightModel.topInsights.some(item => item.type === 'OFFER_SIMILARITY_PROOF_GAP'), false);
+  assert.ok(insightModel.suppressedInsights.every(item => item.type !== 'OFFER_SIMILARITY_PROOF_GAP'));
+});
+
 test('local global asymmetry detects underused local proof pattern', () => {
   const globalProof = Array.from({ length: 8 }, (_, index) => ({
     id: `ev_global_demo_${index + 1}`,
@@ -454,12 +502,13 @@ test('insight schema exposes dimensions metrics scoring and recommended test', (
 
 test('detector registry declares every cross-source relationship and evidence policy', () => {
   const types = DETECTOR_SEQUENCE.map(item => item.type);
-  assert.equal(DETECTOR_SEQUENCE.length, 11);
-  assert.equal(new Set(types).size, 11);
+  assert.equal(DETECTOR_SEQUENCE.length, 12);
+  assert.equal(new Set(types).size, 12);
   [
     'CUSTOMER_COMPETITOR_CONTRADICTION',
     'CUSTOMER_OFFER_GAP',
     'SATURATION',
+    'OFFER_SIMILARITY_PROOF_GAP',
     'LOCAL_GLOBAL_ASYMMETRY',
     'SOCIAL_CONTENT_GAP',
     'PROOF_GAP',
