@@ -4483,6 +4483,27 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
         return typeof val === 'string' ? val.trim() || fallback : val;
     };
 
+    const SUPPRESSED_RESULT_STATUSES = new Set(['UNKNOWN', 'NOT_VERIFIED', 'NOT_FOUND_ON_INSPECTED_PAGE', 'INSUFFICIENT_EVIDENCE']);
+    const hasResultEvidence = (value) => value && typeof value === 'object' && (
+        (Array.isArray(value.evidenceIds) && value.evidenceIds.length > 0) ||
+        (Array.isArray(value.evidenceLinks) && value.evidenceLinks.length > 0) ||
+        (Array.isArray(value.sources) && value.sources.length > 0)
+    );
+    const isSuppressedResultValue = (value) => Boolean(
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        SUPPRESSED_RESULT_STATUSES.has(String(value.status || '').toUpperCase()) &&
+        !hasResultEvidence(value)
+    );
+    const resultValue = (value) => isSuppressedResultValue(value) ? '' : value;
+    const hasResultValue = (value) => {
+        const current = resultValue(value);
+        if (Array.isArray(current)) return current.filter(Boolean).length > 0;
+        if (current && typeof current === 'object') return Boolean(current.value || current.title || current.label || current.message);
+        return Boolean(current && current !== '—');
+    };
+
     const bSide  = isAr ? 'right' : 'left';
     const tAlign = isAr ? 'right' : 'left';
 
@@ -4827,7 +4848,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
             { key: 'timeDelay',           label: t.timeDelay,     icon: 'fa-bolt',        color: '#60a5fa' },
             { key: 'effortAndSacrifice',  label: t.effort,        icon: 'fa-fire',        color: '#f87171' },
             { key: 'theIrresistibleOffer',label: t.irresistible,  icon: 'fa-gem',         color: '#c084fc' },
-        ].filter(item => gsl[item.key] && gsl[item.key] !== '—');
+        ].filter(item => hasResultValue(gsl[item.key]));
 
         if (gslItems.length > 0) {
             gslHtml = card(`
@@ -4841,7 +4862,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
                             </div>
                             <small style="color:${item.color};font-weight:800;font-size:0.67rem;text-transform:uppercase;letter-spacing:1px;">${item.label}</small>
                         </div>
-                        <p style="font-size:0.86rem;color:white;font-weight:600;margin:0;line-height:1.6;" dir="auto">${safe(gsl[item.key])}</p>
+                        <p style="font-size:0.86rem;color:white;font-weight:600;margin:0;line-height:1.6;" dir="auto">${safe(resultValue(gsl[item.key]))}</p>
                     </div>`).join('')}
                 </div>
             `, { borderColor: '#c084fc', mb: 20 });
@@ -4960,33 +4981,33 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
     let masteringHtml = '';
     if (data.masteringTechniques) {
         const mt = data.masteringTechniques;
-        const hasData = (mt.trafficSources && mt.trafficSources !== '—') ||
-                        (mt.retentionLoop   && mt.retentionLoop   !== '—') ||
-                        (mt.monetizationHack && mt.monetizationHack !== '—');
+        const hasData = hasResultValue(mt.trafficSources) ||
+                        hasResultValue(mt.retentionLoop) ||
+                        hasResultValue(mt.monetizationHack);
         if (hasData) {
             masteringHtml = card(`
                 ${sectionTitle('fa-rocket', t.masterTitle, '#f87171')}
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;">
-                    ${mt.trafficSources && mt.trafficSources !== '—' ? `
+                    ${hasResultValue(mt.trafficSources) ? `
                     <div style="padding:14px;border-radius:12px;background:rgba(248,113,113,0.05);border:1px solid rgba(248,113,113,0.12);">
                         <small style="color:#f87171;font-weight:800;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">
                             <i class="fas fa-satellite-dish"></i> ${t.trafficSrc}
                         </small>
-                        <p style="font-size:0.86rem;color:#fca5a5;font-weight:600;margin:0;line-height:1.6;" dir="auto">${safe(mt.trafficSources)}</p>
+                        <p style="font-size:0.86rem;color:#fca5a5;font-weight:600;margin:0;line-height:1.6;" dir="auto">${safe(resultValue(mt.trafficSources))}</p>
                     </div>` : ''}
-                    ${mt.retentionLoop && mt.retentionLoop !== '—' ? `
+                    ${hasResultValue(mt.retentionLoop) ? `
                     <div style="padding:14px;border-radius:12px;background:rgba(34,211,238,0.05);border:1px solid rgba(34,211,238,0.12);">
                         <small style="color:#22d3ee;font-weight:800;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">
                             <i class="fas fa-sync-alt"></i> ${t.retention}
                         </small>
-                        <p style="font-size:0.86rem;color:#67e8f9;font-weight:600;margin:0;line-height:1.6;" dir="auto">${safe(mt.retentionLoop)}</p>
+                        <p style="font-size:0.86rem;color:#67e8f9;font-weight:600;margin:0;line-height:1.6;" dir="auto">${safe(resultValue(mt.retentionLoop))}</p>
                     </div>` : ''}
-                    ${mt.monetizationHack && mt.monetizationHack !== '—' ? `
+                    ${hasResultValue(mt.monetizationHack) ? `
                     <div style="padding:14px;border-radius:12px;background:rgba(250,204,21,0.05);border:1px solid rgba(250,204,21,0.12);">
                         <small style="color:#facc15;font-weight:800;font-size:0.68rem;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:6px;">
                             <i class="fas fa-coins"></i> ${t.monetization}
                         </small>
-                        <p style="font-size:0.86rem;color:#fde68a;font-weight:600;margin:0;line-height:1.6;" dir="auto">${safe(mt.monetizationHack)}</p>
+                        <p style="font-size:0.86rem;color:#fde68a;font-weight:600;margin:0;line-height:1.6;" dir="auto">${safe(resultValue(mt.monetizationHack))}</p>
                     </div>` : ''}
                 </div>
             `, { borderColor: '#f87171', mb: 20 });

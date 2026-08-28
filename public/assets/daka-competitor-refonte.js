@@ -526,7 +526,7 @@
   function genericCompetitorNoise(text) {
     const value = fixText(text);
     if (!value) return true;
-    return /(guide concret|commentaires clients \(0\)|positionnementmedium|preuve(?:high|medium|low)|impact(?:high|medium|low)|plan de recherche|this week|next 30 days)/i.test(value);
+    return /(guide concret|commentaires clients \(0\)|positionnementmedium|preuve(?:high|medium|low)|impact(?:high|medium|low)|plan de recherche|this week|next 30 days|unverified channel|قناة غير مؤكدة|marketing d.?influence|influencer marketing|التسويق عبر المؤثرين|réseaux sociaux et publicités|social media and paid ads|وسائل التواصل الاجتماعي والإعلانات|fid[ée]lit[ée]|loyalty loop|accessoires compl[ée]mentaires|complementary accessories|remboursement 30 jours|30 days refund|30 days money.?back)/i.test(value);
   }
 
   function matchesReportLanguage(text) {
@@ -817,10 +817,10 @@
     const market = cleanInsight(intel?.geoInterpretation?.market || document.getElementById('country')?.value || '');
     const title = subject && market
       ? (lang() === 'ar'
-        ? `من يهيمن على "${subject}" في ${market}؟`
+        ? `من يظهر بقوة حول "${subject}" في ${market}؟`
         : lang() === 'en'
-          ? `Who controls "${subject}" in ${market}?`
-          : `Qui domine "${subject}" en ${market} ?`)
+          ? `Who is most visible for "${subject}" in ${market}?`
+          : `Qui est le plus visible sur « ${subject} » en ${market} ?`)
       : copy('moduleTitle');
     const geoNote = cleanInsight(intel?.geoInterpretation?.mismatchNote);
     const chartScore = Math.max(18, Math.min(96, Math.round((cards.length * 18) + (competitorProfiles({ competitorIntelligence: intel }, intel).length * 6))));
@@ -1122,9 +1122,26 @@
     return fixText(STUDY_FIELD_LABELS[lang()]?.[key] || '');
   }
 
-  const STUDY_META_KEYS = new Set(['status', 'type', 'confidence', 'confidenceExplanation', 'evidenceLinks']);
+  const STUDY_META_KEYS = new Set(['status', 'type', 'confidence', 'confidenceExplanation', 'evidenceLinks', 'evidenceIds', 'message', 'frameworkMessage']);
+  const SUPPRESSED_STUDY_STATUSES = new Set(['UNKNOWN', 'NOT_VERIFIED', 'NOT_FOUND_ON_INSPECTED_PAGE', 'INSUFFICIENT_EVIDENCE']);
+
+  function hasStudyEvidence(value) {
+    if (!value || typeof value !== 'object') return false;
+    return ['evidenceLinks', 'evidenceIds', 'sources', 'sourceUrls'].some((key) => Array.isArray(value[key]) && value[key].length > 0);
+  }
+
+  function isSuppressedStudy(value) {
+    return Boolean(
+      value &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      SUPPRESSED_STUDY_STATUSES.has(String(value.status || '').toUpperCase()) &&
+      !hasStudyEvidence(value)
+    );
+  }
 
   function studyHasValue(value) {
+    if (isSuppressedStudy(value)) return false;
     if (Array.isArray(value)) return value.some(studyHasValue);
     if (value && typeof value === 'object') {
       return Object.entries(value)
@@ -1162,6 +1179,13 @@
 
   function renderStrategicStudies(data) {
     const legacy = data?.competitorIntelligence?.legacyStudies || data?.legacyStudies || {};
+    const frameworkBlocked = data?.frameworkPolicy?.status === 'INSUFFICIENT_EVIDENCE' ||
+      data?.marketDynamics?.frameworkStatus === 'INSUFFICIENT_EVIDENCE' ||
+      data?.swot?.status === 'INSUFFICIENT_EVIDENCE' ||
+      data?.blueOceanStrategy?.status === 'INSUFFICIENT_EVIDENCE';
+    const blockedKeys = new Set(frameworkBlocked
+      ? ['grandSlamOfferBlueprint', 'masteringTechniques', 'duelComparison', 'swot', 'blueOceanStrategy', 'comparisonScores']
+      : []);
     const studies = [
       ['top3ReverseEngineering', extraCopy('reverseEngineering')],
       ['grandSlamOfferBlueprint', extraCopy('grandSlam')],
@@ -1174,7 +1198,7 @@
       ['semanticDifferences', extraCopy('semantic')],
       ['keywordStrategy', extraCopy('keywordStrategy')],
       ['actionRoadmap', extraCopy('roadmap')]
-    ].filter(([key]) => studyHasValue(data?.[key]) || studyHasValue(legacy?.[key]));
+    ].filter(([key]) => !blockedKeys.has(key) && (studyHasValue(data?.[key]) || studyHasValue(legacy?.[key])));
     if (!studies.length) return '';
     const body = `<div class="daka-comp-study-grid">${studies.map(([key, title]) => `
       <article class="daka-comp-study-card">

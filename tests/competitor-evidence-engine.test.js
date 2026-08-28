@@ -121,7 +121,7 @@ test('unsupported channel sanitizer does not corrupt product names or URLs', () 
   assert.match(text, /Blackhead-Remover/);
   assert.match(text, /m\.shein\.com\/Blackhead-Remover-product\.html/);
   assert.doesNotMatch(text, /Blackheunverified channel/i);
-  assert.match(text, /unverified channel/);
+  assert.doesNotMatch(text, /unverified channel|ads and influencers/i);
 });
 
 test('price-only values are removed from promise fields', () => {
@@ -174,6 +174,37 @@ test('advanced frameworks are suppressed when market coverage is thin', () => {
   assert.equal(clean.swot.status, STATUS.INSUFFICIENT_EVIDENCE);
   assert.equal(clean.blueOceanStrategy.status, STATUS.INSUFFICIENT_EVIDENCE);
   assert.doesNotMatch(text, /Competition is moderate|supplier power is high|unique skincare education experience/i);
+});
+
+test('legacy strategic studies are removed when frameworks are not evidence-supported', () => {
+  const report = sampleReport();
+  report.competitorIntelligence = {
+    legacyStudies: {
+      grandSlamOfferBlueprint: { theIrresistibleOffer: '30 days money-back offer' },
+      masteringTechniques: {
+        trafficSources: 'SEO and influencer marketing',
+        retentionLoop: 'Build loyalty with recurring skincare advice.',
+        monetizationHack: 'Sell complementary accessories after purchase.'
+      },
+      swot: { opportunities: ['Influencer marketing and SEO'] },
+      blueOceanStrategy: { create: ['New premium category'] },
+      comparisonScores: { competitor: [100, 100, 100] }
+    },
+    strategicStudiesAvailability: {
+      grandSlamOfferBlueprint: true,
+      masteringTechniques: true,
+      swot: true,
+      blueOceanStrategy: true,
+      comparisonScores: true
+    }
+  };
+
+  const clean = sanitizeCompetitorReport(report, { lang: 'en', userSiteAudited: false });
+  const text = JSON.stringify(clean);
+  assert.equal(clean.competitorIntelligence.legacyStudies.frameworkStatus, STATUS.INSUFFICIENT_EVIDENCE);
+  assert.equal(clean.competitorIntelligence.strategicStudiesAvailability.masteringTechniques, false);
+  assert.equal(clean.competitorIntelligence.strategicStudiesAvailability.swot, false);
+  assert.doesNotMatch(text, /influencer marketing|recurring skincare advice|complementary accessories|premium category|30 days money-back/i);
 });
 
 test('unsupported retention upsell and refund claims become unknown instead of strategy', () => {
