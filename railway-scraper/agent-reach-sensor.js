@@ -486,18 +486,63 @@ async function collectAgentReachMarketEvidence(payload = {}) {
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
-  for (const search of searches) {
-    const result = await collectSearchEvidence(search, context);
-    if (result.evidence) evidence.push(result.evidence);
-    if (result.unavailable) unavailable.push(result.unavailable);
-  }
+ const searchResults = await Promise.allSettled(
+  searches.map(search =>
+    collectSearchEvidence(search, context)
+  )
+);
 
-  for (const url of urls) {
-    const result = await collectUrlEvidence(url, context);
-    if (result.evidence) evidence.push(result.evidence);
-    if (result.unavailable) unavailable.push(result.unavailable);
-  }
+for (const settled of searchResults) {
+  if (settled.status === 'fulfilled') {
+    const result = settled.value;
 
+    if (result?.evidence) {
+      evidence.push(result.evidence);
+    }
+
+    if (result?.unavailable) {
+      unavailable.push(result.unavailable);
+    }
+  } else {
+    unavailable.push({
+      provider: 'jina',
+      channel: 'search',
+      status: 'FAILED',
+      reason: clean(settled.reason?.message || 'search_failed', 220)
+    });
+  }
+}
+
+  const urlResults = await Promise.allSettled(
+  urls.map(url =>
+    collectUrlEvidence(url, context)
+  )
+);
+
+for (const settled of urlResults) {
+  if (settled.status === 'fulfilled') {
+    const result = settled.value;
+
+    if (result?.evidence) {
+      evidence.push(result.evidence);
+    }
+
+    if (result?.unavailable) {
+      unavailable.push(result.unavailable);
+    }
+  } else {
+    unavailable.push({
+      provider: 'jina',
+      channel: 'web',
+      status: 'FAILED',
+      reason: clean(settled.reason?.message || 'url_read_failed', 220)
+    });
+  }
+}
+const MARKET_SENSOR_BUDGET_MS = Math.max(
+  5000,
+  Number(process.env.AGENT_REACH_TOTAL_TIMEOUT_MS || 18000)
+);
   for (const feed of feeds) {
     const result = await collectFeedEvidence(feed, context);
     evidence.push(...arr(result.evidence));
