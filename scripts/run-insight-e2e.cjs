@@ -3,25 +3,13 @@
 process.env.NODE_ENV = process.env.NODE_ENV || 'test';
 process.env.WORKER_MODE = process.env.WORKER_MODE || 'true';
 
-const missing = [];
-if (!process.env.SERPER_API_KEY && !process.env.SERPAPI_KEY) missing.push('SERPER_API_KEY or SERPAPI_KEY');
-if (!process.env.OPENROUTER_API_KEY) missing.push('OPENROUTER_API_KEY');
-
-if (missing.length && process.env.DAKA_E2E_ALLOW_PARTIAL !== '1') {
-  console.error(JSON.stringify({
-    success: false,
-    error: 'INSIGHT_E2E_PRECONDITION_FAILED',
-    missing,
-    message: 'Full live insight E2E needs real search and reasoning providers. Set the missing keys, or run with DAKA_E2E_ALLOW_PARTIAL=1 only for debugging incomplete local wiring.'
-  }, null, 2));
-  process.exit(1);
-}
-
-const { analyzeCompetitors } = require('../server');
-
 const GENERIC_TOP_INSIGHT = /\b(improve seo|use social media|offer good customer service|competitive pricing|add testimonials|differentiate your offer|expand locally|increase brand awareness|create valuable content)\b/i;
 const FORBIDDEN_CLAIMS = /\b(market leader|market dominance|dominance\s*[:=]\s*100|demand growth|market growth|sales growth|exploding demand)\b/i;
 const RELATIONSHIP_MARKERS = /\+|gap|contradiction|asymmetry|risk|saturation|underused|coverage|while/i;
+const QUERY = process.env.DAKA_E2E_QUERY || 'blackhead remover';
+const MARKET = process.env.DAKA_E2E_MARKET || 'Libya';
+const GEO = process.env.DAKA_E2E_GEO || 'ly';
+const LANG = process.env.DAKA_E2E_LANG || 'en';
 
 function asArray(value) {
   return Array.isArray(value) ? value.filter(Boolean) : [];
@@ -63,8 +51,9 @@ function inspectPayload(result = {}) {
   if (noRelationship) fail('A top insight does not express a cross-source relationship.', { insight: noRelationship });
 
   return {
-    query: 'blackhead remover',
-    market: 'Libya',
+    mode: process.env.DAKA_E2E_API_URL ? 'remote-api' : 'local-internal',
+    query: QUERY,
+    market: MARKET,
     success: true,
     source: result.source || null,
     competitors: result.totalFound || asArray(result.competitors).length,
@@ -83,14 +72,79 @@ function inspectPayload(result = {}) {
   };
 }
 
-(async () => {
-  const startedAt = Date.now();
-  const result = await analyzeCompetitors('blackhead remover', 'ly', 'en', null, true, null, {
+function assertLocalPreconditions() {
+  const missing = [];
+  if (!process.env.SERPER_API_KEY && !process.env.SERPAPI_KEY) missing.push('SERPER_API_KEY or SERPAPI_KEY');
+  if (!process.env.OPENROUTER_API_KEY) missing.push('OPENROUTER_API_KEY');
+  if (missing.length && process.env.DAKA_E2E_ALLOW_PARTIAL !== '1') {
+    fail('INSIGHT_E2E_PRECONDITION_FAILED', {
+      missing,
+      message: 'Full local insight E2E needs real search and reasoning providers. Set the missing keys locally, run on Render, or set DAKA_E2E_API_URL plus DAKA_E2E_AUTH_TOKEN/DAKA_E2E_COOKIE to inspect the deployed final payload.'
+    });
+  }
+}
+
+async function runLocalE2E() {
+  assertLocalPreconditions();
+  const { analyzeCompetitors } = require('../server');
+  return analyzeCompetitors(QUERY, GEO, LANG, null, true, null, {
     productDescription: 'Blackhead remover device for the Libyan market.',
     objective: 'sales',
     priceRange: 'unknown',
     budget: 'small'
   });
+}
+
+async function runRemoteE2E() {
+  const base = String(process.env.DAKA_E2E_API_URL || '').replace(/\/+$/, '');
+  if (!base) return null;
+  if (!process.env.DAKA_E2E_AUTH_TOKEN && !process.env.DAKA_E2E_COOKIE && process.env.DAKA_E2E_ALLOW_PARTIAL !== '1') {
+    fail('INSIGHT_E2E_REMOTE_AUTH_REQUIRED', {
+      missing: ['DAKA_E2E_AUTH_TOKEN or DAKA_E2E_COOKIE'],
+      message: 'The deployed /api/competitors route is protected. Provide a bearer token or cookie copied from an authenticated session.'
+    });
+  }
+  const headers = { 'Content-Type': 'application/json' };
+  if (process.env.DAKA_E2E_AUTH_TOKEN) headers.Authorization = `Bearer ${process.env.DAKA_E2E_AUTH_TOKEN}`;
+  if (process.env.DAKA_E2E_COOKIE) headers.Cookie = process.env.DAKA_E2E_COOKIE;
+  const response = await fetch(`${base}/api/competitors`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      query: QUERY,
+      geo: MARKET,
+      lang: LANG,
+      forceRefresh: true,
+      context: {
+        productDescription: 'Blackhead remover device for the Libyan market.',
+        objective: 'sales',
+        priceRange: 'unknown',
+        budget: 'small'
+      }
+    })
+  });
+  const text = await response.text();
+  let json = null;
+  try {
+    json = JSON.parse(text);
+  } catch (_) {
+    fail('INSIGHT_E2E_REMOTE_NON_JSON_RESPONSE', {
+      status: response.status,
+      body: text.slice(0, 600)
+    });
+  }
+  if (!response.ok) {
+    fail('INSIGHT_E2E_REMOTE_HTTP_FAILED', {
+      status: response.status,
+      response: json
+    });
+  }
+  return json;
+}
+
+(async () => {
+  const startedAt = Date.now();
+  const result = process.env.DAKA_E2E_API_URL ? await runRemoteE2E() : await runLocalE2E();
   const audit = inspectPayload(result);
   audit.durationMs = Date.now() - startedAt;
   console.log(JSON.stringify(audit, null, 2));
