@@ -10689,6 +10689,7 @@ finalResult.decisionReportV2 = buildDecisionReportV2({
     geo: geoData.location,
     lang: langObj.code
 });
+finalResult.commentsReviews = finalResult.decisionReportV2?.mainReport?.commentsReviews || null;
 finalResult.evidenceContractAudit = auditMarketEvidenceContract({
     evidenceRegistry: finalResult.evidenceRegistry,
     marketEvidence: agentReachMarketEvidence,

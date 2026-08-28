@@ -129,6 +129,10 @@ test('decision report v2 exposes short executive surface and deep dive', () => {
   assert.equal(report.mainReport.customerVoice.mode, 'quantified_evidence_patterns');
   assert.equal(report.mainReport.customerVoice.quality.quantifiedFromEvidence, true);
   assert.ok(report.mainReport.customerVoice.objections.some(pattern => pattern.count >= 1));
+  assert.equal(report.mainReport.commentsReviews.mode, 'observed_comments_reviews');
+  assert.equal(report.mainReport.commentsReviews.quality.noInventedReviews, true);
+  assert.ok(report.mainReport.commentsReviews.observedItems.some(item => item.id === 'ev_social_1'));
+  assert.ok(report.mainReport.commentsReviews.patterns.some(pattern => pattern.evidenceIds.includes('ev_social_1')));
   assert.equal(report.mainReport.sellerFight.mode, 'quantified_offer_patterns');
   assert.equal(report.mainReport.sellerFight.quality.noInventedCommercialTerms, true);
   assert.ok(report.mainReport.sellerFight.payment.some(pattern => pattern.evidenceIds.includes('ev_offer_1')));
@@ -154,6 +158,75 @@ test('decision report v2 exposes short executive surface and deep dive', () => {
   assert.equal(report.quality.evidenceFirst, true);
   assert.equal(report.quality.noObservedClaimWithoutEvidence, true);
   assert.equal(report.claimValidation.status, 'approved');
+});
+
+test('decision report v2 comments and reviews section refuses to invent missing customer voice', () => {
+  const report = buildDecisionReportV2({
+    query: 'blackhead remover',
+    country: 'Libya',
+    lang: 'en',
+    evidenceRegistry: {
+      evidence: [
+        {
+          id: 'ev_offer_only',
+          scope: 'OFFER',
+          claimType: 'offer',
+          value: 'Product page mentions suction levels and LED light.',
+          sourcePlatform: 'inspected_page',
+          sourceUrl: 'https://seller.example/product',
+          confidence: 'MEDIUM',
+          verificationStatus: 'CONFIRMED'
+        }
+      ]
+    },
+    agentReachEvidence: {
+      channelDiagnostics: [
+        {
+          channel: 'youtube',
+          provider: 'agent-reach',
+          backend: 'youtube',
+          status: 'UNAVAILABLE',
+          reason: 'missing_api_key',
+          resultCount: 0,
+          evidenceCount: 0
+        }
+      ],
+      channelSummary: { unavailable: 1 },
+      evidenceRegistry: { evidence: [] }
+    },
+    marketSignalModel: buildMarketSignalEngine({
+      now: NOW,
+      evidenceRegistry: {
+        evidence: [
+          {
+            id: 'ev_offer_only',
+            scope: 'OFFER',
+            claimType: 'offer',
+            value: 'Product page mentions suction levels and LED light.',
+            sourcePlatform: 'inspected_page',
+            sourceUrl: 'https://seller.example/product',
+            confidence: 'MEDIUM',
+            verificationStatus: 'CONFIRMED'
+          }
+        ]
+      }
+    }),
+    strategicAgentsV2: {
+      marketPatternAnalyst: { observations: [] },
+      gapAnalyst: { gaps: [], saturatedPatterns: [], unknowns: [] },
+      decisionStrategist: { actions: [], unknowns: [] }
+    },
+    marketEntityMap: {
+      byType: {},
+      supplierIntelligence: { status: 'UNKNOWN', limitations: ['No supplier evidence.'] }
+    }
+  });
+
+  assert.equal(report.mainReport.commentsReviews.mode, 'insufficient_customer_voice_evidence');
+  assert.equal(report.mainReport.commentsReviews.status, 'NO_COMMENTS_OR_REVIEWS_FOUND');
+  assert.equal(report.mainReport.commentsReviews.observedItems.length, 0);
+  assert.equal(report.mainReport.commentsReviews.channelDiagnostics[0].reason, 'missing_api_key');
+  assert.equal(report.mainReport.commentsReviews.quality.noInventedReviews, true);
 });
 
 test('decision report v2 does not promote unsupported observations or supplier claims', () => {

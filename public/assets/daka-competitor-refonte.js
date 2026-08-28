@@ -959,6 +959,97 @@
     return detailsSection('comp-action-plan', copy('actionPlan'), body, false);
   }
 
+  function renderCommentsReviews(data) {
+    const model = data?.commentsReviews || data?.decisionReportV2?.mainReport?.commentsReviews || data?.reportV2?.mainReport?.commentsReviews || {};
+    const customerVoice = data?.decisionReportV2?.mainReport?.customerVoice || data?.reportV2?.mainReport?.customerVoice || {};
+    const patterns = Array.isArray(model.patterns) && model.patterns.length
+      ? model.patterns
+      : [
+        ...(Array.isArray(customerVoice.pains) ? customerVoice.pains : []),
+        ...(Array.isArray(customerVoice.desires) ? customerVoice.desires : []),
+        ...(Array.isArray(customerVoice.objections) ? customerVoice.objections : []),
+        ...(Array.isArray(customerVoice.buyingCriteria) ? customerVoice.buyingCriteria : []),
+        ...(Array.isArray(customerVoice.complaints) ? customerVoice.complaints : [])
+      ];
+    const observed = Array.isArray(model.observedItems) ? model.observedItems : [];
+    const diagnostics = Array.isArray(model.channelDiagnostics)
+      ? model.channelDiagnostics
+      : (Array.isArray(data?.agentReachEvidence?.channelDiagnostics) ? data.agentReachEvidence.channelDiagnostics : []);
+    if (!patterns.length && !observed.length && !diagnostics.length) return '';
+
+    const labels = lang() === 'ar' ? {
+      title: 'التعليقات والآراء',
+      empty: 'لم يتم العثور على آراء أو تعليقات قابلة للاستغلال في هذه الجولة.',
+      emptyNote: 'هذا لا يعني أنها غير موجودة؛ فقط غير مرصودة في العينة الحالية.',
+      patterns: 'أنماط صوت العميل',
+      observed: 'أمثلة مرصودة',
+      channels: 'حالة القنوات',
+      evidence: 'دليل',
+      confidence: 'الثقة',
+      source: 'المصدر',
+      open: 'فتح المصدر'
+    } : lang() === 'en' ? {
+      title: 'Comments and reviews',
+      empty: 'No exploitable comments or reviews were collected in this run.',
+      emptyNote: 'This does not mean they do not exist; they were only not observed in this sample.',
+      patterns: 'Customer voice patterns',
+      observed: 'Observed examples',
+      channels: 'Channel status',
+      evidence: 'evidence',
+      confidence: 'Confidence',
+      source: 'Source',
+      open: 'Open source'
+    } : {
+      title: 'Commentaires et avis',
+      empty: 'Aucun commentaire ou avis exploitable n’a été collecté sur cette analyse.',
+      emptyNote: 'Cela ne veut pas dire qu’ils n’existent pas; ils ne sont simplement pas observés dans cet échantillon.',
+      patterns: 'Patterns voix client',
+      observed: 'Exemples observés',
+      channels: 'État des canaux',
+      evidence: 'preuve',
+      confidence: 'Confiance',
+      source: 'Source',
+      open: 'Ouvrir la source'
+    };
+    const summary = model.summary || {};
+    const stats = [
+      splitStat(labels.evidence, summary.evidenceCount || observed.length || 0),
+      splitStat(labels.source, (Array.isArray(summary.platforms) ? summary.platforms : []).slice(0, 3).join(' · ')),
+      splitStat(labels.confidence, patterns[0]?.confidence || (observed.length ? observed[0]?.confidence : ''))
+    ].filter(Boolean).join('');
+    const patternCards = patterns.slice(0, 8).map((item) => {
+      const sourceUrls = Array.isArray(item.sourceUrls) ? item.sourceUrls.slice(0, 2) : [];
+      return `
+        <article class="daka-comp-study-card">
+          <h4>${esc(cleanInsight(item.label || item.statement || item.topic || item.key || labels.patterns))}</h4>
+          <p>${esc(`${labels.evidence}: ${item.count || 1}${item.confidence ? ` · ${labels.confidence}: ${item.confidence}` : ''}`)}</p>
+          ${linkItems(sourceUrls, 2)}
+        </article>`;
+    }).join('');
+    const observedCards = observed.slice(0, 8).map((item) => `
+      <article class="daka-comp-study-card">
+        <h4>${esc(cleanInsight(item.kind || labels.observed))}</h4>
+        <p>${esc(cleanInsight(item.value || item.title || ''))}</p>
+        ${item.sourceUrl ? linkItems([{ url: item.sourceUrl, label: item.sourcePlatform || labels.open }], 1) : ''}
+      </article>`).join('');
+    const diagnosticCards = diagnostics.slice(0, 8).map((item) => `
+      <article class="daka-comp-note-card">
+        <h4>${esc(cleanInsight(item.channel || 'channel'))}</h4>
+        <p>${esc(cleanInsight(`${item.status || 'UNKNOWN'}${item.reason ? ` · ${item.reason}` : ''}`))}</p>
+      </article>`).join('');
+    const empty = !patterns.length && !observed.length
+      ? `<article class="daka-comp-warning"><strong>${esc(labels.empty)}</strong><p>${esc(labels.emptyNote)}</p></article>`
+      : '';
+    const body = [
+      stats ? `<div class="daka-comp-stat-grid">${stats}</div>` : '',
+      empty,
+      patternCards ? `<section><h4>${esc(labels.patterns)}</h4><div class="daka-comp-card-grid">${patternCards}</div></section>` : '',
+      observedCards ? `<section><h4>${esc(labels.observed)}</h4><div class="daka-comp-card-grid">${observedCards}</div></section>` : '',
+      diagnosticCards ? `<section><h4>${esc(labels.channels)}</h4><div class="daka-comp-card-grid">${diagnosticCards}</div></section>` : ''
+    ].filter(Boolean).join('');
+    return detailsSection('comp-comments-reviews', labels.title, body, true);
+  }
+
   function competitorGeoLabel(item) {
     if (item?.geoTier === 'LOCAL_CONFIRMED' || item?.geoConfirmed === true) return extraCopy('localConfirmed');
     if (item?.geoTier === 'LOCAL_PROBABLE' || item?.geoMatched === true) return extraCopy('localProbable');
@@ -1888,6 +1979,7 @@
       renderVerdict(intel),
       renderPositioning(intel),
       renderActionPlan(intel, offerType),
+      renderCommentsReviews(repaired),
       renderUserBenchmark(repaired, intel),
       renderCompetitors(intel, repaired),
       renderSources(intel, repaired),

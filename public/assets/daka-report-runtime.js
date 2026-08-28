@@ -63,6 +63,7 @@ function getReportFeatureCopy(lang = STATE.currentLang || 'fr') {
         keywords: ['Keywords', 'Les demandes utiles à cibler', 'fa-key'],
         pricing: ['Pricing', 'Prix, perception et marge', 'fa-tags'],
         trust: ['Trust', 'Preuves, garanties et objections', 'fa-shield-halved'],
+        'comments-reviews': ['Commentaires & avis', 'Voix client observée et sources terrain', 'fa-comments'],
         backlinks: ['Backlinks', 'Liens et opportunités prêts à consulter', 'fa-link'],
         details: ['Détails', 'Le dossier complet d’intelligence', 'fa-folder-open']
     };
@@ -75,6 +76,7 @@ function getReportFeatureCopy(lang = STATE.currentLang || 'fr') {
         keywords: ['الكلمات', 'الطلبات المفيدة للاستهداف', 'fa-key'],
         pricing: ['السعر', 'السعر والإدراك والهامش', 'fa-tags'],
         trust: ['الثقة', 'الأدلة والضمانات والاعتراضات', 'fa-shield-halved'],
+        'comments-reviews': ['التعليقات والآراء', 'صوت العميل المرصود ومصادره', 'fa-comments'],
         backlinks: ['الروابط الخلفية', 'روابط وفرص جاهزة للفحص', 'fa-link'],
         details: ['التفاصيل', 'ملف التحليل الكامل', 'fa-folder-open']
     };
@@ -87,6 +89,7 @@ function getReportFeatureCopy(lang = STATE.currentLang || 'fr') {
         keywords: ['Keywords', 'Useful demand to target', 'fa-key'],
         pricing: ['Pricing', 'Price, perception, and margin', 'fa-tags'],
         trust: ['Trust', 'Proof, guarantees, and objections', 'fa-shield-halved'],
+        'comments-reviews': ['Comments & reviews', 'Observed customer voice and field sources', 'fa-comments'],
         backlinks: ['Backlinks', 'Links and opportunities ready to review', 'fa-link'],
         details: ['Details', 'The complete intelligence dossier', 'fa-folder-open']
     };
@@ -128,6 +131,7 @@ function enhanceReportNavigation(container) {
             : sectionKey === 'technical' || sectionKey === 'page' ? 'seo'
             : sectionKey === 'money' ? 'pricing'
             : sectionKey === 'proof' ? 'trust'
+            : sectionKey === 'comments-reviews' ? 'comments-reviews'
             : sectionKey === 'backlinks' ? 'backlinks'
             : sectionKey === 'audit' ? 'funnel'
             : sectionKey === 'keywords' ? 'keywords'

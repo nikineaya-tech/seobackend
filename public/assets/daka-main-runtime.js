@@ -4470,6 +4470,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
     dir: (isAr ? 'rtl' : 'ltr'),
     esc: escapeHtml
 });
+const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
 
     // ─── HELPERS ───────────────────────────────────────────────────
     const safe = (v, fallback = '—') => {
@@ -5653,6 +5654,7 @@ const reportLabels = getReportLabels({ isAr, isEn });
     container.innerHTML = `
         ${renderExecutiveSummary(data, 'competitors', { isAr, isEn })}
         ${renderDiscoveryInsights(data, { isAr, isEn })}
+        ${renderReportSection('comments-reviews', reportLabels.commentsReviews, reportLabels.commentsReviewsSub, 'fa-comments', commentsReviewsHtml, { isAr, isEn, open: true })}
         ${renderCompetitorDecisionLayerV2(data, { isAr, isEn })}
         ${renderReportSection('market', reportLabels.market, reportLabels.marketSub, 'fa-compass', `
             ${kgHtml}
@@ -12522,6 +12524,8 @@ function getReportLabels(opts = {}) {
         marketSub: 'القيمة الأساسية ظاهرة هنا أولا، والتفاصيل تبقى متاحة عند الحاجة.',
         plan: 'الخطوة الأقوى لجعل عرضك أفضل',
         planSub: 'ملخص عملي لما يجب تغييره في العرض، الرسالة، والثقة.',
+        commentsReviews: 'التعليقات والآراء',
+        commentsReviewsSub: 'صوت العميل المرصود فقط: مراجعات، أسئلة، اعتراضات وتعليقات من مصادر قابلة للفحص.',
         competitors: 'المنافسون الذين يكشفون فرصة السوق',
         competitorsSub: 'من يربح الآن، أين قوته، وأين توجد الثغرة التي يمكنك استغلالها.',
         proof: 'الأدلة والمصادر',
@@ -12545,6 +12549,8 @@ function getReportLabels(opts = {}) {
         marketSub: 'The core value is visible first; deeper evidence stays one click away.',
         plan: 'Your strongest opening to improve the offer',
         planSub: 'A practical summary of what to change in offer, message, and trust.',
+        commentsReviews: 'Comments and reviews',
+        commentsReviewsSub: 'Observed customer voice only: reviews, questions, objections and comments from traceable sources.',
         competitors: 'Competitors that reveal the market opportunity',
         competitorsSub: 'Who wins now, where they are strong, and where you can attack.',
         proof: 'Proof and sources',
@@ -12568,6 +12574,8 @@ function getReportLabels(opts = {}) {
         marketSub: 'La valeur principale est visible tout de suite; les preuves restent accessibles en un clic.',
         plan: 'Votre meilleure ouverture pour rendre l’offre plus forte',
         planSub: 'Le résumé opérationnel de ce qu’il faut changer dans l’offre, le message et la confiance.',
+        commentsReviews: 'Commentaires et avis',
+        commentsReviewsSub: 'Voix client observée uniquement : avis, questions, objections et commentaires issus de sources vérifiables.',
         competitors: 'Les concurrents qui révèlent votre opportunité',
         competitorsSub: 'Qui gagne maintenant, où ils sont forts, et où vous pouvez attaquer.',
         proof: 'Preuves et sources',
@@ -13066,6 +13074,168 @@ function renderDiscoveryInsights(data, opts = {}) {
             <p>${safe(copy.sub)}</p>
         </div>
         <div class="daka-discovery-grid">${cards}</div>
+    </section>`;
+}
+
+function renderCommentsReviewsPanel(data, opts = {}) {
+    const isAr = opts.isAr ?? STATE.currentLang === 'ar';
+    const isEn = opts.isEn ?? STATE.currentLang === 'en';
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : String;
+    const arr = (value) => Array.isArray(value) ? value.filter(Boolean) : [];
+    const text = (value, fallback = '') => {
+        if (value === null || value === undefined) return fallback;
+        if (typeof value === 'string' || typeof value === 'number') return String(value).trim() || fallback;
+        if (typeof value === 'object') {
+            return value.value || value.label || value.title || value.statement || value.reason || fallback;
+        }
+        return String(value || '').trim() || fallback;
+    };
+    const model =
+        data?.commentsReviews ||
+        data?.mainReport?.commentsReviews ||
+        data?.decisionReportV2?.mainReport?.commentsReviews ||
+        data?.reportV2?.mainReport?.commentsReviews ||
+        null;
+    const fallbackVoice =
+        data?.decisionReportV2?.mainReport?.customerVoice ||
+        data?.reportV2?.mainReport?.customerVoice ||
+        data?.mainReport?.customerVoice ||
+        null;
+    const fallbackSocial =
+        data?.decisionReportV2?.deepDive?.socialContentIntelligence ||
+        data?.reportV2?.deepDive?.socialContentIntelligence ||
+        data?.deepDive?.socialContentIntelligence ||
+        null;
+    const patterns = arr(model?.patterns).length
+        ? arr(model.patterns)
+        : [
+            ...arr(fallbackVoice?.pains),
+            ...arr(fallbackVoice?.desires),
+            ...arr(fallbackVoice?.objections),
+            ...arr(fallbackVoice?.buyingCriteria),
+            ...arr(fallbackVoice?.complaints),
+            ...arr(fallbackSocial?.reviews),
+            ...arr(fallbackSocial?.questions)
+        ];
+    const observedItems = arr(model?.observedItems);
+    const diagnostics = arr(model?.channelDiagnostics || data?.agentReachEvidence?.channelDiagnostics || data?.marketEvidence?.channelDiagnostics);
+    if (!model && !patterns.length && !observedItems.length && !diagnostics.length) return '';
+
+    const copy = isAr ? {
+        title: 'صوت العميل الحقيقي',
+        subtitle: 'لا نعرض شهادات مخترعة. كل بطاقة هنا مرتبطة بمصدر أو تظهر سبب غياب البيانات.',
+        evidence: 'أدلة صوت العميل',
+        platforms: 'منصات',
+        reviews: 'آراء',
+        comments: 'تعليقات',
+        questions: 'أسئلة',
+        patterns: 'أنماط متكررة',
+        observed: 'أمثلة مرصودة',
+        channels: 'حالة القنوات',
+        empty: 'لم يتم العثور على تعليقات أو آراء قابلة للاستغلال في هذه الجولة.',
+        emptyNote: 'هذا لا يعني أن الآراء غير موجودة؛ يعني فقط أنها لم تظهر في العينة التي تم جمعها.',
+        source: 'المصدر',
+        confidence: 'الثقة',
+        open: 'فتح المصدر'
+    } : isEn ? {
+        title: 'Real customer voice',
+        subtitle: 'No invented testimonials. Every card is tied to a source, or explains why data is missing.',
+        evidence: 'Customer voice evidence',
+        platforms: 'Platforms',
+        reviews: 'Reviews',
+        comments: 'Comments',
+        questions: 'Questions',
+        patterns: 'Repeated patterns',
+        observed: 'Observed examples',
+        channels: 'Channel status',
+        empty: 'No exploitable comments or reviews were collected in this run.',
+        emptyNote: 'This does not mean reviews do not exist; it only means they were not found in the collected sample.',
+        source: 'Source',
+        confidence: 'Confidence',
+        open: 'Open source'
+    } : {
+        title: 'Voix client réelle',
+        subtitle: 'Aucun témoignage inventé. Chaque carte est liée à une source, ou explique pourquoi la donnée manque.',
+        evidence: 'Preuves voix client',
+        platforms: 'Plateformes',
+        reviews: 'Avis',
+        comments: 'Commentaires',
+        questions: 'Questions',
+        patterns: 'Patterns répétés',
+        observed: 'Exemples observés',
+        channels: 'État des canaux',
+        empty: 'Aucun commentaire ou avis exploitable n’a été collecté sur cette analyse.',
+        emptyNote: 'Cela ne veut pas dire que les avis n’existent pas; seulement qu’ils ne sont pas sortis dans l’échantillon collecté.',
+        source: 'Source',
+        confidence: 'Confiance',
+        open: 'Ouvrir la source'
+    };
+    const summary = model?.summary || {};
+    const stat = (label, value, icon, accent) => `
+        <article style="border:1px solid rgba(148,163,184,.16);background:rgba(15,23,42,.72);border-radius:14px;padding:14px;min-height:92px;">
+            <span style="display:flex;align-items:center;gap:8px;color:${accent};font-size:.72rem;font-weight:900;text-transform:uppercase;"><i class="fas ${icon}"></i>${safe(label)}</span>
+            <strong style="display:block;margin-top:10px;color:#f8fafc;font-size:1.35rem;">${safe(String(value ?? 0))}</strong>
+        </article>`;
+    const platformList = arr(summary.platforms).slice(0, 6);
+    const patternCards = patterns.slice(0, 8).map((pattern) => {
+        const sources = arr(pattern.sourcePlatforms).slice(0, 4);
+        const urls = arr(pattern.sourceUrls).slice(0, 2);
+        return `
+        <article style="border:1px solid rgba(34,211,238,.16);background:linear-gradient(145deg,rgba(8,47,73,.28),rgba(15,23,42,.72));border-radius:16px;padding:15px;">
+            <span style="color:#67e8f9;font-size:.7rem;font-weight:900;text-transform:uppercase;">${safe(text(pattern.type || pattern.format || pattern.key, copy.patterns).replace(/_/g, ' '))}</span>
+            <strong style="display:block;color:#f8fafc;font-size:.95rem;line-height:1.45;margin-top:7px;" dir="auto">${safe(text(pattern.label || pattern.statement || pattern.topic, ''))}</strong>
+            <div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:11px;">
+                <span style="color:#bbf7d0;background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.2);border-radius:999px;padding:4px 9px;font-size:.68rem;font-weight:800;">${safe(String(pattern.count || 1))} ${safe(copy.evidence)}</span>
+                ${text(pattern.confidence) ? `<span style="color:#fde68a;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.18);border-radius:999px;padding:4px 9px;font-size:.68rem;font-weight:800;">${safe(copy.confidence)} ${safe(text(pattern.confidence))}</span>` : ''}
+                ${sources.map(source => `<span style="color:#cbd5e1;background:rgba(255,255,255,.05);border-radius:999px;padding:4px 9px;font-size:.68rem;">${safe(source)}</span>`).join('')}
+            </div>
+            ${urls.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">${urls.map(url => `<a href="${safe(url)}" target="_blank" rel="noopener" data-no-collapse="true" style="color:#93c5fd;font-size:.72rem;text-decoration:none;word-break:break-all;">${safe(String(url).replace(/^https?:\/\//, '').slice(0, 54))}</a>`).join('')}</div>` : ''}
+        </article>`;
+    }).join('');
+    const observedCards = observedItems.slice(0, 10).map((item) => `
+        <article style="border:1px solid rgba(148,163,184,.14);background:rgba(2,6,23,.55);border-radius:16px;padding:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;flex-wrap:wrap;">
+                <span style="color:#67e8f9;font-size:.68rem;font-weight:900;text-transform:uppercase;">${safe(text(item.kind, copy.observed).replace(/_/g, ' '))}</span>
+                <span style="color:#94a3b8;font-size:.68rem;font-weight:800;">${safe(text(item.sourcePlatform, copy.source))}</span>
+            </div>
+            <p style="margin:0;color:#e2e8f0;font-size:.83rem;line-height:1.62;" dir="auto">${safe(text(item.value, ''))}</p>
+            ${item.sourceUrl ? `<a href="${safe(item.sourceUrl)}" target="_blank" rel="noopener" data-no-collapse="true" style="display:inline-flex;margin-top:10px;color:#93c5fd;font-size:.72rem;text-decoration:none;word-break:break-all;"><i class="fas fa-arrow-up-right-from-square" style="margin-inline-end:6px;"></i>${safe(copy.open)}</a>` : ''}
+        </article>`).join('');
+    const diagnosticCards = diagnostics.slice(0, 10).map((item) => {
+        const ready = String(item.status || '').toUpperCase() === 'READY' && Number(item.evidenceCount || 0) > 0;
+        const accent = ready ? '#22c55e' : '#f59e0b';
+        return `
+        <article style="border:1px solid ${ready ? 'rgba(34,197,94,.2)' : 'rgba(245,158,11,.2)'};background:rgba(15,23,42,.55);border-radius:14px;padding:12px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                <strong style="color:#f8fafc;font-size:.82rem;">${safe(text(item.channel, 'channel'))}</strong>
+                <span style="color:${accent};font-size:.68rem;font-weight:900;">${safe(text(item.status, 'UNKNOWN'))}</span>
+            </div>
+            <small style="display:block;color:#94a3b8;margin-top:6px;line-height:1.45;" dir="auto">${safe(text(item.reason, ready ? `${item.evidenceCount || 0} evidence` : ''))}</small>
+        </article>`;
+    }).join('');
+
+    return `
+    <section class="daka-comments-reviews-panel" data-export-feature="comments-reviews" dir="${isAr ? 'rtl' : 'ltr'}">
+        <header style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:16px;flex-wrap:wrap;">
+            <div>
+                <span style="display:inline-flex;align-items:center;gap:8px;color:#67e8f9;font-size:.72rem;font-weight:950;text-transform:uppercase;"><i class="fas fa-comments"></i>${safe(copy.title)}</span>
+                <p style="margin:8px 0 0;color:#9fb3cc;font-size:.86rem;line-height:1.55;max-width:760px;">${safe(copy.subtitle)}</p>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                ${platformList.map(platform => `<span style="color:#dbeafe;background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.18);border-radius:999px;padding:5px 10px;font-size:.7rem;font-weight:800;">${safe(platform)}</span>`).join('')}
+            </div>
+        </header>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin-bottom:16px;">
+            ${stat(copy.evidence, summary.evidenceCount || observedItems.length || patterns.reduce((sum, item) => sum + Number(item.count || 0), 0), 'fa-database', '#22c55e')}
+            ${stat(copy.platforms, summary.platformCount || platformList.length || 0, 'fa-share-nodes', '#38bdf8')}
+            ${stat(copy.reviews, summary.reviews || 0, 'fa-star', '#f59e0b')}
+            ${stat(copy.comments, summary.comments || 0, 'fa-comment-dots', '#a78bfa')}
+            ${stat(copy.questions, summary.questions || 0, 'fa-circle-question', '#fb7185')}
+        </div>
+        ${!observedItems.length && !patterns.length ? `<div style="border:1px dashed rgba(245,158,11,.32);background:rgba(120,53,15,.16);border-radius:16px;padding:16px;margin-bottom:16px;color:#fde68a;"><strong>${safe(copy.empty)}</strong><p style="margin:7px 0 0;color:#fef3c7;font-size:.82rem;line-height:1.5;">${safe(copy.emptyNote)}</p></div>` : ''}
+        ${patternCards ? `<div style="margin-bottom:18px;"><h4 style="margin:0 0 10px;color:#f8fafc;font-size:.95rem;">${safe(copy.patterns)}</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;">${patternCards}</div></div>` : ''}
+        ${observedCards ? `<div style="margin-bottom:18px;"><h4 style="margin:0 0 10px;color:#f8fafc;font-size:.95rem;">${safe(copy.observed)}</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px;">${observedCards}</div></div>` : ''}
+        ${diagnosticCards ? `<div><h4 style="margin:0 0 10px;color:#f8fafc;font-size:.95rem;">${safe(copy.channels)}</h4><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;">${diagnosticCards}</div></div>` : ''}
     </section>`;
 }
 
