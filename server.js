@@ -9551,7 +9551,6 @@ const enrichedCompetitors = filteredCompetitors.map((x, i) => {
         type,
         serpRelevanceScore: observedVisibilityScore,
         observedVisibilityScore,
-        dominance: observedVisibilityScore,
         geoMatchScore: geoScore,
         geoMatched: ['LOCAL_CONFIRMED', 'LOCAL_PROBABLE'].includes(x.geoMatch?.tier),
         geoConfirmed: x.geoMatch?.tier === 'LOCAL_CONFIRMED',
@@ -25658,7 +25657,7 @@ function buildPDFFromReport(R) {
       y+=3;
     }
 
-    if (B.swot) {
+    if (B.swot && B.swot.status !== 'INSUFFICIENT_EVIDENCE') {
       divider();
       secTitle('SWOT', C.orange);
       twoCol([
@@ -25678,7 +25677,7 @@ function buildPDFFromReport(R) {
       ]);
     }
 
-    if (B.duel && Object.keys(B.duel).length) {
+    if (B.duel && B.duel.status !== 'INSUFFICIENT_EVIDENCE' && Object.keys(B.duel).length) {
       divider();
       secTitle(isEn?'STRATEGIC DUEL':'DUEL STRATEGIQUE', C.purple);
       var duelCfg = {
