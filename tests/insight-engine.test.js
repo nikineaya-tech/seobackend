@@ -48,6 +48,7 @@ function buildModels(evidence, map = entityMap()) {
     registry,
     marketSignalModel,
     insightModel: buildInsightDiscoveryEngine({
+      now: NOW,
       evidenceRegistry: registry,
       marketSignalModel,
       marketEntityMap: map,
@@ -287,4 +288,147 @@ test('fresh content can support emerging sample signals but never demand growth 
   assert.equal(marketSignalModel.quality.noMarketGrowthClaim, true);
   assert.equal(insightModel.quality.noDemandGrowthClaim, true);
   assert.doesNotMatch(JSON.stringify(insightModel), /demand growth|market growth|sales growth/i);
+});
+
+test('trust gap crosses buyer risk concerns with weak visible return and payment clarity', () => {
+  const risks = Array.from({ length: 8 }, (_, index) => ({
+    id: `ev_risk_${index + 1}`,
+    scope: 'CUSTOMER',
+    claimType: 'comment',
+    value: `Buyer asks about return policy, guarantee, delivery and COD payment risk ${index + 1}.`,
+    sourceUrl: `https://facebook.example/post${index + 1}`,
+    sourcePlatform: index % 2 ? 'facebook' : 'instagram',
+    verificationStatus: 'CONFIRMED',
+    publishedAt: '2026-08-20T10:00:00.000Z'
+  }));
+  const trust = [{
+    id: 'ev_trust_1',
+    scope: 'COMPETITOR',
+    claimType: 'offer',
+    value: 'Seller shows a clear return policy.',
+    sourceUrl: 'https://seller1.ly/product',
+    sourcePlatform: 'inspected_page',
+    verificationStatus: 'CONFIRMED'
+  }];
+  const { insightModel } = buildModels([...risks, ...trust], entityMap({ local: 6 }));
+  const gap = insightModel.insights.find(item => item.type === 'TRUST_GAP');
+
+  assert.ok(gap);
+  assert.match(gap.finding, /risk|return|guarantee|delivery|payment/i);
+  assert.match(gap.limitations.join(' '), /visible clarity/i);
+});
+
+test('price value asymmetry flags premium price only when proof is weaker than value claim', () => {
+  const rows = [
+    ['seller1', 199, 'Basic offer product description.'],
+    ['seller2', 210, 'Basic offer product description.'],
+    ['seller3', 229, 'Basic offer product description.'],
+    ['seller4', 399, 'Premium blackhead remover price 399 LYD with feature list only.'],
+    ['seller5', 420, 'Premium blackhead remover price 420 LYD with no verified review proof.']
+  ].map(([seller, price, value], index) => ({
+    id: `ev_price_value_${index + 1}`,
+    scope: 'COMPETITOR',
+    claimType: 'price offer',
+    value: `${value} Price ${price} LYD.`,
+    sourceUrl: `https://${seller}.ly/product`,
+    sourcePlatform: 'inspected_page',
+    verificationStatus: 'CONFIRMED',
+    observedAt: NOW
+  }));
+  const { insightModel } = buildModels(rows, entityMap({ local: 5 }));
+  const insight = insightModel.insights.find(item => item.type === 'PRICE_VALUE_ASYMMETRY');
+
+  assert.ok(insight);
+  assert.match(insight.relationship, /Price premium \+ weak proof/i);
+  assert.ok(insight.components.sampleMedianPrice >= 229);
+});
+
+test('substitute risk crosses product pain with alternative-treatment discussion', () => {
+  const substitutes = ['salicylic acid alternative', 'pore strips substitute', 'clay mask alternative'].map((value, index) => ({
+    id: `ev_sub_${index + 1}`,
+    scope: 'CUSTOMER',
+    claimType: 'reddit discussion',
+    value,
+    sourceUrl: `https://reddit.example/thread${index + 1}`,
+    sourcePlatform: 'reddit',
+    verificationStatus: 'CONFIRMED',
+    publishedAt: '2026-08-24T10:00:00.000Z'
+  }));
+  const pains = Array.from({ length: 4 }, (_, index) => ({
+    id: `ev_device_pain_${index + 1}`,
+    scope: 'CUSTOMER',
+    claimType: 'youtube comment',
+    value: 'Device may cause irritation on sensitive skin and too strong suction.',
+    sourceUrl: `https://youtube.example/watch${index + 1}`,
+    sourcePlatform: 'youtube',
+    verificationStatus: 'CONFIRMED',
+    publishedAt: '2026-08-23T10:00:00.000Z'
+  }));
+  const { insightModel } = buildModels([...substitutes, ...pains], entityMap({ local: 4 }));
+  const insight = insightModel.insights.find(item => item.type === 'SUBSTITUTE_RISK');
+
+  assert.ok(insight);
+  assert.match(insight.relationship, /substitution risk/i);
+  assert.doesNotMatch(insight.finding, /outsell|market share/i);
+});
+
+test('verified supplier evidence can create a local packaging gap without same-supplier claim', () => {
+  const suppliers = [
+    'Supplier confirms OEM packaging and private label bundle MOQ 100.',
+    'Factory page confirms custom heads variant and bundle packaging.'
+  ].map((value, index) => ({
+    id: `ev_supplier_verified_${index + 1}`,
+    scope: 'SUPPLIER',
+    claimType: 'supplier_page',
+    value,
+    sourceUrl: `https://supplier${index + 1}.example/product`,
+    sourcePlatform: 'exa_search',
+    verificationStatus: 'CONFIRMED',
+    collectedAt: NOW
+  }));
+  const local = Array.from({ length: 4 }, (_, index) => ({
+    id: `ev_local_offer_${index + 1}`,
+    scope: 'COMPETITOR',
+    claimType: 'offer',
+    value: 'Local seller shows a single generic product description.',
+    sourceUrl: `https://seller${index + 1}.ly/product`,
+    sourcePlatform: 'inspected_page',
+    verificationStatus: 'CONFIRMED',
+    observedAt: NOW
+  }));
+  const { insightModel } = buildModels([...suppliers, ...local], entityMap({ local: 4 }));
+  const insight = insightModel.insights.find(item => item.type === 'SUPPLIER_LOCAL_GAP');
+
+  assert.ok(insight);
+  assert.match(insight.relationship, /Verified supplier availability/i);
+  assert.doesNotMatch(JSON.stringify(insight), /same supplier/i);
+});
+
+test('insight schema exposes dimensions metrics scoring and recommended test', () => {
+  const { insightModel } = buildModels([
+    ...Array.from({ length: 4 }, (_, index) => ({
+      id: `ev_schema_safety_${index + 1}`,
+      scope: 'CUSTOMER',
+      claimType: 'review',
+      value: 'Customer asks if strong suction is safe for sensitive skin.',
+      sourceUrl: `https://youtube.example/schema${index + 1}`,
+      sourcePlatform: index % 2 ? 'youtube' : 'reddit',
+      verificationStatus: 'CONFIRMED'
+    })),
+    ...Array.from({ length: 4 }, (_, index) => ({
+      id: `ev_schema_power_${index + 1}`,
+      scope: 'COMPETITOR',
+      claimType: 'offer',
+      value: 'Seller emphasizes strong suction levels.',
+      sourceUrl: `https://seller${index + 1}.ly/product`,
+      sourcePlatform: 'inspected_page',
+      verificationStatus: 'CONFIRMED'
+    }))
+  ], entityMap({ local: 4 }));
+  const insight = insightModel.topInsights[0];
+
+  assert.ok(Array.isArray(insight.dimensions));
+  assert.ok(insight.metrics.platformCount >= 2);
+  assert.ok(insight.recommendedTest.action);
+  assert.match(insight.formula, /evidenceStrength 25/);
 });

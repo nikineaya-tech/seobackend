@@ -133,6 +133,11 @@ test('decision report v2 exposes short executive surface and deep dive', () => {
   assert.equal(report.mainReport.sellerFight.quality.noInventedCommercialTerms, true);
   assert.ok(report.mainReport.sellerFight.payment.some(pattern => pattern.evidenceIds.includes('ev_offer_1')));
   assert.ok(Array.isArray(report.mainReport.discoveryInsights));
+  if (report.mainReport.discoveryInsights[0]) {
+    assert.ok(Array.isArray(report.mainReport.discoveryInsights[0].dimensions));
+    assert.ok(report.mainReport.discoveryInsights[0].metrics);
+    assert.ok(report.mainReport.discoveryInsights[0].recommendedTest);
+  }
   assert.ok(report.deepDive.insightDiscovery);
   assert.deepEqual(
     Object.keys(report.deepDive.insightDiscovery.insightTrace).sort(),
