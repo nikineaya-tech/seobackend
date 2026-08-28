@@ -229,3 +229,83 @@ test('decision report validator blocks untraceable output contracts', () => {
   assert.ok(validation.issues.some(issue => issue.code === 'UNSUPPORTED_STRONG_MARKET_CLAIM'));
   assert.ok(validation.issues.some(issue => issue.code === 'SUPPLIER_CONFIRMED_WITHOUT_EVIDENCE'));
 });
+test('decision report v2 does not crash when observation exceeds 500 characters', () => {
+  const longStatement = `Observed market statement: ${'x'.repeat(900)}`;
+
+  const report = buildDecisionReportV2({
+    query: 'fanous led',
+    country: 'Morocco',
+    lang: 'ar',
+
+    marketSignalModel: {
+      signals: [
+        {
+          id: 'sig_long_1',
+          type: 'MESSAGE_PATTERN',
+          topic: 'long observation regression',
+          status: 'OBSERVED',
+          statement: longStatement,
+          confidence: 'MEDIUM',
+          evidenceIds: ['ev_long_1'],
+          sourceUrls: ['https://example.com/product'],
+          limitations: []
+        }
+      ]
+    },
+
+    strategicAgentsV2: {
+      marketPatternAnalyst: {
+        observations: []
+      },
+      gapAnalyst: {
+        gaps: [],
+        saturatedPatterns: [],
+        unknowns: []
+      },
+      decisionStrategist: {
+        actions: [],
+        unknowns: []
+      }
+    },
+
+    evidenceRegistry: {
+      evidence: [
+        {
+          id: 'ev_long_1',
+          scope: 'MARKET',
+          claimType: 'message_pattern',
+          value: longStatement,
+          sourcePlatform: 'serp',
+          sourceUrl: 'https://example.com/product',
+          confidence: 'MEDIUM',
+          verificationStatus: 'CONFIRMED'
+        }
+      ]
+    },
+
+    marketEntityMap: {
+      byType: {},
+      supplierIntelligence: {
+        status: 'UNKNOWN',
+        limitations: ['No supplier evidence collected.']
+      }
+    },
+
+    temporalIntelligence: {
+      status: 'UNKNOWN',
+      quality: {
+        noDemandGrowthClaim: true
+      }
+    }
+  });
+
+  assert.ok(report);
+  assert.ok(report.mainReport);
+  assert.ok(Array.isArray(report.mainReport.marketIn60Seconds));
+  assert.ok(report.mainReport.marketIn60Seconds.length >= 1);
+
+  const observation = report.mainReport.marketIn60Seconds[0];
+
+  assert.ok(observation.evidenceIds.includes('ev_long_1'));
+  assert.equal(observation.status, 'OBSERVED');
+});
