@@ -38,12 +38,15 @@ function row(id, requirement, evidence, ok, partial = false, note = '') {
 }
 
 const insightFile = 'lib/market-intelligence/insights/insight-engine.js';
+const scorerFile = 'lib/market-intelligence/insights/insight-scorer.js';
+const validatorFile = 'lib/market-intelligence/insights/insight-validator.js';
 const reportFile = 'lib/market-intelligence/report-v2.js';
 const runtimeFile = 'public/assets/daka-main-runtime.js';
 const e2eFile = 'scripts/run-insight-e2e.cjs';
 const packageFile = 'package.json';
 
 const insightText = read(insightFile);
+const scorerText = read(scorerFile);
 const detectorTypes = [
   'CUSTOMER_COMPETITOR_CONTRADICTION',
   'CUSTOMER_OFFER_GAP',
@@ -62,8 +65,13 @@ const checks = [
   row(
     'layer',
     'Dedicated insight layer exists',
-    [insightFile],
-    exists(insightFile) && /buildInsightDiscoveryEngine/.test(insightText)
+    [insightFile, scorerFile, validatorFile],
+    exists(insightFile) &&
+      exists(scorerFile) &&
+      exists(validatorFile) &&
+      /buildInsightDiscoveryEngine/.test(insightText) &&
+      /insight-scorer/.test(insightText) &&
+      /insight-validator/.test(insightText)
   ),
   row(
     'detectors',
@@ -76,14 +84,15 @@ const checks = [
   row(
     'schema',
     'Insight schema contains evidence, signals, dimensions, metrics, scoring and recommended test',
-    [insightFile],
-    ['evidenceIds', 'signalIds', 'dimensions', 'metrics', 'recommendedTest', 'formula', 'noveltyScore', 'businessImpactScore', 'actionabilityScore'].every(token => insightText.includes(token))
+    [insightFile, scorerFile],
+    ['evidenceIds', 'signalIds', 'dimensions', 'metrics', 'recommendedTest'].every(token => insightText.includes(token)) &&
+      ['formula', 'noveltyScore', 'businessImpactScore', 'actionabilityScore'].every(token => scorerText.includes(token))
   ),
   row(
     'generic-filter',
     'Generic advice and unsupported growth/leader claims are blocked by gates',
-    [insightFile, e2eFile, reportFile],
-    /GENERIC_ADVICE_PATTERNS/.test(insightText) &&
+    [validatorFile, e2eFile, reportFile],
+    has(validatorFile, /GENERIC_ADVICE_PATTERNS/) &&
       has(e2eFile, /GENERIC_TOP_INSIGHT/) &&
       has(e2eFile, /FORBIDDEN_CLAIMS/) &&
       has(reportFile, /market leader/i)
