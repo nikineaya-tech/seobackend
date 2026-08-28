@@ -110,6 +110,43 @@ test('Jina searches become market evidence, not strategy claims', async () => {
   }
 });
 
+test('Jina search 401 is reported as auth required and later searches are skipped', async () => {
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async url => {
+    calls += 1;
+    assert.match(String(url), /https:\/\/s\.jina\.ai\//);
+    return {
+      ok: false,
+      status: 401,
+      url,
+      text: async () => 'Unauthorized'
+    };
+  };
+
+  try {
+    const result = await collectAgentReachMarketEvidence({
+      query: 'blackhead remover',
+      country: 'Libya',
+      searches: [
+        'blackhead remover Libya',
+        'blackhead remover Libya reviews',
+        'blackhead remover Libya price'
+      ]
+    });
+
+    assert.equal(calls, 1);
+    assert.equal(result.counts.searches, 3);
+    assert.equal(result.evidenceRegistry.evidence.length, 0);
+    assert.equal(result.channelDiagnostics[0].status, 'AUTH_REQUIRED');
+    assert.equal(result.channelDiagnostics[0].reason, 'http_401');
+    assert.equal(result.channelDiagnostics[1].status, 'AUTH_REQUIRED');
+    assert.equal(result.channelDiagnostics[1].reason, 'jina_search_auth_failed_after_first_attempt');
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('Exa search creates semantic discovery evidence when API key exists', async () => {
   const originalFetch = global.fetch;
   const originalKey = process.env.EXA_API_KEY;

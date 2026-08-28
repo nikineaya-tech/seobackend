@@ -46,3 +46,16 @@ test('query variants include local review comparison and supplier discovery path
   assert.ok(variants.some(item => /comparison|comparatif/i.test(item)));
   assert.ok(variants.some(item => /supplier wholesale/i.test(item)));
 });
+
+test('source router compacts long product descriptions before Agent Reach searches', () => {
+  const variants = buildQueryVariants({
+    query: 'مزيل رؤوس سوداء بتكبير 50× وإضاءة LED، مع 3 مستويات شفط تناسب مختلف أنواع البشرة و3 رؤوس سيليكون ناعمة. مزود بالضوء الأزرق، شاشة للبطارية والشفط، وشحن USB.',
+    country: 'Libya',
+    lang: 'ar'
+  });
+
+  assert.ok(variants[0].length < 80);
+  assert.match(variants[0], /مزيل رؤوس سوداء/);
+  assert.match(variants[0], /Libya/);
+  assert.doesNotMatch(variants.join(' '), /مزود بالضوء الأزرق، شاشة للبطارية/);
+});

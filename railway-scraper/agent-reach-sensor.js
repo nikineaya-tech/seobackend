@@ -369,7 +369,7 @@ function diagnosticStatus(result = {}) {
   if (!result.unavailable) return 'NO_RESULTS';
   const reason = clean(result.unavailable.reason || '', 120);
   if (/missing_api_key/i.test(reason)) return 'UNAVAILABLE';
-  if (/auth|unauthor/i.test(reason)) return 'AUTH_REQUIRED';
+  if (/auth|unauthor|http_401|http_403/i.test(reason)) return 'AUTH_REQUIRED';
   if (/empty|no_results|not_found/i.test(reason)) return 'NO_RESULTS';
   return 'ERROR';
 }
@@ -455,7 +455,24 @@ async function collectAgentReachMarketEvidence(payload = {}) {
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
+  let jinaSearchAuthBlocked = false;
   for (const search of searches) {
+    if (jinaSearchAuthBlocked) {
+      channelDiagnostics.push({
+        channel: 'search',
+        provider: 'agent-reach-railway',
+        backend: 'jina-search',
+        query: search,
+        url: null,
+        resultCount: 0,
+        evidenceCount: 0,
+        status: 'AUTH_REQUIRED',
+        reason: 'jina_search_auth_failed_after_first_attempt',
+        durationMs: 0
+      });
+      unavailable.push({ query: search, provider: 'agent-reach-railway', reason: 'jina_search_auth_failed_after_first_attempt' });
+      continue;
+    }
     const { result, diagnostic } = await collectWithDiagnostic({
       channel: 'search',
       provider: 'agent-reach-railway',
@@ -466,6 +483,9 @@ async function collectAgentReachMarketEvidence(payload = {}) {
     channelDiagnostics.push(diagnostic);
     if (result.evidence) evidence.push(result.evidence);
     if (result.unavailable) unavailable.push(result.unavailable);
+    if (diagnostic.status === 'AUTH_REQUIRED') {
+      jinaSearchAuthBlocked = true;
+    }
   }
 
   for (const url of urls) {

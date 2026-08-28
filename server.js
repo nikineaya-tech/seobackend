@@ -9658,7 +9658,9 @@ top5BusinessProfiles.forEach((profile, index) => {
 console.log(`[WarRoom-V10.0] Business profiles explored: ${top5BusinessProfiles.filter(Boolean).length}/${Math.min(10, enrichedCompetitors.length)}`);
 
 const marketDiscoveryPlan = buildMarketDiscoveryPlan({
-    query: reportQuery,
+    query: serpSearchQuery,
+    originalQuery: cleanQuery,
+    reportQuery,
     country: geoData.location,
     lang: langObj.code,
     competitors: enrichedCompetitors,
