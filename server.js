@@ -3252,6 +3252,58 @@ function cleanQueryForSerpAPI(query) {
 
 console.log('✅ cleanQueryForSerpAPI loaded');
 
+function normalizeCompetitorMarketSearchQuery(query = '', reportQuery = '', geo = '', lang = 'fr') {
+    const raw = InputValidator.sanitizeQuery(query || reportQuery || '');
+    const localized = InputValidator.sanitizeQuery(reportQuery || query || '');
+    const geoText = cleanCompetitorBusinessText(geo || '', 50);
+    const source = cleanCompetitorBusinessText(raw || localized, 240);
+    const hasLongDescription = source.length > 90 || /[،,.;؛:]\s|\bavec\b|\bwith\b|\bمزود\b|\bينصح\b|\bتناسب\b|\bمستويات\b|\bشحن\b|\bUSB\b|\bLED\b/i.test(source);
+    const knownHeads = [
+        /(?:جهاز\s+)?(?:إزالة|ازالة|مزيل|مستخرج)\s+(?:ال)?رؤوس\s+(?:ال)?سوداء/i,
+        /(?:extracteur|extratecteur|aspirateur)\s+(?:de\s+)?(?:points?\s+noirs?|comedons?)/i,
+        /blackhead\s+(?:remover|vacuum|extractor)/i,
+        /nettoyeur\s+(?:de\s+)?visage/i,
+        /جهاز\s+تنظيف\s+الوجه/i
+    ];
+    const detectedHead = knownHeads
+        .map(pattern => source.match(pattern)?.[0] || localized.match(pattern)?.[0])
+        .find(Boolean);
+    const stopwords = new Set([
+        'avec', 'pour', 'dans', 'sans', 'plus', 'moins', 'the', 'and', 'with', 'for', 'from',
+        'مزود', 'ينصح', 'قبل', 'بعد', 'عدم', 'نفس', 'أكثر', 'اكثر', 'ثوان', 'ثانية', 'أنواع', 'انواع',
+        'مختلف', 'مستويات', 'مستوى', 'ناعمة', 'شاشة', 'للبطارية', 'والشفط', 'وشحن', 'الضوء', 'الأزرق'
+    ]);
+    const compactFromTokens = cleanCompetitorBusinessText(source, 180)
+        .replace(/https?:\/\/\S+/gi, ' ')
+        .replace(/[0-9٠-٩]+(?:[×x%]|(?:\s*(?:مرة|secondes|seconds|sec|ثوان|ثانية)))?/gi, ' ')
+        .replace(/[،,.;؛:()[\]{}"“”'’`]+/g, ' ')
+        .split(/\s+/)
+        .map(token => token.trim())
+        .filter(token => token.length > 1 && !stopwords.has(token.toLowerCase()))
+        .slice(0, 7)
+        .join(' ');
+    const base = cleanCompetitorBusinessText(detectedHead || compactFromTokens || localized || raw, 70);
+    const geoSuffix = geoText && !new RegExp(geoText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i').test(base)
+        ? ` ${geoText}`
+        : '';
+    const primary = cleanCompetitorBusinessText(`${base}${geoSuffix}`, 90);
+    const variants = [...new Set([
+        primary,
+        base,
+        detectedHead ? cleanCompetitorBusinessText(`${detectedHead} ${geoText}`, 90) : null,
+        detectedHead && /رؤوس/i.test(detectedHead) ? cleanCompetitorBusinessText(`جهاز إزالة الرؤوس السوداء ${geoText}`, 90) : null,
+        /extracteur|extratecteur|points noirs/i.test(source) ? cleanCompetitorBusinessText(`extracteur points noirs ${geoText}`, 90) : null,
+        /blackhead/i.test(source) ? cleanCompetitorBusinessText(`blackhead remover ${geoText}`, 90) : null
+    ].filter(Boolean).map(item => cleanCompetitorBusinessText(item, 90)).filter(Boolean))].slice(0, 5);
+    return {
+        original: raw,
+        report: localized,
+        primary,
+        variants,
+        reason: hasLongDescription ? 'LONG_PRODUCT_DESCRIPTION_COMPACTED_FOR_SERP' : 'QUERY_READY_FOR_SERP'
+    };
+}
+
 
 const SERP_API_BASE = 'https://serpapi.com/search';
 
@@ -9060,10 +9112,15 @@ async function analyzeCompetitors(
 
     const geoData    = resolveSerpGeo(geo);
     const googleLang = langObj.serpHl;
+    const searchQueryPlan = normalizeCompetitorMarketSearchQuery(cleanQuery, reportQuery, geoData.location, langObj.code);
+    const serpSearchQuery = searchQueryPlan.primary || reportQuery || cleanQuery;
+    console.log(
+        `[WarRoom-V10.0] SERP query plan=${searchQueryPlan.reason} | search="${serpSearchQuery}" | variants="${searchQueryPlan.variants.join(' | ')}"`
+    );
     const contextKey = cleanProofText(JSON.stringify(userIntentContext || {}), 220) || 'no-context';
 
     // ── 3. CACHE ──────────────────────────────────────────────
-    const cacheKey = `warroom-v10.4:${cleanQuery}:${reportQuery}:${geoData.gl}:${langObj.code}:${contextKey}`;
+    const cacheKey = `warroom-v10.4:${cleanQuery}:${reportQuery}:${serpSearchQuery}:${geoData.gl}:${langObj.code}:${contextKey}`;
 
     if (forceRefresh) {
         cache.cache.delete(cacheKey);
@@ -9108,9 +9165,7 @@ async function analyzeCompetitors(
             const res = await RetryManager.executeWithRetry(
                 () => axios.post('https://google.serper.dev/search',
                     {
-                        q: queryLocalization.searchVariants.length > 1
-                            ? `(\"${cleanQuery}\") OR (\"${reportQuery}\")`
-                            : cleanQuery,
+                        q: serpSearchQuery,
                         gl: geoData.gl,
                         hl: googleLang,
                         num: 10
@@ -9153,7 +9208,7 @@ async function analyzeCompetitors(
             const res = await RetryManager.executeWithRetry(
                 () => axios.get('https://serpapi.com/search', {
                     params: {
-                        q:       reportQuery || cleanQuery,
+                        q:       cleanQueryForSerpAPI(serpSearchQuery),
                         gl:      geoData.gl,
                         hl:      googleLang,
                         num:     10,
