@@ -38,6 +38,7 @@ function row(id, requirement, evidence, ok, partial = false, note = '') {
 }
 
 const insightFile = 'lib/market-intelligence/insights/insight-engine.js';
+const detectorRegistryFile = 'lib/market-intelligence/insights/detector-registry.js';
 const scorerFile = 'lib/market-intelligence/insights/insight-scorer.js';
 const validatorFile = 'lib/market-intelligence/insights/insight-validator.js';
 const reportFile = 'lib/market-intelligence/report-v2.js';
@@ -65,21 +66,23 @@ const checks = [
   row(
     'layer',
     'Dedicated insight layer exists',
-    [insightFile, scorerFile, validatorFile],
+    [insightFile, detectorRegistryFile, scorerFile, validatorFile],
     exists(insightFile) &&
+      exists(detectorRegistryFile) &&
       exists(scorerFile) &&
       exists(validatorFile) &&
       /buildInsightDiscoveryEngine/.test(insightText) &&
+      /detector-registry/.test(insightText) &&
       /insight-scorer/.test(insightText) &&
       /insight-validator/.test(insightText)
   ),
   row(
     'detectors',
     'Required relationship detectors are implemented',
-    [insightFile],
-    detectorTypes.every(type => insightText.includes(type)),
-    detectorTypes.some(type => insightText.includes(type)),
-    `Detected ${detectorTypes.filter(type => insightText.includes(type)).length}/${detectorTypes.length} types.`
+    [insightFile, detectorRegistryFile],
+    detectorTypes.every(type => insightText.includes(type) && has(detectorRegistryFile, new RegExp(type))),
+    detectorTypes.some(type => insightText.includes(type) || has(detectorRegistryFile, new RegExp(type))),
+    `Detected ${detectorTypes.filter(type => insightText.includes(type) && has(detectorRegistryFile, new RegExp(type))).length}/${detectorTypes.length} types.`
   ),
   row(
     'schema',

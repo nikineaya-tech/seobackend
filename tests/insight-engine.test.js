@@ -3,7 +3,8 @@ const assert = require('node:assert/strict');
 const { buildMarketSignalEngine } = require('../lib/market-intelligence/signal-engine');
 const {
   buildInsightDiscoveryEngine,
-  isGenericAdvice
+  isGenericAdvice,
+  DETECTOR_SEQUENCE
 } = require('../lib/market-intelligence/insights/insight-engine');
 
 const NOW = '2026-08-28T10:00:00.000Z';
@@ -431,4 +432,59 @@ test('insight schema exposes dimensions metrics scoring and recommended test', (
   assert.ok(insight.metrics.platformCount >= 2);
   assert.ok(insight.recommendedTest.action);
   assert.match(insight.formula, /evidenceStrength 25/);
+});
+
+test('detector registry declares every cross-source relationship and evidence policy', () => {
+  const types = DETECTOR_SEQUENCE.map(item => item.type);
+  assert.equal(DETECTOR_SEQUENCE.length, 11);
+  assert.equal(new Set(types).size, 11);
+  [
+    'CUSTOMER_COMPETITOR_CONTRADICTION',
+    'CUSTOMER_OFFER_GAP',
+    'SATURATION',
+    'LOCAL_GLOBAL_ASYMMETRY',
+    'SOCIAL_CONTENT_GAP',
+    'PROOF_GAP',
+    'TRUST_GAP',
+    'PRICE_VALUE_ASYMMETRY',
+    'SUBSTITUTE_RISK',
+    'SUPPLIER_LOCAL_GAP',
+    'TEMPORAL_OPPORTUNITY'
+  ].forEach(type => assert.ok(types.includes(type), `${type} missing`));
+  DETECTOR_SEQUENCE.forEach(item => {
+    assert.ok(item.key);
+    assert.ok(item.relationship.includes(' vs ') || item.relationship.includes(' vs') || item.relationship.includes('+') || item.relationship.includes('RECENT'));
+    assert.ok(Array.isArray(item.dimensions));
+    assert.ok(item.dimensions.length >= 2);
+    assert.match(item.evidencePolicy, /requires|forbids/);
+  });
+});
+
+test('generated insights keep detector provenance for traceability', () => {
+  const { insightModel } = buildModels([
+    ...Array.from({ length: 4 }, (_, index) => ({
+      id: `ev_registry_safety_${index + 1}`,
+      scope: 'CUSTOMER',
+      claimType: 'review',
+      value: 'Customer asks if strong suction is safe for sensitive skin.',
+      sourceUrl: `https://reddit.example/r${index + 1}`,
+      sourcePlatform: index % 2 ? 'youtube' : 'reddit',
+      verificationStatus: 'CONFIRMED'
+    })),
+    ...Array.from({ length: 4 }, (_, index) => ({
+      id: `ev_registry_power_${index + 1}`,
+      scope: 'COMPETITOR',
+      claimType: 'offer',
+      value: 'Seller emphasizes powerful suction and maximum extraction strength.',
+      sourceUrl: `https://seller${index + 1}.ly/product`,
+      sourcePlatform: 'inspected_page',
+      verificationStatus: 'CONFIRMED'
+    }))
+  ], entityMap({ local: 4 }));
+  const insight = insightModel.topInsights[0];
+
+  assert.ok(insight.detectorKey);
+  assert.ok(insight.detectorPolicy);
+  assert.ok(insight.detectorRelationship);
+  assert.ok(insightModel.detectorRegistry.length >= 11);
 });
