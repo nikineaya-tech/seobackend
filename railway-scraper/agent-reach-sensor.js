@@ -358,6 +358,62 @@ function dedupeEvidence(evidence = []) {
   });
 }
 
+function evidenceListFromResult(result = {}) {
+  if (Array.isArray(result.evidence)) return result.evidence.filter(Boolean);
+  return result.evidence ? [result.evidence] : [];
+}
+
+function diagnosticStatus(result = {}) {
+  const evidenceCount = evidenceListFromResult(result).length;
+  if (evidenceCount > 0) return 'READY';
+  if (!result.unavailable) return 'NO_RESULTS';
+  const reason = clean(result.unavailable.reason || '', 120);
+  if (/missing_api_key/i.test(reason)) return 'UNAVAILABLE';
+  if (/auth|unauthor/i.test(reason)) return 'AUTH_REQUIRED';
+  if (/empty|no_results|not_found/i.test(reason)) return 'NO_RESULTS';
+  return 'ERROR';
+}
+
+async function collectWithDiagnostic({ channel, provider, backend, query = '', url = '', collector }) {
+  const startedAt = Date.now();
+  try {
+    const result = await collector();
+    const evidenceList = evidenceListFromResult(result);
+    const unavailable = result.unavailable || null;
+    return {
+      result,
+      diagnostic: {
+        channel,
+        provider,
+        backend,
+        query: clean(query, 220) || null,
+        url: clean(url, 900) || null,
+        resultCount: evidenceList.length,
+        evidenceCount: evidenceList.length,
+        status: diagnosticStatus(result),
+        reason: unavailable ? clean(unavailable.reason || unavailable.error || 'unavailable', 220) : (evidenceList.length ? null : 'no_evidence_returned'),
+        durationMs: Date.now() - startedAt
+      }
+    };
+  } catch (error) {
+    return {
+      result: { unavailable: { query: query || null, url: url || null, provider, reason: clean(error.message, 220) }, evidence: [] },
+      diagnostic: {
+        channel,
+        provider,
+        backend,
+        query: clean(query, 220) || null,
+        url: clean(url, 900) || null,
+        resultCount: 0,
+        evidenceCount: 0,
+        status: /auth|unauthor/i.test(error.message) ? 'AUTH_REQUIRED' : 'ERROR',
+        reason: clean(error.message, 220),
+        durationMs: Date.now() - startedAt
+      }
+    };
+  }
+}
+
 async function collectAgentReachMarketEvidence(payload = {}) {
   const startedAt = Date.now();
   const context = {
@@ -371,38 +427,87 @@ async function collectAgentReachMarketEvidence(payload = {}) {
   const youtubeSearches = arr(payload.youtubeSearches || payload.youtubeQueries).map(item => clean(item, 180)).filter(Boolean).slice(0, MAX_YOUTUBE_SEARCHES);
   const evidence = [];
   const unavailable = [];
+  const channelDiagnostics = [];
 
   for (const exaQuery of exaSearches) {
-    const result = await collectExaSearchEvidence(exaQuery, context);
+    const { result, diagnostic } = await collectWithDiagnostic({
+      channel: 'exa',
+      provider: 'agent-reach-railway',
+      backend: 'exa-search',
+      query: exaQuery,
+      collector: () => collectExaSearchEvidence(exaQuery, context)
+    });
+    channelDiagnostics.push(diagnostic);
     evidence.push(...arr(result.evidence));
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
   for (const youtubeQuery of youtubeSearches) {
-    const result = await collectYouTubeSearchEvidence(youtubeQuery, context);
+    const { result, diagnostic } = await collectWithDiagnostic({
+      channel: 'youtube',
+      provider: 'agent-reach-railway',
+      backend: 'youtube-data-api',
+      query: youtubeQuery,
+      collector: () => collectYouTubeSearchEvidence(youtubeQuery, context)
+    });
+    channelDiagnostics.push(diagnostic);
     evidence.push(...arr(result.evidence));
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
   for (const search of searches) {
-    const result = await collectSearchEvidence(search, context);
+    const { result, diagnostic } = await collectWithDiagnostic({
+      channel: 'search',
+      provider: 'agent-reach-railway',
+      backend: 'jina-search',
+      query: search,
+      collector: () => collectSearchEvidence(search, context)
+    });
+    channelDiagnostics.push(diagnostic);
     if (result.evidence) evidence.push(result.evidence);
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
   for (const url of urls) {
-    const result = await collectUrlEvidence(url, context);
+    const channel = platformOf(url);
+    const { result, diagnostic } = await collectWithDiagnostic({
+      channel: channel === 'web' ? 'web' : `${channel}-url`,
+      provider: 'agent-reach-railway',
+      backend: 'jina-reader',
+      url,
+      collector: () => collectUrlEvidence(url, context)
+    });
+    channelDiagnostics.push(diagnostic);
     if (result.evidence) evidence.push(result.evidence);
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
   for (const feed of feeds) {
-    const result = await collectFeedEvidence(feed, context);
+    const { result, diagnostic } = await collectWithDiagnostic({
+      channel: 'rss',
+      provider: 'agent-reach-railway',
+      backend: 'direct-rss-parser',
+      url: feed,
+      collector: () => collectFeedEvidence(feed, context)
+    });
+    channelDiagnostics.push(diagnostic);
     evidence.push(...arr(result.evidence));
     if (result.unavailable) unavailable.push(result.unavailable);
   }
 
   const normalizedEvidence = dedupeEvidence(evidence);
+  const channelSummary = channelDiagnostics.reduce((summary, item) => {
+    const key = item.channel || 'unknown';
+    if (!summary[key]) {
+      summary[key] = { attempts: 0, evidence: 0, unavailable: 0, errors: 0, statuses: {} };
+    }
+    summary[key].attempts += 1;
+    summary[key].evidence += Number(item.evidenceCount || 0);
+    if (item.status !== 'READY') summary[key].unavailable += 1;
+    if (item.status === 'ERROR') summary[key].errors += 1;
+    summary[key].statuses[item.status] = (summary[key].statuses[item.status] || 0) + 1;
+    return summary;
+  }, {});
   return {
     success: normalizedEvidence.length > 0,
     kind: 'market-sensor',
@@ -425,6 +530,8 @@ async function collectAgentReachMarketEvidence(payload = {}) {
       evidence: normalizedEvidence
     },
     unavailable,
+    channelDiagnostics,
+    channelSummary,
     counts: {
       exaSearches: exaSearches.length,
       searches: searches.length,

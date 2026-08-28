@@ -9627,6 +9627,19 @@ if (shouldUseAgentReachMarketSensor()) {
             console.log(
                 `[WarRoom-V10.0] Agent Reach sensor evidence=${agentReachMarketEvidence?.counts?.evidence || 0} unavailable=${agentReachMarketEvidence?.counts?.unavailable || 0}`
             );
+            const channelDiagnostics = Array.isArray(agentReachMarketEvidence?.channelDiagnostics)
+                ? agentReachMarketEvidence.channelDiagnostics
+                : [];
+            channelDiagnostics.forEach(item => {
+                console.log(
+                    `[AGENT-REACH] channel=${item.channel || 'unknown'} ` +
+                    `status=${item.status || 'UNKNOWN'} backend=${item.backend || 'unknown'} ` +
+                    `query="${String(item.query || '').slice(0, 140)}" ` +
+                    `url="${String(item.url || '').slice(0, 180)}" ` +
+                    `resultCount=${Number(item.resultCount || 0)} evidence=${Number(item.evidenceCount || 0)} ` +
+                    `reason=${item.reason || 'ok'} durationMs=${Number(item.durationMs || 0)}`
+                );
+            });
         } catch (sensorError) {
             console.warn(`[WarRoom-V10.0] Agent Reach sensor skipped: ${sensorError.message}`);
             agentReachMarketEvidence = {
@@ -21047,7 +21060,11 @@ app.get('/health', (req, res) => {
         services: {
             serpAPI: !!CONFIG.SERPAPI_KEY,
             serperAPI: !!CONFIG.SERPER_API_KEY,
-            openRouter: !!CONFIG.OPENROUTER_KEY
+            openRouter: !!CONFIG.OPENROUTER_KEY,
+            agentReachMarketSensor: shouldUseAgentReachMarketSensor(),
+            railwayScraper: Boolean(process.env.RAILWAY_SCRAPER_URL || process.env.SCRAPER_WORKER_URL),
+            exa: Boolean(process.env.EXA_API_KEY || process.env.EXA_SEARCH_API_KEY),
+            youtube: Boolean(process.env.YOUTUBE_API_KEY || process.env.GOOGLE_YOUTUBE_API_KEY)
         }
     });
 });

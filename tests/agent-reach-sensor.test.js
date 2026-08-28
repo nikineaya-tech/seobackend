@@ -37,6 +37,8 @@ test('normalizes Agent Reach URL evidence without producing strategy claims', as
     assert.equal(result.evidenceRegistry.evidence[0].scope, 'CUSTOMER');
     assert.equal(result.evidenceRegistry.evidence[0].verificationStatus, 'CONFIRMED');
     assert.ok(result.evidenceRegistry.evidence[0].collectedAt);
+    assert.ok(result.channelDiagnostics.some(item => item.channel === 'youtube-url' && item.status === 'READY'));
+    assert.equal(result.channelSummary['youtube-url'].evidence, 1);
     assert.doesNotMatch(JSON.stringify(result), /leader|dominates|market share|strategy to win/i);
   } finally {
     global.fetch = originalFetch;
@@ -145,6 +147,7 @@ test('Exa search creates semantic discovery evidence when API key exists', async
 
     const item = result.evidenceRegistry.evidence[0];
     assert.equal(result.counts.exaSearches, 1);
+    assert.ok(result.channelDiagnostics.some(item => item.channel === 'exa' && item.backend === 'exa-search' && item.status === 'READY'));
     assert.equal(item.claimType, 'EXA_SEARCH_RESULT');
     assert.equal(item.sourcePlatform, 'exa_search');
     assert.equal(item.resultPlatform, 'web');
@@ -173,6 +176,7 @@ test('Exa search records unavailable state when API key is missing', async () =>
     assert.equal(result.counts.exaSearches, 1);
     assert.equal(result.evidenceRegistry.evidence.length, 0);
     assert.ok(result.unavailable.some(item => item.provider === 'exa' && item.reason === 'missing_api_key'));
+    assert.ok(result.channelDiagnostics.some(item => item.channel === 'exa' && item.status === 'UNAVAILABLE' && item.reason === 'missing_api_key'));
   } finally {
     if (originalKey == null) delete process.env.EXA_API_KEY;
     else process.env.EXA_API_KEY = originalKey;
@@ -210,6 +214,7 @@ test('YouTube search creates dated customer evidence when API key exists', async
 
     const item = result.evidenceRegistry.evidence[0];
     assert.equal(result.counts.youtubeSearches, 1);
+    assert.ok(result.channelDiagnostics.some(item => item.channel === 'youtube' && item.backend === 'youtube-data-api' && item.status === 'READY'));
     assert.equal(item.claimType, 'YOUTUBE_SEARCH_RESULT');
     assert.equal(item.sourcePlatform, 'youtube');
     assert.equal(item.scope, 'CUSTOMER');
@@ -237,6 +242,7 @@ test('YouTube search records unavailable state when API key is missing', async (
     assert.equal(result.counts.youtubeSearches, 1);
     assert.equal(result.evidenceRegistry.evidence.length, 0);
     assert.ok(result.unavailable.some(item => item.provider === 'youtube' && item.reason === 'missing_api_key'));
+    assert.ok(result.channelDiagnostics.some(item => item.channel === 'youtube' && item.status === 'UNAVAILABLE' && item.reason === 'missing_api_key'));
   } finally {
     if (originalKey == null) delete process.env.YOUTUBE_API_KEY;
     else process.env.YOUTUBE_API_KEY = originalKey;
