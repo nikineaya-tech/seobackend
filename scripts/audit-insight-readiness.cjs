@@ -88,8 +88,17 @@ const checks = [
     'schema',
     'Insight schema contains evidence, signals, dimensions, metrics, scoring and recommended test',
     [insightFile, scorerFile],
-    ['evidenceIds', 'signalIds', 'dimensions', 'metrics', 'recommendedTest'].every(token => insightText.includes(token)) &&
+    ['evidenceIds', 'signalIds', 'dimensions', 'metrics', 'recommendedTest', 'suppressedInsights'].every(token => insightText.includes(token)) &&
       ['formula', 'noveltyScore', 'businessImpactScore', 'actionabilityScore'].every(token => scorerText.includes(token))
+  ),
+  row(
+    'coverage-gate',
+    'Market coverage gate suppresses sophisticated conclusions from thin samples',
+    [insightFile, 'tests/insight-engine.test.js'],
+    /buildMarketCoverageGate/.test(insightText) &&
+      /coverageDecisionForInsight/.test(insightText) &&
+      /COVERAGE_SENSITIVE_INSIGHT_TYPES/.test(insightText) &&
+      has('tests/insight-engine.test.js', /suppresses saturation from one copied seller sample/)
   ),
   row(
     'generic-filter',

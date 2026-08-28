@@ -109,6 +109,44 @@ test('unsupported delivery and acquisition claims are downgraded', () => {
   assert.match(text, /غير مؤكدة/);
 });
 
+test('unsupported channel sanitizer does not corrupt product names or URLs', () => {
+  const report = sampleReport();
+  report.competitors[0].title = 'Blackhead-Remover price';
+  report.competitors[0].url = 'https://m.shein.com/Blackhead-Remover-product.html';
+  report.masteringTechniques = {
+    trafficSources: 'Blackhead-Remover from https://m.shein.com/Blackhead-Remover-product.html with ads and influencers claimed.'
+  };
+  const clean = sanitizeCompetitorReport(report, { lang: 'en', userSiteAudited: false });
+  const text = JSON.stringify(clean);
+  assert.match(text, /Blackhead-Remover/);
+  assert.match(text, /m\.shein\.com\/Blackhead-Remover-product\.html/);
+  assert.doesNotMatch(text, /Blackheunverified channel/i);
+  assert.match(text, /unverified channel/);
+});
+
+test('price-only values are removed from promise fields', () => {
+  const report = sampleReport();
+  report.competitors[0].businessProfile.primaryPromise = '٢١٩ دينار ليبي';
+  report.competitorIntelligence = {
+    recommendedAttackAngle: {
+      promiseToMake: '219 LYD'
+    },
+    competitorProfiles: [
+      {
+        domain: 'aelastore.shop',
+        primaryPromise: '٢١٩ دينار ليبي'
+      }
+    ]
+  };
+  const clean = sanitizeCompetitorReport(report, { lang: 'ar', userSiteAudited: false });
+  const text = JSON.stringify(clean);
+  assert.equal(clean.competitors[0].businessProfile.primaryPromise, '');
+  assert.equal(clean.competitorIntelligence.recommendedAttackAngle.promiseToMake, '');
+  assert.equal(clean.competitorIntelligence.competitorProfiles[0].primaryPromise, '');
+  assert.doesNotMatch(text, /"primaryPromise":"٢١٩ دينار ليبي"|"promiseToMake":"219 LYD"/);
+  assert.match(text, /PRICE_VALUE_REMOVED_FROM_PROMISE_FIELD/);
+});
+
 test('every observed competitor has evidence ids', () => {
   const clean = sanitizeCompetitorReport(sampleReport(), { lang: 'ar', userSiteAudited: false });
   assert.ok(clean.evidenceRegistry.evidence.length >= 3);

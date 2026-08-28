@@ -192,6 +192,24 @@ test('insufficient sample prevents high confidence market insight', () => {
   assert.equal(insightModel.topInsights.some(item => item.confidence === 'HIGH'), false);
 });
 
+test('market coverage gate suppresses saturation from one copied seller sample', () => {
+  const copiedRows = Array.from({ length: 7 }, (_, index) => ({
+    id: `ev_one_seller_led_${index + 1}`,
+    scope: 'COMPETITOR',
+    claimType: 'offer',
+    value: `The product page ${index + 1} mentions LED light, USB charging and suction levels.`,
+    sourceUrl: `https://seller1.ly/product-${index + 1}`,
+    sourcePlatform: 'inspected_page',
+    verificationStatus: 'CONFIRMED',
+    observedAt: NOW
+  }));
+  const { insightModel } = buildModels(copiedRows, entityMap({ local: 1 }));
+
+  assert.equal(insightModel.coverageGate.gates.saturation, false);
+  assert.equal(insightModel.topInsights.some(item => item.type === 'SATURATION'), false);
+  assert.ok(insightModel.suppressedInsights.some(item => item.reason === 'MARKET_COVERAGE_TOO_LOW_FOR_SATURATION'));
+});
+
 test('generic advice is rejected as an insight candidate', () => {
   assert.equal(isGenericAdvice('Use social media to increase awareness.'), true);
   assert.equal(isGenericAdvice('Safety concern + power messaging creates a positioning contradiction.'), false);

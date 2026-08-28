@@ -4730,13 +4730,24 @@ function buildCompetitorProofModel(ctx = {}) {
     comments: (apifyData.apifyIntel.comments || []).length,
     reviews: (apifyData.apifyIntel.reviews || []).length
   } : { ads: 0, posts: 0, comments: 0, reviews: 0 };
+  const socialObservationCount = Object.values(sourceCounts).reduce((sum, value) => sum + Number(value || 0), 0);
+  const socialCoverage = {
+    observedSignals: socialObservationCount,
+    sourceLinks: socialLinks.length,
+    sourceCounts,
+    status: socialLinks.length
+      ? 'LINKS_OBSERVED'
+      : socialObservationCount
+        ? 'SIGNALS_OBSERVED_WITHOUT_CANONICAL_LINKS'
+        : 'NOT_OBSERVED'
+  };
 
   const observed = [
     proofFact({ type: 'observed', title: lang === 'en' ? 'Market analyzed' : lang === 'ar' ? 'السوق المحلل' : 'Marche analyse', value: cleanQuery, source: 'User input', confidence: 'HIGH' }),
     proofFact({ type: 'observed', title: lang === 'en' ? 'Target country' : lang === 'ar' ? 'البلد المستهدف' : 'Pays cible', value: geoData.location || null, source: 'Geo resolver', confidence: 'HIGH', inputs: { gl: geoData.gl || null, hl: geoData.hl || null } }),
     proofFact({ type: 'observed', title: lang === 'en' ? 'Competitors found' : lang === 'ar' ? 'المنافسون المرصودون' : 'Concurrents trouves', value: enrichedCompetitors.length, source, confidence: enrichedCompetitors.length ? 'HIGH' : 'LOW', evidence: competitorUrls }),
     proofFact({ type: 'observed', title: lang === 'en' ? 'Search volume' : lang === 'ar' ? 'حجم البحث' : 'Volume de recherche', value: mainKwData ? realVolume : null, source: mainKwData ? 'Keyword provider' : L.noSource, confidence: mainKwData ? 'HIGH' : 'LOW', caveat: mainKwData ? null : L.unavailable }),
-    proofFact({ type: 'observed', title: lang === 'en' ? 'Field evidence collected' : lang === 'ar' ? 'روابط الادلة الميدانية' : 'Preuves terrain collectees', value: socialLinks.length, source: 'Social and review actors', confidence: socialLinks.length ? 'MEDIUM' : 'LOW', evidence: socialLinks.slice(0, 6), inputs: sourceCounts })
+    proofFact({ type: 'observed', title: lang === 'en' ? 'Social field signals' : lang === 'ar' ? 'إشارات اجتماعية ميدانية' : 'Signaux sociaux terrain', value: socialLinks.length || socialObservationCount || null, source: 'Social and review actors', confidence: (socialLinks.length || socialObservationCount) ? 'MEDIUM' : 'LOW', evidence: socialLinks.slice(0, 6), inputs: socialCoverage })
   ];
 
   const deduced = [
@@ -4752,9 +4763,9 @@ function buildCompetitorProofModel(ctx = {}) {
 
   const unavailable = [];
   if (!mainKwData) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Real keyword volume' : lang === 'ar' ? 'حجم البحث الحقيقي' : 'Volume reel du mot cle', source: L.noSource, confidence: 'LOW' }));
-  if (!socialLinks.length) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Social proof links' : lang === 'ar' ? 'روابط اجتماعية موثقة' : 'Liens sociaux verifies', source: L.noSource, confidence: 'LOW' }));
+  if (!socialLinks.length && !socialObservationCount) unavailable.push(proofFact({ type: 'unavailable', title: lang === 'en' ? 'Social proof links' : lang === 'ar' ? 'روابط اجتماعية موثقة' : 'Liens sociaux verifies', source: L.noSource, confidence: 'LOW' }));
 
-  return { title: L.proofTitle, labels: L, observed, deduced, recommended, unavailable };
+  return { title: L.proofTitle, labels: L, observed, deduced, recommended, unavailable, socialCoverage };
 }
 
 function buildFunnelProofModel(ctx = {}) {
