@@ -4470,6 +4470,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
     dir: (isAr ? 'rtl' : 'ltr'),
     esc: escapeHtml
 });
+const marketCoverageHtml = renderMarketCoveragePanel(data, { isAr, isEn });
 const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
 
     // ─── HELPERS ───────────────────────────────────────────────────
@@ -4633,6 +4634,15 @@ const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
     if (data.marketInsights) {
         const mi    = data.marketInsights;
         const vocab = Array.isArray(mi.vocabulary) ? mi.vocabulary.slice(0, 4).join(', ') : '—';
+        const coverageLevel = String(
+            data?.marketCoverage?.level ||
+            data?.decisionReportV2?.mainReport?.marketCoverage?.level ||
+            data?.reportV2?.mainReport?.marketCoverage?.level ||
+            ''
+        ).toUpperCase();
+        const difficultyDisplay = coverageLevel === 'LOW'
+            ? (isAr ? 'قراءة جزئية' : (isEn ? 'Partial read' : 'Lecture partielle'))
+            : safe(mi.difficulty, '—');
 
         const threatColor = {
             Low: '#10b981', low: '#10b981',
@@ -4645,7 +4655,7 @@ const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:18px;margin-bottom:${mi.notes || mi.trend || mi.sophisticationLevel || mi.awarenessLevel ? '20px' : '0'}">
                 <div>
                     <small style="color:var(--accent-danger);font-weight:800;letter-spacing:1px;text-transform:uppercase;">${t.difficulty}</small>
-                    <div style="font-size:1.4rem;font-weight:900;color:white;margin-top:5px;">${safe(mi.difficulty, '—')}</div>
+                    <div style="font-size:1.4rem;font-weight:900;color:white;margin-top:5px;">${difficultyDisplay}</div>
                 </div>
                 <div style="border-${bSide}:1px solid rgba(255,255,255,0.1);padding-${bSide}:18px;">
                     <small style="color:var(--accent-info);font-weight:800;letter-spacing:1px;text-transform:uppercase;">${t.volume}</small>
@@ -5194,6 +5204,7 @@ const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
         const hasAnything = ba.socialLinksCount !== undefined || tm.schemaTagsCount !== undefined || cs.hasBlog !== undefined;
 
         if (hasAnything) {
+            const detectedSocialCount = Number(ba.socialLinksCount || 0);
             const verifiedSocialHtml = verifiedSocialChannels.length
                 ? verifiedSocialChannels.map(item => `
                     <a href="${escapeHtml(item.url)}" target="_blank" rel="noopener noreferrer"
@@ -5201,11 +5212,19 @@ const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
                        style="color:#93c5fd;text-decoration:none;font-weight:800;display:inline-flex;align-items:center;gap:4px;margin-inline-end:7px;">
                         <i class="fas fa-arrow-up-right-from-square" style="font-size:.58rem;"></i>${escapeHtml(item.platform)}
                     </a>`).join('')
-                : `${ba.socialLinksCount || 0} ${isAr ? 'روابط' : (isEn ? 'links' : 'liens')}`;
+                : detectedSocialCount > 0
+                    ? `<span style="color:#fbbf24;font-weight:800;">${detectedSocialCount} ${isAr ? 'قنوات لرصدها' : (isEn ? 'channels to verify' : 'canaux à vérifier')}</span>`
+                    : `<span style="color:#94a3b8;font-weight:800;">${isAr ? 'غير مؤكد' : (isEn ? 'not verified' : 'non vérifié')}</span>`;
+            const trustpilotReview = ba.trustpilotOrReviews || {};
+            const trustpilotDisplay = typeof trustpilotReview === 'object' && trustpilotReview.status
+                ? (trustpilotReview.status === 'OBSERVED' && trustpilotReview.has
+                    ? `<span style="color:#34d399;font-weight:800;">✓ ${isAr ? 'مرصود' : (isEn ? 'Observed' : 'Observé')}</span>`
+                    : `<span style="color:#fbbf24;font-weight:800;">${isAr ? 'غير مؤكد' : (isEn ? 'not verified' : 'non vérifié')}</span>`)
+                : ba.hasTrustpilotOrReviews;
             const moatItems = [
                 { label: isAr ? 'روابط Wikipedia' : (isEn ? 'Wikipedia links' : 'Liens Wikipedia'), val: ba.hasWikipediaLinks,     icon: 'fa-wikipedia-w', color: '#94a3b8' },
-                { label: isAr ? 'شبكات اجتماعية موثقة' : (isEn ? 'Verified social networks' : 'Réseaux sociaux vérifiés'), val: verifiedSocialHtml, icon: 'fa-share-alt', color: '#60a5fa' },
-                { label: isAr ? 'Trustpilot/Avis'  : (isEn ? 'Reviews/Trustpilot' : 'Trustpilot/Avis'), val: ba.hasTrustpilotOrReviews, icon: 'fa-star',      color: '#fcd34d' },
+                { label: verifiedSocialChannels.length ? (isAr ? 'شبكات اجتماعية موثقة' : (isEn ? 'Verified social networks' : 'Réseaux sociaux vérifiés')) : (isAr ? 'حضور اجتماعي' : (isEn ? 'Social presence' : 'Présence sociale')), val: verifiedSocialHtml, icon: 'fa-share-alt', color: '#60a5fa' },
+                { label: isAr ? 'Trustpilot/Avis'  : (isEn ? 'Reviews/Trustpilot' : 'Trustpilot/Avis'), val: trustpilotDisplay, icon: 'fa-star',      color: '#fcd34d' },
                 { label: isAr ? 'Schema Markup'    : (isEn ? 'Schema tags'      : 'Balises Schema'),   val: (tm.schemaTagsCount||0) + ' tags',  icon: 'fa-code',      color: '#a78bfa' },
                 { label: isAr ? 'Section FAQ'      : (isEn ? 'FAQ section'      : 'Section FAQ'),      val: tm.hasFaqSection,      icon: 'fa-question-circle', color: '#34d399' },
                 { label: isAr ? 'Blog/Actualités'  : (isEn ? 'Blog/News'        : 'Blog/Actualités'),  val: cs.hasBlog,            icon: 'fa-newspaper',   color: '#fb923c' },
@@ -5654,6 +5673,7 @@ const reportLabels = getReportLabels({ isAr, isEn });
     container.innerHTML = `
         ${renderExecutiveSummary(data, 'competitors', { isAr, isEn })}
         ${renderDiscoveryInsights(data, { isAr, isEn })}
+        ${renderReportSection('coverage', reportLabels.coverage, reportLabels.coverageSub, 'fa-shield-halved', marketCoverageHtml, { isAr, isEn, open: true })}
         ${renderReportSection('comments-reviews', reportLabels.commentsReviews, reportLabels.commentsReviewsSub, 'fa-comments', commentsReviewsHtml, { isAr, isEn, open: true })}
         ${renderCompetitorDecisionLayerV2(data, { isAr, isEn })}
         ${renderReportSection('market', reportLabels.market, reportLabels.marketSub, 'fa-compass', `
@@ -12524,6 +12544,8 @@ function getReportLabels(opts = {}) {
         marketSub: 'القيمة الأساسية ظاهرة هنا أولا، والتفاصيل تبقى متاحة عند الحاجة.',
         plan: 'الخطوة الأقوى لجعل عرضك أفضل',
         planSub: 'ملخص عملي لما يجب تغييره في العرض، الرسالة، والثقة.',
+        coverage: 'تغطية ذكاء السوق',
+        coverageSub: 'ما تم تغطيته فعلا، ما بقي ضعيفا، وما لا يجب اعتباره حقيقة بعد.',
         commentsReviews: 'التعليقات والآراء',
         commentsReviewsSub: 'صوت العميل المرصود فقط: مراجعات، أسئلة، اعتراضات وتعليقات من مصادر قابلة للفحص.',
         competitors: 'المنافسون الذين يكشفون فرصة السوق',
@@ -12549,6 +12571,8 @@ function getReportLabels(opts = {}) {
         marketSub: 'The core value is visible first; deeper evidence stays one click away.',
         plan: 'Your strongest opening to improve the offer',
         planSub: 'A practical summary of what to change in offer, message, and trust.',
+        coverage: 'Market intelligence coverage',
+        coverageSub: 'What was really covered, what remains weak, and what must not be treated as fact yet.',
         commentsReviews: 'Comments and reviews',
         commentsReviewsSub: 'Observed customer voice only: reviews, questions, objections and comments from traceable sources.',
         competitors: 'Competitors that reveal the market opportunity',
@@ -12574,6 +12598,8 @@ function getReportLabels(opts = {}) {
         marketSub: 'La valeur principale est visible tout de suite; les preuves restent accessibles en un clic.',
         plan: 'Votre meilleure ouverture pour rendre l’offre plus forte',
         planSub: 'Le résumé opérationnel de ce qu’il faut changer dans l’offre, le message et la confiance.',
+        coverage: 'Couverture intelligence marché',
+        coverageSub: 'Ce qui est vraiment couvert, ce qui reste faible, et ce qu’il ne faut pas encore traiter comme un fait.',
         commentsReviews: 'Commentaires et avis',
         commentsReviewsSub: 'Voix client observée uniquement : avis, questions, objections et commentaires issus de sources vérifiables.',
         competitors: 'Les concurrents qui révèlent votre opportunité',
@@ -13074,6 +13100,118 @@ function renderDiscoveryInsights(data, opts = {}) {
             <p>${safe(copy.sub)}</p>
         </div>
         <div class="daka-discovery-grid">${cards}</div>
+    </section>`;
+}
+
+function renderMarketCoveragePanel(data, opts = {}) {
+    const isAr = opts.isAr ?? STATE.currentLang === 'ar';
+    const isEn = opts.isEn ?? STATE.currentLang === 'en';
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : String;
+    const arr = (value) => Array.isArray(value) ? value.filter(Boolean) : [];
+    const text = (value, fallback = '') => {
+        if (value === null || value === undefined) return fallback;
+        if (typeof value === 'string' || typeof value === 'number') return String(value).trim() || fallback;
+        if (typeof value === 'object') return value.label || value.title || value.why || value.reason || fallback;
+        return String(value || '').trim() || fallback;
+    };
+    const model =
+        data?.marketCoverage ||
+        data?.mainReport?.marketCoverage ||
+        data?.decisionReportV2?.mainReport?.marketCoverage ||
+        data?.reportV2?.mainReport?.marketCoverage ||
+        null;
+    if (!model || typeof model !== 'object') return '';
+    const copy = isAr ? {
+        title: 'خريطة التغطية',
+        subtitle: 'هذه البطاقة تمنع الخلط بين ما تم إثباته وما يحتاج جمع بيانات أكثر.',
+        evidence: 'أدلة',
+        sources: 'مصادر',
+        domains: 'نطاقات',
+        channels: 'قنوات جاهزة',
+        missing: 'ما ينقص',
+        next: 'الخطوة',
+        ready: 'جاهز',
+        weak: 'ضعيف',
+        missingStatus: 'ناقص'
+    } : isEn ? {
+        title: 'Coverage map',
+        subtitle: 'This card separates proven coverage from blocks that still need more data.',
+        evidence: 'Evidence',
+        sources: 'Sources',
+        domains: 'Domains',
+        channels: 'Ready channels',
+        missing: 'Missing',
+        next: 'Next',
+        ready: 'Ready',
+        weak: 'Weak',
+        missingStatus: 'Missing'
+    } : {
+        title: 'Carte de couverture',
+        subtitle: 'Cette carte sépare ce qui est réellement prouvé des blocs qui demandent encore plus de données.',
+        evidence: 'Preuves',
+        sources: 'Sources',
+        domains: 'Domaines',
+        channels: 'Canaux prêts',
+        missing: 'Manques',
+        next: 'Étape',
+        ready: 'Prêt',
+        weak: 'Faible',
+        missingStatus: 'Manquant'
+    };
+    const summary = model.summary || {};
+    const level = String(model.level || model.status || 'LOW').toUpperCase();
+    const levelColor = level === 'HIGH' ? '#22c55e' : level === 'MEDIUM' || level === 'PARTIAL' ? '#f59e0b' : '#fb7185';
+    const statusCopy = (status) => {
+        const s = String(status || '').toUpperCase();
+        if (s === 'READY' || s === 'HIGH') return copy.ready;
+        if (s === 'WEAK' || s === 'PARTIAL' || s === 'MEDIUM') return copy.weak;
+        return copy.missingStatus;
+    };
+    const statusColor = (status) => {
+        const s = String(status || '').toUpperCase();
+        if (s === 'READY' || s === 'HIGH') return '#22c55e';
+        if (s === 'WEAK' || s === 'PARTIAL' || s === 'MEDIUM') return '#f59e0b';
+        return '#fb7185';
+    };
+    const stat = (label, value, icon, color = '#67e8f9') => `
+        <article style="border:1px solid rgba(148,163,184,.14);background:rgba(15,23,42,.66);border-radius:14px;padding:13px;">
+            <span style="display:flex;align-items:center;gap:8px;color:${color};font-size:.68rem;font-weight:950;text-transform:uppercase;"><i class="fas ${icon}"></i>${safe(label)}</span>
+            <strong style="display:block;margin-top:9px;color:#f8fafc;font-size:1.28rem;">${safe(String(value ?? 0))}</strong>
+        </article>`;
+    const sectionCards = arr(model.sections).slice(0, 12).map((item) => {
+        const color = statusColor(item.status);
+        return `
+        <article style="border:1px solid ${color}33;background:linear-gradient(145deg,rgba(15,23,42,.74),rgba(2,6,23,.62));border-radius:15px;padding:14px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;">
+                <strong style="color:#f8fafc;font-size:.86rem;">${safe(text(item.label, item.key))}</strong>
+                <span style="color:${color};background:${color}16;border:1px solid ${color}30;border-radius:999px;padding:4px 9px;font-size:.64rem;font-weight:950;">${safe(statusCopy(item.status))}</span>
+            </div>
+            <p style="margin:0;color:#b6c4d6;font-size:.78rem;line-height:1.55;" dir="auto">${safe(text(item.why, ''))}</p>
+            <div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:10px;">
+                <span style="color:#cbd5e1;background:rgba(255,255,255,.05);border-radius:999px;padding:4px 8px;font-size:.66rem;">${safe(copy.evidence)} ${safe(String(item.evidenceCount || 0))}</span>
+                <span style="color:#cbd5e1;background:rgba(255,255,255,.05);border-radius:999px;padding:4px 8px;font-size:.66rem;">Signals ${safe(String(item.signalCount || 0))}</span>
+            </div>
+            ${text(item.next) ? `<small style="display:block;color:#93c5fd;margin-top:9px;line-height:1.45;" dir="auto">${safe(copy.next)}: ${safe(text(item.next))}</small>` : ''}
+        </article>`;
+    }).join('');
+    const missing = arr(model.missingCapabilities).slice(0, 10);
+    return `
+    <section class="daka-market-coverage-panel" data-export-feature="coverage" dir="${isAr ? 'rtl' : 'ltr'}">
+        <header style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:15px;flex-wrap:wrap;">
+            <div>
+                <span style="display:inline-flex;align-items:center;gap:8px;color:#67e8f9;font-size:.72rem;font-weight:950;text-transform:uppercase;"><i class="fas fa-shield-halved"></i>${safe(copy.title)}</span>
+                <p style="margin:8px 0 0;color:#9fb3cc;font-size:.86rem;line-height:1.55;max-width:780px;">${safe(copy.subtitle)}</p>
+            </div>
+            <strong style="color:${levelColor};background:${levelColor}16;border:1px solid ${levelColor}36;border-radius:999px;padding:8px 13px;font-size:.76rem;text-transform:uppercase;">${safe(level)}</strong>
+        </header>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:12px;margin-bottom:15px;">
+            ${stat(copy.evidence, summary.evidenceCount || 0, 'fa-database', '#22c55e')}
+            ${stat(copy.sources, summary.sourceDiversity || 0, 'fa-share-nodes', '#38bdf8')}
+            ${stat(copy.domains, summary.domainDiversity || 0, 'fa-globe', '#a78bfa')}
+            ${stat(copy.channels, summary.readyChannels || 0, 'fa-satellite-dish', '#f59e0b')}
+        </div>
+        ${missing.length ? `<div style="border:1px dashed rgba(251,113,133,.28);background:rgba(127,29,29,.13);border-radius:15px;padding:13px;margin-bottom:15px;"><strong style="display:block;color:#fecdd3;font-size:.8rem;margin-bottom:8px;">${safe(copy.missing)}</strong><div style="display:flex;gap:7px;flex-wrap:wrap;">${missing.map(item => `<span style="color:#fecdd3;background:rgba(251,113,133,.12);border-radius:999px;padding:5px 9px;font-size:.68rem;font-weight:800;" dir="auto">${safe(item)}</span>`).join('')}</div></div>` : ''}
+        ${sectionCards ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;">${sectionCards}</div>` : ''}
     </section>`;
 }
 

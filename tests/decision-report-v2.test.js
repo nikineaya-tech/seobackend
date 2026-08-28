@@ -133,6 +133,11 @@ test('decision report v2 exposes short executive surface and deep dive', () => {
   assert.equal(report.mainReport.commentsReviews.quality.noInventedReviews, true);
   assert.ok(report.mainReport.commentsReviews.observedItems.some(item => item.id === 'ev_social_1'));
   assert.ok(report.mainReport.commentsReviews.patterns.some(pattern => pattern.evidenceIds.includes('ev_social_1')));
+  assert.ok(report.mainReport.marketCoverage);
+  assert.equal(report.mainReport.marketCoverage.quality.canonicalCoverageObject, true);
+  assert.ok(['LOW', 'MEDIUM', 'HIGH'].includes(report.mainReport.marketCoverage.level));
+  assert.ok(report.mainReport.marketCoverage.sections.some(section => section.key === 'comments_reviews' && section.status === 'READY'));
+  assert.ok(report.mainReport.marketCoverage.sections.some(section => section.key === 'pricing'));
   assert.equal(report.mainReport.sellerFight.mode, 'quantified_offer_patterns');
   assert.equal(report.mainReport.sellerFight.quality.noInventedCommercialTerms, true);
   assert.ok(report.mainReport.sellerFight.payment.some(pattern => pattern.evidenceIds.includes('ev_offer_1')));
@@ -227,6 +232,9 @@ test('decision report v2 comments and reviews section refuses to invent missing 
   assert.equal(report.mainReport.commentsReviews.observedItems.length, 0);
   assert.equal(report.mainReport.commentsReviews.channelDiagnostics[0].reason, 'missing_api_key');
   assert.equal(report.mainReport.commentsReviews.quality.noInventedReviews, true);
+  assert.equal(report.mainReport.marketCoverage.sections.find(section => section.key === 'customer_voice').status, 'MISSING');
+  assert.equal(report.mainReport.marketCoverage.sections.find(section => section.key === 'comments_reviews').status, 'MISSING');
+  assert.ok(report.mainReport.marketCoverage.missingCapabilities.includes('Customer Voice réel insuffisant'));
 });
 
 test('decision report v2 does not promote unsupported observations or supplier claims', () => {

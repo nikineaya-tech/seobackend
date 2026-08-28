@@ -9733,13 +9733,43 @@ try {
                 })
                 .filter(Boolean);
 
+            const trustpilotLinks = outboundLinks
+                .filter(link => typeof link?.normalized === 'string' && /trustpilot\./i.test(link.normalized))
+                .slice(0, 3)
+                .map(link => ({
+                    type: 'trustpilot_link',
+                    url: link.normalized,
+                    text: link.text || 'Trustpilot'
+                }));
+            const reviewAbsencePattern = /aucun\s+avis|no\s+reviews?|0\s+reviews?|0\s+avis|لا\s+توجد\s+(?:مراجعات|تقييمات)|بدون\s+(?:مراجعات|تقييمات)/i;
+            const reviewBlockEvidence = $('[class*="review"], [class*="avis"], [class*="testimonial"], [data-rating], [itemprop="review"], [itemprop="ratingValue"]')
+                .map((i, el) => cleanCompetitorBusinessText($(el).text() || $(el).attr('content') || '', 260))
+                .get()
+                .filter(text => text && text.length >= 25 && !reviewAbsencePattern.test(text))
+                .slice(0, 4)
+                .map(text => ({
+                    type: 'review_block',
+                    text
+                }));
+            const trustpilotOrReviewEvidence = [
+                ...trustpilotLinks,
+                ...reviewBlockEvidence
+            ];
+
             leaderMoat = {
                 brandAuthority: {
                     hasWikipediaLinks: htmlString.includes('wikipedia.org'),
                     socialChannels: channelEvidence.map(x => x.channel),
                     socialLinksCount: channelEvidence.length,
                     channelEvidence,
-                    hasTrustpilotOrReviews: /trustpilot|reviews|rating|avis/i.test(htmlString)
+                    trustpilotOrReviews: {
+                        status: trustpilotOrReviewEvidence.length ? 'OBSERVED' : 'NOT_VERIFIED',
+                        has: trustpilotOrReviewEvidence.length > 0,
+                        evidence: trustpilotOrReviewEvidence,
+                        confidence: trustpilotOrReviewEvidence.length ? 'MEDIUM' : 'LOW',
+                        rule: 'Requires a Trustpilot outbound link or an extractable review/testimonial block; raw words in scripts/classes are ignored.'
+                    },
+                    hasTrustpilotOrReviews: trustpilotOrReviewEvidence.length > 0
                 },
                 technicalMoat: {
                     schemaTagsCount: $('script[type=\"application/ld+json\"]').length,
@@ -10690,6 +10720,7 @@ finalResult.decisionReportV2 = buildDecisionReportV2({
     lang: langObj.code
 });
 finalResult.commentsReviews = finalResult.decisionReportV2?.mainReport?.commentsReviews || null;
+finalResult.marketCoverage = finalResult.decisionReportV2?.mainReport?.marketCoverage || null;
 finalResult.evidenceContractAudit = auditMarketEvidenceContract({
     evidenceRegistry: finalResult.evidenceRegistry,
     marketEvidence: agentReachMarketEvidence,
