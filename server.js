@@ -9137,6 +9137,35 @@ async function analyzeCompetitors(
     // FIX BUG #2 : déclaration AVANT le bloc isUrlTarget
     let rawResults = [];
     let source     = 'none';
+    const dedupeSerpItems = (items = []) => {
+        const seen = new Set();
+        return (Array.isArray(items) ? items : []).filter(item => {
+            const link = String(item?.link || item?.url || '').trim();
+            const title = String(item?.title || item?.question || item?.query || item?.snippet || '').trim().toLowerCase();
+            let key = title;
+            try {
+                const u = new URL(link);
+                key = `${u.hostname.replace(/^www\./i, '').toLowerCase()}${u.pathname.replace(/\/$/, '')}`;
+            } catch (_) {
+                key = `${link.toLowerCase()}|${title}`;
+            }
+            if (!key || seen.has(key)) return false;
+            seen.add(key);
+            return true;
+        });
+    };
+    const countSerpDomains = (items = []) => new Set((Array.isArray(items) ? items : []).map(item => {
+        try {
+            return new URL(item.link || item.url).hostname.replace(/^www\./i, '').toLowerCase();
+        } catch (_) {
+            return '';
+        }
+    }).filter(Boolean)).size;
+    const serpFanoutQueries = [...new Set([
+        serpSearchQuery,
+        ...(searchQueryPlan.variants || []),
+        reportQuery
+    ].filter(Boolean).map(q => cleanProofText(q, 140)))].slice(0, Number(process.env.COMPETITOR_SERP_FANOUT || 4));
 
     // ── 4a — URL directe ──────────────────────────────────────
     const isUrlTarget = /^https?:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/.test(cleanQuery.trim());
@@ -9161,27 +9190,41 @@ async function analyzeCompetitors(
 
     if (rawResults.length === 0 && process.env.SERPER_API_KEY) {
         try {
-            console.log('[WarRoom-V10.0] SERP via SERPER (primaire)...');
-            const res = await RetryManager.executeWithRetry(
-                () => axios.post('https://google.serper.dev/search',
-                    {
-                        q: serpSearchQuery,
-                        gl: geoData.gl,
-                        hl: googleLang,
-                        num: 10
-                    },
-                    {
-                        headers: {
-                            'X-API-KEY':    process.env.SERPER_API_KEY,
-                            'Content-Type': 'application/json'
+            console.log(`[WarRoom-V10.0] SERP via SERPER (primaire fanout=${serpFanoutQueries.length})...`);
+            const mergedOrganic = [];
+            const mergedPaa = [];
+            const mergedRelated = [];
+            let knowledgeGraph = null;
+            for (const fanoutQuery of serpFanoutQueries) {
+                const res = await RetryManager.executeWithRetry(
+                    () => axios.post('https://google.serper.dev/search',
+                        {
+                            q: fanoutQuery,
+                            gl: geoData.gl,
+                            hl: googleLang,
+                            num: 10
                         },
-                        timeout: CONFIG.TIMEOUT_MEDIUM
-                    }
-                ),
-                { context: 'Serper-WarRoom' }
-            );
-            if (res.data?.organic?.length) {
-                rawResults = res.data.organic.map(r => ({
+                        {
+                            headers: {
+                                'X-API-KEY':    process.env.SERPER_API_KEY,
+                                'Content-Type': 'application/json'
+                            },
+                            timeout: CONFIG.TIMEOUT_MEDIUM
+                        }
+                    ),
+                    { context: 'Serper-WarRoom' }
+                );
+                const organic = Array.isArray(res.data?.organic) ? res.data.organic : [];
+                mergedOrganic.push(...organic);
+                mergedPaa.push(...(Array.isArray(res.data?.peopleAlsoAsk) ? res.data.peopleAlsoAsk : []));
+                mergedRelated.push(...(Array.isArray(res.data?.relatedSearches) ? res.data.relatedSearches : []));
+                knowledgeGraph = knowledgeGraph || res.data?.knowledgeGraph || null;
+                console.log(`[WarRoom-V10.0] Serper variant "${fanoutQuery}" => ${organic.length} résultats`);
+                if (dedupeSerpItems(mergedOrganic).length >= 12 && countSerpDomains(mergedOrganic) >= 6) break;
+            }
+            const uniqueOrganic = dedupeSerpItems(mergedOrganic);
+            if (uniqueOrganic.length) {
+                rawResults = uniqueOrganic.map(r => ({
                     link:           r.link,
                     displayed_link: r.displayedLink || r.link,
                     title:          r.title,
@@ -9192,11 +9235,11 @@ async function analyzeCompetitors(
                 }));
                 source          = 'serper';
                 serpExtrasStore = {
-                    peopleAlsoAsk:   res.data.peopleAlsoAsk   || [],
-                    relatedSearches: res.data.relatedSearches || [],
-                    knowledgeGraph:  res.data.knowledgeGraph  || null
+                    peopleAlsoAsk:   dedupeSerpItems(mergedPaa).slice(0, 12),
+                    relatedSearches: dedupeSerpItems(mergedRelated).slice(0, 12),
+                    knowledgeGraph
                 };
-                console.log(`✅ [WarRoom-V10.0] Serper OK — ${rawResults.length} résultats | PAA: ${serpExtrasStore.peopleAlsoAsk.length}`);
+                console.log(`✅ [WarRoom-V10.0] Serper OK — ${rawResults.length} résultats uniques | domaines: ${countSerpDomains(rawResults)} | PAA: ${serpExtrasStore.peopleAlsoAsk.length}`);
             }
         } catch (e) { console.warn('[WarRoom-V10.0] Serper error:', e.message); }
     }
@@ -9289,7 +9332,7 @@ const [
                 {
                     params: {
                         token: process.env.SCRAPEDOTOKEN,
-                        q: cleanQuery,
+                        q: serpSearchQuery,
                         hl: googleLang,
                         gl: geoData.gl
                     },
@@ -9346,7 +9389,7 @@ const [
         try {
             if (!shouldRunKeywords) return null;
             const seedKeywords = [
-                cleanQuery,
+                serpSearchQuery,
                 ...relatedSearches.slice(0, 4).map(r => r?.query || r).filter(Boolean)
             ];
             const data = await fetchKeywordData(seedKeywords);
@@ -9366,7 +9409,7 @@ const [
                 {
                     params: {
                         token: process.env.SCRAPEDOTOKEN,
-                        q: cleanQuery,
+                        q: serpSearchQuery,
                         hl: googleLang,
                         gl: geoData.gl
                     },
@@ -9390,7 +9433,7 @@ const [
                 {
                     params: {
                         token: process.env.SCRAPEDOTOKEN,
-                        q: cleanQuery,
+                        q: serpSearchQuery,
                         geo: String(geoData.gl || '').toUpperCase()
                     },
                     timeout: CONFIG.TIMEOUT_MEDIUM
@@ -9413,7 +9456,7 @@ const [
                 {
                     params: {
                         token: process.env.SCRAPEDOTOKEN,
-                        q: cleanQuery,
+                        q: serpSearchQuery,
                         hl: googleLang,
                         gl: geoData.gl
                     },
@@ -9693,7 +9736,7 @@ if (shouldUseAgentReachMarketSensor()) {
                     `status=${item.status || 'UNKNOWN'} backend=${item.backend || 'unknown'} ` +
                     `query="${String(item.query || '').slice(0, 140)}" ` +
                     `url="${String(item.url || '').slice(0, 180)}" ` +
-                    `resultCount=${Number(item.resultCount || 0)} evidence=${Number(item.evidenceCount || 0)} ` +
+                    `resultCount=${Number(item.resultCount || 0)} evidence=${Number(item.evidence ?? item.evidenceCount ?? 0)} ` +
                     `reason=${item.reason || 'ok'} durationMs=${Number(item.durationMs || 0)}`
                 );
             });

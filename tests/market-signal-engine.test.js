@@ -183,6 +183,45 @@ test('customer voice patterns are quantified from social and semantic evidence',
   assert.doesNotMatch(JSON.stringify(voice), /market share|demand growth|sales growth/i);
 });
 
+test('loose semantic search evidence must match product and country before becoming customer voice', () => {
+  const model = buildMarketSignalEngine({
+    now: NOW,
+    query: 'مزيل رؤوس سوداء بتكبير 50× وإضاءة LED',
+    country: 'Libya',
+    evidenceRegistry: {
+      evidence: [
+        {
+          id: 'ev_jina_noise_1',
+          scope: 'MARKET',
+          claimType: 'JINA_SEARCH_RESULTS',
+          title: 'Jumia Maroc lanterne LED',
+          value: 'Fast delivery and customer reviews for decorative lanterns in Morocco.',
+          sourceUrl: 'https://s.jina.ai/http%3A%2F%2Fexample.com',
+          sourcePlatform: 'jina_search',
+          observedAt: NOW,
+          verificationStatus: 'PARTIAL'
+        },
+        {
+          id: 'ev_jina_relevant_1',
+          scope: 'CUSTOMER',
+          claimType: 'JINA_SEARCH_RESULTS',
+          title: 'مزيل رؤوس سوداء في ليبيا',
+          value: 'يسأل المشترون في ليبيا عن السعر والضمان ونتيجة مزيل رؤوس سوداء للبشرة الحساسة.',
+          sourceUrl: 'https://s.jina.ai/http%3A%2F%2Flocal.example',
+          sourcePlatform: 'jina_search',
+          observedAt: NOW,
+          verificationStatus: 'CONFIRMED'
+        }
+      ]
+    }
+  });
+
+  const voiceJson = JSON.stringify(model.customerVoice);
+  assert.match(voiceJson, /ev_jina_relevant_1/);
+  assert.doesNotMatch(voiceJson, /ev_jina_noise_1/);
+  assert.ok(model.signals.some(signal => signal.evidenceIds.includes('ev_jina_noise_1')));
+});
+
 test('offer intelligence patterns are quantified without inventing commercial terms', () => {
   const model = buildMarketSignalEngine({
     now: NOW,

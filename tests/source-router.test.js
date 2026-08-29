@@ -41,7 +41,7 @@ test('query variants include local review comparison and supplier discovery path
     lang: 'fr'
   });
 
-  assert.ok(variants.includes('extracteur points noirs Libya'));
+  assert.ok(variants.includes('extracteur points noirs Libye'));
   assert.ok(variants.some(item => /reviews|avis/i.test(item)));
   assert.ok(variants.some(item => /comparison|comparatif/i.test(item)));
   assert.ok(variants.some(item => /supplier wholesale/i.test(item)));
@@ -56,6 +56,7 @@ test('source router compacts long product descriptions before Agent Reach search
 
   assert.ok(variants[0].length < 80);
   assert.match(variants[0], /مزيل رؤوس سوداء/);
-  assert.match(variants[0], /Libya/);
+  assert.match(variants[0], /ليبيا/);
+  assert.doesNotMatch(variants.join(' '), /Libya/);
   assert.doesNotMatch(variants.join(' '), /مزود بالضوء الأزرق، شاشة للبطارية/);
 });
