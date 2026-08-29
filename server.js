@@ -8297,7 +8297,8 @@ async function fetchCompetitorBusinessProfile(competitor = {}, lang = 'fr') {
 }
 
 async function enrichTopCompetitorsBusiness(competitors = [], lang = 'fr') {
-    const targets = competitors.slice(0, 10);
+    const limit = Math.max(1, Number(process.env.COMPETITOR_BUSINESS_PROFILE_LIMIT || 4));
+    const targets = competitors.slice(0, limit);
     const results = new Array(targets.length);
     let cursor = 0;
     const worker = async () => {
@@ -9161,11 +9162,12 @@ async function analyzeCompetitors(
             return '';
         }
     }).filter(Boolean)).size;
+    const serpFastTimeoutMs = Math.max(3500, Number(process.env.COMPETITOR_SERP_TIMEOUT_MS || 9000));
     const serpFanoutQueries = [...new Set([
         serpSearchQuery,
         ...(searchQueryPlan.variants || []),
         reportQuery
-    ].filter(Boolean).map(q => cleanProofText(q, 140)))].slice(0, Number(process.env.COMPETITOR_SERP_FANOUT || 4));
+    ].filter(Boolean).map(q => cleanProofText(q, 140)))].slice(0, Number(process.env.COMPETITOR_SERP_FANOUT || 2));
 
     // ── 4a — URL directe ──────────────────────────────────────
     const isUrlTarget = /^https?:\/\/[a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,}/.test(cleanQuery.trim());
@@ -9209,10 +9211,10 @@ async function analyzeCompetitors(
                                 'X-API-KEY':    process.env.SERPER_API_KEY,
                                 'Content-Type': 'application/json'
                             },
-                            timeout: CONFIG.TIMEOUT_MEDIUM
+                            timeout: serpFastTimeoutMs
                         }
                     ),
-                    { context: 'Serper-WarRoom' }
+                    { context: 'Serper-WarRoom', maxRetries: Number(process.env.COMPETITOR_SERP_RETRIES || 0) }
                 );
                 const organic = Array.isArray(res.data?.organic) ? res.data.organic : [];
                 mergedOrganic.push(...organic);
@@ -9258,9 +9260,9 @@ async function analyzeCompetitors(
                         api_key: process.env.SERPAPI_KEY,
                         engine:  'google'
                     },
-                    timeout: CONFIG.TIMEOUT_MEDIUM
-                }),
-                { context: 'SerpAPI-WarRoom' }
+                        timeout: serpFastTimeoutMs
+                    }),
+                { context: 'SerpAPI-WarRoom', maxRetries: Number(process.env.COMPETITOR_SERPAPI_RETRIES || 0) }
             );
             if (res.data?.organic_results?.length) {
                 rawResults      = res.data.organic_results;
@@ -9309,6 +9311,7 @@ const shouldRunKeywords = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_KEYWO
 const shouldRunMaps = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_MAPS;
 const shouldRunTrends = !CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_TRENDS;
 const shouldRunShopping = isProductIntent && (!CONFIG.INTEL_ECO_MODE || CONFIG.SCRAPEDO_ENABLE_SHOPPING);
+const optionalProviderTimeoutMs = Math.max(3500, Number(process.env.COMPETITOR_OPTIONAL_PROVIDER_TIMEOUT_MS || 9000));
 
 console.log(
     `[WarRoom-V10.0] COST-MODE eco=${CONFIG.INTEL_ECO_MODE} | scrapeSearch=${shouldRunSearchEnrich} | kw=${shouldRunKeywords} | maps=${shouldRunMaps} | trends=${shouldRunTrends} | shopping=${shouldRunShopping}`
@@ -9336,7 +9339,7 @@ const [
                         hl: googleLang,
                         gl: geoData.gl
                     },
-                    timeout: CONFIG.TIMEOUT_MEDIUM
+                    timeout: optionalProviderTimeoutMs
                 }
             );
 
@@ -9413,7 +9416,7 @@ const [
                         hl: googleLang,
                         gl: geoData.gl
                     },
-                    timeout: CONFIG.TIMEOUT_MEDIUM
+                    timeout: optionalProviderTimeoutMs
                 }
             );
 
@@ -9436,7 +9439,7 @@ const [
                         q: serpSearchQuery,
                         geo: String(geoData.gl || '').toUpperCase()
                     },
-                    timeout: CONFIG.TIMEOUT_MEDIUM
+                    timeout: optionalProviderTimeoutMs
                 }
             );
 
@@ -9460,7 +9463,7 @@ const [
                         hl: googleLang,
                         gl: geoData.gl
                     },
-                    timeout: CONFIG.TIMEOUT_MEDIUM
+                    timeout: optionalProviderTimeoutMs
                 }
             );
 
@@ -9491,7 +9494,7 @@ const [
                 },
                 {
                     headers: { 'Authorization': `Bearer ${gscAccessToken}` },
-                    timeout: CONFIG.TIMEOUT_MEDIUM
+                    timeout: optionalProviderTimeoutMs
                 }
             );
 
@@ -9717,13 +9720,35 @@ if (shouldUseAgentReachMarketSensor()) {
     const sensorFeeds = marketDiscoveryPlan.railwayPayload.feeds || [];
     if (sensorUrls.length || sensorSearches.length || sensorFeeds.length) {
         try {
-            agentReachMarketEvidence = await runAgentReachMarketSensorOnRailway({
+            const sensorTimeoutMs = Math.max(4000, Number(process.env.AGENT_REACH_SENSOR_TIMEOUT_MS || 12000));
+            const sensorPromise = runAgentReachMarketSensorOnRailway({
                 ...marketDiscoveryPlan.railwayPayload,
                 clientAnalysisId,
                 requestId,
                 purpose: 'competitor-market-sensor',
                 marketDiscoveryPlan
-            }, Number(process.env.AGENT_REACH_SENSOR_TIMEOUT_MS || 90000));
+            }, sensorTimeoutMs + 2500);
+            sensorPromise.catch(error => {
+                console.warn(`[WarRoom-V10.0] Agent Reach background error: ${error.message}`);
+            });
+            agentReachMarketEvidence = await Promise.race([
+                sensorPromise,
+                new Promise(resolve => setTimeout(() => resolve({
+                    counts: { evidence: 0, unavailable: 1 },
+                    channelDiagnostics: [{
+                        channel: 'agent-reach',
+                        provider: 'railway',
+                        backend: 'market-sensor',
+                        status: 'TIMEOUT',
+                        reason: 'soft_timeout_non_blocking',
+                        resultCount: 0,
+                        evidence: 0,
+                        durationMs: sensorTimeoutMs
+                    }],
+                    evidenceRegistry: { evidence: [] },
+                    unavailable: ['agent_reach_soft_timeout']
+                }), sensorTimeoutMs))
+            ]);
             console.log(
                 `[WarRoom-V10.0] Agent Reach sensor evidence=${agentReachMarketEvidence?.counts?.evidence || 0} unavailable=${agentReachMarketEvidence?.counts?.unavailable || 0}`
             );
@@ -14701,7 +14726,7 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
 
         // 2. Appel du moteur d'analyse stratégique
         // Timeout court: la route ne doit jamais laisser l'utilisateur attendre indéfiniment.
-        const ROUTE_TIMEOUT  = 45000;
+        const ROUTE_TIMEOUT  = Math.max(45000, Number(process.env.COMPETITOR_ROUTE_TIMEOUT_MS || 85000));
         const timeoutPromise = new Promise((_, reject) =>
             setTimeout(
                 () => reject(new Error('ROUTE_TIMEOUT')),

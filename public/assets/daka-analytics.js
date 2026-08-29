@@ -3,14 +3,23 @@
   window.__dakaAnalyticsLoaded = true;
 
   function authUser(){try{return window.currentAuthUser||null}catch(_){return null}}
+  function apiBase(){
+    try{
+      if(window.CONFIG&&window.CONFIG.API_BASE_URL)return String(window.CONFIG.API_BASE_URL).replace(/\/+$/,'');
+      if(window.DAKA_API_BASE_URL)return String(window.DAKA_API_BASE_URL).replace(/\/+$/,'');
+      if(location.hostname.indexOf('localhost')>=0)return 'http://localhost:10000';
+    }catch(_){}
+    return 'https://seobackend-f81n.onrender.com';
+  }
 
   function send(type,data){
     try{
       const user=authUser();
       const payload={type,path:location.pathname,domain:location.hostname,title:document.title,userId:user&&user.id||null,email:user&&user.email||null,data:data||{},ts:Date.now()};
       const body=JSON.stringify(payload);
-      if(navigator.sendBeacon){navigator.sendBeacon('/api/track',new Blob([body],{type:'application/json'}));return;}
-      fetch('/api/track',{method:'POST',headers:{'Content-Type':'application/json'},body,keepalive:true}).catch(function(){});
+      const endpoint=apiBase()+'/api/track';
+      if(navigator.sendBeacon){navigator.sendBeacon(endpoint,new Blob([body],{type:'application/json'}));return;}
+      fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body,keepalive:true,mode:'cors',credentials:'omit'}).catch(function(){});
     }catch(_){}
   }
 
