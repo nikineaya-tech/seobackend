@@ -1270,6 +1270,23 @@
 
   function renderStrategicStudies(data) {
     const legacy = data?.competitorIntelligence?.legacyStudies || data?.legacyStudies || {};
+    const currentLang = lang();
+    const isAr = currentLang === 'ar';
+    const isEn = currentLang === 'en';
+    const workshopModel = data?.frameworkWorkshops || data?.competitorIntelligence?.frameworkWorkshops || null;
+    const workshopHtml = workshopModel && Array.isArray(workshopModel.workshops) ? `
+      <article class="daka-comp-study-card">
+        <h4>${esc(workshopModel.label || (isAr ? 'ورشات استراتيجية بسيطة' : isEn ? 'Simple strategy workshops' : 'Ateliers stratégiques simples'))}</h4>
+        <p>${esc(workshopModel.disclaimer || (isAr ? 'هذه فرضيات عمل وليست حقائق سوق مثبتة.' : isEn ? 'Working hypotheses, not proven market facts.' : 'Hypothèses de travail, pas des faits marché prouvés.'))}</p>
+        <div class="daka-comp-study-grid">
+          ${workshopModel.workshops.slice(0, 4).map((workshop) => `
+            <div class="daka-comp-study-subcard">
+              <strong>${esc(workshop.title || workshop.key || '')}</strong>
+              ${bullets((workshop.cards || []).slice(0, 4).map(card => `${card.label || ''}: ${card.guide || ''}`), 'neutral')}
+            </div>
+          `).join('')}
+        </div>
+      </article>` : '';
     const frameworkBlocked = data?.frameworkPolicy?.status === 'INSUFFICIENT_EVIDENCE' ||
       data?.marketDynamics?.frameworkStatus === 'INSUFFICIENT_EVIDENCE' ||
       data?.swot?.status === 'INSUFFICIENT_EVIDENCE' ||
@@ -1290,8 +1307,8 @@
       ['keywordStrategy', extraCopy('keywordStrategy')],
       ['actionRoadmap', extraCopy('roadmap')]
     ].filter(([key]) => !blockedKeys.has(key) && (studyHasValue(data?.[key]) || studyHasValue(legacy?.[key])));
-    if (!studies.length) return '';
-    const body = `<div class="daka-comp-study-grid">${studies.map(([key, title]) => `
+    if (!studies.length && !workshopHtml) return '';
+    const body = `${workshopHtml}<div class="daka-comp-study-grid">${studies.map(([key, title]) => `
       <article class="daka-comp-study-card">
         <h4>${esc(title)}</h4>
         ${renderStudyValue(data[key] || legacy[key])}

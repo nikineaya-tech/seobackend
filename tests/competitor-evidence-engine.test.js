@@ -173,6 +173,11 @@ test('advanced frameworks are suppressed when market coverage is thin', () => {
   assert.equal(clean.marketDynamics.frameworkStatus, STATUS.INSUFFICIENT_EVIDENCE);
   assert.equal(clean.swot.status, STATUS.INSUFFICIENT_EVIDENCE);
   assert.equal(clean.blueOceanStrategy.status, STATUS.INSUFFICIENT_EVIDENCE);
+  assert.equal(clean.frameworkPolicy.workshopMode, true);
+  assert.equal(clean.frameworkWorkshops.mode, 'PROJECTED_WORKSHOP');
+  assert.equal(clean.frameworkWorkshops.status, STATUS.RECOMMENDED);
+  assert.deepEqual(clean.frameworkWorkshops.workshops.map(item => item.key), ['swot', 'blue_ocean', 'porter', 'jtbd_kano_aarrr']);
+  assert.match(clean.frameworkWorkshops.disclaimer, /workshops|not proven market facts/i);
   assert.doesNotMatch(text, /Competition is moderate|supplier power is high|unique skincare education experience/i);
 });
 

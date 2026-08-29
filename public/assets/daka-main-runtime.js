@@ -4471,6 +4471,7 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
     esc: escapeHtml
 });
 const marketCoverageHtml = renderMarketCoveragePanel(data, { isAr, isEn });
+const frameworkWorkshopsHtml = renderFrameworkWorkshopsPanel(data, { isAr, isEn });
 const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
 
     // ─── HELPERS ───────────────────────────────────────────────────
@@ -5674,6 +5675,7 @@ const reportLabels = getReportLabels({ isAr, isEn });
         ${renderExecutiveSummary(data, 'competitors', { isAr, isEn })}
         ${renderDiscoveryInsights(data, { isAr, isEn })}
         ${renderReportSection('coverage', reportLabels.coverage, reportLabels.coverageSub, 'fa-shield-halved', marketCoverageHtml, { isAr, isEn, open: true })}
+        ${renderReportSection('framework-workshops', reportLabels.frameworkWorkshops, reportLabels.frameworkWorkshopsSub, 'fa-chalkboard-user', frameworkWorkshopsHtml, { isAr, isEn, open: true })}
         ${renderReportSection('comments-reviews', reportLabels.commentsReviews, reportLabels.commentsReviewsSub, 'fa-comments', commentsReviewsHtml, { isAr, isEn, open: true })}
         ${renderCompetitorDecisionLayerV2(data, { isAr, isEn })}
         ${renderReportSection('market', reportLabels.market, reportLabels.marketSub, 'fa-compass', `
@@ -12546,6 +12548,8 @@ function getReportLabels(opts = {}) {
         planSub: 'ملخص عملي لما يجب تغييره في العرض، الرسالة، والثقة.',
         coverage: 'تغطية ذكاء السوق',
         coverageSub: 'ما تم تغطيته فعلا، ما بقي ضعيفا، وما لا يجب اعتباره حقيقة بعد.',
+        frameworkWorkshops: 'ورشات استراتيجية بسيطة',
+        frameworkWorkshopsSub: 'SWOT وOcean Blue وباقي النماذج كفرضيات عمل، لا كحقائق سوق مثبتة.',
         commentsReviews: 'التعليقات والآراء',
         commentsReviewsSub: 'صوت العميل المرصود فقط: مراجعات، أسئلة، اعتراضات وتعليقات من مصادر قابلة للفحص.',
         competitors: 'المنافسون الذين يكشفون فرصة السوق',
@@ -12573,6 +12577,8 @@ function getReportLabels(opts = {}) {
         planSub: 'A practical summary of what to change in offer, message, and trust.',
         coverage: 'Market intelligence coverage',
         coverageSub: 'What was really covered, what remains weak, and what must not be treated as fact yet.',
+        frameworkWorkshops: 'Simple strategy workshops',
+        frameworkWorkshopsSub: 'SWOT, Blue Ocean and other models as working hypotheses, not proven market facts.',
         commentsReviews: 'Comments and reviews',
         commentsReviewsSub: 'Observed customer voice only: reviews, questions, objections and comments from traceable sources.',
         competitors: 'Competitors that reveal the market opportunity',
@@ -12600,6 +12606,8 @@ function getReportLabels(opts = {}) {
         planSub: 'Le résumé opérationnel de ce qu’il faut changer dans l’offre, le message et la confiance.',
         coverage: 'Couverture intelligence marché',
         coverageSub: 'Ce qui est vraiment couvert, ce qui reste faible, et ce qu’il ne faut pas encore traiter comme un fait.',
+        frameworkWorkshops: 'Ateliers stratégiques simples',
+        frameworkWorkshopsSub: 'SWOT, Ocean Blue et autres modèles comme hypothèses de travail, pas comme faits marché.',
         commentsReviews: 'Commentaires et avis',
         commentsReviewsSub: 'Voix client observée uniquement : avis, questions, objections et commentaires issus de sources vérifiables.',
         competitors: 'Les concurrents qui révèlent votre opportunité',
@@ -13212,6 +13220,82 @@ function renderMarketCoveragePanel(data, opts = {}) {
         </div>
         ${missing.length ? `<div style="border:1px dashed rgba(251,113,133,.28);background:rgba(127,29,29,.13);border-radius:15px;padding:13px;margin-bottom:15px;"><strong style="display:block;color:#fecdd3;font-size:.8rem;margin-bottom:8px;">${safe(copy.missing)}</strong><div style="display:flex;gap:7px;flex-wrap:wrap;">${missing.map(item => `<span style="color:#fecdd3;background:rgba(251,113,133,.12);border-radius:999px;padding:5px 9px;font-size:.68rem;font-weight:800;" dir="auto">${safe(item)}</span>`).join('')}</div></div>` : ''}
         ${sectionCards ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;">${sectionCards}</div>` : ''}
+    </section>`;
+}
+
+function renderFrameworkWorkshopsPanel(data, opts = {}) {
+    const isAr = opts.isAr ?? STATE.currentLang === 'ar';
+    const isEn = opts.isEn ?? STATE.currentLang === 'en';
+    const safe = typeof escapeHtml === 'function' ? escapeHtml : String;
+    const arr = (value) => Array.isArray(value) ? value.filter(Boolean) : [];
+    const text = (value, fallback = '') => {
+        if (value === null || value === undefined) return fallback;
+        if (typeof value === 'string' || typeof value === 'number') return String(value).trim() || fallback;
+        if (typeof value === 'object') return value.label || value.title || value.guide || fallback;
+        return String(value || '').trim() || fallback;
+    };
+    const model =
+        data?.frameworkWorkshops ||
+        data?.mainReport?.frameworkWorkshops ||
+        data?.decisionReportV2?.mainReport?.frameworkWorkshops ||
+        data?.reportV2?.mainReport?.frameworkWorkshops ||
+        null;
+    if (!model || typeof model !== 'object') return '';
+    const copy = isAr ? {
+        title: 'ورشات وليست حقائق',
+        subtitle: 'هذه البطاقات تساعد على التفكير في المشروع بلغة بسيطة. القرار النهائي يحتاج اختبارا أو دليلا.',
+        status: 'فرضية عمل',
+        proof: 'الدليل منفصل',
+        action: 'الخطوة العملية'
+    } : isEn ? {
+        title: 'Workshops, not facts',
+        subtitle: 'These cards help think through the project in plain language. Final decisions still need proof or a test.',
+        status: 'Working hypothesis',
+        proof: 'Evidence is separate',
+        action: 'Practical step'
+    } : {
+        title: 'Ateliers, pas des faits',
+        subtitle: 'Ces cartes aident à réfléchir au projet avec des mots simples. La décision finale demande une preuve ou un test.',
+        status: 'Hypothèse de travail',
+        proof: 'La preuve est séparée',
+        action: 'Étape pratique'
+    };
+    const colors = ['#67e8f9', '#a78bfa', '#22c55e', '#f59e0b', '#fb7185'];
+    const workshops = arr(model.workshops).slice(0, 6);
+    const headerMeta = [
+        model.subject ? safe(model.subject) : '',
+        model.market ? safe(model.market) : '',
+        model.evidenceStatus ? safe(copy.proof) : ''
+    ].filter(Boolean).join(' · ');
+    const cards = workshops.map((workshop, wi) => {
+        const color = colors[wi % colors.length];
+        const items = arr(workshop.cards).slice(0, 5).map((card) => `
+            <article style="border:1px solid ${color}2e;background:rgba(15,23,42,.68);border-radius:14px;padding:13px;min-height:116px;">
+                <strong style="display:block;color:${color};font-size:.78rem;margin-bottom:8px;" dir="auto">${safe(text(card.label))}</strong>
+                <p style="margin:0;color:#cbd5e1;font-size:.8rem;line-height:1.58;" dir="auto">${safe(text(card.guide))}</p>
+            </article>`).join('');
+        return `
+        <section style="border:1px solid rgba(148,163,184,.14);background:linear-gradient(145deg,rgba(2,6,23,.72),rgba(15,23,42,.54));border-radius:18px;padding:15px;">
+            <header style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;">
+                <h3 style="margin:0;color:#f8fafc;font-size:1rem;">${safe(text(workshop.title))}</h3>
+                <span style="color:${color};background:${color}17;border:1px solid ${color}33;border-radius:999px;padding:5px 9px;font-size:.65rem;font-weight:950;">${safe(copy.status)}</span>
+            </header>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:10px;">${items}</div>
+        </section>`;
+    }).join('');
+    return `
+    <section class="daka-framework-workshops-panel" data-export-feature="framework-workshops" dir="${isAr ? 'rtl' : 'ltr'}">
+        <header style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:15px;flex-wrap:wrap;">
+            <div>
+                <span style="display:inline-flex;align-items:center;gap:8px;color:#67e8f9;font-size:.72rem;font-weight:950;text-transform:uppercase;"><i class="fas fa-chalkboard-user"></i>${safe(copy.title)}</span>
+                <p style="margin:8px 0 0;color:#9fb3cc;font-size:.86rem;line-height:1.55;max-width:840px;">${safe(model.disclaimer || copy.subtitle)}</p>
+                ${headerMeta ? `<small style="display:block;color:#64748b;margin-top:7px;" dir="auto">${headerMeta}</small>` : ''}
+            </div>
+            <strong style="color:#fbbf24;background:rgba(251,191,36,.11);border:1px solid rgba(251,191,36,.28);border-radius:999px;padding:8px 13px;font-size:.72rem;">${safe(model.mode || 'PROJECTED_WORKSHOP')}</strong>
+        </header>
+        ${model.evidenceNote ? `<div style="border:1px dashed rgba(103,232,249,.26);background:rgba(8,145,178,.08);border-radius:15px;padding:12px;margin-bottom:14px;color:#bae6fd;font-size:.82rem;line-height:1.55;" dir="auto">${safe(model.evidenceNote)}</div>` : ''}
+        <div style="display:grid;grid-template-columns:1fr;gap:13px;">${cards}</div>
+        ${model.action ? `<p style="margin:14px 0 0;color:#d8b4fe;font-size:.84rem;font-weight:800;" dir="auto"><i class="fas fa-flask"></i> ${safe(copy.action)}: ${safe(model.action)}</p>` : ''}
     </section>`;
 }
 

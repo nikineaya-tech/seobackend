@@ -13,11 +13,11 @@ const MAX_YOUTUBE_SEARCHES = Math.max(0, Number(process.env.AGENT_REACH_MAX_YOUT
 const MAX_YOUTUBE_RESULTS = Math.max(1, Number(process.env.AGENT_REACH_MAX_YOUTUBE_RESULTS || 5));
 const MAX_TEXT_CHARS = Math.max(800, Number(process.env.AGENT_REACH_MAX_TEXT_CHARS || 5000));
 const FETCH_TIMEOUT_MS = Math.max(3000, Number(process.env.AGENT_REACH_FETCH_TIMEOUT_MS || 25000));
-const JINA_API_KEY = String(process.env.JINA_API_KEY || '').trim();
 
 function jinaAuthHeaders() {
-  return JINA_API_KEY
-    ? { Authorization: `Bearer ${JINA_API_KEY}` }
+  const apiKey = String(process.env.JINA_API_KEY || '').trim();
+  return apiKey
+    ? { Authorization: `Bearer ${apiKey}` }
     : {};
 }
 function arr(value) {
@@ -133,17 +133,11 @@ async function searchViaJina(query) {
     throw new Error('Empty search query');
   }
 
-  if (!JINA_API_KEY) {
-    throw new Error('missing_jina_api_key');
-  }
-
   return fetchText(
     `https://s.jina.ai/${encodeURIComponent(cleanQuery)}`,
     {
       accept: 'text/plain',
-      headers: {
-        Authorization: `Bearer ${JINA_API_KEY}`
-      }
+      headers: jinaAuthHeaders()
     }
   );
 }
@@ -261,28 +255,15 @@ async function collectSearchEvidence(searchQuery, context = {}) {
   try {
     const read = await searchViaJina(query);
 
-    if (read.authRequired) {
-      return {
-        unavailable: {
-          query,
-          provider: 'jina',
-          channel: 'search',
-          backend: 'jina-search',
-          status: 'AUTH_REQUIRED',
-          reason: read.reason || 'jina_search_auth_failed'
-        },
-        evidence: null
-      };
-    }
-
     if (!read.ok || !read.text) {
+      const authRequired = read.status === 401 || read.status === 403;
       return {
         unavailable: {
           query,
           provider: 'jina',
           channel: 'search',
           backend: 'jina-search',
-          status: 'FAILED',
+          status: authRequired ? 'AUTH_REQUIRED' : 'FAILED',
           reason: read.reason || `http_${read.status || 'unknown'}`
         },
         evidence: null
@@ -310,7 +291,7 @@ async function collectSearchEvidence(searchQuery, context = {}) {
         provider: 'jina',
         channel: 'search',
         backend: 'jina-search',
-        status: 'FAILED',
+        status: /401|403|auth|unauthor/i.test(String(error.message || '')) ? 'AUTH_REQUIRED' : 'FAILED',
         reason: clean(error.message, 220)
       },
       evidence: null
@@ -460,6 +441,35 @@ function dedupeEvidence(evidence = []) {
   });
 }
 
+function pushDiagnostic(channelDiagnostics, row = {}) {
+  const item = {
+    provider: row.provider || null,
+    channel: row.channel || row.provider || 'unknown',
+    backend: row.backend || null,
+    query: clean(row.query, 180) || '',
+    url: clean(row.url || row.sourceUrl, 900) || '',
+    resultCount: Number(row.resultCount || 0),
+    evidence: Number(row.evidence || 0),
+    status: row.status || 'UNKNOWN',
+    reason: row.reason || (row.status === 'READY' ? 'ok' : 'unknown'),
+    durationMs: Number(row.durationMs || 0)
+  };
+  channelDiagnostics.push(item);
+  return item;
+}
+
+function summarizeDiagnostics(channelDiagnostics = []) {
+  return channelDiagnostics.reduce((acc, item) => {
+    const key = item.channel || 'unknown';
+    if (!acc[key]) acc[key] = { evidence: 0, unavailable: 0, ready: 0, status: 'UNKNOWN' };
+    acc[key].evidence += Number(item.evidence || 0);
+    if (item.status !== 'READY') acc[key].unavailable += 1;
+    if (item.status === 'READY') acc[key].ready += 1;
+    acc[key].status = acc[key].ready > 0 ? 'READY' : item.status || acc[key].status;
+    return acc;
+  }, {});
+}
+
 async function collectAgentReachMarketEvidence(payload = {}) {
   const startedAt = Date.now();
   const context = {
@@ -473,42 +483,96 @@ async function collectAgentReachMarketEvidence(payload = {}) {
   const youtubeSearches = arr(payload.youtubeSearches || payload.youtubeQueries).map(item => clean(item, 180)).filter(Boolean).slice(0, MAX_YOUTUBE_SEARCHES);
   const evidence = [];
   const unavailable = [];
+  const channelDiagnostics = [];
 
   for (const exaQuery of exaSearches) {
+    const channelStarted = Date.now();
     const result = await collectExaSearchEvidence(exaQuery, context);
     evidence.push(...arr(result.evidence));
     if (result.unavailable) unavailable.push(result.unavailable);
+    pushDiagnostic(channelDiagnostics, {
+      ...(result.unavailable || {}),
+      provider: 'exa',
+      channel: 'exa',
+      backend: 'exa-search',
+      query: exaQuery,
+      status: result.unavailable ? (result.unavailable.status || 'UNAVAILABLE') : 'READY',
+      reason: result.unavailable?.reason || 'ok',
+      resultCount: arr(result.evidence).length,
+      evidence: arr(result.evidence).length,
+      durationMs: Date.now() - channelStarted
+    });
   }
 
   for (const youtubeQuery of youtubeSearches) {
+    const channelStarted = Date.now();
     const result = await collectYouTubeSearchEvidence(youtubeQuery, context);
     evidence.push(...arr(result.evidence));
     if (result.unavailable) unavailable.push(result.unavailable);
+    pushDiagnostic(channelDiagnostics, {
+      ...(result.unavailable || {}),
+      provider: 'youtube',
+      channel: 'youtube',
+      backend: 'youtube-data-api',
+      query: youtubeQuery,
+      status: result.unavailable ? (result.unavailable.status || 'UNAVAILABLE') : 'READY',
+      reason: result.unavailable?.reason || 'ok',
+      resultCount: arr(result.evidence).length,
+      evidence: arr(result.evidence).length,
+      durationMs: Date.now() - channelStarted
+    });
   }
 
- const searchResults = await Promise.allSettled(
-  searches.map(search =>
-    collectSearchEvidence(search, context)
-  )
-);
-
-for (const settled of searchResults) {
-  if (settled.status === 'fulfilled') {
-    const result = settled.value;
-
-    if (result?.evidence) {
-      evidence.push(result.evidence);
-    }
-
-    if (result?.unavailable) {
-      unavailable.push(result.unavailable);
-    }
-  } else {
-    unavailable.push({
+let jinaSearchAuthFailed = false;
+for (const search of searches) {
+  const channelStarted = Date.now();
+  if (jinaSearchAuthFailed) {
+    const blocked = {
+      query: search,
       provider: 'jina',
       channel: 'search',
+      backend: 'jina-search',
+      status: 'AUTH_REQUIRED',
+      reason: 'jina_search_auth_failed_after_first_attempt'
+    };
+    unavailable.push(blocked);
+    pushDiagnostic(channelDiagnostics, {
+      ...blocked,
+      durationMs: Date.now() - channelStarted
+    });
+    continue;
+  }
+  try {
+    const result = await collectSearchEvidence(search, context);
+    if (result?.evidence) evidence.push(result.evidence);
+    if (result?.unavailable) unavailable.push(result.unavailable);
+    const status = result?.unavailable ? (result.unavailable.status || 'FAILED') : 'READY';
+    if (status === 'AUTH_REQUIRED') jinaSearchAuthFailed = true;
+    pushDiagnostic(channelDiagnostics, {
+      ...(result?.unavailable || {}),
+      provider: 'jina',
+      channel: 'search',
+      backend: 'jina-search',
+      query: search,
+      status,
+      reason: result?.unavailable?.reason || 'ok',
+      resultCount: result?.evidence ? 1 : 0,
+      evidence: result?.evidence ? 1 : 0,
+      durationMs: Date.now() - channelStarted
+    });
+  } catch (error) {
+    const failed = {
+      provider: 'jina',
+      channel: 'search',
+      backend: 'jina-search',
       status: 'FAILED',
-      reason: clean(settled.reason?.message || 'search_failed', 220)
+      reason: clean(error?.message || 'search_failed', 220)
+    };
+    unavailable.push(failed);
+    pushDiagnostic(channelDiagnostics, {
+      ...failed,
+      query: search,
+      durationMs: Date.now() - channelStarted
     });
   }
 }
@@ -530,13 +594,27 @@ for (const settled of urlResults) {
     if (result?.unavailable) {
       unavailable.push(result.unavailable);
     }
+    const platform = result?.evidence?.sourcePlatform || platformOf(result?.unavailable?.url || '');
+    pushDiagnostic(channelDiagnostics, {
+      ...(result?.unavailable || {}),
+      provider: 'jina',
+      channel: `${platform || 'web'}-url`,
+      backend: 'jina-reader',
+      url: result?.evidence?.sourceUrl || result?.unavailable?.url || '',
+      status: result?.unavailable ? 'UNAVAILABLE' : 'READY',
+      reason: result?.unavailable?.reason || 'ok',
+      resultCount: result?.evidence ? 1 : 0,
+      evidence: result?.evidence ? 1 : 0
+    });
   } else {
-    unavailable.push({
+    const failed = {
       provider: 'jina',
       channel: 'web',
       status: 'FAILED',
       reason: clean(settled.reason?.message || 'url_read_failed', 220)
-    });
+    };
+    unavailable.push(failed);
+    pushDiagnostic(channelDiagnostics, failed);
   }
 }
 const MARKET_SENSOR_BUDGET_MS = Math.max(
@@ -544,9 +622,22 @@ const MARKET_SENSOR_BUDGET_MS = Math.max(
   Number(process.env.AGENT_REACH_TOTAL_TIMEOUT_MS || 18000)
 );
   for (const feed of feeds) {
+    const channelStarted = Date.now();
     const result = await collectFeedEvidence(feed, context);
     evidence.push(...arr(result.evidence));
     if (result.unavailable) unavailable.push(result.unavailable);
+    pushDiagnostic(channelDiagnostics, {
+      ...(result.unavailable || {}),
+      provider: 'rss',
+      channel: 'rss',
+      backend: 'rss-parser',
+      url: feed,
+      status: result.unavailable ? (result.unavailable.status || 'UNAVAILABLE') : 'READY',
+      reason: result.unavailable?.reason || 'ok',
+      resultCount: arr(result.evidence).length,
+      evidence: arr(result.evidence).length,
+      durationMs: Date.now() - channelStarted
+    });
   }
 
   const normalizedEvidence = dedupeEvidence(evidence);
@@ -572,6 +663,8 @@ const MARKET_SENSOR_BUDGET_MS = Math.max(
       evidence: normalizedEvidence
     },
     unavailable,
+    channelDiagnostics,
+    channelSummary: summarizeDiagnostics(channelDiagnostics),
     counts: {
       exaSearches: exaSearches.length,
       searches: searches.length,

@@ -64,6 +64,7 @@ function getReportFeatureCopy(lang = STATE.currentLang || 'fr') {
         pricing: ['Pricing', 'Prix, perception et marge', 'fa-tags'],
         trust: ['Trust', 'Preuves, garanties et objections', 'fa-shield-halved'],
         coverage: ['Couverture', 'Ce qui est prouvé, faible ou absent', 'fa-shield-halved'],
+        'framework-workshops': ['Ateliers', 'SWOT, Ocean Blue et stratégies en hypothèses simples', 'fa-chalkboard-user'],
         'comments-reviews': ['Commentaires & avis', 'Voix client observée et sources terrain', 'fa-comments'],
         backlinks: ['Backlinks', 'Liens et opportunités prêts à consulter', 'fa-link'],
         details: ['Détails', 'Le dossier complet d’intelligence', 'fa-folder-open']
@@ -78,6 +79,7 @@ function getReportFeatureCopy(lang = STATE.currentLang || 'fr') {
         pricing: ['السعر', 'السعر والإدراك والهامش', 'fa-tags'],
         trust: ['الثقة', 'الأدلة والضمانات والاعتراضات', 'fa-shield-halved'],
         coverage: ['التغطية', 'ما هو مثبت أو ضعيف أو ناقص', 'fa-shield-halved'],
+        'framework-workshops': ['الورشات', 'SWOT وOcean Blue كنماذج تفكير بسيطة', 'fa-chalkboard-user'],
         'comments-reviews': ['التعليقات والآراء', 'صوت العميل المرصود ومصادره', 'fa-comments'],
         backlinks: ['الروابط الخلفية', 'روابط وفرص جاهزة للفحص', 'fa-link'],
         details: ['التفاصيل', 'ملف التحليل الكامل', 'fa-folder-open']
@@ -92,6 +94,7 @@ function getReportFeatureCopy(lang = STATE.currentLang || 'fr') {
         pricing: ['Pricing', 'Price, perception, and margin', 'fa-tags'],
         trust: ['Trust', 'Proof, guarantees, and objections', 'fa-shield-halved'],
         coverage: ['Coverage', 'What is proven, weak, or missing', 'fa-shield-halved'],
+        'framework-workshops': ['Workshops', 'SWOT, Blue Ocean and strategy models as simple hypotheses', 'fa-chalkboard-user'],
         'comments-reviews': ['Comments & reviews', 'Observed customer voice and field sources', 'fa-comments'],
         backlinks: ['Backlinks', 'Links and opportunities ready to review', 'fa-link'],
         details: ['Details', 'The complete intelligence dossier', 'fa-folder-open']
@@ -135,6 +138,7 @@ function enhanceReportNavigation(container) {
             : sectionKey === 'money' ? 'pricing'
             : sectionKey === 'proof' ? 'trust'
             : sectionKey === 'coverage' ? 'coverage'
+            : sectionKey === 'framework-workshops' ? 'framework-workshops'
             : sectionKey === 'comments-reviews' ? 'comments-reviews'
             : sectionKey === 'backlinks' ? 'backlinks'
             : sectionKey === 'audit' ? 'funnel'
