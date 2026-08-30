@@ -52,7 +52,7 @@ const {
 } = require('docx');
 const { createClient } = require('@supabase/supabase-js');
 const { registerAuthRoutes } = require('./supabase-auth-routes');
-const { registerReportRoutes } = require('./supabase-report-routes');
+const { registerReportRoutes, saveGeneratedReportForUser } = require('./supabase-report-routes');
 const { registerUserApiKeyRoutes } = require('./user-api-key-routes');
 const {
   buildAngleDrivenStpModel,
@@ -3298,6 +3298,8 @@ function normalizeCompetitorMarketSearchQuery(query = '', reportQuery = '', geo 
     return {
         original: raw,
         report: localized,
+        base,
+        detectedHead: detectedHead || '',
         primary,
         variants,
         reason: hasLongDescription ? 'LONG_PRODUCT_DESCRIPTION_COMPACTED_FOR_SERP' : 'QUERY_READY_FOR_SERP'
@@ -4881,6 +4883,8 @@ function safeUserContextFromBody(body = {}) {
   const ctx = body?.context || body?.businessContext || {};
   return {
     offer: cleanProofText(ctx.offer || body.offer, 180),
+    niche: cleanProofText(ctx.niche || body.niche, 180),
+    productName: cleanProofText(ctx.productName || body.productName || body.name, 160),
     productDescription: cleanProofText(ctx.productDescription || body.productDescription, 900),
     audience: cleanProofText(ctx.audience || body.audience, 180),
     objective: cleanProofText(ctx.objective || body.objective, 160),
@@ -4897,14 +4901,60 @@ function safeUserContextFromBody(body = {}) {
   };
 }
 
+function buildCompetitorProductIdentity(body = {}, safeContext = {}, geo = '', lang = 'fr') {
+  const rawQuery = cleanProofText(body.query, 900);
+  const rawProductName = cleanProofText(body.productName || body.name || safeContext.productName, 160);
+  const rawNiche = cleanProofText(body.niche || safeContext.niche, 180);
+  const rawDescription = cleanProofText(body.productDescription || safeContext.productDescription, 900);
+  const queryIsUrl = /^https?:\/\//i.test(rawQuery);
+  const queryLooksLikeLongDescription = !queryIsUrl && (
+    rawQuery.length > 110 ||
+    /[،,.;؛:]\s|\bavec\b|\bwith\b|\bمزود\b|\bينصح\b|\bتناسب\b|\bمستويات\b|\bشحن\b|\bUSB\b|\bLED\b/i.test(rawQuery)
+  );
+  const descriptionOriginal = rawDescription || (queryLooksLikeLongDescription ? rawQuery : '');
+  const seed = rawProductName || rawNiche || (queryLooksLikeLongDescription ? '' : rawQuery) || descriptionOriginal;
+  const searchPlan = normalizeCompetitorMarketSearchQuery(seed || rawQuery || descriptionOriginal, seed || rawQuery || descriptionOriginal, geo, lang);
+  const nameOriginal = cleanProofText(
+    rawProductName ||
+    searchPlan.detectedHead ||
+    searchPlan.base ||
+    rawNiche ||
+    (!queryLooksLikeLongDescription ? rawQuery : ''),
+    140
+  );
+  const nicheOriginal = rawNiche || (!queryLooksLikeLongDescription && !rawProductName ? rawQuery : '');
+  const analysisQuery = cleanProofText(nameOriginal || nicheOriginal || rawQuery || descriptionOriginal, 180);
+  const serpQuery = cleanProofText(searchPlan.primary || analysisQuery, 120);
+
+  return {
+    nameOriginal,
+    nicheOriginal,
+    descriptionOriginal,
+    userRawQuery: rawQuery,
+    analysisQuery,
+    serpQuery,
+    serpVariants: searchPlan.variants || [],
+    parserReason: searchPlan.reason,
+    handoff: {
+      productName: nameOriginal,
+      niche: nicheOriginal,
+      description: descriptionOriginal,
+      serpQuery,
+      moduleSubject: analysisQuery,
+      parserReason: searchPlan.reason
+    }
+  };
+}
+
 function formatUserContextForPrompt(context = {}, noDataLabel = 'Not provided') {
   const ctx = context && typeof context === 'object' ? context : {};
   const known = Array.isArray(ctx.knownCompetitors) ? ctx.knownCompetitors.join(', ') : ctx.knownCompetitors;
-  const hasContext = [ctx.productDescription, ctx.offer, ctx.audience, ctx.objective, ctx.priceRange, ctx.price, known, ctx.cityOrRegion].some(Boolean);
+  const hasContext = [ctx.productName, ctx.productDescription, ctx.offer, ctx.audience, ctx.objective, ctx.priceRange, ctx.price, known, ctx.cityOrRegion].some(Boolean);
   if (!hasContext) return '';
   return `
  USER-PROVIDED BUSINESS CONTEXT:
-- Product/service description: ${ctx.productDescription || noDataLabel}
+- Product/service name: ${ctx.productNameLocalized || ctx.productName || noDataLabel}
+- Product/service description: ${ctx.productDescriptionLocalized || ctx.productDescription || noDataLabel}
 - Offer: ${ctx.offer || noDataLabel}
 - Audience: ${ctx.audience || noDataLabel}
 - Objective: ${ctx.objective || noDataLabel}
@@ -9104,9 +9154,57 @@ async function analyzeCompetitors(
         return { success: false, error: 'Query is required', externalBot: GPT_BOT };
     }
 
-    const queryLocalization = await localizeCompetitorQueryForAnalysis(cleanQuery, langObj.code);
+    const incomingUserContext = (userIntentContext && typeof userIntentContext === 'object') ? userIntentContext : {};
+    const incomingProductIdentity = incomingUserContext.productIdentity || {};
+    const cleanQueryIsUrl = /^https?:\/\//i.test(cleanQuery.trim());
+    const originalProductName = cleanProofText(
+        incomingUserContext.productName ||
+        incomingProductIdentity.nameOriginal ||
+        (!cleanQueryIsUrl ? cleanQuery : ''),
+        160
+    );
+    const originalProductDescription = cleanProofText(
+        incomingUserContext.productDescription ||
+        incomingProductIdentity.descriptionOriginal ||
+        '',
+        900
+    );
+    const originalNiche = cleanProofText(incomingUserContext.niche || incomingProductIdentity.nicheOriginal || '', 180);
+    const subjectForReport = originalProductName || originalNiche || cleanQuery;
+    const queryLocalization = await localizeCompetitorQueryForAnalysis(subjectForReport, langObj.code);
     const reportQuery = queryLocalization.localizedQuery || cleanQuery;
-    const queryCorpus = [...new Set([cleanQuery, reportQuery].filter(Boolean))].join(' | ');
+    let reportProductDescription = originalProductDescription;
+    if (originalProductDescription) {
+        const descriptionLocalization = await localizeCompetitorQueryForAnalysis(
+            cleanProofText(originalProductDescription, 450),
+            langObj.code
+        );
+        reportProductDescription = descriptionLocalization.localizedQuery || originalProductDescription;
+    }
+    userIntentContext = {
+        ...incomingUserContext,
+        niche: originalNiche,
+        productName: originalProductName,
+        productNameLocalized: reportQuery,
+        productDescription: originalProductDescription,
+        productDescriptionLocalized: reportProductDescription,
+        productIdentity: {
+            ...incomingProductIdentity,
+            nameOriginal: originalProductName,
+            nameLocalized: reportQuery,
+            nicheOriginal: originalNiche,
+            descriptionOriginal: originalProductDescription,
+            descriptionLocalized: reportProductDescription
+        }
+    };
+    const queryCorpus = [...new Set([
+        cleanQuery,
+        reportQuery,
+        originalProductName,
+        originalNiche,
+        originalProductDescription,
+        reportProductDescription
+    ].filter(Boolean))].join(' | ');
     console.log(
         `[WarRoom-V10.0] Query locale source=${queryLocalization.source} | original="${cleanQuery}" | report="${reportQuery}"`
     );
@@ -10328,7 +10426,8 @@ const safeUserCtx = (userIntentContext && typeof userIntentContext === 'object')
 const hasUserContext = Object.values(safeUserCtx).some(v => v && (typeof v === 'string' ? v.length > 0 : Array.isArray(v) ? v.length > 0 : false));
 const userBusinessContextBlock = hasUserContext ? `
  CONTEXTE BUSINESS FOURNI PAR L'UTILISATEUR :
- Description obligatoire du produit/service : ${safeUserCtx.productDescription || ND}
+ Nom produit/service : ${safeUserCtx.productNameLocalized || safeUserCtx.productName || ND}
+ Description obligatoire du produit/service : ${safeUserCtx.productDescriptionLocalized || safeUserCtx.productDescription || ND}
  Offre : ${safeUserCtx.offer || ND}
 Audience : ${safeUserCtx.audience || ND}
 Objectif : ${safeUserCtx.objective || ND}
@@ -10703,6 +10802,9 @@ let finalResult = {
     originalQuery: cleanQuery,
     localizedQuery: reportQuery,
     queryLocalization,
+    productIdentity: userIntentContext.productIdentity || null,
+    productName: userIntentContext.productNameLocalized || userIntentContext.productName || reportQuery,
+    productDescription: userIntentContext.productDescriptionLocalized || userIntentContext.productDescription || '',
     searchVariants: queryLocalization.searchVariants,
     geo: geoData.location,
     serpGeo: {
@@ -14508,7 +14610,8 @@ module.exports = {
     trackSessionEnd,
     getBehaviorReport,
     cleanupOldSessions,
-    analyzeCompetitors
+    analyzeCompetitors,
+    buildCompetitorProductIdentity
 };
 
 
@@ -14539,6 +14642,82 @@ const warRoomLimiter = rateLimit({
 // ════════════════════════════════════════════════════════════════════
 const competitorsInFlight = new Map();
 const competitorBenchmarkInFlight = new Map();
+const competitorAnalysisJobs = new Map();
+const competitorAnalysisJobsByKey = new Map();
+
+function cleanupCompetitorAnalysisJobs() {
+    const now = Date.now();
+    for (const [id, job] of competitorAnalysisJobs.entries()) {
+        if (now - Number(job.createdAtMs || 0) > 20 * 60 * 1000) {
+            competitorAnalysisJobs.delete(id);
+            if (job.key && competitorAnalysisJobsByKey.get(job.key) === id) {
+                competitorAnalysisJobsByKey.delete(job.key);
+            }
+        }
+    }
+}
+
+function createCompetitorAnalysisJob({ key, promise, user, input, lang = 'fr' } = {}) {
+    cleanupCompetitorAnalysisJobs();
+    const existingId = key ? competitorAnalysisJobsByKey.get(key) : null;
+    if (existingId && competitorAnalysisJobs.has(existingId)) return competitorAnalysisJobs.get(existingId);
+
+    const jobId = `competitors_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`;
+    const job = {
+        id: jobId,
+        key,
+        type: 'competitors',
+        status: 'running',
+        createdAtMs: Date.now(),
+        startedAtMs: Date.now(),
+        finishedAtMs: null,
+        result: null,
+        error: null,
+        userId: user?.id || null
+    };
+    competitorAnalysisJobs.set(jobId, job);
+    if (key) competitorAnalysisJobsByKey.set(key, jobId);
+
+    Promise.resolve(promise)
+        .then(async result => {
+            const guarded = result?.success
+                ? await applyMarketingMasterGate('competitors', result, { lang, query: input?.query || '', geo: input?.geo || '' })
+                : result;
+
+            let finalResult = guarded;
+            if (guarded?.success && supabase && user?.id) {
+                try {
+                    const savedReport = await saveGeneratedReportForUser(supabase, {
+                        userId: user.id,
+                        type: 'competitors',
+                        input: input || {},
+                        result: guarded
+                    });
+                    finalResult = { ...guarded, savedReport };
+                    try {
+                        finalResult.reportQuota = await reportRuntime.getQuota(user.id, user.email);
+                    } catch (quotaError) {
+                        console.warn('[Reports] async competitor quota refresh failed:', quotaError.message);
+                    }
+                } catch (saveError) {
+                    console.warn('[Reports] async competitor save failed:', saveError.message);
+                    finalResult = { ...guarded, reportPersistence: { saved: false, error: 'REPORT_SAVE_FAILED' } };
+                }
+            }
+
+            job.status = finalResult?.success ? 'done' : 'error';
+            job.result = finalResult?.success ? finalResult : null;
+            job.error = finalResult?.success ? null : (finalResult?.message || finalResult?.error || 'Competitor analysis failed');
+            job.finishedAtMs = Date.now();
+        })
+        .catch(error => {
+            job.status = 'error';
+            job.error = error.message || 'Competitor analysis failed';
+            job.finishedAtMs = Date.now();
+        });
+
+    return job;
+}
 
 function normalizeCompetitorBenchmarkResult(result, url) {
     const meta = result?.meta || {};
@@ -14642,10 +14821,16 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
     const isProd    = process.env.NODE_ENV === 'production';
     let inFlightKey = '';
     let requestLang = 'fr';
+    let activeAnalysisPromise = null;
+    let timeoutJobInput = null;
+    let timeoutJobUser = req.user || null;
 
     try {
     let {
         query,
+        niche,
+        productName,
+        productDescription,
         geo,
         lang = 'fr',
         url,
@@ -14654,21 +14839,23 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
     } = req.body || {};
 
     // ── PATCH 1 : Validation query ────────────────────────
-    if (!query || !query.trim()) {
+    const rawQuery = String(query || productName || niche || productDescription || url || '').trim();
+    if (!rawQuery) {
         return res.status(400).json({
             success: false,
             error: 'Query is required',
-            message: 'Veuillez fournir un mot-clé ou une URL.'
+            message: 'Veuillez fournir une niche, un nom produit, une description ou une URL.'
         });
     }
 
-    if (query.trim().length > 300) {
+    if (rawQuery.length > 900) {
         return res.status(400).json({
             success: false,
             error: 'Query too long',
-            message: 'Maximum 300 caractères autorisés.'
+            message: 'Maximum 900 caractères autorisés pour la description.'
         });
     }
+    query = rawQuery;
 
     // ── PATCH 2 : Validation lang + résolution geo réelle ─
     const ALLOWED_LANGS = ['fr', 'ar', 'en'];
@@ -14696,14 +14883,28 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
 
         // ── PATCH 4 : forceRefresh réservé admin ─────────────
         const safeForceRefresh = Boolean(forceRefresh) && !!req.user?.isAdmin;
-        const safeContext = {
+        let safeContext = {
             ...safeUserContextFromBody(req.body),
             requestId: req.id || `REQ-${Date.now()}`,
             clientAnalysisId: String(req.body?.clientAnalysisId || req.id || `COMP-${Date.now()}`).slice(0, 120)
         };
+        const productIdentity = buildCompetitorProductIdentity(
+            { ...req.body, query, niche, productName, productDescription },
+            safeContext,
+            safeGeo,
+            lang
+        );
+        const effectiveQuery = productIdentity.analysisQuery || query.trim();
+        safeContext = {
+            ...safeContext,
+            niche: productIdentity.nicheOriginal || safeContext.niche || '',
+            productName: productIdentity.nameOriginal || safeContext.productName || '',
+            productDescription: productIdentity.descriptionOriginal || safeContext.productDescription || '',
+            productIdentity
+        };
 
         console.log(
-    `[api/competitors] DÉMARRAGE WAR ROOM | query="${query.trim()}" | rawGeo="${rawGeo}" | resolvedGeo="${safeGeo}" | gl="${geoData.gl}" | lang="${lang}"`
+    `[api/competitors] DÉMARRAGE WAR ROOM | query="${query.trim()}" | effectiveQuery="${effectiveQuery}" | rawGeo="${rawGeo}" | resolvedGeo="${safeGeo}" | gl="${geoData.gl}" | lang="${lang}"`
 );
 
         // 1. Scraping du site utilisateur (si fourni) pour benchmark
@@ -14726,7 +14927,7 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
 
         // 2. Appel du moteur d'analyse stratégique
         // Timeout court: la route ne doit jamais laisser l'utilisateur attendre indéfiniment.
-        const ROUTE_TIMEOUT  = Math.max(45000, Number(process.env.COMPETITOR_ROUTE_TIMEOUT_MS || 85000));
+        const ROUTE_TIMEOUT  = Math.max(10000, Number(process.env.COMPETITOR_DIRECT_TIMEOUT_MS || process.env.COMPETITOR_ROUTE_TIMEOUT_MS || 25000));
         const timeoutPromise = new Promise((_, reject) =>
             setTimeout(
                 () => reject(new Error('ROUTE_TIMEOUT')),
@@ -14735,19 +14936,32 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
         );
 
         inFlightKey = buildCompetitorsRequestKey({
-            query: query.trim(),
+            query: effectiveQuery,
             geo: safeGeo,
             lang,
             url: url || '',
             forceRefresh: safeForceRefresh,
             context: safeContext
         });
+        timeoutJobInput = {
+            query: effectiveQuery,
+            rawQuery: query.trim(),
+            niche: productIdentity.nicheOriginal || '',
+            productName: productIdentity.nameOriginal || '',
+            productDescription: productIdentity.descriptionOriginal || '',
+            productIdentity,
+            geo: safeGeo,
+            lang,
+            url: url || '',
+            forceRefresh: safeForceRefresh,
+            context: safeContext
+        };
 
         let analysisPromise = competitorsInFlight.get(inFlightKey);
         if (analysisPromise) {
             console.log(`🧠 [api/competitors] IN-FLIGHT REUSE: ${inFlightKey}`);
         } else {
-            analysisPromise = analyzeCompetitors(query.trim(), safeGeo, lang, userSiteData, safeForceRefresh, null, safeContext);
+            analysisPromise = analyzeCompetitors(effectiveQuery, safeGeo, lang, userSiteData, safeForceRefresh, null, safeContext);
             competitorsInFlight.set(inFlightKey, analysisPromise);
             analysisPromise.finally(() => {
                 if (competitorsInFlight.get(inFlightKey) === analysisPromise) {
@@ -14755,6 +14969,7 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
                 }
             });
         }
+        activeAnalysisPromise = analysisPromise;
 
        const result = await Promise.race([
     analysisPromise,
@@ -14772,7 +14987,7 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
         }
 
         const guardedResult = result.success
-            ? await applyMarketingMasterGate('competitors', result, { lang, query: query.trim(), geo: safeGeo })
+            ? await applyMarketingMasterGate('competitors', result, { lang, query: effectiveQuery, geo: safeGeo })
             : result;
 
         if (typeof updateMetrics === 'function') {
@@ -14787,10 +15002,30 @@ app.post('/api/competitors', requireAuth, requireReportQuota, persistGeneratedRe
         // ── PATCH 6 : Timeout → 504 propre ───────────────────
         if (error.message === 'ROUTE_TIMEOUT') {
             console.warn(`⏱️ [/api/competitors] TIMEOUT après ${elapsed}ms`);
-            // Keep the active promise registered until it settles. Removing
-            // it here would let the next click launch a duplicate analysis.
+            const asyncJob = activeAnalysisPromise
+                ? createCompetitorAnalysisJob({
+                    key: inFlightKey,
+                    promise: activeAnalysisPromise,
+                    user: timeoutJobUser,
+                    input: timeoutJobInput,
+                    lang: requestLang
+                })
+                : null;
             if (typeof updateMetrics === 'function') {
-                updateMetrics(req.method, req.path, 504, elapsed);
+                updateMetrics(req.method, req.path, asyncJob ? 202 : 504, elapsed);
+            }
+            if (asyncJob) {
+                return res.status(202).json({
+                    success: true,
+                    jobId: asyncJob.id,
+                    status: asyncJob.status,
+                    queued: true,
+                    message: requestLang === 'ar'
+                        ? 'التحليل طويل، لكننا نواصله في الخلفية. ستظهر النتيجة هنا تلقائيا.'
+                        : requestLang === 'en'
+                            ? 'The market analysis is still running in the background. The result will appear here automatically.'
+                            : 'L’analyse marché continue en arrière-plan. Le résultat va apparaître ici automatiquement.'
+                });
             }
             return res.status(504).json({
                 success: false,
@@ -20746,6 +20981,31 @@ console.log('✅ generateAIDAFunnel V10 GOD TIER loaded');
 
 
 app.get('/api/job/:id', requireAuth, async (req, res) => {
+    const localJob = competitorAnalysisJobs.get(req.params.id);
+    if (localJob) {
+        if (localJob.userId && localJob.userId !== req.user.id) {
+            return res.status(404).json({
+                jobId: req.params.id,
+                status: 'not_found',
+                result: null,
+                error: 'Job not found',
+                timing: { created: null, started: null, finished: null, durationMs: null }
+            });
+        }
+        return res.json({
+            jobId: localJob.id,
+            status: localJob.status,
+            result: localJob.status === 'done' ? localJob.result : null,
+            error: localJob.status === 'error' ? localJob.error : null,
+            timing: {
+                created: localJob.createdAtMs ? new Date(localJob.createdAtMs).toISOString() : null,
+                started: localJob.startedAtMs ? new Date(localJob.startedAtMs).toISOString() : null,
+                finished: localJob.finishedAtMs ? new Date(localJob.finishedAtMs).toISOString() : null,
+                durationMs: localJob.startedAtMs && localJob.finishedAtMs ? Math.max(0, localJob.finishedAtMs - localJob.startedAtMs) : null
+            }
+        });
+    }
+
     if (!supabase) {
         return res.json({
             jobId: req.params.id,

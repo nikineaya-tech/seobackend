@@ -30,6 +30,10 @@
       moduleSubtitle: 'Voyez qui capte la demande, pourquoi il gagne et où votre vraie ouverture existe.',
       queryLabel: 'Marché, niche ou requête à analyser',
       queryPlaceholder: 'Ex: logiciel de veille concurrentielle Maroc',
+      productNameLabel: 'Nom du produit ou service',
+      productNamePlaceholder: 'Ex: extracteur de points noirs',
+      productDescriptionLabel: 'Description du produit ou service',
+      productDescriptionPlaceholder: 'Ex: appareil rechargeable avec LED, niveaux de puissance, accessoires inclus, usage visage à domicile.',
       urlLabel: 'Votre site pour benchmark direct',
       urlPlaceholder: 'https://votre-site.com',
       countryLabel: 'Pays et marché cible',
@@ -121,6 +125,10 @@
       moduleSubtitle: 'See who captures demand, why they win, and where your clean opening exists.',
       queryLabel: 'Market, niche, or query to analyze',
       queryPlaceholder: 'Ex: competitor intelligence software Morocco',
+      productNameLabel: 'Product or service name',
+      productNamePlaceholder: 'Ex: blackhead remover',
+      productDescriptionLabel: 'Product or service description',
+      productDescriptionPlaceholder: 'Ex: rechargeable LED device with power levels, accessories included, for at-home facial care.',
       urlLabel: 'Your website for direct benchmark',
       urlPlaceholder: 'https://your-site.com',
       countryLabel: 'Target country and market',
@@ -212,6 +220,10 @@
       moduleSubtitle: 'اعرف من يلتقط الطلب، ولماذا يفوز، وأين توجد الفتحة النظيفة التي يمكنك دخولها.',
       queryLabel: 'السوق أو النيش أو عبارة البحث',
       queryPlaceholder: 'مثال: برنامج ذكاء المنافسين في المغرب',
+      productNameLabel: 'اسم المنتج أو الخدمة',
+      productNamePlaceholder: 'مثال: مزيل الرؤوس السوداء',
+      productDescriptionLabel: 'وصف المنتج أو الخدمة',
+      productDescriptionPlaceholder: 'مثال: جهاز قابل للشحن مع إضاءة LED ومستويات قوة وإكسسوارات للعناية بالوجه في المنزل.',
       urlLabel: 'موقعك للمقارنة المباشرة',
       urlPlaceholder: 'https://your-site.com',
       countryLabel: 'البلد والسوق المستهدف',
@@ -680,15 +692,27 @@
     if (titleHighlight) titleHighlight.textContent = copy('moduleHighlight');
     if (subtitle) subtitle.textContent = copy('moduleSubtitle');
 
-    const labels = tab.querySelectorAll('.form-group .form-label');
-    if (labels[0]) labels[0].textContent = copy('queryLabel');
-    if (labels[1]) labels[1].textContent = copy('urlLabel');
-    if (labels[2]) labels[2].textContent = copy('countryLabel');
-    if (labels[3]) labels[3].textContent = copy('languageLabel');
+    const setLabel = (forId, key) => {
+      const label = tab.querySelector(`label[for="${forId}"]`);
+      if (label) label.textContent = copy(key);
+    };
+    setLabel('keyword', 'queryLabel');
+    setLabel('competitorProductName', 'productNameLabel');
+    setLabel('competitorProductDescription', 'productDescriptionLabel');
+    setLabel('url', 'urlLabel');
+    const gridLabels = tab.querySelectorAll('select#country, select#analysisLang');
+    const countryLabelEl = gridLabels[0]?.closest('.form-group')?.querySelector('.form-label');
+    const languageLabelEl = gridLabels[1]?.closest('.form-group')?.querySelector('.form-label');
+    if (countryLabelEl) countryLabelEl.textContent = copy('countryLabel');
+    if (languageLabelEl) languageLabelEl.textContent = copy('languageLabel');
 
     const keyword = document.getElementById('keyword');
+    const productName = document.getElementById('competitorProductName');
+    const productDescription = document.getElementById('competitorProductDescription');
     const url = document.getElementById('url');
     if (keyword) keyword.placeholder = copy('queryPlaceholder');
+    if (productName) productName.placeholder = copy('productNamePlaceholder');
+    if (productDescription) productDescription.placeholder = copy('productDescriptionPlaceholder');
     if (url) url.placeholder = copy('urlPlaceholder');
 
     const analyzeBtn = document.getElementById('analyzeBtn');
@@ -707,6 +731,9 @@
     const read = (id) => document.getElementById(id)?.value?.trim() || '';
     return {
       offer: read('compOffer'),
+      niche: read('keyword'),
+      productName: read('competitorProductName'),
+      productDescription: read('competitorProductDescription'),
       audience: read('compAudience'),
       objective: read('compObjective'),
       priceRange: read('compPriceRange'),
@@ -2032,6 +2059,9 @@
   }
 
   async function requestCompetitorReport(payload) {
+    if (typeof window.analyzeWithPolling === 'function') {
+      return window.analyzeWithPolling('/api/competitors', payload);
+    }
     if (typeof api !== 'undefined' && typeof api.request === 'function') {
       return api.request('/api/competitors', {
         method: 'POST',
@@ -2057,9 +2087,11 @@
     if (STATE.inFlight) return;
 
     const keyword = document.getElementById('keyword')?.value?.trim() || '';
+    const productName = document.getElementById('competitorProductName')?.value?.trim() || '';
+    const productDescription = document.getElementById('competitorProductDescription')?.value?.trim() || '';
     const url = document.getElementById('url')?.value?.trim() || '';
     const country = document.getElementById('country')?.value || 'Morocco';
-    if (!keyword && !url) {
+    if (!keyword && !productName && !productDescription && !url) {
       window.toast?.warning(lang() === 'ar' ? 'أدخل عبارة بحث أو رابطا على الأقل.' : lang() === 'en' ? 'Add at least a query or a URL.' : 'Ajoute au moins une requête ou une URL.');
       return;
     }
@@ -2087,12 +2119,16 @@
       }
       if (exportButton) exportButton.style.display = 'none';
 
+      const context = collectContext();
       const response = await requestCompetitorReport({
-        query: keyword || url,
+        query: productName || keyword || productDescription || url,
+        niche: keyword || '',
+        productName,
+        productDescription,
         url: url || null,
         geo: country,
         lang: lang(),
-        context: collectContext(),
+        context,
         forceRefresh: false
       });
 
@@ -2107,6 +2143,8 @@
         window.STATE.lastActiveModule = 'competitors';
         window.STATE.lastInputs = window.STATE.lastInputs || {};
         window.STATE.lastInputs.keyword = keyword;
+        window.STATE.lastInputs.productName = productName;
+        window.STATE.lastInputs.productDescription = productDescription;
         window.STATE.lastInputs.url = url;
         window.STATE.lastInputs.country = country;
         window.STATE.lastInputs.compLang = lang();

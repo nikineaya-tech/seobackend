@@ -490,6 +490,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrète peut vous faire prendre sa place.',
                     label_keyword: 'Marché, niche ou requête à analyser',
                     placeholder_keyword: 'Ex: SaaS marketing all-in-one Maroc',
+                    label_product_name: 'Nom du produit ou service',
+                    placeholder_product_name: 'Ex: extracteur de points noirs',
+                    label_product_description: 'Description du produit ou service',
+                    placeholder_product_description: 'Ex: appareil rechargeable avec LED, niveaux de puissance, accessoires inclus, usage visage à domicile.',
+                    hint_product_description: 'Daka cherche avec un nom court et transmet la description complète aux modules.',
                     label_url: 'Votre site pour benchmark direct',
                     placeholder_url: 'https://votre-site.com',
                     label_country: 'Pays et marché cible',
@@ -597,6 +602,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     tab1_subtitle: 'See who wins, why they win, and the exact move that can help you take the market.',
                     label_keyword: 'Market, niche, or search query',
                     placeholder_keyword: 'Ex: all-in-one marketing SaaS Morocco',
+                    label_product_name: 'Product or service name',
+                    placeholder_product_name: 'Ex: blackhead remover',
+                    label_product_description: 'Product or service description',
+                    placeholder_product_description: 'Ex: rechargeable LED device with power levels, accessories included, for at-home facial care.',
+                    hint_product_description: 'Daka searches with a short name and sends the full description to the modules.',
                     label_url: 'Your website for direct benchmark',
                     placeholder_url: 'https://your-site.com',
                     appbadge: 'MARKET INTEL',
@@ -706,6 +716,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     tab1_subtitle: 'افهم من يربح في السوق، لماذا يربح، وما الحركة العملية التي تقربك منه.',
                     label_keyword: 'السوق أو المجال أو كلمة البحث',
                     placeholder_keyword: 'مثال: SaaS marketing Maroc',
+                    label_product_name: 'اسم المنتج أو الخدمة',
+                    placeholder_product_name: 'مثال: مزيل الرؤوس السوداء',
+                    label_product_description: 'وصف المنتج أو الخدمة',
+                    placeholder_product_description: 'مثال: جهاز قابل للشحن مع إضاءة LED ومستويات قوة وإكسسوارات للعناية بالوجه في المنزل.',
+                    hint_product_description: 'تبحث Daka باسم قصير وتنقل الوصف الكامل إلى باقي الوحدات.',
                     label_url: 'موقعك للمقارنة المباشرة',
                     label_country: 'البلد ونتائج البحث المستهدفة',
                     label_analysis_lang: 'لغة التقرير',
@@ -1975,7 +1990,7 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
                     : STATE.currentLang === 'en'
                         ? 'The previous analysis stopped responding. Please try again now.'
                         : 'L’analyse précédente ne répond plus. Relancez maintenant.'
-            )), 125000))
+            )), 240000))
         ]).then(data => {
             if (typeof resultsHandler === 'function' && data) resultsHandler(data);
             return data;
@@ -2032,7 +2047,7 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
     const startedAt = Date.now();
     let stepIndex = 0;
 
-    while (Date.now() - startedAt < 120000) {
+    while (Date.now() - startedAt < 240000) {
         document.querySelectorAll('.loading-step-text').forEach(node => {
             node.textContent = steps[stepIndex % steps.length];
         });
@@ -2067,6 +2082,8 @@ async function analyzeWithPolling(endpoint, payload, resultsHandler) {
         }
     }
 }
+
+window.analyzeWithPolling = analyzeWithPolling;
 
 const DakaSound = (() => {
     let ctx = null;
@@ -5908,6 +5925,8 @@ async function analyzeCompetitors(e) {
     if (STATE.competitorAnalysisInFlight) return;
 
     const keyword = document.getElementById('keyword')?.value.trim();
+    const productName = document.getElementById('competitorProductName')?.value.trim() || '';
+    const productDescription = document.getElementById('competitorProductDescription')?.value.trim() || '';
     const url     = document.getElementById('url')?.value.trim();
     const country = document.getElementById('country')?.value || 'Morocco';
     const lang    = document.getElementById('analysisLang')?.value || 'fr';
@@ -5919,7 +5938,7 @@ async function analyzeCompetitors(e) {
     const isEn = lang === 'en';
 
     // ── Validation ────────────────────────────────────────────
-    if (!keyword && !url) {
+    if (!keyword && !productName && !productDescription && !url) {
         return toast.warning(
             isAr ? 'يرجى ملء حقل واحد على الأقل.'
             : isEn ? 'Please fill in at least one field.'
@@ -5942,12 +5961,21 @@ async function analyzeCompetitors(e) {
     if (exportBtn) exportBtn.style.display = 'none';
 
     try {
+        const businessContext = collectBusinessContext('comp');
         const response = await analyzeWithPolling('/api/competitors', {
-            query: keyword || url,
+            query: productName || keyword || productDescription || url,
+            niche: keyword || '',
+            productName,
+            productDescription,
             url: url || null,
             geo: country,
             lang,
-            context: collectBusinessContext('comp'),
+            context: {
+                ...businessContext,
+                niche: keyword || '',
+                productName,
+                productDescription: productDescription || businessContext.productDescription || ''
+            },
             forceRefresh: true
         });
 
@@ -5962,7 +5990,7 @@ async function analyzeCompetitors(e) {
         try {
             const dlResp = await api.post('/api/decision-layer', {
                 lang,
-                keyword: keyword || url || '',
+                keyword: productName || keyword || url || '',
                 marketInsights: response.marketInsights || {},
                 marketDynamics: response.marketDynamics || {},
                 leaderMoat: response.leaderMoat || {},
@@ -5985,6 +6013,8 @@ async function analyzeCompetitors(e) {
         STATE.lastAnalysisResults   = response;
         STATE.lastInputs            = STATE.lastInputs || {};
         STATE.lastInputs.keyword    = keyword;
+        STATE.lastInputs.productName = productName;
+        STATE.lastInputs.productDescription = productDescription;
         STATE.lastInputs.url        = url;
         STATE.lastInputs.country    = country;
         STATE.lastInputs.compLang   = lang;

@@ -4651,6 +4651,20 @@ table tbody td {
             </div>
 
             <div class="form-group">
+                <label class="form-label" for="competitorProductName" data-i18n="label_product_name">Nom du produit ou service</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-tag input-icon"></i>
+                    <input type="text" id="competitorProductName" class="input-field" maxlength="160" data-i18n-placeholder="placeholder_product_name" placeholder="Ex: extracteur de points noirs">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="competitorProductDescription" data-i18n="label_product_description">Description du produit ou service</label>
+                <textarea id="competitorProductDescription" class="textarea-field" maxlength="900" data-i18n-placeholder="placeholder_product_description" placeholder="Ex: appareil rechargeable avec LED, plusieurs niveaux de puissance, livré avec accessoires et destiné aux soins visage à domicile."></textarea>
+                <small class="country-select-note" data-i18n="hint_product_description">Daka utilise le nom court pour chercher le marché et garde la description complète pour analyser l’offre.</small>
+            </div>
+
+            <div class="form-group">
                 <label class="form-label" for="url" data-i18n="label_url">🔗 Votre URL (Benchmark comparatif)</label>
                 <div class="input-wrapper">
                     <i class="fas fa-link input-icon"></i>
@@ -5538,6 +5552,11 @@ navkeywords: 'Demande marché',
         tab1_subtitle: 'Comprenez qui gagne, pourquoi il gagne, et quelle action concrète peut vous faire prendre sa place.',
         label_keyword: '🎯 Mot-clé cible',
         placeholder_keyword: 'Ex: chaussures running Maroc',
+        label_product_name: 'Nom du produit ou service',
+        placeholder_product_name: 'Ex: extracteur de points noirs',
+        label_product_description: 'Description du produit ou service',
+        placeholder_product_description: 'Ex: appareil rechargeable avec LED, niveaux de puissance, accessoires inclus, usage visage à domicile.',
+        hint_product_description: 'Daka cherche avec un nom court et transmet la description complète aux modules.',
         label_url: '🔗 URL à analyser (optionnel)',
         placeholder_url: 'https://votre-site.com',
         label_country: '🌍 Pays cible',
@@ -5742,6 +5761,11 @@ navkeywords: 'طلب السوق',
         tab1_subtitle: 'المحرك الاستراتيجي المطلق: اكتشف الثغرات واستخرج خارطة الطريق للسيطرة على السوق. 🏆',
         label_keyword: '🎯 الكلمة المفتاحية المستهدفة',
         placeholder_keyword: 'مثال: أحذية رياضية المغرب',
+        label_product_name: 'اسم المنتج أو الخدمة',
+        placeholder_product_name: 'مثال: مزيل الرؤوس السوداء',
+        label_product_description: 'وصف المنتج أو الخدمة',
+        placeholder_product_description: 'مثال: جهاز قابل للشحن مع إضاءة LED ومستويات قوة وإكسسوارات للعناية بالوجه في المنزل.',
+        hint_product_description: 'تبحث Daka باسم قصير وتنقل الوصف الكامل إلى باقي الوحدات.',
         label_url: '🔗 رابط URL للتحليل (اختياري)',
         placeholder_url: 'https://yoursite.com',
         label_country: '🌍 البلد المستهدف',
@@ -5946,6 +5970,11 @@ navkeywords: 'Market demand',
         tab1_subtitle: 'See who wins, why they win, and the exact move that can help you take the market.',
         label_keyword: '🎯 Target keyword',
         placeholder_keyword: 'Ex: running shoes Morocco',
+        label_product_name: 'Product or service name',
+        placeholder_product_name: 'Ex: blackhead remover',
+        label_product_description: 'Product or service description',
+        placeholder_product_description: 'Ex: rechargeable LED device with power levels, accessories included, for at-home facial care.',
+        hint_product_description: 'Daka searches with a short name and sends the full description to the modules.',
         label_url: '🔗 URL to analyze (optional)',
         placeholder_url: 'https://example.com',
         label_country: '🌍 Target country',
