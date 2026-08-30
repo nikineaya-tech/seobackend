@@ -250,6 +250,61 @@ test('decision report v2 deduplicates repeated comments and content patterns', (
   assert.equal(report.deepDive.socialContentIntelligence.reviews.length, 1);
 });
 
+test('decision report v2 rejects social login pages as comments or reviews', () => {
+  const loginUrl = 'https://www.facebook.com/login/device-based/regular/login/?login_attempt=1';
+  const report = buildDecisionReportV2({
+    query: 'soins de peau',
+    country: 'Libya',
+    lang: 'ar',
+    evidenceRegistry: {
+      evidence: [
+        {
+          id: 'ev_login_wall',
+          scope: 'CUSTOMER',
+          claimType: 'review',
+          value: 'Title: Facebook URL Source: https://www.facebook.com/post Markdown Content: Explore the things you love. Log into Facebook Email or mobile.',
+          sourcePlatform: 'facebook',
+          sourceUrl: loginUrl,
+          confidence: 'MEDIUM',
+          verificationStatus: 'CONFIRMED',
+          collectedAt: NOW
+        }
+      ]
+    },
+    marketSignalModel: buildMarketSignalEngine({
+      now: NOW,
+      evidenceRegistry: {
+        evidence: [
+          {
+            id: 'ev_login_wall',
+            scope: 'CUSTOMER',
+            claimType: 'review',
+            value: 'Title: Facebook URL Source: https://www.facebook.com/post Markdown Content: Explore the things you love. Log into Facebook Email or mobile.',
+            sourcePlatform: 'facebook',
+            sourceUrl: loginUrl,
+            confidence: 'MEDIUM',
+            verificationStatus: 'CONFIRMED',
+            collectedAt: NOW
+          }
+        ]
+      }
+    }),
+    strategicAgentsV2: {
+      marketPatternAnalyst: { observations: [] },
+      gapAnalyst: { gaps: [], saturatedPatterns: [], unknowns: [] },
+      decisionStrategist: { actions: [], unknowns: [] }
+    },
+    marketEntityMap: {
+      byType: {},
+      supplierIntelligence: { status: 'UNKNOWN', limitations: [] }
+    }
+  });
+
+  assert.equal(report.mainReport.commentsReviews.summary.evidenceCount, 0);
+  assert.equal(report.mainReport.commentsReviews.patterns.length, 0);
+  assert.doesNotMatch(JSON.stringify(report.mainReport.commentsReviews), /login_attempt|Log into Facebook/i);
+});
+
 test('decision report v2 comments and reviews section refuses to invent missing customer voice', () => {
   const report = buildDecisionReportV2({
     query: 'blackhead remover',

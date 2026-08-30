@@ -13288,6 +13288,15 @@ function renderFrameworkWorkshopsPanel(data, opts = {}) {
         });
         return out.slice(0, limit);
     };
+    const sourceLabel = (url) => {
+        const raw = text(url);
+        if (!raw) return '';
+        try {
+            return new URL(raw).hostname.replace(/^www\./i, '');
+        } catch (_) {
+            return raw.replace(/^https?:\/\//i, '').split('/')[0].slice(0, 42);
+        }
+    };
     const model =
         data?.frameworkWorkshops ||
         data?.mainReport?.frameworkWorkshops ||
@@ -13498,7 +13507,7 @@ function renderCommentsReviewsPanel(data, opts = {}) {
                 ${text(pattern.confidence) ? `<span style="color:#fde68a;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.18);border-radius:999px;padding:4px 9px;font-size:.68rem;font-weight:800;">${safe(copy.confidence)} ${safe(text(pattern.confidence))}</span>` : ''}
                 ${sources.map(source => `<span style="color:#cbd5e1;background:rgba(255,255,255,.05);border-radius:999px;padding:4px 9px;font-size:.68rem;">${safe(source)}</span>`).join('')}
             </div>
-            ${urls.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">${urls.map(url => `<a href="${safe(url)}" target="_blank" rel="noopener" data-no-collapse="true" style="color:#93c5fd;font-size:.72rem;text-decoration:none;word-break:break-all;">${safe(String(url).replace(/^https?:\/\//, '').slice(0, 54))}</a>`).join('')}</div>` : ''}
+            ${urls.length ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">${urls.map(url => `<a href="${safe(url)}" target="_blank" rel="noopener" data-no-collapse="true" style="color:#93c5fd;font-size:.72rem;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${safe(sourceLabel(url))}</a>`).join('')}</div>` : ''}
         </article>`;
     }).join('');
     const observedCards = observedItems.slice(0, 10).map((item) => `
@@ -13508,7 +13517,7 @@ function renderCommentsReviewsPanel(data, opts = {}) {
                 <span style="color:#94a3b8;font-size:.68rem;font-weight:800;">${safe(text(item.sourcePlatform, copy.source))}</span>
             </div>
             <p style="margin:0;color:#e2e8f0;font-size:.83rem;line-height:1.62;" dir="auto">${safe(text(item.value, ''))}</p>
-            ${item.sourceUrl ? `<a href="${safe(item.sourceUrl)}" target="_blank" rel="noopener" data-no-collapse="true" style="display:inline-flex;margin-top:10px;color:#93c5fd;font-size:.72rem;text-decoration:none;word-break:break-all;"><i class="fas fa-arrow-up-right-from-square" style="margin-inline-end:6px;"></i>${safe(copy.open)}</a>` : ''}
+            ${item.sourceUrl ? `<a href="${safe(item.sourceUrl)}" target="_blank" rel="noopener" data-no-collapse="true" style="display:inline-flex;align-items:center;gap:6px;margin-top:10px;color:#93c5fd;font-size:.72rem;text-decoration:none;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"><i class="fas fa-arrow-up-right-from-square"></i>${safe(copy.open)} · ${safe(sourceLabel(item.sourceUrl))}</a>` : ''}
         </article>`).join('');
     const diagnosticCards = diagnostics.slice(0, 10).map((item) => {
         const ready = String(item.status || '').toUpperCase() === 'READY' && Number(item.evidenceCount || 0) > 0;

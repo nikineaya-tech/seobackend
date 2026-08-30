@@ -110,6 +110,58 @@ test('Jina searches become market evidence, not strategy claims', async () => {
   }
 });
 
+test('Agent Reach blocks social login pages as customer proof', async () => {
+  const originalFetch = global.fetch;
+  let calls = 0;
+  global.fetch = async () => {
+    calls += 1;
+    return {
+      ok: true,
+      status: 200,
+      url: 'https://example.test/should-not-be-called',
+      text: async () => 'Log into Facebook Email or mobile'
+    };
+  };
+
+  try {
+    const result = await collectAgentReachMarketEvidence({
+      query: 'soins de peau',
+      country: 'Libya',
+      urls: ['https://www.facebook.com/login/device-based/regular/login/?login_attempt=1']
+    });
+
+    assert.equal(calls, 0);
+    assert.equal(result.evidenceRegistry.evidence.length, 0);
+    assert.ok(result.unavailable.some(item => item.reason === 'blocked_login_or_auth_url'));
+    assert.ok(result.channelDiagnostics.some(item => item.status === 'UNAVAILABLE' && item.reason === 'blocked_login_or_auth_url'));
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
+test('Agent Reach blocks login-wall content returned from social pages', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async url => ({
+    ok: true,
+    status: 200,
+    url,
+    text: async () => 'Title: Facebook URL Source: https://www.facebook.com/post Markdown Content: Explore the things you love. Log into Facebook Email or mobile.'
+  });
+
+  try {
+    const result = await collectAgentReachMarketEvidence({
+      query: 'soins de peau',
+      country: 'Libya',
+      urls: ['https://www.facebook.com/house.com.tn/videos/123']
+    });
+
+    assert.equal(result.evidenceRegistry.evidence.length, 0);
+    assert.ok(result.unavailable.some(item => item.reason === 'login_wall_not_customer_voice'));
+  } finally {
+    global.fetch = originalFetch;
+  }
+});
+
 test('Jina search 401 is reported as auth required and later searches are skipped', async () => {
   const originalFetch = global.fetch;
   let calls = 0;

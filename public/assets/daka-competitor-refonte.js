@@ -622,12 +622,14 @@
         const url = typeof item === 'string' ? item : item?.url;
         const label = typeof item === 'string' ? item : (item?.label || item?.title || item?.domain || item?.url);
         if (!useful(url)) return null;
-        return { url: String(url), label: cleanInsight(label) || String(url) };
+        if (/(?:facebook\.com\/login|login\/device-based|login_attempt=|accounts\.google\.com|\/signin|\/login\b|checkpoint)/i.test(String(url))) return null;
+        const host = urlDomain(url);
+        return { url: String(url), label: cleanInsight(label) || host || String(url) };
       })
       .filter(Boolean)
       .slice(0, limit || 4);
     if (!values.length) return '';
-    return `<div class="daka-comp-links">${values.map((item) => `<a href="${esc(item.url)}" target="_blank" rel="noopener" data-no-collapse="true">${esc(item.label || copy('open'))}</a>`).join('')}</div>`;
+    return `<div class="daka-comp-links">${values.map((item) => `<a href="${esc(item.url)}" target="_blank" rel="noopener" data-no-collapse="true">${esc(urlDomain(item.url) || item.label || copy('open'))}</a>`).join('')}</div>`;
   }
   function urlDomain(url) {
     const raw = fixText(url);

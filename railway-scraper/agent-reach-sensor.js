@@ -49,6 +49,17 @@ function normalizeUrl(rawUrl) {
   }
 }
 
+function isBlockedCustomerProofUrl(url = '') {
+  const value = clean(url, 900).toLowerCase();
+  if (!value) return true;
+  return /(?:facebook\.com\/login|facebook\.com\/recover|facebook\.com\/privacy|facebook\.com\/help|login\/device-based|login_attempt=|accounts\.google\.com|\/signin|\/login\b|\/auth\b|\/oauth\b|checkpoint)/i.test(value);
+}
+
+function isLoginWallText(text = '') {
+  const value = clean(text, 1800).toLowerCase();
+  return /log in to facebook|log into facebook|login to facebook|facebook email or mobile|login_attempt=|device-based\/regular\/login|تسجيل الدخول إلى فيسبوك|سجّل الدخول إلى فيسبوك/i.test(value);
+}
+
 function platformOf(url = '') {
   const host = (() => {
     try { return new URL(url).hostname.toLowerCase(); } catch (_) { return ''; }
@@ -169,11 +180,13 @@ function evidenceFromText({ url, text, title, country, query, claimType = 'WEB_C
 async function collectUrlEvidence(url, context = {}) {
   const normalized = normalizeUrl(url);
   if (!normalized) return { unavailable: { url, reason: 'invalid_url' }, evidence: null };
+  if (isBlockedCustomerProofUrl(normalized)) return { unavailable: { url: normalized, reason: 'blocked_login_or_auth_url' }, evidence: null };
   try {
     const read = await readViaJina(normalized);
     if (!read.ok || !read.text) {
       return { unavailable: { url: normalized, reason: `http_${read.status || 'unknown'}` }, evidence: null };
     }
+    if (isLoginWallText(read.text)) return { unavailable: { url: normalized, reason: 'login_wall_not_customer_voice' }, evidence: null };
     const titleMatch = read.text.match(/^Title:\s*(.+)$/im);
     return {
       unavailable: null,
@@ -244,6 +257,7 @@ function extractCustomerProofUrls(text = '') {
     const url = normalizeUrl(raw.replace(/[.,;]+$/g, ''));
     if (!url) return raw;
     if (/s\.jina\.ai|r\.jina\.ai/.test(url)) return raw;
+    if (isBlockedCustomerProofUrl(url)) return raw;
     if (/youtube\.com|youtu\.be|reddit\.com|facebook\.com|instagram\.com|tiktok\.com|twitter\.com|x\.com|trustpilot|avis-verifies|reviews?|comment|testimonial|rating/i.test(url)) {
       urls.add(url);
     }
