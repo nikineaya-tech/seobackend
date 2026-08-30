@@ -128,7 +128,7 @@ test('evidence rows are deduplicated before signal creation', () => {
   assert.equal(topicFor(rows[0]), 'delivery');
 });
 
-test('customer voice patterns are quantified from social and semantic evidence', () => {
+test('customer voice patterns are quantified from traceable social and review evidence', () => {
   const model = buildMarketSignalEngine({
     now: NOW,
     evidenceRegistry: {
@@ -147,22 +147,22 @@ test('customer voice patterns are quantified from social and semantic evidence',
         {
           id: 'ev_exa_review_1',
           scope: 'CUSTOMER',
-          claimType: 'EXA_SEARCH_RESULT',
-          title: 'Buyer comparison guide',
+          claimType: 'CUSTOMER_REVIEW_SOURCE_CONTENT',
+          title: 'Buyer comparison discussion',
           value: 'Buyers compare price, refund guarantee and verified reviews before ordering.',
-          sourceUrl: 'https://example.com/guide',
-          sourcePlatform: 'exa_search',
+          sourceUrl: 'https://reddit.com/r/skincare/comments/example',
+          sourcePlatform: 'reddit',
           publishedAt: '2026-08-20T10:00:00.000Z',
           verificationStatus: 'CONFIRMED'
         },
         {
           id: 'ev_jina_question_1',
           scope: 'CUSTOMER',
-          claimType: 'JINA_SEARCH_RESULTS',
+          claimType: 'CUSTOMER_QUESTION',
           title: 'Search questions',
           value: 'People ask whether the return policy is real and if the product is safe for sensitive skin.',
-          sourceUrl: 'https://s.jina.ai/http%3A%2F%2Fexample.com',
-          sourcePlatform: 'jina_search',
+          sourceUrl: 'https://facebook.com/groups/skincare/posts/example',
+          sourcePlatform: 'facebook',
           observedAt: NOW,
           verificationStatus: 'CONFIRMED'
         }
@@ -183,7 +183,7 @@ test('customer voice patterns are quantified from social and semantic evidence',
   assert.doesNotMatch(JSON.stringify(voice), /market share|demand growth|sales growth/i);
 });
 
-test('loose semantic search evidence must match product and country before becoming customer voice', () => {
+test('loose semantic search evidence stays market evidence until a real customer source is opened', () => {
   const model = buildMarketSignalEngine({
     now: NOW,
     query: 'مزيل رؤوس سوداء بتكبير 50× وإضاءة LED',
@@ -217,9 +217,11 @@ test('loose semantic search evidence must match product and country before becom
   });
 
   const voiceJson = JSON.stringify(model.customerVoice);
-  assert.match(voiceJson, /ev_jina_relevant_1/);
+  assert.doesNotMatch(voiceJson, /ev_jina_relevant_1/);
   assert.doesNotMatch(voiceJson, /ev_jina_noise_1/);
+  assert.equal(model.customerVoice.patternCount, 0);
   assert.ok(model.signals.some(signal => signal.evidenceIds.includes('ev_jina_noise_1')));
+  assert.ok(model.signals.some(signal => signal.evidenceIds.includes('ev_jina_relevant_1')));
 });
 
 test('offer intelligence patterns are quantified without inventing commercial terms', () => {

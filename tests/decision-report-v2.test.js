@@ -234,7 +234,84 @@ test('decision report v2 comments and reviews section refuses to invent missing 
   assert.equal(report.mainReport.commentsReviews.quality.noInventedReviews, true);
   assert.equal(report.mainReport.marketCoverage.sections.find(section => section.key === 'customer_voice').status, 'MISSING');
   assert.equal(report.mainReport.marketCoverage.sections.find(section => section.key === 'comments_reviews').status, 'MISSING');
-  assert.ok(report.mainReport.marketCoverage.missingCapabilities.includes('Customer Voice réel insuffisant'));
+  assert.ok(report.mainReport.marketCoverage.missingCapabilities.includes('Real customer voice is insufficient'));
+});
+
+test('decision report v2 localizes Arabic coverage and refuses catalog snippets as comments', () => {
+  const report = buildDecisionReportV2({
+    query: 'soins de peau',
+    country: 'Libya',
+    lang: 'ar',
+    evidenceRegistry: {
+      evidence: [
+        {
+          id: 'ev_catalog_snippet',
+          scope: 'MARKET',
+          claimType: 'CUSTOMER_DESIRE',
+          value: 'Buy premium skin care products online on a marketplace catalog with many product options.',
+          sourcePlatform: 'web',
+          sourceUrl: 'https://catalog.example/skin-care',
+          confidence: 'MEDIUM',
+          verificationStatus: 'CONFIRMED'
+        },
+        {
+          id: 'ev_offer_snippet',
+          scope: 'OFFER',
+          claimType: 'offer',
+          value: 'Product page mentions price and available skin care products.',
+          sourcePlatform: 'serp',
+          sourceUrl: 'https://seller.example/product',
+          confidence: 'MEDIUM',
+          verificationStatus: 'CONFIRMED'
+        }
+      ]
+    },
+    marketSignalModel: buildMarketSignalEngine({
+      now: NOW,
+      query: 'soins de peau',
+      country: 'Libya',
+      evidenceRegistry: {
+        evidence: [
+          {
+            id: 'ev_catalog_snippet',
+            scope: 'MARKET',
+            claimType: 'CUSTOMER_DESIRE',
+            value: 'Buy premium skin care products online on a marketplace catalog with many product options.',
+            sourcePlatform: 'web',
+            sourceUrl: 'https://catalog.example/skin-care',
+            confidence: 'MEDIUM',
+            verificationStatus: 'CONFIRMED'
+          },
+          {
+            id: 'ev_offer_snippet',
+            scope: 'OFFER',
+            claimType: 'offer',
+            value: 'Product page mentions price and available skin care products.',
+            sourcePlatform: 'serp',
+            sourceUrl: 'https://seller.example/product',
+            confidence: 'MEDIUM',
+            verificationStatus: 'CONFIRMED'
+          }
+        ]
+      }
+    }),
+    strategicAgentsV2: {
+      marketPatternAnalyst: { observations: [] },
+      gapAnalyst: { gaps: [], saturatedPatterns: [], unknowns: [] },
+      decisionStrategist: { actions: [], unknowns: [] }
+    },
+    marketEntityMap: {
+      byType: {},
+      supplierIntelligence: { status: 'UNKNOWN', limitations: [] }
+    }
+  });
+
+  const coverageJson = JSON.stringify(report.mainReport.marketCoverage);
+  assert.equal(report.mainReport.commentsReviews.summary.evidenceCount, 0);
+  assert.equal(report.mainReport.commentsReviews.patterns.length, 0);
+  assert.match(coverageJson, /صوت العميل الحقيقي غير كاف/);
+  assert.match(coverageJson, /لم يتم جمع تعليقات أو آراء قابلة للاستعمال/);
+  assert.doesNotMatch(coverageJson, /Customer Voice réel|Commentaires et avis|Guide concret|Pricing Intelligence|Offer Intelligence/i);
 });
 
 test('decision report v2 does not promote unsupported observations or supplier claims', () => {

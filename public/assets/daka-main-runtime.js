@@ -13292,6 +13292,10 @@ function renderFrameworkWorkshopsPanel(data, opts = {}) {
     };
     const colors = ['#67e8f9', '#a78bfa', '#22c55e', '#f59e0b', '#fb7185'];
     const workshops = arr(model.workshops).slice(0, 6);
+    const rawMode = String(model.mode || '').toUpperCase();
+    const modeLabel = rawMode === 'PROJECTED_WORKSHOP' || rawMode === 'WORKSHOP' || !rawMode
+        ? (isAr ? 'ورشة مبسطة' : isEn ? 'Projected workshop' : 'Atelier projeté')
+        : text(model.mode);
     const headerMeta = [
         model.subject ? safe(model.subject) : '',
         model.market ? safe(model.market) : '',
@@ -13321,7 +13325,7 @@ function renderFrameworkWorkshopsPanel(data, opts = {}) {
                 <p style="margin:8px 0 0;color:#9fb3cc;font-size:.86rem;line-height:1.55;max-width:840px;">${safe(model.disclaimer || copy.subtitle)}</p>
                 ${headerMeta ? `<small style="display:block;color:#64748b;margin-top:7px;" dir="auto">${headerMeta}</small>` : ''}
             </div>
-            <strong style="color:#fbbf24;background:rgba(251,191,36,.11);border:1px solid rgba(251,191,36,.28);border-radius:999px;padding:8px 13px;font-size:.72rem;">${safe(model.mode || 'PROJECTED_WORKSHOP')}</strong>
+            <strong style="color:#fbbf24;background:rgba(251,191,36,.11);border:1px solid rgba(251,191,36,.28);border-radius:999px;padding:8px 13px;font-size:.72rem;">${safe(modeLabel)}</strong>
         </header>
         ${model.evidenceNote ? `<div style="border:1px dashed rgba(103,232,249,.26);background:rgba(8,145,178,.08);border-radius:15px;padding:12px;margin-bottom:14px;color:#bae6fd;font-size:.82rem;line-height:1.55;" dir="auto">${safe(model.evidenceNote)}</div>` : ''}
         <div style="display:grid;grid-template-columns:1fr;gap:13px;">${cards}</div>
@@ -13358,7 +13362,7 @@ function renderCommentsReviewsPanel(data, opts = {}) {
         data?.reportV2?.deepDive?.socialContentIntelligence ||
         data?.deepDive?.socialContentIntelligence ||
         null;
-    const patterns = arr(model?.patterns).length
+    const patterns = model
         ? arr(model.patterns)
         : [
             ...arr(fallbackVoice?.pains),

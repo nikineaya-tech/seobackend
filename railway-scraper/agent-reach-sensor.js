@@ -58,12 +58,13 @@ function platformOf(url = '') {
   if (/(^|\.)x\.com|twitter\.com/.test(host)) return 'x';
   if (/instagram\.com/.test(host)) return 'instagram';
   if (/facebook\.com/.test(host)) return 'facebook';
+  if (/trustpilot|avis-verifies|reviews?/.test(host)) return 'reviews';
   if (/linkedin\.com/.test(host)) return 'linkedin';
   return 'web';
 }
 
 function scopeForPlatform(platform) {
-  if (['youtube', 'reddit', 'x', 'instagram', 'facebook', 'linkedin'].includes(platform)) return 'CUSTOMER';
+  if (['youtube', 'reddit', 'x', 'instagram', 'facebook', 'linkedin', 'reviews'].includes(platform)) return 'CUSTOMER';
   return 'MARKET';
 }
 
@@ -236,6 +237,21 @@ async function collectFeedEvidence(feedUrl, context = {}) {
   }
 }
 
+function extractCustomerProofUrls(text = '') {
+  const urls = new Set();
+  const urlPattern = /https?:\/\/[^\s)\]>"']+/g;
+  String(text || '').replace(urlPattern, raw => {
+    const url = normalizeUrl(raw.replace(/[.,;]+$/g, ''));
+    if (!url) return raw;
+    if (/s\.jina\.ai|r\.jina\.ai/.test(url)) return raw;
+    if (/youtube\.com|youtu\.be|reddit\.com|facebook\.com|instagram\.com|tiktok\.com|twitter\.com|x\.com|trustpilot|avis-verifies|reviews?|comment|testimonial|rating/i.test(url)) {
+      urls.add(url);
+    }
+    return raw;
+  });
+  return [...urls].slice(0, 8);
+}
+
 async function collectSearchEvidence(searchQuery, context = {}) {
   const query = clean(searchQuery, 180);
 
@@ -270,19 +286,36 @@ async function collectSearchEvidence(searchQuery, context = {}) {
       };
     }
 
+    const isProofSearch = /review|reviews|avis|comment|comments|testimonial|rating|feedback|experience|تقييم|تقييمات|آراء|اراء|مراجعات|مراجعة|تعليقات|تعليق|تجربة/i.test(query);
+    const searchEvidence = evidenceFromText({
+      url:
+        read.url ||
+        `https://s.jina.ai/${encodeURIComponent(query)}`,
+      text: read.text,
+      title: `Jina search results: ${query}`,
+      country: context.country,
+      query: context.query || query,
+      platform: isProofSearch ? 'review_search' : 'jina_search',
+      claimType: isProofSearch ? 'CUSTOMER_REVIEW_SEARCH_RESULTS' : 'JINA_SEARCH_RESULTS'
+    });
+    const candidateUrls = isProofSearch
+      ? extractCustomerProofUrls(read.text).slice(0, Number(process.env.AGENT_REACH_REVIEW_URLS_PER_SEARCH || 2))
+      : [];
+    const candidateEvidence = [];
+    for (const candidateUrl of candidateUrls) {
+      const candidate = await collectUrlEvidence(candidateUrl, { ...context, query });
+      if (candidate?.evidence) {
+        candidateEvidence.push({
+          ...candidate.evidence,
+          claimType: /youtube|reddit|facebook|instagram|tiktok|twitter|trustpilot|avis|review/i.test(candidate.evidence.sourcePlatform || candidate.evidence.sourceUrl || '')
+            ? 'CUSTOMER_REVIEW_SOURCE_CONTENT'
+            : candidate.evidence.claimType
+        });
+      }
+    }
     return {
       unavailable: null,
-      evidence: evidenceFromText({
-        url:
-          read.url ||
-          `https://s.jina.ai/${encodeURIComponent(query)}`,
-        text: read.text,
-        title: `Jina search results: ${query}`,
-        country: context.country,
-        query: context.query || query,
-        platform: 'jina_search',
-        claimType: 'JINA_SEARCH_RESULTS'
-      })
+      evidence: [searchEvidence, ...candidateEvidence]
     };
   } catch (error) {
     return {
@@ -544,7 +577,12 @@ for (const search of searches) {
   }
   try {
     const result = await collectSearchEvidence(search, context);
-    if (result?.evidence) evidence.push(result.evidence);
+    const collected = Array.isArray(result?.evidence)
+      ? result.evidence
+      : result?.evidence
+        ? [result.evidence]
+        : [];
+    if (collected.length) evidence.push(...collected);
     if (result?.unavailable) unavailable.push(result.unavailable);
     const status = result?.unavailable ? (result.unavailable.status || 'FAILED') : 'READY';
     if (status === 'AUTH_REQUIRED') jinaSearchAuthFailed = true;
@@ -556,8 +594,8 @@ for (const search of searches) {
       query: search,
       status,
       reason: result?.unavailable?.reason || 'ok',
-      resultCount: result?.evidence ? 1 : 0,
-      evidence: result?.evidence ? 1 : 0,
+      resultCount: collected.length,
+      evidence: collected.length,
       durationMs: Date.now() - channelStarted
     });
   } catch (error) {

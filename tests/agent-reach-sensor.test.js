@@ -101,8 +101,8 @@ test('Jina searches become market evidence, not strategy claims', async () => {
 
     assert.equal(result.counts.searches, 1);
     assert.equal(result.evidenceRegistry.evidence.length, 1);
-    assert.equal(result.evidenceRegistry.evidence[0].claimType, 'JINA_SEARCH_RESULTS');
-    assert.equal(result.evidenceRegistry.evidence[0].sourcePlatform, 'jina_search');
+    assert.equal(result.evidenceRegistry.evidence[0].claimType, 'CUSTOMER_REVIEW_SEARCH_RESULTS');
+    assert.equal(result.evidenceRegistry.evidence[0].sourcePlatform, 'review_search');
     assert.equal(result.evidenceRegistry.evidence[0].scope, 'MARKET');
     assert.doesNotMatch(JSON.stringify(result), /winning strategy|market leader|dominates/i);
   } finally {

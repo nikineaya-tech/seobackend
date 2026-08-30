@@ -3917,16 +3917,43 @@ function apifyBuildSocialListeningIntel(recordsByBucket = {}) {
   };
 }
 
-function apifyBuildGuideTop(reason = 'CONTEXT_ONLY') {
+function apifyBuildGuideTop(reason = 'CONTEXT_ONLY', lang = 'fr') {
   const label = String(reason || '').replace(/_/g, ' ').toLowerCase();
+  const locale = String(lang || 'fr').toLowerCase().startsWith('ar')
+    ? 'ar'
+    : String(lang || 'fr').toLowerCase().startsWith('en')
+      ? 'en'
+      : 'fr';
+  const copy = {
+    fr: {
+      title: 'Guide concret',
+      steps: [
+        'Reconstruire les mots de recherche depuis la SERP, le funnel, les concurrents et le pays cible.',
+        'Chercher les preuves terrain utiles: publicités, posts, commentaires, avis, questions achat et objections.',
+        'Transformer les liens trouvés en hooks, garanties, CTA, H1, angles ads et priorités funnel.'
+      ]
+    },
+    en: {
+      title: 'Concrete guide',
+      steps: [
+        'Rebuild search terms from the SERP, funnel, competitors and target country.',
+        'Collect useful field proof: ads, posts, comments, reviews, purchase questions and objections.',
+        'Turn found links into hooks, guarantees, CTAs, H1s, ad angles and funnel priorities.'
+      ]
+    },
+    ar: {
+      title: 'دليل عملي',
+      steps: [
+        'أعد بناء كلمات البحث من نتائج البحث ومسار التحويل والمنافسين والبلد المستهدف.',
+        'ابحث عن أدلة ميدانية مفيدة: إعلانات، منشورات، تعليقات، آراء، أسئلة شراء واعتراضات.',
+        'حوّل الروابط المرصودة إلى هوكات، ضمانات، دعوات فعل، عناوين وزوايا إعلانية قابلة للاختبار.'
+      ]
+    }
+  }[locale];
   return {
-    title: 'Guide concret',
+    title: copy.title,
     reason: label,
-    steps: [
-      'Reconstruire les mots de recherche depuis la SERP, le funnel, les concurrents et le pays cible.',
-      'Chercher les preuves terrain utiles: ads, posts, commentaires, avis, questions achat et objections.',
-      'Transformer les liens trouves en hooks, garanties, CTA, H1, angles ads et quick wins funnel.'
-    ]
+    steps: copy.steps
   };
 }
 
@@ -3941,7 +3968,7 @@ function apifyEmptyDisplayResponse(reason, gate, links, apifyIntel, extra = {}) 
     preflight: gate,
     links,
     apifyIntel,
-    guideTop: apifyBuildGuideTop(reason),
+    guideTop: apifyBuildGuideTop(reason, extra.lang || extra?.searchPlan?.lang || 'fr'),
     studiesBottom: [],
     runs: [],
     ...apifyBuildSocialListeningIntel(recordsByBucket),
@@ -4567,14 +4594,7 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
         geo: geoData.location || 'Morocco',
         lang
       },
-      guideTop: {
-        title: 'Guide concret',
-        steps: [
-          'Identifier les ads et posts les plus répétés',
-          'Comparer promesse marketing vs objections commentaires',
-          'Transformer en 3 quick wins funnel + copy'
-        ]
-      },
+      guideTop: apifyBuildGuideTop('NO_ITEMS', lang),
       studiesBottom: [],
       apifyIntel,
       ...apifyBuildSocialListeningIntel(recordsByBucket)
@@ -4611,14 +4631,7 @@ async function callApify({ query = '', url = '', geo = '', lang = 'fr', prefligh
       geo: geoData.location || 'Morocco',
       lang
     },
-    guideTop: {
-      title: 'Guide concret',
-      steps: [
-        'Identifier les ads et posts les plus répétés',
-        'Comparer promesse marketing vs objections commentaires',
-        'Transformer en 3 quick wins funnel + copy'
-      ]
-    },
+    guideTop: apifyBuildGuideTop('OK', lang),
     studiesBottom: studiesBottom.slice(0, 30),
     apifyIntel,
     ...socialIntel

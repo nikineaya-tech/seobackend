@@ -57,6 +57,8 @@ test('source router compacts long product descriptions before Agent Reach search
   assert.ok(variants[0].length < 80);
   assert.match(variants[0], /مزيل رؤوس سوداء/);
   assert.match(variants[0], /ليبيا/);
+  assert.ok(variants.some(item => /آراء العملاء|تقييمات|مراجعات|تعليقات/.test(item)));
   assert.doesNotMatch(variants.join(' '), /Libya/);
+  assert.doesNotMatch(variants.join(' '), /ليبيا ليبيا/);
   assert.doesNotMatch(variants.join(' '), /مزود بالضوء الأزرق، شاشة للبطارية/);
 });
