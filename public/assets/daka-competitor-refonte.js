@@ -581,6 +581,29 @@
     return values.slice(0, limit);
   }
 
+  function normalizeKey(value) {
+    return cleanInsight(value)
+      .toLowerCase()
+      .replace(/https?:\/\/\S+/g, '')
+      .replace(/[^\p{L}\p{N}]+/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  function uniqueBy(items, keyFn, limit = 10) {
+    const seen = new Set();
+    const out = [];
+    (Array.isArray(items) ? items : [])
+      .filter(Boolean)
+      .forEach((item) => {
+        const key = normalizeKey(typeof keyFn === 'function' ? keyFn(item) : normalizeItem(item));
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        out.push(item);
+      });
+    return out.slice(0, limit);
+  }
+
   function bullets(items, tone) {
     const values = list(items);
     if (!values.length) return '';
@@ -989,7 +1012,7 @@
   function renderCommentsReviews(data) {
     const model = data?.commentsReviews || data?.decisionReportV2?.mainReport?.commentsReviews || data?.reportV2?.mainReport?.commentsReviews || {};
     const customerVoice = data?.decisionReportV2?.mainReport?.customerVoice || data?.reportV2?.mainReport?.customerVoice || {};
-    const patterns = Array.isArray(model.patterns) && model.patterns.length
+    const rawPatterns = Array.isArray(model.patterns) && model.patterns.length
       ? model.patterns
       : [
         ...(Array.isArray(customerVoice.pains) ? customerVoice.pains : []),
@@ -998,10 +1021,14 @@
         ...(Array.isArray(customerVoice.buyingCriteria) ? customerVoice.buyingCriteria : []),
         ...(Array.isArray(customerVoice.complaints) ? customerVoice.complaints : [])
       ];
-    const observed = Array.isArray(model.observedItems) ? model.observedItems : [];
-    const diagnostics = Array.isArray(model.channelDiagnostics)
+    const patterns = uniqueBy(rawPatterns, item => item.key || item.label || item.statement || item.topic || normalizeItem(item), 8);
+    const observed = uniqueBy(model.observedItems, item => `${item.kind || 'observed'}|${item.sourceUrl || ''}|${item.value || item.title || normalizeItem(item)}`, 8);
+    const diagnostics = uniqueBy(Array.isArray(model.channelDiagnostics)
       ? model.channelDiagnostics
-      : (Array.isArray(data?.agentReachEvidence?.channelDiagnostics) ? data.agentReachEvidence.channelDiagnostics : []);
+      : (Array.isArray(data?.agentReachEvidence?.channelDiagnostics) ? data.agentReachEvidence.channelDiagnostics : []),
+      item => `${item.channel || ''}|${item.backend || item.provider || ''}|${item.status || ''}|${item.reason || ''}`,
+      8
+    );
     if (!patterns.length && !observed.length && !diagnostics.length) return '';
 
     const labels = lang() === 'ar' ? {
@@ -1306,10 +1333,16 @@
         <h4>${esc(workshopModel.label || (isAr ? 'ورشات استراتيجية بسيطة' : isEn ? 'Simple strategy workshops' : 'Ateliers stratégiques simples'))}</h4>
         <p>${esc(workshopModel.disclaimer || (isAr ? 'هذه فرضيات عمل وليست حقائق سوق مثبتة.' : isEn ? 'Working hypotheses, not proven market facts.' : 'Hypothèses de travail, pas des faits marché prouvés.'))}</p>
         <div class="daka-comp-study-grid">
-          ${workshopModel.workshops.slice(0, 4).map((workshop) => `
+          ${uniqueBy(workshopModel.workshops, workshop => workshop.key || workshop.title, 4).map((workshop) => `
             <div class="daka-comp-study-subcard">
               <strong>${esc(workshop.title || workshop.key || '')}</strong>
-              ${bullets((workshop.cards || []).slice(0, 4).map(card => `${card.label || ''}: ${card.guide || ''}`), 'neutral')}
+              ${uniqueBy(workshop.cards || [], card => `${card.label || ''}|${card.question || card.guide || ''}|${card.answer || ''}`, 4).map(card => `
+                <div class="daka-comp-study-field">
+                  <strong>${esc(card.label || '')}</strong>
+                  ${paragraph(card.question || card.guide)}
+                  ${paragraph(card.answer || card.response || '')}
+                </div>
+              `).join('')}
             </div>
           `).join('')}
         </div>
@@ -1321,7 +1354,7 @@
     const blockedKeys = new Set(frameworkBlocked
       ? ['grandSlamOfferBlueprint', 'masteringTechniques', 'duelComparison', 'swot', 'blueOceanStrategy', 'comparisonScores']
       : []);
-    const studies = [
+    const studies = frameworkBlocked && workshopHtml ? [] : [
       ['top3ReverseEngineering', extraCopy('reverseEngineering')],
       ['grandSlamOfferBlueprint', extraCopy('grandSlam')],
       ['productServiceAudit', extraCopy('productAudit')],

@@ -4490,6 +4490,13 @@ const decisionProofHtml = renderDecisionProofPanel(data, {
 const marketCoverageHtml = renderMarketCoveragePanel(data, { isAr, isEn });
 const frameworkWorkshopsHtml = renderFrameworkWorkshopsPanel(data, { isAr, isEn });
 const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
+const frameworkWorkshopMode = Boolean(frameworkWorkshopsHtml) && (
+    data?.frameworkPolicy?.workshopMode === true ||
+    String(data?.frameworkWorkshops?.mode || data?.decisionReportV2?.mainReport?.frameworkWorkshops?.mode || '').toUpperCase().includes('WORKSHOP') ||
+    data?.marketDynamics?.frameworkStatus === 'INSUFFICIENT_EVIDENCE' ||
+    data?.swot?.status === 'INSUFFICIENT_EVIDENCE' ||
+    data?.blueOceanStrategy?.status === 'INSUFFICIENT_EVIDENCE'
+);
 
     // ─── HELPERS ───────────────────────────────────────────────────
     const safe = (v, fallback = '—') => {
@@ -4747,7 +4754,7 @@ const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
     // §1b — MARKET DYNAMICS (Porter) — NOUVEAU
     // ══════════════════════════════════════════════════════════════
     let marketDynHtml = '';
-    if (data.marketDynamics && data.marketDynamics.frameworkStatus !== 'INSUFFICIENT_EVIDENCE') {
+    if (!frameworkWorkshopMode && data.marketDynamics && data.marketDynamics.frameworkStatus !== 'INSUFFICIENT_EVIDENCE') {
         const md = data.marketDynamics;
         const lvlColor = { Low: '#10b981', Medium: '#f59e0b', High: '#ef4444', Critical: '#dc2626' };
         const tColor   = lvlColor[md.threatLevel] || '#94a3b8';
@@ -4869,7 +4876,7 @@ const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
     // §2b — GRAND SLAM OFFER BLUEPRINT — NOUVEAU
     // ══════════════════════════════════════════════════════════════
     let gslHtml = '';
-    if (data.grandSlamOfferBlueprint && data.grandSlamOfferBlueprint.status !== 'INSUFFICIENT_EVIDENCE') {
+    if (!frameworkWorkshopMode && data.grandSlamOfferBlueprint && data.grandSlamOfferBlueprint.status !== 'INSUFFICIENT_EVIDENCE') {
         const gsl = data.grandSlamOfferBlueprint;
         const gslItems = [
             { key: 'dreamOutcome',        label: t.dreamOutcome,  icon: 'fa-star',        color: '#fcd34d' },
@@ -5008,7 +5015,7 @@ const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
     // §3c — MASTERING TECHNIQUES — NOUVEAU
     // ══════════════════════════════════════════════════════════════
     let masteringHtml = '';
-    if (data.masteringTechniques) {
+    if (!frameworkWorkshopMode && data.masteringTechniques) {
         const mt = data.masteringTechniques;
         const hasData = hasResultValue(mt.trafficSources) ||
                         hasResultValue(mt.retentionLoop) ||
@@ -5047,7 +5054,7 @@ const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
     // §4 — DUEL STRATÉGIQUE (duelConfig étendu + fix valueLadder/uxTeardown)
     // ══════════════════════════════════════════════════════════════
     let duelHtml = '';
-    if (data.duelComparison && typeof data.duelComparison === 'object') {
+    if (!frameworkWorkshopMode && data.duelComparison && typeof data.duelComparison === 'object') {
         const duel = data.duelComparison;
         const validDuelKeys = Object.keys(duel).filter(k =>
             duel[k] && typeof duel[k] === 'object' && duel[k].competitor
@@ -5117,7 +5124,7 @@ const commentsReviewsHtml = renderCommentsReviewsPanel(data, { isAr, isEn });
     let warRoomHtml = '';
     const swotAllowed = data.swot && data.swot.status !== 'INSUFFICIENT_EVIDENCE';
     const blueOceanAllowed = data.blueOceanStrategy && data.blueOceanStrategy.status !== 'INSUFFICIENT_EVIDENCE';
-    if (swotAllowed || data.comparisonScores || blueOceanAllowed) {
+    if (!frameworkWorkshopMode && (swotAllowed || data.comparisonScores || blueOceanAllowed)) {
         const swot         = data.swot || {};
         const strengths    = Array.isArray(swot.strengths)     ? swot.strengths     : [];
         const weaknesses   = Array.isArray(swot.weaknesses)    ? swot.weaknesses    : [];
@@ -13264,6 +13271,23 @@ function renderFrameworkWorkshopsPanel(data, opts = {}) {
         if (typeof value === 'object') return value.label || value.title || value.guide || fallback;
         return String(value || '').trim() || fallback;
     };
+    const normalized = (value) => text(value)
+        .toLowerCase()
+        .replace(/https?:\/\/\S+/g, '')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    const uniqueBy = (items, keyFn, limit = 10) => {
+        const seen = new Set();
+        const out = [];
+        arr(items).forEach((item) => {
+            const key = normalized(keyFn(item));
+            if (!key || seen.has(key)) return;
+            seen.add(key);
+            out.push(item);
+        });
+        return out.slice(0, limit);
+    };
     const model =
         data?.frameworkWorkshops ||
         data?.mainReport?.frameworkWorkshops ||
@@ -13276,22 +13300,28 @@ function renderFrameworkWorkshopsPanel(data, opts = {}) {
         subtitle: 'هذه البطاقات تساعد على التفكير في المشروع بلغة بسيطة. القرار النهائي يحتاج اختبارا أو دليلا.',
         status: 'فرضية عمل',
         proof: 'الدليل منفصل',
-        action: 'الخطوة العملية'
+        action: 'الخطوة العملية',
+        question: 'السؤال',
+        answer: 'الإجابة العملية'
     } : isEn ? {
         title: 'Workshops, not facts',
         subtitle: 'These cards help think through the project in plain language. Final decisions still need proof or a test.',
         status: 'Working hypothesis',
         proof: 'Evidence is separate',
-        action: 'Practical step'
+        action: 'Practical step',
+        question: 'Question',
+        answer: 'Working answer'
     } : {
         title: 'Ateliers, pas des faits',
         subtitle: 'Ces cartes aident à réfléchir au projet avec des mots simples. La décision finale demande une preuve ou un test.',
         status: 'Hypothèse de travail',
         proof: 'La preuve est séparée',
-        action: 'Étape pratique'
+        action: 'Étape pratique',
+        question: 'Question',
+        answer: 'Réponse de travail'
     };
     const colors = ['#67e8f9', '#a78bfa', '#22c55e', '#f59e0b', '#fb7185'];
-    const workshops = arr(model.workshops).slice(0, 6);
+    const workshops = uniqueBy(model.workshops, workshop => workshop.key || workshop.title, 6);
     const rawMode = String(model.mode || '').toUpperCase();
     const modeLabel = rawMode === 'PROJECTED_WORKSHOP' || rawMode === 'WORKSHOP' || !rawMode
         ? (isAr ? 'ورشة مبسطة' : isEn ? 'Projected workshop' : 'Atelier projeté')
@@ -13303,11 +13333,16 @@ function renderFrameworkWorkshopsPanel(data, opts = {}) {
     ].filter(Boolean).join(' · ');
     const cards = workshops.map((workshop, wi) => {
         const color = colors[wi % colors.length];
-        const items = arr(workshop.cards).slice(0, 5).map((card) => `
+        const items = uniqueBy(workshop.cards, card => `${card.label}|${card.question || card.guide}|${card.answer || ''}`, 5).map((card) => {
+            const question = text(card.question || card.guide);
+            const answer = text(card.answer || card.response || card.recommendation || '');
+            return `
             <article style="border:1px solid ${color}2e;background:rgba(15,23,42,.68);border-radius:14px;padding:13px;min-height:116px;">
                 <strong style="display:block;color:${color};font-size:.78rem;margin-bottom:8px;" dir="auto">${safe(text(card.label))}</strong>
-                <p style="margin:0;color:#cbd5e1;font-size:.8rem;line-height:1.58;" dir="auto">${safe(text(card.guide))}</p>
-            </article>`).join('');
+                ${question ? `<div style="margin-bottom:9px;"><span style="display:block;color:#94a3b8;font-size:.66rem;font-weight:900;text-transform:uppercase;margin-bottom:4px;">${safe(copy.question)}</span><p style="margin:0;color:#e2e8f0;font-size:.8rem;line-height:1.58;" dir="auto">${safe(question)}</p></div>` : ''}
+                ${answer ? `<div><span style="display:block;color:#bbf7d0;font-size:.66rem;font-weight:900;text-transform:uppercase;margin-bottom:4px;">${safe(copy.answer)}</span><p style="margin:0;color:#cbd5e1;font-size:.8rem;line-height:1.58;" dir="auto">${safe(answer)}</p></div>` : ''}
+            </article>`;
+        }).join('');
         return `
         <section style="border:1px solid rgba(148,163,184,.14);background:linear-gradient(145deg,rgba(2,6,23,.72),rgba(15,23,42,.54));border-radius:18px;padding:15px;">
             <header style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px;">
@@ -13346,6 +13381,23 @@ function renderCommentsReviewsPanel(data, opts = {}) {
         }
         return String(value || '').trim() || fallback;
     };
+    const normalized = (value) => text(value)
+        .toLowerCase()
+        .replace(/https?:\/\/\S+/g, '')
+        .replace(/[^\p{L}\p{N}]+/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    const uniqueBy = (items, keyFn, limit = 10) => {
+        const seen = new Set();
+        const out = [];
+        arr(items).forEach((item) => {
+            const key = normalized(keyFn(item));
+            if (!key || seen.has(key)) return;
+            seen.add(key);
+            out.push(item);
+        });
+        return out.slice(0, limit);
+    };
     const model =
         data?.commentsReviews ||
         data?.mainReport?.commentsReviews ||
@@ -13362,7 +13414,7 @@ function renderCommentsReviewsPanel(data, opts = {}) {
         data?.reportV2?.deepDive?.socialContentIntelligence ||
         data?.deepDive?.socialContentIntelligence ||
         null;
-    const patterns = model
+    const rawPatterns = model
         ? arr(model.patterns)
         : [
             ...arr(fallbackVoice?.pains),
@@ -13373,8 +13425,9 @@ function renderCommentsReviewsPanel(data, opts = {}) {
             ...arr(fallbackSocial?.reviews),
             ...arr(fallbackSocial?.questions)
         ];
-    const observedItems = arr(model?.observedItems);
-    const diagnostics = arr(model?.channelDiagnostics || data?.agentReachEvidence?.channelDiagnostics || data?.marketEvidence?.channelDiagnostics);
+    const patterns = uniqueBy(rawPatterns, item => item.key || item.label || item.statement || item.topic || text(item), 8);
+    const observedItems = uniqueBy(model?.observedItems, item => `${item.kind || 'observed'}|${item.sourceUrl || ''}|${item.value || item.title || text(item)}`, 10);
+    const diagnostics = uniqueBy(model?.channelDiagnostics || data?.agentReachEvidence?.channelDiagnostics || data?.marketEvidence?.channelDiagnostics, item => `${item.channel || ''}|${item.backend || item.provider || ''}|${item.status || ''}|${item.reason || ''}`, 10);
     if (!model && !patterns.length && !observedItems.length && !diagnostics.length) return '';
 
     const copy = isAr ? {

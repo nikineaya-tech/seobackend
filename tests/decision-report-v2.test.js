@@ -165,6 +165,91 @@ test('decision report v2 exposes short executive surface and deep dive', () => {
   assert.equal(report.claimValidation.status, 'approved');
 });
 
+test('decision report v2 deduplicates repeated comments and content patterns', () => {
+  const report = buildDecisionReportV2({
+    query: 'soins de peau',
+    country: 'Libya',
+    lang: 'ar',
+    evidenceRegistry: {
+      evidence: [
+        {
+          id: 'ev_review_1',
+          scope: 'CUSTOMER',
+          claimType: 'review',
+          value: 'Customer asks for real proof before trusting the product.',
+          sourcePlatform: 'youtube',
+          sourceUrl: 'https://youtube.example/review-1',
+          confidence: 'LOW',
+          verificationStatus: 'CONFIRMED',
+          collectedAt: NOW
+        },
+        {
+          id: 'ev_review_2',
+          scope: 'CUSTOMER',
+          claimType: 'comment',
+          value: 'Customer asks for real proof before trusting the product.',
+          sourcePlatform: 'review_search',
+          sourceUrl: 'https://reviews.example/review-2',
+          confidence: 'MEDIUM',
+          verificationStatus: 'CONFIRMED',
+          collectedAt: NOW
+        }
+      ]
+    },
+    marketSignalModel: {
+      signals: [],
+      customerVoice: {
+        patterns: [
+          {
+            type: 'OBJECTION',
+            key: 'proof_or_reviews_needed',
+            label: 'Need proof before trust',
+            count: 1,
+            confidence: 'LOW',
+            evidenceIds: ['ev_review_1'],
+            sourceUrls: ['https://youtube.example/review-1'],
+            sourcePlatforms: ['youtube']
+          }
+        ]
+      },
+      socialContent: {
+        patterns: [
+          {
+            format: 'review',
+            key: 'proof_or_reviews_needed',
+            label: 'Need proof before trust',
+            count: 1,
+            confidence: 'MEDIUM',
+            evidenceIds: ['ev_review_2'],
+            sourceUrls: ['https://reviews.example/review-2'],
+            sourcePlatforms: ['review_search']
+          }
+        ],
+        quality: { quantifiedFromEvidence: true, noInventedEngagementClaims: true }
+      },
+      offerIntelligence: { patterns: [] },
+      quality: { limitations: [] }
+    },
+    strategicAgentsV2: {
+      marketPatternAnalyst: { observations: [] },
+      gapAnalyst: { gaps: [], saturatedPatterns: [], unknowns: [] },
+      decisionStrategist: { actions: [], unknowns: [] }
+    },
+    marketEntityMap: {
+      byType: {},
+      supplierIntelligence: { status: 'UNKNOWN', limitations: [] }
+    }
+  });
+
+  const duplicated = report.mainReport.commentsReviews.patterns
+    .filter(pattern => pattern.key === 'proof_or_reviews_needed');
+
+  assert.equal(duplicated.length, 1);
+  assert.deepEqual(duplicated[0].evidenceIds.sort(), ['ev_review_1', 'ev_review_2']);
+  assert.equal(duplicated[0].confidence, 'MEDIUM');
+  assert.equal(report.deepDive.socialContentIntelligence.reviews.length, 1);
+});
+
 test('decision report v2 comments and reviews section refuses to invent missing customer voice', () => {
   const report = buildDecisionReportV2({
     query: 'blackhead remover',
