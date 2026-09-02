@@ -1,8 +1,9 @@
 'use strict';
 
 const crypto = require('crypto');
+const { createCampaignAnalysisHandler } = require('./lib/campaign-analysis-engine');
 
-const REPORT_TYPES = new Set(['competitors', 'funnel', 'technical', 'keywords', 'stp']);
+const REPORT_TYPES = new Set(['competitors', 'funnel', 'technical', 'keywords', 'stp', 'campaign_analysis']);
 const PUBLIC_REPORT_FRONTEND_URL = process.env.PUBLIC_REPORT_FRONTEND_URL || 'https://marketinsight.mktnstrategix.com';
 
 function safeText(value, max = 240) {
@@ -16,6 +17,59 @@ function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+function normalizeOrigin(value) {
+    const text = String(value || '').trim();
+    if (!text) return '';
+    try {
+        return new URL(text).origin.replace(/\/+$/, '');
+    } catch (_) {
+        return text.replace(/\/+$/, '');
+    }
+}
+
+function parseOrigins(...values) {
+    return values
+        .flatMap(value => String(value || '').split(','))
+        .map(normalizeOrigin)
+        .filter(Boolean);
+}
+
+function getCampaignFrontendOrigins() {
+    return new Set([
+        'https://marketinsight.mktnstrategix.com',
+        'https://app.da-ka.live',
+        'https://d1wtqea293om4x.cloudfront.net',
+        'http://localhost:3000',
+        'http://localhost:5500',
+        'http://127.0.0.1:5500',
+        ...parseOrigins(
+            process.env.FRONTEND_URL,
+            process.env.PUBLIC_REPORT_FRONTEND_URL,
+            process.env.FRONTEND_ORIGINS,
+            process.env.DAKA_ALLOWED_ORIGINS,
+            process.env.AUTH_REDIRECT_ORIGINS
+        )
+    ]);
+}
+
+function campaignOptimizerCors(req, res, next) {
+    const origin = normalizeOrigin(req.get('origin'));
+    const allowedOrigins = getCampaignFrontendOrigins();
+    if (origin && (allowedOrigins.has(origin) || origin.includes('mktnstrategix.com'))) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+        res.setHeader('Vary', 'Origin');
+        res.setHeader('Access-Control-Allow-Credentials', 'true');
+        res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+        res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, X-Client-Version, X-Request-ID');
+    }
+    if (req.method === 'OPTIONS') return res.status(204).end();
+    return next();
+}
+
+async function campaignAnalysisFallbackAI() {
+    return { success: false };
 }
 
 function reportText(value) {
@@ -463,6 +517,20 @@ return {
             return next();
         };
     }
+
+    const campaignAnalysisHandler = createCampaignAnalysisHandler({
+        callOpenRouterAPI: campaignAnalysisFallbackAI
+    });
+
+    app.options('/api/analyze-campaigns', campaignOptimizerCors);
+    app.post(
+        '/api/analyze-campaigns',
+        campaignOptimizerCors,
+        requireAuth,
+        requireReportQuota,
+        persistGeneratedReport('campaign_analysis'),
+        campaignAnalysisHandler
+    );
 
     app.get('/api/reports/quota', requireAuth, async (req, res) => {
         if (!ensureReportsConfigured(res)) return;
