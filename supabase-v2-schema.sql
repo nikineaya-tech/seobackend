@@ -3,7 +3,7 @@ create extension if not exists pgcrypto;
 create table if not exists public.user_reports (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  type text not null check (type in ('competitors', 'funnel', 'technical', 'keywords')),
+  type text not null check (type in ('competitors', 'funnel', 'technical', 'keywords', 'stp', 'campaign_analysis')),
   title text not null,
   target_url text,
   query text,
@@ -18,6 +18,12 @@ create table if not exists public.user_reports (
 
 alter table public.user_reports
   add column if not exists source_job_id uuid;
+
+-- Existing databases keep their old CHECK constraint after CREATE TABLE IF NOT EXISTS.
+alter table public.user_reports drop constraint if exists user_reports_type_check;
+alter table public.user_reports
+  add constraint user_reports_type_check
+  check (type in ('competitors', 'funnel', 'technical', 'keywords', 'stp', 'campaign_analysis'));
 
 create unique index if not exists user_reports_source_job_idx
   on public.user_reports(source_job_id);
