@@ -967,7 +967,7 @@
             ${geoNote ? `<div class="daka-comp-warning">${esc(geoNote)}</div>` : ''}
           </div>
           <aside class="daka-comp-orbit-chart" style="--daka-comp-orbit:${Math.round(chartScore * 3.6)}deg;">
-            <div class="daka-comp-orbit-core"><span>${esc(copy('opening'))}</span><strong>${esc(chartScore.toFixed(1))}<small>/10</small></strong><small>${esc(copy('confidence'))}</small></div>
+            <div class="daka-comp-orbit-core"><span>${esc(copy('opening'))}</span><strong>${esc(chartScore.toFixed(1))}<small>/10</small></strong><small>${esc(qualityLabels().title)}</small></div>
             ${cards.slice(0, 4).map((card, index) => `
               <article class="daka-comp-orbit-node daka-comp-orbit-node-${index}">
                 <span>${esc(card.title)}</span>
