@@ -1620,6 +1620,40 @@
         color: #e2e8f0;
         font-size: .96rem;
       }
+      #resultsCompetitors .daka-comp-section {
+        counter-increment: daka-report-section;
+        border-color: rgba(148, 163, 184, .18);
+        transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+      }
+      #resultsCompetitors .daka-comp-section:hover {
+        border-color: rgba(103, 232, 249, .30);
+      }
+      #resultsCompetitors .daka-comp-section[open] {
+        border-color: rgba(167, 139, 250, .32);
+        box-shadow: 0 24px 60px rgba(2, 6, 23, .36);
+      }
+      #resultsCompetitors .daka-comp-section-head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+      #resultsCompetitors .daka-comp-section-head::before {
+        content: counter(daka-report-section, decimal-leading-zero);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 30px;
+        width: 30px;
+        height: 30px;
+        border: 1px solid rgba(251, 191, 36, .28);
+        border-radius: 9px;
+        background: rgba(251, 191, 36, .10);
+        color: #fde68a;
+        font-size: .68rem;
+        font-weight: 900;
+        letter-spacing: .04em;
+      }
       #resultsCompetitors .daka-comp-quality,
       #resultsCompetitors .daka-comp-quality .daka-comp-stat-card {
         background-color: var(--daka-panel);
@@ -1638,6 +1672,7 @@
       #resultsCompetitors {
         display: none;
         margin-top: 24px;
+        counter-reset: daka-report-section;
       }
       #resultsCompetitors .daka-comp-opening,
       #resultsCompetitors .daka-comp-executive,
