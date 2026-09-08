@@ -1537,6 +1537,69 @@
     style.id = `${MODULE_ID}-styles`;
     style.textContent = `
       #resultsCompetitors {
+        --daka-ink: #07111f;
+        --daka-panel: #0d1a2b;
+        --daka-panel-soft: #12233a;
+        --daka-line: rgba(148, 163, 184, .18);
+        --daka-text: #f8fafc;
+        --daka-muted: #9fb3cc;
+        --daka-cyan: #38bdf8;
+        --daka-green: #34d399;
+        --daka-amber: #fbbf24;
+        --daka-coral: #fb7185;
+        --daka-violet: #a78bfa;
+        color: var(--daka-text);
+      }
+      #resultsCompetitors .daka-comp-opening,
+      #resultsCompetitors .daka-comp-executive,
+      #resultsCompetitors .daka-comp-quality,
+      #resultsCompetitors .daka-comp-section {
+        position: relative;
+        isolation: isolate;
+      }
+      #resultsCompetitors .daka-comp-opening::before,
+      #resultsCompetitors .daka-comp-executive::before,
+      #resultsCompetitors .daka-comp-quality::before,
+      #resultsCompetitors .daka-comp-section::before {
+        content: "";
+        position: absolute;
+        inset: 0 auto auto 0;
+        width: 100%;
+        height: 3px;
+        background: var(--daka-cyan);
+        opacity: .9;
+        z-index: 1;
+      }
+      #resultsCompetitors .daka-comp-executive::before { background: var(--daka-green); }
+      #resultsCompetitors .daka-comp-quality::before { background: var(--daka-violet); }
+      #resultsCompetitors .daka-comp-section::before { background: var(--daka-amber); }
+      #resultsCompetitors .daka-comp-section > summary {
+        border-bottom: 1px solid rgba(148, 163, 184, .12);
+        background: rgba(13, 26, 43, .78);
+      }
+      #resultsCompetitors .daka-comp-section[open] > summary {
+        background: rgba(18, 35, 58, .9);
+      }
+      #resultsCompetitors .daka-comp-section-head strong {
+        color: #e2e8f0;
+        font-size: .96rem;
+      }
+      #resultsCompetitors .daka-comp-quality,
+      #resultsCompetitors .daka-comp-quality .daka-comp-stat-card {
+        background-color: var(--daka-panel);
+      }
+      #resultsCompetitors .daka-comp-stat-card {
+        border-color: var(--daka-line);
+        background: rgba(13, 26, 43, .72);
+      }
+      #resultsCompetitors .daka-comp-stat-card strong {
+        color: var(--daka-text);
+      }
+      #resultsCompetitors .daka-comp-quality-score strong {
+        color: var(--daka-text);
+        text-shadow: 0 0 20px rgba(167, 139, 250, .22);
+      }
+      #resultsCompetitors {
         display: none;
         margin-top: 24px;
       }
