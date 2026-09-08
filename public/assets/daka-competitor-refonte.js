@@ -2154,8 +2154,8 @@
     const offerType = offerTypeFromInput(intel);
     const html = [
       renderOpening(repaired, intel, offerType),
-      renderQualityPanel(repaired, intel),
       renderExecutive(intel, offerType),
+      renderQualityPanel(repaired, intel),
       renderMarketReading(intel),
       renderVerdict(intel),
       renderPositioning(intel),
