@@ -2393,6 +2393,37 @@
     document.head.appendChild(style);
   }
 
+  function decorateSectionRail(container) {
+    if (!container) return;
+    const sections = Array.from(container.querySelectorAll('.daka-comp-section[id]'));
+    if (sections.length < 2) return;
+    const rail = document.createElement('nav');
+    rail.className = 'daka-comp-section-rail';
+    rail.setAttribute('aria-label', lang() === 'ar' ? 'أقسام التقرير' : lang() === 'en' ? 'Report sections' : 'Sections du rapport');
+    const items = document.createElement('div');
+    items.className = 'daka-comp-section-rail-items';
+    sections.forEach((section, index) => {
+      const summary = section.querySelector('summary');
+      const title = summary?.querySelector('.daka-comp-section-head strong')?.textContent?.trim() || summary?.textContent?.trim() || '';
+      if (!title) return;
+      const link = document.createElement('a');
+      link.className = 'daka-comp-section-rail-link';
+      link.href = '#' + section.id;
+      link.textContent = String(index + 1).padStart(2, '0') + ' · ' + title;
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        section.open = true;
+        section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      items.appendChild(link);
+    });
+    if (!items.children.length) return;
+    rail.appendChild(items);
+    const quality = container.querySelector('.daka-comp-quality');
+    if (quality) quality.after(rail);
+    else container.prepend(rail);
+  }
+
   function renderCompetitorReport(data) {
     const container = document.getElementById('resultsCompetitors');
     if (!container) return;
@@ -2422,6 +2453,7 @@
     container.style.display = 'block';
     container.dir = lang() === 'ar' ? 'rtl' : 'ltr';
     container.setAttribute('lang', lang());
+    decorateSectionRail(container);
 
     if (container.dataset.interactionGuard !== 'true') {
       container.dataset.interactionGuard = 'true';
