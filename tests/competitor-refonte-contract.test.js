@@ -35,5 +35,5 @@ test('Competitor quality contract is present', () => {
   assert.match(refonte, /IntersectionObserver/);
   assert.match(refonte, /aria-current/);
   assert.match(refonte, /daka-comp-section-rail-score/);
-  assert.ok(refonte.indexOf('renderQualityPanel(repaired, intel)') < refonte.indexOf('renderExecutive(intel, offerType)'), 'quality must precede executive decision');
+  assert.match(refonte, /const html = \[\s*renderOpening\(repaired, intel, offerType\),\s*renderQualityPanel\(repaired, intel\),\s*renderExecutive\(intel, offerType\),/);
 });
