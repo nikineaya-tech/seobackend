@@ -2112,6 +2112,18 @@
         #resultsCompetitors .daka-comp-quality { padding: 16px; }
         #resultsCompetitors .daka-comp-quality-head { align-items: flex-start; flex-direction: column; }
         #resultsCompetitors .daka-comp-quality-score { justify-items: start; }
+        #resultsCompetitors .daka-comp-orbit-chart { min-height: 360px; border-radius: 20px; }
+        #resultsCompetitors .daka-comp-orbit-chart::before { inset: 30px; }
+        #resultsCompetitors .daka-comp-orbit-chart::after { inset: 72px; }
+        #resultsCompetitors .daka-comp-orbit-core { width: 142px; }
+        #resultsCompetitors .daka-comp-orbit-core strong { font-size: 2.25rem; }
+        #resultsCompetitors .daka-comp-orbit-node { width: min(170px, 42%); padding: 9px 10px; }
+        #resultsCompetitors .daka-comp-orbit-node strong { font-size: .74rem; }
+        #resultsCompetitors .daka-comp-orbit-node p { font-size: .64rem; }
+        #resultsCompetitors .daka-comp-orbit-node-0 { top: 12px; }
+        #resultsCompetitors .daka-comp-orbit-node-1 { right: 10px; }
+        #resultsCompetitors .daka-comp-orbit-node-2 { bottom: 12px; }
+        #resultsCompetitors .daka-comp-orbit-node-3 { left: 10px; }
         #resultsCompetitors .daka-comp-quality-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
         #resultsCompetitors .daka-comp-opening,
