@@ -884,9 +884,9 @@
   }
 
   function qualityLabels() {
-    if (lang() === 'ar') return { title: 'جودة البيانات', subtitle: 'درجة مبنية على الأدلة والمصادر المتنوعة، وليست على كثرة الكلام.', evidence: 'أدلة قابلة للفحص', sources: 'مصادر مختلفة', platforms: 'منصات', channels: 'قنوات جاهزة', detailCompetitors: 'منافسون مفحوصون', detailDomains: 'نطاقات مستقلة', detailEvidence: 'حالة الدليل', detailReading: 'قراءة الجودة', observed: 'مرصود', notObserved: 'غير مرصود', next: 'ما يحتاج إلى تحقق', thin: 'العينة ما زالت محدودة؛ لا تعتبرها حكماً نهائياً.', auth: 'بعض القنوات تحتاج مفتاح وصول صحيحاً.', repeated: 'تم إخفاء الروابط المكررة أو روابط الوسيط التقني.', strong: 'قاعدة جيدة للقرار الأولي.', partial: 'إشارات مفيدة، لكنها تحتاج تأكيداً إضافياً.' };
-    if (lang() === 'en') return { title: 'Data quality', subtitle: 'A score based on evidence and source diversity, not on report length.', evidence: 'Inspectable evidence', sources: 'Distinct sources', platforms: 'Platforms', channels: 'Ready channels', detailCompetitors: 'Competitors checked', detailDomains: 'Independent domains', detailEvidence: 'Evidence state', detailReading: 'Quality reading', observed: 'Observed', notObserved: 'Not observed', next: 'Needs verification', thin: 'The sample is still limited; do not treat it as a final market verdict.', auth: 'Some channels need a valid access key.', repeated: 'Repeated links and technical proxy URLs were hidden.', strong: 'A solid base for an initial decision.', partial: 'Useful signals, but more confirmation is needed.' };
-    return { title: 'Qualité des données', subtitle: 'Une note basée sur les preuves et la diversité des sources, pas sur la longueur du rapport.', evidence: 'Preuves inspectables', sources: 'Sources distinctes', platforms: 'Plateformes', channels: 'Canaux prêts', detailCompetitors: 'Concurrents examinés', detailDomains: 'Domaines indépendants', detailEvidence: 'État des preuves', detailReading: 'Lecture qualité', observed: 'Observé', notObserved: 'Non observé', next: 'À vérifier', thin: 'L’échantillon reste limité; ce n’est pas encore un verdict marché final.', auth: 'Certains canaux nécessitent une clé d’accès valide.', repeated: 'Les liens répétés et les URLs techniques ont été masqués.', strong: 'Une bonne base pour une première décision.', partial: 'Des signaux utiles, mais une confirmation reste nécessaire.' };
+    if (lang() === 'ar') return { title: 'جودة البيانات', subtitle: 'درجة مبنية على الأدلة والمصادر المتنوعة، وليست على كثرة الكلام.', evidence: 'أدلة قابلة للفحص', sources: 'مصادر مختلفة', platforms: 'منصات', channels: 'قنوات جاهزة', detailCompetitors: 'منافسون مفحوصون', detailDomains: 'نطاقات مستقلة', detailEvidence: 'حالة الدليل', detailReading: 'قراءة الجودة', observed: 'مرصود', notObserved: 'غير مرصود', gradeHigh: 'قوي', gradeMedium: 'متوسط', gradeLow: 'ضعيف', next: 'ما يحتاج إلى تحقق', thin: 'العينة ما زالت محدودة؛ لا تعتبرها حكماً نهائياً.', auth: 'بعض القنوات تحتاج مفتاح وصول صحيحاً.', repeated: 'تم إخفاء الروابط المكررة أو روابط الوسيط التقني.', strong: 'قاعدة جيدة للقرار الأولي.', partial: 'إشارات مفيدة، لكنها تحتاج تأكيداً إضافياً.' };
+    if (lang() === 'en') return { title: 'Data quality', subtitle: 'A score based on evidence and source diversity, not on report length.', evidence: 'Inspectable evidence', sources: 'Distinct sources', platforms: 'Platforms', channels: 'Ready channels', detailCompetitors: 'Competitors checked', detailDomains: 'Independent domains', detailEvidence: 'Evidence state', detailReading: 'Quality reading', observed: 'Observed', notObserved: 'Not observed', gradeHigh: 'Strong', gradeMedium: 'Medium', gradeLow: 'Thin', next: 'Needs verification', thin: 'The sample is still limited; do not treat it as a final market verdict.', auth: 'Some channels need a valid access key.', repeated: 'Repeated links and technical proxy URLs were hidden.', strong: 'A solid base for an initial decision.', partial: 'Useful signals, but more confirmation is needed.' };
+    return { title: 'Qualité des données', subtitle: 'Une note basée sur les preuves et la diversité des sources, pas sur la longueur du rapport.', evidence: 'Preuves inspectables', sources: 'Sources distinctes', platforms: 'Plateformes', channels: 'Canaux prêts', detailCompetitors: 'Concurrents examinés', detailDomains: 'Domaines indépendants', detailEvidence: 'État des preuves', detailReading: 'Lecture qualité', observed: 'Observé', notObserved: 'Non observé', gradeHigh: 'Solide', gradeMedium: 'Moyen', gradeLow: 'Faible', next: 'À vérifier', thin: 'L’échantillon reste limité; ce n’est pas encore un verdict marché final.', auth: 'Certains canaux nécessitent une clé d’accès valide.', repeated: 'Les liens répétés et les URLs techniques ont été masqués.', strong: 'Une bonne base pour une première décision.', partial: 'Des signaux utiles, mais une confirmation reste nécessaire.' };
   }
 
   function qualityModel(data, intel) {
@@ -895,14 +895,15 @@
     const profiles = competitorProfiles(data, intel);
     const rawUrls = [...(Array.isArray(model.observedItems) ? model.observedItems.map((item) => item?.sourceUrl) : []), ...profiles.flatMap((item) => Array.isArray(item.evidenceLinks) ? item.evidenceLinks : [])];
     const urls = Array.from(new Set(rawUrls.map(canonicalSourceUrl).filter(Boolean)));
-    const platforms = Array.from(new Set([...(Array.isArray(model.summary?.platforms) ? model.summary.platforms : []), ...diagnostics.map((item) => item.channel || item.backend || '')].map((value) => cleanInsight(value, '')).filter(Boolean)));
+    const platforms = Array.from(new Set([...(Array.isArray(model.summary?.platforms) ? model.summary.platforms : []), ...(Array.isArray(model.observedItems) ? model.observedItems.map((item) => item.sourcePlatform || item.platform || '') : [])].map((value) => cleanInsight(value, '')).filter(Boolean)));
     const domains = Array.from(new Set(urls.map(urlDomain).filter(Boolean)));
     const ready = diagnostics.filter((item) => /^(READY|OK|FULFILLED)$/i.test(String(item.status || ''))).length;
     const authErrors = diagnostics.filter((item) => /(?:401|AUTH|KEY|CREDENTIAL)/i.test(String(item.status || '') + ' ' + String(item.reason || ''))).length;
     const evidence = Number(model.summary?.evidenceCount || (Array.isArray(model.observedItems) ? model.observedItems.length : 0) || 0);
-    let score = 2.4 + Math.min(2.4, profiles.length * 0.8) + Math.min(2.2, urls.length * 0.55) + Math.min(1.2, platforms.length * 0.3) + Math.min(0.8, ready * 0.2);
-    if (evidence < 3) score -= 0.8;
+    let score = 1.4 + Math.min(0.9, profiles.length * 0.3) + Math.min(2.7, urls.length * 0.9) + Math.min(1.2, domains.length * 0.6) + Math.min(1.2, platforms.length * 0.3) + Math.min(0.9, ready * 0.15) + Math.min(1.5, evidence * 0.15);
+    if (evidence < 2) score -= 0.9;
     if (urls.length <= 1 && evidence > 1) score -= 0.8;
+    if (domains.length <= 1 && evidence > 2) score -= 0.5;
     if (authErrors) score -= 0.7;
     score = Math.max(1, Math.min(10, Math.round(score * 10) / 10));
     const q = qualityLabels();
@@ -910,7 +911,8 @@
     if (urls.length <= 1 || evidence < 3) warnings.push(q.thin);
     if (authErrors) warnings.push(q.auth);
     if (rawUrls.length > urls.length) warnings.push(q.repeated);
-    return { score, evidence, sources: urls.length, domains: domains.length, competitors: profiles.length, platforms: platforms.length, ready, channels: diagnostics.length, warnings, label: score >= 7.5 ? q.strong : q.partial };
+    const grade = score >= 7.5 ? q.gradeHigh : score >= 5 ? q.gradeMedium : q.gradeLow;
+    return { score, evidence, sources: urls.length, domains: domains.length, competitors: profiles.length, platforms: platforms.length, ready, channels: diagnostics.length, warnings, label: grade, grade };
   }
 
   function renderQualityPanel(data, intel) {
@@ -924,7 +926,7 @@
       '<div><span>' + esc(labels.detailReading) + '</span><strong>' + esc(q.label) + '</strong></div>'
     ].join('');
     const warnings = q.warnings.map((item) => '<li>' + esc(item) + '</li>').join('');
-    return '<section class="daka-comp-quality" dir="' + (lang() === 'ar' ? 'rtl' : 'ltr') + '"><div class="daka-comp-quality-head"><div><span class="daka-comp-kicker">' + esc(labels.title) + '</span><p>' + esc(labels.subtitle) + '</p></div><div class="daka-comp-quality-score"><strong>' + esc(q.score.toFixed(1)) + '<small>/10</small></strong><span>' + esc(q.label) + '</span></div></div><div class="daka-comp-stat-grid">' + stats + '</div><div class="daka-comp-quality-details">' + details + '</div>' + (warnings ? '<div class="daka-comp-quality-warning"><strong>' + esc(labels.next) + '</strong><ul>' + warnings + '</ul></div>' : '') + '</section>';
+    return '<section class="daka-comp-quality" dir="' + (lang() === 'ar' ? 'rtl' : 'ltr') + '"><div class="daka-comp-quality-head"><div><span class="daka-comp-kicker">' + esc(labels.title) + '</span><p>' + esc(labels.subtitle) + '</p></div><div class="daka-comp-quality-score"><strong>' + esc(q.score.toFixed(1)) + '<small>/10</small></strong><span class="daka-comp-quality-grade grade-' + (q.score >= 7.5 ? 'high' : q.score >= 5 ? 'medium' : 'low') + '">' + esc(q.grade) + '</span></div></div><div class="daka-comp-stat-grid">' + stats + '</div><div class="daka-comp-quality-details">' + details + '</div>' + (warnings ? '<div class="daka-comp-quality-warning"><strong>' + esc(labels.next) + '</strong><ul>' + warnings + '</ul></div>' : '') + '</section>';
   }
 
   function renderOpening(data, intel, offerType) {
@@ -1539,6 +1541,8 @@
       #resultsCompetitors .daka-comp-quality-score strong { color: #f8fafc; font-size: 2.45rem; line-height: .95; }
       #resultsCompetitors .daka-comp-quality-score strong small { color: #67e8f9; font-size: .9rem; }
       #resultsCompetitors .daka-comp-quality-score span { color: #86efac; font-size: .72rem; font-weight: 800; }
+      #resultsCompetitors .daka-comp-quality-score .grade-medium { color: #facc15; }
+      #resultsCompetitors .daka-comp-quality-score .grade-low { color: #fda4af; }
       #resultsCompetitors .daka-comp-quality-details { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
       #resultsCompetitors .daka-comp-quality-details > div { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: rgba(2, 8, 19, .38); border: 1px solid rgba(148, 163, 184, .12); }
       #resultsCompetitors .daka-comp-quality-details span { color: #8da5bd; font-size: .68rem; font-weight: 800; }
