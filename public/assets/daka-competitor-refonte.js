@@ -1159,7 +1159,11 @@
         <p>${esc(cleanInsight(item.value || item.title || ''))}</p>
         ${canonicalSourceUrl(item.sourceUrl) ? linkItems([{ url: canonicalSourceUrl(item.sourceUrl), label: item.sourcePlatform || labels.open }], 1, reviewSeenUrls) : ''}
       </article>`).join('');
-    const channelNames = { search: 'Search', web: 'Web', youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', reddit: 'Reddit', x: 'X', rss: 'RSS' };
+    const channelNames = lang() === 'ar'
+      ? { search: 'بحث', web: 'ويب', youtube: 'يوتيوب', instagram: 'إنستغرام', facebook: 'فيسبوك', tiktok: 'تيك توك', reddit: 'ريديت', x: 'X', rss: 'RSS' }
+      : lang() === 'fr'
+        ? { search: 'Recherche', web: 'Web', youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', reddit: 'Reddit', x: 'X', rss: 'RSS' }
+        : { search: 'Search', web: 'Web', youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', reddit: 'Reddit', x: 'X', rss: 'RSS' };
     const statusText = (item) => {
       const rawStatus = String(item.status || '').toUpperCase();
       if (/^(READY|OK|FULFILLED)$/.test(rawStatus)) return labels.ready;
