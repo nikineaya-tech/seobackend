@@ -555,7 +555,7 @@
     const text = fixText(value);
     if (!useful(text) || mixedLanguageNoise(text) || genericCompetitorNoise(text) || !matchesReportLanguage(text)) return fixText(fallback);
     if (/(?:AuthenticationRequiredError|40103|valid API key via Authorization|authentication is required)/i.test(text)) return fixText(fallback);
-    if (/s\\.jina\\.ai/i.test(text)) return fixText(fallback);
+    if (/s\.jina\.ai/i.test(text)) return fixText(fallback);
     return text;
   }
 
