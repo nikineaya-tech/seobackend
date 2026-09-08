@@ -2490,7 +2490,9 @@
       const link = document.createElement('a');
       link.className = 'daka-comp-section-rail-link';
       link.href = '#' + section.id;
-      link.textContent = String(index + 1).padStart(2, '0') + ' · ' + title;
+      const blockCount = section.querySelectorAll('article').length;
+      const countLabel = blockCount > 0 ? ' (' + blockCount + ')' : '';
+      link.textContent = String(index + 1).padStart(2, '0') + ' · ' + title + countLabel;
       link.addEventListener('click', (event) => {
         event.preventDefault();
         section.open = true;
