@@ -554,6 +554,8 @@
   function cleanInsight(value, fallback = '') {
     const text = fixText(value);
     if (!useful(text) || mixedLanguageNoise(text) || genericCompetitorNoise(text) || !matchesReportLanguage(text)) return fixText(fallback);
+    if (/(?:AuthenticationRequiredError|40103|valid API key via Authorization|authentication is required)/i.test(text)) return fixText(fallback);
+    if (/s\\.jina\\.ai/i.test(text)) return fixText(fallback);
     return text;
   }
 
@@ -616,21 +618,40 @@
     return `<p class="${className || ''}">${esc(value)}</p>`;
   }
 
+  function canonicalSourceUrl(value) {
+    const raw = fixText(value);
+    if (!/^https?:\/\//i.test(raw)) return '';
+    if (/(?:s\.jina\.ai|facebook\.com\/login|login\/device-based|login_attempt=|accounts\.google\.com|\/signin|\/login\b|checkpoint)/i.test(raw)) return '';
+    try {
+      const parsed = new URL(raw);
+      const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+      if (host === 'youtube.com' || host === 'youtu.be' || host === 'm.youtube.com') {
+        const id = parsed.searchParams.get('v') || parsed.pathname.match(/(?:watch\/|embed\/|shorts\/|youtu\.be\/)([A-Za-z0-9_-]{6,})/)?.[1];
+        return id ? 'https://www.youtube.com/watch?v=' + id : '';
+      }
+      ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid'].forEach((key) => parsed.searchParams.delete(key));
+      return parsed.protocol + '//' + host + parsed.pathname.replace(/\/$/, '') + (parsed.search ? parsed.search : '');
+    } catch (_) { return ''; }
+  }
+
   function linkItems(items, limit) {
+    const seen = new Set();
     const values = (Array.isArray(items) ? items : [])
       .map((item) => {
-        const url = typeof item === 'string' ? item : item?.url;
+        const rawUrl = typeof item === 'string' ? item : item?.url;
+        const url = canonicalSourceUrl(rawUrl);
         const label = typeof item === 'string' ? item : (item?.label || item?.title || item?.domain || item?.url);
-        if (!useful(url)) return null;
-        if (/(?:facebook\.com\/login|login\/device-based|login_attempt=|accounts\.google\.com|\/signin|\/login\b|checkpoint)/i.test(String(url))) return null;
+        if (!url || seen.has(url)) return null;
+        seen.add(url);
         const host = urlDomain(url);
-        return { url: String(url), label: cleanInsight(label) || host || String(url) };
+        return { url, label: cleanInsight(label) || host || url };
       })
       .filter(Boolean)
       .slice(0, limit || 4);
     if (!values.length) return '';
     return `<div class="daka-comp-links">${values.map((item) => `<a href="${esc(item.url)}" target="_blank" rel="noopener" data-no-collapse="true">${esc(urlDomain(item.url) || item.label || copy('open'))}</a>`).join('')}</div>`;
   }
+
   function urlDomain(url) {
     const raw = fixText(url);
     if (!raw) return '';
@@ -862,6 +883,43 @@
       : 'Lecture ciblée des signaux de demande, d’offre et de preuve qui peuvent devenir une décision concrète.';
   }
 
+  function qualityLabels() {
+    if (lang() === 'ar') return { title: 'جودة البيانات', subtitle: 'درجة مبنية على الأدلة والمصادر المتنوعة، وليست على كثرة الكلام.', evidence: 'أدلة قابلة للفحص', sources: 'مصادر مختلفة', platforms: 'منصات', channels: 'قنوات جاهزة', next: 'ما يحتاج إلى تحقق', thin: 'العينة ما زالت محدودة؛ لا تعتبرها حكماً نهائياً.', auth: 'بعض القنوات تحتاج مفتاح وصول صحيحاً.', repeated: 'تم إخفاء الروابط المكررة أو روابط الوسيط التقني.', strong: 'قاعدة جيدة للقرار الأولي.', partial: 'إشارات مفيدة، لكنها تحتاج تأكيداً إضافياً.' };
+    if (lang() === 'en') return { title: 'Data quality', subtitle: 'A score based on evidence and source diversity, not on report length.', evidence: 'Inspectable evidence', sources: 'Distinct sources', platforms: 'Platforms', channels: 'Ready channels', next: 'Needs verification', thin: 'The sample is still limited; do not treat it as a final market verdict.', auth: 'Some channels need a valid access key.', repeated: 'Repeated links and technical proxy URLs were hidden.', strong: 'A solid base for an initial decision.', partial: 'Useful signals, but more confirmation is needed.' };
+    return { title: 'Qualité des données', subtitle: 'Une note basée sur les preuves et la diversité des sources, pas sur la longueur du rapport.', evidence: 'Preuves inspectables', sources: 'Sources distinctes', platforms: 'Plateformes', channels: 'Canaux prêts', next: 'À vérifier', thin: 'L’échantillon reste limité; ce n’est pas encore un verdict marché final.', auth: 'Certains canaux nécessitent une clé d’accès valide.', repeated: 'Les liens répétés et les URLs techniques ont été masqués.', strong: 'Une bonne base pour une première décision.', partial: 'Des signaux utiles, mais une confirmation reste nécessaire.' };
+  }
+
+  function qualityModel(data, intel) {
+    const model = data?.commentsReviews || data?.decisionReportV2?.mainReport?.commentsReviews || data?.reportV2?.mainReport?.commentsReviews || {};
+    const diagnostics = Array.isArray(model.channelDiagnostics) ? model.channelDiagnostics : (Array.isArray(data?.agentReachEvidence?.channelDiagnostics) ? data.agentReachEvidence.channelDiagnostics : []);
+    const profiles = competitorProfiles(data, intel);
+    const rawUrls = [...(Array.isArray(model.observedItems) ? model.observedItems.map((item) => item?.sourceUrl) : []), ...profiles.flatMap((item) => Array.isArray(item.evidenceLinks) ? item.evidenceLinks : [])];
+    const urls = Array.from(new Set(rawUrls.map(canonicalSourceUrl).filter(Boolean)));
+    const platforms = Array.from(new Set([...(Array.isArray(model.summary?.platforms) ? model.summary.platforms : []), ...diagnostics.map((item) => item.channel || item.backend || '')].map((value) => cleanInsight(value, '')).filter(Boolean)));
+    const ready = diagnostics.filter((item) => /^(READY|OK|FULFILLED)$/i.test(String(item.status || ''))).length;
+    const authErrors = diagnostics.filter((item) => /(?:401|AUTH|KEY|CREDENTIAL)/i.test(String(item.status || '') + ' ' + String(item.reason || ''))).length;
+    const evidence = Number(model.summary?.evidenceCount || (Array.isArray(model.observedItems) ? model.observedItems.length : 0) || 0);
+    let score = 2.4 + Math.min(2.4, profiles.length * 0.8) + Math.min(2.2, urls.length * 0.55) + Math.min(1.2, platforms.length * 0.3) + Math.min(0.8, ready * 0.2);
+    if (evidence < 3) score -= 0.8;
+    if (urls.length <= 1 && evidence > 1) score -= 0.8;
+    if (authErrors) score -= 0.7;
+    score = Math.max(1, Math.min(10, Math.round(score * 10) / 10));
+    const q = qualityLabels();
+    const warnings = [];
+    if (urls.length <= 1 || evidence < 3) warnings.push(q.thin);
+    if (authErrors) warnings.push(q.auth);
+    if (rawUrls.length > urls.length) warnings.push(q.repeated);
+    return { score, evidence, sources: urls.length, platforms: platforms.length, ready, channels: diagnostics.length, warnings, label: score >= 7.5 ? q.strong : q.partial };
+  }
+
+  function renderQualityPanel(data, intel) {
+    const q = qualityModel(data, intel);
+    const labels = qualityLabels();
+    const stats = [splitStat(labels.evidence, q.evidence), splitStat(labels.sources, q.sources), splitStat(labels.platforms, q.platforms), splitStat(labels.channels, q.channels ? q.ready + '/' + q.channels : '0')].filter(Boolean).join('');
+    const warnings = q.warnings.map((item) => '<li>' + esc(item) + '</li>').join('');
+    return '<section class="daka-comp-quality" dir="' + (lang() === 'ar' ? 'rtl' : 'ltr') + '"><div class="daka-comp-quality-head"><div><span class="daka-comp-kicker">' + esc(labels.title) + '</span><p>' + esc(labels.subtitle) + '</p></div><div class="daka-comp-quality-score"><strong>' + esc(q.score.toFixed(1)) + '<small>/10</small></strong><span>' + esc(q.label) + '</span></div></div><div class="daka-comp-stat-grid">' + stats + '</div>' + (warnings ? '<div class="daka-comp-quality-warning"><strong>' + esc(labels.next) + '</strong><ul>' + warnings + '</ul></div>' : '') + '</section>';
+  }
+
   function renderOpening(intel, offerType) {
     const cards = openingCards(intel, offerType);
     if (!cards.length) return '';
@@ -875,7 +933,8 @@
           : `Qui est le plus visible sur « ${subject} » en ${market} ?`)
       : copy('moduleTitle');
     const geoNote = cleanInsight(intel?.geoInterpretation?.mismatchNote);
-    const chartScore = Math.max(18, Math.min(96, Math.round((cards.length * 18) + (competitorProfiles({ competitorIntelligence: intel }, intel).length * 6))));
+    const quality = qualityModel({ competitorIntelligence: intel }, intel);
+    const chartScore = quality.score;
     const mini = cards.slice(0, 3);
     return `
       <section class="daka-comp-opening daka-comp-opening-circular" dir="${lang() === 'ar' ? 'rtl' : 'ltr'}">
@@ -897,7 +956,7 @@
             ${geoNote ? `<div class="daka-comp-warning">${esc(geoNote)}</div>` : ''}
           </div>
           <aside class="daka-comp-orbit-chart" style="--daka-comp-orbit:${Math.round(chartScore * 3.6)}deg;">
-            <div class="daka-comp-orbit-core"><span>${esc(copy('opening'))}</span><strong>${esc(String(chartScore))}</strong><small>${esc(copy('confidence'))}</small></div>
+            <div class="daka-comp-orbit-core"><span>${esc(copy('opening'))}</span><strong>${esc(chartScore.toFixed(1))}<small>/10</small></strong><small>${esc(copy('confidence'))}</small></div>
             ${cards.slice(0, 4).map((card, index) => `
               <article class="daka-comp-orbit-node daka-comp-orbit-node-${index}">
                 <span>${esc(card.title)}</span>
@@ -1074,7 +1133,7 @@
       splitStat(labels.confidence, patterns[0]?.confidence || (observed.length ? observed[0]?.confidence : ''))
     ].filter(Boolean).join('');
     const patternCards = patterns.slice(0, 8).map((item) => {
-      const sourceUrls = Array.isArray(item.sourceUrls) ? item.sourceUrls.slice(0, 2) : [];
+      const sourceUrls = Array.isArray(item.sourceUrls) ? item.sourceUrls.map(canonicalSourceUrl).filter(Boolean).filter((url, index, urls) => urls.indexOf(url) === index).slice(0, 2) : [];
       return `
         <article class="daka-comp-study-card">
           <h4>${esc(cleanInsight(item.label || item.statement || item.topic || item.key || labels.patterns))}</h4>
@@ -1086,7 +1145,7 @@
       <article class="daka-comp-study-card">
         <h4>${esc(cleanInsight(item.kind || labels.observed))}</h4>
         <p>${esc(cleanInsight(item.value || item.title || ''))}</p>
-        ${item.sourceUrl ? linkItems([{ url: item.sourceUrl, label: item.sourcePlatform || labels.open }], 1) : ''}
+        ${canonicalSourceUrl(item.sourceUrl) ? linkItems([{ url: canonicalSourceUrl(item.sourceUrl), label: item.sourcePlatform || labels.open }], 1) : ''}
       </article>`).join('');
     const diagnosticCards = diagnostics.slice(0, 8).map((item) => `
       <article class="daka-comp-note-card">
@@ -1465,6 +1524,16 @@
         overflow: hidden;
         margin: 22px 0;
       }
+      #resultsCompetitors .daka-comp-quality { border: 1px solid rgba(34, 211, 238, 0.24); background: linear-gradient(135deg, rgba(8, 31, 50, 0.96), rgba(18, 15, 45, 0.96)); border-radius: 22px; padding: 20px 24px; margin: 16px 0; box-shadow: 0 18px 44px rgba(2, 6, 23, 0.28); }
+      #resultsCompetitors .daka-comp-quality-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+      #resultsCompetitors .daka-comp-quality-head p { margin: 8px 0 0; color: #9fb3cc; font-size: 0.88rem; }
+      #resultsCompetitors .daka-comp-quality-score { display: grid; justify-items: end; gap: 3px; min-width: 116px; }
+      #resultsCompetitors .daka-comp-quality-score strong { color: #f8fafc; font-size: 2.45rem; line-height: .95; }
+      #resultsCompetitors .daka-comp-quality-score strong small { color: #67e8f9; font-size: .9rem; }
+      #resultsCompetitors .daka-comp-quality-score span { color: #86efac; font-size: .72rem; font-weight: 800; }
+      #resultsCompetitors .daka-comp-quality-warning { margin-top: 14px; padding: 12px 14px; border: 1px solid rgba(251, 191, 36, .22); border-radius: 14px; background: rgba(120, 53, 15, .16); color: #fde68a; }
+      #resultsCompetitors .daka-comp-quality-warning ul { margin: 7px 0 0; padding-inline-start: 18px; }
+      #resultsCompetitors .daka-comp-quality-warning li { margin: 4px 0; color: #cbd5e1; font-size: .8rem; }
       #resultsCompetitors .daka-comp-opening,
       #resultsCompetitors .daka-comp-executive {
         padding: 28px;
@@ -1996,6 +2065,10 @@
         background: rgba(15, 23, 42, 0.55);
       }
       @media (max-width: 720px) {
+        #resultsCompetitors .daka-comp-quality { padding: 16px; }
+        #resultsCompetitors .daka-comp-quality-head { align-items: flex-start; flex-direction: column; }
+        #resultsCompetitors .daka-comp-quality-score { justify-items: start; }
+
         #resultsCompetitors .daka-comp-opening,
         #resultsCompetitors .daka-comp-executive {
           padding: 20px;
@@ -2053,6 +2126,7 @@
     const offerType = offerTypeFromInput(intel);
     const html = [
       renderOpening(intel, offerType),
+      renderQualityPanel(repaired, intel),
       renderExecutive(intel, offerType),
       renderMarketReading(intel),
       renderVerdict(intel),
