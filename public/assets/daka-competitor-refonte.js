@@ -1794,6 +1794,12 @@
         margin: 22px 0;
       }
       #resultsCompetitors .daka-comp-quality { border: 1px solid rgba(34, 211, 238, 0.24); background: linear-gradient(135deg, rgba(8, 31, 50, 0.96), rgba(18, 15, 45, 0.96)); border-radius: 22px; padding: 20px 24px; margin: 16px 0; box-shadow: 0 18px 44px rgba(2, 6, 23, 0.28); }
+      #resultsCompetitors .daka-comp-quality.grade-high { border-color: rgba(52, 211, 153, .40); }
+      #resultsCompetitors .daka-comp-quality.grade-medium { border-color: rgba(251, 191, 36, .38); }
+      #resultsCompetitors .daka-comp-quality.grade-low { border-color: rgba(251, 113, 133, .38); }
+      #resultsCompetitors .daka-comp-quality.grade-high .daka-comp-quality-score strong { text-shadow: 0 0 24px rgba(52, 211, 153, .28); }
+      #resultsCompetitors .daka-comp-quality.grade-medium .daka-comp-quality-score strong { text-shadow: 0 0 24px rgba(251, 191, 36, .24); }
+      #resultsCompetitors .daka-comp-quality.grade-low .daka-comp-quality-score strong { text-shadow: 0 0 24px rgba(251, 113, 133, .24); }
       #resultsCompetitors .daka-comp-quality-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
       #resultsCompetitors .daka-comp-quality-head p { margin: 8px 0 0; color: #9fb3cc; font-size: 0.88rem; }
       #resultsCompetitors .daka-comp-quality-score { display: grid; justify-items: end; gap: 3px; min-width: 116px; }
