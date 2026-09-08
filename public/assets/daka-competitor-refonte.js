@@ -864,6 +864,12 @@
     };
   }
 
+  function qualityDetail(label, value, tone) {
+    const clean = typeof value === 'number' && Number.isFinite(value) ? String(value) : cleanInsight(value);
+    if (!useful(clean) || clean === '0') return '';
+    return '<div class="tone-' + (tone || 'details') + '"><span>' + esc(label) + '</span><strong>' + esc(clean) + '</strong></div>';
+  }
+
   function splitStat(label, value) {
     const clean = typeof value === 'number' && Number.isFinite(value) ? String(value) : cleanInsight(value);
     if (!useful(clean) || clean === '0') return '';
@@ -945,11 +951,11 @@
     const labels = qualityLabels();
     const stats = [splitStat(labels.evidence, q.evidence), splitStat(labels.sources, q.sources), splitStat(labels.platforms, q.platforms), splitStat(labels.channels, q.channels ? q.ready + '/' + q.channels : '0')].filter(Boolean).join('');
     const details = [
-      '<div><span>' + esc(labels.detailCompetitors) + '</span><strong>' + esc(String(q.competitors)) + '</strong></div>',
-      '<div><span>' + esc(labels.detailDomains) + '</span><strong>' + esc(String(q.domains)) + '</strong></div>',
-      '<div><span>' + esc(labels.detailEvidence) + '</span><strong>' + esc(q.evidence ? labels.observed : labels.notObserved) + '</strong></div>',
-      '<div><span>' + esc(labels.detailReading) + '</span><strong>' + esc(q.label) + '</strong></div>'
-    ].join('');
+      qualityDetail(labels.detailCompetitors, q.competitors, 'decision'),
+      qualityDetail(labels.detailDomains, q.domains, 'quality'),
+      qualityDetail(labels.detailEvidence, q.evidence ? labels.observed : '', 'quality'),
+      qualityDetail(labels.detailReading, q.label, 'details')
+    ].filter(Boolean).join('');
     const sourceNames = q.domainLabels.length ? q.domainLabels.map((item) => '<span>' + esc(item) + '</span>').join('') : '<em>' + esc(labels.noSources) + '</em>';
     const warnings = q.warnings.map((item) => '<li>' + esc(item) + '</li>').join('');
     const gradeClass = q.score >= 7.5 ? 'high' : q.score >= 5 ? 'medium' : 'low';
@@ -1092,7 +1098,12 @@
   }
 
   function renderActionPlan(intel, offerType) {
-    const actions = Array.isArray(intel.priorityActions) ? intel.priorityActions : [];
+    const actions = uniqueBy(
+      (Array.isArray(intel.priorityActions) ? intel.priorityActions : [])
+        .filter((item) => useful(normalizeItem(item?.action || item))),
+      (item) => normalizeItem(item?.action || item),
+      9
+    );
     const groups = {
       NOW: actions.filter((item) => !item.horizon || item.horizon === 'NOW').slice(0, 3),
       DAYS7: actions.filter((item) => item.horizon === '7_DAYS').slice(0, 3),
