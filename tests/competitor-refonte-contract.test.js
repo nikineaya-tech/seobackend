@@ -37,3 +37,6 @@ test('Competitor quality contract is present', () => {
   assert.match(refonte, /daka-comp-section-rail-score/);
   assert.match(refonte, /const html = \[\s*renderOpening\(repaired, intel, offerType\),\s*renderQualityPanel\(repaired, intel\),\s*renderExecutive\(intel, offerType\),/);
 });
+
+assert.match(refonte, /Decision readiness|Préparation à la décision|الجاهزية لاتخاذ القرار/);
+assert.match(refonte, /CONDITIONAL GO|GO conditionnel|GO مشروط|TEMPORARY NO-GO|NO-GO temporaire|NO-GO مؤقت/);
