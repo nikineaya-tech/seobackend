@@ -2472,6 +2472,13 @@
       items.appendChild(link);
     });
     if (!items.children.length) return;
+    const scoreNode = container.querySelector('.daka-comp-quality-score strong');
+    if (scoreNode) {
+      const scoreBadge = document.createElement('span');
+      scoreBadge.className = 'daka-comp-section-rail-score';
+      scoreBadge.textContent = (lang() === 'ar' ? 'الجودة ' : lang() === 'en' ? 'Quality ' : 'Qualité ') + scoreNode.textContent.trim();
+      rail.appendChild(scoreBadge);
+    }
     rail.appendChild(items);
     const quality = container.querySelector('.daka-comp-quality');
     if (quality) quality.after(rail);
