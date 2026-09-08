@@ -30,4 +30,6 @@ test('Competitor quality contract is present', () => {
   assert.match(refonte, /decimal-leading-zero/);
   assert.match(refonte, /qualityBreakdown/);
   assert.match(refonte, /daka-comp-quality-breakdown/);
+  assert.match(refonte, /function decorateSectionRail\(/);
+  assert.match(refonte, /daka-comp-section-rail/);
 });
