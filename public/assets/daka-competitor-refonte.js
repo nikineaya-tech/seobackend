@@ -1722,6 +1722,51 @@
       #resultsCompetitors .daka-comp-quality-meter span.grade-medium { background: #facc15; }
       #resultsCompetitors .daka-comp-quality-meter span.grade-high { background: linear-gradient(90deg, #22d3ee, #4ade80); }
       #resultsCompetitors .daka-comp-quality-method { margin: 0; color: #8da5bd; font-size: .72rem; line-height: 1.5; }
+      #resultsCompetitors .daka-comp-quality-breakdown {
+        margin-top: 14px;
+        border: 1px solid rgba(167, 139, 250, .20);
+        border-radius: 14px;
+        background: rgba(2, 8, 19, .26);
+        overflow: hidden;
+      }
+      #resultsCompetitors .daka-comp-quality-breakdown summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 10px 12px;
+        color: #ddd6fe;
+        cursor: pointer;
+        font-size: .74rem;
+        font-weight: 900;
+        list-style: none;
+      }
+      #resultsCompetitors .daka-comp-quality-breakdown summary::-webkit-details-marker { display: none; }
+      #resultsCompetitors .daka-comp-quality-breakdown summary i { color: #a78bfa; transition: transform 180ms ease; }
+      #resultsCompetitors .daka-comp-quality-breakdown[open] summary i { transform: rotate(180deg); }
+      #resultsCompetitors .daka-comp-quality-breakdown > p {
+        margin: 0;
+        padding: 0 12px 8px;
+        color: #8da5bd;
+        font-size: .68rem;
+        line-height: 1.5;
+      }
+      #resultsCompetitors .daka-comp-quality-breakdown > div {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 7px;
+        padding: 0 12px 12px;
+      }
+      #resultsCompetitors .daka-comp-quality-breakdown > div span {
+        display: grid;
+        gap: 3px;
+        padding: 8px 9px;
+        border-radius: 10px;
+        background: rgba(18, 35, 58, .72);
+        border: 1px solid rgba(148, 163, 184, .12);
+      }
+      #resultsCompetitors .daka-comp-quality-breakdown b { color: #9fb3cc; font-size: .64rem; }
+      #resultsCompetitors .daka-comp-quality-breakdown strong { color: #f8fafc; font-size: .82rem; }
       #resultsCompetitors .daka-comp-quality-legend { display: flex; flex-wrap: wrap; gap: 10px 16px; margin-top: 12px; color: #aebed1; font-size: .68rem; font-weight: 800; }
       #resultsCompetitors .daka-comp-quality-legend span { display: inline-flex; align-items: center; gap: 6px; }
       #resultsCompetitors .daka-comp-quality-legend i { width: 8px; height: 8px; border-radius: 50%; background: var(--daka-cyan); box-shadow: 0 0 10px currentColor; }
