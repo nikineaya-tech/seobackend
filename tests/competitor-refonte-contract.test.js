@@ -34,4 +34,5 @@ test('Competitor quality contract is present', () => {
   assert.match(refonte, /daka-comp-section-rail/);
   assert.match(refonte, /IntersectionObserver/);
   assert.match(refonte, /aria-current/);
+  assert.match(refonte, /daka-comp-section-rail-score/);
 });
