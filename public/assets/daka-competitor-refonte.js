@@ -1681,6 +1681,12 @@
       #resultsCompetitors .daka-comp-quality-details > div { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: rgba(2, 8, 19, .38); border: 1px solid rgba(148, 163, 184, .12); }
       #resultsCompetitors .daka-comp-quality-details span { color: #8da5bd; font-size: .68rem; font-weight: 800; }
       #resultsCompetitors .daka-comp-quality-details strong { color: #e2e8f0; font-size: .82rem; }
+      #resultsCompetitors .daka-comp-quality-details > div.tone-decision { border-color: rgba(52, 211, 153, .26); box-shadow: inset 3px 0 0 var(--daka-green); }
+      #resultsCompetitors .daka-comp-quality-details > div.tone-quality { border-color: rgba(167, 139, 250, .26); box-shadow: inset 3px 0 0 var(--daka-violet); }
+      #resultsCompetitors .daka-comp-quality-details > div.tone-details { border-color: rgba(251, 191, 36, .24); box-shadow: inset 3px 0 0 var(--daka-amber); }
+      #resultsCompetitors .daka-comp-quality-details > div.tone-decision strong { color: #a7f3d0; }
+      #resultsCompetitors .daka-comp-quality-details > div.tone-quality strong { color: #ddd6fe; }
+      #resultsCompetitors .daka-comp-quality-details > div.tone-details strong { color: #fde68a; }
       #resultsCompetitors .daka-comp-quality-warning { margin-top: 14px; padding: 12px 14px; border: 1px solid rgba(251, 191, 36, .22); border-radius: 14px; background: rgba(120, 53, 15, .16); color: #fde68a; }
       #resultsCompetitors .daka-comp-quality-warning ul { margin: 7px 0 0; padding-inline-start: 18px; }
       #resultsCompetitors .daka-comp-quality-warning li { margin: 4px 0; color: #cbd5e1; font-size: .8rem; }
