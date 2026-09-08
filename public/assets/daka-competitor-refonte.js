@@ -1613,6 +1613,51 @@
       }
       #resultsCompetitors .daka-comp-opening,
       #resultsCompetitors .daka-comp-executive,
+      #resultsCompetitors .daka-comp-section-rail {
+        position: sticky;
+        top: 12px;
+        z-index: 5;
+        margin: 10px 0 16px;
+        padding: 8px;
+        border: 1px solid rgba(56, 189, 248, .18);
+        border-radius: 16px;
+        background: rgba(7, 17, 31, .88);
+        box-shadow: 0 14px 34px rgba(2, 6, 23, .28);
+        backdrop-filter: blur(14px);
+      }
+      #resultsCompetitors .daka-comp-section-rail-items {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        overflow-x: auto;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(103, 232, 249, .35) transparent;
+      }
+      #resultsCompetitors .daka-comp-section-rail-link {
+        display: inline-flex;
+        align-items: center;
+        flex: 0 0 auto;
+        min-height: 32px;
+        padding: 0 10px;
+        border: 1px solid rgba(148, 163, 184, .16);
+        border-radius: 10px;
+        background: rgba(18, 35, 58, .70);
+        color: #aebed1;
+        text-decoration: none;
+        font-size: .68rem;
+        font-weight: 850;
+        white-space: nowrap;
+        transition: border-color 160ms ease, background 160ms ease, color 160ms ease, transform 160ms ease;
+      }
+      #resultsCompetitors .daka-comp-section-rail-link:hover,
+      #resultsCompetitors .daka-comp-section-rail-link:focus-visible {
+        border-color: rgba(103, 232, 249, .52);
+        background: rgba(14, 116, 144, .24);
+        color: #f8fafc;
+        transform: translateY(-1px);
+        outline: none;
+      }
+      #resultsCompetitors .daka-comp-section-rail-link::first-letter { color: #67e8f9; }
       #resultsCompetitors .daka-comp-quality,
       #resultsCompetitors .daka-comp-section {
         position: relative;
