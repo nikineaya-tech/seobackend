@@ -2342,6 +2342,7 @@
         #resultsCompetitors .daka-comp-orbit-node-2 { bottom: 12px; }
         #resultsCompetitors .daka-comp-orbit-node-3 { left: 10px; }
         #resultsCompetitors .daka-comp-quality-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        #resultsCompetitors .daka-comp-quality-breakdown > div { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
         #resultsCompetitors .daka-comp-opening,
         #resultsCompetitors .daka-comp-executive {
