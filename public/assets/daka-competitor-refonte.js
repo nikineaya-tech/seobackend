@@ -1113,7 +1113,7 @@
       evidence: 'دليل',
       confidence: 'الثقة',
       source: 'المصدر',
-      open: 'فتح المصدر'
+      open: 'فتح المصدر', ready: 'جاهز', unavailable: 'غير متاح', error: 'تعذر الاتصال', noResults: 'لا توجد نتائج', notVerified: 'يحتاج إلى تحقق', authRequired: 'مفتاح الوصول مطلوب'
     } : lang() === 'en' ? {
       title: 'Comments and reviews',
       empty: 'No exploitable comments or reviews were collected in this run.',
@@ -1124,7 +1124,7 @@
       evidence: 'evidence',
       confidence: 'Confidence',
       source: 'Source',
-      open: 'Open source'
+      open: 'Open source', ready: 'Ready', unavailable: 'Unavailable', error: 'Connection failed', noResults: 'No results', notVerified: 'Needs verification', authRequired: 'Access key required'
     } : {
       title: 'Commentaires et avis',
       empty: 'Aucun commentaire ou avis exploitable n’a été collecté sur cette analyse.',
@@ -1135,7 +1135,7 @@
       evidence: 'preuve',
       confidence: 'Confiance',
       source: 'Source',
-      open: 'Ouvrir la source'
+      open: 'Ouvrir la source', ready: 'Prêt', unavailable: 'Indisponible', error: 'Connexion impossible', noResults: 'Aucun résultat', notVerified: 'À vérifier', authRequired: 'Clé d’accès requise'
     };
     const summary = model.summary || {};
     const stats = [
@@ -1159,11 +1159,24 @@
         <p>${esc(cleanInsight(item.value || item.title || ''))}</p>
         ${canonicalSourceUrl(item.sourceUrl) ? linkItems([{ url: canonicalSourceUrl(item.sourceUrl), label: item.sourcePlatform || labels.open }], 1, reviewSeenUrls) : ''}
       </article>`).join('');
-    const diagnosticCards = diagnostics.slice(0, 8).map((item) => `
-      <article class="daka-comp-note-card">
-        <h4>${esc(cleanInsight(item.channel || 'channel'))}</h4>
-        <p>${esc(cleanInsight(`${item.status || 'UNKNOWN'}${item.reason ? ` · ${item.reason}` : ''}`))}</p>
-      </article>`).join('');
+    const channelNames = { search: 'Search', web: 'Web', youtube: 'YouTube', instagram: 'Instagram', facebook: 'Facebook', tiktok: 'TikTok', reddit: 'Reddit', x: 'X', rss: 'RSS' };
+    const statusText = (item) => {
+      const rawStatus = String(item.status || '').toUpperCase();
+      if (/^(READY|OK|FULFILLED)$/.test(rawStatus)) return labels.ready;
+      if (/NO_RESULTS/.test(rawStatus)) return labels.noResults;
+      if (/(AUTH|401|KEY|CREDENTIAL)/.test(rawStatus + ' ' + String(item.reason || '').toUpperCase())) return labels.authRequired;
+      if (/^(ERROR|FAILED)$/.test(rawStatus)) return labels.error;
+      if (/UNAVAILABLE|TIMEOUT/.test(rawStatus)) return labels.unavailable;
+      return labels.notVerified;
+    };
+    const diagnosticCards = diagnostics.slice(0, 8).map((item) => {
+      const channel = String(item.channel || '').toLowerCase();
+      return `
+        <article class="daka-comp-note-card">
+          <h4>${esc(channelNames[channel] || cleanInsight(item.channel || 'Channel'))}</h4>
+          <p>${esc(statusText(item))}</p>
+        </article>`;
+    }).join('');
     const empty = !patterns.length && !observed.length
       ? `<article class="daka-comp-warning"><strong>${esc(labels.empty)}</strong><p>${esc(labels.emptyNote)}</p></article>`
       : '';
