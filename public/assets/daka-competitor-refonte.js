@@ -2467,6 +2467,19 @@
     const quality = container.querySelector('.daka-comp-quality');
     if (quality) quality.after(rail);
     else container.prepend(rail);
+
+    if ('IntersectionObserver' in window) {
+      const links = Array.from(items.querySelectorAll('.daka-comp-section-rail-link'));
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          links.forEach((link) => link.removeAttribute('aria-current'));
+          const active = links.find((link) => link.getAttribute('href') === '#' + entry.target.id);
+          if (active) active.setAttribute('aria-current', 'true');
+        });
+      }, { rootMargin: '-96px 0px -62% 0px', threshold: 0.05 });
+      sections.forEach((section) => observer.observe(section));
+    }
   }
 
   function renderCompetitorReport(data) {
