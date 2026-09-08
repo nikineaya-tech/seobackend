@@ -1657,6 +1657,15 @@
         transform: translateY(-1px);
         outline: none;
       }
+      #resultsCompetitors .daka-comp-section {
+        scroll-margin-top: 92px;
+      }
+      #resultsCompetitors .daka-comp-section-rail-link[aria-current="true"] {
+        border-color: rgba(167, 139, 250, .60);
+        background: rgba(91, 33, 182, .30);
+        color: #f5f3ff;
+        box-shadow: 0 0 0 2px rgba(167, 139, 250, .10);
+      }
       #resultsCompetitors .daka-comp-section-rail-link::first-letter { color: #67e8f9; }
       #resultsCompetitors .daka-comp-quality,
       #resultsCompetitors .daka-comp-section {
