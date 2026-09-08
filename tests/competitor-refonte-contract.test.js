@@ -26,4 +26,6 @@ test('Competitor quality contract is present', () => {
   assert.match(refonte, /DAKA_USE_COMPETITOR_REFONTE|__dakaCompetitorRefonteRender/);
   assert.match(refonte, /function decisionStatement\(/);
   assert.match(refonte, /clean === '0'/);
+  assert.match(refonte, /daka-report-section/);
+  assert.match(refonte, /decimal-leading-zero/);
 });
