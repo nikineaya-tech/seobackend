@@ -1702,6 +1702,19 @@
       #resultsCompetitors .daka-comp-executive::before { background: var(--daka-green); }
       #resultsCompetitors .daka-comp-quality::before { background: var(--daka-violet); }
       #resultsCompetitors .daka-comp-section::before { background: var(--daka-amber); }
+      #resultsCompetitors #comp-market-reading::before,
+      #resultsCompetitors #comp-market-verdict::before { background: var(--daka-cyan); }
+      #resultsCompetitors #comp-positioning::before,
+      #resultsCompetitors #comp-comments-reviews::before,
+      #resultsCompetitors #comp-source-deck::before { background: var(--daka-violet); }
+      #resultsCompetitors #comp-action-plan::before,
+      #resultsCompetitors #comp-final-answers::before { background: var(--daka-green); }
+      #resultsCompetitors #comp-direct-competitors::before,
+      #resultsCompetitors #comp-user-benchmark::before { background: var(--daka-cyan); }
+      #resultsCompetitors #comp-strategic-studies::before,
+      #resultsCompetitors #comp-market-intelligence-studies::before,
+      #resultsCompetitors #comp-product-study::before,
+      #resultsCompetitors #comp-missing-proofs::before { background: var(--daka-amber); }
       #resultsCompetitors .daka-comp-section > summary {
         border-bottom: 1px solid rgba(148, 163, 184, .12);
         background: rgba(13, 26, 43, .78);
