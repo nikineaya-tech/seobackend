@@ -2493,9 +2493,11 @@
       const summary = section.querySelector('summary');
       const title = summary?.querySelector('.daka-comp-section-head strong')?.textContent?.trim() || summary?.textContent?.trim() || '';
       if (!title) return;
+      section.setAttribute('tabindex', '-1');
       const link = document.createElement('a');
       link.className = 'daka-comp-section-rail-link';
       link.href = '#' + section.id;
+      link.setAttribute('aria-controls', section.id);
       const blockCount = section.querySelectorAll('article').length;
       const countLabel = blockCount > 0 ? ' (' + blockCount + ')' : '';
       link.textContent = String(index + 1).padStart(2, '0') + ' · ' + title + countLabel;
@@ -2503,6 +2505,7 @@
         event.preventDefault();
         section.open = true;
         section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        window.setTimeout(() => section.focus({ preventScroll: true }), 220);
       });
       items.appendChild(link);
     });
