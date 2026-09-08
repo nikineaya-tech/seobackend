@@ -2511,7 +2511,9 @@
     if (scoreNode) {
       const scoreBadge = document.createElement('span');
       scoreBadge.className = 'daka-comp-section-rail-score';
-      scoreBadge.textContent = (lang() === 'ar' ? 'الجودة ' : lang() === 'en' ? 'Quality ' : 'Qualité ') + scoreNode.textContent.trim();
+      const scoreLabel = (lang() === 'ar' ? 'جودة البيانات ' : lang() === 'en' ? 'Data quality ' : 'Qualité des données ') + scoreNode.textContent.trim();
+      scoreBadge.textContent = scoreLabel;
+      scoreBadge.setAttribute('aria-label', scoreLabel);
       rail.appendChild(scoreBadge);
     }
     rail.appendChild(items);
