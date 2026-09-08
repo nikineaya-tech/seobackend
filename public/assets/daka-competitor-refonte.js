@@ -822,6 +822,31 @@
     ].filter((item) => useful(item.value));
   }
 
+  function decisionStatement(intel, offerType) {
+    const verdict = intel.marketVerdict || {};
+    const attack = intel.recommendedAttackAngle || {};
+    const answers = intel.finalAnswers || {};
+    const leader = cleanInsight(verdict.currentLeader);
+    const weakness = list(answers.weaknesses || attack.whatTheyDoNotProve || answers.missingProofs, 1)[0];
+    const action = list((intel.priorityActions || []).filter((item) => !item.horizon || item.horizon === 'NOW').map((item) => item?.action || item), 1)[0];
+    if (lang() === 'ar') {
+      if (weakness && leader) return 'خذ موقع الهجوم حول «' + weakness + '» مقابل ' + leader + '، ثم اختبره بدليل قابل للقياس قبل توسيع الإنفاق.';
+      if (weakness) return 'اجعل «' + weakness + '» محور العرض، واختبره بدليل واضح قبل زيادة الإنفاق.';
+      if (action) return 'ابدأ بـ «' + action + '» كاختبار أول، ولا تعتبره نتيجة نهائية قبل قياس الاستجابة.';
+      return offerType === 'service' ? 'وضّح النتيجة التي تبيعها ثم اختبرها مع شريحة محددة.' : 'وضّح العرض والدليل والسعر قبل اتخاذ قرار التوسع.';
+    }
+    if (lang() === 'en') {
+      if (weakness && leader) return 'Own the attack around “' + weakness + '” against ' + leader + ', then validate it with measurable proof before scaling spend.';
+      if (weakness) return 'Make “' + weakness + '” the offer angle and validate it with clear proof before increasing spend.';
+      if (action) return 'Start with “' + action + '” as the first test; do not treat it as a final conclusion before measuring response.';
+      return offerType === 'service' ? 'Clarify the outcome you sell, then test it with one defined segment.' : 'Clarify the offer, proof, and price before deciding to scale.';
+    }
+    if (weakness && leader) return 'Positionne l’attaque sur « ' + weakness + ' » face à ' + leader + ', puis valide-la par une preuve mesurable avant d’augmenter le budget.';
+    if (weakness) return 'Fais de « ' + weakness + ' » l’angle de l’offre et valide-le par une preuve claire avant d’augmenter le budget.';
+    if (action) return 'Lance « ' + action + ' » comme premier test; ne le considère pas comme une conclusion avant d’en mesurer la réponse.';
+    return offerType === 'service' ? 'Clarifie le résultat vendu, puis teste-le sur un segment défini.' : 'Clarifie l’offre, la preuve et le prix avant de décider d’augmenter le budget.';
+  }
+
   function executiveModel(intel, offerType) {
     const verdict = intel.marketVerdict || {};
     const attack = intel.recommendedAttackAngle || {};
@@ -829,7 +854,7 @@
     const actions = Array.isArray(intel.priorityActions) ? intel.priorityActions : [];
     const immediate = actions.filter((item) => !item.horizon || item.horizon === 'NOW').slice(0, 3);
     return {
-      decision: cleanInsight(attack.positioningStatement || answers.positionToTake),
+      decision: decisionStatement(intel, offerType),
       lever: list(verdict.whyTheyWin, 1)[0],
       risk: list(answers.missingProofs || attack.proofsToAdd || answers.weaknesses, 1)[0],
       move: normalizeItem(immediate[0]?.action || immediate[0]),
@@ -841,7 +866,7 @@
 
   function splitStat(label, value) {
     const clean = typeof value === 'number' && Number.isFinite(value) ? String(value) : cleanInsight(value);
-    if (!useful(clean) && clean !== '0') return '';
+    if (!useful(clean) || clean === '0') return '';
     return `<article class="daka-comp-stat-card"><span>${esc(label)}</span><strong>${esc(clean)}</strong></article>`;
   }
 
