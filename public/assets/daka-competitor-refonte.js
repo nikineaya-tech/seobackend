@@ -962,7 +962,7 @@
       [labels[2], q.domains],
       [labels[3], q.platforms],
       [labels[4], q.competitors],
-      [labels[5], q.channels ? q.ready + '/' + q.channels : '']
+      [labels[5], q.ready ? q.ready + '/' + q.channels : '']
     ].filter((item) => {
       const value = String(item[1] ?? '');
       return useful(value) && value !== '0';
@@ -974,7 +974,7 @@
   function renderQualityPanel(data, intel) {
     const q = qualityModel(data, intel);
     const labels = qualityLabels();
-    const stats = [splitStat(labels.evidence, q.evidence), splitStat(labels.sources, q.sources), splitStat(labels.platforms, q.platforms), splitStat(labels.channels, q.channels ? q.ready + '/' + q.channels : '0')].filter(Boolean).join('');
+    const stats = [splitStat(labels.evidence, q.evidence), splitStat(labels.sources, q.sources), splitStat(labels.platforms, q.platforms), splitStat(labels.channels, q.ready ? q.ready + '/' + q.channels : '')].filter(Boolean).join('');
     const details = [
       qualityDetail(labels.detailCompetitors, q.competitors, 'decision'),
       qualityDetail(labels.detailDomains, q.domains, 'quality'),
