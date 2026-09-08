@@ -1674,6 +1674,10 @@
       #resultsCompetitors .daka-comp-section {
         scroll-margin-top: 92px;
       }
+      #resultsCompetitors .daka-comp-section:focus-visible {
+        outline: 2px solid rgba(103, 232, 249, .82);
+        outline-offset: 4px;
+      }
       #resultsCompetitors .daka-comp-section-rail-link[aria-current="true"] {
         border-color: rgba(167, 139, 250, .60);
         background: rgba(91, 33, 182, .30);
