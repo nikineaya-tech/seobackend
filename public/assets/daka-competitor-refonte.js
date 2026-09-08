@@ -946,6 +946,31 @@
     return { score, evidence, sources: urls.length, domains: domains.length, domainLabels: domains.slice(0, 5), competitors: profiles.length, platforms: platforms.length, ready, channels: diagnostics.length, warnings, label: grade, grade };
   }
 
+  function qualityBreakdown(q) {
+    const isAr = lang() === 'ar';
+    const isEn = lang() === 'en';
+    const title = isAr ? 'كيف حُسبت الدرجة؟' : isEn ? 'How this score is built' : 'Comment la note est construite';
+    const note = isAr ? 'مؤشرات قابلة للفحص فقط؛ لا تعني نجاحا تجاريا مضمونا.' : isEn ? 'Inspectable signals only; this is not a guarantee of commercial success.' : 'Uniquement des signaux inspectables; ce n’est pas une garantie de succès commercial.';
+    const labels = isAr
+      ? ['الأدلة', 'المصادر', 'النطاقات المستقلة', 'المنصات', 'المنافسون', 'القنوات الجاهزة']
+      : isEn
+        ? ['Evidence', 'Sources', 'Independent domains', 'Platforms', 'Competitors', 'Ready channels']
+        : ['Preuves', 'Sources', 'Domaines indépendants', 'Plateformes', 'Concurrents', 'Canaux prêts'];
+    const values = [
+      [labels[0], q.evidence],
+      [labels[1], q.sources],
+      [labels[2], q.domains],
+      [labels[3], q.platforms],
+      [labels[4], q.competitors],
+      [labels[5], q.channels ? q.ready + '/' + q.channels : '']
+    ].filter((item) => {
+      const value = String(item[1] ?? '');
+      return useful(value) && value !== '0';
+    });
+    if (!values.length) return '';
+    return '<details class="daka-comp-quality-breakdown"><summary><span>' + esc(title) + '</span><i class="fas fa-chevron-down" aria-hidden="true"></i></summary><p>' + esc(note) + '</p><div>' + values.map((item) => '<span><b>' + esc(item[0]) + '</b><strong>' + esc(String(item[1])) + '</strong></span>').join('') + '</div></details>';
+  }
+
   function renderQualityPanel(data, intel) {
     const q = qualityModel(data, intel);
     const labels = qualityLabels();
@@ -959,7 +984,7 @@
     const sourceNames = q.domainLabels.length ? q.domainLabels.map((item) => '<span>' + esc(item) + '</span>').join('') : '<em>' + esc(labels.noSources) + '</em>';
     const warnings = q.warnings.map((item) => '<li>' + esc(item) + '</li>').join('');
     const gradeClass = q.score >= 7.5 ? 'high' : q.score >= 5 ? 'medium' : 'low';
-    return '<section class="daka-comp-quality" dir="' + (lang() === 'ar' ? 'rtl' : 'ltr') + '"><div class="daka-comp-quality-head"><div><span class="daka-comp-kicker">' + esc(labels.title) + '</span><p>' + esc(labels.subtitle) + '</p></div><div class="daka-comp-quality-score"><strong>' + esc(q.score.toFixed(1)) + '<small>/10</small></strong><span class="daka-comp-quality-grade grade-' + gradeClass + '">' + esc(q.grade) + '</span></div></div><div class="daka-comp-quality-meter" role="progressbar" aria-label="' + esc(labels.title) + '" aria-valuemin="0" aria-valuemax="10" aria-valuenow="' + esc(q.score.toFixed(1)) + '"><span class="grade-' + gradeClass + '" style="width:' + (q.score * 10) + '%"></span></div><p class="daka-comp-quality-method">' + esc(labels.methodNote) + '</p><div class="daka-comp-quality-legend"><span class="tone-decision"><i></i>' + esc(labels.legendDecision) + '</span><span class="tone-quality"><i></i>' + esc(labels.legendQuality) + '</span><span class="tone-details"><i></i>' + esc(labels.legendDetails) + '</span></div><div class="daka-comp-quality-sources"><span>' + esc(labels.sourceList) + '</span><div>' + sourceNames + '</div></div><div class="daka-comp-stat-grid">' + stats + '</div><div class="daka-comp-quality-details">' + details + '</div>' + (warnings ? '<div class="daka-comp-quality-warning"><strong>' + esc(labels.next) + '</strong><ul>' + warnings + '</ul></div>' : '') + '</section>';
+    return '<section class="daka-comp-quality" dir="' + (lang() === 'ar' ? 'rtl' : 'ltr') + '"><div class="daka-comp-quality-head"><div><span class="daka-comp-kicker">' + esc(labels.title) + '</span><p>' + esc(labels.subtitle) + '</p></div><div class="daka-comp-quality-score"><strong>' + esc(q.score.toFixed(1)) + '<small>/10</small></strong><span class="daka-comp-quality-grade grade-' + gradeClass + '">' + esc(q.grade) + '</span></div></div><div class="daka-comp-quality-meter" role="progressbar" aria-label="' + esc(labels.title) + '" aria-valuemin="0" aria-valuemax="10" aria-valuenow="' + esc(q.score.toFixed(1)) + '"><span class="grade-' + gradeClass + '" style="width:' + (q.score * 10) + '%"></span></div><p class="daka-comp-quality-method">' + esc(labels.methodNote) + '</p>' + qualityBreakdown(q) + '<div class="daka-comp-quality-legend"><span class="tone-decision"><i></i>' + esc(labels.legendDecision) + '</span><span class="tone-quality"><i></i>' + esc(labels.legendQuality) + '</span><span class="tone-details"><i></i>' + esc(labels.legendDetails) + '</span></div><div class="daka-comp-quality-sources"><span>' + esc(labels.sourceList) + '</span><div>' + sourceNames + '</div></div><div class="daka-comp-stat-grid">' + stats + '</div><div class="daka-comp-quality-details">' + details + '</div>' + (warnings ? '<div class="daka-comp-quality-warning"><strong>' + esc(labels.next) + '</strong><ul>' + warnings + '</ul></div>' : '') + '</section>';
   }
 
   function renderOpening(data, intel, offerType) {
