@@ -634,8 +634,8 @@
     } catch (_) { return ''; }
   }
 
-  function linkItems(items, limit) {
-    const seen = new Set();
+  function linkItems(items, limit, sharedSeen) {
+    const seen = sharedSeen || new Set();
     const values = (Array.isArray(items) ? items : [])
       .map((item) => {
         const rawUrl = typeof item === 'string' ? item : item?.url;
@@ -884,9 +884,9 @@
   }
 
   function qualityLabels() {
-    if (lang() === 'ar') return { title: 'جودة البيانات', subtitle: 'درجة مبنية على الأدلة والمصادر المتنوعة، وليست على كثرة الكلام.', evidence: 'أدلة قابلة للفحص', sources: 'مصادر مختلفة', platforms: 'منصات', channels: 'قنوات جاهزة', next: 'ما يحتاج إلى تحقق', thin: 'العينة ما زالت محدودة؛ لا تعتبرها حكماً نهائياً.', auth: 'بعض القنوات تحتاج مفتاح وصول صحيحاً.', repeated: 'تم إخفاء الروابط المكررة أو روابط الوسيط التقني.', strong: 'قاعدة جيدة للقرار الأولي.', partial: 'إشارات مفيدة، لكنها تحتاج تأكيداً إضافياً.' };
-    if (lang() === 'en') return { title: 'Data quality', subtitle: 'A score based on evidence and source diversity, not on report length.', evidence: 'Inspectable evidence', sources: 'Distinct sources', platforms: 'Platforms', channels: 'Ready channels', next: 'Needs verification', thin: 'The sample is still limited; do not treat it as a final market verdict.', auth: 'Some channels need a valid access key.', repeated: 'Repeated links and technical proxy URLs were hidden.', strong: 'A solid base for an initial decision.', partial: 'Useful signals, but more confirmation is needed.' };
-    return { title: 'Qualité des données', subtitle: 'Une note basée sur les preuves et la diversité des sources, pas sur la longueur du rapport.', evidence: 'Preuves inspectables', sources: 'Sources distinctes', platforms: 'Plateformes', channels: 'Canaux prêts', next: 'À vérifier', thin: 'L’échantillon reste limité; ce n’est pas encore un verdict marché final.', auth: 'Certains canaux nécessitent une clé d’accès valide.', repeated: 'Les liens répétés et les URLs techniques ont été masqués.', strong: 'Une bonne base pour une première décision.', partial: 'Des signaux utiles, mais une confirmation reste nécessaire.' };
+    if (lang() === 'ar') return { title: 'جودة البيانات', subtitle: 'درجة مبنية على الأدلة والمصادر المتنوعة، وليست على كثرة الكلام.', evidence: 'أدلة قابلة للفحص', sources: 'مصادر مختلفة', platforms: 'منصات', channels: 'قنوات جاهزة', detailCompetitors: 'منافسون مفحوصون', detailDomains: 'نطاقات مستقلة', detailEvidence: 'حالة الدليل', detailReading: 'قراءة الجودة', observed: 'مرصود', notObserved: 'غير مرصود', next: 'ما يحتاج إلى تحقق', thin: 'العينة ما زالت محدودة؛ لا تعتبرها حكماً نهائياً.', auth: 'بعض القنوات تحتاج مفتاح وصول صحيحاً.', repeated: 'تم إخفاء الروابط المكررة أو روابط الوسيط التقني.', strong: 'قاعدة جيدة للقرار الأولي.', partial: 'إشارات مفيدة، لكنها تحتاج تأكيداً إضافياً.' };
+    if (lang() === 'en') return { title: 'Data quality', subtitle: 'A score based on evidence and source diversity, not on report length.', evidence: 'Inspectable evidence', sources: 'Distinct sources', platforms: 'Platforms', channels: 'Ready channels', detailCompetitors: 'Competitors checked', detailDomains: 'Independent domains', detailEvidence: 'Evidence state', detailReading: 'Quality reading', observed: 'Observed', notObserved: 'Not observed', next: 'Needs verification', thin: 'The sample is still limited; do not treat it as a final market verdict.', auth: 'Some channels need a valid access key.', repeated: 'Repeated links and technical proxy URLs were hidden.', strong: 'A solid base for an initial decision.', partial: 'Useful signals, but more confirmation is needed.' };
+    return { title: 'Qualité des données', subtitle: 'Une note basée sur les preuves et la diversité des sources, pas sur la longueur du rapport.', evidence: 'Preuves inspectables', sources: 'Sources distinctes', platforms: 'Plateformes', channels: 'Canaux prêts', detailCompetitors: 'Concurrents examinés', detailDomains: 'Domaines indépendants', detailEvidence: 'État des preuves', detailReading: 'Lecture qualité', observed: 'Observé', notObserved: 'Non observé', next: 'À vérifier', thin: 'L’échantillon reste limité; ce n’est pas encore un verdict marché final.', auth: 'Certains canaux nécessitent une clé d’accès valide.', repeated: 'Les liens répétés et les URLs techniques ont été masqués.', strong: 'Une bonne base pour une première décision.', partial: 'Des signaux utiles, mais une confirmation reste nécessaire.' };
   }
 
   function qualityModel(data, intel) {
@@ -896,6 +896,7 @@
     const rawUrls = [...(Array.isArray(model.observedItems) ? model.observedItems.map((item) => item?.sourceUrl) : []), ...profiles.flatMap((item) => Array.isArray(item.evidenceLinks) ? item.evidenceLinks : [])];
     const urls = Array.from(new Set(rawUrls.map(canonicalSourceUrl).filter(Boolean)));
     const platforms = Array.from(new Set([...(Array.isArray(model.summary?.platforms) ? model.summary.platforms : []), ...diagnostics.map((item) => item.channel || item.backend || '')].map((value) => cleanInsight(value, '')).filter(Boolean)));
+    const domains = Array.from(new Set(urls.map(urlDomain).filter(Boolean)));
     const ready = diagnostics.filter((item) => /^(READY|OK|FULFILLED)$/i.test(String(item.status || ''))).length;
     const authErrors = diagnostics.filter((item) => /(?:401|AUTH|KEY|CREDENTIAL)/i.test(String(item.status || '') + ' ' + String(item.reason || ''))).length;
     const evidence = Number(model.summary?.evidenceCount || (Array.isArray(model.observedItems) ? model.observedItems.length : 0) || 0);
@@ -909,18 +910,24 @@
     if (urls.length <= 1 || evidence < 3) warnings.push(q.thin);
     if (authErrors) warnings.push(q.auth);
     if (rawUrls.length > urls.length) warnings.push(q.repeated);
-    return { score, evidence, sources: urls.length, platforms: platforms.length, ready, channels: diagnostics.length, warnings, label: score >= 7.5 ? q.strong : q.partial };
+    return { score, evidence, sources: urls.length, domains: domains.length, competitors: profiles.length, platforms: platforms.length, ready, channels: diagnostics.length, warnings, label: score >= 7.5 ? q.strong : q.partial };
   }
 
   function renderQualityPanel(data, intel) {
     const q = qualityModel(data, intel);
     const labels = qualityLabels();
     const stats = [splitStat(labels.evidence, q.evidence), splitStat(labels.sources, q.sources), splitStat(labels.platforms, q.platforms), splitStat(labels.channels, q.channels ? q.ready + '/' + q.channels : '0')].filter(Boolean).join('');
+    const details = [
+      '<div><span>' + esc(labels.detailCompetitors) + '</span><strong>' + esc(String(q.competitors)) + '</strong></div>',
+      '<div><span>' + esc(labels.detailDomains) + '</span><strong>' + esc(String(q.domains)) + '</strong></div>',
+      '<div><span>' + esc(labels.detailEvidence) + '</span><strong>' + esc(q.evidence ? labels.observed : labels.notObserved) + '</strong></div>',
+      '<div><span>' + esc(labels.detailReading) + '</span><strong>' + esc(q.label) + '</strong></div>'
+    ].join('');
     const warnings = q.warnings.map((item) => '<li>' + esc(item) + '</li>').join('');
-    return '<section class="daka-comp-quality" dir="' + (lang() === 'ar' ? 'rtl' : 'ltr') + '"><div class="daka-comp-quality-head"><div><span class="daka-comp-kicker">' + esc(labels.title) + '</span><p>' + esc(labels.subtitle) + '</p></div><div class="daka-comp-quality-score"><strong>' + esc(q.score.toFixed(1)) + '<small>/10</small></strong><span>' + esc(q.label) + '</span></div></div><div class="daka-comp-stat-grid">' + stats + '</div>' + (warnings ? '<div class="daka-comp-quality-warning"><strong>' + esc(labels.next) + '</strong><ul>' + warnings + '</ul></div>' : '') + '</section>';
+    return '<section class="daka-comp-quality" dir="' + (lang() === 'ar' ? 'rtl' : 'ltr') + '"><div class="daka-comp-quality-head"><div><span class="daka-comp-kicker">' + esc(labels.title) + '</span><p>' + esc(labels.subtitle) + '</p></div><div class="daka-comp-quality-score"><strong>' + esc(q.score.toFixed(1)) + '<small>/10</small></strong><span>' + esc(q.label) + '</span></div></div><div class="daka-comp-stat-grid">' + stats + '</div><div class="daka-comp-quality-details">' + details + '</div>' + (warnings ? '<div class="daka-comp-quality-warning"><strong>' + esc(labels.next) + '</strong><ul>' + warnings + '</ul></div>' : '') + '</section>';
   }
 
-  function renderOpening(intel, offerType) {
+  function renderOpening(data, intel, offerType) {
     const cards = openingCards(intel, offerType);
     if (!cards.length) return '';
     const subject = cleanInsight(intel?.productMarketStudy?.subject || document.getElementById('keyword')?.value || '');
@@ -933,7 +940,7 @@
           : `Qui est le plus visible sur « ${subject} » en ${market} ?`)
       : copy('moduleTitle');
     const geoNote = cleanInsight(intel?.geoInterpretation?.mismatchNote);
-    const quality = qualityModel({ competitorIntelligence: intel }, intel);
+    const quality = qualityModel(data, intel);
     const chartScore = quality.score;
     const mini = cards.slice(0, 3);
     return `
@@ -1132,20 +1139,21 @@
       splitStat(labels.source, (Array.isArray(summary.platforms) ? summary.platforms : []).slice(0, 3).join(' · ')),
       splitStat(labels.confidence, patterns[0]?.confidence || (observed.length ? observed[0]?.confidence : ''))
     ].filter(Boolean).join('');
+    const reviewSeenUrls = new Set();
     const patternCards = patterns.slice(0, 8).map((item) => {
       const sourceUrls = Array.isArray(item.sourceUrls) ? item.sourceUrls.map(canonicalSourceUrl).filter(Boolean).filter((url, index, urls) => urls.indexOf(url) === index).slice(0, 2) : [];
       return `
         <article class="daka-comp-study-card">
           <h4>${esc(cleanInsight(item.label || item.statement || item.topic || item.key || labels.patterns))}</h4>
           <p>${esc(`${labels.evidence}: ${item.count || 1}${item.confidence ? ` · ${labels.confidence}: ${item.confidence}` : ''}`)}</p>
-          ${linkItems(sourceUrls, 2)}
+          ${linkItems(sourceUrls, 2, reviewSeenUrls)}
         </article>`;
     }).join('');
     const observedCards = observed.slice(0, 8).map((item) => `
       <article class="daka-comp-study-card">
         <h4>${esc(cleanInsight(item.kind || labels.observed))}</h4>
         <p>${esc(cleanInsight(item.value || item.title || ''))}</p>
-        ${canonicalSourceUrl(item.sourceUrl) ? linkItems([{ url: canonicalSourceUrl(item.sourceUrl), label: item.sourcePlatform || labels.open }], 1) : ''}
+        ${canonicalSourceUrl(item.sourceUrl) ? linkItems([{ url: canonicalSourceUrl(item.sourceUrl), label: item.sourcePlatform || labels.open }], 1, reviewSeenUrls) : ''}
       </article>`).join('');
     const diagnosticCards = diagnostics.slice(0, 8).map((item) => `
       <article class="daka-comp-note-card">
@@ -1531,6 +1539,10 @@
       #resultsCompetitors .daka-comp-quality-score strong { color: #f8fafc; font-size: 2.45rem; line-height: .95; }
       #resultsCompetitors .daka-comp-quality-score strong small { color: #67e8f9; font-size: .9rem; }
       #resultsCompetitors .daka-comp-quality-score span { color: #86efac; font-size: .72rem; font-weight: 800; }
+      #resultsCompetitors .daka-comp-quality-details { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 12px; }
+      #resultsCompetitors .daka-comp-quality-details > div { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: rgba(2, 8, 19, .38); border: 1px solid rgba(148, 163, 184, .12); }
+      #resultsCompetitors .daka-comp-quality-details span { color: #8da5bd; font-size: .68rem; font-weight: 800; }
+      #resultsCompetitors .daka-comp-quality-details strong { color: #e2e8f0; font-size: .82rem; }
       #resultsCompetitors .daka-comp-quality-warning { margin-top: 14px; padding: 12px 14px; border: 1px solid rgba(251, 191, 36, .22); border-radius: 14px; background: rgba(120, 53, 15, .16); color: #fde68a; }
       #resultsCompetitors .daka-comp-quality-warning ul { margin: 7px 0 0; padding-inline-start: 18px; }
       #resultsCompetitors .daka-comp-quality-warning li { margin: 4px 0; color: #cbd5e1; font-size: .8rem; }
@@ -2068,6 +2080,7 @@
         #resultsCompetitors .daka-comp-quality { padding: 16px; }
         #resultsCompetitors .daka-comp-quality-head { align-items: flex-start; flex-direction: column; }
         #resultsCompetitors .daka-comp-quality-score { justify-items: start; }
+        #resultsCompetitors .daka-comp-quality-details { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
         #resultsCompetitors .daka-comp-opening,
         #resultsCompetitors .daka-comp-executive {
@@ -2125,7 +2138,7 @@
     const intel = repaired.competitorIntelligence || {};
     const offerType = offerTypeFromInput(intel);
     const html = [
-      renderOpening(intel, offerType),
+      renderOpening(repaired, intel, offerType),
       renderQualityPanel(repaired, intel),
       renderExecutive(intel, offerType),
       renderMarketReading(intel),
