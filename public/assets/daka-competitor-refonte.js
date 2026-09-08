@@ -840,8 +840,8 @@
   }
 
   function splitStat(label, value) {
-    const clean = cleanInsight(value);
-    if (!useful(clean)) return '';
+    const clean = typeof value === 'number' && Number.isFinite(value) ? String(value) : cleanInsight(value);
+    if (!useful(clean) && clean !== '0') return '';
     return `<article class="daka-comp-stat-card"><span>${esc(label)}</span><strong>${esc(clean)}</strong></article>`;
   }
 
