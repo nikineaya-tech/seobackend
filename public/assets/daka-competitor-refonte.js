@@ -1625,6 +1625,20 @@
         box-shadow: 0 14px 34px rgba(2, 6, 23, .28);
         backdrop-filter: blur(14px);
       }
+      #resultsCompetitors .daka-comp-section-rail-score {
+        display: inline-flex;
+        align-items: center;
+        flex: 0 0 auto;
+        min-height: 32px;
+        padding: 0 11px;
+        border: 1px solid rgba(52, 211, 153, .32);
+        border-radius: 10px;
+        background: rgba(6, 78, 59, .24);
+        color: #a7f3d0;
+        font-size: .70rem;
+        font-weight: 900;
+        white-space: nowrap;
+      }
       #resultsCompetitors .daka-comp-section-rail-items {
         display: flex;
         align-items: center;
