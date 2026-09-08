@@ -915,9 +915,9 @@
   }
 
   function qualityLabels() {
-    if (lang() === 'ar') return { title: 'جودة البيانات', subtitle: 'درجة مبنية على الأدلة والمصادر المتنوعة، وليست على كثرة الكلام.', evidence: 'أدلة قابلة للفحص', sources: 'مصادر مختلفة', platforms: 'منصات', channels: 'قنوات جاهزة', detailCompetitors: 'منافسون مفحوصون', detailDomains: 'نطاقات مستقلة', detailEvidence: 'حالة الدليل', detailReading: 'قراءة الجودة', observed: 'مرصود', notObserved: 'غير مرصود', gradeHigh: 'قوي', gradeMedium: 'متوسط', gradeLow: 'ضعيف', methodNote: 'تقيس هذه الدرجة جودة الأدلة، وليست جاذبية السوق أو ضمان النجاح.', sourceList: 'المصادر المستخدمة', noSources: 'لا توجد مصادر قابلة للعرض', legendDecision: 'القرار', legendQuality: 'جودة البيانات', legendDetails: 'التفاصيل', next: 'ما يحتاج إلى تحقق', thin: 'العينة ما زالت محدودة؛ لا تعتبرها حكماً نهائياً.', auth: 'بعض القنوات تحتاج مفتاح وصول صحيحاً.', repeated: 'تم إخفاء الروابط المكررة أو روابط الوسيط التقني.', strong: 'قاعدة جيدة للقرار الأولي.', partial: 'إشارات مفيدة، لكنها تحتاج تأكيداً إضافياً.' };
-    if (lang() === 'en') return { title: 'Data quality', subtitle: 'A score based on evidence and source diversity, not on report length.', evidence: 'Inspectable evidence', sources: 'Distinct sources', platforms: 'Platforms', channels: 'Ready channels', detailCompetitors: 'Competitors checked', detailDomains: 'Independent domains', detailEvidence: 'Evidence state', detailReading: 'Quality reading', observed: 'Observed', notObserved: 'Not observed', gradeHigh: 'Strong', gradeMedium: 'Medium', gradeLow: 'Thin', methodNote: 'This score measures evidence quality, not market attractiveness or guaranteed success.', sourceList: 'Sources used', noSources: 'No displayable sources', legendDecision: 'Decision', legendQuality: 'Data quality', legendDetails: 'Details', next: 'Needs verification', thin: 'The sample is still limited; do not treat it as a final market verdict.', auth: 'Some channels need a valid access key.', repeated: 'Repeated links and technical proxy URLs were hidden.', strong: 'A solid base for an initial decision.', partial: 'Useful signals, but more confirmation is needed.' };
-    return { title: 'Qualité des données', subtitle: 'Une note basée sur les preuves et la diversité des sources, pas sur la longueur du rapport.', evidence: 'Preuves inspectables', sources: 'Sources distinctes', platforms: 'Plateformes', channels: 'Canaux prêts', detailCompetitors: 'Concurrents examinés', detailDomains: 'Domaines indépendants', detailEvidence: 'État des preuves', detailReading: 'Lecture qualité', observed: 'Observé', notObserved: 'Non observé', gradeHigh: 'Solide', gradeMedium: 'Moyen', gradeLow: 'Faible', methodNote: 'Cette note mesure la qualité des preuves, pas l’attractivité du marché ni une garantie de succès.', sourceList: 'Sources utilisées', noSources: 'Aucune source affichable', legendDecision: 'Décision', legendQuality: 'Qualité des données', legendDetails: 'Détails', next: 'À vérifier', thin: 'L’échantillon reste limité; ce n’est pas encore un verdict marché final.', auth: 'Certains canaux nécessitent une clé d’accès valide.', repeated: 'Les liens répétés et les URLs techniques ont été masqués.', strong: 'Une bonne base pour une première décision.', partial: 'Des signaux utiles, mais une confirmation reste nécessaire.' };
+    if (lang() === 'ar') return { title: 'الجاهزية لاتخاذ القرار', subtitle: 'درجة استراتيجية لمساعدة التطبيق على اختيار Go أو No-Go، وليست حكماً على موثوقية عملك أو قيمة بياناتك.', evidence: 'إشارات القرار', sources: 'مراجع القرار', platforms: 'قنوات القرار', channels: 'قنوات نشطة', detailCompetitors: 'منافسون داخل القرار', detailDomains: 'أسواق أو نطاقات مقارنة', detailEvidence: 'حالة القرار', detailReading: 'التوصية', observed: 'جاهز للتحليل', notObserved: 'يحتاج خطوة', gradeHigh: 'GO', gradeMedium: 'GO مشروط', gradeLow: 'NO-GO مؤقت', methodNote: 'تقيس هذه الدرجة جاهزية القرار الاستراتيجي: هل نتحرك، نختبر، أم نؤجل؟ لا تقيس قيمة بياناتك ولا تنتقد العمل المنجز.', sourceList: 'مراجع القرار', noSources: 'لا توجد مراجع إضافية للعرض', legendDecision: 'القرار', legendQuality: 'جاهزية القرار', legendDetails: 'التفاصيل', next: 'ما الذي يغيّر القرار', thin: 'لا تعني هذه الحالة أن البيانات ضعيفة؛ تعني أن القرار يحتاج اختبارا أو مدخلا إضافيا قبل التوسع.', auth: 'بعض القنوات غير متاحة حاليا؛ لا تمنع القرار إلا إذا كانت حاسمة له.', repeated: 'تم توحيد المراجع المكررة حتى لا تؤثر على القرار أكثر من مرة.', strong: 'القرار قابل للتنفيذ الآن.', partial: 'القرار مناسب كتجربة محدودة قبل التوسع.' };
+    if (lang() === 'en') return { title: 'Decision readiness', subtitle: 'A strategic score to choose Go or No-Go, not a judgment on the reliability of your work or data.', evidence: 'Decision signals', sources: 'Decision references', platforms: 'Decision channels', channels: 'Active channels', detailCompetitors: 'Competitors in decision', detailDomains: 'Compared markets or domains', detailEvidence: 'Decision state', detailReading: 'Recommendation', observed: 'Decision-ready', notObserved: 'Step required', gradeHigh: 'GO', gradeMedium: 'CONDITIONAL GO', gradeLow: 'TEMPORARY NO-GO', methodNote: 'This score measures strategic decision readiness: move, test, or wait. It does not devalue your data or the work completed.', sourceList: 'Decision references', noSources: 'No additional references to display', legendDecision: 'Decision', legendQuality: 'Readiness', legendDetails: 'Details', next: 'What can change the decision', thin: 'This does not mean your data is weak; it means a test or extra input is needed before scaling.', auth: 'Some channels are currently unavailable; they matter only if they are decisive for this decision.', repeated: 'Repeated references were grouped so they do not overweight the decision.', strong: 'Decision-ready for action.', partial: 'Suitable for a bounded test before scaling.' };
+    return { title: 'Préparation à la décision', subtitle: 'Un score stratégique pour choisir Go ou No-Go, pas un jugement sur la fiabilité de votre travail ou de vos données.', evidence: 'Signaux décisionnels', sources: 'Références de décision', platforms: 'Canaux décisionnels', channels: 'Canaux actifs', detailCompetitors: 'Concurrents intégrés', detailDomains: 'Marchés ou domaines comparés', detailEvidence: 'État de décision', detailReading: 'Recommandation', observed: 'Prêt à décider', notObserved: 'Étape requise', gradeHigh: 'GO', gradeMedium: 'GO conditionnel', gradeLow: 'NO-GO temporaire', methodNote: 'Cette note mesure la préparation d’une décision stratégique : avancer, tester ou attendre. Elle ne dévalorise ni vos données ni le travail réalisé.', sourceList: 'Références de décision', noSources: 'Aucune référence supplémentaire à afficher', legendDecision: 'Décision', legendQuality: 'Préparation', legendDetails: 'Détails', next: 'Ce qui peut changer la décision', thin: 'Ce statut ne signifie pas que vos données sont faibles ; il indique qu’un test ou un élément supplémentaire est nécessaire avant de généraliser.', auth: 'Certains canaux sont indisponibles ; ils ne bloquent la décision que s’ils sont décisifs.', repeated: 'Les références répétées ont été regroupées pour ne pas surpondérer la décision.', strong: 'Décision exploitable maintenant.', partial: 'Décision adaptée à un test limité avant extension.' };
   }
 
   function qualityModel(data, intel) {
@@ -931,31 +931,37 @@
     const ready = diagnostics.filter((item) => /^(READY|OK|FULFILLED)$/i.test(String(item.status || ''))).length;
     const authErrors = diagnostics.filter((item) => /(?:401|AUTH|KEY|CREDENTIAL)/i.test(String(item.status || '') + ' ' + String(item.reason || ''))).length;
     const evidence = Number(model.summary?.evidenceCount || (Array.isArray(model.observedItems) ? model.observedItems.length : 0) || 0);
-    let score = 1.4 + Math.min(0.9, profiles.length * 0.3) + Math.min(2.7, urls.length * 0.9) + Math.min(1.2, domains.length * 0.6) + Math.min(1.2, platforms.length * 0.3) + Math.min(0.9, ready * 0.15) + Math.min(1.5, evidence * 0.15);
-    if (evidence < 2) score -= 0.9;
-    if (urls.length <= 1 && evidence > 1) score -= 0.8;
-    if (domains.length <= 1 && evidence > 2) score -= 0.5;
-    if (authErrors) score -= 0.7;
+
+    // This is a decision-readiness index, not a data-quality verdict.
+    let score = 5;
+    score += Math.min(1.4, profiles.length * 0.2);
+    score += Math.min(1, urls.length * 0.25);
+    score += Math.min(0.8, Math.max(0, domains.length - 1) * 0.25);
+    score += Math.min(0.5, platforms.length * 0.15);
+    score += Math.min(0.5, ready * 0.1);
+    score += Math.min(0.8, evidence * 0.08);
+    score -= Math.min(0.5, authErrors * 0.1);
     score = Math.max(1, Math.min(10, Math.round(score * 10) / 10));
+
     const q = qualityLabels();
     const warnings = [];
-    if (urls.length <= 1 || evidence < 3) warnings.push(q.thin);
     if (authErrors) warnings.push(q.auth);
+    if (!evidence && !urls.length) warnings.push(q.thin);
     if (rawUrls.length > urls.length) warnings.push(q.repeated);
-    const grade = score >= 7.5 ? q.gradeHigh : score >= 5 ? q.gradeMedium : q.gradeLow;
+    const grade = score >= 7.5 ? q.gradeHigh : score >= 5.5 ? q.gradeMedium : q.gradeLow;
     return { score, evidence, sources: urls.length, domains: domains.length, domainLabels: domains.slice(0, 5), competitors: profiles.length, platforms: platforms.length, ready, channels: diagnostics.length, warnings, label: grade, grade };
   }
 
   function qualityBreakdown(q) {
     const isAr = lang() === 'ar';
     const isEn = lang() === 'en';
-    const title = isAr ? 'كيف حُسبت الدرجة؟' : isEn ? 'How this score is built' : 'Comment la note est construite';
-    const note = isAr ? 'مؤشرات قابلة للفحص فقط؛ لا تعني نجاحا تجاريا مضمونا.' : isEn ? 'Inspectable signals only; this is not a guarantee of commercial success.' : 'Uniquement des signaux inspectables; ce n’est pas une garantie de succès commercial.';
+    const title = isAr ? 'كيف تساعد الدرجة على قرار Go أو No-Go؟' : isEn ? 'How the score supports Go / No-Go' : 'Comment la note aide à décider Go ou No-Go';
+    const note = isAr ? 'تجمع هذه المؤشرات لتحديد مستوى الحركة التالية، ولا تطعن في البيانات المدخلة.' : isEn ? 'These signals guide the next move; they do not question the reliability of your inputs.' : 'Ces indicateurs orientent la prochaine action; ils ne jugent pas la fiabilité de vos données.';
     const labels = isAr
-      ? ['الأدلة', 'المصادر', 'النطاقات المستقلة', 'المنصات', 'المنافسون', 'القنوات الجاهزة']
+      ? ['إشارات القرار', 'مراجع القرار', 'الأسواق المقارنة', 'القنوات', 'المنافسون', 'القنوات النشطة']
       : isEn
-        ? ['Evidence', 'Sources', 'Independent domains', 'Platforms', 'Competitors', 'Ready channels']
-        : ['Preuves', 'Sources', 'Domaines indépendants', 'Plateformes', 'Concurrents', 'Canaux prêts'];
+        ? ['Decision signals', 'Decision references', 'Compared markets', 'Channels', 'Competitors', 'Active channels']
+        : ['Signaux décisionnels', 'Références de décision', 'Marchés comparés', 'Canaux', 'Concurrents', 'Canaux actifs'];
     const values = [
       [labels[0], q.evidence],
       [labels[1], q.sources],
@@ -1800,16 +1806,16 @@
       #resultsCompetitors .daka-comp-quality { border: 1px solid rgba(34, 211, 238, 0.24); background: linear-gradient(135deg, rgba(8, 31, 50, 0.96), rgba(18, 15, 45, 0.96)); border-radius: 22px; padding: 20px 24px; margin: 16px 0; box-shadow: 0 18px 44px rgba(2, 6, 23, 0.28); }
       #resultsCompetitors .daka-comp-quality.grade-high { border-color: rgba(52, 211, 153, .40); }
       #resultsCompetitors .daka-comp-quality.grade-medium { border-color: rgba(251, 191, 36, .38); }
-      #resultsCompetitors .daka-comp-quality.grade-low { border-color: rgba(251, 113, 133, .38); }
+      #resultsCompetitors .daka-comp-quality.grade-low { border-color: rgba(251, 191, 36, .38); }
       #resultsCompetitors .daka-comp-quality.grade-high .daka-comp-quality-score strong { text-shadow: 0 0 24px rgba(52, 211, 153, .28); }
       #resultsCompetitors .daka-comp-quality.grade-medium .daka-comp-quality-score strong { text-shadow: 0 0 24px rgba(251, 191, 36, .24); }
-      #resultsCompetitors .daka-comp-quality.grade-low .daka-comp-quality-score strong { text-shadow: 0 0 24px rgba(251, 113, 133, .24); }
+      #resultsCompetitors .daka-comp-quality.grade-low .daka-comp-quality-score strong { text-shadow: 0 0 24px rgba(251, 191, 36, .24); }
       #resultsCompetitors .daka-comp-quality-head { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
       #resultsCompetitors .daka-comp-quality-head p { margin: 8px 0 0; color: #9fb3cc; font-size: 0.88rem; }
       #resultsCompetitors .daka-comp-quality-score { display: grid; justify-items: end; gap: 3px; min-width: 116px; }
       #resultsCompetitors .daka-comp-quality-meter { height: 7px; margin: 16px 0 7px; border-radius: 999px; overflow: hidden; background: rgba(148, 163, 184, .16); }
       #resultsCompetitors a:focus-visible, #resultsCompetitors button:focus-visible, #resultsCompetitors summary:focus-visible { outline: 2px solid #67e8f9; outline-offset: 3px; }
-      #resultsCompetitors .daka-comp-quality-meter span { display: block; height: 100%; border-radius: inherit; background: #fda4af; transition: width 240ms ease; }
+      #resultsCompetitors .daka-comp-quality-meter span { display: block; height: 100%; border-radius: inherit; background: #fbbf24; transition: width 240ms ease; }
       #resultsCompetitors .daka-comp-quality-meter span.grade-medium { background: #facc15; }
       #resultsCompetitors .daka-comp-quality-meter span.grade-high { background: linear-gradient(90deg, #22d3ee, #4ade80); }
       #resultsCompetitors .daka-comp-quality-method { margin: 0; color: #8da5bd; font-size: .72rem; line-height: 1.5; }
