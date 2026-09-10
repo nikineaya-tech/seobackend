@@ -13077,6 +13077,42 @@ function enforceStpPersonaDiversity(personaCards = [], lang = 'fr') {
     });
 }
 
+function enforcePhysicalProductPersonaGuard(personas = [], basePersonas = [], lang = 'fr') {
+    const incompatible = /founder|foundress|dirigeant|fondatrice|fondateur|responsable marketing|marketing manager|consultant|consultante|agency|agence|business owner|project owner|chef de projet|commerçant voulant vendre en ligne|débutant e[-\s]?commerce|e[-\s]?commerce beginner|مؤسس|مؤسسة|مدير التسويق|مستشار|صاحب مشروع|تاجر يريد البيع عبر الإنترنت|مبتدئ التجارة الإلكترونية/i;
+    const consumerSignal = /voiture|automobile|conducteur|lavage|laver|car[-\s]?care|vehicle|wash|owner|propriétaire|passionné auto|véhicule|سيارة|سائق|غسيل|غسل|العناية بالسيارات|مالك/i;
+    const baseById = new Map((basePersonas || []).map(item => [stpText(item?.id, 90), item]));
+    return (personas || []).map((persona, index) => {
+        const base = baseById.get(stpText(persona?.id, 90)) || basePersonas[index] || {};
+        const visible = JSON.stringify({
+            name: persona?.displayName || persona?.title || persona?.name,
+            occupation: persona?.occupation,
+            summary: persona?.summary,
+            job: persona?.jobToBeDone,
+            details: persona?.details
+        });
+        if (!incompatible.test(visible) && consumerSignal.test(visible)) return persona;
+        if (!base || !Object.keys(base).length) return persona;
+        const baseDetails = base.details && typeof base.details === 'object' ? base.details : {};
+        return {
+            ...persona,
+            displayName: base.displayName || base.title || persona.displayName,
+            title: base.title || base.displayName || persona.title,
+            name: base.name || persona.name,
+            occupation: base.occupation || base.displayName || persona.occupation,
+            summary: base.summary || base.jobToBeDone || persona.summary,
+            jobToBeDone: base.jobToBeDone || persona.jobToBeDone,
+            market: base.market || persona.market,
+            details: {
+                ...persona.details,
+                ...baseDetails,
+                occupation: baseDetails.occupation || base.occupation || base.displayName || persona.details?.occupation,
+                primaryJobToBeDone: baseDetails.primaryJobToBeDone || baseDetails.need || base.jobToBeDone || persona.details?.primaryJobToBeDone
+            },
+            guardrail: 'PHYSICAL_PRODUCT_B2C_PERSONA_GUARD'
+        };
+    });
+}
+
 async function maybeRefineStpPersonasWithAi({ personaCards = [], inputs = {}, competitorData = {}, beachheadMarket = {}, positioning = {}, lang = 'fr', modelMode = '' } = {}) {
     try {
         if (!personaCards.length) return null;
@@ -13382,7 +13418,7 @@ async function buildDakaStpDecision({ query, productDescription = '', productInt
     });
     const personaAiOverlay = await stpOptionalLayer(maybeRefineStpPersonasWithAi({
         personaCards,
-        inputs: { query, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
+        inputs: { query, productDescription, productIntake, geo: safeGeo, budget: effectiveBudget, objective: effectiveObjective, url, context: effectiveContext },
         competitorData,
         beachheadMarket,
         positioning,
@@ -13390,7 +13426,11 @@ async function buildDakaStpDecision({ query, productDescription = '', productInt
         modelMode
     }), 9000, 'persona-ai-overlay');
     if (personaAiOverlay?.personas?.length) {
+        const basePersonaCards = personaCards;
         personaCards = mergeStpPersonaAiOverlay(personaCards, personaAiOverlay.personas);
+        if (productIntake?.semantics?.productType === 'physical_product') {
+            personaCards = enforcePhysicalProductPersonaGuard(personaCards, basePersonaCards, langPack.code);
+        }
     }
     const reportSubject = productIntake?.reportLabel || localizeStpSubjectForReport(query, langPack.code) || query;
     const stpAngleModel = buildAngleDrivenStpModel({
