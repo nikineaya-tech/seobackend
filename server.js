@@ -11029,13 +11029,14 @@ function stpText(value, max = 220) {
  * localized before SERP, competitor, angle and persona layers receive it.
  * This is a structured handoff, not a generated marketing claim.
  */
-async function buildStpProductIntakeLayer({ query = '', description = '', geo = '', lang = 'fr' } = {}) {
+async function buildStpProductIntakeLayer({ query = '', description = '', geo = '', lang = 'fr', offerType = '' } = {}) {
     const originalQuery = stpText(query, 180);
     const originalDescription = stpText(description, 900);
     const semantics = classifyProductSemantics({
         query: originalQuery,
         description: originalDescription,
-        geo: stpText(geo, 80)
+        geo: stpText(geo, 80),
+        offerType
     });
     const [queryLocale, descriptionLocale] = await Promise.all([
         localizeCompetitorQueryForAnalysis(originalQuery, lang),
@@ -11165,7 +11166,7 @@ function stpLangPack(lang = 'fr') {
     };
 }
 
-function inferStpArchetype(query = '', competitorData = {}, urlIntel = null, productDescription = '') {
+function inferStpArchetype(query = '', competitorData = {}, urlIntel = null, productDescription = '', geo = '') {
     const corpus = [
         query,
         productDescription,
@@ -11339,6 +11340,41 @@ function buildStpSegmentCandidates({ query = '', productDescription = '', produc
                     need: lang === 'ar' ? 'مقارنة تكلفة الغسيل المتكرر بحل منزلي سهل' : lang === 'en' ? 'Compare frequent wash costs with an easy home-use option' : 'Comparer le coût des lavages fréquents avec une solution simple à domicile',
                     accessChannels: ['Google Search', 'YouTube', 'Facebook', 'comparison content'],
                     buyingTriggers: lang === 'ar' ? ['تكرار الدفع', 'مقارنة التكلفة', 'توفير الوقت', 'الاعتماد على النفس'] : lang === 'en' ? ['repeated payment', 'cost comparison', 'time saving', 'self-reliance'] : ['paiements répétés', 'comparaison du coût', 'gain de temps', 'autonomie']
+                }
+            );
+        } else if (productFamily === 'physical_goods') {
+            candidates.push(
+                {
+                    id: 'physical-home-users',
+                    name: lang === 'ar' ? `مستخدمو ${baseNeed} في المنزل في ${marketName}` : lang === 'en' ? `At-home users of ${baseNeed} in ${marketName}` : `Utilisateurs à domicile de ${baseNeed} en ${marketName}`,
+                    type: 'use-case+behavioral+b2c',
+                    need: lang === 'ar' ? `استخدام ${baseNeed} بسهولة في الحياة اليومية دون تعقيد` : lang === 'en' ? `Use ${baseNeed} easily in everyday life without unnecessary complexity` : `Utiliser ${baseNeed} facilement au quotidien sans complexité inutile`,
+                    accessChannels: ['Google Search', 'Facebook', 'Instagram', 'TikTok', 'WhatsApp'],
+                    buyingTriggers: lang === 'ar' ? ['حاجة يومية', 'سهولة الاستخدام', 'توفر محلي', 'سعر واضح'] : lang === 'en' ? ['daily need', 'ease of use', 'local availability', 'clear price'] : ['besoin quotidien', 'facilité d’usage', 'disponibilité locale', 'prix clair']
+                },
+                {
+                    id: 'physical-practical-buyers',
+                    name: lang === 'ar' ? `المشترون العمليون لـ ${baseNeed} في ${marketName}` : lang === 'en' ? `Practical buyers of ${baseNeed} in ${marketName}` : `Acheteurs pratiques de ${baseNeed} en ${marketName}`,
+                    type: 'value+behavioral+b2c',
+                    need: lang === 'ar' ? 'حل مشكلة واضحة بوقت وجهد وتكلفة معقولة' : lang === 'en' ? 'Solve a concrete problem with reasonable time, effort and total cost' : 'Résoudre un problème concret avec un temps, un effort et un coût total raisonnables',
+                    accessChannels: ['Google Search', 'Facebook Ads', 'marketplace', 'WhatsApp'],
+                    buyingTriggers: lang === 'ar' ? ['مقارنة السعر', 'نتيجة عملية', 'توصيل واضح', 'إرجاع مفهوم'] : lang === 'en' ? ['price comparison', 'practical outcome', 'clear delivery', 'understandable returns'] : ['comparaison du prix', 'résultat pratique', 'livraison claire', 'retour compréhensible']
+                },
+                {
+                    id: 'physical-replacement-seekers',
+                    name: lang === 'ar' ? `من يبحثون عن بديل عملي لـ ${baseNeed}` : lang === 'en' ? `Alternative seekers for ${baseNeed}` : `Chercheurs d’alternative pour ${baseNeed}`,
+                    type: 'alternative+behavioral+b2c',
+                    need: lang === 'ar' ? 'مقارنة المنتج بالحل اليدوي أو البدائل قبل الشراء' : lang === 'en' ? 'Compare the product with manual solutions and alternatives before buying' : 'Comparer le produit aux solutions manuelles et alternatives avant achat',
+                    accessChannels: ['Google Search', 'YouTube', 'TikTok', 'comparison content'],
+                    buyingTriggers: lang === 'ar' ? ['مقارنة البدائل', 'تجربة حقيقية', 'آراء المستخدمين'] : lang === 'en' ? ['alternative comparison', 'real demonstration', 'user reviews'] : ['comparaison des alternatives', 'démonstration réelle', 'avis utilisateurs']
+                },
+                {
+                    id: 'physical-proof-conscious',
+                    name: lang === 'ar' ? `المشترون الذين يريدون دليلا قبل شراء ${baseNeed}` : lang === 'en' ? `Proof-conscious buyers of ${baseNeed}` : `Acheteurs qui veulent une preuve avant ${baseNeed}`,
+                    type: 'trust+behavioral+b2c',
+                    need: lang === 'ar' ? 'رؤية تجربة حقيقية ومحتوى العرض والسعر قبل إرسال الطلب' : lang === 'en' ? 'See a real demonstration, package contents and final price before ordering' : 'Voir une démonstration réelle, le contenu du pack et le prix final avant de commander',
+                    accessChannels: ['Instagram', 'TikTok', 'Facebook', 'WhatsApp'],
+                    buyingTriggers: lang === 'ar' ? ['فيديو تجربة', 'آراء موثقة', 'السعر النهائي', 'ضمان واضح'] : lang === 'en' ? ['demo video', 'verified reviews', 'final price', 'clear warranty'] : ['vidéo de démonstration', 'avis vérifiés', 'prix final', 'garantie claire']
                 }
             );
         } else if (productFamily === 'beauty_skin') {
@@ -12065,6 +12101,8 @@ function buildStpPersona(segment = {}, inputs = {}, competitorData = {}, lang = 
     const segmentText = `${segment.id || ''} ${segment.name || ''} ${segment.need || ''} ${stpArray(segment.buyingTriggers, 4).join(' ')}`.toLowerCase();
     const productSemantics = inputs.productIntake?.semantics || classifyProductSemantics({ query: `${query} ${segmentText}`, description: inputs.productDescription || inputs.context?.productDescription || '', geo: market, competitorData });
     const isBeautySkinOffer = productSemantics.productFamily === 'beauty_skin';
+    const productFamily = productSemantics.productFamily || 'general_offer';
+    const isPhysicalProductOffer = productSemantics.productType === 'physical_product';
     const personaJtbd = (() => {
         if (isPhysicalProductOffer && productFamily === 'automotive_care') {
             return isAr
