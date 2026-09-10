@@ -6130,6 +6130,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         metaAds: 'Meta Ads',
         googleAds: 'Google Ads',
         measurement: 'القياس',
+        objective: 'الهدف', audience: 'الجمهور', geo: 'الموقع', interests: 'الاهتمامات', behaviors: 'السلوكيات', exclusions: 'الاستثناءات', hooksLabel: 'الخطافات', cta: 'الدعوة إلى الإجراء', type: 'النوع', intent: 'النية', adGroup: 'مجموعة الإعلانات', keywords: 'الكلمات المفتاحية', negative: 'الكلمات السلبية', landing: 'الصفحة المقصودة', primary: 'الرئيسي', secondary: 'الثانوي', rule: 'القاعدة', role: 'الدور', supportAngles: 'الزوايا المساندة', qualityGateFailed: 'فشل بوابة الجودة', qualityGatePassed: 'اجتازت بوابة الجودة', segmentExists: 'التقسيم ← الاستهداف ← التموضع موجود قبل الشخصيات.', noDataShort: 'لا توجد بيانات', personasCount: 'شخصيات', all: 'الكل', na: 'غير متاح', scores: 'الدرجات',
         viewPersona: 'عرض التفاصيل',
         closePersona: 'إغلاق',
         adObjective: 'هدف الحملة',
@@ -6235,6 +6236,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         metaAds: 'Meta Ads',
         googleAds: 'Google Ads',
         measurement: 'Measurement',
+        objective: 'Objective', audience: 'Audience', geo: 'Geo', interests: 'Interests', behaviors: 'Behaviors', exclusions: 'Exclusions', hooksLabel: 'Hooks', cta: 'CTA', type: 'Type', intent: 'Intent', adGroup: 'Ad group', keywords: 'Keywords', negative: 'Negative keywords', landing: 'Landing page', primary: 'Primary', secondary: 'Secondary', rule: 'Rule', role: 'Role', supportAngles: 'Support angles', qualityGateFailed: 'Quality gate failed', qualityGatePassed: 'Quality gate passed', segmentExists: (copy.segmentExists || 'SEGMENT → TARGET → POSITIONING exists before personas.'), noDataShort: 'No data', personasCount: 'personas', all: 'All', na: 'N/A', scores: 'Scores',
         viewPersona: 'View details',
         closePersona: 'Close',
         adObjective: 'Campaign objective',
@@ -6340,6 +6342,7 @@ function getStpCopy(lang = STATE.currentLang || 'fr') {
         metaAds: 'Meta Ads',
         googleAds: 'Google Ads',
         measurement: 'Mesure',
+        objective: 'Objectif', audience: 'Audience', geo: 'Zone géographique', interests: 'Centres d’intérêt', behaviors: 'Comportements', exclusions: 'Exclusions', hooksLabel: 'Hooks', cta: 'CTA', type: 'Type', intent: 'Intention', adGroup: 'Groupe d’annonces', keywords: 'Mots-clés', negative: 'Mots-clés négatifs', landing: 'Page d’atterrissage', primary: 'Principal', secondary: 'Secondaire', rule: 'Règle', role: 'Rôle', supportAngles: 'Angles supports', qualityGateFailed: 'Porte de qualité non validée', qualityGatePassed: 'Porte de qualité validée', segmentExists: 'SEGMENT → CIBLE → POSITIONNEMENT existe avant les personas.', noDataShort: 'Aucune donnée', personasCount: 'personas', all: 'Tous', na: 'N/D', scores: 'Scores',
         viewPersona: 'Voir détails',
         closePersona: 'Fermer',
         adObjective: 'Objectif campagne',
@@ -6806,39 +6809,39 @@ function renderStpAdsTargeting(details = {}, copy = {}) {
         ${line(copy.adObjective || 'Objective', ads.objective)}
         ${line(copy.funnelStage || 'Funnel stage', ads.funnelStage)}
         ${line(copy.audienceType || 'Audience type', meta.audienceType)}
-        ${line('Audience', meta.audienceName)}
-        ${line('Geo', meta.geo)}
+        ${line(copy.audience || 'Audience', meta.audienceName)}
+        ${line(copy.geo || 'Geo', meta.geo)}
         ${line(copy.age || 'Age', meta.ageRange)}
         ${line(copy.coreTargeting || 'Core targeting', meta.coreTargeting)}
-        ${line('Interests', meta.interests)}
-        ${line('Behaviors', meta.behaviors)}
+        ${line(copy.interests || 'Interests', meta.interests)}
+        ${line(copy.behaviors || 'Behaviors', meta.behaviors)}
         ${line(copy.customAudiences || 'Custom audiences', meta.customAudiences)}
         ${line(copy.lookalike || 'Lookalike', meta.lookalike)}
         ${line(copy.advantagePlus || 'Advantage+', meta.advantagePlus)}
-        ${line('Exclusions', meta.exclusions)}
-        ${line('Hooks', meta.creativeHooks)}
-        ${line('CTA', meta.recommendedCTA)}
+        ${line(copy.exclusions || 'Exclusions', meta.exclusions)}
+        ${line(copy.hooksLabel || 'Hooks', meta.creativeHooks)}
+        ${line(copy.cta || 'CTA', meta.recommendedCTA)}
         ${line(copy.budgetGuidance || 'Budget guidance', meta.budgetGuidance)}
       </article>
       <article class="daka-stp-ads-card">
         <strong><i class="fab fa-google"></i>${stpUiEsc(copy.googleAds || 'Google Ads')}</strong>
-        ${line('Type', google.campaignType)}
-        ${line('Intent', google.searchIntent)}
-        ${line('Ad group', google.adGroupIdea)}
-        ${line('Keywords', google.keywords)}
+        ${line(copy.type || 'Type', google.campaignType)}
+        ${line(copy.intent || 'Intent', google.searchIntent)}
+        ${line(copy.adGroup || 'Ad group', google.adGroupIdea)}
+        ${line(copy.keywords || 'Keywords', google.keywords)}
         ${line(copy.basicDemographics || 'Basic demographics', google.basicDemographics)}
         ${line(copy.detailedDemographics || 'Detailed demographics', google.detailedDemographics)}
         ${line(copy.audienceSegments || 'Audience segments', google.audienceSegments)}
-        ${line('Negative', google.negativeKeywords)}
-        ${line('Exclusions', google.exclusions)}
+        ${line(copy.negative || 'Negative', google.negativeKeywords)}
+        ${line(copy.exclusions || 'Exclusions', google.exclusions)}
         ${line(copy.bidding || 'Bidding', google.bidding)}
-        ${line('Landing', google.landingMessage)}
+        ${line(copy.landing || 'Landing', google.landingMessage)}
       </article>
       <article class="daka-stp-ads-card">
         <strong><i class="fas fa-chart-line"></i>${stpUiEsc(copy.measurement || 'Measurement')}</strong>
-        ${line('Primary', measurement.primaryEvent)}
-        ${line('Secondary', measurement.secondaryEvent)}
-        ${line('Rule', measurement.testBudgetRule)}
+        ${line(copy.primary || 'Primary', measurement.primaryEvent)}
+        ${line(copy.secondary || 'Secondary', measurement.secondaryEvent)}
+        ${line(copy.rule || 'Rule', measurement.testBudgetRule)}
         ${line(copy.privacyAndQuality || 'Privacy and quality', measurement.privacyAndQuality)}
       </article>
     </section>`;
@@ -6853,7 +6856,7 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
     const summary = stpUiText(card.summary, '');
     const displayAge = stpDisplayAge(card, details);
     const lines = [
-        `# Persona ${index + 1}: ${stpUiText(card.displayName || card.name || card.title, `Persona ${index + 1}`)}`,
+        `# Persona ${index + 1}: ${stpUiText(card.displayName || card.name || card.title, `${copy.persona || 'Persona'} ${index + 1}`)}`,
         '',
         `- ${copy.age || 'Age'}: ${stpUiText(displayAge, copy.noData || 'N/A')}`,
         `- ${copy.ageConfidence || 'Age confidence'}: ${stpUiText(details.ageConfidence || card.ageConfidence, copy.noData || 'N/A')}`,
@@ -6999,7 +7002,7 @@ function renderStpPersonaFocusContent(card = {}, index = 0, copy = {}) {
     const primaryAngle = card.primaryAngle || {};
     const priority = card.beachheadPriority || {};
     const tone = stpUiText(card.tone, '34,211,238');
-    const personaName = stpUiText(card.displayName || card.name || card.title, `Persona ${index + 1}`);
+    const personaName = stpUiText(card.displayName || card.name || card.title, `${copy.persona || 'Persona'} ${index + 1}`);
     const personaRole = stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName || '');
     const wantStatement = stpUiText(details.wantStatement || details.primaryJobToBeDone || card.summary || details.need, '');
     const mdId = `stpPersonaFocusMarkdown_${index}_${stpPersonaKey(card, index)}`;
@@ -7008,7 +7011,7 @@ function renderStpPersonaFocusContent(card = {}, index = 0, copy = {}) {
     return `<div class="daka-stp-focus-head" style="--focus-rgb:${stpUiEsc(tone)}">
       <div class="daka-stp-avatar"><i class="fas ${stpUiEsc(card.icon || 'fa-user')}"></i></div>
       <div>
-        <span class="daka-stp-kicker">${stpUiEsc(card.role || `Persona ${index + 1}`)}</span>
+        <span class="daka-stp-kicker">${stpUiEsc(card.role || `${copy.persona || 'Persona'} ${index + 1}`)}</span>
         <h3>${stpUiEsc(personaName)}</h3>
         ${personaRole ? `<p>${stpUiEsc(personaRole)}</p>` : ''}
       </div>
@@ -7107,7 +7110,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
         const tone = stpUiText(card.tone, '34,211,238');
         const priority = card.beachheadPriority || {};
         const score = stpUiText(card.priorityScore, '');
-        const personaName = stpUiText(card.displayName || card.name || card.title, `Persona ${index + 1}`);
+        const personaName = stpUiText(card.displayName || card.name || card.title, `${copy.persona || 'Persona'} ${index + 1}`);
         const personaRole = stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName || '');
         const primaryAngle = card.primaryAngle || {};
         const secondaryAngles = Array.isArray(card.secondaryAngles) ? card.secondaryAngles : [];
@@ -7121,7 +7124,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
           <div class="daka-stp-persona-top">
             <div class="daka-stp-avatar"><i class="fas ${stpUiEsc(card.icon || 'fa-user')}"></i></div>
             <div style="min-width:0">
-              <small class="daka-stp-chip">${stpUiEsc(card.role || `Persona ${index + 1}`)}</small>
+              <small class="daka-stp-chip">${stpUiEsc(card.role || `${copy.persona || 'Persona'} ${index + 1}`)}</small>
               <h3>${stpUiEsc(personaName)}</h3>
               ${personaRole ? `<p style="margin-top:4px;color:#8fb4cf;font-weight:800">${stpUiEsc(personaRole)}</p>` : ''}
               ${personaSummary ? `<p style="margin-top:6px">${stpUiEsc(personaSummary)}</p>` : ''}
@@ -7203,8 +7206,8 @@ function renderStpStrategyHierarchy(data = {}, copy = {}) {
         </div>
       </div>
       <div class="daka-stp-gate ${gate.valid === false ? 'bad' : ''}">
-        <strong><i class="fas ${gate.valid === false ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> ${gate.valid === false ? 'Quality gate failed' : 'Quality gate passed'}</strong>
-        <span>${gate.valid === false ? stpUiEsc(stpUiArray(gate.failures, 3).join(' · ')) : 'SEGMENT → TARGET → POSITIONING exists before personas.'}</span>
+        <strong><i class="fas ${gate.valid === false ? 'fa-triangle-exclamation' : 'fa-circle-check'}"></i> ${gate.valid === false ? (copy.qualityGateFailed || 'Quality gate failed') : (copy.qualityGatePassed || 'Quality gate passed')}</strong>
+        <span>${gate.valid === false ? stpUiEsc(stpUiArray(gate.failures, 3).join(' · ')) : (copy.segmentExists || 'SEGMENT → TARGET → POSITIONING exists before personas.')}</span>
       </div>
       <section class="daka-stp-flow-step">
         <h3><i class="fas fa-layer-group"></i>${stpUiEsc(copy.stpSegmentation || 'Segmentation')}</h3>
