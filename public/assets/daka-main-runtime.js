@@ -6722,7 +6722,7 @@ function renderStpAttackChannels(channels = [], copy = {}) {
     if (!typed.length) return '';
     return `<div class="daka-stp-mini"><strong>${stpUiEsc(copy.channels || 'Channels')}</strong>${typed.map(item => {
         const name = stpUiText(item.name || item.channel);
-        const type = stpUiText(item.type, 'Experiment');
+        const type = stpUiText(item.type, copy.hypothesis || 'Experiment');
         const role = stpUiText(item.role || item.why);
         return `<span><b style="color:#eaf6ff">${stpUiEsc(type)}</b>${name ? ` · ${stpUiEsc(name)}` : ''}${role ? `<br>${stpUiEsc(role)}` : ''}</span>`;
     }).join('')}</div>`;
@@ -6806,9 +6806,9 @@ function renderStpAdsTargeting(details = {}, copy = {}) {
       ${status || confidence ? `<article class="daka-stp-ads-card"><strong><i class="fas fa-triangle-exclamation"></i>${stpUiEsc(copy.executionHypothesis || 'Execution hypothesis')}</strong>${confidence ? `<span><b style="color:#eaf6ff">${stpUiEsc(copy.confidenceScore || 'Confidence')}:</b> ${stpUiEsc(confidence)}</span>` : ''}${status ? `<span>${stpUiEsc(status)}</span>` : ''}</article>` : ''}
       <article class="daka-stp-ads-card">
         <strong><i class="fab fa-facebook"></i>${stpUiEsc(copy.metaAds || 'Meta Ads')}</strong>
-        ${line(copy.adObjective || 'Objective', ads.objective)}
+        ${line(copy.objective || copy.adObjective || 'Objective', ads.objective)}
         ${line(copy.funnelStage || 'Funnel stage', ads.funnelStage)}
-        ${line(copy.audienceType || 'Audience type', meta.audienceType)}
+        ${line(copy.audience || copy.audienceType || 'Audience type', meta.audienceType)}
         ${line(copy.audience || 'Audience', meta.audienceName)}
         ${line(copy.geo || 'Geo', meta.geo)}
         ${line(copy.age || 'Age', meta.ageRange)}
@@ -6852,34 +6852,34 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
     const primaryAngle = card.primaryAngle || {};
     const secondaryAngles = Array.isArray(card.secondaryAngles) ? card.secondaryAngles : [];
     const priority = card.beachheadPriority || {};
-    const wantStatement = stpUiText(details.wantStatement || details.primaryJobToBeDone || card.summary || details.need, copy.noData || 'N/A');
+    const wantStatement = stpUiText(details.wantStatement || details.primaryJobToBeDone || card.summary || details.need, copy.noData || copy.na || 'N/A');
     const summary = stpUiText(card.summary, '');
     const displayAge = stpDisplayAge(card, details);
     const lines = [
         `# Persona ${index + 1}: ${stpUiText(card.displayName || card.name || card.title, `${copy.persona || 'Persona'} ${index + 1}`)}`,
         '',
-        `- ${copy.age || 'Age'}: ${stpUiText(displayAge, copy.noData || 'N/A')}`,
-        `- ${copy.ageConfidence || 'Age confidence'}: ${stpUiText(details.ageConfidence || card.ageConfidence, copy.noData || 'N/A')}`,
-        `- ${copy.occupation || 'Role'}: ${stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName, copy.noData || 'N/A')}`,
-        `- ${copy.socialCulture || 'Social culture'}: ${stpUiText(details.socialCulture, copy.noData || 'N/A')}`,
-        `- ${copy.lifeSituation || 'Life situation'}: ${stpUiText(details.lifeSituation, copy.noData || 'N/A')}`,
-        `- ${copy.digitalMaturity || 'Digital maturity'}: ${stpUiText(details.digitalMaturity, copy.noData || 'N/A')}`,
-        `- ${copy.purchasePower || 'Purchase power'}: ${stpUiText(details.purchasePower, copy.noData || 'N/A')}`,
+        `- ${copy.age || 'Age'}: ${stpUiText(displayAge, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.ageConfidence || 'Age confidence'}: ${stpUiText(details.ageConfidence || card.ageConfidence, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.occupation || 'Role'}: ${stpUiText(card.occupation || details.occupation || card.segmentName || details.segmentName, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.socialCulture || 'Social culture'}: ${stpUiText(details.socialCulture, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.lifeSituation || 'Life situation'}: ${stpUiText(details.lifeSituation, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.digitalMaturity || 'Digital maturity'}: ${stpUiText(details.digitalMaturity, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.purchasePower || 'Purchase power'}: ${stpUiText(details.purchasePower, copy.noData || copy.na || 'N/A')}`,
         `- ${copy.priorityTest || copy.priority || 'Test priority'}: ${stpUiText(card.priorityScore, '0')}/100`,
         details.reliability?.confidenceLabel ? `- ${copy.confidenceScore || 'Confidence score'}: ${stpUiText(details.reliability.confidenceLabel)}` : '',
         details.reliability?.priorityScoreMeaning ? `- ${copy.assumptionWarning || 'Confidence warning'}: ${stpUiText(details.reliability.priorityScoreMeaning)}` : '',
         summary ? `- ${copy.persona || 'Persona'}: ${summary}` : '',
-        `- ${copy.primaryAngle || 'Primary angle'}: ${stpUiText(primaryAngle.name || details.primaryMarketingAngle || card.attackAngle, copy.noData || 'N/A')}`,
+        `- ${copy.primaryAngle || 'Primary angle'}: ${stpUiText(primaryAngle.name || details.primaryMarketingAngle || card.attackAngle, copy.noData || copy.na || 'N/A')}`,
         secondaryAngles.length ? `- ${copy.secondaryAngles || 'Support angles'}: ${secondaryAngles.map(a => stpUiText(a.name || a.label || a.type)).filter(Boolean).join(', ')}` : '',
-        `- ${copy.attackAngle || 'Attack angle'}: ${stpUiText(card.attackAngle || details.attackAngle, copy.noData || 'N/A')}`,
-        `- ${copy.attackFormula || 'Attack formula'}: ${stpUiText(details.attackFormula || primaryAngle.angleFormula, copy.noData || 'N/A')}`,
-        `- ${copy.corePromise || 'Core promise'}: ${stpUiText(details.corePromise || primaryAngle.corePromise, copy.noData || 'N/A')}`,
-        `- ${copy.proofToShow || 'Proof to show'}: ${stpUiText(details.proofToShow || primaryAngle.proofToShow, copy.noData || 'N/A')}`,
-        `- ${copy.objectionToNeutralize || 'Objection'}: ${stpUiText(details.objectionToNeutralize || primaryAngle.objectionToNeutralize, copy.noData || 'N/A')}`,
-        `- ${copy.offerMove || 'Offer move'}: ${stpUiText(details.offerMove || primaryAngle.offerMove, copy.noData || 'N/A')}`,
-        `- ${copy.landingPageSection || 'Landing section'}: ${stpUiText(details.landingPageSection || primaryAngle.landingPageSection, copy.noData || 'N/A')}`,
+        `- ${copy.attackAngle || 'Attack angle'}: ${stpUiText(card.attackAngle || details.attackAngle, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.attackFormula || 'Attack formula'}: ${stpUiText(details.attackFormula || primaryAngle.angleFormula, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.corePromise || 'Core promise'}: ${stpUiText(details.corePromise || primaryAngle.corePromise, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.proofToShow || 'Proof to show'}: ${stpUiText(details.proofToShow || primaryAngle.proofToShow, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.objectionToNeutralize || 'Objection'}: ${stpUiText(details.objectionToNeutralize || primaryAngle.objectionToNeutralize, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.offerMove || 'Offer move'}: ${stpUiText(details.offerMove || primaryAngle.offerMove, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.landingPageSection || 'Landing section'}: ${stpUiText(details.landingPageSection || primaryAngle.landingPageSection, copy.noData || copy.na || 'N/A')}`,
         `- ${copy.jtbd || 'JTBD'}: ${wantStatement}`,
-        `- ${copy.budgetPath || 'Budget path'}: ${stpUiText(priority.budgetPath || details.budgetPath, copy.noData || 'N/A')}`,
+        `- ${copy.budgetPath || 'Budget path'}: ${stpUiText(priority.budgetPath || details.budgetPath, copy.noData || copy.na || 'N/A')}`,
         '',
         `## ${copy.reliability || 'Strategic reliability'}`,
         details.reliability?.caveat || '',
@@ -6907,39 +6907,39 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
         ...stpUiArray(details.channels, 8).map(item => `- ${item}`),
         '',
         `## ${copy.adsTargeting || 'Ads targeting'}`,
-        `- ${copy.adObjective || 'Campaign objective'}: ${stpUiText(details.adsTargeting?.objective, copy.noData || 'N/A')}`,
-        `- ${copy.funnelStage || 'Funnel stage'}: ${stpUiText(details.adsTargeting?.funnelStage, copy.noData || 'N/A')}`,
+        `- ${copy.adObjective || 'Campaign objective'}: ${stpUiText(details.adsTargeting?.objective, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.funnelStage || 'Funnel stage'}: ${stpUiText(details.adsTargeting?.funnelStage, copy.noData || copy.na || 'N/A')}`,
         `### ${copy.metaAds || 'Meta Ads'}`,
-        `- ${copy.audienceType || 'Audience type'}: ${stpUiText(details.adsTargeting?.metaAds?.audienceType, copy.noData || 'N/A')}`,
-        `- Audience: ${stpUiText(details.adsTargeting?.metaAds?.audienceName, copy.noData || 'N/A')}`,
-        `- Geo: ${stpUiText(details.adsTargeting?.metaAds?.geo, copy.noData || 'N/A')}`,
-        `- ${copy.age || 'Age'}: ${stpUiText(details.adsTargeting?.metaAds?.ageRange, copy.noData || 'N/A')}`,
-        `- ${copy.coreTargeting || 'Core targeting'}: ${stpUiArray(details.adsTargeting?.metaAds?.coreTargeting?.demographics, 8).join(', ') || (copy.noData || 'N/A')}`,
-        `- Interests: ${stpUiArray(details.adsTargeting?.metaAds?.interests, 10).join(', ') || (copy.noData || 'N/A')}`,
-        `- Behaviors: ${stpUiArray(details.adsTargeting?.metaAds?.behaviors, 8).join(', ') || (copy.noData || 'N/A')}`,
-        `- ${copy.customAudiences || 'Custom audiences'}: ${stpUiArray(details.adsTargeting?.metaAds?.customAudiences, 8).join(', ') || (copy.noData || 'N/A')}`,
-        `- ${copy.lookalike || 'Lookalike'}: ${stpUiText(details.adsTargeting?.metaAds?.lookalike, copy.noData || 'N/A')}`,
-        `- ${copy.advantagePlus || 'Advantage+'}: ${stpUiText(details.adsTargeting?.metaAds?.advantagePlus, copy.noData || 'N/A')}`,
-        `- Exclusions: ${stpUiArray(details.adsTargeting?.metaAds?.exclusions, 6).join(', ') || (copy.noData || 'N/A')}`,
-        `- Hooks: ${stpUiArray(details.adsTargeting?.metaAds?.creativeHooks, 6).join(' | ') || (copy.noData || 'N/A')}`,
-        `- CTA: ${stpUiText(details.adsTargeting?.metaAds?.recommendedCTA, copy.noData || 'N/A')}`,
-        `- ${copy.budgetGuidance || 'Budget guidance'}: ${stpUiText(details.adsTargeting?.metaAds?.budgetGuidance, copy.noData || 'N/A')}`,
+        `- ${copy.audience || copy.audienceType || 'Audience type'}: ${stpUiText(details.adsTargeting?.metaAds?.audienceType, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.audience || 'Audience'}: ${stpUiText(details.adsTargeting?.metaAds?.audienceName, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.geo || 'Geo'}: ${stpUiText(details.adsTargeting?.metaAds?.geo, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.age || 'Age'}: ${stpUiText(details.adsTargeting?.metaAds?.ageRange, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.coreTargeting || 'Core targeting'}: ${stpUiArray(details.adsTargeting?.metaAds?.coreTargeting?.demographics, 8).join(', ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.interests || 'Interests'}: ${stpUiArray(details.adsTargeting?.metaAds?.interests, 10).join(', ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.behaviors || 'Behaviors'}: ${stpUiArray(details.adsTargeting?.metaAds?.behaviors, 8).join(', ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.customAudiences || 'Custom audiences'}: ${stpUiArray(details.adsTargeting?.metaAds?.customAudiences, 8).join(', ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.lookalike || 'Lookalike'}: ${stpUiText(details.adsTargeting?.metaAds?.lookalike, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.advantagePlus || 'Advantage+'}: ${stpUiText(details.adsTargeting?.metaAds?.advantagePlus, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.exclusions || 'Exclusions'}: ${stpUiArray(details.adsTargeting?.metaAds?.exclusions, 6).join(', ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.hooksLabel || 'Hooks'}: ${stpUiArray(details.adsTargeting?.metaAds?.creativeHooks, 6).join(' | ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.cta || 'CTA'}: ${stpUiText(details.adsTargeting?.metaAds?.recommendedCTA, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.budgetGuidance || 'Budget guidance'}: ${stpUiText(details.adsTargeting?.metaAds?.budgetGuidance, copy.noData || copy.na || 'N/A')}`,
         `### ${copy.googleAds || 'Google Ads'}`,
-        `- Type: ${stpUiText(details.adsTargeting?.googleAds?.campaignType, copy.noData || 'N/A')}`,
-        `- Intent: ${stpUiText(details.adsTargeting?.googleAds?.searchIntent, copy.noData || 'N/A')}`,
-        `- Keywords: ${stpUiArray(details.adsTargeting?.googleAds?.keywords, 12).join(', ') || (copy.noData || 'N/A')}`,
-        `- ${copy.basicDemographics || 'Basic demographics'}: ${details.adsTargeting?.googleAds?.basicDemographics ? Object.entries(details.adsTargeting.googleAds.basicDemographics).map(([k,v]) => `${k}: ${stpUiText(v)}`).filter(Boolean).join(', ') : (copy.noData || 'N/A')}`,
-        `- ${copy.detailedDemographics || 'Detailed demographics'}: ${stpUiArray(details.adsTargeting?.googleAds?.detailedDemographics, 8).join(', ') || (copy.noData || 'N/A')}`,
-        `- ${copy.audienceSegments || 'Audience segments'}: ${stpUiArray(details.adsTargeting?.googleAds?.audienceSegments, 8).join(', ') || (copy.noData || 'N/A')}`,
-        `- Negative keywords: ${stpUiArray(details.adsTargeting?.googleAds?.negativeKeywords, 8).join(', ') || (copy.noData || 'N/A')}`,
-        `- Exclusions: ${stpUiArray(details.adsTargeting?.googleAds?.exclusions, 10).join(', ') || (copy.noData || 'N/A')}`,
-        `- ${copy.bidding || 'Bidding'}: ${stpUiText(details.adsTargeting?.googleAds?.bidding, copy.noData || 'N/A')}`,
-        `- Landing message: ${stpUiText(details.adsTargeting?.googleAds?.landingMessage, copy.noData || 'N/A')}`,
+        `- ${copy.type || 'Type'}: ${stpUiText(details.adsTargeting?.googleAds?.campaignType, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.intent || 'Intent'}: ${stpUiText(details.adsTargeting?.googleAds?.searchIntent, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.keywords || 'Keywords'}: ${stpUiArray(details.adsTargeting?.googleAds?.keywords, 12).join(', ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.basicDemographics || 'Basic demographics'}: ${details.adsTargeting?.googleAds?.basicDemographics ? Object.entries(details.adsTargeting.googleAds.basicDemographics).map(([k,v]) => `${k}: ${stpUiText(v)}`).filter(Boolean).join(', ') : (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.detailedDemographics || 'Detailed demographics'}: ${stpUiArray(details.adsTargeting?.googleAds?.detailedDemographics, 8).join(', ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.audienceSegments || 'Audience segments'}: ${stpUiArray(details.adsTargeting?.googleAds?.audienceSegments, 8).join(', ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.negative || 'Negative keywords'}: ${stpUiArray(details.adsTargeting?.googleAds?.negativeKeywords, 8).join(', ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.exclusions || 'Exclusions'}: ${stpUiArray(details.adsTargeting?.googleAds?.exclusions, 10).join(', ') || (copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.bidding || 'Bidding'}: ${stpUiText(details.adsTargeting?.googleAds?.bidding, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.landing || 'Landing message'}: ${stpUiText(details.adsTargeting?.googleAds?.landingMessage, copy.noData || copy.na || 'N/A')}`,
         `### ${copy.measurement || 'Measurement'}`,
-        `- Primary event: ${stpUiText(details.adsTargeting?.measurement?.primaryEvent, copy.noData || 'N/A')}`,
-        `- Secondary event: ${stpUiText(details.adsTargeting?.measurement?.secondaryEvent, copy.noData || 'N/A')}`,
-        `- Test rule: ${stpUiText(details.adsTargeting?.measurement?.testBudgetRule, copy.noData || 'N/A')}`,
-        `- ${copy.privacyAndQuality || 'Privacy and quality'}: ${stpUiText(details.adsTargeting?.measurement?.privacyAndQuality, copy.noData || 'N/A')}`,
+        `- ${copy.primary || 'Primary event'}: ${stpUiText(details.adsTargeting?.measurement?.primaryEvent, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.secondary || 'Secondary event'}: ${stpUiText(details.adsTargeting?.measurement?.secondaryEvent, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.rule || 'Test rule'}: ${stpUiText(details.adsTargeting?.measurement?.testBudgetRule, copy.noData || copy.na || 'N/A')}`,
+        `- ${copy.privacyAndQuality || 'Privacy and quality'}: ${stpUiText(details.adsTargeting?.measurement?.privacyAndQuality, copy.noData || copy.na || 'N/A')}`,
         '',
         `## ${copy.triggers || 'Triggers'}`,
         ...stpUiArray(details.buyingTriggers, 8).map(item => `- ${item}`),
@@ -6954,16 +6954,16 @@ function buildStpPersonaMarkdown(card = {}, index = 0, copy = {}) {
         ...stpUiArray(details.proofNeeded || details.trustSources, 8).map(item => `- ${item}`),
         '',
         `## ${copy.informationBehavior || 'Information behavior'}`,
-        stpUiText(details.informationBehavior, copy.noData || 'N/A'),
+        stpUiText(details.informationBehavior, copy.noData || copy.na || 'N/A'),
         '',
         `## ${copy.buyingBehavior || 'Buying behavior'}`,
-        stpUiText(details.buyingBehavior, copy.noData || 'N/A'),
+        stpUiText(details.buyingBehavior, copy.noData || copy.na || 'N/A'),
         '',
         `## ${copy.searchBehavior || 'Search behavior'}`,
-        stpUiText(details.searchBehavior, copy.noData || 'N/A'),
+        stpUiText(details.searchBehavior, copy.noData || copy.na || 'N/A'),
         '',
         `## ${copy.discoveryBehavior || 'Discovery'}`,
-        stpUiText(details.discoveryBehavior, copy.noData || 'N/A')
+        stpUiText(details.discoveryBehavior, copy.noData || copy.na || 'N/A')
     ].filter(line => line !== '');
     return lines.join('\n');
 }
@@ -7097,7 +7097,7 @@ function renderStpPersonaCards(personaCards = [], copy = {}, meta = {}) {
         <p>${stpUiEsc(copy.personasSub || '')}</p>
       </div>
       <div class="daka-stp-pill-row">
-        <span class="daka-stp-chip">${cards.length} personas</span>
+        <span class="daka-stp-chip">${cards.length} ${stpUiEsc(copy.personasCount || copy.personas || 'personas')}</span>
         ${competitorCount ? `<span class="daka-stp-chip"><i class="fas fa-ranking-star"></i> ${competitorCount} ${stpUiEsc(copy.competitorsObserved || copy.competitors || 'competitors observed')}</span>` : ''}
       </div>
     </div>
