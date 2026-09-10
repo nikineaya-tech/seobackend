@@ -11066,11 +11066,12 @@ async function buildStpProductIntakeLayer({ query = '', description = '', geo = 
         reportLabel,
         reportDescription,
         translationSource,
-        classificationConfidence: 'MEDIUM',
+        classificationConfidence: semantics.classificationConfidence || 'MEDIUM',
         semantics,
         handoff: {
             reportLabel,
             reportDescription,
+            offerType: semantics.offerType || (semantics.productType === 'physical_product' ? 'PRODUCT' : 'OTHER'),
             productType: semantics.productType,
             productFamily: semantics.productFamily,
             deliveryMode: semantics.deliveryMode,
@@ -11176,7 +11177,7 @@ function inferStpArchetype(query = '', competitorData = {}, urlIntel = null, pro
         urlIntel?.content?.description
     ].filter(Boolean).join(' ').toLowerCase();
 
-    const semantics = classifyProductSemantics({ query: corpus, competitorData });
+    const semantics = classifyProductSemantics({ query: corpus, description: productDescription, geo, competitorData });
     if (semantics.productType === 'education') {
         return 'content_education';
     }
@@ -11297,7 +11298,50 @@ function buildStpSegmentCandidates({ query = '', productDescription = '', produc
             }
         );
     } else if (archetype === 'ecommerce_product') {
-        if (productFamily === 'beauty_skin') {
+        if (productFamily === 'automotive_care') {
+            candidates.push(
+                {
+                    id: 'auto-home-wash-owners',
+                    name: lang === 'ar' ? `مالكو السيارات الذين يغسلون سياراتهم في المنزل في ${marketName}` : lang === 'en' ? `Car owners washing at home in ${marketName}` : `Propriétaires de voiture qui lavent chez eux en ${marketName}`,
+                    type: 'use-case+behavioral+b2c',
+                    need: lang === 'ar' ? 'غسل السيارة في المنزل بسهولة وتقليل الوقت والاعتماد على محطة الغسيل' : lang === 'en' ? 'Wash the car at home more easily while reducing time and dependence on a car wash' : 'Laver la voiture à domicile plus facilement, en réduisant le temps et le recours à une station',
+                    accessChannels: ['Facebook', 'Instagram', 'TikTok', 'YouTube', 'WhatsApp'],
+                    buyingTriggers: lang === 'ar' ? ['الغبار المتكرر', 'الغسيل المنزلي', 'توفير الوقت', 'سهولة التوصيل'] : lang === 'en' ? ['frequent dust', 'home washing', 'time saving', 'easy delivery'] : ['poussière fréquente', 'lavage à domicile', 'gain de temps', 'livraison simple']
+                },
+                {
+                    id: 'auto-urban-drivers',
+                    name: lang === 'ar' ? `سائقون حضريون يريدون تنظيفا سريعا في ${marketName}` : lang === 'en' ? `Urban drivers needing a quick clean in ${marketName}` : `Conducteurs urbains qui veulent un nettoyage rapide en ${marketName}`,
+                    type: 'lifestyle+use-case+b2c',
+                    need: lang === 'ar' ? 'تنظيف الغبار والأوساخ بسرعة بعد التنقل داخل المدينة' : lang === 'en' ? 'Remove dust and dirt quickly after driving around the city' : 'Retirer rapidement la poussière et la saleté après les trajets urbains',
+                    accessChannels: ['TikTok', 'Instagram Reels', 'Facebook Ads', 'Google Search'],
+                    buyingTriggers: lang === 'ar' ? ['تنقل يومي', 'غبار المدينة', 'وقت محدود', 'نتيجة مرئية'] : lang === 'en' ? ['daily driving', 'city dust', 'limited time', 'visible result'] : ['trajets quotidiens', 'poussière urbaine', 'temps limité', 'résultat visible']
+                },
+                {
+                    id: 'auto-car-care-enthusiasts',
+                    name: lang === 'ar' ? `محبو العناية بالسيارات في ${marketName}` : lang === 'en' ? `Car-care enthusiasts in ${marketName}` : `Passionnés d’entretien automobile en ${marketName}`,
+                    type: 'interest+behavioral+b2c',
+                    need: lang === 'ar' ? 'تحسين أدوات العناية بالسيارة والتحكم في جودة التنظيف' : lang === 'en' ? 'Upgrade car-care tools and control the quality of the clean' : 'Améliorer ses outils d’entretien et contrôler la qualité du lavage',
+                    accessChannels: ['YouTube', 'Instagram', 'TikTok', 'automotive communities'],
+                    buyingTriggers: lang === 'ar' ? ['العناية بالسيارة', 'تجربة أدوات جديدة', 'جودة التنظيف', 'فيديو توضيحي'] : lang === 'en' ? ['car care', 'trying new tools', 'cleaning quality', 'demo video'] : ['entretien auto', 'nouveaux outils', 'qualité du lavage', 'vidéo démonstration']
+                },
+                {
+                    id: 'auto-family-vehicle-owners',
+                    name: lang === 'ar' ? `أسر تملك سيارة وتبحث عن حل عملي في ${marketName}` : lang === 'en' ? `Families with a vehicle seeking a practical solution in ${marketName}` : `Familles avec véhicule qui cherchent une solution pratique en ${marketName}`,
+                    type: 'life-stage+value+b2c',
+                    need: lang === 'ar' ? 'الحفاظ على نظافة السيارة بتكلفة ووقت معقولين للعائلة' : lang === 'en' ? 'Keep the family vehicle clean with a reasonable time and total cost' : 'Garder le véhicule familial propre avec un temps et un coût raisonnables',
+                    accessChannels: ['Facebook', 'WhatsApp', 'Google Search', 'local marketplace'],
+                    buyingTriggers: lang === 'ar' ? ['ميزانية محدودة', 'سيارة عائلية', 'قلة الوقت', 'سهولة الاستخدام'] : lang === 'en' ? ['limited budget', 'family vehicle', 'little time', 'ease of use'] : ['budget limité', 'véhicule familial', 'peu de temps', 'facilité d’usage']
+                },
+                {
+                    id: 'auto-wash-frequency-users',
+                    name: lang === 'ar' ? `مستخدمو محطات غسل السيارات بشكل متكرر في ${marketName}` : lang === 'en' ? `Frequent car-wash users in ${marketName}` : `Utilisateurs fréquents des stations de lavage en ${marketName}`,
+                    type: 'alternative+behavioral+b2c',
+                    need: lang === 'ar' ? 'مقارنة تكلفة الغسيل المتكرر بحل منزلي سهل' : lang === 'en' ? 'Compare frequent wash costs with an easy home-use option' : 'Comparer le coût des lavages fréquents avec une solution simple à domicile',
+                    accessChannels: ['Google Search', 'YouTube', 'Facebook', 'comparison content'],
+                    buyingTriggers: lang === 'ar' ? ['تكرار الدفع', 'مقارنة التكلفة', 'توفير الوقت', 'الاعتماد على النفس'] : lang === 'en' ? ['repeated payment', 'cost comparison', 'time saving', 'self-reliance'] : ['paiements répétés', 'comparaison du coût', 'gain de temps', 'autonomie']
+                }
+            );
+        } else if (productFamily === 'beauty_skin') {
             candidates.push(
                 {
                     id: 'beauty-visible-result',
@@ -12019,9 +12063,16 @@ function buildStpPersona(segment = {}, inputs = {}, competitorData = {}, lang = 
     const audience = stpText(inputs.context?.audience || inputs.context?.userAudience, 160);
     const leader = competitorData?.top10Competitors?.[0] || competitorData?.competitors?.[0] || {};
     const segmentText = `${segment.id || ''} ${segment.name || ''} ${segment.need || ''} ${stpArray(segment.buyingTriggers, 4).join(' ')}`.toLowerCase();
-    const productSemantics = classifyProductSemantics({ query: `${query} ${segmentText}`, geo: market, competitorData });
+    const productSemantics = inputs.productIntake?.semantics || classifyProductSemantics({ query: `${query} ${segmentText}`, description: inputs.productDescription || inputs.context?.productDescription || '', geo: market, competitorData });
     const isBeautySkinOffer = productSemantics.productFamily === 'beauty_skin';
     const personaJtbd = (() => {
+        if (isPhysicalProductOffer && productFamily === 'automotive_care') {
+            return isAr
+                ? `أريد ${query} في ${market} لغسل سيارتي في المنزل بسهولة، وتوفير الوقت وتقليل الاعتماد على محطة الغسيل.`
+                : isEn
+                    ? `I want ${query} in ${market} to wash my car at home easily, save time, and rely less on a car wash.`
+                    : `Je veux ${query} en ${market} pour laver ma voiture à domicile facilement, gagner du temps et moins dépendre d’une station de lavage.`;
+        }
         if (isBeautySkinOffer && /visible-result|outcome|result|نتيجة|قبل|بعد|demo|démo/.test(segmentText)) {
             return isAr
                 ? `أريد ${query} في ${market} أرى نتيجته على بشرة حقيقية قبل أن أصدق صورة قبل/بعد.`
@@ -12185,6 +12236,7 @@ function buildStpPersonaCards({ segments = [], inputs = {}, competitorData = {},
     const productSemantics = ctx.productIntake?.semantics || classifyProductSemantics({ query: rawOfferForSemantics, description: ctx.productDescription || '', geo: market, competitorData });
     const productFamily = productSemantics.productFamily || 'general_offer';
     const isOnlineEducationOffer = /formation|cours|course|training|coaching|e[-\s]?commerce|commerce en ligne|متجر إلكتروني|تكوين|دورة|تعلم|تعليم|التجارة الإلكترونية/i.test(rawOfferForSemantics);
+    const isPhysicalProductOffer = productSemantics.productType === 'physical_product';
     const isBeautySkinOffer = productFamily === 'beauty_skin';
     const defaultProof = stpArray([
         isAr ? 'إثبات النتيجة قبل الوعد' : isEn ? 'proof of result before the promise' : 'preuve du résultat avant la promesse',
