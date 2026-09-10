@@ -1161,7 +1161,7 @@
   function translateCustomerVoiceText(value = '', language = 'fr') {
     const raw = cleanInsight(value, '');
     if (!raw) return '';
-    let text = raw.replace(/\\bDJD:\\s*\\d+\\s*['’]?D\\+B\\)?[:\\/\\s-]*[A-Z]+\\b/gi, '').replace(/\\s{2,}/g, ' ').trim();
+    let text = raw.replace(/DJD:[^|]*/gi, '').replace(/  +/g, ' ').trim();
     const replacements = language === 'ar' ? [
       [/customer\\s+desire\\s+observed\\s+around/gi, '\\u0631\\u063a\\u0628\\u0629 \\u0627\\u0644\\u0639\\u0645\\u064a\\u0644 \\u0627\\u0644\\u0645\\u0631\\u0635\\u0648\\u062f\\u0629 \\u062d\\u0648\\u0644'],
       [/customer\\s+pain\\s+observed\\s+around/gi, '\\u0623\\u0644\\u0645 \\u0627\\u0644\\u0639\\u0645\\u064a\\u0644 \\u0627\\u0644\\u0645\\u0631\\u0635\\u0648\\u062f \\u062d\\u0648\\u0644'],
