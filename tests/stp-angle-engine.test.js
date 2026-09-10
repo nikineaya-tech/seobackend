@@ -440,6 +440,44 @@ test('automotive wash brush is a physical B2C product, not a business service', 
   assert.equal(model.productUnderstanding.productSemantics.offerType, 'PRODUCT');
 });
  
+test('generic physical product stays B2C and does not inherit e-commerce business personas', () => {
+  const description = 'Sac à dos étanche avec plusieurs poches, utilisé par une personne pour transporter ses affaires au quotidien.';
+  const semantics = classifyProductSemantics({
+    query: 'Sac à dos étanche',
+    description,
+    geo: 'Libya'
+  });
+
+  assert.equal(semantics.offerType, 'PRODUCT');
+  assert.equal(semantics.productType, 'physical_product');
+  assert.equal(semantics.productFamily, 'physical_goods');
+  assert.equal(semantics.deliveryMode, 'physical');
+  assert.equal(semantics.requiresPhysicalShipping, true);
+
+  const model = buildAngleDrivenStpModel({
+    query: 'Sac à dos étanche',
+    productDescription: description,
+    productIntake: { status: 'ready', semantics },
+    geo: 'Libya',
+    lang: 'fr',
+    segments: [
+      { id: 'physical-home-users', name: 'Utilisateurs quotidiens', need: 'transporter ses affaires', buyingTriggers: ['usage quotidien'] },
+      { id: 'physical-practical-buyers', name: 'Acheteurs pratiques', need: 'comparer solidité et prix', buyingTriggers: ['prix clair'] },
+      { id: 'physical-proof-conscious', name: 'Acheteurs prudents', need: 'voir la qualité avant achat', buyingTriggers: ['avis'] }
+    ],
+    personaCards: [
+      { id: 'p1', displayName: 'Utilisateur quotidien', summary: 'porte ses affaires chaque jour', details: { buyingTriggers: ['usage'], pains: ['sac peu solide'] } },
+      { id: 'p2', displayName: 'Acheteur pratique', summary: 'compare la solidité et le prix', details: { buyingTriggers: ['prix'], pains: ['qualité incertaine'] } },
+      { id: 'p3', displayName: 'Acheteur prudent', summary: 'veut voir des avis avant achat', details: { buyingTriggers: ['avis'], pains: ['peur de se tromper'] } }
+    ]
+  });
+
+  const visible = JSON.stringify(model);
+  assert.match(visible, /sac|transport|solidité|qualité|avis/i);
+  assert.doesNotMatch(visible, /fondateur|founder|responsable marketing|consultant|débutant e-commerce|LinkedIn/i);
+  assert.ok(model.personaCards.length >= 3);
+});
+
 test('online ecommerce training blocks physical delivery local angle and keeps local market fit', () => {
   const semantics = classifyProductSemantics({
     query: 'formation e-commerce en ligne',
