@@ -2475,6 +2475,16 @@
       #resultsCompetitors .daka-comp-study-card {
         min-width: 0;
       }
+      #resultsCompetitors .daka-comp-voice-interpretation {
+        margin-top: 9px;
+        padding: 9px 11px;
+        border-inline-start: 3px solid rgba(34, 211, 238, .72);
+        border-radius: 8px;
+        background: rgba(8, 47, 73, .24);
+        color: #b9e9f4;
+        font-size: .74rem;
+        line-height: 1.65;
+      }
       #resultsCompetitors .daka-comp-study-field {
         display: grid;
         gap: 7px;
