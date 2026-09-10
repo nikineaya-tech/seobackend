@@ -1148,6 +1148,70 @@
     return detailsSection('comp-action-plan', copy('actionPlan'), body, false);
   }
 
+  function customerVoiceKindLabel(kind = '', language = 'fr') {
+    const value = String(kind || '').toLowerCase();
+    const packs = {
+      ar: { review: '\\u0631\\u0623\\u064a \\u0639\\u0645\\u064a\\u0644', comment: '\\u062a\\u0639\\u0644\\u064a\\u0642 \\u0639\\u0645\\u064a\\u0644', question: '\\u0633\\u0624\\u0627\\u0644 \\u0645\\u062a\\u0643\\u0631\\u0631', complaint: '\\u0634\\u0643\\u0648\\u0649 \\u0623\\u0648 \\u0645\\u0634\\u0643\\u0644\\u0629', customer_voice: '\\u0635\\u0648\\u062a \\u0627\\u0644\\u0639\\u0645\\u064a\\u0644' },
+      fr: { review: 'Avis client', comment: 'Commentaire client', question: 'Question frequente', complaint: 'Plainte ou probleme', customer_voice: 'Voix client' },
+      en: { review: 'Customer review', comment: 'Customer comment', question: 'Frequent question', complaint: 'Complaint or problem', customer_voice: 'Customer voice' }
+    };
+    return packs[language]?.[value] || packs.fr[value] || value || (language === 'ar' ? '\\u0635\\u0648\\u062a \\u0627\\u0644\\u0639\\u0645\\u064a\\u0644' : 'Customer voice');
+  }
+
+  function translateCustomerVoiceText(value = '', language = 'fr') {
+    const raw = cleanInsight(value, '');
+    if (!raw) return '';
+    let text = raw.replace(/\\bDJD:\\s*\\d+\\s*['’]?D\\+B\\)?[:\\/\\s-]*[A-Z]+\\b/gi, '').replace(/\\s{2,}/g, ' ').trim();
+    const replacements = language === 'ar' ? [
+      [/customer\\s+desire\\s+observed\\s+around/gi, '\\u0631\\u063a\\u0628\\u0629 \\u0627\\u0644\\u0639\\u0645\\u064a\\u0644 \\u0627\\u0644\\u0645\\u0631\\u0635\\u0648\\u062f\\u0629 \\u062d\\u0648\\u0644'],
+      [/customer\\s+pain\\s+observed\\s+around/gi, '\\u0623\\u0644\\u0645 \\u0627\\u0644\\u0639\\u0645\\u064a\\u0644 \\u0627\\u0644\\u0645\\u0631\\u0635\\u0648\\u062f \\u062d\\u0648\\u0644'],
+      [/buying\\s+criterion\\s+observed\\s+around/gi, '\\u0645\\u0639\\u064a\\u0627\\u0631 \\u0627\\u0644\\u0634\\u0631\\u0627\\u0621 \\u0627\\u0644\\u0645\\u0631\\u0635\\u0648\\u062f \\u062d\\u0648\\u0644'],
+      [/objection\\s+observed\\s+around/gi, '\\u0627\\u0639\\u062a\\u0631\\u0627\\u0636 \\u0645\\u0631\\u0635\\u0648\\u062f \\u062d\\u0648\\u0644'],
+      [/reviews?, opinions? or customer reactions?/gi, '\\u0622\\u0631\\u0627\\u0621 \\u0648\\u062a\\u062c\\u0627\\u0631\\u0628 \\u0627\\u0644\\u0639\\u0645\\u0644\\u0627\\u0621'],
+      [/original price was/gi, '\\u0627\\u0644\\u0633\\u0639\\u0631 \\u0627\\u0644\\u0623\\u0635\\u0644\\u064a \\u0647\\u0648'],
+      [/current price is/gi, '\\u0627\\u0644\\u0633\\u0639\\u0631 \\u0627\\u0644\\u062d\\u0627\\u0644\\u064a \\u0647\\u0648'],
+      [/price|pricing/gi, '\\u0627\\u0644\\u0633\\u0639\\u0631'],
+      [/delivery|shipping/gi, '\\u0627\\u0644\\u062a\\u0648\\u0635\\u064a\\u0644'],
+      [/guarantee|warranty|return|refund/gi, '\\u0627\\u0644\\u0636\\u0645\\u0627\\u0646 \\u0623\\u0648 \\u0627\\u0644\\u0625\\u0631\\u062c\\u0627\\u0639'],
+      [/waterproof/gi, '\\u0645\\u0642\\u0627\\u0648\\u0645 \\u0644\\u0644\\u0645\\u0627\\u0621'],
+      [/rotating|rotary/gi, '\\u062f\\u0648\\u0631\\u0627\\u0646'],
+      [/car wash|washing cars?/gi, '\\u063a\\u0633\\u064a\\u0644 \\u0627\\u0644\\u0633\\u064a\\u0627\\u0631\\u0629'],
+      [/easy to use|easy\\s+use/gi, '\\u0633\\u0647\\u0644 \\u0627\\u0644\\u0627\\u0633\\u062a\\u062e\\u062f\\u0627\\u0645'],
+      [/customer|customers/gi, '\\u0627\\u0644\\u0639\\u0645\\u064a\\u0644'],
+      [/review|rating|feedback|comment/gi, '\\u0631\\u0623\\u064a \\u0623\\u0648 \\u062a\\u0639\\u0644\\u064a\\u0642']
+    ] : language === 'fr' ? [
+      [/customer\\s+desire\\s+observed\\s+around/gi, 'Desir client observe autour de'],
+      [/customer\\s+pain\\s+observed\\s+around/gi, 'Douleur client observee autour de'],
+      [/buying\\s+criterion\\s+observed\\s+around/gi, 'Critere d achat observe autour de'],
+      [/objection\\s+observed\\s+around/gi, 'Objection observee autour de'],
+      [/reviews?, opinions? or customer reactions?/gi, 'Avis, opinions ou reactions clients'],
+      [/original price was/gi, 'Le prix initial etait'],
+      [/current price is/gi, 'Le prix actuel est'],
+      [/waterproof/gi, 'resistant a l eau'],
+      [/rotating|rotary/gi, 'rotatif'],
+      [/car wash|washing cars?/gi, 'lavage automobile'],
+      [/easy to use|easy\\s+use/gi, 'facile a utiliser']
+    ] : [];
+    replacements.forEach(([pattern, replacement]) => { text = text.replace(pattern, replacement); });
+    return text.replace(/\\s{2,}/g, ' ').trim();
+  }
+
+  function customerVoiceInterpretation(item = {}, language = 'fr') {
+    const rawKind = String(item.kind || item.type || '').toLowerCase();
+    const label = translateCustomerVoiceText(item.label || item.statement || item.topic || item.key || '', language);
+    if (language === 'ar') {
+      if (rawKind === 'complaint') return '\\u0627\\u0644\\u0645\\u0639\\u0646\\u0649 \\u0627\\u0644\\u062a\\u062c\\u0627\\u0631\\u064a: \\u0647\\u0630\\u0647 \\u0634\\u0643\\u0648\\u0649 \\u062a\\u062d\\u062a\\u0627\\u062c \\u0625\\u0644\\u0649 \\u0631\\u062f \\u0648\\u0627\\u0636\\u062d \\u0641\\u064a \\u0627\\u0644\\u0639\\u0631\\u0636: ' + label + '.';
+      if (rawKind === 'question') return '\\u0627\\u0644\\u0645\\u0639\\u0646\\u0649 \\u0627\\u0644\\u062a\\u062c\\u0627\\u0631\\u064a: \\u0647\\u0630\\u0627 \\u0633\\u0624\\u0627\\u0644 \\u064a\\u062c\\u0628 \\u0627\\u0644\\u0625\\u062c\\u0627\\u0628\\u0629 \\u0639\\u0646\\u0647 \\u0642\\u0628\\u0644 \\u0627\\u0644\\u0634\\u0631\\u0627\\u0621: ' + label + '.';
+      if (rawKind === 'review') return '\\u0627\\u0644\\u0645\\u0639\\u0646\\u0649 \\u0627\\u0644\\u062a\\u062c\\u0627\\u0631\\u064a: \\u0647\\u0630\\u0647 \\u062a\\u062c\\u0631\\u0628\\u0629 \\u0639\\u0645\\u064a\\u0644 \\u064a\\u0645\\u0643\\u0646 \\u0627\\u0633\\u062a\\u062e\\u062f\\u0627\\u0645\\u0647\\u0627 \\u0643\\u062f\\u0644\\u064a\\u0644 \\u0642\\u0628\\u0644 \\u0627\\u0644\\u0634\\u0631\\u0627\\u0621.';
+      return '\\u0627\\u0644\\u0645\\u0639\\u0646\\u0649 \\u0627\\u0644\\u062a\\u062c\\u0627\\u0631\\u064a: \\u0647\\u0630\\u0627 \\u0635\\u0648\\u062a \\u0645\\u062d\\u0627\\u064a\\u062f \\u064a\\u0633\\u0627\\u0639\\u062f \\u0641\\u064a \\u0641\\u0647\\u0645 \\uu0627\\u0644\\u0634\\u0631\\u0627\\u0621.';
+    }
+    if (language === 'en') return 'Business meaning: use this customer signal to refine the offer and buying message: ' + label + '.';
+    if (rawKind === 'complaint') return 'Sens commercial : cette plainte doit recevoir une reponse visible dans l offre : ' + label + '.';
+    if (rawKind === 'question') return 'Sens commercial : cette question doit etre traitee avant l achat : ' + label + '.';
+    if (rawKind === 'review') return 'Sens commercial : cette experience peut servir de preuve avant achat.';
+    return 'Sens commercial : ce signal aide a ajuster l offre et le message : ' + label + '.';
+  }
+
   function renderCommentsReviews(data) {
     const model = data?.commentsReviews || data?.decisionReportV2?.mainReport?.commentsReviews || data?.reportV2?.mainReport?.commentsReviews || {};
     const customerVoice = data?.decisionReportV2?.mainReport?.customerVoice || data?.reportV2?.mainReport?.customerVoice || {};
@@ -1213,19 +1277,27 @@
     const reviewSeenUrls = new Set();
     const patternCards = patterns.slice(0, 8).map((item) => {
       const sourceUrls = Array.isArray(item.sourceUrls) ? item.sourceUrls.map(canonicalSourceUrl).filter(Boolean).filter((url, index, urls) => urls.indexOf(url) === index).slice(0, 2) : [];
+      const displayLabel = translateCustomerVoiceText(item.label || item.statement || item.topic || item.key || labels.patterns, lang());
+      const interpretation = customerVoiceInterpretation(item, lang());
       return `
         <article class="daka-comp-study-card">
-          <h4>${esc(cleanInsight(item.label || item.statement || item.topic || item.key || labels.patterns))}</h4>
+          <h4>${esc(displayLabel)}</h4>
           <p>${esc(`${labels.evidence}: ${item.count || 1}${item.confidence ? ` · ${labels.confidence}: ${item.confidence}` : ''}`)}</p>
+          <p class="daka-comp-voice-interpretation">${esc(interpretation)}</p>
           ${linkItems(sourceUrls, 2, reviewSeenUrls)}
         </article>`;
     }).join('');
-    const observedCards = observed.slice(0, 8).map((item) => `
-      <article class="daka-comp-study-card">
-        <h4>${esc(cleanInsight(item.kind || labels.observed))}</h4>
-        <p>${esc(cleanInsight(item.value || item.title || ''))}</p>
-        ${canonicalSourceUrl(item.sourceUrl) ? linkItems([{ url: canonicalSourceUrl(item.sourceUrl), label: item.sourcePlatform || labels.open }], 1, reviewSeenUrls) : ''}
-      </article>`).join('');
+    const observedCards = observed.slice(0, 8).map((item) => {
+      const translatedValue = translateCustomerVoiceText(item.translatedValue || item.localizedValue || item.value || item.title || '', lang());
+      const interpretation = customerVoiceInterpretation(item, lang());
+      return `
+        <article class="daka-comp-study-card">
+          <h4>${esc(customerVoiceKindLabel(item.kind || labels.observed, lang()))}</h4>
+          <p>${esc(translatedValue)}</p>
+          <p class="daka-comp-voice-interpretation">${esc(interpretation)}</p>
+          ${canonicalSourceUrl(item.sourceUrl) ? linkItems([{ url: canonicalSourceUrl(item.sourceUrl), label: item.sourcePlatform || labels.open }], 1, reviewSeenUrls) : ''}
+        </article>`;
+    }).join('');
     const channelNames = lang() === 'ar'
       ? { search: 'بحث', web: 'ويب', youtube: 'يوتيوب', instagram: 'إنستغرام', facebook: 'فيسبوك', tiktok: 'تيك توك', reddit: 'ريديت', x: 'X', rss: 'RSS' }
       : lang() === 'fr'
