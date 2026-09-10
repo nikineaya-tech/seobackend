@@ -15209,6 +15209,7 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
             lang = 'fr',
             url = '',
             productDescription = '',
+            offerType = '',
             budget = '',
             objective = '',
             businessModel = '',
@@ -15259,7 +15260,8 @@ app.post('/api/stp', requireAuth, requireReportQuota, persistGeneratedReport('st
             query,
             description: productDescription,
             geo: safeGeo,
-            lang
+            lang,
+            offerType
         });
         const handoffContext = {
             ...safeContext,
