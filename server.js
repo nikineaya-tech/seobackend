@@ -13346,7 +13346,7 @@ async function buildDakaStpDecision({ query, productDescription = '', productInt
         };
     }
 
-    const archetype = inferStpArchetype(query, competitorData, userSiteData, productDescription);
+    const archetype = inferStpArchetype(query, competitorData, userSiteData, productDescription, safeGeo);
     const inferredContext = inferStpOperatingContext({
         query,
         geo: safeGeo,
