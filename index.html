@@ -4786,6 +4786,22 @@ table tbody td {
                             <span class="daka-stp-product-intake-required"><i class="fas fa-lock"></i> <span data-i18n="stp_required_field">Champ obligatoire</span></span>
                         </div>
                     </div>
+                    <div class="form-group daka-stp-offer-type-field">
+                        <label class="form-label" for="stpOfferType" data-i18n="stp_label_offer_type">Type d’offre à analyser</label>
+                        <div class="input-wrapper">
+                            <i class="fas fa-layer-group input-icon"></i>
+                            <select id="stpOfferType" name="offerType" class="select-field" aria-describedby="stpOfferTypeHint">
+                                <option value="">Détection automatique depuis la description</option>
+                                <option value="PRODUCT">Produit physique</option>
+                                <option value="DIGITAL_PRODUCT">Produit numérique / formation</option>
+                                <option value="SERVICE">Service</option>
+                                <option value="SAAS">SaaS / logiciel</option>
+                                <option value="LOCAL_BUSINESS">Activité locale</option>
+                            </select>
+                        </div>
+                        <small id="stpOfferTypeHint" class="country-select-note">La description reste prioritaire ; ce choix sert à confirmer ou préciser le mode d’achat.</small>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label" for="stpKeyword" data-i18n="stp_label_keyword">Marché, niche ou offre à positionner</label>
                         <div class="input-wrapper">
