@@ -402,6 +402,44 @@ test('french STP output does not expose english internal hooks', () => {
   assert.match(visible, /disponibilite locale|reponse rapide|comparer avec les alternatives|prouver le resultat/i);
 });
 
+test('automotive wash brush is a physical B2C product, not a business service', () => {
+  const description = 'Brosse de lavage pour voiture avec tête rotative. Elle se branche à un tuyau d’eau. L’eau passe dans la brosse et aide à faire tourner la tête pour nettoyer la carrosserie. Utilisée par un propriétaire de voiture pour laver son véhicule à domicile.';
+  const semantics = classifyProductSemantics({
+    query: 'Brosse rotative de lavage automobile à eau',
+    description,
+    geo: 'Libya'
+  });
+
+  assert.equal(semantics.offerType, 'PRODUCT');
+  assert.equal(semantics.productType, 'physical_product');
+  assert.equal(semantics.productFamily, 'automotive_care');
+  assert.equal(semantics.deliveryMode, 'physical');
+  assert.equal(semantics.requiresPhysicalShipping, true);
+
+  const model = buildAngleDrivenStpModel({
+    query: 'Brosse rotative de lavage automobile à eau',
+    productDescription: description,
+    productIntake: { status: 'ready', semantics },
+    geo: 'Libya',
+    lang: 'fr',
+    segments: [
+      { id: 'auto-home-wash-owners', name: 'Propriétaires de voiture qui lavent chez eux', need: 'laver la voiture à domicile', buyingTriggers: ['gain de temps', 'poussière'] },
+      { id: 'auto-urban-drivers', name: 'Conducteurs urbains', need: 'nettoyer rapidement après les trajets', buyingTriggers: ['temps limité', 'résultat visible'] },
+      { id: 'auto-car-care-enthusiasts', name: 'Passionnés d’entretien automobile', need: 'contrôler la qualité du lavage', buyingTriggers: ['entretien auto', 'démonstration'] }
+    ],
+    personaCards: [
+      { id: 'p1', displayName: 'Propriétaire automobile', summary: 'lave sa voiture à domicile', details: { buyingTriggers: ['gain de temps'], pains: ['poussière'] } },
+      { id: 'p2', displayName: 'Conducteur urbain', summary: 'veut nettoyer rapidement son véhicule', details: { buyingTriggers: ['temps limité'], pains: ['saleté'] } },
+      { id: 'p3', displayName: 'Passionné auto', summary: 'cherche un meilleur outil de lavage', details: { buyingTriggers: ['qualité'], pains: ['outil peu pratique'] } }
+    ]
+  });
+
+  const visible = JSON.stringify(model);
+  assert.match(visible, /voiture|automobile|véhicule|lavage|laver/i);
+  assert.doesNotMatch(visible, /fondateur|founder|responsable marketing|consultant|débutant e-commerce|LinkedIn/i);
+  assert.equal(model.productUnderstanding.productSemantics.offerType, 'PRODUCT');
+});
+ 
 test('online ecommerce training blocks physical delivery local angle and keeps local market fit', () => {
   const semantics = classifyProductSemantics({
     query: 'formation e-commerce en ligne',
